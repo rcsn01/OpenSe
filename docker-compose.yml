@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  proxy:
+    image: inventory-proxy:latest
+    ports:
+      - "80:80"
+    networks:
+      - inventory-net
+    volumes:
+      - uploads-data:/usr/share/nginx/html/uploads:ro
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+  backend:
+    image: inventory-backend:latest
+    networks:
+      - inventory-net
+    volumes:
+      - uploads-data:/app/uploads
+    secrets:
+      - db_user
+      - db_password
+      - jwt_secret_key
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=inventory_db
+    deploy:
+      # Start with 0 replicas to avoid multiple replicas running schema
+      # creation at the same time. The deploy script will initialize the DB
+      # and then scale the backend to the desired replica count.
+      replicas: 0
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    networks:
+      - inventory-net
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    secrets:
+      - db_user
+      - db_password
+    environment:
+      - POSTGRES_USER_FILE=/run/secrets/db_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_DB=inventory_db
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+volumes:
+  db-data:
+  uploads-data:
+
+networks:
+  inventory-net:
+    driver: overlay
+    attachable: true
+
+secrets:
+  db_user:
+    external: true
+  db_password:
+    external: true
+  jwt_secret_key:
+    external: true
