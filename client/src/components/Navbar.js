@@ -11,6 +11,9 @@ function Navbar({ user, onLogout }) {
         <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
           Dashboard
         </button>
+        <button className="btn btn-secondary" onClick={() => navigate('/products')}>
+          Products
+        </button>
         <button className="btn btn-secondary" onClick={() => navigate('/scanner')}>
           Scan QR Code
         </button>

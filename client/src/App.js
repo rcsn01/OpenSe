@@ -5,6 +5,8 @@ import Signup from './components/Signup';
 import Dashboard from './components/Dashboard';
 import Scanner from './components/Scanner';
 import Reports from './components/Reports';
+import Products from './components/Products';
+import ProductDetail from './components/ProductDetail';
 import Navbar from './components/Navbar';
 
 function App() {
@@ -53,6 +55,14 @@ function App() {
             <Route
               path="/scanner"
               element={token ? <Scanner token={token} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/products"
+              element={token ? <Products token={token} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/product/:qrCode"
+              element={token ? <ProductDetail token={token} /> : <Navigate to="/login" />}
             />
             <Route
               path="/reports"
