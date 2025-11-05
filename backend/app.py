@@ -1,198 +1,167 @@
 import os
+import time
 import uuid
-from datetime import datetime
-from flask import Flask, request, jsonify
-from flask_socketio import SocketIO, emit
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+from datetime import timedelta
+from typing import Dict, Any
+
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
+from flask_socketio import SocketIO
 from werkzeug.utils import secure_filename
-from config import Config
+import logging
+
 from models import db, User, Product, StockUpdate
 from auth import auth_bp
 
-# Initialize Flask app
-app = Flask(__name__)
-app.config.from_object(Config)
 
-# Initialize extensions
-db.init_app(app)
-jwt = JWTManager(app)
-CORS(app, resources={r"/*": {"origins": "*"}})
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
-
-# Ensure upload directory exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+# Allowed statuses for stock updates (use user-friendly labels)
+ALLOWED_STATUSES = {
+    "Out of Stock",
+    "Near Out of Stock",
+    "Ordered",
+    "Restocked",
+}
 
 
-def allowed_file(filename):
-    """Check if file extension is allowed."""
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+def create_app() -> Flask:
+    app = Flask(__name__, static_folder='static', static_url_path='')
 
+    # Configuration from environment
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'change-me')
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
+    app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', os.path.join(app.root_path, 'uploads'))
 
-def save_uploaded_file(file):
-    """Save an uploaded file and return its URL."""
-    if file and allowed_file(file.filename):
-        # Generate unique filename
-        file_ext = file.filename.rsplit('.', 1)[1].lower()
-        unique_filename = f"{uuid.uuid4()}.{file_ext}"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-        
-        # Save file
-        file.save(file_path)
-        
-        # Return public URL
-        return f"/uploads/{unique_filename}"
-    
-    return None
+    # Ensure uploads directory exists
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+    # Extensions
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    db.init_app(app)
+    JWTManager(app)
 
-# Register blueprints
-app.register_blueprint(auth_bp)
+    # SocketIO with gevent/gevent-websocket
+    socketio = SocketIO(app, cors_allowed_origins="*")
+    app.socketio = socketio  # type: ignore[attr-defined]
 
+    # Blueprints
+    app.register_blueprint(auth_bp)
 
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    """Health check endpoint."""
-    return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}), 200
+    # Health check
+    @app.route('/api/health')
+    def health():
+        return jsonify({"status": "ok"})
 
+    # Current user
+    @app.route('/api/me')
+    @jwt_required()
+    def me():
+        uid = get_jwt_identity()
+        user = User.query.get(int(uid)) if uid is not None else None
+        return jsonify(user=user.to_dict() if user else None)
 
-@app.route('/api/updates', methods=['POST'])
-@jwt_required()
-def create_update():
-    """Create a new stock update."""
-    try:
-        # Get current user ID from JWT
-        current_user_id = get_jwt_identity()
-        
-        # Get form data
-        qr_identifier = request.form.get('qr_identifier')
-        status = request.form.get('status')
-        notes = request.form.get('notes', '')
-        
-        # Validation
-        if not qr_identifier:
-            return jsonify({'error': 'QR identifier is required'}), 400
-        
-        if not status:
-            return jsonify({'error': 'Status is required'}), 400
-        
-        if status not in StockUpdate.VALID_STATUSES:
-            return jsonify({'error': f'Invalid status. Must be one of: {", ".join(StockUpdate.VALID_STATUSES)}'}), 400
-        
-        # Find or create product
-        product = Product.query.filter_by(qr_identifier=qr_identifier).first()
+    # Serve uploaded images
+    @app.route('/uploads/<path:filename>')
+    def uploaded_file(filename):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+    # Create a new stock update
+    @app.route('/api/updates', methods=['POST'])
+    @jwt_required()
+    def create_update():
+        uid = get_jwt_identity()
+        user = User.query.get(int(uid)) if uid is not None else None
+        if not user:
+            return jsonify({'message': 'Unauthorized'}), 401
+
+        # Supports multipart/form-data with optional image
+        status = (request.form.get('status') or request.json.get('status') if request.is_json else None)  # type: ignore
+        notes = (request.form.get('notes') or (request.json.get('notes') if request.is_json else None))  # type: ignore
+        product_code = (request.form.get('product_code') or (request.json.get('product_code') if request.is_json else None))  # type: ignore
+        product_name = (request.form.get('product_name') or (request.json.get('product_name') if request.is_json else None))  # type: ignore
+
+        if not status or status not in ALLOWED_STATUSES:
+            return jsonify({'message': 'Invalid or missing status.'}), 400
+
+        if not product_code:
+            return jsonify({'message': 'product_code is required.'}), 400
+
+        product = Product.query.filter_by(code=product_code).first()
         if not product:
-            # Create new product with QR identifier as name (can be updated later)
-            product = Product(
-                qr_identifier=qr_identifier,
-                name=f"Product {qr_identifier}"
-            )
+            product = Product(code=product_code, name=product_name)
             db.session.add(product)
-            db.session.flush()  # Get product ID without committing
-        
-        # Handle image upload
+            db.session.flush()  # get product.id
+
         image_url = None
         if 'image' in request.files:
-            file = request.files['image']
-            if file.filename:
-                image_url = save_uploaded_file(file)
-        
-        # Create stock update
-        stock_update = StockUpdate(
-            user_id=current_user_id,
+            img = request.files['image']
+            if img and img.filename:
+                filename = secure_filename(img.filename)
+                # Prefix with UUID to avoid collisions
+                unique_name = f"{uuid.uuid4().hex}_{filename}"
+                save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+                img.save(save_path)
+                image_url = f"/uploads/{unique_name}"
+
+        update = StockUpdate(
             product_id=product.id,
+            user_id=user.id,
             status=status,
             notes=notes,
             image_url=image_url,
-            timestamp=datetime.utcnow()
         )
-        
-        db.session.add(stock_update)
+        db.session.add(update)
         db.session.commit()
-        
-        # Query the complete update with relations
-        created_update = StockUpdate.query.filter_by(id=stock_update.id).first()
-        update_data = created_update.to_dict(include_relations=True)
-        
-        # Emit Socket.IO event for real-time updates
-        socketio.emit('new_update', update_data, broadcast=True, namespace='/')
-        
-        return jsonify({
-            'message': 'Stock update created successfully',
-            'update': update_data
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error creating update: {str(e)}")
-        return jsonify({'error': f'Failed to create update: {str(e)}'}), 500
 
+        payload: Dict[str, Any] = update.to_dict()
 
-@app.route('/api/updates', methods=['GET'])
-@jwt_required()
-def get_updates():
-    """Get all stock updates."""
-    try:
-        # Query all updates with user and product relations, ordered by timestamp descending
-        updates = StockUpdate.query.order_by(StockUpdate.timestamp.desc()).all()
-        
-        # Serialize updates
-        updates_data = [update.to_dict(include_relations=True) for update in updates]
-        
-        return jsonify({
-            'updates': updates_data,
-            'count': len(updates_data)
-        }), 200
-        
-    except Exception as e:
-        app.logger.error(f"Error fetching updates: {str(e)}")
-        return jsonify({'error': f'Failed to fetch updates: {str(e)}'}), 500
+        # Broadcast to all connected clients
+        socketio.emit('update_created', payload, broadcast=True)
 
+        return jsonify(payload), 201
 
-@app.route('/api/products', methods=['GET'])
-@jwt_required()
-def get_products():
-    """Get all products."""
-    try:
-        products = Product.query.all()
-        products_data = [product.to_dict() for product in products]
-        
-        return jsonify({
-            'products': products_data,
-            'count': len(products_data)
-        }), 200
-        
-    except Exception as e:
-        app.logger.error(f"Error fetching products: {str(e)}")
-        return jsonify({'error': f'Failed to fetch products: {str(e)}'}), 500
+    # List all updates (most recent first)
+    @app.route('/api/updates', methods=['GET'])
+    @jwt_required()
+    def list_updates():
+        updates = StockUpdate.query.order_by(StockUpdate.created_at.desc()).all()
+        return jsonify([u.to_dict() for u in updates])
 
+    # Serve React build (catch-all)
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve_react(path):
+        if path != '' and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        else:
+            return send_from_directory(app.static_folder, 'index.html')
 
-@socketio.on('connect')
-def handle_connect():
-    """Handle client connection."""
-    print('Client connected')
-    emit('connected', {'data': 'Connected to server'})
-
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    """Handle client disconnection."""
-    print('Client disconnected')
-
-
-def create_app():
-    """Application factory function."""
-    # NOTE: don't run create_all() here — running migrations / schema creation
-    # from every replica causes race conditions when multiple backend
-    # containers start at once (race -> duplicate catalog entries / crashes).
-    # Schema should be created once by a maintainer or by a controlled
-    # initialization job (see init_db.py).
+    # Initialize database with retry (wait for Postgres)
+    with app.app_context():
+        retries = 0
+        while retries < 30:
+            try:
+                db.create_all()
+                app.logger.info('Database initialized successfully')
+                break
+            except Exception as e:
+                retries += 1
+                app.logger.warning(f'Database not ready, retry {retries}/30: {e}')
+                time.sleep(2)
 
     return app
 
 
+# Expose app and socketio for Gunicorn
+app = create_app()
+socketio = app.socketio  # type: ignore[attr-defined]
+
+
 if __name__ == '__main__':
-    application = create_app()
-    # Run with SocketIO for development
-    socketio.run(application, host='0.0.0.0', port=5000, debug=True)
+    # Configure basic logging to stdout for container visibility
+    logging.basicConfig(level=logging.INFO)
+    app.logger.info('Starting Flask development server via socketio.run')
+    # Use socketio.run so websockets work in development when running directly
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)

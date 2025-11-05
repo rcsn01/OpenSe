@@ -1,88 +1,50 @@
+import re
 from flask import Blueprint, request, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token
+
 from models import db, User
+
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """Register a new user."""
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-        
-        username = data.get('username')
-        password = data.get('password')
-        
-        # Validation
-        if not username or not password:
-            return jsonify({'error': 'Username and password are required'}), 400
-        
-        if len(username) < 3:
-            return jsonify({'error': 'Username must be at least 3 characters long'}), 400
-        
-        if len(password) < 6:
-            return jsonify({'error': 'Password must be at least 6 characters long'}), 400
-        
-        # Check if user already exists
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
-            return jsonify({'error': 'Username already exists'}), 409
-        
-        # Create new user
-        new_user = User(username=username)
-        new_user.set_password(password)
-        
-        db.session.add(new_user)
-        db.session.commit()
-        
-        # Create access token
-        access_token = create_access_token(identity=new_user.id)
-        
-        return jsonify({
-            'message': 'User registered successfully',
-            'access_token': access_token,
-            'user': new_user.to_dict()
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': f'Registration failed: {str(e)}'}), 500
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+
+    if not email or not password:
+        return jsonify({'message': 'Email and password are required.'}), 400
+
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return jsonify({'message': 'Invalid email format.'}), 400
+
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        return jsonify({'message': 'Email already registered.'}), 400
+
+    user = User(email=email, password_hash=generate_password_hash(password))
+    db.session.add(user)
+    db.session.commit()
+
+    token = create_access_token(identity=str(user.id))
+    return jsonify({'access_token': token, 'user': user.to_dict()}), 201
 
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """Login an existing user."""
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-        
-        username = data.get('username')
-        password = data.get('password')
-        
-        # Validation
-        if not username or not password:
-            return jsonify({'error': 'Username and password are required'}), 400
-        
-        # Find user
-        user = User.query.filter_by(username=username).first()
-        
-        if not user or not user.check_password(password):
-            return jsonify({'error': 'Invalid username or password'}), 401
-        
-        # Create access token
-        access_token = create_access_token(identity=user.id)
-        
-        return jsonify({
-            'message': 'Login successful',
-            'access_token': access_token,
-            'user': user.to_dict()
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': f'Login failed: {str(e)}'}), 500
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+
+    if not email or not password:
+        return jsonify({'message': 'Email and password are required.'}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({'message': 'Invalid credentials.'}), 401
+
+    token = create_access_token(identity=str(user.id))
+    return jsonify({'access_token': token, 'user': user.to_dict()}), 200
