@@ -7,7 +7,6 @@ yarn-error.log*
 # Production
 build/
 dist/
-client/build/
 
 # Environment variables
 .env
@@ -36,9 +35,3 @@ logs/
 
 # Docker
 docker-compose.override.yml
-
-# Testing
-coverage/
-
-# Misc
-.cache/
