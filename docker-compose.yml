@@ -2,10 +2,12 @@ version: '3.9'
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     container_name: fts-app
     ports:
-      - "80:5000"
+      - "5000:5000"
     environment:
       # Example connection string for the db service below
       - DATABASE_URL=postgresql+psycopg2://postgres:postgres@db:5432/inventorydb
