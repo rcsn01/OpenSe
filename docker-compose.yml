@@ -1,33 +1,45 @@
-version: '3.9'
+version: '3.8'
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: fts-app
-    ports:
-      - "5000:5000"
-    environment:
-      # Example connection string for the db service below
-      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@db:5432/inventorydb
-      - JWT_SECRET_KEY=super-secret-change-me
-      - UPLOAD_FOLDER=/app/uploads
-    depends_on:
-      - db
-    volumes:
-      - uploads-data:/app/uploads
-
   db:
-    image: postgres:16-alpine
-    container_name: fts-db
+    image: postgres:15-alpine
+    container_name: filltheshelf-db
+    restart: always
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=inventorydb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: filltheshelf
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: filltheshelf-app
+    restart: always
+    ports:
+      - "8080:3000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=filltheshelf
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - JWT_SECRET=your-secret-key-change-this-in-production
+      - PORT=3000
+      - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
 
 volumes:
-  db-data:
-  uploads-data:
+  postgres_data:
+  uploads:
