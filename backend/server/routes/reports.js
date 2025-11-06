@@ -39,8 +39,8 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
   try {
-    // Get product by QR code
-    const productResult = await pool.query('SELECT id FROM products WHERE qr_code = $1', [qrCode]);
+    // Treat the supplied qrCode as the product UUID (product id)
+    const productResult = await pool.query('SELECT id FROM products WHERE id::text = $1', [qrCode]);
 
     if (productResult.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
@@ -50,7 +50,7 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
 
     // Create report
     const result = await pool.query(
-      'INSERT INTO stock_reports (product_id, user_id, status, notes, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      'INSERT INTO stock_reports (product_id, user_id, status, notes, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING id, product_id::text as product_id, user_id, status, notes, image_url, created_at',
       [productId, userId, status, notes, imageUrl]
     );
 
@@ -65,7 +65,8 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT sr.*, p.name as product_name, p.qr_code, u.username 
+      SELECT sr.id, sr.product_id::text as product_id, sr.user_id, sr.status, sr.notes, sr.image_url, sr.created_at,
+        p.name as product_name, u.username
       FROM stock_reports sr
       JOIN products p ON sr.product_id = p.id
       JOIN users u ON sr.user_id = u.id
@@ -84,11 +85,12 @@ router.get('/product/:qrCode', authMiddleware, async (req, res) => {
 
   try {
     const result = await pool.query(`
-      SELECT sr.*, p.name as product_name, p.qr_code, u.username 
+      SELECT sr.id, sr.product_id::text as product_id, sr.user_id, sr.status, sr.notes, sr.image_url, sr.created_at,
+        p.name as product_name, u.username
       FROM stock_reports sr
       JOIN products p ON sr.product_id = p.id
       JOIN users u ON sr.user_id = u.id
-      WHERE p.qr_code = $1
+      WHERE p.id::text = $1
       ORDER BY sr.created_at DESC
     `, [qrCode]);
     res.json(result.rows);
