@@ -207,42 +207,35 @@ export default function HomeScreen() {
       <View style={[styles.header, { borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 12 }]}> 
         <ThemedText type="title" style={[styles.title, { color: themeText }]}>Scan</ThemedText>
       </View>
-      {/* Top Half - Camera */}
-      {isScanning ? (
-        <View style={[
-          styles.cameraSection,
-          // Add safe-area padding on iOS so camera content doesn't underlap the Dynamic Island
-          Platform.OS === 'android'
-            ? { paddingTop: StatusBar.currentHeight || 0 }
-            : { paddingTop: insets.top || 12 }
-        ]}>
-        {permission == null && (
-          <View style={[styles.cameraPlaceholder, { backgroundColor: cameraPlaceholderBackground }]}>
-            <ThemedText style={styles.placeholderText}>Requesting camera permission...</ThemedText>
-          </View>
-        )}
-        {!(permission?.granted ?? permission?.status === 'granted') && permission != null && (
-          <View style={styles.permissionDeniedContainer}>
-            <ThemedText type="subtitle">Camera permission denied</ThemedText>
-            <ThemedText style={styles.permissionText}>
-              Please enable camera permission
-            </ThemedText>
-            <View style={styles.permissionButtons}>
-                <TouchableOpacity style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} onPress={handleOpenSettings}>
-                <ThemedText style={[styles.permissionButtonText, { color: buttonTextSelected }]}>Open Settings</ThemedText>
-              </TouchableOpacity>
-                <TouchableOpacity style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} onPress={requestPermission}>
-                <ThemedText style={[styles.permissionButtonText, { color: buttonTextSelected }]}>Request Permission</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        {permission && (permission?.granted ?? permission?.status === 'granted') ? (
-          <>
-            {isScanning ? (() => {
-              // Prefer a static CameraView import or the CameraComp set earlier.
-              const Candidate = CameraComp ?? CameraView ?? null;
 
+      {/* Always-visible card area: shows camera when scanning, product details when idle/scanned */}
+      <View style={styles.cardContainer}>
+        {isScanning ? (
+          // Camera view when actively scanning
+          <View style={styles.cameraSection}>
+            {permission == null && (
+              <View style={[styles.cameraPlaceholder, { backgroundColor: cameraPlaceholderBackground }]}>
+                <ThemedText style={styles.placeholderText}>Requesting camera permission...</ThemedText>
+              </View>
+            )}
+            {!(permission?.granted ?? permission?.status === 'granted') && permission != null && (
+              <View style={styles.permissionDeniedContainer}>
+                <ThemedText type="subtitle">Camera permission denied</ThemedText>
+                <ThemedText style={styles.permissionText}>
+                  Please enable camera permission
+                </ThemedText>
+                <View style={styles.permissionButtons}>
+                  <TouchableOpacity style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} onPress={handleOpenSettings}>
+                    <ThemedText style={[styles.permissionButtonText, { color: buttonTextSelected }]}>Open Settings</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} onPress={requestPermission}>
+                    <ThemedText style={[styles.permissionButtonText, { color: buttonTextSelected }]}>Request Permission</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            {permission && (permission?.granted ?? permission?.status === 'granted') ? (() => {
+              const Candidate = CameraComp ?? CameraView ?? null;
               const isCallableComponent =
                 typeof Candidate === 'function' ||
                 (typeof Candidate === 'object' && Candidate !== null && ('render' in Candidate || Candidate.prototype));
@@ -265,8 +258,6 @@ export default function HomeScreen() {
                     }}
                     onBarcodeScanned={handleBarcodeScanned}
                   />
-
-                  {/* Close button overlay (bottom-right) while scanning */}
                   <TouchableOpacity
                     style={styles.closeButton}
                     onPress={() => setIsScanning(false)}
@@ -276,79 +267,61 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 </>
               );
-            })() : (
-              <View style={styles.cameraPlaceholder}>
-                        {scannedData ? (
-                                    // Show product info inside the camera area. Add top margin on iOS to avoid
-                                    // being covered by the Dynamic Island / notch.
-                                    <View style={[
-                                      styles.productInfoContainer,
-                                      Platform.OS === 'ios' ? { marginTop: insets.top + 4 } : {},
-                                      { backgroundColor: productCardBackground, borderColor: productBorderColor, borderWidth: 1, padding: 12, borderRadius: 12 }
-                                    ]}>
-                                      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
-                                          <View style={{ flex: 1, paddingRight: 8 }}>
-                                            <ThemedText style={[styles.productNameText, { color: productTextColor }]}> 
-                                              {productLoading ? 'Loading…' : (productDetails?.name ?? productName ?? 'Unknown Product')}
-                                            </ThemedText>
-
-                                            {productDetails?.description ? (
-                                              <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{productDetails.description}</ThemedText>
-                                            ) : null}
-
-                                            {productDetails?.latestStatus ? (
-                                              <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
-                                                <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
-                                              </View>
-                                            ) : null}
-
-                                            <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{scannedData}</ThemedText>
-                                          </View>
-
-                                          {/* Meta column: category / qty / location */}
-                                          <View style={styles.productMetaColumn}>
-                                            {productDetails?.category ? (
-                                              <ThemedText style={[styles.placeholderSubtext, { color: productMutedText }]}>Category: {productDetails.category}</ThemedText>
-                                            ) : null}
-
-                                            {productDetails?.quantity != null ? (
-                                              <ThemedText style={[styles.placeholderSubtext, { color: productMutedText, marginTop: 6 }]}>Qty: {productDetails.quantity}</ThemedText>
-                                            ) : null}
-
-                                            {productDetails?.location ? (
-                                              <ThemedText style={[styles.placeholderSubtext, { color: productMutedText, marginTop: 6 }]}>{productDetails.location}</ThemedText>
-                                            ) : null}
-                                          </View>
-                                        </View>
-
-                                        {productDetails?.image_url ? (
-                                          <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { backgroundColor: productOptionBg, marginLeft: 12 }]} />
-                                        ) : null}
-                                      </View>
-                                    </View>
-                          ) : (
-                  <>
-                    <ThemedText style={styles.placeholderText}>📷</ThemedText>
-                    <ThemedText style={styles.placeholderSubtext}>
-                      {'Ready to scan'}
+            })() : null}
+          </View>
+        ) : (
+          // Product detail view when not scanning
+          <View style={[styles.productDetailCard, { backgroundColor: productCardBackground, borderColor: productBorderColor }]}>
+            {scannedData ? (
+              // Scanned product details
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <ThemedText style={[styles.productNameText, { color: productTextColor }]}> 
+                      {productLoading ? 'Loading…' : (productDetails?.name ?? productName ?? 'Unknown Product')}
                     </ThemedText>
 
-                    {/* Scan button moved below the camera section */}
-                  </>
-                )}
+                    {productDetails?.description ? (
+                      <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{productDetails.description}</ThemedText>
+                    ) : null}
+
+                    {productDetails?.category ? (
+                      <ThemedText style={[styles.placeholderSubtext, { color: productMutedText }]}>Category: {productDetails.category}</ThemedText>
+                    ) : null}
+
+                    {productDetails?.quantity != null ? (
+                      <ThemedText style={[styles.placeholderSubtext, { color: productMutedText}]}>Quantity: {productDetails.quantity}</ThemedText>
+                    ) : null}
+
+                    {productDetails?.location ? (
+                      <ThemedText style={[styles.placeholderSubtext, { color: productMutedText}]}>Location: {productDetails.location}</ThemedText>
+                    ) : null}
+
+                    {productDetails?.latestStatus ? (
+                      <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
+                        <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+
+                {productDetails?.image_url ? (
+                  <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { backgroundColor: productOptionBg, marginLeft: 12 }]} />
+                ) : null}
+              </View>
+            ) : (
+              // Empty state - ready to scan
+              <View style={styles.emptyStateContainer}>
+                <ThemedText style={styles.placeholderText}>📷</ThemedText>
+                <ThemedText style={styles.placeholderSubtext}>Ready to scan</ThemedText>
               </View>
             )}
+          </View>
+        )}
+      </View>
 
-            {/* Scanning indicator removed to hide the "Scanning..." text while active */}
-          </>
-        ) : null}
-        </View>
-      ) : null}
-
-      {/* Scan button under the camera area when idle and permission granted */}
+      {/* Scan button under the card area when idle and permission granted */}
       {permission && (permission?.granted ?? permission?.status === 'granted') && (
-        // Place the scan button at the same location as the Products add button
         <View style={[styles.scanButtonBottom, { backgroundColor: scanUnderBackground }]}> 
           <TouchableOpacity
             style={[
@@ -370,52 +343,6 @@ export default function HomeScreen() {
 
       {/* Bottom Half - Form */}
   <ScrollView style={[styles.formSection, { backgroundColor: formBackground }]} contentContainerStyle={styles.formContent}>
-        {/* If a product was scanned, show its name and QR here (camera section is hidden after scan) */}
-        {scannedData && (
-          <View style={[
-              styles.scannedInfo,
-              { backgroundColor: productDetails ? productCardBackground : scannedInfoBackground, paddingTop: 12, marginTop: Platform.OS === 'ios' ? (insets.top + 4) : 0, borderColor: productDetails ? productBorderColor : borderColor, borderWidth: productDetails ? 1 : 0, borderRadius: productDetails ? 12 : undefined }
-            ]}> 
-              {productLoading ? (
-                <ThemedText style={styles.qrCodeText}>Loading…</ThemedText>
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <View style={{ flex: 1, paddingRight: 8 }}>
-                      <ThemedText style={[styles.qrCodeText, { fontWeight: '700', color: productTextColor }]}>{productDetails?.name ?? productName ?? scannedData}</ThemedText>
-
-                      {productDetails?.description ? (
-                        <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}>Description: {productDetails.description}</ThemedText>
-                      ) : null}
-
-                      {productDetails?.category ? (
-                        <ThemedText style={[styles.placeholderSubtext, { color: productMutedText }]}>Category: {productDetails.category}</ThemedText>
-                      ) : null}
-
-                      {productDetails?.quantity != null ? (
-                        <ThemedText style={[styles.placeholderSubtext, { color: productMutedText}]}>Quantity: {productDetails.quantity}</ThemedText>
-                      ) : null}
-
-                      {productDetails?.location ? (
-                        <ThemedText style={[styles.placeholderSubtext, { color: productMutedText}]}>Location: {productDetails.location}</ThemedText>
-                      ) : null}
-
-                      {productDetails?.latestStatus ? (
-                        <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
-                          <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-
-                  {productDetails?.image_url ? (
-                    <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { backgroundColor: productOptionBg, marginLeft: 5 }]} />
-                  ) : null}
-                </View>
-              )}
-            </View>
-        )}
-
         <View style={styles.formGroup}>
           <ThemedText type="defaultSemiBold" style={styles.label}>Stock Status</ThemedText>
           <View style={styles.statusButtons}>
@@ -490,9 +417,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  cardContainer: {
+    height: '25%',
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  productDetailCard: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    justifyContent: 'center',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   cameraSection: {
-    height: '40%',
+    flex: 1,
     backgroundColor: '#000',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   camera: {
     width: '100%',
