@@ -2,6 +2,7 @@ import { StyleSheet, View, Button, Linking, TouchableOpacity, TextInput, ScrollV
 import { useEffect, useRef, useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
@@ -74,10 +75,17 @@ export default function HomeScreen() {
     setIsScanning(true);
   };
 
+  // Resolve theme-aware colors so text remains visible in both light/dark modes
+  const themeBackground = useThemeColor({}, 'background');
+  const formBackground = useThemeColor({ light: '#f9fafb', dark: '#0f1720' }, 'background');
+  const scannedInfoBackground = useThemeColor({ light: '#e0e7ff', dark: '#111827' }, 'background');
+  const cameraPlaceholderBackground = useThemeColor({ light: '#1a1a1a', dark: '#0b0b0b' }, 'background');
+  const scanUnderBackground = useThemeColor({ light: '#f9fafb', dark: '#0f1720' }, 'background');
+  const themeText = useThemeColor({}, 'text');
+  const inputBackground = useThemeColor({ light: '#ffffff', dark: '#081018' }, 'background');
+
   // When a QR is scanned we set `scannedData` and stop active scanning; another effect
   // (below) will react to `scannedData` and fetch the product details from the backend.
-
-  // When a QR code is scanned, fetch product details (requires auth token)
   // Explanation: this effect watches `scannedData`. When a QR is present we call
   // GET /products/:id to resolve the human-readable product name to show in the UI.
   // `mounted` guard prevents state updates after unmount.
@@ -157,14 +165,15 @@ export default function HomeScreen() {
   // The backend expects a multipart form in this flow (FormData). No image is included here.
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeBackground }]}>
       {/* Top Half - Camera */}
-      <View style={[
-        styles.cameraSection,
-        Platform.OS === 'android' && { paddingTop: StatusBar.currentHeight || 0 }
-      ]}>
+      {isScanning ? (
+        <View style={[
+          styles.cameraSection,
+          Platform.OS === 'android' && { paddingTop: StatusBar.currentHeight || 0 }
+        ]}>
         {permission == null && (
-          <View style={styles.cameraPlaceholder}>
+          <View style={[styles.cameraPlaceholder, { backgroundColor: cameraPlaceholderBackground }]}>
             <ThemedText style={styles.placeholderText}>Requesting camera permission...</ThemedText>
           </View>
         )}
@@ -243,31 +252,39 @@ export default function HomeScreen() {
                       {'Ready to scan'}
                     </ThemedText>
 
-                    {/* When ready (not scanning and no scannedData), offer a Scan button in the preview */}
-                    {!isScanning && !scannedData && (
-                      <TouchableOpacity style={[styles.primaryButton, styles.previewScanButton]} onPress={startScanning}>
-                        <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>Scan QR Code</ThemedText>
-                      </TouchableOpacity>
-                    )}
+                    {/* Scan button moved below the camera section */}
                   </>
                 )}
               </View>
             )}
 
-            {isScanning && (
-              <View style={styles.scanningIndicator}>
-                <ThemedText type="defaultSemiBold" style={styles.scanningText}>
-                  Scanning...
-                </ThemedText>
-              </View>
-            )}
+            {/* Scanning indicator removed to hide the "Scanning..." text while active */}
           </>
         ) : null}
-      </View>
+        </View>
+      ) : null}
+
+      {/* Scan button under the camera area when idle and permission granted */}
+      {!isScanning && !scannedData && permission && (permission?.granted ?? permission?.status === 'granted') && (
+        <View style={[styles.scanUnderContainer, { backgroundColor: scanUnderBackground }]}>
+          <TouchableOpacity style={styles.primaryButton} onPress={startScanning}>
+            <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>Scan QR Code</ThemedText>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Bottom Half - Form */}
-      <ScrollView style={styles.formSection} contentContainerStyle={styles.formContent}>
-        {/* Product QR code display removed — product information is shown in the camera area */}
+  <ScrollView style={[styles.formSection, { backgroundColor: formBackground }]} contentContainerStyle={styles.formContent}>
+        {/* If a product was scanned, show its name and QR here (camera section is hidden after scan) */}
+        {scannedData && (
+          <View style={[styles.scannedInfo, { backgroundColor: scannedInfoBackground }]}> 
+            <ThemedText type="defaultSemiBold">Product:</ThemedText>
+            <ThemedText style={styles.qrCodeText}>{productLoading ? 'Loading…' : (productName ?? scannedData)}</ThemedText>
+            <TouchableOpacity style={[styles.secondaryButton, { marginTop: 12 }]} onPress={startScanning}>
+              <ThemedText type="defaultSemiBold" style={styles.secondaryButtonText}>Rescan</ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.formGroup}>
           <ThemedText type="defaultSemiBold" style={styles.label}>Stock Status</ThemedText>
@@ -302,7 +319,7 @@ export default function HomeScreen() {
         <View style={styles.formGroup}>
           <ThemedText type="defaultSemiBold" style={styles.label}>Notes</ThemedText>
           <TextInput
-            style={styles.notesInput}
+            style={[styles.notesInput, { backgroundColor: inputBackground, color: themeText }]}
             value={notes}
             onChangeText={setNotes}
             placeholder="Add notes about the stock condition..."
@@ -455,10 +472,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     borderRadius: 8,
     padding: 12,
-    fontSize: 14,
-    backgroundColor: '#fff',
-    color: '#000',
-    textAlignVertical: 'top',
+  fontSize: 14,
+  textAlignVertical: 'top',
     minHeight: 100,
   },
   imageButton: {
@@ -499,7 +514,6 @@ const styles = StyleSheet.create({
   },
   productNameText: {
     fontSize: 28,
-    color: '#fff',
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 8,
@@ -541,5 +555,12 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  scanUnderContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#f9fafb',
+    // Add extra top margin on iOS to avoid the Dynamic Island / notch overlap
+    marginTop: Platform.OS === 'ios' ? 28 : 12,
   },
 });
