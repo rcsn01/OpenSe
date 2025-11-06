@@ -172,21 +172,25 @@ export default function DashboardScreen() {
           </View>
         ) : null}
 
-        {/* Single stats card with three rows */}
-        <View style={[styles.singleStatCard, { backgroundColor: cardBackground, borderColor }]}>
-          <View style={[styles.statRow, { borderBottomColor: borderColor }]}> 
-            <ThemedText style={[styles.statLabel, { color: mutedText }]}>Out of Stock</ThemedText>
-            <ThemedText style={[styles.statNumber, { color: textColor }]}>{stats.empty}</ThemedText>
+        {/* Three-column stats: In Stock | Low Stock | Out of Stock */}
+        <View style={styles.statsRow}>
+          <View style={[styles.statColumn, { backgroundColor: cardBackground, borderColor }]}> 
+            <ThemedText style={[styles.statLabel, { color: mutedText }]}>In Stock</ThemedText>
+            <ThemedText style={[styles.statNumber, { color: textColor }]}>{stats.inStock}</ThemedText>
           </View>
 
-          <View style={[styles.statRow, { borderBottomColor: borderColor }]}> 
+          <View style={[styles.verticalSeparator, { backgroundColor: borderColor }]} />
+
+          <View style={[styles.statColumn, { backgroundColor: cardBackground, borderColor }]}> 
             <ThemedText style={[styles.statLabel, { color: mutedText }]}>Low Stock</ThemedText>
             <ThemedText style={[styles.statNumber, { color: textColor }]}>{stats.low}</ThemedText>
           </View>
 
-          <View style={styles.statRow}> 
-            <ThemedText style={[styles.statLabel, { color: mutedText }]}>In Stock</ThemedText>
-            <ThemedText style={[styles.statNumber, { color: textColor }]}>{stats.inStock}</ThemedText>
+          <View style={[styles.verticalSeparator, { backgroundColor: borderColor }]} />
+
+          <View style={[styles.statColumn, { backgroundColor: cardBackground, borderColor }]}> 
+            <ThemedText style={[styles.statLabel, { color: mutedText }]}>Out of Stock</ThemedText>
+            <ThemedText style={[styles.statNumber, { color: textColor }]}>{stats.empty}</ThemedText>
           </View>
         </View>
 
@@ -355,15 +359,37 @@ const styles = StyleSheet.create({
     borderLeftColor: '#10b981',
   },
   statNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '700',
+    marginTop: 6,
+    marginBottom: 0,
   },
   statLabel: {
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
     opacity: 0.8,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    gap: 12,
+  },
+  statColumn: {
+    flex: 1,
+    minHeight: 88,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verticalSeparator: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginHorizontal: 12,
   },
   singleStatCard: {
     borderRadius: 12,

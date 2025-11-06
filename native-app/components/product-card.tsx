@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   productName: {
-    fontSize: 18,
+    fontSize: 20,
     flex: 1,
     marginRight: 12,
   },
