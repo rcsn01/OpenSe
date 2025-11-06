@@ -1,4 +1,4 @@
-import { useColorScheme as useRNColorScheme } from 'react-native';
+import { useColorScheme as useRNColorScheme, Appearance } from 'react-native';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -59,7 +59,10 @@ export function useColorScheme() {
 			if (preferredValue === 'light' || preferredValue === 'dark') {
 				setScheme(preferredValue as 'light' | 'dark');
 			} else {
-				setScheme((useRNColorScheme() ?? 'light') as 'light' | 'dark');
+				// Don't call hooks from callbacks running outside React render.
+				// Use Appearance.getColorScheme() to synchronously read current system scheme.
+				const sys = Appearance.getColorScheme();
+				setScheme((sys ?? 'light') as 'light' | 'dark');
 			}
 		});
 

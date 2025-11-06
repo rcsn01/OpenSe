@@ -12,9 +12,13 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        // Keep tab bar background equal to theme background (light: '#fff')
+        tabBarStyle: { backgroundColor: Colors[colorScheme ?? 'light'].background },
+        // Active icon/text uses `menuBarSelected`, inactive uses `tabIconDefault`
+        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].menuBarSelected,
+        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
       }}>
       <Tabs.Screen
         name="index"
