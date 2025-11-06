@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS, API_BASE_URL } from '@/config/api';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,6 +27,12 @@ type FilterType = 'all' | 'empty' | 'low' | 'in-stock';
 export default function ProductsScreen() {
   const { token } = useAuth();
   const router = useRouter();
+  const background = useThemeColor({}, 'background');
+  const cardBackground = useThemeColor({ light: '#fff', dark: '#0b1220' }, 'background');
+  const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#1f2937' }, 'background');
+  const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
+  const tint = useThemeColor({}, 'tint');
+  const optionBg = useThemeColor({ light: '#f3f4f6', dark: '#111827' }, 'background');
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -308,16 +315,16 @@ export default function ProductsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
-        <ThemedText style={styles.loadingText}>Loading products...</ThemedText>
+      <View style={[styles.centerContainer, { backgroundColor: background }]}> 
+        <ActivityIndicator size="large" color={tint} />
+        <ThemedText style={[styles.loadingText, { color: mutedText }]}>Loading products...</ThemedText>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: background }]}> 
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
         <View style={styles.headerTop}>
           <View>
             <ThemedText type="title" style={styles.title}>Products</ThemedText>
@@ -327,12 +334,12 @@ export default function ProductsScreen() {
           </View>
           
           <TouchableOpacity 
-            style={styles.filterButton}
+            style={[styles.filterButton, { backgroundColor: cardBackground }]}
             onPress={() => setFilterDropdownVisible(!filterDropdownVisible)}>
-            <ThemedText style={styles.filterButtonText}>
+            <ThemedText style={[styles.filterButtonText, { color: mutedText }]}>
               {getFilterLabel(selectedFilter)}
             </ThemedText>
-            <ThemedText style={styles.filterButtonIcon}>▼</ThemedText>
+            <ThemedText style={[styles.filterButtonIcon, { color: mutedText }]}>▼</ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -393,7 +400,7 @@ export default function ProductsScreen() {
         }
       />
 
-      <TouchableOpacity style={styles.addButton} onPress={() => { setIsEditing(false); setEditingProductId(null); setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' }); setProductImageUri(null); setModalVisible(true); }}>
+      <TouchableOpacity style={[styles.addButton, { backgroundColor: tint }]} onPress={() => { setIsEditing(false); setEditingProductId(null); setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' }); setProductImageUri(null); setModalVisible(true); }}>
         <ThemedText style={styles.addButtonText}>+ Add Product</ThemedText>
       </TouchableOpacity>
 
@@ -409,14 +416,14 @@ export default function ProductsScreen() {
               <ThemedText type="subtitle" style={styles.modalTitle}>Product Details</ThemedText>
               <View style={styles.modalActionsRight}>
                 <TouchableOpacity
-                  style={styles.editButton}
+                      style={[styles.editButton, { backgroundColor: optionBg }]}
                   onPress={() => selectedProduct && handleStartEdit(selectedProduct)}
                 >
-                  <ThemedText style={styles.editButtonText}>Edit</ThemedText>
+                      <ThemedText style={[styles.editButtonText, { color: mutedText }]}>Edit</ThemedText>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                  <ThemedText style={styles.closeButton}>✕</ThemedText>
+                  <ThemedText style={[styles.closeButton, { color: mutedText }]}>✕</ThemedText>
                 </TouchableOpacity>
               </View>
             </View>
@@ -532,8 +539,8 @@ export default function ProductsScreen() {
               <View style={styles.inputGroup}>
                 <ThemedText style={styles.inputLabel}>Image (optional)</ThemedText>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <TouchableOpacity
-                    style={styles.imagePickButton}
+          <TouchableOpacity
+            style={[styles.imagePickButton, { backgroundColor: optionBg }]}
                     onPress={async () => {
                       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                       if (status !== 'granted') {
@@ -553,7 +560,7 @@ export default function ProductsScreen() {
                       if (!pickedUri && res?.uri) pickedUri = res.uri;
                       if (pickedUri) setProductImageUri(pickedUri);
                     }}>
-                    <ThemedText style={styles.imagePickButtonText}>Choose Image</ThemedText>
+                    <ThemedText style={[styles.imagePickButtonText, { color: mutedText }]}>Choose Image</ThemedText>
                   </TouchableOpacity>
                   {productImageUri ? (
                     <Image source={{ uri: productImageUri }} style={styles.imagePreview} />
@@ -608,12 +615,12 @@ export default function ProductsScreen() {
 
               <View style={styles.modalActions}>
                 <TouchableOpacity
-                  style={styles.cancelButton}
+                  style={[styles.cancelButton, { backgroundColor: optionBg }]}
                   onPress={() => { setModalVisible(false); setIsEditing(false); setEditingProductId(null); setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' }); setProductImageUri(null); }}>
-                  <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+                  <ThemedText style={[styles.cancelButtonText, { color: mutedText }]}>Cancel</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+                  style={[styles.submitButton, { backgroundColor: tint }, isSubmitting && styles.submitButtonDisabled]}
                   onPress={handleAddProduct}
                   disabled={isSubmitting}>
                   <ThemedText style={styles.submitButtonText}>

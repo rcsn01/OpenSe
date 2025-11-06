@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView, Modal, TouchableOpacity, FlatList } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
 // QR code generation (install `react-native-qrcode-svg` and `react-native-svg` for Expo)
@@ -28,6 +29,11 @@ interface StockStats {
 
 export default function DashboardScreen() {
   const { token } = useAuth();
+  const background = useThemeColor({}, 'background');
+  const cardBackground = useThemeColor({ light: '#fff', dark: '#0b1220' }, 'background');
+  const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#1f2937' }, 'background');
+  const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
+  const tint = useThemeColor({}, 'tint');
   const [stats, setStats] = useState<StockStats>({ empty: 0, low: 0, inStock: 0, total: 0 });
   const [recentReports, setRecentReports] = useState<StockReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -136,20 +142,20 @@ export default function DashboardScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
-        <ThemedText style={styles.loadingText}>Loading dashboard...</ThemedText>
+      <View style={[styles.centerContainer, { backgroundColor: background }]}>
+        <ActivityIndicator size="large" color={tint} />
+        <ThemedText style={[styles.loadingText, { color: mutedText }]}>Loading dashboard...</ThemedText>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: background }]}> 
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> 
         <ThemedText type="title" style={styles.title}>Dashboard</ThemedText>
         <ThemedText style={styles.subtitle}>Stock Status Overview</ThemedText>
-        <TouchableOpacity style={styles.qrButton} onPress={openQrModal} accessibilityRole="button">
-          <ThemedText style={styles.qrButtonText}>QR Codes</ThemedText>
+        <TouchableOpacity style={[styles.qrButton, { backgroundColor: cardBackground, borderColor }]} onPress={openQrModal} accessibilityRole="button">
+          <ThemedText style={[styles.qrButtonText, { color: tint }]}>QR Codes</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -166,17 +172,17 @@ export default function DashboardScreen() {
         ) : null}
 
         <View style={styles.statsGrid}>
-          <View style={[styles.statCard, styles.emptyCard]}>
+          <View style={[styles.statCard, styles.emptyCard, { backgroundColor: cardBackground, borderColor }]}>
             <ThemedText style={styles.statNumber}>{stats.empty}</ThemedText>
             <ThemedText style={styles.statLabel}>Out of Stock</ThemedText>
           </View>
 
-          <View style={[styles.statCard, styles.lowCard]}>
+          <View style={[styles.statCard, styles.lowCard, { backgroundColor: cardBackground, borderColor }]}>
             <ThemedText style={styles.statNumber}>{stats.low}</ThemedText>
             <ThemedText style={styles.statLabel}>Low Stock</ThemedText>
           </View>
 
-          <View style={[styles.statCard, styles.inStockCard]}>
+          <View style={[styles.statCard, styles.inStockCard, { backgroundColor: cardBackground, borderColor }]}>
             <ThemedText style={styles.statNumber}>{stats.inStock}</ThemedText>
             <ThemedText style={styles.statLabel}>In Stock</ThemedText>
           </View>
@@ -188,7 +194,7 @@ export default function DashboardScreen() {
               Recent Reports
             </ThemedText>
             {recentReports.map((report) => (
-              <View key={report.id} style={styles.reportCard}>
+              <View key={report.id} style={[styles.reportCard, { backgroundColor: cardBackground, borderColor }]}>
                 <View style={styles.reportHeader}>
                   <ThemedText type="defaultSemiBold">{report.product_name}</ThemedText>
                   <View style={[
@@ -233,17 +239,17 @@ export default function DashboardScreen() {
 
       {/* QR Codes modal */}
       <Modal visible={isQrModalVisible} animationType="slide" onRequestClose={closeQrModal}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <ThemedText type="title" style={styles.modalTitle}>Product QR Codes</ThemedText>
+        <View style={[styles.modalContainer, { backgroundColor: background }]}> 
+          <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}> 
+            <ThemedText type="title" style={[styles.modalTitle, { color: tint }]}>Product QR Codes</ThemedText>
             <TouchableOpacity onPress={closeQrModal} style={styles.qrCloseButton} accessibilityRole="button">
-              <ThemedText style={styles.qrCloseButtonText}>Close</ThemedText>
+              <ThemedText style={[styles.qrCloseButtonText, { color: mutedText }]}>Close</ThemedText>
             </TouchableOpacity>
           </View>
 
           {isProductsLoading ? (
             <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color="#667eea" />
+              <ActivityIndicator size="large" color={tint} />
               <ThemedText style={styles.loadingText}>Loading products...</ThemedText>
             </View>
           ) : productsError ? (
@@ -256,7 +262,7 @@ export default function DashboardScreen() {
               keyExtractor={(item) => String(item.id)}
               contentContainerStyle={styles.qrList}
               renderItem={({ item }) => (
-                <View style={styles.qrItem}>
+                <View style={[styles.qrItem, { backgroundColor: cardBackground, borderColor }]}>
                   <ThemedText type="defaultSemiBold" style={styles.qrName}>{item.name}</ThemedText>
                   <View style={styles.qrSvgContainer}>
                     {/* Use product id as QR payload; you can change to a URL or SKU if preferred */}
