@@ -374,33 +374,35 @@ export default function HomeScreen() {
               {productLoading ? (
                 <ThemedText style={styles.qrCodeText}>Loading…</ThemedText>
               ) : (
-                <>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.qrCodeText, { fontWeight: '700', color: productTextColor }]}>{productDetails?.name ?? productName ?? scannedData}</ThemedText>
+
+                    {productDetails?.description ? (
+                      <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}>{productDetails.description}</ThemedText>
+                    ) : null}
+
+                    {(productDetails?.category || productDetails?.quantity != null || productDetails?.location) ? (
+                      <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}> 
+                        {[
+                          productDetails?.category ? `Category: ${productDetails.category}` : null,
+                          productDetails?.quantity != null ? `Qty: ${productDetails.quantity}` : null,
+                          productDetails?.location ? `${productDetails.location}` : null,
+                        ].filter(Boolean).join(' • ')}
+                      </ThemedText>
+                    ) : null}
+
+                    {productDetails?.latestStatus ? (
+                      <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
+                        <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
+                      </View>
+                    ) : null}
+                  </View>
+
                   {productDetails?.image_url ? (
-                    <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { marginBottom: 12, backgroundColor: productOptionBg }]} />
+                    <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { backgroundColor: productOptionBg, marginLeft: 12 }]} />
                   ) : null}
-
-                  <ThemedText style={[styles.qrCodeText, { fontWeight: '700', color: productTextColor }]}>{productDetails?.name ?? productName ?? scannedData}</ThemedText>
-
-                  {productDetails?.description ? (
-                    <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}>{productDetails.description}</ThemedText>
-                  ) : null}
-
-                  {(productDetails?.category || productDetails?.quantity != null || productDetails?.location) ? (
-                    <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}> 
-                      {[
-                        productDetails?.category ? `Category: ${productDetails.category}` : null,
-                        productDetails?.quantity != null ? `Qty: ${productDetails.quantity}` : null,
-                        productDetails?.location ? `${productDetails.location}` : null,
-                      ].filter(Boolean).join(' • ')}
-                    </ThemedText>
-                  ) : null}
-
-                  {productDetails?.latestStatus ? (
-                    <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
-                      <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
-                    </View>
-                  ) : null}
-                </>
+                </View>
               )}
             </View>
         )}
@@ -559,8 +561,7 @@ const styles = StyleSheet.create({
   },
   qrCodeText: {
     marginTop: 4,
-    fontSize: 12,
-    fontFamily: 'monospace',
+    fontSize: 20,
   },
   formGroup: {
     marginBottom: 20,
