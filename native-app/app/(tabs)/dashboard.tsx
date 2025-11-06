@@ -7,14 +7,13 @@ import { API_ENDPOINTS } from '@/config/api';
 
 interface StockReport {
   id: number;
-  product_id: number;
+  product_id: string;
   user_id: number;
   status: string;
   notes: string;
   image_url: string | null;
   created_at: string;
   product_name: string;
-  qr_code: string;
   username: string;
 }
 
@@ -59,11 +58,12 @@ export default function DashboardScreen() {
       const reports: StockReport[] = await response.json();
       
       // Calculate statistics from the latest report for each product
-      const latestReportsByProduct = new Map<number, StockReport>();
+      const latestReportsByProduct = new Map<string, StockReport>();
       reports.forEach(report => {
-        const existing = latestReportsByProduct.get(report.product_id);
+        const key = String(report.product_id);
+        const existing = latestReportsByProduct.get(key);
         if (!existing || new Date(report.created_at) > new Date(existing.created_at)) {
-          latestReportsByProduct.set(report.product_id, report);
+          latestReportsByProduct.set(key, report);
         }
       });
 

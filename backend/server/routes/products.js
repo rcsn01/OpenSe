@@ -23,7 +23,11 @@ router.get('/:qrCode', authMiddleware, async (req, res) => {
   const { qrCode } = req.params;
 
   try {
-    const result = await pool.query('SELECT * FROM products WHERE qr_code = $1', [qrCode]);
+    const result = await pool.query(
+      `SELECT id::text as id, name, description, category, quantity, expiry_date, location, image_url, created_at
+       FROM products WHERE id::text = $1`,
+      [qrCode]
+    );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
@@ -39,7 +43,10 @@ router.get('/:qrCode', authMiddleware, async (req, res) => {
 // Get all products
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
+    const result = await pool.query(
+      `SELECT id::text as id, name, description, category, quantity, expiry_date, location, image_url, created_at
+       FROM products ORDER BY created_at DESC`
+    );
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -50,10 +57,10 @@ router.get('/', authMiddleware, async (req, res) => {
 // Create product (supports optional image upload)
 router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { qr_code, name, description, category, quantity, expiry_date, location } = req.body;
+    const { name, description, category, quantity, expiry_date, location } = req.body;
 
-    if (!qr_code || !name) {
-      return res.status(400).json({ error: 'qr_code and name are required' });
+    if (!name) {
+      return res.status(400).json({ error: 'name is required' });
     }
 
     // If file uploaded, build image URL
@@ -63,9 +70,10 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO products (qr_code, name, description, category, quantity, expiry_date, location, image_url)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [qr_code, name, description || null, category || null, quantity ? parseInt(quantity, 10) : 0, expiry_date || null, location || null, image_url]
+      `INSERT INTO products (name, description, category, quantity, expiry_date, location, image_url)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       RETURNING id::text as id, name, description, category, quantity, expiry_date, location, image_url, created_at`,
+      [name, description || null, category || null, quantity ? parseInt(quantity, 10) : 0, expiry_date || null, location || null, image_url]
     );
 
     res.status(201).json(result.rows[0]);

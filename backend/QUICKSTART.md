@@ -31,32 +31,16 @@
 
 2. **Install dependencies**:
    ```bash
-   # Install root dependencies
+   # Install root/backend dependencies
    npm install
-   
-   # Install client dependencies
-   cd client
-   npm install
-   cd ..
    ```
 
-3. **Run in development mode**:
+3. **Run the backend in development mode**:
    ```bash
-   # Start both backend and frontend
    npm run dev
    ```
-   
-   Or run them separately:
-   ```bash
-   # Terminal 1 - Backend
-   npm run server
-   
-   # Terminal 2 - Frontend
-   npm run client
-   ```
 
-4. **Access the application**:
-   - Frontend: `http://localhost:3000`
+4. **Access the backend API**:
    - Backend API: `http://localhost:5000`
 
 ## First Time Setup
