@@ -1,4 +1,4 @@
-import { StyleSheet, View, Button, Linking, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, Button, Linking, TouchableOpacity, TextInput, ScrollView, Alert, StatusBar, Platform } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
@@ -6,17 +6,29 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
 
+// HomeScreen: Scanner + report submission screen
+// - Top half: camera preview and QR scanning (uses expo-camera)
+// - Bottom half: simple form to submit stock reports tied to the scanned product
 export default function HomeScreen() {
   const { token } = useAuth();
   const cameraRef = useRef<any | null>(null);
-  const [cameraType, setCameraType] = useState<any>('back');
-  const [cameraReady, setCameraReady] = useState(false);
-  const [CameraComp, setCameraComp] = useState<any | null>(null);
-  const [scannedData, setScannedData] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
+  // Camera refs and UI state
+  const [cameraType, setCameraType] = useState<any>('back'); // 'back' or 'front'
+  const [cameraReady, setCameraReady] = useState(false); // whether camera has initialized
+  const [CameraComp, setCameraComp] = useState<any | null>(null); // dynamic camera component
+
+  // Scanning flow state
+  const [scannedData, setScannedData] = useState<string | null>(null); // raw QR payload
+  const [isScanning, setIsScanning] = useState(false); // true when actively scanning
+
+  // Product lookup / display state
   const [productName, setProductName] = useState<string | null>(null);
   const [productLoading, setProductLoading] = useState(false);
+
+  // Throttle guard to avoid duplicate rapid scans
   const [lastScanTime, setLastScanTime] = useState<number>(0);
+
+  // Camera permissions helper from expo-camera
   const [permission, requestPermission] = useCameraPermissions();
   
   // Form state
@@ -32,10 +44,13 @@ export default function HomeScreen() {
     }
   };
 
+  // Note: This helper opens the OS settings screen so the user can manually grant camera permissions
+
   useEffect(() => {
     setCameraComp(() => CameraView);
   }, []);
 
+  // Resolve CameraView component once and allow toggling camera facing if needed
   const toggleCameraType = () => setCameraType((c: any) => (c === 'back' ? 'front' : 'back'));
 
 
@@ -59,7 +74,13 @@ export default function HomeScreen() {
     setIsScanning(true);
   };
 
+  // When a QR is scanned we set `scannedData` and stop active scanning; another effect
+  // (below) will react to `scannedData` and fetch the product details from the backend.
+
   // When a QR code is scanned, fetch product details (requires auth token)
+  // Explanation: this effect watches `scannedData`. When a QR is present we call
+  // GET /products/:id to resolve the human-readable product name to show in the UI.
+  // `mounted` guard prevents state updates after unmount.
   useEffect(() => {
     let mounted = true;
     const fetchProduct = async () => {
@@ -132,10 +153,16 @@ export default function HomeScreen() {
     }
   };
 
+  // handleSubmit: gather the scanned QR code plus status/notes and POST a stock report.
+  // The backend expects a multipart form in this flow (FormData). No image is included here.
+
   return (
     <View style={styles.container}>
       {/* Top Half - Camera */}
-      <View style={styles.cameraSection}>
+      <View style={[
+        styles.cameraSection,
+        Platform.OS === 'android' && { paddingTop: StatusBar.currentHeight || 0 }
+      ]}>
         {permission == null && (
           <View style={styles.cameraPlaceholder}>
             <ThemedText style={styles.placeholderText}>Requesting camera permission...</ThemedText>
@@ -174,30 +201,41 @@ export default function HomeScreen() {
 
               const CamComp: any = Candidate;
               return (
-                <CamComp
-                  ref={cameraRef}
-                  style={styles.camera}
-                  facing={cameraType as any}
-                  onCameraReady={() => setCameraReady(true)}
-                  barcodeScannerSettings={{
-                    barcodeTypes: ['qr'],
-                  }}
-                  onBarcodeScanned={handleBarcodeScanned}
-                />
+                <>
+                  <CamComp
+                    ref={cameraRef}
+                    style={styles.camera}
+                    facing={cameraType as any}
+                    onCameraReady={() => setCameraReady(true)}
+                    barcodeScannerSettings={{
+                      barcodeTypes: ['qr'],
+                    }}
+                    onBarcodeScanned={handleBarcodeScanned}
+                  />
+
+                  {/* Close button overlay (bottom-right) while scanning */}
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setIsScanning(false)}
+                    accessibilityLabel="Close scanning"
+                  >
+                    <ThemedText style={styles.closeButtonText}>Close</ThemedText>
+                  </TouchableOpacity>
+                </>
               );
             })() : (
               <View style={styles.cameraPlaceholder}>
                 {scannedData ? (
-                  // Show product name and Rescan button inside the camera area
-                  <>
+                  // Show product info stacked above the Rescan button inside the camera area
+                  <View style={styles.productInfoContainer}>
                     <ThemedText style={styles.productNameText}>
                       {productLoading ? 'Loading…' : (productName ?? 'Unknown Product')}
                     </ThemedText>
-                    <View style={{ flex: 1 }} />
+                    <ThemedText style={styles.placeholderSubtext}>{scannedData}</ThemedText>
                     <TouchableOpacity style={[styles.primaryButton, styles.previewScanButton]} onPress={startScanning}>
                       <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>Rescan</ThemedText>
                     </TouchableOpacity>
-                  </>
+                  </View>
                 ) : (
                   <>
                     <ThemedText style={styles.placeholderText}>📷</ThemedText>
@@ -229,12 +267,7 @@ export default function HomeScreen() {
 
       {/* Bottom Half - Form */}
       <ScrollView style={styles.formSection} contentContainerStyle={styles.formContent}>
-        {scannedData && (
-          <View style={styles.scannedInfo}>
-            <ThemedText type="defaultSemiBold">Product QR Code:</ThemedText>
-            <ThemedText style={styles.qrCodeText}>{scannedData}</ThemedText>
-          </View>
-        )}
+        {/* Product QR code display removed — product information is shown in the camera area */}
 
         <View style={styles.formGroup}>
           <ThemedText type="defaultSemiBold" style={styles.label}>Stock Status</ThemedText>
@@ -283,22 +316,15 @@ export default function HomeScreen() {
 
         <View style={styles.actionButtons}>
           {scannedData ? (
-            <>
-              <TouchableOpacity 
-                style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]} 
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-              >
-                <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-                  {isSubmitting ? 'Submitting...' : 'Submit Report'}
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButton} onPress={startScanning}>
-                <ThemedText type="defaultSemiBold" style={styles.secondaryButtonText}>
-                  Rescan
-                </ThemedText>
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity 
+              style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]} 
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+            >
+              <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
+                {isSubmitting ? 'Submitting...' : 'Submit Report'}
+              </ThemedText>
+            </TouchableOpacity>
           ) : null}
         </View>
       </ScrollView>
@@ -477,6 +503,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 8,
+  },
+  productInfoContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    gap: 8,
+  },
+  closeButton: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
   primaryButtonText: {
     color: '#fff',
