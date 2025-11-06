@@ -1,7 +1,5 @@
-import { Image } from 'expo-image';
 import { StyleSheet, View, Button, Linking, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
-import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/themed-text';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -16,13 +14,14 @@ export default function HomeScreen() {
   const [CameraComp, setCameraComp] = useState<any | null>(null);
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [productName, setProductName] = useState<string | null>(null);
+  const [productLoading, setProductLoading] = useState(false);
   const [lastScanTime, setLastScanTime] = useState<number>(0);
   const [permission, requestPermission] = useCameraPermissions();
   
   // Form state
   const [status, setStatus] = useState<'empty' | 'low' | 'in-stock'>('empty');
   const [notes, setNotes] = useState('');
-  const [reportImage, setReportImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOpenSettings = async () => {
@@ -39,18 +38,6 @@ export default function HomeScreen() {
 
   const toggleCameraType = () => setCameraType((c: any) => (c === 'back' ? 'front' : 'back'));
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-    });
-
-    if (!result.canceled) {
-      setReportImage(result.assets[0].uri);
-    }
-  };
 
   const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
     // Prevent scanning too frequently (throttle to once per second)
@@ -69,9 +56,42 @@ export default function HomeScreen() {
     setScannedData(null);
     setStatus('empty');
     setNotes('');
-    setReportImage(null);
     setIsScanning(true);
   };
+
+  // When a QR code is scanned, fetch product details (requires auth token)
+  useEffect(() => {
+    let mounted = true;
+    const fetchProduct = async () => {
+      if (!scannedData) return;
+      setProductLoading(true);
+      setProductName(null);
+      try {
+        const res = await fetch(`${API_ENDPOINTS.products}/${scannedData}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+
+        if (!res.ok) {
+          // Show fallback name
+          if (mounted) setProductName('Unknown Product');
+          return;
+        }
+
+        const data = await res.json();
+        if (mounted) setProductName(data.name ?? 'Unknown Product');
+      } catch (err) {
+        if (mounted) setProductName('Unknown Product');
+      } finally {
+        if (mounted) setProductLoading(false);
+      }
+    };
+
+    fetchProduct();
+    return () => { mounted = false; };
+  }, [scannedData, token]);
 
   const handleSubmit = async () => {
     if (!scannedData) {
@@ -87,17 +107,7 @@ export default function HomeScreen() {
       formData.append('status', status);
       formData.append('notes', notes);
 
-      if (reportImage) {
-        const filename = reportImage.split('/').pop() || 'image.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-
-        formData.append('image', {
-          uri: reportImage,
-          name: filename,
-          type,
-        } as any);
-      }
+      // No image attachment in this flow
 
       const response = await fetch(API_ENDPOINTS.reports, {
         method: 'POST',
@@ -177,10 +187,32 @@ export default function HomeScreen() {
               );
             })() : (
               <View style={styles.cameraPlaceholder}>
-                <ThemedText style={styles.placeholderText}>📷</ThemedText>
-                <ThemedText style={styles.placeholderSubtext}>
-                  {scannedData ? `Scanned: ${scannedData}` : 'Ready to scan'}
-                </ThemedText>
+                {scannedData ? (
+                  // Show product name and Rescan button inside the camera area
+                  <>
+                    <ThemedText style={styles.productNameText}>
+                      {productLoading ? 'Loading…' : (productName ?? 'Unknown Product')}
+                    </ThemedText>
+                    <View style={{ flex: 1 }} />
+                    <TouchableOpacity style={[styles.primaryButton, styles.previewScanButton]} onPress={startScanning}>
+                      <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>Rescan</ThemedText>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <ThemedText style={styles.placeholderText}>📷</ThemedText>
+                    <ThemedText style={styles.placeholderSubtext}>
+                      {'Ready to scan'}
+                    </ThemedText>
+
+                    {/* When ready (not scanning and no scannedData), offer a Scan button in the preview */}
+                    {!isScanning && !scannedData && (
+                      <TouchableOpacity style={[styles.primaryButton, styles.previewScanButton]} onPress={startScanning}>
+                        <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>Scan QR Code</ThemedText>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
               </View>
             )}
 
@@ -247,28 +279,10 @@ export default function HomeScreen() {
           />
         </View>
 
-        <View style={styles.formGroup}>
-          <ThemedText type="defaultSemiBold" style={styles.label}>Image (Optional)</ThemedText>
-          <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-            <ThemedText style={styles.imageButtonText}>
-              {reportImage ? '✓ Image Added' : '+ Add Image'}
-            </ThemedText>
-          </TouchableOpacity>
-          {reportImage && (
-            <View style={styles.imagePreview}>
-              <Image source={{ uri: reportImage }} style={styles.previewImage} />
-            </View>
-          )}
-        </View>
+        {/* Image upload removed per request */}
 
         <View style={styles.actionButtons}>
-          {!scannedData ? (
-            <TouchableOpacity style={styles.primaryButton} onPress={startScanning}>
-              <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-                Scan QR Code
-              </ThemedText>
-            </TouchableOpacity>
-          ) : (
+          {scannedData ? (
             <>
               <TouchableOpacity 
                 style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]} 
@@ -285,7 +299,7 @@ export default function HomeScreen() {
                 </ThemedText>
               </TouchableOpacity>
             </>
-          )}
+          ) : null}
         </View>
       </ScrollView>
     </View>
@@ -451,6 +465,18 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  previewScanButton: {
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  productNameText: {
+    fontSize: 28,
+    color: '#fff',
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 8,
   },
   primaryButtonText: {
     color: '#fff',
