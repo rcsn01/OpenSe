@@ -1,112 +1,346 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { API_ENDPOINTS } from '@/config/api';
 
-export default function TabTwoScreen() {
+interface StockReport {
+  id: number;
+  product_id: number;
+  user_id: number;
+  status: string;
+  notes: string;
+  image_url: string | null;
+  created_at: string;
+  product_name: string;
+  qr_code: string;
+  username: string;
+}
+
+interface StockStats {
+  empty: number;
+  low: number;
+  inStock: number;
+  total: number;
+}
+
+export default function DashboardScreen() {
+  const { token } = useAuth();
+  const [stats, setStats] = useState<StockStats>({ empty: 0, low: 0, inStock: 0, total: 0 });
+  const [recentReports, setRecentReports] = useState<StockReport[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    setError('');
+
+    try {
+      const response = await fetch(API_ENDPOINTS.reports, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch reports');
+      }
+
+      const reports: StockReport[] = await response.json();
+      
+      // Calculate statistics from the latest report for each product
+      const latestReportsByProduct = new Map<number, StockReport>();
+      reports.forEach(report => {
+        const existing = latestReportsByProduct.get(report.product_id);
+        if (!existing || new Date(report.created_at) > new Date(existing.created_at)) {
+          latestReportsByProduct.set(report.product_id, report);
+        }
+      });
+
+      const latestReports = Array.from(latestReportsByProduct.values());
+      
+      const calculatedStats: StockStats = {
+        empty: latestReports.filter(r => r.status === 'empty').length,
+        low: latestReports.filter(r => r.status === 'low').length,
+        inStock: latestReports.filter(r => r.status === 'in-stock').length,
+        total: latestReports.length,
+      };
+
+      setStats(calculatedStats);
+      setRecentReports(reports.slice(0, 5)); // Get 5 most recent reports
+    } catch (err: any) {
+      setError(err.message || 'Failed to load dashboard data');
+      console.error('Dashboard error:', err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    fetchDashboardData(true);
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#667eea" />
+        <ThemedText style={styles.loadingText}>Loading dashboard...</ThemedText>
+      </View>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <ThemedText type="title" style={styles.title}>Dashboard</ThemedText>
+        <ThemedText style={styles.subtitle}>Stock Status Overview</ThemedText>
+      </View>
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }>
+        {error ? (
+          <View style={styles.errorContainer}>
+            <ThemedText style={styles.errorText}>{error}</ThemedText>
+          </View>
+        ) : null}
+
+        <View style={styles.statsGrid}>
+          <View style={[styles.statCard, styles.emptyCard]}>
+            <ThemedText style={styles.statNumber}>{stats.empty}</ThemedText>
+            <ThemedText style={styles.statLabel}>Out of Stock</ThemedText>
+          </View>
+
+          <View style={[styles.statCard, styles.lowCard]}>
+            <ThemedText style={styles.statNumber}>{stats.low}</ThemedText>
+            <ThemedText style={styles.statLabel}>Low Stock</ThemedText>
+          </View>
+
+          <View style={[styles.statCard, styles.inStockCard]}>
+            <ThemedText style={styles.statNumber}>{stats.inStock}</ThemedText>
+            <ThemedText style={styles.statLabel}>In Stock</ThemedText>
+          </View>
+        </View>
+
+        {recentReports.length > 0 && (
+          <View style={styles.recentSection}>
+            <ThemedText type="subtitle" style={styles.recentTitle}>
+              Recent Reports
             </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+            {recentReports.map((report) => (
+              <View key={report.id} style={styles.reportCard}>
+                <View style={styles.reportHeader}>
+                  <ThemedText type="defaultSemiBold">{report.product_name}</ThemedText>
+                  <View style={[
+                    styles.statusBadge,
+                    report.status === 'empty' && styles.statusEmpty,
+                    report.status === 'low' && styles.statusLow,
+                    report.status === 'in-stock' && styles.statusInStock,
+                  ]}>
+                    <ThemedText style={styles.statusText}>
+                      {report.status === 'empty' ? 'Empty' : 
+                       report.status === 'low' ? 'Low' : 'In Stock'}
+                    </ThemedText>
+                  </View>
+                </View>
+                <ThemedText style={styles.reportDetail}>
+                  By {report.username}
+                </ThemedText>
+                <ThemedText style={styles.reportDetail}>
+                  {new Date(report.created_at).toLocaleDateString()} at{' '}
+                  {new Date(report.created_at).toLocaleTimeString()}
+                </ThemedText>
+                {report.notes && (
+                  <ThemedText style={styles.reportNotes}>{report.notes}</ThemedText>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {recentReports.length === 0 && !error && (
+          <View style={styles.emptyState}>
+            <ThemedText style={styles.emptyText}>📊</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.emptyTitle}>
+              No reports yet
+            </ThemedText>
+            <ThemedText style={styles.emptyStateText}>
+              Start scanning products to see your stock status!
+            </ThemedText>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
   },
-  titleContainer: {
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    marginTop: 12,
+    opacity: 0.7,
+  },
+  header: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    opacity: 0.6,
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 16,
+  },
+  errorContainer: {
+    backgroundColor: '#fee2e2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: '#ef4444',
+    textAlign: 'center',
+  },
+  statsGrid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 100,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  emptyCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  lowCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b',
+  },
+  inStockCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
+  },
+  statNumber: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  recentSection: {
+    marginTop: 8,
+  },
+  recentTitle: {
+    marginBottom: 12,
+    fontSize: 18,
+  },
+  reportCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  reportHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusEmpty: {
+    backgroundColor: '#fee2e2',
+  },
+  statusLow: {
+    backgroundColor: '#fef3c7',
+  },
+  statusInStock: {
+    backgroundColor: '#d1fae5',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  reportDetail: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginBottom: 4,
+  },
+  reportNotes: {
+    fontSize: 13,
+    marginTop: 8,
+    fontStyle: 'italic',
+    opacity: 0.8,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    textAlign: 'center',
+    opacity: 0.6,
   },
 });
