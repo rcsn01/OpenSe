@@ -202,6 +202,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     opacity: 0.7,
+    color: '#6b7280',
   },
   header: {
     backgroundColor: '#fff',
@@ -215,10 +216,12 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 4,
+    color: '#000',
   },
   subtitle: {
     fontSize: 14,
     opacity: 0.6,
+    color: '#6b7280',
   },
   content: {
     flex: 1,
@@ -268,12 +271,14 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 8,
+    color: '#000',
   },
   statLabel: {
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
     opacity: 0.8,
+    color: '#374151',
   },
   recentSection: {
     marginTop: 8,
@@ -281,6 +286,7 @@ const styles = StyleSheet.create({
   recentTitle: {
     marginBottom: 12,
     fontSize: 18,
+    color: '#000',
   },
   reportCard: {
     backgroundColor: '#fff',
@@ -313,17 +319,20 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#374151',
   },
   reportDetail: {
     fontSize: 12,
     opacity: 0.7,
     marginBottom: 4,
+    color: '#6b7280',
   },
   reportNotes: {
     fontSize: 13,
     marginTop: 8,
     fontStyle: 'italic',
     opacity: 0.8,
+    color: '#6b7280',
   },
   emptyState: {
     alignItems: 'center',
@@ -337,10 +346,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     marginBottom: 8,
+    color: '#000',
   },
   emptyStateText: {
     fontSize: 14,
     textAlign: 'center',
     opacity: 0.6,
+    color: '#6b7280',
   },
 });

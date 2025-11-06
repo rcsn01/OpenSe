@@ -93,10 +93,12 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 4,
+    color: '#000',
   },
   subtitle: {
     fontSize: 14,
     opacity: 0.6,
+    color: '#6b7280',
   },
   content: {
     flex: 1,
@@ -130,10 +132,12 @@ const styles = StyleSheet.create({
   welcomeText: {
     marginBottom: 4,
     fontSize: 20,
+    color: '#000',
   },
   emailText: {
     opacity: 0.6,
     fontSize: 14,
+    color: '#6b7280',
   },
   section: {
     marginBottom: 24,
@@ -141,6 +145,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: 12,
     fontSize: 16,
+    color: '#000',
   },
   infoCard: {
     backgroundColor: '#fff',
@@ -159,10 +164,12 @@ const styles = StyleSheet.create({
   infoLabel: {
     opacity: 0.6,
     fontSize: 14,
+    color: '#6b7280',
   },
   infoValue: {
     fontWeight: '600',
     fontSize: 14,
+    color: '#000',
   },
   logoutButton: {
     backgroundColor: '#ef4444',
