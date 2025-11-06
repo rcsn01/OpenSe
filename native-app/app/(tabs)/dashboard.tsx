@@ -6,8 +6,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
-// QR code generation (install `react-native-qrcode-svg` and `react-native-svg` for Expo)
-import QRCode from 'react-native-qrcode-svg';
+import ProductQrModal from '@/components/product-qr-modal';
 
 interface StockReport {
   id: number;
@@ -43,10 +42,7 @@ export default function DashboardScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
-  // Products & QR modal
-  const [products, setProducts] = useState<Array<{ id: number; name: string; [k: string]: any }>>([]);
-  const [isProductsLoading, setIsProductsLoading] = useState(false);
-  const [productsError, setProductsError] = useState('');
+  // QR modal visibility
   const [isQrModalVisible, setIsQrModalVisible] = useState(false);
 
   useEffect(() => {
@@ -105,29 +101,7 @@ export default function DashboardScreen() {
   };
 
   const fetchProducts = async () => {
-    setIsProductsLoading(true);
-    setProductsError('');
-    try {
-      const res = await fetch(API_ENDPOINTS.products, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) throw new Error('Failed to fetch products');
-
-      const data = await res.json();
-      // Expecting an array of products. Normalize to objects with id and name.
-      const normalized = Array.isArray(data)
-        ? data.map((p: any) => ({ id: p.id ?? p.product_id ?? p._id ?? 0, name: p.name ?? p.product_name ?? p.title ?? String(p.id) , ...p }))
-        : [];
-      setProducts(normalized);
-    } catch (err: any) {
-      console.error('Products fetch error:', err);
-      setProductsError(err.message || 'Failed to load products');
-    } finally {
-      setIsProductsLoading(false);
-    }
+    // moved to ProductQrModal component
   };
 
   const onRefresh = () => {
@@ -136,8 +110,6 @@ export default function DashboardScreen() {
 
   const openQrModal = () => {
     setIsQrModalVisible(true);
-    // load products when opening
-    fetchProducts();
   };
 
   const closeQrModal = () => {
@@ -243,44 +215,7 @@ export default function DashboardScreen() {
         <ThemedText style={[styles.qrButtonText, { color: buttonTextSelected }]}>QR Codes</ThemedText>
       </TouchableOpacity>
 
-      {/* QR Codes modal */}
-      <Modal visible={isQrModalVisible} animationType="slide" onRequestClose={closeQrModal}>
-        <View style={[styles.modalContainer, { backgroundColor: background }]}> 
-          <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}> 
-            <ThemedText type="title" style={[styles.modalTitle, { color: tint }]}>Product QR Codes</ThemedText>
-            <TouchableOpacity onPress={closeQrModal} style={[styles.qrCloseButton, { backgroundColor: cardBackground, borderColor }]} accessibilityRole="button">
-              <ThemedText style={[styles.qrCloseButtonText, { color: mutedText }]}>Close</ThemedText>
-            </TouchableOpacity>
-          </View>
-
-          {isProductsLoading ? (
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={tint} />
-              <ThemedText style={[styles.loadingText, { color: mutedText }]}>Loading products...</ThemedText>
-            </View>
-          ) : productsError ? (
-            <View style={styles.errorContainer}>
-              <ThemedText style={styles.errorText}>{productsError}</ThemedText>
-            </View>
-          ) : (
-            <FlatList
-              data={products}
-              keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={styles.qrList}
-              renderItem={({ item }) => (
-                <View style={[styles.qrItem, { backgroundColor: cardBackground, borderColor }]}>
-                  <ThemedText type="defaultSemiBold" style={[styles.qrName, { color: textColor }]}>{item.name}</ThemedText>
-                  <View style={[styles.qrSvgContainer, { backgroundColor: cardBackground }]}>
-                    {/* Use product id as QR payload; you can change to a URL or SKU if preferred */}
-                    {/* @ts-ignore */}
-                    <QRCode value={String(item.id)} size={140} />
-                  </View>
-                </View>
-              )}
-            />
-          )}
-        </View>
-      </Modal>
+      <ProductQrModal visible={isQrModalVisible} onClose={closeQrModal} />
     </View>
   );
 }

@@ -18,14 +18,14 @@ export const Colors = {
     mutedText: '#a0a0a0ff',
     //buttons
     buttonBackgroundDefault: '#ffffffff',
-    buttonBackgroundSelected: '#c7dfffff',
+    buttonBackgroundSelected: '#e9e9e9ff',
     buttonTextDefault: '#505050ff',
     buttonTextSelected: '#000000ff',
     // product card
     productCardBackground: '#ffffffff',
     productCardBorder: '#e5e7eb',
     productThumbBackground: '#f3f4f6',
-    productMutedText: '#6b7280',
+    productMutedText: '#919191ff',
     //menu bar color
     menuBarDefault: '#949494ff',
     menuBarSelected: '#000000ff',
@@ -48,8 +48,8 @@ export const Colors = {
     // product card
     productCardBackground: '#0b1220',
     productCardBorder: '#1f2937',
-  productThumbBackground: '#111827',
-  productMutedText: '#9ca3af',
+    productThumbBackground: '#111827',
+    productMutedText: '#4363a3ff',
     //menu bar color
     menuBarDefault: '#838383ff',
     menuBarSelected: '#ffffffff',
