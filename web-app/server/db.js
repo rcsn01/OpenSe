@@ -1,4 +1,6 @@
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
 
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -10,6 +12,11 @@ const pool = new Pool({
 
 // Initialize database tables
 const initDB = async () => {
+  // Ensure uploads directory exists (for product/report images)
+  const uploadsDir = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
   const client = await pool.connect();
   try {
     await client.query(`
@@ -26,6 +33,11 @@ const initDB = async () => {
         qr_code VARCHAR(255) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
         description TEXT,
+        category VARCHAR(255),
+        quantity INTEGER DEFAULT 0,
+        expiry_date DATE,
+        location VARCHAR(255),
+        image_url VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -46,6 +58,15 @@ const initDB = async () => {
         ('product-02', 'Product 2', 'Sample product 2'),
         ('product-03', 'Product 3', 'Sample product 3')
       ON CONFLICT (qr_code) DO NOTHING;
+    `);
+    // Ensure new columns exist for existing databases (safe migrations)
+    await client.query(`
+      ALTER TABLE products
+        ADD COLUMN IF NOT EXISTS category VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS expiry_date DATE,
+        ADD COLUMN IF NOT EXISTS location VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS image_url VARCHAR(500);
     `);
     console.log('Database initialized successfully');
   } catch (err) {
