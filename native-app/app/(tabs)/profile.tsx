@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setPreferredColorScheme, useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { Colors } from '@/constants/theme';
 
 export default function TabFourScreen() {
   const { user, logout } = useAuth();
@@ -15,9 +16,15 @@ export default function TabFourScreen() {
   const background = useThemeColor({}, 'background');
   const cardBackground = useThemeColor({ light: '#fff', dark: '#0b1220' }, 'background');
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#1f2937' }, 'background');
-  const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
+  const mutedText = useThemeColor({ light: Colors.light.mutedText, dark: Colors.dark.mutedText }, 'text');
   const tint = useThemeColor({}, 'tint');
-  const optionBg = useThemeColor({ light: '#f3f4f6', dark: '#111827' }, 'background');
+  const optionBg = useThemeColor({ light: Colors.light.mutedBackground, dark: Colors.dark.mutedBackground }, 'background');
+  const scheme = useColorScheme();
+  // button theme tokens
+  const buttonBackgroundSelected = useThemeColor({ light: Colors.light.buttonBackgroundSelected, dark: Colors.dark.buttonBackgroundSelected }, 'background');
+  const buttonBackgroundDefault = useThemeColor({ light: Colors.light.buttonBackgroundDefault, dark: Colors.dark.buttonBackgroundDefault }, 'background');
+  const buttonTextSelected = useThemeColor({ light: Colors.light.buttonTextSelected, dark: Colors.dark.buttonTextSelected }, 'text');
+  const buttonTextDefault = useThemeColor({ light: Colors.light.buttonTextDefault, dark: Colors.dark.buttonTextDefault }, 'text');
 
   useEffect(() => {
     (async () => {
@@ -102,30 +109,42 @@ export default function TabFourScreen() {
               <ThemedText style={styles.infoLabel}>Theme</ThemedText>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TouchableOpacity
-                  style={[styles.themeOption, styles.themeOptionLeft, { backgroundColor: pref === 'light' ? tint : optionBg }]}
+                  style={[
+                    styles.themeOption,
+                    styles.themeOptionLeft,
+                    { backgroundColor: pref === 'light' ? buttonBackgroundSelected : buttonBackgroundDefault },
+                  ]}
                   onPress={async () => { await setPreferredColorScheme('light'); setPref('light'); }}
                 >
-                  <ThemedText style={[styles.themeOptionText, pref === 'light' ? { color: '#fff' } : { color: mutedText } ]}>{'Light'}</ThemedText>
+                  <ThemedText style={[styles.themeOptionText, pref === 'light' ? { color: buttonTextSelected } : { color: mutedText } ]}>{'Light'}</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.themeOption, styles.themeOptionRight, { backgroundColor: pref === 'dark' ? tint : optionBg }]}
+                  style={[
+                    styles.themeOption,
+                    styles.themeOptionRight,
+                    { backgroundColor: pref === 'dark' ? buttonBackgroundSelected : buttonBackgroundDefault },
+                  ]}
                   onPress={async () => { await setPreferredColorScheme('dark'); setPref('dark'); }}
                 >
-                  <ThemedText style={[styles.themeOptionText, pref === 'dark' ? { color: '#fff' } : { color: mutedText } ]}>{'Dark'}</ThemedText>
+                  <ThemedText style={[styles.themeOptionText, pref === 'dark' ? { color: buttonTextSelected } : { color: mutedText } ]}>{'Dark'}</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.themeOption, styles.themeOptionRight, { backgroundColor: pref === 'system' ? tint : optionBg }]}
+                  style={[
+                    styles.themeOption,
+                    styles.themeOptionRight,
+                    { backgroundColor: pref === 'system' ? buttonBackgroundSelected : buttonBackgroundDefault },
+                  ]}
                   onPress={async () => { await setPreferredColorScheme('system'); setPref('system'); }}
                 >
-                  <ThemedText style={[styles.themeOptionText, pref === 'system' ? { color: '#fff' } : { color: mutedText } ]}>{'System'}</ThemedText>
+                  <ThemedText style={[styles.themeOptionText, pref === 'system' ? { color: buttonTextSelected } : { color: mutedText } ]}>{'System'}</ThemedText>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         </View>
 
-        <TouchableOpacity style={[styles.logoutButton, { backgroundColor: tint }]} onPress={handleLogout}>
-          <ThemedText type="defaultSemiBold" style={styles.logoutButtonText}>
+        <TouchableOpacity style={[styles.logoutButton, { backgroundColor: buttonBackgroundSelected }]} onPress={handleLogout}>
+          <ThemedText type="defaultSemiBold" style={[styles.logoutButtonText, { color: buttonTextSelected }]}> 
             Logout
           </ThemedText>
         </TouchableOpacity>

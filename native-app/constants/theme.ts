@@ -5,25 +5,54 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
 export const Colors = {
   light: {
     text: '#11181C',
     background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    tint: '#e8f3ffff',
+    icon: '#000000ff',
+    tabIconDefault: '#000000ff',
+    tabIconSelected: '#000000ff',
+    // muted UI tones for secondary buttons / inactive states
+    mutedBackground: '#dadadaff',
+    mutedText: '#a0a0a0ff',
+    //buttons
+    buttonBackgroundDefault: '#ffffffff',
+    buttonBackgroundSelected: '#c7dfffff',
+    buttonTextDefault: '#505050ff',
+    buttonTextSelected: '#000000ff',
+    // product card
+    productCardBackground: '#ffffffff',
+    productCardBorder: '#e5e7eb',
+    productThumbBackground: '#f3f4f6',
+    productMutedText: '#6b7280',
+    //menu bar color
+    menuBarDefault: '#949494ff',
+    menuBarSelected: '#000000ff',
   },
   dark: {
     text: '#ECEDEE',
     background: '#151718',
-    tint: tintColorDark,
+    tint: '#fff',
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    tabIconSelected: '#fff',
+    // muted UI tones for secondary buttons / inactive states
+    mutedBackground: '#1f2937',
+    mutedText: '#9ca3af',
+    //buttons
+    buttonBackgroundDefault: '#ffffffff',
+    buttonBackgroundSelected: '#949494ff',
+    buttonTextDefault: '#505050ff',
+    buttonTextSelected: '#000000ff',
+    // product card
+    productCardBackground: '#0b1220',
+    productCardBorder: '#1f2937',
+  productThumbBackground: '#111827',
+  productMutedText: '#9ca3af',
+    //menu bar color
+    menuBarDefault: '#838383ff',
+    menuBarSelected: '#ffffffff',
   },
 };
 

@@ -1,11 +1,15 @@
-import { StyleSheet, View, Button, Linking, TouchableOpacity, TextInput, ScrollView, Alert, StatusBar, Platform } from 'react-native';
+import { StyleSheet, View, Button, Linking, TouchableOpacity, TextInput, ScrollView, Alert, StatusBar, Platform, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useRef, useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { Colors } from '@/constants/theme';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
+import { API_BASE_URL } from '@/config/api';
 
 // HomeScreen: Scanner + report submission screen
 // - Top half: camera preview and QR scanning (uses expo-camera)
@@ -24,6 +28,7 @@ export default function HomeScreen() {
 
   // Product lookup / display state
   const [productName, setProductName] = useState<string | null>(null);
+  const [productDetails, setProductDetails] = useState<any | null>(null);
   const [productLoading, setProductLoading] = useState(false);
 
   // Throttle guard to avoid duplicate rapid scans
@@ -75,14 +80,43 @@ export default function HomeScreen() {
     setIsScanning(true);
   };
 
-  // Resolve theme-aware colors so text remains visible in both light/dark modes
+  // General
+  const scheme = useColorScheme();
+  const insets = useSafeAreaInsets();
   const themeBackground = useThemeColor({}, 'background');
-  const formBackground = useThemeColor({ light: '#f9fafb', dark: '#0f1720' }, 'background');
-  const scannedInfoBackground = useThemeColor({ light: '#e0e7ff', dark: '#111827' }, 'background');
-  const cameraPlaceholderBackground = useThemeColor({ light: '#1a1a1a', dark: '#0b0b0b' }, 'background');
-  const scanUnderBackground = useThemeColor({ light: '#f9fafb', dark: '#0f1720' }, 'background');
   const themeText = useThemeColor({}, 'text');
-  const inputBackground = useThemeColor({ light: '#ffffff', dark: '#081018' }, 'background');
+  const tint = useThemeColor({}, 'tint');
+  const activeTextColor = scheme === 'dark' ? '#000' : '#fff';
+
+  // Backgrounds
+  // form and scan-under use the theme background
+  const formBackground = useThemeColor({ light: Colors.light.background, dark: Colors.dark.background }, 'background');
+  const scanUnderBackground = useThemeColor({ light: Colors.light.background, dark: Colors.dark.background }, 'background');
+  const scannedInfoBackground = useThemeColor({ light: Colors.light.tint, dark: Colors.dark.background }, 'background');
+  const cameraPlaceholderBackground = useThemeColor({ light: Colors.dark.background, dark: Colors.dark.background }, 'background');
+  const optionBg = useThemeColor({ light: Colors.light.mutedBackground, dark: Colors.dark.mutedBackground }, 'background');
+  const inactiveBg = useThemeColor({ light: Colors.light.mutedBackground, dark: Colors.dark.mutedBackground }, 'background');
+
+  // Buttons
+  const buttonBackgroundDefault = useThemeColor({ light: Colors.light.buttonBackgroundDefault, dark: Colors.dark.buttonBackgroundDefault }, 'background');
+  const buttonBackgroundSelected = useThemeColor({ light: Colors.light.buttonBackgroundSelected, dark: Colors.dark.buttonBackgroundSelected }, 'background');
+  const buttonTextDefault = useThemeColor({ light: Colors.light.buttonTextDefault, dark: Colors.dark.buttonTextDefault }, 'text');
+  const buttonTextSelected = useThemeColor({ light: Colors.light.buttonTextSelected, dark: Colors.dark.buttonTextSelected }, 'text');
+
+  // Inputs & Text variants
+  const inputBackground = useThemeColor({ light: Colors.light.background, dark: Colors.dark.background }, 'background');
+  const placeholderTextColor = useThemeColor({ light: '#999', dark: '#9ca3af' }, 'text');
+  const secondaryText = useThemeColor({ light: Colors.light.mutedText, dark: Colors.dark.mutedText }, 'text');
+
+  // Borders / misc
+  const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#1f2937' }, 'background');
+
+  // Product Card
+  const productCardBackground = useThemeColor({ light: Colors.light.productCardBackground, dark: Colors.dark.productCardBackground }, 'background');
+  const productBorderColor = useThemeColor({ light: Colors.light.productCardBorder, dark: Colors.dark.productCardBorder }, 'background');
+  const productOptionBg = useThemeColor({ light: Colors.light.productThumbBackground, dark: Colors.dark.productThumbBackground }, 'background');
+  const productMutedText = useThemeColor({ light: Colors.light.productMutedText, dark: Colors.dark.productMutedText }, 'text');
+  const productTextColor = useThemeColor({}, 'text');
 
   // When a QR is scanned we set `scannedData` and stop active scanning; another effect
   // (below) will react to `scannedData` and fetch the product details from the backend.
@@ -95,6 +129,7 @@ export default function HomeScreen() {
       if (!scannedData) return;
       setProductLoading(true);
       setProductName(null);
+      setProductDetails(null);
       try {
         const res = await fetch(`${API_ENDPOINTS.products}/${scannedData}`, {
           headers: {
@@ -110,7 +145,10 @@ export default function HomeScreen() {
         }
 
         const data = await res.json();
-        if (mounted) setProductName(data.name ?? 'Unknown Product');
+        if (mounted) {
+          setProductName(data.name ?? 'Unknown Product');
+          setProductDetails(data || null);
+        }
       } catch (err) {
         if (mounted) setProductName('Unknown Product');
       } finally {
@@ -166,11 +204,19 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeBackground }]}>
+      {!isScanning && !scannedData && (
+        <View style={[styles.header, { borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 12 }]}> 
+          <ThemedText type="title" style={[styles.title, { color: themeText }]}>Scan</ThemedText>
+        </View>
+      )}
       {/* Top Half - Camera */}
       {isScanning ? (
         <View style={[
           styles.cameraSection,
-          Platform.OS === 'android' && { paddingTop: StatusBar.currentHeight || 0 }
+          // Add safe-area padding on iOS so camera content doesn't underlap the Dynamic Island
+          Platform.OS === 'android'
+            ? { paddingTop: StatusBar.currentHeight || 0 }
+            : { paddingTop: insets.top || 12 }
         ]}>
         {permission == null && (
           <View style={[styles.cameraPlaceholder, { backgroundColor: cameraPlaceholderBackground }]}>
@@ -184,11 +230,11 @@ export default function HomeScreen() {
               Please enable camera permission
             </ThemedText>
             <View style={styles.permissionButtons}>
-              <TouchableOpacity style={styles.permissionButton} onPress={handleOpenSettings}>
-                <ThemedText style={styles.permissionButtonText}>Open Settings</ThemedText>
+                <TouchableOpacity style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} onPress={handleOpenSettings}>
+                <ThemedText style={[styles.permissionButtonText, { color: buttonTextSelected }]}>Open Settings</ThemedText>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-                <ThemedText style={styles.permissionButtonText}>Request Permission</ThemedText>
+                <TouchableOpacity style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} onPress={requestPermission}>
+                <ThemedText style={[styles.permissionButtonText, { color: buttonTextSelected }]}>Request Permission</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -234,18 +280,49 @@ export default function HomeScreen() {
               );
             })() : (
               <View style={styles.cameraPlaceholder}>
-                {scannedData ? (
-                  // Show product info stacked above the Rescan button inside the camera area
-                  <View style={styles.productInfoContainer}>
-                    <ThemedText style={styles.productNameText}>
-                      {productLoading ? 'Loading…' : (productName ?? 'Unknown Product')}
-                    </ThemedText>
-                    <ThemedText style={styles.placeholderSubtext}>{scannedData}</ThemedText>
-                    <TouchableOpacity style={[styles.primaryButton, styles.previewScanButton]} onPress={startScanning}>
-                      <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>Rescan</ThemedText>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
+                        {scannedData ? (
+                                    // Show product info inside the camera area. Add top margin on iOS to avoid
+                                    // being covered by the Dynamic Island / notch.
+                                    <View style={[
+                                      styles.productInfoContainer,
+                                      Platform.OS === 'ios' ? { marginTop: insets.top + 4 } : {},
+                                      { backgroundColor: productCardBackground, borderColor: productBorderColor, borderWidth: 1, padding: 12, borderRadius: 12 }
+                                    ]}>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <View style={{ flex: 1 }}>
+                                          <ThemedText style={[styles.productNameText, { color: productTextColor }]}>
+                                            {productLoading ? 'Loading…' : (productDetails?.name ?? productName ?? 'Unknown Product')}
+                                          </ThemedText>
+
+                                          {productDetails?.description ? (
+                                            <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{productDetails.description}</ThemedText>
+                                          ) : null}
+
+                                          {(productDetails?.category || productDetails?.quantity != null || productDetails?.location) ? (
+                                            <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}> 
+                                              {[
+                                                productDetails?.category ? `Category: ${productDetails.category}` : null,
+                                                productDetails?.quantity != null ? `Qty: ${productDetails.quantity}` : null,
+                                                productDetails?.location ? `${productDetails.location}` : null,
+                                              ].filter(Boolean).join(' • ')}
+                                            </ThemedText>
+                                          ) : null}
+
+                                          {productDetails?.latestStatus ? (
+                                            <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
+                                              <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
+                                            </View>
+                                          ) : null}
+
+                                          <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{scannedData}</ThemedText>
+                                        </View>
+
+                                        {productDetails?.image_url ? (
+                                          <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { backgroundColor: productOptionBg, marginLeft: 12 }]} />
+                                        ) : null}
+                                      </View>
+                                    </View>
+                          ) : (
                   <>
                     <ThemedText style={styles.placeholderText}>📷</ThemedText>
                     <ThemedText style={styles.placeholderSubtext}>
@@ -265,10 +342,23 @@ export default function HomeScreen() {
       ) : null}
 
       {/* Scan button under the camera area when idle and permission granted */}
-      {!isScanning && !scannedData && permission && (permission?.granted ?? permission?.status === 'granted') && (
-        <View style={[styles.scanUnderContainer, { backgroundColor: scanUnderBackground }]}>
-          <TouchableOpacity style={styles.primaryButton} onPress={startScanning}>
-            <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>Scan QR Code</ThemedText>
+      {permission && (permission?.granted ?? permission?.status === 'granted') && (
+        // Place the scan button at the same location as the Products add button
+        <View style={[styles.scanButtonBottom, { backgroundColor: scanUnderBackground }]}> 
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              styles.buttonShadow,
+              { backgroundColor: buttonBackgroundSelected, paddingVertical: 16, borderRadius: 12, width: '100%' },
+              isScanning && styles.buttonDisabled,
+            ]}
+            onPress={startScanning}
+            disabled={isScanning}
+            accessibilityState={{ disabled: isScanning }}
+          >
+            <ThemedText type="defaultSemiBold" style={[styles.primaryButtonText, { color: buttonTextSelected }]}> 
+              {isScanning ? 'Scanning...' : (scannedData ? 'Rescan' : 'Scan QR Code')}
+            </ThemedText>
           </TouchableOpacity>
         </View>
       )}
@@ -277,39 +367,68 @@ export default function HomeScreen() {
   <ScrollView style={[styles.formSection, { backgroundColor: formBackground }]} contentContainerStyle={styles.formContent}>
         {/* If a product was scanned, show its name and QR here (camera section is hidden after scan) */}
         {scannedData && (
-          <View style={[styles.scannedInfo, { backgroundColor: scannedInfoBackground }]}> 
-            <ThemedText type="defaultSemiBold">Product:</ThemedText>
-            <ThemedText style={styles.qrCodeText}>{productLoading ? 'Loading…' : (productName ?? scannedData)}</ThemedText>
-            <TouchableOpacity style={[styles.secondaryButton, { marginTop: 12 }]} onPress={startScanning}>
-              <ThemedText type="defaultSemiBold" style={styles.secondaryButtonText}>Rescan</ThemedText>
-            </TouchableOpacity>
-          </View>
+          <View style={[
+              styles.scannedInfo,
+              { backgroundColor: productDetails ? productCardBackground : scannedInfoBackground, paddingTop: 12, marginTop: Platform.OS === 'ios' ? (insets.top + 4) : 0, borderColor: productDetails ? productBorderColor : borderColor, borderWidth: productDetails ? 1 : 0, borderRadius: productDetails ? 12 : undefined }
+            ]}> 
+              {productLoading ? (
+                <ThemedText style={styles.qrCodeText}>Loading…</ThemedText>
+              ) : (
+                <>
+                  {productDetails?.image_url ? (
+                    <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { marginBottom: 12, backgroundColor: productOptionBg }]} />
+                  ) : null}
+
+                  <ThemedText style={[styles.qrCodeText, { fontWeight: '700', color: productTextColor }]}>{productDetails?.name ?? productName ?? scannedData}</ThemedText>
+
+                  {productDetails?.description ? (
+                    <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}>{productDetails.description}</ThemedText>
+                  ) : null}
+
+                  {(productDetails?.category || productDetails?.quantity != null || productDetails?.location) ? (
+                    <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}> 
+                      {[
+                        productDetails?.category ? `Category: ${productDetails.category}` : null,
+                        productDetails?.quantity != null ? `Qty: ${productDetails.quantity}` : null,
+                        productDetails?.location ? `${productDetails.location}` : null,
+                      ].filter(Boolean).join(' • ')}
+                    </ThemedText>
+                  ) : null}
+
+                  {productDetails?.latestStatus ? (
+                    <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
+                      <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
+                    </View>
+                  ) : null}
+                </>
+              )}
+            </View>
         )}
 
         <View style={styles.formGroup}>
           <ThemedText type="defaultSemiBold" style={styles.label}>Stock Status</ThemedText>
           <View style={styles.statusButtons}>
             <TouchableOpacity
-              style={[styles.statusButton, status === 'empty' && styles.statusButtonActive]}
+              style={[styles.statusButton, styles.buttonShadow, { backgroundColor: status === 'empty' ? buttonBackgroundSelected : buttonBackgroundDefault }]}
               onPress={() => setStatus('empty')}
             >
-              <ThemedText style={[styles.statusButtonText, status === 'empty' && styles.statusButtonTextActive]}>
+              <ThemedText style={[styles.statusButtonText, { color: status === 'empty' ? buttonTextSelected : buttonTextDefault }]}> 
                 Empty
               </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.statusButton, status === 'low' && styles.statusButtonActive]}
+              style={[styles.statusButton, styles.buttonShadow, { backgroundColor: status === 'low' ? buttonBackgroundSelected : buttonBackgroundDefault }]}
               onPress={() => setStatus('low')}
             >
-              <ThemedText style={[styles.statusButtonText, status === 'low' && styles.statusButtonTextActive]}>
+              <ThemedText style={[styles.statusButtonText, { color: status === 'low' ? buttonTextSelected : buttonTextDefault }]}> 
                 Low Stock
               </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.statusButton, status === 'in-stock' && styles.statusButtonActive]}
+              style={[styles.statusButton, styles.buttonShadow, { backgroundColor: status === 'in-stock' ? buttonBackgroundSelected : buttonBackgroundDefault }]}
               onPress={() => setStatus('in-stock')}
             >
-              <ThemedText style={[styles.statusButtonText, status === 'in-stock' && styles.statusButtonTextActive]}>
+              <ThemedText style={[styles.statusButtonText, { color: status === 'in-stock' ? buttonTextSelected : buttonTextDefault }]}> 
                 In Stock
               </ThemedText>
             </TouchableOpacity>
@@ -323,7 +442,7 @@ export default function HomeScreen() {
             value={notes}
             onChangeText={setNotes}
             placeholder="Add notes about the stock condition..."
-            placeholderTextColor="#999"
+            placeholderTextColor={placeholderTextColor}
             multiline
             numberOfLines={4}
           />
@@ -332,17 +451,23 @@ export default function HomeScreen() {
         {/* Image upload removed per request */}
 
         <View style={styles.actionButtons}>
-          {scannedData ? (
-            <TouchableOpacity 
-              style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]} 
-              onPress={handleSubmit}
-              disabled={isSubmitting}
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              styles.buttonShadow,
+              { backgroundColor: scannedData ? buttonBackgroundSelected : buttonBackgroundDefault },
+              (isSubmitting || !scannedData) && styles.buttonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={!scannedData || isSubmitting}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={[styles.primaryButtonText, { color: scannedData ? buttonTextSelected : buttonTextDefault }]}
             >
-              <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-                {isSubmitting ? 'Submitting...' : 'Submit Report'}
-              </ThemedText>
-            </TouchableOpacity>
-          ) : null}
+              {isSubmitting ? 'Submitting...' : 'Submit Report'}
+            </ThemedText>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -507,6 +632,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
+  buttonShadow: {
+    // cross-platform shadow: iOS (shadow*), Android (elevation)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
+  },
   previewScanButton: {
     marginTop: 12,
     paddingHorizontal: 20,
@@ -562,5 +695,50 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     // Add extra top margin on iOS to avoid the Dynamic Island / notch overlap
     marginTop: Platform.OS === 'ios' ? 28 : 12,
+  },
+  scanButtonBottom: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 20,
+    alignItems: 'center',
+    zIndex: 20,
+    backgroundColor: 'transparent',
+  },
+  productDetailImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  statusBadgeSmall: {
+    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  statusEmptySmall: {
+    backgroundColor: '#fee2e2',
+  },
+  statusLowSmall: {
+    backgroundColor: '#fef3c7',
+  },
+  statusInStockSmall: {
+    backgroundColor: '#d1fae5',
+  },
+  statusTextSmall: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
 });
