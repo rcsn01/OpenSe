@@ -204,11 +204,9 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: themeBackground }]}>
-      {!isScanning && !scannedData && (
-        <View style={[styles.header, { borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 12 }]}> 
-          <ThemedText type="title" style={[styles.title, { color: themeText }]}>Scan</ThemedText>
-        </View>
-      )}
+      <View style={[styles.header, { borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 12 }]}> 
+        <ThemedText type="title" style={[styles.title, { color: themeText }]}>Scan</ThemedText>
+      </View>
       {/* Top Half - Camera */}
       {isScanning ? (
         <View style={[
@@ -288,33 +286,40 @@ export default function HomeScreen() {
                                       Platform.OS === 'ios' ? { marginTop: insets.top + 4 } : {},
                                       { backgroundColor: productCardBackground, borderColor: productBorderColor, borderWidth: 1, padding: 12, borderRadius: 12 }
                                     ]}>
-                                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <View style={{ flex: 1 }}>
-                                          <ThemedText style={[styles.productNameText, { color: productTextColor }]}>
-                                            {productLoading ? 'Loading…' : (productDetails?.name ?? productName ?? 'Unknown Product')}
-                                          </ThemedText>
-
-                                          {productDetails?.description ? (
-                                            <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{productDetails.description}</ThemedText>
-                                          ) : null}
-
-                                          {(productDetails?.category || productDetails?.quantity != null || productDetails?.location) ? (
-                                            <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}> 
-                                              {[
-                                                productDetails?.category ? `Category: ${productDetails.category}` : null,
-                                                productDetails?.quantity != null ? `Qty: ${productDetails.quantity}` : null,
-                                                productDetails?.location ? `${productDetails.location}` : null,
-                                              ].filter(Boolean).join(' • ')}
+                                      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
+                                          <View style={{ flex: 1, paddingRight: 8 }}>
+                                            <ThemedText style={[styles.productNameText, { color: productTextColor }]}> 
+                                              {productLoading ? 'Loading…' : (productDetails?.name ?? productName ?? 'Unknown Product')}
                                             </ThemedText>
-                                          ) : null}
 
-                                          {productDetails?.latestStatus ? (
-                                            <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
-                                              <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
-                                            </View>
-                                          ) : null}
+                                            {productDetails?.description ? (
+                                              <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{productDetails.description}</ThemedText>
+                                            ) : null}
 
-                                          <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{scannedData}</ThemedText>
+                                            {productDetails?.latestStatus ? (
+                                              <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
+                                                <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
+                                              </View>
+                                            ) : null}
+
+                                            <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{scannedData}</ThemedText>
+                                          </View>
+
+                                          {/* Meta column: category / qty / location */}
+                                          <View style={styles.productMetaColumn}>
+                                            {productDetails?.category ? (
+                                              <ThemedText style={[styles.placeholderSubtext, { color: productMutedText }]}>Category: {productDetails.category}</ThemedText>
+                                            ) : null}
+
+                                            {productDetails?.quantity != null ? (
+                                              <ThemedText style={[styles.placeholderSubtext, { color: productMutedText, marginTop: 6 }]}>Qty: {productDetails.quantity}</ThemedText>
+                                            ) : null}
+
+                                            {productDetails?.location ? (
+                                              <ThemedText style={[styles.placeholderSubtext, { color: productMutedText, marginTop: 6 }]}>{productDetails.location}</ThemedText>
+                                            ) : null}
+                                          </View>
                                         </View>
 
                                         {productDetails?.image_url ? (
@@ -374,33 +379,37 @@ export default function HomeScreen() {
               {productLoading ? (
                 <ThemedText style={styles.qrCodeText}>Loading…</ThemedText>
               ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={[styles.qrCodeText, { fontWeight: '700', color: productTextColor }]}>{productDetails?.name ?? productName ?? scannedData}</ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <ThemedText style={[styles.qrCodeText, { fontWeight: '700', color: productTextColor }]}>{productDetails?.name ?? productName ?? scannedData}</ThemedText>
 
-                    {productDetails?.description ? (
-                      <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}>{productDetails.description}</ThemedText>
-                    ) : null}
+                      {productDetails?.description ? (
+                        <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}>Description: {productDetails.description}</ThemedText>
+                      ) : null}
 
-                    {(productDetails?.category || productDetails?.quantity != null || productDetails?.location) ? (
-                      <ThemedText style={[styles.placeholderSubtext, { marginTop: 6, color: productMutedText }]}> 
-                        {[
-                          productDetails?.category ? `Category: ${productDetails.category}` : null,
-                          productDetails?.quantity != null ? `Qty: ${productDetails.quantity}` : null,
-                          productDetails?.location ? `${productDetails.location}` : null,
-                        ].filter(Boolean).join(' • ')}
-                      </ThemedText>
-                    ) : null}
+                      {productDetails?.category ? (
+                        <ThemedText style={[styles.placeholderSubtext, { color: productMutedText }]}>Category: {productDetails.category}</ThemedText>
+                      ) : null}
 
-                    {productDetails?.latestStatus ? (
-                      <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
-                        <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
-                      </View>
-                    ) : null}
+                      {productDetails?.quantity != null ? (
+                        <ThemedText style={[styles.placeholderSubtext, { color: productMutedText}]}>Quantity: {productDetails.quantity}</ThemedText>
+                      ) : null}
+
+                      {productDetails?.location ? (
+                        <ThemedText style={[styles.placeholderSubtext, { color: productMutedText}]}>Location: {productDetails.location}</ThemedText>
+                      ) : null}
+
+                      {productDetails?.latestStatus ? (
+                        <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
+                          <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
 
                   {productDetails?.image_url ? (
-                    <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { backgroundColor: productOptionBg, marginLeft: 12 }]} />
+                    <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { backgroundColor: productOptionBg, marginLeft: 5 }]} />
                   ) : null}
                 </View>
               )}
@@ -707,10 +716,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   productDetailImage: {
-    width: 80,
-    height: 80,
+    width: 90,
+    height: 90,
     borderRadius: 8,
     marginBottom: 8,
+  },
+  productMetaColumn: {
+    width: 128,
+    paddingLeft: 8,
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
   statusBadgeSmall: {
     marginTop: 8,
