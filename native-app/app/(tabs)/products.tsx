@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, TextInput, Modal, ScrollView } from 'react-native';
+import { StyleSheet, View, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, TextInput, Modal, ScrollView, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/AuthContext';
-import { API_ENDPOINTS } from '@/config/api';
+import { API_ENDPOINTS, API_BASE_URL } from '@/config/api';
+import * as ImagePicker from 'expo-image-picker';
 
 interface Product {
   id: number;
@@ -14,6 +15,11 @@ interface Product {
   qr_code: string;
   created_at: string;
   latestStatus?: 'empty' | 'low' | 'in-stock' | null;
+  category?: string | null;
+  quantity?: number | null;
+  expiry_date?: string | null;
+  location?: string | null;
+  image_url?: string | null;
 }
 
 type FilterType = 'all' | 'empty' | 'low' | 'in-stock';
@@ -26,13 +32,20 @@ export default function ProductsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [filterDropdownVisible, setFilterDropdownVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
     qr_code: '',
+    category: '',
+    quantity: '',
+    expiry_date: '',
+    location: '',
   });
+  const [productImageUri, setProductImageUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchProducts = async () => {
@@ -137,24 +150,55 @@ export default function ProductsScreen() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(API_ENDPOINTS.products, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newProduct),
-      });
+      let response;
+      if (productImageUri) {
+        const formData: any = new FormData();
+        formData.append('name', newProduct.name);
+        formData.append('qr_code', newProduct.qr_code);
+        formData.append('description', newProduct.description);
+        formData.append('category', newProduct.category);
+        formData.append('quantity', newProduct.quantity);
+        formData.append('expiry_date', newProduct.expiry_date);
+        formData.append('location', newProduct.location);
+
+        const uri = productImageUri;
+        const filename = uri.split('/').pop() || `photo.jpg`;
+        const match = filename.match(/\.([a-zA-Z0-9]+)$/);
+        const ext = match ? match[1] : 'jpg';
+        const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+        // @ts-ignore - FormData file object for React Native
+        formData.append('image', { uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''), name: filename, type });
+
+        response = await fetch(API_ENDPOINTS.products, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            // Let fetch set Content-Type with boundary
+          },
+          body: formData,
+        });
+      } else {
+        response = await fetch(API_ENDPOINTS.products, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newProduct),
+        });
+      }
 
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to add product');
       }
 
-      Alert.alert('Success', 'Product added successfully!');
-      setModalVisible(false);
-      setNewProduct({ name: '', description: '', qr_code: '' });
-      fetchProducts();
+  Alert.alert('Success', 'Product added successfully!');
+  setModalVisible(false);
+  setNewProduct({ name: '', description: '', qr_code: '', category: '', quantity: '', expiry_date: '', location: '' });
+  setProductImageUri(null);
+  fetchProducts();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to add product');
     } finally {
@@ -162,12 +206,20 @@ export default function ProductsScreen() {
     }
   };
 
+  const handleProductPress = (product: Product) => {
+    setSelectedProduct(product);
+    setDetailModalVisible(true);
+  };
+
   const renderProduct = ({ item }: { item: Product }) => (
-    <TouchableOpacity style={styles.productCard}>
+    <TouchableOpacity style={styles.productCard} onPress={() => handleProductPress(item)}>
       <View style={styles.productHeader}>
         <ThemedText type="defaultSemiBold" style={styles.productName}>
           {item.name}
         </ThemedText>
+        {item.image_url ? (
+          <Image source={{ uri: `${API_BASE_URL}${item.image_url}` }} style={styles.productThumb} />
+        ) : null}
         <View style={styles.qrBadge}>
           <ThemedText style={styles.qrText}>QR: {item.qr_code}</ThemedText>
         </View>
@@ -287,6 +339,32 @@ export default function ProductsScreen() {
         <ThemedText style={styles.addButtonText}>+ Add Product</ThemedText>
       </TouchableOpacity>
 
+      {/* Product Detail Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={detailModalVisible}
+        onRequestClose={() => setDetailModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText type="subtitle" style={styles.modalTitle}>Product Details</ThemedText>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                <ThemedText style={styles.closeButton}>✕</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {selectedProduct && (
+              <View style={styles.detailContent}>
+                <ThemedText style={styles.detailLabel}>Product ID:</ThemedText>
+                <ThemedText style={styles.detailValue}>{selectedProduct.id}</ThemedText>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Product Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -333,6 +411,83 @@ export default function ProductsScreen() {
                 placeholderTextColor="#9ca3af"
                 multiline
                 numberOfLines={4}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Image (optional)</ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity
+                  style={styles.imagePickButton}
+                  onPress={async () => {
+                    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (status !== 'granted') {
+                      Alert.alert('Permission required', 'Permission to access photos is required to pick an image.');
+                      return;
+                    }
+
+                    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+                    // Handle different response shapes across SDK versions
+                    // modern: { canceled: boolean, assets: [{ uri }] }
+                    // older: { cancelled: boolean, uri }
+                    // @ts-ignore
+                    let pickedUri = null;
+                    // @ts-ignore
+                    if (res?.assets && res.assets.length > 0) pickedUri = res.assets[0].uri;
+                    // @ts-ignore
+                    if (!pickedUri && res?.uri) pickedUri = res.uri;
+                    if (pickedUri) setProductImageUri(pickedUri);
+                  }}>
+                  <ThemedText style={styles.imagePickButtonText}>Choose Image</ThemedText>
+                </TouchableOpacity>
+                {productImageUri ? (
+                  <Image source={{ uri: productImageUri }} style={styles.imagePreview} />
+                ) : null}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Category</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={newProduct.category}
+                onChangeText={(text) => setNewProduct({ ...newProduct, category: text })}
+                placeholder="Category"
+                placeholderTextColor="#9ca3af"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Quantity</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={newProduct.quantity}
+                onChangeText={(text) => setNewProduct({ ...newProduct, quantity: text })}
+                placeholder="0"
+                placeholderTextColor="#9ca3af"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Expiry Date (YYYY-MM-DD)</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={newProduct.expiry_date}
+                onChangeText={(text) => setNewProduct({ ...newProduct, expiry_date: text })}
+                placeholder="2025-12-31"
+                placeholderTextColor="#9ca3af"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Location</ThemedText>
+              <TextInput
+                style={styles.input}
+                value={newProduct.location}
+                onChangeText={(text) => setNewProduct({ ...newProduct, location: text })}
+                placeholder="Aisle 3, Shelf B"
+                placeholderTextColor="#9ca3af"
               />
             </View>
 
@@ -487,6 +642,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#6b7280',
   },
+  productThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    marginLeft: 12,
+    backgroundColor: '#f3f4f6',
+  },
   productFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -636,5 +798,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  imagePickButton: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  imagePickButtonText: {
+    color: '#374151',
+    fontWeight: '600',
+  },
+  imagePreview: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  detailContent: {
+    paddingVertical: 20,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 8,
+  },
+  detailValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
   },
 });

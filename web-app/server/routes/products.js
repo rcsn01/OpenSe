@@ -1,6 +1,20 @@
 const express = require('express');
 const pool = require('../db');
 const authMiddleware = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+
+// Configure multer to save uploads to /uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, name);
+  },
+});
+
+const upload = multer({ storage });
 
 const router = express.Router();
 
@@ -29,6 +43,37 @@ router.get('/', authMiddleware, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Create product (supports optional image upload)
+router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    const { qr_code, name, description, category, quantity, expiry_date, location } = req.body;
+
+    if (!qr_code || !name) {
+      return res.status(400).json({ error: 'qr_code and name are required' });
+    }
+
+    // If file uploaded, build image URL
+    let image_url = null;
+    if (req.file) {
+      image_url = `/uploads/${req.file.filename}`;
+    }
+
+    const result = await pool.query(
+      `INSERT INTO products (qr_code, name, description, category, quantity, expiry_date, location, image_url)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [qr_code, name, description || null, category || null, quantity ? parseInt(quantity, 10) : 0, expiry_date || null, location || null, image_url]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    if (err.code === '23505') { // unique_violation
+      return res.status(409).json({ error: 'Product with this QR code already exists' });
+    }
     res.status(500).json({ error: 'Server error' });
   }
 });
