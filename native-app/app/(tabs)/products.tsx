@@ -45,6 +45,14 @@ export default function ProductsScreen() {
   });
   const [productImageUri, setProductImageUri] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  const getImageUri = (path?: string | null) => {
+    if (!path) return null;
+    // Ensure path already begins with /uploads or similar
+    return `${API_BASE_URL}${path}`;
+  };
 
   const fetchProducts = async () => {
     try {
@@ -150,16 +158,18 @@ export default function ProductsScreen() {
 
     try {
       let response;
-      if (productImageUri) {
-  const formData: any = new FormData();
-  formData.append('name', newProduct.name);
+      const isLocalImage = productImageUri && !productImageUri.startsWith('http');
+
+      if (isLocalImage) {
+        const formData: any = new FormData();
+        formData.append('name', newProduct.name);
         formData.append('description', newProduct.description);
         formData.append('category', newProduct.category);
         formData.append('quantity', newProduct.quantity);
         formData.append('expiry_date', newProduct.expiry_date);
         formData.append('location', newProduct.location);
 
-        const uri = productImageUri;
+        const uri = productImageUri as string;
         const filename = uri.split('/').pop() || `photo.jpg`;
         const match = filename.match(/\.([a-zA-Z0-9]+)$/);
         const ext = match ? match[1] : 'jpg';
@@ -168,37 +178,63 @@ export default function ProductsScreen() {
         // @ts-ignore - FormData file object for React Native
         formData.append('image', { uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''), name: filename, type });
 
-        response = await fetch(API_ENDPOINTS.products, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            // Let fetch set Content-Type with boundary
-          },
-          body: formData,
-        });
+        if (isEditing && editingProductId) {
+          response = await fetch(`${API_ENDPOINTS.products}/${editingProductId}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              // Let fetch set Content-Type with boundary
+            },
+            body: formData,
+          });
+        } else {
+          response = await fetch(API_ENDPOINTS.products, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          });
+        }
       } else {
-        response = await fetch(API_ENDPOINTS.products, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(newProduct),
-        });
+        // No local image picked (either no image or existing remote image kept)
+        const payload: any = { ...newProduct };
+
+        if (isEditing && editingProductId) {
+          response = await fetch(`${API_ENDPOINTS.products}/${editingProductId}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          response = await fetch(API_ENDPOINTS.products, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+        }
       }
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to add product');
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to save product');
       }
 
-  Alert.alert('Success', 'Product added successfully!');
-  setModalVisible(false);
-  setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' });
-  setProductImageUri(null);
-  fetchProducts();
+      Alert.alert('Success', isEditing ? 'Product updated successfully!' : 'Product added successfully!');
+      setModalVisible(false);
+      setIsEditing(false);
+      setEditingProductId(null);
+      setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' });
+      setProductImageUri(null);
+      fetchProducts();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to add product');
+      Alert.alert('Error', error.message || 'Failed to save product');
     } finally {
       setIsSubmitting(false);
     }
@@ -209,6 +245,25 @@ export default function ProductsScreen() {
     setDetailModalVisible(true);
   };
 
+  const handleStartEdit = (product: Product) => {
+    // Prefill the add-product modal for editing
+    setSelectedProduct(product);
+    setDetailModalVisible(false);
+    setIsEditing(true);
+    setEditingProductId(String(product.id));
+    setNewProduct({
+      name: product.name || '',
+      description: product.description || '',
+      category: product.category || '',
+      quantity: product.quantity != null ? String(product.quantity) : '',
+      expiry_date: product.expiry_date || '',
+      location: product.location || '',
+    });
+    // Use remote image URI for preview; when submitting, we only upload if user picked a new local file
+    setProductImageUri(getImageUri(product.image_url) || null);
+    setModalVisible(true);
+  };
+
   const renderProduct = ({ item }: { item: Product }) => (
     <TouchableOpacity style={styles.productCard} onPress={() => handleProductPress(item)}>
       <View style={styles.productHeader}>
@@ -216,7 +271,12 @@ export default function ProductsScreen() {
           {item.name}
         </ThemedText>
         {item.image_url ? (
-          <Image source={{ uri: `${API_BASE_URL}${item.image_url}` }} style={styles.productThumb} />
+          <Image
+            source={{ uri: getImageUri(item.image_url) || undefined }}
+            style={styles.productThumb}
+            resizeMode="cover"
+            onError={(e) => console.warn('Product image failed to load', e.nativeEvent)}
+          />
         ) : null}
         <View style={styles.qrBadge}>
           <ThemedText style={styles.qrText}>QR: {String(item.id).slice(0, 8)}</ThemedText>
@@ -333,7 +393,7 @@ export default function ProductsScreen() {
         }
       />
 
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity style={styles.addButton} onPress={() => { setIsEditing(false); setEditingProductId(null); setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' }); setProductImageUri(null); setModalVisible(true); }}>
         <ThemedText style={styles.addButtonText}>+ Add Product</ThemedText>
       </TouchableOpacity>
 
@@ -347,9 +407,18 @@ export default function ProductsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <ThemedText type="subtitle" style={styles.modalTitle}>Product Details</ThemedText>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                <ThemedText style={styles.closeButton}>✕</ThemedText>
-              </TouchableOpacity>
+              <View style={styles.modalActionsRight}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => selectedProduct && handleStartEdit(selectedProduct)}
+                >
+                  <ThemedText style={styles.editButtonText}>Edit</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                  <ThemedText style={styles.closeButton}>✕</ThemedText>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {selectedProduct && (
@@ -428,8 +497,8 @@ export default function ProductsScreen() {
           <View style={styles.modalContent}>
             <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
               <View style={styles.modalHeader}>
-                <ThemedText type="subtitle" style={styles.modalTitle}>Add New Product</ThemedText>
-                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <ThemedText type="subtitle" style={styles.modalTitle}>{isEditing ? 'Edit Product' : 'Add New Product'}</ThemedText>
+                <TouchableOpacity onPress={() => { setModalVisible(false); setIsEditing(false); setEditingProductId(null); }}>
                   <ThemedText style={styles.closeButton}>✕</ThemedText>
                 </TouchableOpacity>
               </View>
@@ -540,7 +609,7 @@ export default function ProductsScreen() {
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={styles.cancelButton}
-                  onPress={() => setModalVisible(false)}>
+                  onPress={() => { setModalVisible(false); setIsEditing(false); setEditingProductId(null); setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' }); setProductImageUri(null); }}>
                   <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -548,7 +617,7 @@ export default function ProductsScreen() {
                   onPress={handleAddProduct}
                   disabled={isSubmitting}>
                   <ThemedText style={styles.submitButtonText}>
-                    {isSubmitting ? 'Adding...' : 'Add Product'}
+                    {isSubmitting ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Product')}
                   </ThemedText>
                 </TouchableOpacity>
               </View>
@@ -787,6 +856,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  modalActionsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -795,6 +868,18 @@ const styles = StyleSheet.create({
   closeButton: {
     fontSize: 24,
     color: '#6b7280',
+  },
+  editButton: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  editButtonText: {
+    color: '#374151',
+    fontWeight: '600',
+    fontSize: 14,
   },
   inputGroup: {
     marginBottom: 16,

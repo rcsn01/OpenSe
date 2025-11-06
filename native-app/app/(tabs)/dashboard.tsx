@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView, Modal, TouchableOpacity, FlatList } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
+// QR code generation (install `react-native-qrcode-svg` and `react-native-svg` for Expo)
+import QRCode from 'react-native-qrcode-svg';
 
 interface StockReport {
   id: number;
@@ -31,6 +33,11 @@ export default function DashboardScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
+  // Products & QR modal
+  const [products, setProducts] = useState<Array<{ id: number; name: string; [k: string]: any }>>([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState('');
+  const [isQrModalVisible, setIsQrModalVisible] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -87,8 +94,44 @@ export default function DashboardScreen() {
     }
   };
 
+  const fetchProducts = async () => {
+    setIsProductsLoading(true);
+    setProductsError('');
+    try {
+      const res = await fetch(API_ENDPOINTS.products, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to fetch products');
+
+      const data = await res.json();
+      // Expecting an array of products. Normalize to objects with id and name.
+      const normalized = Array.isArray(data)
+        ? data.map((p: any) => ({ id: p.id ?? p.product_id ?? p._id ?? 0, name: p.name ?? p.product_name ?? p.title ?? String(p.id) , ...p }))
+        : [];
+      setProducts(normalized);
+    } catch (err: any) {
+      console.error('Products fetch error:', err);
+      setProductsError(err.message || 'Failed to load products');
+    } finally {
+      setIsProductsLoading(false);
+    }
+  };
+
   const onRefresh = () => {
     fetchDashboardData(true);
+  };
+
+  const openQrModal = () => {
+    setIsQrModalVisible(true);
+    // load products when opening
+    fetchProducts();
+  };
+
+  const closeQrModal = () => {
+    setIsQrModalVisible(false);
   };
 
   if (isLoading) {
@@ -105,6 +148,9 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         <ThemedText type="title" style={styles.title}>Dashboard</ThemedText>
         <ThemedText style={styles.subtitle}>Stock Status Overview</ThemedText>
+        <TouchableOpacity style={styles.qrButton} onPress={openQrModal} accessibilityRole="button">
+          <ThemedText style={styles.qrButtonText}>QR Codes</ThemedText>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -184,6 +230,45 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* QR Codes modal */}
+      <Modal visible={isQrModalVisible} animationType="slide" onRequestClose={closeQrModal}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <ThemedText type="title" style={styles.modalTitle}>Product QR Codes</ThemedText>
+            <TouchableOpacity onPress={closeQrModal} style={styles.qrCloseButton} accessibilityRole="button">
+              <ThemedText style={styles.qrCloseButtonText}>Close</ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {isProductsLoading ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color="#667eea" />
+              <ThemedText style={styles.loadingText}>Loading products...</ThemedText>
+            </View>
+          ) : productsError ? (
+            <View style={styles.errorContainer}>
+              <ThemedText style={styles.errorText}>{productsError}</ThemedText>
+            </View>
+          ) : (
+            <FlatList
+              data={products}
+              keyExtractor={(item) => String(item.id)}
+              contentContainerStyle={styles.qrList}
+              renderItem={({ item }) => (
+                <View style={styles.qrItem}>
+                  <ThemedText type="defaultSemiBold" style={styles.qrName}>{item.name}</ThemedText>
+                  <View style={styles.qrSvgContainer}>
+                    {/* Use product id as QR payload; you can change to a URL or SKU if preferred */}
+                    {/* @ts-ignore */}
+                    <QRCode value={String(item.id)} size={140} />
+                  </View>
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -353,5 +438,72 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.6,
     color: '#6b7280',
+  },
+  qrButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+  },
+  qrButtonText: {
+    color: '#4c51bf',
+    fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+    paddingTop: 48,
+    paddingHorizontal: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000',
+  },
+  qrCloseButton: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  qrCloseButtonText: {
+    color: '#374151',
+    fontWeight: '600',
+  },
+  qrList: {
+    paddingBottom: 48,
+  },
+  qrItem: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+  },
+  qrName: {
+    marginBottom: 10,
+    color: '#111827',
+    fontSize: 16,
+  },
+  qrSvgContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    padding: 8,
+    borderRadius: 8,
   },
 });
