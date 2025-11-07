@@ -18,6 +18,11 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  // additional mappings for app tabs
+  'camera.fill': 'photo-camera',
+  'chart.bar.fill': 'insert-chart',
+  'cube.box.fill': 'inventory',
+  'person.fill': 'person',
 } as IconMapping;
 
 /**
@@ -37,5 +42,7 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  // Use a safe fallback if mapping is missing to avoid runtime errors
+  const mappedName = (MAPPING as Record<string, string>)[name] ?? 'help';
+  return <MaterialIcons color={color} size={size} name={mappedName as any} style={style} />;
 }

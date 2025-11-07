@@ -3,7 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useRef, useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
-import DetailedProductCard from '@/components/detailed-product-card';
+import DetailedProductCard from '@/components/scan-product-card';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import ProductCard from '@/components/product-card';
+import ProductDetailScreen from '@/components/product-detail-screen';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -375,95 +376,12 @@ export default function ProductsScreen() {
         <ThemedText style={[styles.addButtonText, { color: buttonTextSelected }]}>+ Add Product</ThemedText>
       </TouchableOpacity>
 
-      {/* Product Detail Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <ProductDetailScreen
         visible={detailModalVisible}
-        onRequestClose={() => setDetailModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: cardBackground, borderColor }] }>
-            <View style={styles.modalHeader}>
-              <ThemedText type="subtitle" style={[styles.modalTitle, { color: textColor }]}>Product Details</ThemedText>
-              <View style={styles.modalActionsRight}>
-        <TouchableOpacity
-          style={[styles.editButton, { backgroundColor: buttonBackgroundDefault }]}
-      onPress={() => selectedProduct && handleStartEdit(selectedProduct)}
-        >
-          <ThemedText style={[styles.editButtonText, { color: buttonTextDefault }]}>Edit</ThemedText>
-        </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                  <ThemedText style={[styles.closeButton, { color: mutedText }]}>✕</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {selectedProduct && (
-              <ScrollView contentContainerStyle={styles.detailContent}>
-                {selectedProduct.image_url ? (
-                  <Image source={{ uri: `${API_BASE_URL}${selectedProduct.image_url}` }} style={[styles.detailImage, { backgroundColor: optionBg }]} />
-                ) : null}
-
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: mutedText }]}>Name:</ThemedText>
-                  <ThemedText style={[styles.detailValue, { color: textColor }]}>{selectedProduct.name}</ThemedText>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: mutedText }]}>Product ID (QR):</ThemedText>
-                  <ThemedText style={[styles.detailValue, { color: textColor }]}>{selectedProduct.id}</ThemedText>
-                </View>
-
-                {selectedProduct.description ? (
-                  <View style={styles.detailRow}>
-                    <ThemedText style={[styles.detailLabel, { color: mutedText }]}>Description:</ThemedText>
-                    <ThemedText style={[styles.detailValue, { color: textColor }]}>{selectedProduct.description}</ThemedText>
-                  </View>
-                ) : null}
-
-                {selectedProduct.category ? (
-                  <View style={styles.detailRow}>
-                    <ThemedText style={[styles.detailLabel, { color: mutedText }]}>Category:</ThemedText>
-                    <ThemedText style={[styles.detailValue, { color: textColor }]}>{selectedProduct.category}</ThemedText>
-                  </View>
-                ) : null}
-
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: mutedText }]}>Quantity:</ThemedText>
-                  <ThemedText style={[styles.detailValue, { color: textColor }]}>{selectedProduct.quantity ?? 0}</ThemedText>
-                </View>
-
-                {selectedProduct.expiry_date ? (
-                  <View style={styles.detailRow}>
-                    <ThemedText style={[styles.detailLabel, { color: mutedText }]}>Expiry:</ThemedText>
-                    <ThemedText style={[styles.detailValue, { color: textColor }]}>{new Date(selectedProduct.expiry_date).toLocaleDateString()}</ThemedText>
-                  </View>
-                ) : null}
-
-                {selectedProduct.location ? (
-                  <View style={styles.detailRow}>
-                    <ThemedText style={[styles.detailLabel, { color: mutedText }]}>Location:</ThemedText>
-                    <ThemedText style={[styles.detailValue, { color: textColor }]}>{selectedProduct.location}</ThemedText>
-                  </View>
-                ) : null}
-
-                {selectedProduct.latestStatus && (
-                  <View style={styles.detailRow}>
-                    <ThemedText style={[styles.detailLabel, { color: mutedText }]}>Status:</ThemedText>
-                    <ThemedText style={[styles.detailValue, { color: textColor }]}>{selectedProduct.latestStatus}</ThemedText>
-                  </View>
-                )}
-
-                <View style={styles.detailRow}>
-                  <ThemedText style={[styles.detailLabel, { color: mutedText }]}>Added:</ThemedText>
-                  <ThemedText style={[styles.detailValue, { color: textColor }]}>{new Date(selectedProduct.created_at).toLocaleString()}</ThemedText>
-                </View>
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+        product={selectedProduct}
+        onClose={() => setDetailModalVisible(false)}
+        onEdit={(p) => { handleStartEdit(p); }}
+      />
 
       {/* Add Product Modal */}
       <Modal
