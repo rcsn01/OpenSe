@@ -6,7 +6,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
-import ProductQrModal from '@/components/product-qr-modal';
+import ProductQrModal from '@/components/product-qr-screen';
 
 interface StockReport {
   id: number;
@@ -191,6 +191,14 @@ export default function DashboardScreen() {
           >
             <ThemedText style={[styles.actionButtonText, { color: textColor }]}>Locations</ThemedText>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: cardBackground, borderColor }]}
+            onPress={openQrModal}
+            accessibilityRole="button"
+          >
+            <ThemedText style={[styles.actionButtonText, { color: textColor }]}>QR Codes</ThemedText>
+          </TouchableOpacity>
         </View>
 
         {recentReports.length === 0 && !error && (
@@ -206,14 +214,7 @@ export default function DashboardScreen() {
         )}
       </ScrollView>
 
-      {/* Floating QR Codes button at bottom-right */}
-      <TouchableOpacity
-        style={[styles.qrFloatButton, { backgroundColor: buttonBackgroundSelected, borderColor }]}
-        onPress={openQrModal}
-        accessibilityRole="button"
-      >
-        <ThemedText style={[styles.qrButtonText, { color: buttonTextSelected }]}>QR Codes</ThemedText>
-      </TouchableOpacity>
+      {/* QR Codes is now available in the Actions column above */}
 
       <ProductQrModal visible={isQrModalVisible} onClose={closeQrModal} />
     </View>

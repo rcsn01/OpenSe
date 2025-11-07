@@ -11,7 +11,7 @@ export const Colors = {
     background: '#fff',
     tint: '#e8f3ffff',
     icon: '#000000ff',
-    tabIconDefault: '#000000ff',
+    tabIconDefault: '#000000ff', 
     tabIconSelected: '#000000ff',
     // muted UI tones for secondary buttons / inactive states
     mutedBackground: '#dadadaff',
@@ -80,3 +80,24 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+// screens color
+// Centralized colors for screen-level UI (headers, cards, borders, muted text, etc.)
+export const Screens = {
+  light: {
+    headerBackground: '#fff',
+    cardBackground: '#fff',
+    borderColor: '#e5e7eb',
+    mutedText: '#6b7280',
+    tint: Colors.light.tint,
+    text: Colors.light.text,
+  },
+  dark: {
+    headerBackground: '#0b1220',
+    cardBackground: '#0b1220',
+    borderColor: '#1f2937',
+    mutedText: '#9ca3af',
+    tint: Colors.dark.tint,
+    text: Colors.dark.text,
+  },
+};
