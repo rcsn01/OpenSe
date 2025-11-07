@@ -32,26 +32,26 @@ export const Colors = {
   },
   dark: {
     text: '#ECEDEE',
-    background: '#151718',
+    background: '#181818ff',
     tint: '#fff',
     icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    tabIconDefault: '#a69b9bff',
     tabIconSelected: '#fff',
     // muted UI tones for secondary buttons / inactive states
-    mutedBackground: '#1f2937',
+    mutedBackground: '#414141ff',
     mutedText: '#9ca3af',
     //buttons
-    buttonBackgroundDefault: '#ffffffff',
-    buttonBackgroundSelected: '#949494ff',
-    buttonTextDefault: '#505050ff',
-    buttonTextSelected: '#000000ff',
+    buttonBackgroundDefault: '#1d1d1dff',
+    buttonBackgroundSelected: '#464646ff',
+    buttonTextDefault: '#a0a0a0ff',
+    buttonTextSelected: '#cececeff',
     // product card
-    productCardBackground: '#0b1220',
-    productCardBorder: '#1f2937',
-    productThumbBackground: '#111827',
-    productMutedText: '#4363a3ff',
+    productCardBackground: '#1f1f1fff',
+    productCardBorder: '#7c7c7cff',
+    productThumbBackground: '#000000ff',
+    productMutedText: '#5a5a5aff',
     //menu bar color
-    menuBarDefault: '#838383ff',
+    menuBarDefault: '#5c5c5cff',
     menuBarSelected: '#ffffffff',
   },
 };

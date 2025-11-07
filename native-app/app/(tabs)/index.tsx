@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useRef, useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
+import DetailedProductCard from '@/components/detailed-product-card';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
@@ -270,52 +271,18 @@ export default function HomeScreen() {
             })() : null}
           </View>
         ) : (
-          // Product detail view when not scanning
+          // Product detail view when not scanning — delegate to component
           <View style={[styles.productDetailCard, { backgroundColor: productCardBackground, borderColor: productBorderColor }]}>
-            {scannedData ? (
-              // Scanned product details
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <ThemedText style={[styles.productNameText, { color: productTextColor }]}> 
-                      {productLoading ? 'Loading…' : (productDetails?.name ?? productName ?? 'Unknown Product')}
-                    </ThemedText>
-
-                    {productDetails?.description ? (
-                      <ThemedText style={[styles.placeholderSubtext, { marginTop: 8, color: productMutedText }]}>{productDetails.description}</ThemedText>
-                    ) : null}
-
-                    {productDetails?.category ? (
-                      <ThemedText style={[styles.placeholderSubtext, { color: productMutedText }]}>Category: {productDetails.category}</ThemedText>
-                    ) : null}
-
-                    {productDetails?.quantity != null ? (
-                      <ThemedText style={[styles.placeholderSubtext, { color: productMutedText}]}>Quantity: {productDetails.quantity}</ThemedText>
-                    ) : null}
-
-                    {productDetails?.location ? (
-                      <ThemedText style={[styles.placeholderSubtext, { color: productMutedText}]}>Location: {productDetails.location}</ThemedText>
-                    ) : null}
-
-                    {productDetails?.latestStatus ? (
-                      <View style={[styles.statusBadgeSmall, productDetails.latestStatus === 'empty' && styles.statusEmptySmall, productDetails.latestStatus === 'low' && styles.statusLowSmall, productDetails.latestStatus === 'in-stock' && styles.statusInStockSmall]}>
-                        <ThemedText style={[styles.statusTextSmall, { color: productMutedText }]}>{productDetails.latestStatus === 'empty' ? 'Empty' : productDetails.latestStatus === 'low' ? 'Low' : 'In Stock'}</ThemedText>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-
-                {productDetails?.image_url ? (
-                  <Image source={{ uri: `${API_BASE_URL}${productDetails.image_url}` }} style={[styles.productDetailImage, { backgroundColor: productOptionBg, marginLeft: 12 }]} />
-                ) : null}
-              </View>
-            ) : (
-              // Empty state - ready to scan
-              <View style={styles.emptyStateContainer}>
-                <ThemedText style={styles.placeholderText}>📷</ThemedText>
-                <ThemedText style={styles.placeholderSubtext}>Ready to scan</ThemedText>
-              </View>
-            )}
+            <DetailedProductCard
+              productDetails={productDetails}
+              productLoading={productLoading}
+              scannedData={scannedData}
+              productMutedText={productMutedText}
+              productTextColor={productTextColor}
+              productOptionBg={productOptionBg}
+              onReturnToScan={startScanning}
+              apiBaseUrl={API_BASE_URL}
+            />
           </View>
         )}
       </View>
@@ -335,7 +302,7 @@ export default function HomeScreen() {
             accessibilityState={{ disabled: isScanning }}
           >
             <ThemedText type="defaultSemiBold" style={[styles.primaryButtonText, { color: buttonTextSelected }]}> 
-              {isScanning ? 'Scanning...' : (scannedData ? 'Rescan' : 'Scan QR Code')}
+              {isScanning ? 'Scanning...' : (scannedData ? 'Submit Report' : 'Scan QR Code')}
             </ThemedText>
           </TouchableOpacity>
         </View>
@@ -388,25 +355,7 @@ export default function HomeScreen() {
 
         {/* Image upload removed per request */}
 
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[
-              styles.primaryButton,
-              styles.buttonShadow,
-              { backgroundColor: scannedData ? buttonBackgroundSelected : buttonBackgroundDefault },
-              (isSubmitting || !scannedData) && styles.buttonDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={!scannedData || isSubmitting}
-          >
-            <ThemedText
-              type="defaultSemiBold"
-              style={[styles.primaryButtonText, { color: scannedData ? buttonTextSelected : buttonTextDefault }]}
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit Report'}
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
+        {/* Submit button removed here to avoid duplication with the bottom action button */}
       </ScrollView>
     </View>
   );
@@ -667,6 +616,12 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 8,
     marginBottom: 8,
+  },
+  emptyDetailContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
   },
   productMetaColumn: {
     width: 128,
