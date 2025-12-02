@@ -226,10 +226,48 @@ export default function HomeScreen() {
                   Please enable camera permission
                 </ThemedText>
                 <View style={styles.permissionButtons}>
-                  <TouchableOpacity style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} onPress={handleOpenSettings}>
+                  <TouchableOpacity 
+                    style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} 
+                    onPress={async () => {
+                      if (Platform.OS === 'web') {
+                        alert('Please check your browser settings (usually the lock icon in the address bar) to enable camera access.');
+                      } else {
+                        handleOpenSettings();
+                      }
+                    }}
+                  >
                     <ThemedText style={[styles.permissionButtonText, { color: buttonTextSelected }]}>Open Settings</ThemedText>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} onPress={requestPermission}>
+                  <TouchableOpacity 
+                    style={[styles.permissionButton, styles.buttonShadow, { backgroundColor: buttonBackgroundSelected }]} 
+                    onPress={async () => {
+                      if (Platform.OS === 'web') {
+                        try {
+                          // Check for secure context (HTTPS or localhost)
+                          if (window.location.hostname !== 'localhost' && window.location.protocol !== 'https:') {
+                            alert('Camera access requires HTTPS or localhost. Please check your URL.');
+                            return;
+                          }
+
+                          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                          stream.getTracks().forEach(track => track.stop());
+                          await requestPermission();
+                        } catch (err: any) {
+                          console.error('Camera Error:', err);
+                          // Provide specific feedback based on error name
+                          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                             alert('Permission denied. Please check macOS System Settings > Privacy & Security > Camera to ensure Safari has access.');
+                          } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                             alert('No camera found. Please check your device connection.');
+                          } else {
+                             alert(`Camera error: ${err.name}: ${err.message}`);
+                          }
+                        }
+                      } else {
+                        const result = await requestPermission();
+                      }
+                    }}
+                  >
                     <ThemedText style={[styles.permissionButtonText, { color: buttonTextSelected }]}>Request Permission</ThemedText>
                   </TouchableOpacity>
                 </View>
@@ -287,9 +325,8 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Scan button under the card area when idle and permission granted */}
-      {permission && (permission?.granted ?? permission?.status === 'granted') && (
-        <View style={[styles.scanButtonBottom, { backgroundColor: scanUnderBackground }]}> 
+      {/* Scan button under the card area when idle */}
+      <View style={[styles.scanButtonBottom, { backgroundColor: scanUnderBackground }]}> 
           <TouchableOpacity
             style={[
               styles.primaryButton,
@@ -310,7 +347,6 @@ export default function HomeScreen() {
             )}
           </TouchableOpacity>
         </View>
-      )}
 
       {/* Bottom Half - Form */}
   <ScrollView style={[styles.formSection, { backgroundColor: formBackground }]} contentContainerStyle={styles.formContent}>
