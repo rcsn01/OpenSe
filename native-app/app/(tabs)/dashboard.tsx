@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView, Modal, TouchableOpacity, FlatList } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -45,11 +46,18 @@ export default function DashboardScreen() {
   // QR modal visibility
   const [isQrModalVisible, setIsQrModalVisible] = useState(false);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  // Use useFocusEffect to refresh data when the tab comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        fetchDashboardData();
+      }
+    }, [token])
+  );
 
   const fetchDashboardData = async (isRefresh = false) => {
+    if (!token) return;
+    
     if (isRefresh) {
       setIsRefreshing(true);
     } else {
@@ -58,6 +66,7 @@ export default function DashboardScreen() {
     setError('');
 
     try {
+      console.log('Fetching reports with token:', token ? token.substring(0, 10) + '...' : 'null');
       const response = await fetch(API_ENDPOINTS.reports, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -65,10 +74,16 @@ export default function DashboardScreen() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch reports');
+        if (response.status === 401) {
+          throw new Error('Session expired. Please login again.');
+        }
+        const errText = await response.text();
+        console.error('Fetch reports failed:', response.status, errText);
+        throw new Error(`Failed to fetch reports: ${response.status}`);
       }
 
       const reports: StockReport[] = await response.json();
+      console.log('Fetched reports:', reports.length, reports);
       
       // Calculate statistics from the latest report for each product
       const latestReportsByProduct = new Map<string, StockReport>();
@@ -143,28 +158,6 @@ export default function DashboardScreen() {
             <ThemedText style={styles.errorText}>{error}</ThemedText>
           </View>
         ) : null}
-
-        {/* Three-column stats: In Stock | Low Stock | Out of Stock */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statColumn, { backgroundColor: cardBackground, borderColor }]}> 
-            <ThemedText style={[styles.statLabel, { color: mutedText }]}>In Stock</ThemedText>
-            <ThemedText style={[styles.statNumber, { color: textColor }]}>{stats.inStock}</ThemedText>
-          </View>
-
-          <View style={[styles.verticalSeparator, { backgroundColor: borderColor }]} />
-
-          <View style={[styles.statColumn, { backgroundColor: cardBackground, borderColor }]}> 
-            <ThemedText style={[styles.statLabel, { color: mutedText }]}>Low Stock</ThemedText>
-            <ThemedText style={[styles.statNumber, { color: textColor }]}>{stats.low}</ThemedText>
-          </View>
-
-          <View style={[styles.verticalSeparator, { backgroundColor: borderColor }]} />
-
-          <View style={[styles.statColumn, { backgroundColor: cardBackground, borderColor }]}> 
-            <ThemedText style={[styles.statLabel, { color: mutedText }]}>Out of Stock</ThemedText>
-            <ThemedText style={[styles.statNumber, { color: textColor }]}>{stats.empty}</ThemedText>
-          </View>
-        </View>
 
         {/* Action buttons row (replaces previous "Recent Reports" section) */}
         <View style={styles.actionsRow}>
