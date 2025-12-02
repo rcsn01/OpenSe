@@ -1,8 +1,12 @@
+import { Platform } from 'react-native';
+
 // API Configuration
 // Update this URL to match your backend server
+const LOCAL_IP = '192.168.12.149'; // Update this to your machine's LAN IP
+const PORT = 5279;
+
 export const API_BASE_URL = __DEV__ 
-  //? 'http://localhost:5000' // Development: local backend
-  ? 'http://192.168.1.10:5000' // Development: local backend
+  ? (Platform.OS === 'web' ? `http://localhost:${PORT}` : `http://${LOCAL_IP}:${PORT}`)
   : 'https://your-production-url.com'; // Production: replace with your deployed backend URL
 
 export const API_ENDPOINTS = {

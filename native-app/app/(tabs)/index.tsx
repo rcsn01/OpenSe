@@ -1,4 +1,4 @@
-import { StyleSheet, View, Button, Linking, TouchableOpacity, TextInput, ScrollView, Alert, StatusBar, Platform, Image } from 'react-native';
+import { StyleSheet, View, Button, Linking, TouchableOpacity, TextInput, ScrollView, Alert, StatusBar, Platform, Image, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEffect, useRef, useState } from 'react';
 
@@ -295,15 +295,19 @@ export default function HomeScreen() {
               styles.primaryButton,
               styles.buttonShadow,
               { backgroundColor: buttonBackgroundSelected, paddingVertical: 16, borderRadius: 12, width: '100%' },
-              isScanning && styles.buttonDisabled,
+              (isScanning || isSubmitting) && styles.buttonDisabled,
             ]}
-            onPress={startScanning}
-            disabled={isScanning}
-            accessibilityState={{ disabled: isScanning }}
+            onPress={scannedData ? handleSubmit : startScanning}
+            disabled={isScanning || isSubmitting}
+            accessibilityState={{ disabled: isScanning || isSubmitting }}
           >
-            <ThemedText type="defaultSemiBold" style={[styles.primaryButtonText, { color: buttonTextSelected }]}> 
-              {isScanning ? 'Scanning...' : (scannedData ? 'Submit Report' : 'Scan QR Code')}
-            </ThemedText>
+            {isSubmitting ? (
+              <ActivityIndicator color={buttonTextSelected} />
+            ) : (
+              <ThemedText type="defaultSemiBold" style={[styles.primaryButtonText, { color: buttonTextSelected }]}> 
+                {isScanning ? 'Scanning...' : (scannedData ? 'Submit Report' : 'Scan QR Code')}
+              </ThemedText>
+            )}
           </TouchableOpacity>
         </View>
       )}
@@ -355,7 +359,7 @@ export default function HomeScreen() {
 
         {/* Image upload removed per request */}
 
-        {/* Submit button removed here to avoid duplication with the bottom action button */}
+        {/* Submit button */}
       </ScrollView>
     </View>
   );
@@ -365,6 +369,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  submitButton: {
+    marginVertical: 20,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   cardContainer: {
     height: '25%',

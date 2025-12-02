@@ -34,6 +34,7 @@ const upload = multer({
 
 // Create a stock report
 router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
+  console.log('Received report submission:', req.body);
   const { qrCode, status, notes } = req.body;
   const userId = req.user.id;
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;

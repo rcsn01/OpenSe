@@ -1,4 +1,4 @@
-import { StyleSheet, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Alert, ScrollView, Platform } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,23 +38,29 @@ export default function TabFourScreen() {
   }, []);
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
+    if (Platform.OS === 'web') {
+      if (confirm('Are you sure you want to logout?')) {
+        logout();
+      }
+    } else {
+      Alert.alert(
+        'Logout',
+        'Are you sure you want to logout?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
           },
-        },
-      ]
-    );
+          {
+            text: 'Logout',
+            style: 'destructive',
+            onPress: async () => {
+              await logout();
+            },
+          },
+        ]
+      );
+    }
   };
 
   return (

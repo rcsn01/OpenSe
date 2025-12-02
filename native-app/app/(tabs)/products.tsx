@@ -72,6 +72,8 @@ export default function ProductsScreen() {
   };
 
   const fetchProducts = async () => {
+    if (!token) return;
+    
     try {
       // Fetch products
       const productsResponse = await fetch(API_ENDPOINTS.products, {
@@ -157,8 +159,10 @@ export default function ProductsScreen() {
   };
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    if (token) {
+      fetchProducts();
+    }
+  }, [token]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -313,6 +317,30 @@ export default function ProductsScreen() {
             </ThemedText>
             <ThemedText style={[styles.filterButtonIcon, { color: mutedText }]}>▼</ThemedText>
           </TouchableOpacity>
+        </View>
+
+        {/* Stats Row */}
+        <View style={[styles.statsRow, { backgroundColor: cardBackground, borderColor }]}>
+          <View style={styles.statItem}>
+            <ThemedText style={[styles.statLabel, { color: mutedText }]}>In Stock</ThemedText>
+            <ThemedText style={[styles.statValue, { color: textColor }]}>
+              {products.filter(p => p.latestStatus === 'in-stock').length}
+            </ThemedText>
+          </View>
+          <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
+          <View style={styles.statItem}>
+            <ThemedText style={[styles.statLabel, { color: mutedText }]}>Low</ThemedText>
+            <ThemedText style={[styles.statValue, { color: textColor }]}>
+              {products.filter(p => p.latestStatus === 'low').length}
+            </ThemedText>
+          </View>
+          <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
+          <View style={styles.statItem}>
+            <ThemedText style={[styles.statLabel, { color: mutedText }]}>Empty</ThemedText>
+            <ThemedText style={[styles.statValue, { color: textColor }]}>
+              {products.filter(p => p.latestStatus === 'empty').length}
+            </ThemedText>
+          </View>
         </View>
 
         {filterDropdownVisible && (
@@ -578,6 +606,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 12,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  statSeparator: {
+    width: 1,
+    height: '100%',
   },
   filterOption: {
     paddingVertical: 12,
