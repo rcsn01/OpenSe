@@ -356,10 +356,6 @@ export default function HomeScreen() {
             numberOfLines={4}
           />
         </View>
-
-        {/* Image upload removed per request */}
-
-        {/* Submit button */}
       </ScrollView>
     </View>
   );
