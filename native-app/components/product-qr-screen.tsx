@@ -62,9 +62,9 @@ export default function ProductQrModal({ visible, onClose }: Props) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: background }]}> 
         <View style={[styles.header, { borderBottomColor: borderColor }]}> 
-          <ThemedText type="title" style={[styles.title, { color: tint }]}>Product QR Codes</ThemedText>
+          <ThemedText type="title" style={[styles.title, { color: textColor }]}>Product QR Codes</ThemedText>
           <TouchableOpacity onPress={onClose} style={[styles.closeButton, { backgroundColor: cardBackground, borderColor }]} accessibilityRole="button">
-            <ThemedText style={[styles.closeButtonText, { color: mutedText }]}>Close</ThemedText>
+            <ThemedText style={[styles.closeButtonText, { color: textColor }]}>Close</ThemedText>
           </TouchableOpacity>
         </View>
 

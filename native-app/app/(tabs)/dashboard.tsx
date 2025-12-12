@@ -1,25 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView, Modal, TouchableOpacity, FlatList } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
 import ProductQrModal from '@/components/product-qr-screen';
-
-interface StockReport {
-  id: number;
-  product_id: string;
-  user_id: number;
-  status: string;
-  notes: string;
-  image_url: string | null;
-  created_at: string;
-  product_name: string;
-  username: string;
-}
+import { RecentReports, StockReport } from '@/components/recent-reports';
+import { StockList, Product } from '@/components/stock-list';
+import { TeamActivity, UserStat } from '@/components/team-activity';
 
 interface StockStats {
   empty: number;
@@ -36,10 +26,12 @@ export default function DashboardScreen() {
   const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
   const tint = useThemeColor({}, 'tint');
   const textColor = useThemeColor({}, 'text');
-  const buttonBackgroundSelected = useThemeColor({ light: Colors.light.buttonBackgroundSelected, dark: Colors.dark.buttonBackgroundSelected }, 'background');
-  const buttonTextSelected = useThemeColor({ light: Colors.light.buttonTextSelected, dark: Colors.dark.buttonTextSelected }, 'text');
+  
   const [stats, setStats] = useState<StockStats>({ empty: 0, low: 0, inStock: 0, total: 0 });
   const [recentReports, setRecentReports] = useState<StockReport[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [teamStats, setTeamStats] = useState<UserStat[]>([]);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -66,46 +58,53 @@ export default function DashboardScreen() {
     setError('');
 
     try {
-      console.log('Fetching reports with token:', token ? token.substring(0, 10) + '...' : 'null');
-      const response = await fetch(API_ENDPOINTS.reports, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      // Fetch Reports
+      const reportsRes = await fetch(API_ENDPOINTS.reports, {
+        headers: { 'Authorization': `Bearer ${token}` },
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Session expired. Please login again.');
-        }
-        const errText = await response.text();
-        console.error('Fetch reports failed:', response.status, errText);
-        throw new Error(`Failed to fetch reports: ${response.status}`);
-      }
-
-      const reports: StockReport[] = await response.json();
-      console.log('Fetched reports:', reports.length, reports);
       
-      // Calculate statistics from the latest report for each product
+      if (!reportsRes.ok) throw new Error('Failed to fetch reports');
+      const reportsData: StockReport[] = await reportsRes.json();
+      
+      // Calculate stats
       const latestReportsByProduct = new Map<string, StockReport>();
-      reports.forEach(report => {
+      reportsData.forEach(report => {
         const key = String(report.product_id);
         const existing = latestReportsByProduct.get(key);
         if (!existing || new Date(report.created_at) > new Date(existing.created_at)) {
           latestReportsByProduct.set(key, report);
         }
       });
-
       const latestReports = Array.from(latestReportsByProduct.values());
       
-      const calculatedStats: StockStats = {
+      setStats({
         empty: latestReports.filter(r => r.status === 'empty').length,
         low: latestReports.filter(r => r.status === 'low').length,
         inStock: latestReports.filter(r => r.status === 'in-stock').length,
         total: latestReports.length,
-      };
+      });
+      setRecentReports(reportsData.slice(0, 5));
 
-      setStats(calculatedStats);
-      setRecentReports(reports.slice(0, 5)); // Get 5 most recent reports
+      // Fetch Products (for Stock section)
+      const productsRes = await fetch(API_ENDPOINTS.products, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (productsRes.ok) {
+        const productsData: Product[] = await productsRes.json();
+        // Sort by location
+        const sortedProducts = productsData.sort((a, b) => (a.location || '').localeCompare(b.location || ''));
+        setProducts(sortedProducts);
+      }
+
+      // Fetch Team Stats
+      const teamRes = await fetch(API_ENDPOINTS.users, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (teamRes.ok) {
+        const teamData: UserStat[] = await teamRes.json();
+        setTeamStats(teamData);
+      }
+
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard data');
       console.error('Dashboard error:', err);
@@ -113,10 +112,6 @@ export default function DashboardScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
-
-  const fetchProducts = async () => {
-    // moved to ProductQrModal component
   };
 
   const onRefresh = () => {
@@ -159,55 +154,21 @@ export default function DashboardScreen() {
           </View>
         ) : null}
 
-        {/* Action buttons row (replaces previous "Recent Reports" section) */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: buttonBackgroundSelected, borderColor }]}
-            onPress={() => { /* TODO: wire navigation to Reports screen */ }}
-            accessibilityRole="button"
-          >
-            <ThemedText style={[styles.actionButtonText, { color: buttonTextSelected }]}>Reports</ThemedText>
-          </TouchableOpacity>
+        <RecentReports reports={recentReports} />
+        <StockList products={products} />
+        <TeamActivity teamStats={teamStats} />
 
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: cardBackground, borderColor }]}
-            onPress={() => { /* TODO: wire navigation to Categories screen */ }}
-            accessibilityRole="button"
-          >
-            <ThemedText style={[styles.actionButtonText, { color: textColor }]}>Categories</ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: cardBackground, borderColor }]}
-            onPress={() => { /* TODO: wire navigation to Locations screen */ }}
-            accessibilityRole="button"
-          >
-            <ThemedText style={[styles.actionButtonText, { color: textColor }]}>Locations</ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: cardBackground, borderColor }]}
-            onPress={openQrModal}
-            accessibilityRole="button"
-          >
-            <ThemedText style={[styles.actionButtonText, { color: textColor }]}>QR Codes</ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        {recentReports.length === 0 && !error && (
-          <View style={styles.emptyState}>
-            <ThemedText style={styles.emptyText}>📊</ThemedText>
-            <ThemedText type="defaultSemiBold" style={[styles.emptyTitle, { color: textColor }]}>
-              No reports yet
-            </ThemedText>
-            <ThemedText style={styles.emptyStateText}>
-              Start scanning products to see your stock status!
-            </ThemedText>
-          </View>
-        )}
+        <View style={{ height: 80 }} /> 
       </ScrollView>
 
-      {/* QR Codes is now available in the Actions column above */}
+      {/* Floating QR Button */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: tint }]}
+        onPress={openQrModal}
+        accessibilityRole="button"
+      >
+        <ThemedText style={styles.fabText}>QR Codes</ThemedText>
+      </TouchableOpacity>
 
       <ProductQrModal visible={isQrModalVisible} onClose={closeQrModal} />
     </View>
@@ -259,237 +220,22 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     textAlign: 'center',
   },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 100,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  emptyCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#ef4444',
-  },
-  lowCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b',
-  },
-  inStockCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#10b981',
-  },
-  statNumber: {
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '700',
-    marginTop: 6,
-    marginBottom: 0,
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-    opacity: 0.8,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    gap: 12,
-  },
-  statColumn: {
-    flex: 1,
-    minHeight: 88,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  verticalSeparator: {
-    width: 1,
-    alignSelf: 'stretch',
-    marginHorizontal: 12,
-  },
-  singleStatCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    marginBottom: 24,
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  recentSection: {
-    marginTop: 8,
-  },
-  recentTitle: {
-    marginBottom: 12,
-    fontSize: 18,
-  },
-  reportCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  reportHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusEmpty: {
-    backgroundColor: '#fee2e2',
-  },
-  statusLow: {
-    backgroundColor: '#fef3c7',
-  },
-  statusInStock: {
-    backgroundColor: '#d1fae5',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  reportDetail: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginBottom: 4,
-  },
-  reportNotes: {
-    fontSize: 13,
-    marginTop: 8,
-    fontStyle: 'italic',
-    opacity: 0.8,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyText: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    marginBottom: 8,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    textAlign: 'center',
-    opacity: 0.6,
-  },
-  qrButton: {
-    marginTop: 12,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  qrButtonText: {
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    paddingTop: 48,
-    paddingHorizontal: 16,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  qrCloseButton: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  qrCloseButtonText: {
-    fontWeight: '600',
-  },
-  qrList: {
-    paddingBottom: 48,
-  },
-  qrItem: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  qrName: {
-    marginBottom: 10,
-    fontSize: 16,
-  },
-  qrSvgContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-    borderRadius: 8,
-  },
-  actionsRow: {
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    marginBottom: 20,
-  },
-  actionButton: {
-    width: '100%',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  actionButtonText: {
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  qrFloatButton: {
+  fab: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
+    bottom: 24,
+    right: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  fabText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
