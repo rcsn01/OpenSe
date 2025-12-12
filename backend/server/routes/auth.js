@@ -45,6 +45,23 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+// Get all users with report counts
+router.get('/users', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT u.id, u.username, COUNT(sr.id) as report_count
+      FROM users u
+      LEFT JOIN stock_reports sr ON u.id = sr.user_id
+      GROUP BY u.id, u.username
+      ORDER BY report_count DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
