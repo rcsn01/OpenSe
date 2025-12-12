@@ -20,19 +20,49 @@ export function StockList({ products }: Props) {
   const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
   const textColor = useThemeColor({}, 'text');
 
+  const locationStats = React.useMemo(() => {
+    const stats: Record<string, { empty: number; low: number; inStock: number }> = {};
+    
+    products.forEach(p => {
+      const loc = p.location || 'Unassigned';
+      if (!stats[loc]) stats[loc] = { empty: 0, low: 0, inStock: 0 };
+      
+      if (p.quantity === 0) stats[loc].empty++;
+      else if (p.quantity <= 5) stats[loc].low++;
+      else stats[loc].inStock++;
+    });
+
+    return Object.entries(stats).map(([location, data]) => ({
+      location,
+      ...data
+    })).sort((a, b) => a.location.localeCompare(b.location));
+  }, [products]);
+
   return (
     <View style={styles.section}>
       <ThemedText type="subtitle" style={[styles.sectionTitle, { color: textColor }]}>Stock by Location</ThemedText>
-      {products.length === 0 ? (
+      {locationStats.length === 0 ? (
         <ThemedText style={{ color: mutedText }}>No products found.</ThemedText>
       ) : (
-        products.map((product) => (
-          <View key={product.id} style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
-            <View style={styles.cardHeader}>
-              <ThemedText type="defaultSemiBold">{product.name}</ThemedText>
-              <ThemedText style={{ color: mutedText }}>{product.location || 'No Location'}</ThemedText>
+        locationStats.map((stat) => (
+          <View key={stat.location} style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
+            <View style={[styles.cardHeader, { borderBottomColor: borderColor }]}>
+              <ThemedText type="defaultSemiBold">{stat.location}</ThemedText>
             </View>
-            <ThemedText style={{ color: textColor }}>Qty: {product.quantity}</ThemedText>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statValue, { color: '#ef4444' }]}>{stat.empty}</ThemedText>
+                <ThemedText style={[styles.statLabel, { color: mutedText }]}>Empty</ThemedText>
+              </View>
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statValue, { color: '#f59e0b' }]}>{stat.low}</ThemedText>
+                <ThemedText style={[styles.statLabel, { color: mutedText }]}>Low</ThemedText>
+              </View>
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statValue, { color: '#10b981' }]}>{stat.inStock}</ThemedText>
+                <ThemedText style={[styles.statLabel, { color: mutedText }]}>In Stock</ThemedText>
+              </View>
+            </View>
           </View>
         ))
       )}
@@ -56,9 +86,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cardHeader: {
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+  },
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+  },
+  statItem: {
     alignItems: 'center',
-    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
   },
 });

@@ -25,13 +25,22 @@ export function RecentReports({ reports }: Props) {
   const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
   const textColor = useThemeColor({}, 'text');
 
+  const sortedReports = [...reports]
+    .sort((a, b) => {
+      const priority: Record<string, number> = { 'empty': 0, 'low': 1, 'in-stock': 2 };
+      const pA = priority[a.status] ?? 3;
+      const pB = priority[b.status] ?? 3;
+      return pA - pB;
+    })
+    .slice(0, 3);
+
   return (
     <View style={styles.section}>
       <ThemedText type="subtitle" style={[styles.sectionTitle, { color: textColor }]}>Recent Reports</ThemedText>
-      {reports.length === 0 ? (
+      {sortedReports.length === 0 ? (
         <ThemedText style={{ color: mutedText }}>No reports yet.</ThemedText>
       ) : (
-        reports.map((report) => (
+        sortedReports.map((report) => (
           <View key={report.id} style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
             <View style={styles.cardHeader}>
               <ThemedText type="defaultSemiBold">{report.product_name}</ThemedText>
@@ -43,10 +52,16 @@ export function RecentReports({ reports }: Props) {
                 <ThemedText style={styles.statusText}>{report.status.toUpperCase()}</ThemedText>
               </View>
             </View>
-            <ThemedText style={[styles.cardSubtext, { color: mutedText }]}>
-              By {report.username} • {new Date(report.created_at).toLocaleDateString()}
-            </ThemedText>
-            {report.notes ? <ThemedText style={styles.cardNotes}>"{report.notes}"</ThemedText> : null}
+            <View style={styles.detailsRow}>
+              <ThemedText style={[styles.cardSubtext, { color: mutedText }]}>
+                {report.username} • {new Date(report.created_at).toLocaleDateString()}
+              </ThemedText>
+              {report.notes ? (
+                <ThemedText style={[styles.cardNotes, { color: mutedText }]} numberOfLines={1}>
+                  "{report.notes}"
+                </ThemedText>
+              ) : null}
+            </View>
           </View>
         ))
       )}
@@ -56,37 +71,42 @@ export function RecentReports({ reports }: Props) {
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   sectionTitle: {
-    marginBottom: 12,
-    fontSize: 20,
+    marginBottom: 8,
+    fontSize: 18,
     fontWeight: '700',
   },
   card: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
     borderWidth: 1,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardSubtext: {
-    fontSize: 12,
     marginBottom: 4,
   },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardSubtext: {
+    fontSize: 11,
+  },
   cardNotes: {
-    fontSize: 13,
+    fontSize: 11,
     fontStyle: 'italic',
     opacity: 0.8,
-    marginTop: 4,
+    maxWidth: '50%',
+    textAlign: 'right',
   },
   statusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
