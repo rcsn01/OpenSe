@@ -319,29 +319,8 @@ export default function ProductsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Stats Row */}
-        <View style={[styles.statsRow, { backgroundColor: cardBackground, borderColor }]}>
-          <View style={styles.statItem}>
-            <ThemedText style={[styles.statLabel, { color: mutedText }]}>In Stock</ThemedText>
-            <ThemedText style={[styles.statValue, { color: textColor }]}>
-              {products.filter(p => p.latestStatus === 'in-stock').length}
-            </ThemedText>
-          </View>
-          <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
-          <View style={styles.statItem}>
-            <ThemedText style={[styles.statLabel, { color: mutedText }]}>Low</ThemedText>
-            <ThemedText style={[styles.statValue, { color: textColor }]}>
-              {products.filter(p => p.latestStatus === 'low').length}
-            </ThemedText>
-          </View>
-          <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
-          <View style={styles.statItem}>
-            <ThemedText style={[styles.statLabel, { color: mutedText }]}>Empty</ThemedText>
-            <ThemedText style={[styles.statValue, { color: textColor }]}>
-              {products.filter(p => p.latestStatus === 'empty').length}
-            </ThemedText>
-          </View>
-        </View>
+
+
 
         {filterDropdownVisible && (
           <View style={[styles.filterDropdown, { backgroundColor: cardBackground, borderColor }] }>
@@ -382,6 +361,30 @@ export default function ProductsScreen() {
         renderItem={renderProduct}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View style={[styles.statsRow, { backgroundColor: cardBackground, borderColor, marginTop: 0, marginBottom: 16 }]}>
+            <View style={styles.statItem}>
+              <ThemedText style={[styles.statLabel, { color: mutedText }]}>In Stock</ThemedText>
+              <ThemedText style={[styles.statValue, { color: textColor }]}>
+                {products.filter(p => p.latestStatus === 'in-stock').length}
+              </ThemedText>
+            </View>
+            <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
+            <View style={styles.statItem}>
+              <ThemedText style={[styles.statLabel, { color: mutedText }]}>Low</ThemedText>
+              <ThemedText style={[styles.statValue, { color: textColor }]}>
+                {products.filter(p => p.latestStatus === 'low').length}
+              </ThemedText>
+            </View>
+            <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
+            <View style={styles.statItem}>
+              <ThemedText style={[styles.statLabel, { color: mutedText }]}>Empty</ThemedText>
+              <ThemedText style={[styles.statValue, { color: textColor }]}>
+                {products.filter(p => p.latestStatus === 'empty').length}
+              </ThemedText>
+            </View>
+          </View>
+        }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
