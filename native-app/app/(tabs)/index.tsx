@@ -16,7 +16,7 @@ import { API_BASE_URL } from '@/config/api';
 // - Top half: camera preview and QR scanning (uses expo-camera)
 // - Bottom half: simple form to submit stock reports tied to the scanned product
 export default function HomeScreen() {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const cameraRef = useRef<any | null>(null);
   // Camera refs and UI state
   const [cameraType, setCameraType] = useState<any>('back'); // 'back' or 'front'
@@ -139,6 +139,11 @@ export default function HomeScreen() {
           },
         });
 
+        if (res.status === 401) {
+          await logout();
+          return;
+        }
+
         if (!res.ok) {
           // Show fallback name
           if (mounted) setProductName('Unknown Product');
@@ -184,6 +189,11 @@ export default function HomeScreen() {
         },
         body: formData,
       });
+
+      if (response.status === 401) {
+        await logout();
+        return;
+      }
 
       if (!response.ok) {
         const error = await response.json();

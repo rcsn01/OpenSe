@@ -6,7 +6,6 @@ import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
-import ProductQrModal from '@/components/product-qr-screen';
 import { RecentReports, StockReport } from '@/components/recent-reports';
 import { StockList, Product } from '@/components/stock-list';
 import { TeamActivity, UserStat } from '@/components/team-activity';
@@ -19,7 +18,7 @@ interface StockStats {
 }
 
 export default function DashboardScreen() {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const background = useThemeColor({}, 'background');
   const cardBackground = useThemeColor({ light: '#fff', dark: '#0b1220' }, 'background');
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#1f2937' }, 'background');
@@ -35,8 +34,6 @@ export default function DashboardScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
-  // QR modal visibility
-  const [isQrModalVisible, setIsQrModalVisible] = useState(false);
 
   // Use useFocusEffect to refresh data when the tab comes into focus
   useFocusEffect(
@@ -63,6 +60,11 @@ export default function DashboardScreen() {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       
+      if (reportsRes.status === 401) {
+        await logout();
+        return;
+      }
+
       if (!reportsRes.ok) throw new Error('Failed to fetch reports');
       const reportsData: StockReport[] = await reportsRes.json();
       
@@ -118,14 +120,6 @@ export default function DashboardScreen() {
     fetchDashboardData(true);
   };
 
-  const openQrModal = () => {
-    setIsQrModalVisible(true);
-  };
-
-  const closeQrModal = () => {
-    setIsQrModalVisible(false);
-  };
-
   if (isLoading) {
     return (
       <View style={[styles.centerContainer, { backgroundColor: background }]}>
@@ -160,17 +154,6 @@ export default function DashboardScreen() {
 
         <View style={{ height: 80 }} /> 
       </ScrollView>
-
-      {/* Floating QR Button */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: tint }]}
-        onPress={openQrModal}
-        accessibilityRole="button"
-      >
-        <ThemedText style={styles.fabText}>QR Codes</ThemedText>
-      </TouchableOpacity>
-
-      <ProductQrModal visible={isQrModalVisible} onClose={closeQrModal} />
     </View>
   );
 }
@@ -219,23 +202,5 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#ef4444',
     textAlign: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 24,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  fabText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
   },
 });

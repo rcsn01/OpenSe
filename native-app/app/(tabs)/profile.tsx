@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setPreferredColorScheme, useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
+import ProductQrModal from '@/components/product-qr-screen';
 
 export default function TabFourScreen() {
   const { user, logout } = useAuth();
@@ -25,6 +26,16 @@ export default function TabFourScreen() {
   const buttonBackgroundDefault = useThemeColor({ light: Colors.light.buttonBackgroundDefault, dark: Colors.dark.buttonBackgroundDefault }, 'background');
   const buttonTextSelected = useThemeColor({ light: Colors.light.buttonTextSelected, dark: Colors.dark.buttonTextSelected }, 'text');
   const buttonTextDefault = useThemeColor({ light: Colors.light.buttonTextDefault, dark: Colors.dark.buttonTextDefault }, 'text');
+
+  const [isQrModalVisible, setIsQrModalVisible] = useState(false);
+
+  const openQrModal = () => {
+    setIsQrModalVisible(true);
+  };
+
+  const closeQrModal = () => {
+    setIsQrModalVisible(false);
+  };
 
   useEffect(() => {
     (async () => {
@@ -146,6 +157,14 @@ export default function TabFourScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+
+            <TouchableOpacity 
+              style={[styles.infoItem, { borderBottomWidth: 0 }]} 
+              onPress={openQrModal}
+            >
+              <ThemedText style={styles.infoLabel}>Product QR Codes</ThemedText>
+              <ThemedText style={[styles.infoValue, { color: tint }]}>View</ThemedText>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -155,6 +174,8 @@ export default function TabFourScreen() {
           </ThemedText>
         </TouchableOpacity>
       </ScrollView>
+
+      <ProductQrModal visible={isQrModalVisible} onClose={closeQrModal} />
     </View>
   );
 }

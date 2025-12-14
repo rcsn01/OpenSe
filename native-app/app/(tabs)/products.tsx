@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import ProductCard from '@/components/product-card';
-import ProductDetailScreen from '@/components/product-detail-screen';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +26,7 @@ interface Product {
 type FilterType = 'all' | 'empty' | 'low' | 'in-stock';
 
 export default function ProductsScreen() {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const router = useRouter();
   const background = useThemeColor({}, 'background');
   const cardBackground = useThemeColor({ light: '#fff', dark: '#0b1220' }, 'background');
@@ -48,7 +47,6 @@ export default function ProductsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [filterDropdownVisible, setFilterDropdownVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
@@ -81,6 +79,11 @@ export default function ProductsScreen() {
           'Authorization': `Bearer ${token}`,
         },
       });
+
+      if (productsResponse.status === 401) {
+        await logout();
+        return;
+      }
 
       if (!productsResponse.ok) {
         throw new Error('Failed to fetch products');
@@ -262,14 +265,12 @@ export default function ProductsScreen() {
   };
 
   const handleProductPress = (product: Product) => {
-    setSelectedProduct(product);
-    setDetailModalVisible(true);
+    router.push(`/product/${product.id}`);
   };
 
   const handleStartEdit = (product: Product) => {
     // Prefill the add-product modal for editing
     setSelectedProduct(product);
-    setDetailModalVisible(false);
     setIsEditing(true);
     setEditingProductId(String(product.id));
     setNewProduct({
@@ -406,13 +407,6 @@ export default function ProductsScreen() {
       <TouchableOpacity style={[styles.addButton, { backgroundColor: buttonBackgroundSelected }]} onPress={() => { setIsEditing(false); setEditingProductId(null); setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' }); setProductImageUri(null); setModalVisible(true); }}>
         <ThemedText style={[styles.addButtonText, { color: buttonTextSelected }]}>+ Add Product</ThemedText>
       </TouchableOpacity>
-
-      <ProductDetailScreen
-        visible={detailModalVisible}
-        product={selectedProduct}
-        onClose={() => setDetailModalVisible(false)}
-        onEdit={(p) => { handleStartEdit(p); }}
-      />
 
       {/* Add Product Modal */}
       <Modal

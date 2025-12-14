@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Link } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export interface StockReport {
   id: number;
@@ -36,7 +38,12 @@ export function RecentReports({ reports }: Props) {
 
   return (
     <View style={styles.section}>
-      <ThemedText type="subtitle" style={[styles.sectionTitle, { color: textColor }]}>Recent Reports</ThemedText>
+      <Link href="/recent-reports-list" asChild>
+        <TouchableOpacity style={styles.headerRow}>
+          <ThemedText type="subtitle" style={[styles.sectionTitle, { color: textColor }]}>Recent Reports</ThemedText>
+          <IconSymbol name="chevron.right" size={24} color={textColor} />
+        </TouchableOpacity>
+      </Link>
       {sortedReports.length === 0 ? (
         <ThemedText style={{ color: mutedText }}>No reports yet.</ThemedText>
       ) : (
@@ -73,8 +80,13 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 16,
   },
-  sectionTitle: {
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
   },
