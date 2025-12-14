@@ -130,7 +130,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}> 
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 20 }]}> 
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 12 }]}> 
         <ThemedText type="title" style={[styles.title, { color: textColor }]}>Dashboard</ThemedText>
         <ThemedText style={[styles.subtitle, { color: mutedText }]}>Stock Status Overview</ThemedText>
       </View>
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 12,
     borderBottomWidth: 1,
   },
   title: {
