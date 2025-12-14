@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -25,6 +25,7 @@ export default function DashboardScreen() {
   const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
   const tint = useThemeColor({}, 'tint');
   const textColor = useThemeColor({}, 'text');
+  const insets = useSafeAreaInsets();
   
   const [stats, setStats] = useState<StockStats>({ empty: 0, low: 0, inStock: 0, total: 0 });
   const [recentReports, setRecentReports] = useState<StockReport[]>([]);
@@ -35,14 +36,12 @@ export default function DashboardScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  // Use useFocusEffect to refresh data when the tab comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      if (token) {
-        fetchDashboardData();
-      }
-    }, [token])
-  );
+  // Initial load only
+  useEffect(() => {
+    if (token) {
+      fetchDashboardData();
+    }
+  }, [token]);
 
   const fetchDashboardData = async (isRefresh = false) => {
     if (!token) return;
@@ -131,7 +130,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}> 
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> 
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 20 }]}> 
         <ThemedText type="title" style={[styles.title, { color: textColor }]}>Dashboard</ThemedText>
         <ThemedText style={[styles.subtitle, { color: mutedText }]}>Stock Status Overview</ThemedText>
       </View>
@@ -174,7 +173,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 20,
     borderBottomWidth: 1,
   },

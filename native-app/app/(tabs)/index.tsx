@@ -86,6 +86,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const themeBackground = useThemeColor({}, 'background');
   const themeText = useThemeColor({}, 'text');
+  const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
   const tint = useThemeColor({}, 'tint');
   const activeTextColor = scheme === 'dark' ? '#000' : '#fff';
 
@@ -217,8 +218,10 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: themeBackground }]}>
       <View style={[styles.header, { borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 12 }]}> 
         <ThemedText type="title" style={[styles.title, { color: themeText }]}>Scan</ThemedText>
+        <ThemedText style={[styles.subtitle, { color: mutedText }]}>Scan product QR codes</ThemedText>
       </View>
 
+      {/* Always-visible card area: shows camera when scanning, product details when idle/scanned */}
       {/* Always-visible card area: shows camera when scanning, product details when idle/scanned */}
       <View style={styles.cardContainer}>
         {isScanning ? (
@@ -603,10 +606,10 @@ const styles = StyleSheet.create({
   buttonShadow: {
     // cross-platform shadow: iOS (shadow*), Android (elevation)
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   previewScanButton: {
     marginTop: 12,
@@ -720,5 +723,9 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    opacity: 0.6,
   },
 });

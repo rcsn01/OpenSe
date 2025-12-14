@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, View, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, TextInput, Modal, ScrollView, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import ProductCard from '@/components/product-card';
@@ -28,6 +29,7 @@ type FilterType = 'all' | 'empty' | 'low' | 'in-stock';
 export default function ProductsScreen() {
   const { token, logout } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const background = useThemeColor({}, 'background');
   const cardBackground = useThemeColor({ light: '#fff', dark: '#0b1220' }, 'background');
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#1f2937' }, 'background');
@@ -301,7 +303,7 @@ export default function ProductsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}> 
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 20 }]}>
         <View style={styles.headerTop}>
           <View>
             <ThemedText type="title" style={[styles.title, { color: textColor }]}>Products</ThemedText>
@@ -565,7 +567,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 20,
     borderBottomWidth: 1,
   },

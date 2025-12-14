@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, Image, Platform } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { API_BASE_URL } from '@/config/api';
@@ -84,8 +85,9 @@ export default function ProductCard({ product, onPress }: Props) {
           <Image
             source={{ uri: getImageUri(product.image_url) || undefined }}
             style={[styles.productThumb, { backgroundColor: optionBg }]}
-            resizeMode="cover"
-            onError={(e) => console.warn('Product image failed to load', e.nativeEvent)}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
           />
         ) : null}
       </View>
