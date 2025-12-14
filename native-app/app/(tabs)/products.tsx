@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, TextInput, Modal, ScrollView, Image, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useState, useCallback } from 'react';
+import { StyleSheet, View, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Modal, ScrollView, Platform } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ui/themed-text';
@@ -9,7 +9,6 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS, API_BASE_URL } from '@/config/api';
-import * as ImagePicker from 'expo-image-picker';
 
 interface Product {
   id: string;
@@ -48,33 +47,12 @@ export default function ProductsScreen() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
   // Filter states
   const [selectedLocation, setSelectedLocation] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<FilterType>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [activeDropdown, setActiveDropdown] = useState<'none' | 'location' | 'status' | 'category'>('none');
-
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    description: '',
-    category: '',
-    quantity: '',
-    expiry_date: '',
-    location: '',
-  });
-  const [productImageUri, setProductImageUri] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
-
-  const getImageUri = (path?: string | null) => {
-    if (!path) return null;
-    // Ensure path already begins with /uploads or similar
-    return `${API_BASE_URL}${path}`;
-  };
 
   const locations = ['All', ...Array.from(new Set(products.map(p => p.location).filter(Boolean) as string[]))].sort();
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category).filter(Boolean) as string[]))].sort();
@@ -196,130 +174,26 @@ export default function ProductsScreen() {
     setActiveDropdown('none');
   };
 
-  useEffect(() => {
-    if (token) {
-      fetchProducts();
-    }
-  }, [token]);
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        fetchProducts();
+      }
+    }, [token])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchProducts();
   };
 
-  const handleAddProduct = async () => {
-    if (!newProduct.name.trim()) {
-      Alert.alert('Error', 'Please fill in product name');
-      return;
-    }
 
-    setIsSubmitting(true);
-
-    try {
-      let response;
-      const isLocalImage = productImageUri && !productImageUri.startsWith('http');
-
-      if (isLocalImage) {
-        const formData: any = new FormData();
-        formData.append('name', newProduct.name);
-        formData.append('description', newProduct.description);
-        formData.append('category', newProduct.category);
-        formData.append('quantity', newProduct.quantity);
-        formData.append('expiry_date', newProduct.expiry_date);
-        formData.append('location', newProduct.location);
-
-        const uri = productImageUri as string;
-        const filename = uri.split('/').pop() || `photo.jpg`;
-        const match = filename.match(/\.([a-zA-Z0-9]+)$/);
-        const ext = match ? match[1] : 'jpg';
-        const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-
-        // @ts-ignore - FormData file object for React Native
-        formData.append('image', { uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''), name: filename, type });
-
-        if (isEditing && editingProductId) {
-          response = await fetch(`${API_ENDPOINTS.products}/${editingProductId}`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              // Let fetch set Content-Type with boundary
-            },
-            body: formData,
-          });
-        } else {
-          response = await fetch(API_ENDPOINTS.products, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-            body: formData,
-          });
-        }
-      } else {
-        // No local image picked (either no image or existing remote image kept)
-        const payload: any = { ...newProduct };
-
-        if (isEditing && editingProductId) {
-          response = await fetch(`${API_ENDPOINTS.products}/${editingProductId}`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-          });
-        } else {
-          response = await fetch(API_ENDPOINTS.products, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-          });
-        }
-      }
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || 'Failed to save product');
-      }
-
-      Alert.alert('Success', isEditing ? 'Product updated successfully!' : 'Product added successfully!');
-      setModalVisible(false);
-      setIsEditing(false);
-      setEditingProductId(null);
-      setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' });
-      setProductImageUri(null);
-      fetchProducts();
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save product');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleProductPress = (product: Product) => {
     router.push(`/product/${product.id}`);
   };
 
-  const handleStartEdit = (product: Product) => {
-    // Prefill the add-product modal for editing
-    setSelectedProduct(product);
-    setIsEditing(true);
-    setEditingProductId(String(product.id));
-    setNewProduct({
-      name: product.name || '',
-      description: product.description || '',
-      category: product.category || '',
-      quantity: product.quantity != null ? String(product.quantity) : '',
-      expiry_date: product.expiry_date || '',
-      location: product.location || '',
-    });
-    // Use remote image URI for preview; when submitting, we only upload if user picked a new local file
-    setProductImageUri(getImageUri(product.image_url) || null);
-    setModalVisible(true);
-  };
+
 
   const renderProduct = ({ item }: { item: Product }) => (
     <ProductCard product={item} onPress={handleProductPress} />
@@ -493,148 +367,11 @@ export default function ProductsScreen() {
         </TouchableOpacity>
       </Modal>
 
-      <TouchableOpacity style={[styles.addButton, { backgroundColor: buttonBackgroundSelected }]} onPress={() => { setIsEditing(false); setEditingProductId(null); setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' }); setProductImageUri(null); setModalVisible(true); }}>
+      <TouchableOpacity style={[styles.addButton, { backgroundColor: buttonBackgroundSelected }]} onPress={() => router.push('/product/add')}>
         <ThemedText style={[styles.addButtonText, { color: buttonTextSelected }]}>+ Add Product</ThemedText>
       </TouchableOpacity>
 
-      {/* Add Product Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: cardBackground }] }>
-            <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
-              <View style={styles.modalHeader}>
-                <ThemedText type="subtitle" style={[styles.modalTitle, { color: textColor }]}>{isEditing ? 'Edit Product' : 'Add New Product'}</ThemedText>
-                  <TouchableOpacity onPress={() => { setModalVisible(false); setIsEditing(false); setEditingProductId(null); }}>
-                    <ThemedText style={[styles.closeButton, { color: mutedText }]}>✕</ThemedText>
-                  </TouchableOpacity>
-              </View>
 
-              <View style={styles.inputGroup}>
-                <ThemedText style={[styles.inputLabel, { color: mutedText }]}>Product Name *</ThemedText>
-                <TextInput
-                  style={[styles.input, { backgroundColor: cardBackground, borderColor, color: textColor }]}
-                  value={newProduct.name}
-                  onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
-                  placeholder="Enter product name"
-                  placeholderTextColor={secondaryText}
-                />
-              </View>
-
-              {/* QR code removed: product UUID will be used as the QR identifier */}
-
-              <View style={styles.inputGroup}>
-                <ThemedText style={[styles.inputLabel, { color: mutedText }]}>Description (Optional)</ThemedText>
-                <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: cardBackground, borderColor, color: textColor }]}
-                  value={newProduct.description}
-                  onChangeText={(text) => setNewProduct({ ...newProduct, description: text })}
-                  placeholder="Enter product description"
-                  placeholderTextColor={secondaryText}
-                  multiline
-                  numberOfLines={4}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <ThemedText style={[styles.inputLabel, { color: mutedText }]}>Image (optional)</ThemedText>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <TouchableOpacity
-    style={[styles.imagePickButton, { backgroundColor: buttonBackgroundDefault }]}
-                    onPress={async () => {
-                      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                      if (status !== 'granted') {
-                        Alert.alert('Permission required', 'Permission to access photos is required to pick an image.');
-                        return;
-                      }
-
-                      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
-                      // Handle different response shapes across SDK versions
-                      // modern: { canceled: boolean, assets: [{ uri }] }
-                      // older: { cancelled: boolean, uri }
-                      // @ts-ignore
-                      let pickedUri = null;
-                      // @ts-ignore
-                      if (res?.assets && res.assets.length > 0) pickedUri = res.assets[0].uri;
-                      // @ts-ignore
-                      if (!pickedUri && res?.uri) pickedUri = res.uri;
-                      if (pickedUri) setProductImageUri(pickedUri);
-                    }}>
-            <ThemedText style={[styles.imagePickButtonText, { color: buttonTextDefault }]}>Choose Image</ThemedText>
-                  </TouchableOpacity>
-                  {productImageUri ? (
-                    <Image source={{ uri: productImageUri }} style={styles.imagePreview} />
-                  ) : null}
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <ThemedText style={[styles.inputLabel, { color: mutedText }]}>Category</ThemedText>
-                <TextInput
-                  style={[styles.input, { backgroundColor: cardBackground, borderColor, color: textColor }]}
-                  value={newProduct.category}
-                  onChangeText={(text) => setNewProduct({ ...newProduct, category: text })}
-                  placeholder="Category"
-                  placeholderTextColor={secondaryText}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <ThemedText style={[styles.inputLabel, { color: mutedText }]}>Quantity</ThemedText>
-                <TextInput
-                  style={[styles.input, { backgroundColor: cardBackground, borderColor, color: textColor }]}
-                  value={newProduct.quantity}
-                  onChangeText={(text) => setNewProduct({ ...newProduct, quantity: text })}
-                  placeholder="0"
-                  placeholderTextColor={secondaryText}
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <ThemedText style={[styles.inputLabel, { color: mutedText }]}>Expiry Date (YYYY-MM-DD)</ThemedText>
-                <TextInput
-                  style={[styles.input, { backgroundColor: cardBackground, borderColor, color: textColor }]}
-                  value={newProduct.expiry_date}
-                  onChangeText={(text) => setNewProduct({ ...newProduct, expiry_date: text })}
-                  placeholder="2025-12-31"
-                  placeholderTextColor={secondaryText}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <ThemedText style={[styles.inputLabel, { color: mutedText }]}>Location</ThemedText>
-                <TextInput
-                  style={[styles.input, { backgroundColor: cardBackground, borderColor, color: textColor }]}
-                  value={newProduct.location}
-                  onChangeText={(text) => setNewProduct({ ...newProduct, location: text })}
-                  placeholder="Aisle 3, Shelf B"
-                  placeholderTextColor={secondaryText}
-                />
-              </View>
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.cancelButton, { backgroundColor: buttonBackgroundDefault }]}
-                  onPress={() => { setModalVisible(false); setIsEditing(false); setEditingProductId(null); setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' }); setProductImageUri(null); }}>
-                  <ThemedText style={[styles.cancelButtonText, { color: buttonTextDefault }]}>Cancel</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.submitButton, { backgroundColor: buttonBackgroundSelected }, isSubmitting && styles.submitButtonDisabled]}
-                  onPress={handleAddProduct}
-                  disabled={isSubmitting}>
-                  <ThemedText style={[styles.submitButtonText, { color: buttonTextSelected }]}>
-                    {isSubmitting ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Product')}
-                  </ThemedText>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

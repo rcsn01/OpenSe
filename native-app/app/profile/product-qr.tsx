@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, FlatList, StyleSheet, Alert } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, FlatList, StyleSheet, Alert, Dimensions } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -16,6 +16,18 @@ interface Product {
   name: string;
   [k: string]: any;
 }
+
+const { width } = Dimensions.get('window');
+// Calculate QR size based on 4 columns
+// Screen width - (horizontal padding * 2) - (gap * 3)
+// Then divide by 4 columns
+// Then subtract internal padding of the card
+const GAP = 12;
+const PADDING = 16;
+const COLUMNS = 4;
+const AVAILABLE_WIDTH = width - (PADDING * 2) - (GAP * (COLUMNS - 1));
+const ITEM_WIDTH = AVAILABLE_WIDTH / COLUMNS;
+const QR_SIZE = ITEM_WIDTH - 16; // 4px padding on each side
 
 export default function ProductQrScreen() {
   const { token } = useAuth();
@@ -151,12 +163,14 @@ export default function ProductQrScreen() {
               data={products}
               keyExtractor={(item) => String(item.id)}
               contentContainerStyle={styles.list}
+              numColumns={4}
+              columnWrapperStyle={styles.columnWrapper}
               renderItem={({ item }) => (
-                <View style={[styles.item, { backgroundColor: cardBackground, borderColor }]}>
-                  <ThemedText type="defaultSemiBold" style={[styles.name, { color: textColor }]}>{item.name}</ThemedText>
+                <View style={[styles.item, { backgroundColor: cardBackground, borderColor, width: ITEM_WIDTH }]}>
+                  <ThemedText type="defaultSemiBold" style={[styles.name, { color: textColor }]} numberOfLines={1}>{item.name}</ThemedText>
                   <View style={[styles.qrContainer, { backgroundColor: cardBackground }]}>
                     {/* @ts-ignore */}
-                    <QRCode value={String(item.id)} size={140} />
+                    <QRCode value={String(item.id)} size={QR_SIZE} />
                   </View>
                 </View>
               )}
@@ -209,21 +223,26 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 48,
   },
+  columnWrapper: {
+    gap: GAP,
+  },
   item: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 4,
+    borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
     alignItems: 'center',
   },
   name: {
-    marginBottom: 10,
-    fontSize: 16,
+    marginBottom: 4,
+    fontSize: 22,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   qrContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
-    borderRadius: 8,
+    padding: 0,
+    borderRadius: 4,
   },
 });
