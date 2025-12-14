@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Stack } from 'expo-router';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText } from '@/components/ui/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';

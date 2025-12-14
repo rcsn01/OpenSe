@@ -2,13 +2,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, ActivityIndicator, RefreshControl, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText } from '@/components/ui/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_ENDPOINTS } from '@/config/api';
 import { RecentReports, StockReport } from '@/components/recent-reports';
-import { StockList, Product } from '@/components/stock-list';
-import { TeamActivity, UserStat } from '@/components/team-activity';
+import { StockList, Product } from '@/components/dashboard/stock-list';
+import { TeamActivity, UserStat } from '@/components/dashboard/team-activity';
 
 interface StockStats {
   empty: number;

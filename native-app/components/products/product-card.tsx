@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, TouchableOpacity, Platform } from 'react-native';
 import { Image } from 'expo-image';
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText } from '@/components/ui/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { API_BASE_URL } from '@/config/api';
 import { Colors } from '@/constants/theme';
