@@ -20,6 +20,8 @@ export function SettingsSection({ pref, setPref }: Props) {
   const buttonBackgroundSelected = useThemeColor({ light: Colors.light.buttonBackgroundSelected, dark: Colors.dark.buttonBackgroundSelected }, 'background');
   const buttonBackgroundDefault = useThemeColor({ light: Colors.light.buttonBackgroundDefault, dark: Colors.dark.buttonBackgroundDefault }, 'background');
   const buttonTextSelected = useThemeColor({ light: Colors.light.buttonTextSelected, dark: Colors.dark.buttonTextSelected }, 'text');
+  const buttonTextDefault = useThemeColor({ light: Colors.light.buttonTextDefault, dark: Colors.dark.buttonTextDefault }, 'text');
+  const linkColor = useThemeColor({ light: '#667eea', dark: '#667eea' }, 'text');
 
   const [isQrModalVisible, setIsQrModalVisible] = useState(false);
 
@@ -40,7 +42,7 @@ export function SettingsSection({ pref, setPref }: Props) {
               ]}
               onPress={async () => { await setPreferredColorScheme('light'); setPref('light'); }}
             >
-              <ThemedText style={[styles.themeOptionText, pref === 'light' ? { color: buttonTextSelected } : { color: mutedText } ]}>{'Light'}</ThemedText>
+              <ThemedText style={[styles.themeOptionText, pref === 'light' ? { color: buttonTextSelected } : { color: buttonTextDefault } ]}>{'Light'}</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -49,7 +51,7 @@ export function SettingsSection({ pref, setPref }: Props) {
               ]}
               onPress={async () => { await setPreferredColorScheme('dark'); setPref('dark'); }}
             >
-              <ThemedText style={[styles.themeOptionText, pref === 'dark' ? { color: buttonTextSelected } : { color: mutedText } ]}>{'Dark'}</ThemedText>
+              <ThemedText style={[styles.themeOptionText, pref === 'dark' ? { color: buttonTextSelected } : { color: buttonTextDefault } ]}>{'Dark'}</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -58,7 +60,7 @@ export function SettingsSection({ pref, setPref }: Props) {
               ]}
               onPress={async () => { await setPreferredColorScheme('system'); setPref('system'); }}
             >
-              <ThemedText style={[styles.themeOptionText, pref === 'system' ? { color: buttonTextSelected } : { color: mutedText } ]}>{'System'}</ThemedText>
+              <ThemedText style={[styles.themeOptionText, pref === 'system' ? { color: buttonTextSelected } : { color: buttonTextDefault } ]}>{'System'}</ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -68,7 +70,7 @@ export function SettingsSection({ pref, setPref }: Props) {
           onPress={() => setIsQrModalVisible(true)}
         >
           <ThemedText style={styles.infoLabel}>Product QR Codes</ThemedText>
-          <ThemedText style={[styles.infoValue, { color: tint }]}>View</ThemedText>
+          <ThemedText style={[styles.infoValue, { color: linkColor }]}>View</ThemedText>
         </TouchableOpacity>
       </View>
 

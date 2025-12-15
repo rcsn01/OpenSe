@@ -65,7 +65,7 @@ export default function TabFourScreen() {
   return (
     <View style={[styles.container, { backgroundColor: background }]}>
       {/* single header container (removed nested header to avoid double background/card) */}
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 20 }]}> 
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 12 }]}> 
         <ThemedText type="title" style={styles.title}>Profile</ThemedText>
         <ThemedText style={[styles.subtitle, { color: mutedText }]}>Account & Settings</ThemedText>
       </View>
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#fff',
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },

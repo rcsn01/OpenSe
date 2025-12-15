@@ -303,7 +303,7 @@ export default function ProductsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}> 
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 20 }]}>
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: Platform.OS === 'ios' ? (insets.top + 12) : 12 }]}>
         <View style={styles.headerTop}>
           <View>
             <ThemedText type="title" style={[styles.title, { color: textColor }]}>Products</ThemedText>
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 12,
     borderBottomWidth: 1,
   },
   headerTop: {
