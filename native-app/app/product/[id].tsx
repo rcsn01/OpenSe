@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -101,7 +102,13 @@ export default function ProductDetailScreen() {
       
       <ScrollView contentContainerStyle={styles.detailContent}>
         {product.image_url ? (
-          <Image source={{ uri: `${API_BASE_URL}${product.image_url}` }} style={[styles.detailImage, { backgroundColor: optionBg }]} />
+          <Image 
+            source={{ uri: `${API_BASE_URL}${product.image_url}` }} 
+            style={[styles.detailImage, { backgroundColor: optionBg }]} 
+            contentFit="cover"
+            transition={300}
+            cachePolicy="memory-disk"
+          />
         ) : null}
 
         <View style={styles.detailRow}>
