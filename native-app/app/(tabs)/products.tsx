@@ -3,8 +3,8 @@ import { StyleSheet, View, FlatList, TouchableOpacity, RefreshControl, ActivityI
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import ProductCard from '@/components/product-card';
+import { ThemedText } from '@/components/ui/themed-text';
+import ProductCard from '@/components/products/product-card';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,8 +50,13 @@ export default function ProductsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [filterDropdownVisible, setFilterDropdownVisible] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+  
+  // Filter states
+  const [selectedLocation, setSelectedLocation] = useState<string>('All');
+  const [selectedStatus, setSelectedStatus] = useState<FilterType>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [activeDropdown, setActiveDropdown] = useState<'none' | 'location' | 'status' | 'category'>('none');
+
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
@@ -69,6 +74,38 @@ export default function ProductsScreen() {
     if (!path) return null;
     // Ensure path already begins with /uploads or similar
     return `${API_BASE_URL}${path}`;
+  };
+
+  const locations = ['All', ...Array.from(new Set(products.map(p => p.location).filter(Boolean) as string[]))].sort();
+  const categories = ['All', ...Array.from(new Set(products.map(p => p.category).filter(Boolean) as string[]))].sort();
+  const statuses: { label: string; value: FilterType }[] = [
+    { label: 'All Statuses', value: 'all' },
+    { label: 'In Stock', value: 'in-stock' },
+    { label: 'Low Stock', value: 'low' },
+    { label: 'Out of Stock', value: 'empty' },
+  ];
+
+  const applyFilters = (
+    productList: Product[],
+    location: string,
+    status: FilterType,
+    category: string
+  ) => {
+    let result = productList;
+
+    if (location !== 'All') {
+      result = result.filter(p => p.location === location);
+    }
+
+    if (status !== 'all') {
+      result = result.filter(p => p.latestStatus === status);
+    }
+
+    if (category !== 'All') {
+      result = result.filter(p => p.category === category);
+    }
+
+    setFilteredProducts(result);
   };
 
   const fetchProducts = async () => {
@@ -126,7 +163,7 @@ export default function ProductsScreen() {
         });
 
         setProducts(productsWithStatus);
-        applyFilter(productsWithStatus, selectedFilter);
+        applyFilters(productsWithStatus, selectedLocation, selectedStatus, selectedCategory);
       } else {
         setProducts(productsData);
         setFilteredProducts(productsData);
@@ -139,28 +176,24 @@ export default function ProductsScreen() {
     }
   };
 
-  const applyFilter = (productList: Product[], filter: FilterType) => {
-    if (filter === 'all') {
-      setFilteredProducts(productList);
-    } else {
-      const filtered = productList.filter(p => p.latestStatus === filter);
-      setFilteredProducts(filtered);
-    }
-  };
+  const handleFilterChange = (type: 'location' | 'status' | 'category', value: any) => {
+    let newLocation = selectedLocation;
+    let newStatus = selectedStatus;
+    let newCategory = selectedCategory;
 
-  const handleFilterChange = (filter: FilterType) => {
-    setSelectedFilter(filter);
-    applyFilter(products, filter);
-    setFilterDropdownVisible(false);
-  };
-
-  const getFilterLabel = (filter: FilterType): string => {
-    switch (filter) {
-      case 'all': return 'All Products';
-      case 'empty': return 'Out of Stock';
-      case 'low': return 'Low Stock';
-      case 'in-stock': return 'In Stock';
+    if (type === 'location') {
+      newLocation = value;
+      setSelectedLocation(value);
+    } else if (type === 'status') {
+      newStatus = value;
+      setSelectedStatus(value);
+    } else if (type === 'category') {
+      newCategory = value;
+      setSelectedCategory(value);
     }
+
+    applyFilters(products, newLocation, newStatus, newCategory);
+    setActiveDropdown('none');
   };
 
   useEffect(() => {
@@ -311,52 +344,7 @@ export default function ProductsScreen() {
               {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
             </ThemedText>
           </View>
-          
-          <TouchableOpacity 
-            style={[styles.filterButton, { backgroundColor: cardBackground }]}
-            onPress={() => setFilterDropdownVisible(!filterDropdownVisible)}>
-            <ThemedText style={[styles.filterButtonText, { color: mutedText }]}>
-              {getFilterLabel(selectedFilter)}
-            </ThemedText>
-            <ThemedText style={[styles.filterButtonIcon, { color: mutedText }]}>▼</ThemedText>
-          </TouchableOpacity>
         </View>
-
-
-
-
-        {filterDropdownVisible && (
-          <View style={[styles.filterDropdown, { backgroundColor: cardBackground, borderColor }] }>
-            <TouchableOpacity
-              style={[styles.filterOption, selectedFilter === 'all' ? { backgroundColor: buttonBackgroundSelected } : { backgroundColor: buttonBackgroundDefault }]}
-              onPress={() => handleFilterChange('all')}>
-              <ThemedText style={[styles.filterOptionText, { color: selectedFilter === 'all' ? buttonTextSelected : buttonTextDefault }]}>
-                All Products
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterOption, selectedFilter === 'empty' ? { backgroundColor: buttonBackgroundSelected } : { backgroundColor: buttonBackgroundDefault }]}
-              onPress={() => handleFilterChange('empty')}>
-              <ThemedText style={[styles.filterOptionText, { color: selectedFilter === 'empty' ? buttonTextSelected : buttonTextDefault }]}>
-                Out of Stock
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterOption, selectedFilter === 'low' ? { backgroundColor: buttonBackgroundSelected } : { backgroundColor: buttonBackgroundDefault }]}
-              onPress={() => handleFilterChange('low')}>
-              <ThemedText style={[styles.filterOptionText, { color: selectedFilter === 'low' ? buttonTextSelected : buttonTextDefault }]}>
-                Low Stock
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterOption, selectedFilter === 'in-stock' ? { backgroundColor: buttonBackgroundSelected } : { backgroundColor: buttonBackgroundDefault }]}
-              onPress={() => handleFilterChange('in-stock')}>
-              <ThemedText style={[styles.filterOptionText, { color: selectedFilter === 'in-stock' ? buttonTextSelected : buttonTextDefault }]}>
-                In Stock
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
       
       <FlatList
@@ -365,28 +353,70 @@ export default function ProductsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
-          <View style={[styles.statsRow, { backgroundColor: cardBackground, borderColor, marginTop: 0, marginBottom: 16 }]}>
-            <View style={styles.statItem}>
-              <ThemedText style={[styles.statLabel, { color: mutedText }]}>In Stock</ThemedText>
-              <ThemedText style={[styles.statValue, { color: textColor }]}>
-                {products.filter(p => p.latestStatus === 'in-stock').length}
-              </ThemedText>
+          <>
+            <View style={[styles.statsRow, { backgroundColor: cardBackground, borderColor, marginTop: 0, marginBottom: 16 }]}>
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statLabel, { color: mutedText }]}>In Stock</ThemedText>
+                <ThemedText style={[styles.statValue, { color: textColor }]}>
+                  {products.filter(p => p.latestStatus === 'in-stock').length}
+                </ThemedText>
+              </View>
+              <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statLabel, { color: mutedText }]}>Low</ThemedText>
+                <ThemedText style={[styles.statValue, { color: textColor }]}>
+                  {products.filter(p => p.latestStatus === 'low').length}
+                </ThemedText>
+              </View>
+              <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statLabel, { color: mutedText }]}>Empty</ThemedText>
+                <ThemedText style={[styles.statValue, { color: textColor }]}>
+                  {products.filter(p => p.latestStatus === 'empty').length}
+                </ThemedText>
+              </View>
             </View>
-            <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
-              <ThemedText style={[styles.statLabel, { color: mutedText }]}>Low</ThemedText>
-              <ThemedText style={[styles.statValue, { color: textColor }]}>
-                {products.filter(p => p.latestStatus === 'low').length}
-              </ThemedText>
+
+            <View style={styles.filtersContainer}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
+                {/* Location Filter */}
+                <TouchableOpacity 
+                  style={[styles.filterChip, { backgroundColor: selectedLocation !== 'All' ? buttonBackgroundSelected : cardBackground, borderColor }]}
+                  onPress={() => setActiveDropdown('location')}
+                >
+                  <ThemedText style={[styles.filterChipLabel, { color: mutedText }]}>Location:</ThemedText>
+                  <ThemedText style={[styles.filterChipValue, { color: textColor }]}>
+                    {selectedLocation.length > 15 ? selectedLocation.substring(0, 15) + '...' : selectedLocation}
+                  </ThemedText>
+                  <ThemedText style={[styles.filterArrow, { color: mutedText }]}>▼</ThemedText>
+                </TouchableOpacity>
+
+                {/* Status Filter */}
+                <TouchableOpacity 
+                  style={[styles.filterChip, { backgroundColor: selectedStatus !== 'all' ? buttonBackgroundSelected : cardBackground, borderColor }]}
+                  onPress={() => setActiveDropdown('status')}
+                >
+                  <ThemedText style={[styles.filterChipLabel, { color: mutedText }]}>Status:</ThemedText>
+                  <ThemedText style={[styles.filterChipValue, { color: textColor }]}>
+                    {statuses.find(s => s.value === selectedStatus)?.label || 'All'}
+                  </ThemedText>
+                  <ThemedText style={[styles.filterArrow, { color: mutedText }]}>▼</ThemedText>
+                </TouchableOpacity>
+
+                {/* Category Filter */}
+                <TouchableOpacity 
+                  style={[styles.filterChip, { backgroundColor: selectedCategory !== 'All' ? buttonBackgroundSelected : cardBackground, borderColor }]}
+                  onPress={() => setActiveDropdown('category')}
+                >
+                  <ThemedText style={[styles.filterChipLabel, { color: mutedText }]}>Category:</ThemedText>
+                  <ThemedText style={[styles.filterChipValue, { color: textColor }]}>
+                    {selectedCategory.length > 15 ? selectedCategory.substring(0, 15) + '...' : selectedCategory}
+                  </ThemedText>
+                  <ThemedText style={[styles.filterArrow, { color: mutedText }]}>▼</ThemedText>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
-            <View style={[styles.statSeparator, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
-              <ThemedText style={[styles.statLabel, { color: mutedText }]}>Empty</ThemedText>
-              <ThemedText style={[styles.statValue, { color: textColor }]}>
-                {products.filter(p => p.latestStatus === 'empty').length}
-              </ThemedText>
-            </View>
-          </View>
+          </>
         }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -395,16 +425,73 @@ export default function ProductsScreen() {
           <View style={styles.emptyContainer}>
             <ThemedText style={styles.emptyText}>📦</ThemedText>
             <ThemedText type="defaultSemiBold" style={[styles.emptyTitle, { color: textColor }]}>
-              No products {selectedFilter !== 'all' ? 'in this category' : 'yet'}
+              No products found
             </ThemedText>
             <ThemedText style={[styles.emptySubtitle, { color: mutedText }] }>
-              {selectedFilter !== 'all' 
-                ? 'Try selecting a different filter' 
-                : 'Products will appear here once they\'re added to the system'}
+              Try adjusting your filters
             </ThemedText>
           </View>
         }
       />
+
+      {/* Filter Selection Modal */}
+      <Modal
+        visible={activeDropdown !== 'none'}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setActiveDropdown('none')}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setActiveDropdown('none')}
+        >
+          <View style={[styles.dropdownModal, { backgroundColor: cardBackground }]}>
+            <View style={[styles.dropdownHeader, { borderBottomColor: borderColor }]}>
+              <ThemedText type="subtitle" style={{ color: textColor }}>
+                Select {activeDropdown === 'location' ? 'Location' : activeDropdown === 'status' ? 'Status' : 'Category'}
+              </ThemedText>
+              <TouchableOpacity onPress={() => setActiveDropdown('none')}>
+                <ThemedText style={{ color: mutedText, fontSize: 20 }}>✕</ThemedText>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.dropdownList}>
+              {activeDropdown === 'location' && locations.map((loc) => (
+                <TouchableOpacity
+                  key={loc}
+                  style={[styles.dropdownItem, selectedLocation === loc && { backgroundColor: buttonBackgroundSelected }]}
+                  onPress={() => handleFilterChange('location', loc)}
+                >
+                  <ThemedText style={{ color: selectedLocation === loc ? buttonTextSelected : textColor }}>{loc}</ThemedText>
+                  {selectedLocation === loc && <ThemedText style={{ color: buttonTextSelected }}>✓</ThemedText>}
+                </TouchableOpacity>
+              ))}
+              
+              {activeDropdown === 'status' && statuses.map((status) => (
+                <TouchableOpacity
+                  key={status.value}
+                  style={[styles.dropdownItem, selectedStatus === status.value && { backgroundColor: buttonBackgroundSelected }]}
+                  onPress={() => handleFilterChange('status', status.value)}
+                >
+                  <ThemedText style={{ color: selectedStatus === status.value ? buttonTextSelected : textColor }}>{status.label}</ThemedText>
+                  {selectedStatus === status.value && <ThemedText style={{ color: buttonTextSelected }}>✓</ThemedText>}
+                </TouchableOpacity>
+              ))}
+
+              {activeDropdown === 'category' && categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.dropdownItem, selectedCategory === cat && { backgroundColor: buttonBackgroundSelected }]}
+                  onPress={() => handleFilterChange('category', cat)}
+                >
+                  <ThemedText style={{ color: selectedCategory === cat ? buttonTextSelected : textColor }}>{cat}</ThemedText>
+                  {selectedCategory === cat && <ThemedText style={{ color: buttonTextSelected }}>✓</ThemedText>}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <TouchableOpacity style={[styles.addButton, { backgroundColor: buttonBackgroundSelected }]} onPress={() => { setIsEditing(false); setEditingProductId(null); setNewProduct({ name: '', description: '', category: '', quantity: '', expiry_date: '', location: '' }); setProductImageUri(null); setModalVisible(true); }}>
         <ThemedText style={[styles.addButtonText, { color: buttonTextSelected }]}>+ Add Product</ThemedText>
@@ -772,7 +859,8 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
     borderTopLeftRadius: 20,
@@ -891,5 +979,62 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  filtersContainer: {
+    marginBottom: 16,
+  },
+  filtersScroll: {
+    gap: 8,
+    paddingRight: 16,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
+  },
+  filterChipLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  filterChipValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  filterArrow: {
+    fontSize: 10,
+  },
+  dropdownModal: {
+    width: '80%',
+    maxHeight: '60%',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+  },
+  dropdownList: {
+    maxHeight: 300,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 8,
   },
 });

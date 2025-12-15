@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
+import { useRouter } from 'expo-router';
+import { ThemedText } from '@/components/ui/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
 import { setPreferredColorScheme } from '@/hooks/use-color-scheme';
-import ProductQrModal from '@/components/product-qr-screen';
 
 interface Props {
   pref: 'light' | 'dark' | 'system';
@@ -12,6 +12,7 @@ interface Props {
 }
 
 export function SettingsSection({ pref, setPref }: Props) {
+  const router = useRouter();
   const cardBackground = useThemeColor({ light: '#fff', dark: '#0b1220' }, 'background');
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#1f2937' }, 'background');
   const tint = useThemeColor({}, 'tint');
@@ -22,8 +23,6 @@ export function SettingsSection({ pref, setPref }: Props) {
   const buttonTextSelected = useThemeColor({ light: Colors.light.buttonTextSelected, dark: Colors.dark.buttonTextSelected }, 'text');
   const buttonTextDefault = useThemeColor({ light: Colors.light.buttonTextDefault, dark: Colors.dark.buttonTextDefault }, 'text');
   const linkColor = useThemeColor({ light: '#667eea', dark: '#667eea' }, 'text');
-
-  const [isQrModalVisible, setIsQrModalVisible] = useState(false);
 
   return (
     <View style={styles.section}>
@@ -67,14 +66,12 @@ export function SettingsSection({ pref, setPref }: Props) {
 
         <TouchableOpacity 
           style={[styles.infoItem, { borderBottomWidth: 0 }]} 
-          onPress={() => setIsQrModalVisible(true)}
+          onPress={() => router.push('/profile/product-qr')}
         >
           <ThemedText style={styles.infoLabel}>Product QR Codes</ThemedText>
           <ThemedText style={[styles.infoValue, { color: linkColor }]}>View</ThemedText>
         </TouchableOpacity>
       </View>
-
-      <ProductQrModal visible={isQrModalVisible} onClose={() => setIsQrModalVisible(false)} />
     </View>
   );
 }
