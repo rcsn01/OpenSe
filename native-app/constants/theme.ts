@@ -29,6 +29,8 @@ export const Colors = {
     //menu bar color
     menuBarDefault: '#949494ff',
     menuBarSelected: '#000000ff',
+    // actions
+    link: '#007AFF',
   },
   dark: {
     text: '#ECEDEE',
@@ -53,6 +55,8 @@ export const Colors = {
     //menu bar color
     menuBarDefault: '#5c5c5cff',
     menuBarSelected: '#ffffffff',
+    // actions
+    link: '#fff',
   },
 };
 
