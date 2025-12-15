@@ -20,13 +20,14 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(tabs)';
+    const inTabsGroup = segments[0] === '(tabs)';
+    const inPublicGroup = segments[0] === 'login' || segments[0] === 'signup';
 
-    if (!user && inAuthGroup) {
-      // Redirect to login if not authenticated
+    if (!user && !inPublicGroup) {
+      // Redirect to login if not authenticated and trying to access protected routes
       router.replace('/login');
-    } else if (user && !inAuthGroup) {
-      // Redirect to tabs if authenticated
+    } else if (user && inPublicGroup) {
+      // Redirect to tabs if authenticated and trying to access public routes
       router.replace('/(tabs)');
     }
   }, [user, segments, isLoading]);
@@ -38,6 +39,7 @@ function RootLayoutNav() {
         <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="recent-reports-list" options={{ title: 'All Reports', headerBackTitle: 'Back' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
