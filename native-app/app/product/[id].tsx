@@ -30,7 +30,7 @@ export default function ProductDetailScreen() {
   const [error, setError] = useState('');
 
   const background = useThemeColor({}, 'background');
-  const editColor = useThemeColor({ light: '#007AFF', dark: '#fff' }, 'text');
+  const link = useThemeColor({}, 'link');
   const optionBg = useThemeColor({ light: Colors.light.mutedBackground, dark: Colors.dark.mutedBackground }, 'background');
   const mutedText = useThemeColor({ light: Colors.light.mutedText, dark: Colors.dark.mutedText }, 'text');
   const textColor = useThemeColor({}, 'text');
@@ -103,9 +103,9 @@ export default function ProductDetailScreen() {
                   }
                 });
               }}
-              style={{ marginRight: 8 }}
+              style={{ marginRight: 8, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
             >
-              <ThemedText style={{ color: editColor, fontWeight: '600', fontSize: 17 }}>Edit</ThemedText>
+              <ThemedText style={{ color: link, fontWeight: '600', fontSize: 17 }}>Edit</ThemedText>
             </TouchableOpacity>
           )
         }} 
