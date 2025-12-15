@@ -5,6 +5,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const reportRoutes = require('./routes/reports');
+const userRoutes = require('./routes/users');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/users', userRoutes);
 
 // Serve static files from React app in production
 if (process.env.NODE_ENV === 'production') {
