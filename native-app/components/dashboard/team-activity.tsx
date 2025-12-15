@@ -25,12 +25,10 @@ export function TeamActivity({ teamStats }: Props) {
 
   return (
     <View style={styles.section}>
-      <View style={styles.headerRow}>
+      <TouchableOpacity style={styles.headerRow} onPress={() => router.push('/dashboard/teams')}>
         <ThemedText type="subtitle" style={[styles.sectionTitle, { color: textColor }]}>Team Activity</ThemedText>
-        <TouchableOpacity onPress={() => router.push('/dashboard/teams')}>
-          <IconSymbol name="chevron.right" size={24} color={mutedText} />
-        </TouchableOpacity>
-      </View>
+        <IconSymbol name="chevron.right" size={24} color={mutedText} />
+      </TouchableOpacity>
       {teamStats.length === 0 ? (
         <ThemedText style={{ color: mutedText }}>No team data.</ThemedText>
       ) : (
