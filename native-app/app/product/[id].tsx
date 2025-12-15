@@ -3,6 +3,7 @@ import { View, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } fro
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ui/themed-text';
+import { HeaderButton } from '@/components/ui/header-button';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Colors } from '@/constants/theme';
 import { API_BASE_URL, API_ENDPOINTS } from '@/config/api';
@@ -87,7 +88,8 @@ export default function ProductDetailScreen() {
         options={{ 
           title: product.name,
           headerRight: () => (
-            <TouchableOpacity 
+            <HeaderButton 
+              title="Edit"
               onPress={() => {
                 router.push({
                   pathname: '/product/add',
@@ -103,10 +105,7 @@ export default function ProductDetailScreen() {
                   }
                 });
               }}
-              style={{ marginRight: 8, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <ThemedText style={{ color: link, fontWeight: '600', fontSize: 17 }}>Edit</ThemedText>
-            </TouchableOpacity>
+            />
           )
         }} 
       />
