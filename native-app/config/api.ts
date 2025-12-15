@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   login: `${API_BASE_URL}/api/auth/login`,
   signup: `${API_BASE_URL}/api/auth/signup`,
   users: `${API_BASE_URL}/api/auth/users`,
+  roles: `${API_BASE_URL}/api/users`,
   products: `${API_BASE_URL}/api/products`,
   reports: `${API_BASE_URL}/api/reports`,
 };

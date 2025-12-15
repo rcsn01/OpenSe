@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ui/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export interface UserStat {
   id: number;
@@ -14,6 +16,7 @@ interface Props {
 }
 
 export function TeamActivity({ teamStats }: Props) {
+  const router = useRouter();
   const cardBackground = useThemeColor({ light: '#fff', dark: '#0b1220' }, 'background');
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#1f2937' }, 'background');
   const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
@@ -22,7 +25,12 @@ export function TeamActivity({ teamStats }: Props) {
 
   return (
     <View style={styles.section}>
-      <ThemedText type="subtitle" style={[styles.sectionTitle, { color: textColor }]}>Team Activity</ThemedText>
+      <View style={styles.headerRow}>
+        <ThemedText type="subtitle" style={[styles.sectionTitle, { color: textColor }]}>Team Activity</ThemedText>
+        <TouchableOpacity onPress={() => router.push('/dashboard/teams')}>
+          <IconSymbol name="chevron.right" size={24} color={mutedText} />
+        </TouchableOpacity>
+      </View>
       {teamStats.length === 0 ? (
         <ThemedText style={{ color: mutedText }}>No team data.</ThemedText>
       ) : (
@@ -49,8 +57,13 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
-  sectionTitle: {
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
   },

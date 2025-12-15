@@ -52,6 +52,28 @@ const initDB = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS roles (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(50) UNIQUE NOT NULL,
+        description TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS user_roles (
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, role_id)
+      );
+
+      -- Insert default roles if they don't exist
+      INSERT INTO roles (name, description) 
+      VALUES 
+        ('admin', 'Full system access'),
+        ('manager', 'Inventory management access'),
+        ('user', 'Standard operator access'),
+        ('viewer', 'Read-only access')
+      ON CONFLICT (name) DO NOTHING;
+
     `);
     // NOTE: older-database migration/backfill removed — recreate the DB if you need
     console.log('Database initialized successfully');
