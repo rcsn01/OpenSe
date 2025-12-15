@@ -30,6 +30,7 @@ export default function ProductDetailScreen() {
   const [error, setError] = useState('');
 
   const background = useThemeColor({}, 'background');
+  const editColor = useThemeColor({ light: '#007AFF', dark: '#fff' }, 'text');
   const optionBg = useThemeColor({ light: Colors.light.mutedBackground, dark: Colors.dark.mutedBackground }, 'background');
   const mutedText = useThemeColor({ light: Colors.light.mutedText, dark: Colors.dark.mutedText }, 'text');
   const textColor = useThemeColor({}, 'text');
@@ -88,13 +89,23 @@ export default function ProductDetailScreen() {
           headerRight: () => (
             <TouchableOpacity 
               onPress={() => {
-                // For now, we can't easily edit from here without refactoring the Edit Modal too.
-                // We could pass a param back to the list, or create an edit screen.
-                // Let's just show an alert for now or implement basic navigation if we had an edit screen.
-                alert('Edit feature coming to this screen soon!');
+                router.push({
+                  pathname: '/product/add',
+                  params: { 
+                    id: product.id, 
+                    name: product.name,
+                    description: product.description || '',
+                    category: product.category || '',
+                    quantity: product.quantity?.toString() || '',
+                    expiry_date: product.expiry_date || '',
+                    location: product.location || '',
+                    image_url: product.image_url || ''
+                  }
+                });
               }}
+              style={{ marginRight: 8 }}
             >
-              <ThemedText style={{ color: Colors.light.tint, fontWeight: '600' }}>Edit</ThemedText>
+              <ThemedText style={{ color: editColor, fontWeight: '600', fontSize: 17 }}>Edit</ThemedText>
             </TouchableOpacity>
           )
         }} 
