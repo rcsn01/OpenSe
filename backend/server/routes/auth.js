@@ -9,6 +9,17 @@ const router = express.Router();
 router.post('/signup', async (req, res) => {
   const { username, email, password } = req.body;
 
+  // Basic validation
+  if (!username || !email || !password) {
+    return res.status(400).json({ error: 'Please fill in all fields' });
+  }
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address' });
+  }
+
   try {
     // Check if user already exists
     const userExists = await pool.query(
