@@ -24,6 +24,7 @@ const MAPPING = {
   'cube.box.fill': 'inventory',
   'person.fill': 'person',
   'plus': 'add',
+  'plus.circle.fill': 'add-circle',
   'minus.circle.fill': 'remove-circle',
   'trash.fill': 'delete',
 } as IconMapping;

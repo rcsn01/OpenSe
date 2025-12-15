@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, TouchableOpacity, Modal, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, TouchableOpacity, Modal, Alert, TextInput } from 'react-native';
 import { Stack } from 'expo-router';
 
 import { ThemedText } from '@/components/ui/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { HeaderButton } from '@/components/ui/header-button';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { API_ENDPOINTS } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,16 +32,20 @@ export default function TeamsScreen() {
   const mutedText = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
   const textColor = useThemeColor({}, 'text');
   const tint = useThemeColor({}, 'tint');
+  const link = useThemeColor({}, 'link');
 
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
+  const [addUserModalVisible, setAddUserModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
+  const [newUser, setNewUser] = useState({ username: '', email: '', password: '' });
 
   useEffect(() => {
     fetchData();
@@ -65,7 +70,10 @@ export default function TeamsScreen() {
     const res = await fetch(API_ENDPOINTS.roles, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error('Failed to fetch users');
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to fetch users: ${res.status}`);
+    }
     const data = await res.json();
     setUsers(data);
   };
@@ -81,6 +89,34 @@ export default function TeamsScreen() {
       }
     } catch (e) {
       console.error('Failed to fetch roles', e);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.username || !newUser.email || !newUser.password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    try {
+      const res = await fetch(API_ENDPOINTS.signup, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create user');
+      }
+
+      Alert.alert('Success', 'User created successfully');
+      setAddUserModalVisible(false);
+      setNewUser({ username: '', email: '', password: '' });
+      fetchUsers();
+    } catch (err: any) {
+      Alert.alert('Error', err.message);
     }
   };
 
@@ -158,7 +194,16 @@ export default function TeamsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: background }]}>
-      <Stack.Screen options={{ title: 'Teams', headerBackTitle: 'Back' }} />
+      <Stack.Screen options={{ 
+        title: 'Teams', 
+        headerBackTitle: 'Back',
+        headerRight: () => (
+          <HeaderButton 
+            title={isEditing ? 'Done' : 'Edit'} 
+            onPress={() => setIsEditing(!isEditing)} 
+          />
+        ),
+      }} />
       
       {isLoading && !isRefreshing ? (
         <View style={styles.centerContainer}>
@@ -181,8 +226,19 @@ export default function TeamsScreen() {
                 <ThemedText type="defaultSemiBold" style={[styles.headerCell, { width: 180 }]}>User</ThemedText>
                 <ThemedText type="defaultSemiBold" style={[styles.headerCell, { width: 220 }]}>Email</ThemedText>
                 <ThemedText type="defaultSemiBold" style={[styles.headerCell, { width: 250 }]}>Roles</ThemedText>
-                <ThemedText type="defaultSemiBold" style={[styles.headerCell, { width: 60 }]}>Action</ThemedText>
               </View>
+              
+              {isEditing && (
+                <TouchableOpacity 
+                  style={[styles.row, { borderBottomColor: borderColor, justifyContent: 'center', paddingVertical: 16 }]}
+                  onPress={() => setAddUserModalVisible(true)}
+                >
+                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <IconSymbol name="plus.circle.fill" size={20} color={textColor} />
+                      <ThemedText type="defaultSemiBold" style={{ color: textColor }}>Add New User</ThemedText>
+                   </View>
+                </TouchableOpacity>
+              )}
               
               {users.length === 0 ? (
                  <View style={{ padding: 20 }}>
@@ -192,40 +248,57 @@ export default function TeamsScreen() {
                 users.map((item) => (
                   <View key={item.id} style={[styles.row, { borderBottomColor: borderColor }]}>
                     <View style={[styles.cell, { width: 180, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
-                      <View style={[styles.avatarSmall, { backgroundColor: tint }]}>
-                        <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
-                          {item.username.charAt(0).toUpperCase()}
-                        </ThemedText>
-                      </View>
+                      {isEditing ? (
+                        <TouchableOpacity onPress={() => handleDeleteUser(item)} style={{ width: 24, alignItems: 'center' }}>
+                          <IconSymbol name="minus.circle.fill" size={22} color="#ef4444" />
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={[styles.avatarSmall, { backgroundColor: link }]}>
+                          <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>
+                            {item.username.charAt(0).toUpperCase()}
+                          </ThemedText>
+                        </View>
+                      )}
                       <ThemedText numberOfLines={1}>{item.username}</ThemedText>
                     </View>
                     <View style={[styles.cell, { width: 220, justifyContent: 'center' }]}>
                       <ThemedText style={{ color: mutedText }} numberOfLines={1}>{item.email}</ThemedText>
                     </View>
-                    <View style={[styles.cell, { width: 250, flexDirection: 'row', flexWrap: 'wrap', gap: 4, alignItems: 'center' }]}>
+                    <View style={[styles.cell, { width: 250, flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }]}>
                       {item.roles && item.roles.length > 0 ? (
                         item.roles.map((role, index) => (
                           <TouchableOpacity 
                             key={index} 
-                            style={[styles.roleBadge, { backgroundColor: tint + '20' }]}
-                            onPress={() => handleRemoveRole(item.id, role)}
+                            style={[styles.roleBadge, { backgroundColor: borderColor }]}
+                            onPress={() => isEditing && handleRemoveRole(item.id, role)}
+                            disabled={!isEditing}
                           >
-                            <ThemedText style={[styles.roleText, { color: tint }]}>{role}</ThemedText>
+                            <ThemedText style={[styles.roleText, { color: textColor }]}>{role}</ThemedText>
+                            {isEditing && (
+                               <View style={{ marginLeft: 4 }}>
+                                  <IconSymbol name="minus.circle.fill" size={12} color="#ef4444" />
+                               </View>
+                            )}
                           </TouchableOpacity>
                         ))
                       ) : null}
+                      {isEditing && (
+                        <TouchableOpacity 
+                          style={[styles.addRoleButton, { borderColor: textColor }]}
+                          onPress={() => handleAddRole(item)}
+                        >
+                          <IconSymbol name="plus" size={14} color={textColor} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    {isEditing && (
                       <TouchableOpacity 
-                        style={[styles.addRoleButton, { borderColor: tint }]}
-                        onPress={() => handleAddRole(item)}
+                        style={[styles.deleteButton, { backgroundColor: borderColor }]}
+                        onPress={() => handleDeleteUser(item)}
                       >
-                        <IconSymbol name="plus" size={12} color={tint} />
+                        <ThemedText style={{ color: '#fff', fontWeight: 'bold' }}>Delete User</ThemedText>
                       </TouchableOpacity>
-                    </View>
-                    <View style={[styles.cell, { width: 60, alignItems: 'center', justifyContent: 'center' }]}>
-                      <TouchableOpacity onPress={() => handleDeleteUser(item)}>
-                        <IconSymbol name="minus.circle.fill" size={20} color="#ef4444" />
-                      </TouchableOpacity>
-                    </View>
+                    )}
                   </View>
                 ))
               )}
@@ -254,11 +327,76 @@ export default function TeamsScreen() {
               </TouchableOpacity>
             ))}
             <TouchableOpacity 
-              style={[styles.closeButton, { backgroundColor: tint }]}
+              style={[styles.closeButton, { backgroundColor: link }]}
               onPress={() => setModalVisible(false)}
             >
               <ThemedText style={{ color: '#fff', fontWeight: 'bold' }}>Cancel</ThemedText>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={addUserModalVisible}
+        onRequestClose={() => setAddUserModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: cardBackground }]}>
+            <ThemedText type="subtitle" style={{ marginBottom: 16 }}>Create New User</ThemedText>
+            
+            <View style={styles.inputContainer}>
+              <ThemedText style={{ marginBottom: 4, fontSize: 12, color: mutedText }}>Username</ThemedText>
+              <TextInput
+                style={[styles.input, { color: textColor, borderColor }]}
+                value={newUser.username}
+                onChangeText={(text) => setNewUser({ ...newUser, username: text })}
+                placeholder="Username"
+                placeholderTextColor={mutedText}
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <ThemedText style={{ marginBottom: 4, fontSize: 12, color: mutedText }}>Email</ThemedText>
+              <TextInput
+                style={[styles.input, { color: textColor, borderColor }]}
+                value={newUser.email}
+                onChangeText={(text) => setNewUser({ ...newUser, email: text })}
+                placeholder="Email"
+                placeholderTextColor={mutedText}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <ThemedText style={{ marginBottom: 4, fontSize: 12, color: mutedText }}>Password</ThemedText>
+              <TextInput
+                style={[styles.input, { color: textColor, borderColor }]}
+                value={newUser.password}
+                onChangeText={(text) => setNewUser({ ...newUser, password: text })}
+                placeholder="Password"
+                placeholderTextColor={mutedText}
+                secureTextEntry
+              />
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+              <TouchableOpacity 
+                style={[styles.modalButton, { backgroundColor: borderColor, flex: 1 }]}
+                onPress={() => setAddUserModalVisible(false)}
+              >
+                <ThemedText style={{ color: textColor, fontWeight: '600' }}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, { backgroundColor: link, flex: 1 }]}
+                onPress={handleCreateUser}
+              >
+                <ThemedText style={{ color: '#fff', fontWeight: 'bold' }}>Create</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -304,23 +442,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   roleBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   roleText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     textTransform: 'capitalize',
   },
   addRoleButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderStyle: 'dashed',
+  },
+  deleteButton: {
+    marginLeft: 'auto',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -347,6 +494,27 @@ const styles = StyleSheet.create({
   closeButton: {
     marginTop: 16,
     padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  inputContainer: {
+    marginBottom: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+  },
+  modalButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createButton: {
+    marginTop: 12,
+    paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
