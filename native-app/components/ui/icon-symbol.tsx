@@ -23,6 +23,9 @@ const MAPPING = {
   'chart.bar.fill': 'insert-chart',
   'cube.box.fill': 'inventory',
   'person.fill': 'person',
+  'plus': 'add',
+  'minus.circle.fill': 'remove-circle',
+  'trash.fill': 'delete',
 } as IconMapping;
 
 /**
