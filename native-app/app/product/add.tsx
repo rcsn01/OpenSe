@@ -51,7 +51,7 @@ export default function AddProductScreen() {
         setImageUri(`${API_BASE_URL}${params.image_url}`);
       }
     }
-  }, [params]);
+  }, [editingProductId]);
 
   const handleSave = async () => {
     if (!name.trim()) {

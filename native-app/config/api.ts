@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 // API Configuration
 // Update this URL to match your backend server
-const LOCAL_IP = '192.168.12.148'; // Update this to your machine's LAN IP
+const LOCAL_IP = '192.168.1.12'; // Update this to your machine's LAN IP
 const PORT = 5279;
 
 export const API_BASE_URL = __DEV__ 

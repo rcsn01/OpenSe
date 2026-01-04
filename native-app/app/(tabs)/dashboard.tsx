@@ -29,6 +29,7 @@ export default function DashboardScreen() {
   
   const [stats, setStats] = useState<StockStats>({ empty: 0, low: 0, inStock: 0, total: 0 });
   const [recentReports, setRecentReports] = useState<StockReport[]>([]);
+  const [allReports, setAllReports] = useState<StockReport[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [teamStats, setTeamStats] = useState<UserStat[]>([]);
   
@@ -78,6 +79,7 @@ export default function DashboardScreen() {
       });
       const latestReports = Array.from(latestReportsByProduct.values());
       
+      setAllReports(latestReports);
       setStats({
         empty: latestReports.filter(r => r.status === 'empty').length,
         low: latestReports.filter(r => r.status === 'low').length,
@@ -148,7 +150,7 @@ export default function DashboardScreen() {
         ) : null}
 
         <RecentReports reports={recentReports} />
-        <StockList products={products} />
+        <StockList products={products} reports={allReports} />
         <TeamActivity teamStats={teamStats} />
 
         <View style={{ height: 80 }} /> 
