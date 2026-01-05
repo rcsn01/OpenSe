@@ -223,7 +223,7 @@ export default function TeamsScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={true}>
             <View>
               <View style={[styles.headerRow, { borderBottomColor: borderColor }]}>
-                <ThemedText type="defaultSemiBold" style={[styles.headerCell, { width: 180 }]}>User</ThemedText>
+                <ThemedText type="defaultSemiBold" style={[styles.headerCell, { width: 120 }]}>User</ThemedText>
                 <ThemedText type="defaultSemiBold" style={[styles.headerCell, { width: 220 }]}>Email</ThemedText>
                 <ThemedText type="defaultSemiBold" style={[styles.headerCell, { width: 250 }]}>Roles</ThemedText>
               </View>
@@ -247,7 +247,7 @@ export default function TeamsScreen() {
               ) : (
                 users.map((item) => (
                   <View key={item.id} style={[styles.row, { borderBottomColor: borderColor }]}>
-                    <View style={[styles.cell, { width: 180, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+                    <View style={[styles.cell, { width: 120, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
                       {isEditing ? (
                         <TouchableOpacity onPress={() => handleDeleteUser(item)} style={{ width: 24, alignItems: 'center' }}>
                           <IconSymbol name="minus.circle.fill" size={22} color="#ef4444" />
@@ -259,7 +259,9 @@ export default function TeamsScreen() {
                           </ThemedText>
                         </View>
                       )}
-                      <ThemedText numberOfLines={1}>{item.username}</ThemedText>
+                      <ThemedText numberOfLines={1}>
+                        {item.username.length > 10 ? `${item.username.substring(0, 10)}...` : item.username}
+                      </ThemedText>
                     </View>
                     <View style={[styles.cell, { width: 220, justifyContent: 'center' }]}>
                       <ThemedText style={{ color: mutedText }} numberOfLines={1}>{item.email}</ThemedText>
@@ -291,14 +293,6 @@ export default function TeamsScreen() {
                         </TouchableOpacity>
                       )}
                     </View>
-                    {isEditing && (
-                      <TouchableOpacity 
-                        style={[styles.deleteButton, { backgroundColor: borderColor }]}
-                        onPress={() => handleDeleteUser(item)}
-                      >
-                        <ThemedText style={{ color: '#fff', fontWeight: 'bold' }}>Delete User</ThemedText>
-                      </TouchableOpacity>
-                    )}
                   </View>
                 ))
               )}
