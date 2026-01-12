@@ -1,0 +1,13 @@
+# To start
+Terminal 1: The Backend Admin
+
+    Location: Pearl/ (Root)
+    Commands:
+        npx supabase start (Start DB)
+        npx supabase stop (Stop DB)
+        npx supabase status (Check keys)
+Terminal 2: The Frontend Dev
+    Location: Pearl/w-etl/ (Inside the app)
+    Commands:
+        npm run dev (Start React)
+        npm install ... (Add libraries)
