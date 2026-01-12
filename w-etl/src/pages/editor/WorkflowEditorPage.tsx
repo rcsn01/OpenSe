@@ -27,6 +27,8 @@ import ReactFlow, {
   Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { SplitNode } from '../../components/nodes/SplitNode';
+import { JoinNode } from '../../components/nodes/JoinNode';
 
 type Row = Record<string, any>;
 
@@ -62,6 +64,8 @@ const NODE_PALETTE = [
   { type: 'filter', label: 'Filter Rows', icon: Filter, color: 'bg-indigo-500' },
   { type: 'remove', label: 'Remove Column', icon: Scissors, color: 'bg-orange-500' },
   { type: 'save', label: 'Save CSV', icon: SaveIcon, color: 'bg-green-500' },
+  { type: 'split', label: 'Split Rows', icon: MousePointer2, color: 'bg-purple-500' },
+  { type: 'join', label: 'Join Tables', icon: MousePointer2, color: 'bg-emerald-500' },
 ];
 
 const sampleRows: Row[] = [
@@ -73,7 +77,7 @@ const sampleRows: Row[] = [
 
 const FileInputNode = ({ data }: { data: FileNodeData }) => (
   <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3 w-64">
-    <Handle type="source" position={Position.Right} className="!bg-blue-500" />
+    <Handle type="source" position={Position.Right} id="out" className="!bg-blue-500" />
     <div className="flex items-center gap-2 mb-2">
       <div className="p-2 rounded-md bg-blue-100 text-blue-700"><FileInput className="w-4 h-4" /></div>
       <div>
@@ -96,8 +100,8 @@ const FileInputNode = ({ data }: { data: FileNodeData }) => (
 
 const FilterNode = ({ data }: { data: FilterNodeData }) => (
   <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3 w-64">
-    <Handle type="target" position={Position.Left} className="!bg-slate-400" />
-    <Handle type="source" position={Position.Right} className="!bg-indigo-500" />
+    <Handle type="target" position={Position.Left} id="in" className="!bg-slate-400" />
+    <Handle type="source" position={Position.Right} id="out" className="!bg-indigo-500" />
     <div className="flex items-center gap-2 mb-2">
       <div className="p-2 rounded-md bg-indigo-100 text-indigo-700"><Filter className="w-4 h-4" /></div>
       <div>
@@ -132,8 +136,8 @@ const FilterNode = ({ data }: { data: FilterNodeData }) => (
 
 const RemoveColumnNode = ({ data }: { data: RemoveNodeData }) => (
   <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3 w-64">
-    <Handle type="target" position={Position.Left} className="!bg-slate-400" />
-    <Handle type="source" position={Position.Right} className="!bg-orange-500" />
+    <Handle type="target" position={Position.Left} id="in" className="!bg-slate-400" />
+    <Handle type="source" position={Position.Right} id="out" className="!bg-orange-500" />
     <div className="flex items-center gap-2 mb-2">
       <div className="p-2 rounded-md bg-orange-100 text-orange-700"><Scissors className="w-4 h-4" /></div>
       <div>
@@ -152,7 +156,7 @@ const RemoveColumnNode = ({ data }: { data: RemoveNodeData }) => (
 
 const SaveFileNode = ({ data }: { data: SaveNodeData }) => (
   <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3 w-64">
-    <Handle type="target" position={Position.Left} className="!bg-slate-400" />
+    <Handle type="target" position={Position.Left} id="in" className="!bg-slate-400" />
     <div className="flex items-center gap-2 mb-2">
       <div className="p-2 rounded-md bg-green-100 text-green-700"><SaveIcon className="w-4 h-4" /></div>
       <div>
@@ -172,6 +176,8 @@ const nodeTypes = {
   filter: FilterNode,
   remove: RemoveColumnNode,
   save: SaveFileNode,
+  split: SplitNode,
+  join: JoinNode,
 };
 
 const toCsv = (rows: Row[]) => {
@@ -210,13 +216,20 @@ export const WorkflowEditorPage = () => {
     const position = rfInstance?.project({ x: event.clientX - 320, y: event.clientY - 80 }) || { x: 100, y: 100 };
     const id = `${type}-${Date.now()}`;
 
-    const baseData: WorkflowNodeData = {
-      label: NODE_PALETTE.find((p) => p.type === type)?.label || 'Node',
-      rows: [],
-      field: '',
-      operator: 'equals',
-      value: '',
-    } as WorkflowNodeData;
+    const label = NODE_PALETTE.find((p) => p.type === type)?.label || 'Node';
+
+    let baseData: WorkflowNodeData;
+    if (type === 'file') {
+      baseData = { label, rows: [], description: '', sampleRows } as FileNodeData;
+    } else if (type === 'filter') {
+      baseData = { label, field: '', operator: 'equals', value: '', description: '' } as FilterNodeData;
+    } else if (type === 'remove') {
+      baseData = { label, field: '', description: '' } as RemoveNodeData;
+    } else if (type === 'save') {
+      baseData = { label } as SaveNodeData;
+    } else {
+      baseData = { label } as WorkflowNodeData;
+    }
 
     const dataWithSetter = { ...baseData, setData: (updater: any) => setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: updater(n.data) } : n)) };
 
@@ -235,7 +248,7 @@ export const WorkflowEditorPage = () => {
       incoming[e.target].push(e as Edge);
     });
 
-    const dataOut: Record<string, Row[]> = {};
+    const dataOut: Record<string, Record<string, Row[]>> = {};
     const unresolved = new Set(nodes.map((n) => n.id));
     let progress = true;
 
@@ -246,40 +259,61 @@ export const WorkflowEditorPage = () => {
         if (!node) continue;
 
         const deps = incoming[id] || [];
-        const inputs = deps.map((d) => dataOut[d.source]).filter(Boolean) as Row[][];
+        const inputs = deps.map((d) => ({ edge: d, rows: dataOut[d.source]?.[d.sourceHandle || 'default'] })).filter((x) => x.rows);
         if (deps.length && inputs.length !== deps.length) continue;
 
-        let out: Row[] = [];
+        const setOutput = (handleId: string, rows: Row[]) => {
+          if (!dataOut[id]) dataOut[id] = {};
+          dataOut[id][handleId || 'default'] = rows;
+        };
+
         if (node.type === 'file') {
           const d = node.data as FileNodeData;
-          out = d.rows || [];
+          setOutput('out', d.rows || []);
         } else if (node.type === 'filter') {
           const d = node.data as FilterNodeData;
-          const sourceRows = inputs[0] || [];
+          const sourceRows = inputs.find((x) => x.edge.targetHandle === 'in')?.rows || inputs[0]?.rows || [];
           if (!d.field || d.value === undefined) {
-            out = sourceRows;
+            setOutput('out', sourceRows);
           } else {
-            out = sourceRows.filter((r) => {
+            const filtered = sourceRows.filter((r) => {
               const val = (r[d.field] ?? '').toString();
               return d.operator === 'equals' ? val === d.value : val.toLowerCase().includes(d.value.toLowerCase());
             });
+            setOutput('out', filtered);
           }
         } else if (node.type === 'remove') {
           const d = node.data as RemoveNodeData;
-          const sourceRows = inputs[0] || [];
+          const sourceRows = inputs.find((x) => x.edge.targetHandle === 'in')?.rows || inputs[0]?.rows || [];
           if (!d.field) {
-            out = sourceRows;
+            setOutput('out', sourceRows);
           } else {
-            out = sourceRows.map((r) => {
+            const pruned = sourceRows.map((r) => {
               const clone = { ...r };
               delete clone[d.field];
               return clone;
             });
+            setOutput('out', pruned);
           }
+        } else if (node.type === 'split') {
+          const sourceRows = inputs.find((x) => x.edge.targetHandle === 'input')?.rows || inputs[0]?.rows || [];
+          const evens = sourceRows.filter((_, i) => i % 2 === 0);
+          const odds = sourceRows.filter((_, i) => i % 2 !== 0);
+          setOutput('output-even', evens);
+          setOutput('output-odd', odds);
+        } else if (node.type === 'join') {
+          const left = inputs.find((x) => x.edge.targetHandle === 'input-left')?.rows || [];
+          const right = inputs.find((x) => x.edge.targetHandle === 'input-right')?.rows || [];
+          const minLength = Math.min(left.length, right.length);
+          const merged: Row[] = [];
+          for (let i = 0; i < minLength; i++) {
+            merged.push({ ...left[i], ...right[i] });
+          }
+          setOutput('output-merged', merged);
         } else if (node.type === 'save') {
-          const sourceRows = inputs[0] || [];
+          const sourceRows = inputs.find((x) => x.edge.targetHandle === 'in')?.rows || inputs[0]?.rows || [];
           const csv = toCsv(sourceRows);
-          out = sourceRows;
+          setOutput('out', sourceRows);
           setNodes((nds) => nds.map((n) => n.id === node.id ? { ...n, data: { ...(n.data as SaveNodeData), lastSavedCsv: csv } } : n));
           const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
           const url = URL.createObjectURL(blob);
@@ -292,7 +326,6 @@ export const WorkflowEditorPage = () => {
           URL.revokeObjectURL(url);
         }
 
-        dataOut[id] = out;
         unresolved.delete(id);
         progress = true;
       }

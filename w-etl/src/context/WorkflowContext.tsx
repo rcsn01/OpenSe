@@ -1,44 +1,47 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { useEdges } from 'reactflow';
 
-// Maps Node ID -> Array of Data Objects
-type DataMap = Record<string, any[]>;
+// Maps Node ID -> Source Handle ID -> Data Array
+type DataMap = Record<string, Record<string, any[]>>;
 
 interface WorkflowContextType {
   dataMap: DataMap;
-  updateNodeData: (nodeId: string, data: any[]) => void;
-  getNodeData: (nodeId: string) => any[] | null;
+  updateNodeData: (nodeId: string, handleId: string, data: any[]) => void;
+  getNodeInput: (nodeId: string, targetHandle: string) => any[] | null;
 }
 
 const WorkflowContext = createContext<WorkflowContextType | undefined>(undefined);
 
 export const WorkflowProvider = ({ children }: { children: React.ReactNode }) => {
   const [dataMap, setDataMap] = useState<DataMap>({});
-  // Mock edges for now to prevent crash outside ReactFlowProvider
-  const edges: any[] = []; 
+  const edges = useEdges();
 
-  // Called when a node completes processing
-  const updateNodeData = useCallback((nodeId: string, data: any[]) => {
-    setDataMap((prev) => ({ ...prev, [nodeId]: data }));
-    
-    // AUTO-PROPAGATION LOGIC mocking
-    // 1. Find all edges where 'source' is the current nodeId
-    const outgoingEdges = edges.filter(e => e.source === nodeId);
-    
-    // 2. Trigger updates...
-  }, [edges]);
+  // Publish data from a specific output handle on a node
+  const updateNodeData = useCallback((nodeId: string, handleId: string, data: any[]) => {
+    setDataMap((prev) => ({
+      ...prev,
+      [nodeId]: {
+        ...(prev[nodeId] || {}),
+        [handleId || 'default']: data,
+      },
+    }));
+  }, []);
 
-  // Called by a node to see what its input is
-  const getNodeData = useCallback((nodeId: string) => {
-    // Find the edge connecting TO this node
-    const incomingEdge = edges.find(e => e.target === nodeId);
+  // Retrieve data arriving at a specific target handle on a node
+  const getNodeInput = useCallback((nodeId: string, targetHandle: string) => {
+    const incomingEdge = edges.find(
+      (e) => e.target === nodeId && (e.targetHandle || 'default') === (targetHandle || 'default')
+    );
     if (!incomingEdge) return null;
-    
-    // Return data from the SOURCE of that edge
-    return dataMap[incomingEdge.source] || null;
+
+    const sourceNodeData = dataMap[incomingEdge.source];
+    if (!sourceNodeData) return null;
+
+    return sourceNodeData[incomingEdge.sourceHandle || 'default'] || null;
   }, [dataMap, edges]);
 
   return (
-    <WorkflowContext.Provider value={{ dataMap, updateNodeData, getNodeData }}>
+    <WorkflowContext.Provider value={{ dataMap, updateNodeData, getNodeInput }}>
       {children}
     </WorkflowContext.Provider>
   );
