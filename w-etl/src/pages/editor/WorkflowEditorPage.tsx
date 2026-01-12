@@ -32,7 +32,7 @@ import { FilePreviewNode } from '../../components/nodes/FilePreviewNode';
 import { FilterNode } from '../../components/nodes/FilterNode';
 import { SplitNode } from '../../components/nodes/SplitNode';
 import { JoinNode } from '../../components/nodes/JoinNode';
-import { RemoveColumnNode } from '../../components/nodes/RemoveColumnNode';
+import { RemoveColumnNode } from '../../components/nodes/FilterColumn';
 import { SaveFileNode } from '../../components/nodes/SaveFileNode';
 import {
   Row,
