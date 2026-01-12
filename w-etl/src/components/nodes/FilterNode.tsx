@@ -15,12 +15,25 @@ export const FilterNode = ({ data }: NodeProps<FilterNodeData>) => (
       </div>
     </div>
     <div className="space-y-2 text-xs text-slate-700">
-      <input
-        className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
-        placeholder="Field (e.g. country)"
-        value={data.field}
-        onChange={(e) => data.setData?.((prev: FilterNodeData) => ({ ...prev, field: e.target.value }))}
-      />
+      {data.availableFields?.length ? (
+        <select
+          className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
+          value={data.field}
+          onChange={(e) => data.setData?.((prev: FilterNodeData) => ({ ...prev, field: e.target.value }))}
+        >
+          <option value="">Select column...</option>
+          {data.availableFields.map((field) => (
+            <option key={field} value={field}>{field}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
+          placeholder="Field (e.g. country)"
+          value={data.field}
+          onChange={(e) => data.setData?.((prev: FilterNodeData) => ({ ...prev, field: e.target.value }))}
+        />
+      )}
       <select
         className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
         value={data.operator}

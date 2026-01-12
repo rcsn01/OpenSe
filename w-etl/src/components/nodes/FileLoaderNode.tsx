@@ -1,32 +1,32 @@
 import React, { useCallback } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import Papa from 'papaparse'; // Best CSV parser for browser
 import { useWorkflowData } from '../../context/WorkflowContext';
+import { useWorker } from '../../hooks/useWorker';
 
 export const FileLoaderNode = ({ id, data }: NodeProps) => {
   const { updateNodeData } = useWorkflowData();
+  const { runWorkerTask } = useWorker();
 
   const stopPropagation = (event: React.SyntheticEvent) => {
     event.stopPropagation();
   };
 
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // In a real app, offload this parsing to a Web Worker!
-    Papa.parse(file, {
-      header: true,
-      dynamicTyping: true,
-      complete: (results) => {
-        // Propagate data to the engine
-        updateNodeData(id, 'out', results.data);
-        if (typeof data === 'object' && data && 'setData' in data && typeof (data as any).setData === 'function') {
-          (data as any).setData((prev: any) => ({ ...prev, fileName: file.name }));
-        }
-      },
-    });
-  }, [data, id, updateNodeData]);
+    try {
+      const rows = await runWorkerTask('PARSE_CSV', { file });
+      updateNodeData(id, 'out', rows as any[]);
+      if (typeof data === 'object' && data && 'setData' in data && typeof (data as any).setData === 'function') {
+        (data as any).setData((prev: any) => ({ ...prev, fileName: file.name }));
+      }
+    } catch (err) {
+      console.error('CSV parse failed', err);
+    } finally {
+      event.target.value = '';
+    }
+  }, [data, id, runWorkerTask, updateNodeData]);
 
   return (
     <div className="bg-white border-2 border-gray-200 rounded-lg p-4 shadow-md w-64" onMouseDown={stopPropagation} onClick={stopPropagation}>
