@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Play,
   Save,
@@ -12,6 +12,8 @@ import {
   Info,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 import ReactFlow, {
   Background,
   Controls,
@@ -74,12 +76,42 @@ const toCsv = (rows: Row[]) => {
 
 export const WorkflowEditorPage = () => {
   const { id } = useParams();
-  const [workflowName, setWorkflowName] = useState(id ? `Workflow ${id}` : 'New Workflow');
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<WorkflowNodeData>>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const isValidUuid = (value: string | null | undefined) => !!value && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(value);
+  const initialWorkflowId = id && id !== 'new' && isValidUuid(id) ? id : null;
+  const { user } = useAuth();
+  const [workflowName, setWorkflowName] = useState(initialWorkflowId ? `Workflow ${id}` : 'New Workflow');
+  const [workflowId, setWorkflowId] = useState<string | null>(initialWorkflowId);
+  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [runMessage, setRunMessage] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load existing workflow when a valid id is present
+  useEffect(() => {
+    const loadWorkflow = async () => {
+      if (!initialWorkflowId) return;
+      const { data, error } = await supabase
+        .from('workflows')
+        .select('id, name, graph_data')
+        .eq('id', initialWorkflowId)
+        .single();
+      if (error) {
+        setRunMessage(error.message || 'Failed to load workflow');
+        return;
+      }
+      setWorkflowId(data.id);
+      setWorkflowName(data.name || 'Untitled Workflow');
+      const graph = (data.graph_data || {}) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
+      const incomingNodes = (graph.nodes || []) as Node<WorkflowNodeData>[];
+      const incomingEdges = (graph.edges || []) as Edge[];
+      setNodes(incomingNodes);
+      setEdges(incomingEdges);
+      setRunMessage('Workflow loaded');
+    };
+    loadWorkflow();
+  }, [initialWorkflowId, setEdges, setNodes]);
 
   const onConnect = useCallback((connection: Edge | Connection) => {
     setEdges((eds) => addEdge({ ...connection, animated: true, type: 'smoothstep' }, eds));
@@ -236,9 +268,74 @@ export const WorkflowEditorPage = () => {
     }
   };
 
-  const handleSaveName = () => {
-    setRunMessage('Name saved locally. (Backend wiring pending)');
-  };
+  const persistNameIfPossible = useCallback(async () => {
+    if (!workflowName?.trim()) return;
+    if (!workflowId) return; // Name will be stored on first save
+    if (!user) {
+      setRunMessage('Please sign in to save changes.');
+      return;
+    }
+    const { error } = await supabase
+      .from('workflows')
+      .update({ name: workflowName.trim() })
+      .eq('id', workflowId);
+    if (error) {
+      setRunMessage(error.message || 'Failed to update name');
+    } else {
+      setRunMessage('Name updated');
+    }
+  }, [user, workflowId, workflowName]);
+
+  const handleSaveWorkflow = useCallback(async () => {
+    if (!workflowName?.trim()) {
+      setRunMessage('Please enter a workflow name before saving.');
+      return;
+    }
+    if (!user) {
+      setRunMessage('Please sign in to save your workflow.');
+      return;
+    }
+    setIsSaving(true);
+    setRunMessage('');
+    const sanitizedNodes = nodes.map((node) => {
+      const { data, ...rest } = node;
+      const cleanedData = data && typeof data === 'object'
+        ? Object.fromEntries(
+            Object.entries(data as Record<string, any>).filter(([key, val]) => key !== 'setData' && typeof val !== 'function')
+          )
+        : data;
+      return { ...rest, data: cleanedData };
+    });
+    const payload = {
+      name: workflowName.trim(),
+      graph_data: { nodes: sanitizedNodes, edges },
+      owner_id: user.id,
+    } as const;
+
+    try {
+      if (workflowId) {
+        const { error } = await supabase
+          .from('workflows')
+          .update({ name: payload.name, graph_data: payload.graph_data })
+          .eq('id', workflowId);
+        if (error) throw error;
+        setRunMessage('Workflow updated');
+      } else {
+        const { data, error } = await supabase
+          .from('workflows')
+          .insert([{ ...payload }])
+          .select('id')
+          .single();
+        if (error) throw error;
+        setWorkflowId(data?.id || null);
+        setRunMessage('Workflow saved');
+      }
+    } catch (err: any) {
+      setRunMessage(err?.message || 'Failed to save workflow');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [edges, nodes, user, workflowId, workflowName]);
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden">
@@ -251,14 +348,14 @@ export const WorkflowEditorPage = () => {
           <input
             value={workflowName}
             onChange={(e) => setWorkflowName(e.target.value)}
+            onBlur={persistNameIfPossible}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.currentTarget.blur();
+              }
+            }}
             className="text-lg font-semibold text-slate-900 border-none focus:ring-0 p-0 hover:bg-slate-50 rounded px-2"
           />
-          <button
-            onClick={handleSaveName}
-            className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1 rounded-md bg-blue-50 border border-blue-200"
-          >
-            Save Name
-          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -268,11 +365,12 @@ export const WorkflowEditorPage = () => {
             </button>
             <div className="h-6 w-px bg-slate-200 mx-1" />
             <button
-              onClick={handleSaveName}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 rounded-md shadow-sm transition-colors"
+              onClick={handleSaveWorkflow}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 rounded-md shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
                 <Save className="w-4 h-4" />
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={handleRun}
