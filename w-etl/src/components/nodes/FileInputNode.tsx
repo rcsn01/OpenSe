@@ -1,29 +1,37 @@
 import React, { useCallback } from 'react';
-import Papa from 'papaparse';
 import { Handle, Position } from 'reactflow';
 import { FileInput } from 'lucide-react';
 import { FileNodeData, Row } from './types';
+import { useWorker } from '../../hooks/useWorker';
+import { db } from '../../lib/db';
 
 export const FileInputNode = ({ data }: { data: FileNodeData }) => {
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const { runWorkerTask } = useWorker();
+
+  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     event.stopPropagation();
     const file = event.target.files?.[0];
     if (!file) return;
 
-    Papa.parse<Row>(file, {
-      header: true,
-      dynamicTyping: true,
-      complete: (results) => {
-        const rows = results.data as Row[];
-        const schema = rows.length ? Object.keys(rows[0]) : [];
-        data.setData?.((prev: FileNodeData) => ({ ...prev, rows, schema, fileName: file.name }));
-        event.target.value = '';
-      },
-      error: () => {
-        // Keep rows untouched on parse error
-      },
-    });
-  }, [data]);
+    try {
+      const rows = (await runWorkerTask('PARSE_CSV', { file })) as Row[];
+      const schema = rows.length ? Object.keys(rows[0]) : [];
+      const datasetId = crypto.randomUUID();
+      await db.datasets.put({ id: datasetId, rows, timestamp: Date.now() });
+      data.setData?.((prev: FileNodeData) => ({
+        ...prev,
+        datasetId,
+        schema,
+        fileName: file.name,
+        count: rows.length,
+        rows: rows.slice(0, 10),
+      }));
+    } catch (err) {
+      console.error('CSV parse failed', err);
+    } finally {
+      event.target.value = '';
+    }
+  }, [data, runWorkerTask]);
 
   const stopPropagation = (event: React.SyntheticEvent) => {
     event.stopPropagation();
@@ -48,8 +56,8 @@ export const FileInputNode = ({ data }: { data: FileNodeData }) => {
         className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-200 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
       />
       <div className="mt-2 text-xs text-slate-600 space-y-1">
-        <p>Rows: {data.rows?.length || 0}</p>
-        <p>Columns: {data.rows?.[0] ? Object.keys(data.rows[0]).length : 0}</p>
+        <p>Rows: {data.count || data.rows?.length || 0}</p>
+        <p>Columns: {data.schema?.length || (data.rows?.[0] ? Object.keys(data.rows[0]).length : 0)}</p>
         <p className="truncate" title={data.fileName || ''}>File: {data.fileName || '—'}</p>
       </div>
     </div>
