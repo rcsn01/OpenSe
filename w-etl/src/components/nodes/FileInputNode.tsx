@@ -14,7 +14,9 @@ export const FileInputNode = ({ data }: { data: FileNodeData }) => {
       header: true,
       dynamicTyping: true,
       complete: (results) => {
-        data.setData?.((prev: FileNodeData) => ({ ...prev, rows: results.data as Row[], fileName: file.name }));
+        const rows = results.data as Row[];
+        const schema = rows.length ? Object.keys(rows[0]) : [];
+        data.setData?.((prev: FileNodeData) => ({ ...prev, rows, schema, fileName: file.name }));
         event.target.value = '';
       },
       error: () => {

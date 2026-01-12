@@ -14,11 +14,24 @@ export const RemoveColumnNode = ({ data }: NodeProps<RemoveNodeData>) => (
         <p className="text-xs text-slate-500">Drop a column</p>
       </div>
     </div>
-    <input
-      className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
-      placeholder="Column name (e.g. amount)"
-      value={data.field}
-      onChange={(e) => data.setData?.((prev: RemoveNodeData) => ({ ...prev, field: e.target.value }))}
-    />
+    {data.availableFields?.length ? (
+      <select
+        className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
+        value={data.field}
+        onChange={(e) => data.setData?.((prev: RemoveNodeData) => ({ ...prev, field: e.target.value }))}
+      >
+        <option value="">Select column...</option>
+        {data.availableFields.map((field) => (
+          <option key={field} value={field}>{field}</option>
+        ))}
+      </select>
+    ) : (
+      <input
+        className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
+        placeholder="Column name (e.g. amount)"
+        value={data.field}
+        onChange={(e) => data.setData?.((prev: RemoveNodeData) => ({ ...prev, field: e.target.value }))}
+      />
+    )}
   </div>
 );
