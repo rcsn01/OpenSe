@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { WorkflowProvider } from './context/WorkflowContext';
+import { ReactFlowProvider } from 'reactflow';
 
 // Layouts
 import { AppLayout } from './layouts/AppLayout';
@@ -17,29 +18,31 @@ import { OrganizationSettingsPage } from './pages/settings/OrganizationSettingsP
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <WorkflowProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-            </Route>
+      <ReactFlowProvider>
+        <AuthProvider>
+          <WorkflowProvider>
+            <Routes>
+              {/* Public Routes */}
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+              </Route>
 
-            {/* Protected Routes */}
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/settings/org" element={<OrganizationSettingsPage />} />
-            </Route>
+              {/* Protected Routes */}
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/settings/org" element={<OrganizationSettingsPage />} />
+              </Route>
 
-            {/* Editor (Separate Layout or No Layout) */}
-            <Route path="/editor/:id" element={<WorkflowEditorPage />} />
+              {/* Editor (Separate Layout or No Layout) */}
+              <Route path="/editor/:id" element={<WorkflowEditorPage />} />
 
-            {/* Catch all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </WorkflowProvider>
-      </AuthProvider>
+              {/* Catch all */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </WorkflowProvider>
+        </AuthProvider>
+      </ReactFlowProvider>
     </BrowserRouter>
   );
 }
