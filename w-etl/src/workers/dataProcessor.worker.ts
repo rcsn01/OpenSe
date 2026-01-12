@@ -1,6 +1,7 @@
 /* eslint-disable no-restricted-globals */
 // Web Worker for Heavy Data Processing
 import Papa from 'papaparse';
+import { db, DatasetChunk } from '../lib/db';
 
 self.onmessage = async (e: MessageEvent) => {
   const { type, payload, id } = e.data;
@@ -19,12 +20,59 @@ self.onmessage = async (e: MessageEvent) => {
         break;
       case 'PARSE_CSV': {
         const file: File = payload.file;
-        result = await new Promise((resolve, reject) => {
+        const datasetId = crypto.randomUUID();
+        const batchSize = 1000;
+        let buffer: any[] = [];
+        let total = 0;
+        let chunkIndex = 0;
+        let schema: string[] = [];
+        let preview: any[] = [];
+
+        await new Promise<void>((resolve, reject) => {
           Papa.parse(file, {
             header: true,
             dynamicTyping: true,
             skipEmptyLines: true,
-            complete: (out) => resolve(out.data),
+            worker: false,
+            step: async (row) => {
+              if (!schema.length) schema = Object.keys(row.data || {});
+              if (preview.length < 10) preview.push(row.data);
+              buffer.push(row.data);
+              total += 1;
+              if (buffer.length >= batchSize) {
+                const chunk: DatasetChunk = { datasetId, index: chunkIndex++, rows: buffer };
+                await db.datasetChunks.add(chunk);
+                buffer = [];
+              }
+            },
+            complete: async () => {
+              try {
+                if (buffer.length) {
+                  const chunk: DatasetChunk = { datasetId, index: chunkIndex++, rows: buffer };
+                  await db.datasetChunks.add(chunk);
+                  buffer = [];
+                }
+
+                await db.datasets.put({
+                  id: datasetId,
+                  schema,
+                  count: total,
+                  chunkCount: chunkIndex,
+                  timestamp: Date.now(),
+                });
+
+                result = {
+                  datasetId,
+                  schema,
+                  count: total,
+                  chunkCount: chunkIndex,
+                  preview,
+                };
+                resolve();
+              } catch (err) {
+                reject(err);
+              }
+            },
             error: (err) => reject(err),
           });
         });
