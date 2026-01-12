@@ -32,7 +32,7 @@ import { FilePreviewNode } from '../../components/nodes/FilePreviewNode';
 import { FilterNode } from '../../components/nodes/FilterNode';
 import { SplitNode } from '../../components/nodes/SplitNode';
 import { JoinNode } from '../../components/nodes/JoinNode';
-import { RemoveColumnNode } from '../../components/nodes/FilterColumn';
+import { FilterColumn } from '../../components/nodes/FilterColumn';
 import { SaveFileNode } from '../../components/nodes/SaveFileNode';
 import {
   Row,
@@ -49,7 +49,7 @@ import { useSchemaPropagation } from '../../hooks/useSchemaPropagation';
 const NODE_PALETTE = [
   { type: 'file', label: 'File Input', icon: FileInput, color: 'bg-blue-500' },
   { type: 'filter', label: 'Filter Rows', icon: Filter, color: 'bg-indigo-500' },
-  { type: 'remove', label: 'Remove Column', icon: Scissors, color: 'bg-orange-500' },
+  { type: 'remove', label: 'Filter Columns', icon: Scissors, color: 'bg-orange-500' },
   { type: 'save', label: 'Save CSV', icon: SaveIcon, color: 'bg-green-500' },
   { type: 'split', label: 'Split Rows', icon: MousePointer2, color: 'bg-purple-500' },
   { type: 'join', label: 'Join Tables', icon: MousePointer2, color: 'bg-emerald-500' },
@@ -59,7 +59,7 @@ const NODE_PALETTE = [
 const nodeTypes = {
   file: FileInputNode,
   filter: FilterNode,
-  remove: RemoveColumnNode,
+  remove: FilterColumn,
   save: SaveFileNode,
   split: SplitNode,
   join: JoinNode,
@@ -92,6 +92,18 @@ export const WorkflowEditorPage = () => {
 
   useSchemaPropagation(nodes, edges, setNodes);
 
+  const withSetters = useCallback((list: Node<WorkflowNodeData>[]) => (
+    list.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        setData: node.data?.setData || ((updater: any) => setNodes((nds) => nds.map((n) => (
+          n.id === node.id ? { ...n, data: typeof updater === 'function' ? updater(n.data) : updater } : n
+        )))),
+      },
+    }))
+  ), [setNodes]);
+
   // Load existing workflow when a valid id is present
   useEffect(() => {
     const loadWorkflow = async () => {
@@ -108,7 +120,7 @@ export const WorkflowEditorPage = () => {
       setWorkflowId(data.id);
       setWorkflowName(data.name || 'Untitled Workflow');
       const graph = (data.graph_data || {}) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
-      const incomingNodes = (graph.nodes || []) as Node<WorkflowNodeData>[];
+      const incomingNodes = withSetters((graph.nodes || []) as Node<WorkflowNodeData>[]);
       const incomingEdges = (graph.edges || []) as Edge[];
       setNodes(incomingNodes);
       setEdges(incomingEdges);
@@ -142,7 +154,7 @@ export const WorkflowEditorPage = () => {
     } else if (type === 'filter') {
       baseData = { label, field: '', operator: 'equals', value: '', description: '' } as FilterNodeData;
     } else if (type === 'remove') {
-      baseData = { label, field: '', description: '' } as RemoveNodeData;
+      baseData = { label, field: '', availableFields: [], description: '' } as RemoveNodeData;
     } else if (type === 'save') {
       baseData = { label } as SaveNodeData;
     } else if (type === 'preview') {
@@ -151,7 +163,7 @@ export const WorkflowEditorPage = () => {
       baseData = { label } as WorkflowNodeData;
     }
 
-    const dataWithSetter = { ...baseData, setData: (updater: any) => setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: updater(n.data) } : n)) };
+    const dataWithSetter = { ...baseData, setData: (updater: any) => setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: typeof updater === 'function' ? updater(n.data) : updater } : n)) };
 
     setNodes((nds) => nds.concat({ id, type: type as any, position, data: dataWithSetter }));
   }, [rfInstance, setNodes]);

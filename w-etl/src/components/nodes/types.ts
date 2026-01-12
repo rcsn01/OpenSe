@@ -23,7 +23,8 @@ export type FilterNodeData = BaseNodeData & {
 };
 
 export type RemoveNodeData = BaseNodeData & {
-  field: string;
+  field?: string;
+  selectedFields?: string[];
   availableFields?: string[];
 };
 
