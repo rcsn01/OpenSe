@@ -115,14 +115,17 @@ export const runExecution = async (
         const d = node.data as RemoveNodeData;
         const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
         const sourceRows = await loadRows(sourceRef);
-        const pruned = !d.field
+        const targets = d.selectedFields?.length ? d.selectedFields : d.field ? [d.field] : [];
+        const projected = !targets.length
           ? sourceRows
           : sourceRows.map((r) => {
-              const clone = { ...r };
-              delete clone[d.field];
-              return clone;
+              const kept: Row = {};
+              targets.forEach((col) => {
+                kept[col] = r[col];
+              });
+              return kept;
             });
-        const outRef = await persistRows(pruned);
+        const outRef = await persistRows(projected);
         setOutput('out', outRef);
       } else if (node.type === 'split') {
         const sourceRef = inputs.find((x) => x.edge.targetHandle === 'input')?.ref || inputs[0]?.ref;
