@@ -1,5 +1,5 @@
 import { Edge, Node } from 'reactflow';
-import { Row, WorkflowNodeData, FileNodeData, FilterNodeData, RemoveNodeData, PreviewNodeData, SaveNodeData, DeduplicateNodeData, FindReplaceNodeData, FillMissingNodeData, ConditionalRouterNodeData, SamplerNodeData, RenameColumnNodeData, SortNodeData, LookupNodeData, TypeCasterNodeData } from '../../components/nodes/types';
+import { Row, WorkflowNodeData, FileNodeData, FilterNodeData, RemoveNodeData, PreviewNodeData, SaveNodeData, DeduplicateNodeData, FindReplaceNodeData, FillMissingNodeData, ConditionalRouterNodeData, SamplerNodeData, RenameColumnNodeData, SortNodeData, LookupNodeData, TypeCasterNodeData, RenameNodeData, UnpivotNodeData, PivotNodeData, JoinVerticalNodeData } from '../../components/nodes/types';
 import { db } from '../db';
 
 export type ExecutionDownload = { csv: string; filename: string };
@@ -247,6 +247,71 @@ export const runExecution = async (
           });
           setOutput('out', await persistRows(out));
         }
+      } else if (node.type === 'renameMap') {
+        const d = node.data as RenameNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        const mappings = d.mappings || [];
+        if (!mappings.length) {
+          setOutput('out', sourceRef || {});
+        } else {
+          const mapObj: Record<string, string> = {};
+          mappings.forEach((m) => {
+            if (m.oldColumn && m.newColumn) mapObj[m.oldColumn] = m.newColumn;
+          });
+          const out = sourceRows.map((r) => {
+            const next: Row = {};
+            Object.entries(r).forEach(([k, v]) => {
+              const target = mapObj[k] || k;
+              next[target] = v;
+            });
+            return next;
+          });
+          setOutput('out', await persistRows(out));
+        }
+      } else if (node.type === 'unpivot') {
+        const d = node.data as UnpivotNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        const keeps = d.keepColumns || [];
+        const melts = d.pivotColumns || [];
+        if (!melts.length) {
+          setOutput('out', sourceRef || {});
+        } else {
+          const out: Row[] = [];
+          sourceRows.forEach((r) => {
+            melts.forEach((col) => {
+              const base: Row = {};
+              keeps.forEach((k) => { base[k] = r[k]; });
+              base.Variable = col;
+              base.Value = r[col];
+              out.push(base);
+            });
+          });
+          setOutput('out', await persistRows(out));
+        }
+      } else if (node.type === 'pivot') {
+        const d = node.data as PivotNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        if (!d.indexColumn || !d.pivotColumn || !d.valueColumn) {
+          setOutput('out', sourceRef || {});
+        } else {
+          const groups = new Map<string, Row>();
+          sourceRows.forEach((r) => {
+            const idxVal = r[d.indexColumn];
+            const pivotKey = r[d.pivotColumn];
+            const val = r[d.valueColumn];
+            const key = JSON.stringify(idxVal);
+            const bucket = groups.get(key) || { [d.indexColumn]: idxVal };
+            if (pivotKey !== undefined && pivotKey !== null) {
+              bucket[String(pivotKey)] = val;
+            }
+            groups.set(key, bucket);
+          });
+          const out = Array.from(groups.values());
+          setOutput('out', await persistRows(out));
+        }
       } else if (node.type === 'sort') {
         const d = node.data as SortNodeData;
         const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
@@ -321,6 +386,23 @@ export const runExecution = async (
           merged.push({ ...left[i], ...right[i] });
         }
         setOutput('output-merged', await persistRows(merged));
+      } else if (node.type === 'joinVertical') {
+        const _d = node.data as JoinVerticalNodeData;
+        const topRef = inputs.find((x) => x.edge.targetHandle === 'input-top')?.ref;
+        const bottomRef = inputs.find((x) => x.edge.targetHandle === 'input-bottom')?.ref;
+        const top = await loadRows(topRef);
+        const bottom = await loadRows(bottomRef);
+        const fields = new Set<string>();
+        top.forEach((r) => Object.keys(r).forEach((k) => fields.add(k)));
+        bottom.forEach((r) => Object.keys(r).forEach((k) => fields.add(k)));
+        const cols = Array.from(fields);
+        const normalize = (rows: Row[]) => rows.map((r) => {
+          const next: Row = {};
+          cols.forEach((c) => { next[c] = r[c]; });
+          return next;
+        });
+        const out = [...normalize(top), ...normalize(bottom)];
+        setOutput('output-stacked', await persistRows(out));
       } else if (node.type === 'preview') {
         const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
         const sourceRows = await loadRows(sourceRef);

@@ -42,7 +42,10 @@ export const DeduplicateNode = ({ data }: NodeProps<DeduplicateNodeData>) => {
             <button className="flex-1 rounded-md border border-slate-200 px-2 py-1 hover:bg-slate-50" onClick={selectAll}>Select all</button>
             <button className="flex-1 rounded-md border border-slate-200 px-2 py-1 hover:bg-slate-50" onClick={deselectAll}>De-select all</button>
           </div>
-          <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
+          <div
+            className="max-h-32 overflow-y-auto space-y-1 pr-1"
+            onWheel={(e) => e.stopPropagation()}
+          >
             {available.map((field) => (
               <label key={field} className="flex items-center gap-2">
                 <input type="checkbox" checked={selected.includes(field)} onChange={() => toggle(field)} className="rounded border-slate-300" />

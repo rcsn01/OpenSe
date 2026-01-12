@@ -19,6 +19,8 @@ import {
   ArrowDownUp,
   Book,
   Type as TypeIcon,
+  Table,
+  Layers,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -41,6 +43,7 @@ import { FilePreviewNode } from '../../components/nodes/FilePreviewNode';
 import { FilterNode } from '../../components/nodes/FilterNode';
 import { SplitNode } from '../../components/nodes/SplitNode';
 import { JoinNode } from '../../components/nodes/JoinNode';
+import { JoinVerticalNode } from '../../components/nodes/JoinVerticalNode';
 import { FilterColumn } from '../../components/nodes/FilterColumn';
 import { SaveFileNode } from '../../components/nodes/SaveFileNode';
 import { DeduplicateNode } from '../../components/nodes/DeduplicateNode';
@@ -52,6 +55,9 @@ import { RenameColumnNode } from '../../components/nodes/RenameColumnNode';
 import { SortNode } from '../../components/nodes/SortNode';
 import { LookupNode } from '../../components/nodes/LookupNode';
 import { TypeCasterNode } from '../../components/nodes/TypeCasterNode';
+import { RenameNode } from '../../components/nodes/RenameNode';
+import { UnpivotNode } from '../../components/nodes/UnpivotNode';
+import { PivotNode } from '../../components/nodes/PivotNode';
 import {
   Row,
   FileNodeData,
@@ -66,6 +72,10 @@ import {
   SortNodeData,
   LookupNodeData,
   TypeCasterNodeData,
+  RenameNodeData,
+  UnpivotNodeData,
+  PivotNodeData,
+  JoinVerticalNodeData,
   SaveNodeData,
   PreviewNodeData,
   WorkflowNodeData,
@@ -86,9 +96,13 @@ const NODE_PALETTE = [
   { type: 'sort', label: 'Sort', icon: ArrowDownUp, color: 'bg-indigo-600' },
   { type: 'lookup', label: 'Lookup', icon: Book, color: 'bg-emerald-600' },
   { type: 'typeCast', label: 'Type Caster', icon: TypeIcon, color: 'bg-fuchsia-500' },
+  { type: 'renameMap', label: 'Rename (Mappings)', icon: Edit3, color: 'bg-yellow-600' },
+  { type: 'unpivot', label: 'Unpivot (Melt)', icon: GitBranch, color: 'bg-rose-600' },
+  { type: 'pivot', label: 'Pivot', icon: Table, color: 'bg-emerald-700' },
   { type: 'save', label: 'Save CSV', icon: SaveIcon, color: 'bg-green-500' },
   { type: 'split', label: 'Split Rows', icon: MousePointer2, color: 'bg-purple-500' },
   { type: 'join', label: 'Join Tables', icon: MousePointer2, color: 'bg-emerald-500' },
+  { type: 'joinVertical', label: 'Stack Tables', icon: Layers, color: 'bg-emerald-700' },
   { type: 'preview', label: 'File Preview', icon: Info, color: 'bg-teal-500' },
 ];
 
@@ -105,9 +119,13 @@ const nodeTypes = {
   sort: SortNode,
   lookup: LookupNode,
   typeCast: TypeCasterNode,
+  renameMap: RenameNode,
+  unpivot: UnpivotNode,
+  pivot: PivotNode,
   save: SaveFileNode,
   split: SplitNode,
   join: JoinNode,
+  joinVertical: JoinVerticalNode,
   preview: FilePreviewNode,
 };
 
@@ -164,7 +182,14 @@ export const WorkflowEditorPage = () => {
       }
       setWorkflowId(data.id);
       setWorkflowName(data.name || 'Untitled Workflow');
-      const graph = (data.graph_data || {}) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
+      const rawGraph = data.graph_data;
+      let graph: { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
+      try {
+        graph = (typeof rawGraph === 'string' ? JSON.parse(rawGraph) : rawGraph || {}) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
+      } catch (parseErr) {
+        setRunMessage('Failed to parse saved workflow');
+        return;
+      }
       const incomingNodes = withSetters((graph.nodes || []) as Node<WorkflowNodeData>[]);
       const incomingEdges = (graph.edges || []) as Edge[];
       setNodes(incomingNodes);
@@ -218,6 +243,14 @@ export const WorkflowEditorPage = () => {
       baseData = { label, field: '', newField: '', map: {}, availableFields: [], description: '' } as LookupNodeData;
     } else if (type === 'typeCast') {
       baseData = { label, field: '', targetType: 'string', availableFields: [], description: '' } as TypeCasterNodeData;
+    } else if (type === 'renameMap') {
+      baseData = { label, mappings: [], availableFields: [], description: '' } as RenameNodeData;
+    } else if (type === 'unpivot') {
+      baseData = { label, keepColumns: [], pivotColumns: [], availableFields: [], description: '' } as UnpivotNodeData;
+    } else if (type === 'pivot') {
+      baseData = { label, indexColumn: '', pivotColumn: '', valueColumn: '', availableFields: [], description: '' } as PivotNodeData;
+    } else if (type === 'joinVertical') {
+      baseData = { label } as JoinVerticalNodeData;
     } else if (type === 'save') {
       baseData = { label } as SaveNodeData;
     } else if (type === 'preview') {
@@ -303,10 +336,11 @@ export const WorkflowEditorPage = () => {
     const sanitizedNodes = nodes.map((node) => {
       const { data, ...rest } = node;
       const cleanedData = data && typeof data === 'object'
-        ? Object.fromEntries(
-            Object.entries(data as Record<string, any>).filter(([key, val]) => key !== 'setData' && typeof val !== 'function')
-          )
+        ? JSON.parse(JSON.stringify(data, (_key, val) => (typeof val === 'function' ? undefined : val)))
         : data;
+      if (cleanedData && typeof cleanedData === 'object' && 'setData' in (cleanedData as Record<string, unknown>)) {
+        delete (cleanedData as Record<string, unknown>).setData;
+      }
       return { ...rest, data: cleanedData };
     });
     const payload = {
