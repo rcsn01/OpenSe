@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Play,
   Save,
@@ -23,41 +23,24 @@ import ReactFlow, {
   Node,
   useEdgesState,
   useNodesState,
-  Handle,
-  Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { FileInputNode } from '../../components/nodes/FileInputNode';
+import { FilePreviewNode } from '../../components/nodes/FilePreviewNode';
+import { FilterNode } from '../../components/nodes/FilterNode';
 import { SplitNode } from '../../components/nodes/SplitNode';
 import { JoinNode } from '../../components/nodes/JoinNode';
-
-type Row = Record<string, any>;
-
-type BaseNodeData = {
-  label: string;
-  description?: string;
-  sampleRows?: Row[];
-  setData?: (updater: (prev: any) => any) => void;
-};
-
-type FileNodeData = BaseNodeData & {
-  rows: Row[];
-};
-
-type FilterNodeData = BaseNodeData & {
-  field: string;
-  operator: 'equals' | 'contains';
-  value: string;
-};
-
-type RemoveNodeData = BaseNodeData & {
-  field: string;
-};
-
-type SaveNodeData = BaseNodeData & {
-  lastSavedCsv?: string;
-};
-
-type WorkflowNodeData = FileNodeData | FilterNodeData | RemoveNodeData | SaveNodeData;
+import { RemoveColumnNode } from '../../components/nodes/RemoveColumnNode';
+import { SaveFileNode } from '../../components/nodes/SaveFileNode';
+import {
+  Row,
+  FileNodeData,
+  FilterNodeData,
+  RemoveNodeData,
+  SaveNodeData,
+  PreviewNodeData,
+  WorkflowNodeData,
+} from '../../components/nodes/types';
 
 const NODE_PALETTE = [
   { type: 'file', label: 'File Input', icon: FileInput, color: 'bg-blue-500' },
@@ -66,110 +49,8 @@ const NODE_PALETTE = [
   { type: 'save', label: 'Save CSV', icon: SaveIcon, color: 'bg-green-500' },
   { type: 'split', label: 'Split Rows', icon: MousePointer2, color: 'bg-purple-500' },
   { type: 'join', label: 'Join Tables', icon: MousePointer2, color: 'bg-emerald-500' },
+  { type: 'preview', label: 'File Preview', icon: Info, color: 'bg-teal-500' },
 ];
-
-const sampleRows: Row[] = [
-  { id: 1, name: 'Alice', country: 'US', amount: 120 },
-  { id: 2, name: 'Bob', country: 'UK', amount: 80 },
-  { id: 3, name: 'Charlie', country: 'US', amount: 200 },
-  { id: 4, name: 'Diana', country: 'DE', amount: 150 },
-];
-
-const FileInputNode = ({ data }: { data: FileNodeData }) => (
-  <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3 w-64">
-    <Handle type="source" position={Position.Right} id="out" className="!bg-blue-500" />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-2 rounded-md bg-blue-100 text-blue-700"><FileInput className="w-4 h-4" /></div>
-      <div>
-        <p className="text-sm font-semibold text-slate-900">{data.label}</p>
-        <p className="text-xs text-slate-500">Provide sample rows</p>
-      </div>
-    </div>
-    <button
-      className="w-full text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md py-1"
-      onClick={() => data.setData?.((prev: FileNodeData) => ({ ...prev, rows: sampleRows }))}
-    >
-      Load sample data
-    </button>
-    <div className="mt-2 text-xs text-slate-600 space-y-1">
-      <p>Rows: {data.rows?.length || 0}</p>
-      <p>Columns: {data.rows?.[0] ? Object.keys(data.rows[0]).length : 0}</p>
-    </div>
-  </div>
-);
-
-const FilterNode = ({ data }: { data: FilterNodeData }) => (
-  <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3 w-64">
-    <Handle type="target" position={Position.Left} id="in" className="!bg-slate-400" />
-    <Handle type="source" position={Position.Right} id="out" className="!bg-indigo-500" />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-2 rounded-md bg-indigo-100 text-indigo-700"><Filter className="w-4 h-4" /></div>
-      <div>
-        <p className="text-sm font-semibold text-slate-900">{data.label}</p>
-        <p className="text-xs text-slate-500">Keep rows matching</p>
-      </div>
-    </div>
-    <div className="space-y-2 text-xs text-slate-700">
-      <input
-        className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
-        placeholder="Field (e.g. country)"
-        value={data.field}
-        onChange={(e) => data.setData?.((prev: FilterNodeData) => ({ ...prev, field: e.target.value }))}
-      />
-      <select
-        className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
-        value={data.operator}
-        onChange={(e) => data.setData?.((prev: FilterNodeData) => ({ ...prev, operator: e.target.value as FilterNodeData['operator'] }))}
-      >
-        <option value="equals">equals</option>
-        <option value="contains">contains</option>
-      </select>
-      <input
-        className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
-        placeholder="Value"
-        value={data.value}
-        onChange={(e) => data.setData?.((prev: FilterNodeData) => ({ ...prev, value: e.target.value }))}
-      />
-    </div>
-  </div>
-);
-
-const RemoveColumnNode = ({ data }: { data: RemoveNodeData }) => (
-  <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3 w-64">
-    <Handle type="target" position={Position.Left} id="in" className="!bg-slate-400" />
-    <Handle type="source" position={Position.Right} id="out" className="!bg-orange-500" />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-2 rounded-md bg-orange-100 text-orange-700"><Scissors className="w-4 h-4" /></div>
-      <div>
-        <p className="text-sm font-semibold text-slate-900">{data.label}</p>
-        <p className="text-xs text-slate-500">Drop a column</p>
-      </div>
-    </div>
-    <input
-      className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
-      placeholder="Column name (e.g. amount)"
-      value={data.field}
-      onChange={(e) => data.setData?.((prev: RemoveNodeData) => ({ ...prev, field: e.target.value }))}
-    />
-  </div>
-);
-
-const SaveFileNode = ({ data }: { data: SaveNodeData }) => (
-  <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-3 w-64">
-    <Handle type="target" position={Position.Left} id="in" className="!bg-slate-400" />
-    <div className="flex items-center gap-2 mb-2">
-      <div className="p-2 rounded-md bg-green-100 text-green-700"><SaveIcon className="w-4 h-4" /></div>
-      <div>
-        <p className="text-sm font-semibold text-slate-900">{data.label}</p>
-        <p className="text-xs text-slate-500">Final output</p>
-      </div>
-    </div>
-    <div className="text-xs text-slate-600 space-y-1">
-      <p>Rows saved: {data.lastSavedCsv ? 'Updated' : '—'}</p>
-      {data.lastSavedCsv && <p className="truncate" title={data.lastSavedCsv}>CSV ready</p>}
-    </div>
-  </div>
-);
 
 const nodeTypes = {
   file: FileInputNode,
@@ -178,6 +59,7 @@ const nodeTypes = {
   save: SaveFileNode,
   split: SplitNode,
   join: JoinNode,
+  preview: FilePreviewNode,
 };
 
 const toCsv = (rows: Row[]) => {
@@ -193,8 +75,8 @@ const toCsv = (rows: Row[]) => {
 export const WorkflowEditorPage = () => {
   const { id } = useParams();
   const [workflowName, setWorkflowName] = useState(id ? `Workflow ${id}` : 'New Workflow');
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<WorkflowNodeData>[]>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<WorkflowNodeData>>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [runMessage, setRunMessage] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
@@ -220,13 +102,15 @@ export const WorkflowEditorPage = () => {
 
     let baseData: WorkflowNodeData;
     if (type === 'file') {
-      baseData = { label, rows: [], description: '', sampleRows } as FileNodeData;
+      baseData = { label, rows: [], description: '' } as FileNodeData;
     } else if (type === 'filter') {
       baseData = { label, field: '', operator: 'equals', value: '', description: '' } as FilterNodeData;
     } else if (type === 'remove') {
       baseData = { label, field: '', description: '' } as RemoveNodeData;
     } else if (type === 'save') {
       baseData = { label } as SaveNodeData;
+    } else if (type === 'preview') {
+      baseData = { label, previewRows: [], description: '' } as PreviewNodeData;
     } else {
       baseData = { label } as WorkflowNodeData;
     }
@@ -310,6 +194,10 @@ export const WorkflowEditorPage = () => {
             merged.push({ ...left[i], ...right[i] });
           }
           setOutput('output-merged', merged);
+        } else if (node.type === 'preview') {
+          const sourceRows = inputs.find((x) => x.edge.targetHandle === 'in')?.rows || inputs[0]?.rows || [];
+          setOutput('out', sourceRows);
+          setNodes((nds) => nds.map((n) => n.id === node.id ? { ...n, data: { ...(n.data as PreviewNodeData), previewRows: sourceRows.slice(0, 10) } } : n));
         } else if (node.type === 'save') {
           const sourceRows = inputs.find((x) => x.edge.targetHandle === 'in')?.rows || inputs[0]?.rows || [];
           const csv = toCsv(sourceRows);
