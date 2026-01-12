@@ -44,7 +44,7 @@ export const useSchemaPropagation = (
         if (!incomingSchema) return node
 
         const data = node.data as any
-        const shouldAssign = 'availableFields' in data || node.type === 'filter' || node.type === 'remove'
+        const shouldAssign = 'availableFields' in data || ['filter', 'remove', 'deduplicate', 'findReplace', 'fillMissing', 'router', 'rename', 'sort', 'lookup', 'typeCast'].includes(node.type)
 
         if (shouldAssign && !schemasEqual(data.availableFields, incomingSchema)) {
           changed = true

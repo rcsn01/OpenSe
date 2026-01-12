@@ -1,5 +1,5 @@
 import { Edge, Node } from 'reactflow';
-import { Row, WorkflowNodeData, FileNodeData, FilterNodeData, RemoveNodeData, PreviewNodeData, SaveNodeData } from '../../components/nodes/types';
+import { Row, WorkflowNodeData, FileNodeData, FilterNodeData, RemoveNodeData, PreviewNodeData, SaveNodeData, DeduplicateNodeData, FindReplaceNodeData, FillMissingNodeData, ConditionalRouterNodeData, SamplerNodeData, RenameColumnNodeData, SortNodeData, LookupNodeData, TypeCasterNodeData } from '../../components/nodes/types';
 import { db } from '../db';
 
 export type ExecutionDownload = { csv: string; filename: string };
@@ -30,18 +30,29 @@ type DataRef = {
 const loadRows = async (ref: DataRef | undefined, fallbackRows: Row[] = []) => {
   if (!ref) return fallbackRows;
   if (ref.datasetId) {
-    const found = await db.datasets.get(ref.datasetId);
-    return found?.rows || [];
+    const meta = await db.datasets.get(ref.datasetId);
+    if (!meta) return fallbackRows;
+    const chunks = await db.datasetChunks.where('datasetId').equals(ref.datasetId).sortBy('index');
+    const rows: Row[] = [];
+    chunks.forEach((c) => rows.push(...c.rows));
+    return rows;
   }
   return fallbackRows;
 };
 
 const persistRows = async (rows: Row[]): Promise<DataRef> => {
   const datasetId = crypto.randomUUID();
-  await db.datasets.put({ id: datasetId, rows, timestamp: Date.now() });
+  const batchSize = 1000;
+  let chunkIndex = 0;
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const slice = rows.slice(i, i + batchSize);
+    await db.datasetChunks.add({ datasetId, index: chunkIndex++, rows: slice });
+  }
+  const schema = rows.length ? Object.keys(rows[0]) : [];
+  await db.datasets.put({ id: datasetId, schema, count: rows.length, chunkCount: chunkIndex, timestamp: Date.now() });
   return {
     datasetId,
-    schema: rows.length ? Object.keys(rows[0]) : [],
+    schema,
     count: rows.length,
     preview: rows.slice(0, 10),
   };
@@ -127,6 +138,171 @@ export const runExecution = async (
             });
         const outRef = await persistRows(projected);
         setOutput('out', outRef);
+      } else if (node.type === 'deduplicate') {
+        const d = node.data as DeduplicateNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        const keys = d.keys && d.keys.length ? d.keys : undefined;
+        const seen = new Set<string>();
+        const out: Row[] = [];
+        for (const r of sourceRows) {
+          const key = keys ? JSON.stringify(keys.map((k) => r[k])) : JSON.stringify(r);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push(r);
+        }
+        const outRef = await persistRows(out);
+        setOutput('out', outRef);
+      } else if (node.type === 'findReplace') {
+        const d = node.data as FindReplaceNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        const out = sourceRows.map((r) => {
+          if (!d.field || !(d.field in r)) return r;
+          const val = r[d.field];
+          if (val === null || val === undefined) return r;
+          const str = val.toString();
+          const needle = d.search || '';
+          if (!needle) return r;
+          const replaced = d.caseSensitive
+            ? str.split(needle).join(d.replace)
+            : str.replace(new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), d.replace);
+          return { ...r, [d.field]: replaced };
+        });
+        const outRef = await persistRows(out);
+        setOutput('out', outRef);
+      } else if (node.type === 'fillMissing') {
+        const d = node.data as FillMissingNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        if (!d.field) {
+          setOutput('out', sourceRef || {});
+        } else {
+          let fillVal: any = d.value;
+          if (d.strategy === 'mean' || d.strategy === 'median') {
+            const nums = sourceRows.map((r) => Number(r[d.field as string])).filter((n) => !Number.isNaN(n));
+            if (nums.length) {
+              nums.sort((a, b) => a - b);
+              fillVal = d.strategy === 'mean'
+                ? nums.reduce((a, b) => a + b, 0) / nums.length
+                : nums[Math.floor(nums.length / 2)];
+            }
+          }
+          const out = sourceRows.map((r, idx) => {
+            const val = r[d.field as string];
+            if (val === null || val === undefined || val === '') {
+              if (d.strategy === 'ffill' && idx > 0) {
+                return { ...r, [d.field as string]: out[idx - 1]?.[d.field as string] ?? fillVal };
+              }
+              return { ...r, [d.field as string]: fillVal };
+            }
+            return r;
+          });
+          const outRef = await persistRows(out);
+          setOutput('out', outRef);
+        }
+      } else if (node.type === 'router') {
+        const d = node.data as ConditionalRouterNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        const yes: Row[] = [];
+        const no: Row[] = [];
+        sourceRows.forEach((r) => {
+          const val = (d.field ? r[d.field] : undefined)?.toString() ?? '';
+          const match = d.operator === 'equals'
+            ? val === d.value
+            : val.toLowerCase().includes((d.value || '').toLowerCase());
+          (match ? yes : no).push(r);
+        });
+        setOutput('out-yes', await persistRows(yes));
+        setOutput('out-no', await persistRows(no));
+      } else if (node.type === 'sampler') {
+        const d = node.data as SamplerNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        let out: Row[] = [];
+        const amt = Math.max(0, Math.min(sourceRows.length, Math.floor(d.amount)));
+        if (d.mode === 'top') {
+          out = sourceRows.slice(0, amt);
+        } else {
+          const shuffled = [...sourceRows];
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+          out = shuffled.slice(0, amt);
+        }
+        setOutput('out', await persistRows(out));
+      } else if (node.type === 'rename') {
+        const d = node.data as RenameColumnNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        if (!d.field || !d.newName) {
+          setOutput('out', sourceRef || {});
+        } else {
+          const out = sourceRows.map((r) => {
+            if (!(d.field as string in r)) return r;
+            const { [d.field as string]: val, ...rest } = r;
+            return { ...rest, [d.newName]: val };
+          });
+          setOutput('out', await persistRows(out));
+        }
+      } else if (node.type === 'sort') {
+        const d = node.data as SortNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        if (!d.field) {
+          setOutput('out', sourceRef || {});
+        } else {
+          const out = [...sourceRows].sort((a, b) => {
+            const av = a[d.field as string];
+            const bv = b[d.field as string];
+            if (av === bv) return 0;
+            if (av === undefined || av === null) return 1;
+            if (bv === undefined || bv === null) return -1;
+            if (av > bv) return d.direction === 'asc' ? 1 : -1;
+            if (av < bv) return d.direction === 'asc' ? -1 : 1;
+            return 0;
+          });
+          setOutput('out', await persistRows(out));
+        }
+      } else if (node.type === 'lookup') {
+        const d = node.data as LookupNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        const map = d.map || {};
+        const newField = d.newField || d.field || 'lookup';
+        const out = d.field
+          ? sourceRows.map((r) => ({ ...r, [newField as string]: map[r[d.field as string]] ?? r[newField as string] }))
+          : sourceRows;
+        setOutput('out', await persistRows(out));
+      } else if (node.type === 'typeCast') {
+        const d = node.data as TypeCasterNodeData;
+        const sourceRef = inputs.find((x) => x.edge.targetHandle === 'in')?.ref || inputs[0]?.ref;
+        const sourceRows = await loadRows(sourceRef);
+        if (!d.field) {
+          setOutput('out', sourceRef || {});
+        } else {
+          const out = sourceRows.map((r) => {
+            const val = r[d.field as string];
+            let casted: any = val;
+            switch (d.targetType) {
+              case 'number':
+                casted = Number(val);
+                break;
+              case 'boolean':
+                casted = typeof val === 'boolean' ? val : ['true', '1', 'yes'].includes(String(val).toLowerCase());
+                break;
+              case 'date':
+                casted = val ? new Date(val) : null;
+                break;
+              default:
+                casted = val?.toString();
+            }
+            return { ...r, [d.field as string]: casted };
+          });
+          setOutput('out', await persistRows(out));
+        }
       } else if (node.type === 'split') {
         const sourceRef = inputs.find((x) => x.edge.targetHandle === 'input')?.ref || inputs[0]?.ref;
         const sourceRows = await loadRows(sourceRef);

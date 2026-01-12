@@ -3,7 +3,6 @@ import { Handle, Position } from 'reactflow';
 import { FileInput } from 'lucide-react';
 import { FileNodeData, Row } from './types';
 import { useWorker } from '../../hooks/useWorker';
-import { db } from '../../lib/db';
 
 export const FileInputNode = ({ data }: { data: FileNodeData }) => {
   const { runWorkerTask } = useWorker();
@@ -14,17 +13,16 @@ export const FileInputNode = ({ data }: { data: FileNodeData }) => {
     if (!file) return;
 
     try {
-      const rows = (await runWorkerTask('PARSE_CSV', { file })) as Row[];
-      const schema = rows.length ? Object.keys(rows[0]) : [];
-      const datasetId = crypto.randomUUID();
-      await db.datasets.put({ id: datasetId, rows, timestamp: Date.now() });
+      const result = await runWorkerTask('PARSE_CSV', { file });
+      const { datasetId, schema, count, chunkCount, preview } = result as any;
       data.setData?.((prev: FileNodeData) => ({
         ...prev,
         datasetId,
         schema,
         fileName: file.name,
-        count: rows.length,
-        rows: rows.slice(0, 10),
+        count,
+        chunkCount,
+        rows: preview,
       }));
     } catch (err) {
       console.error('CSV parse failed', err);

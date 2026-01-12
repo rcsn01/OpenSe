@@ -10,6 +10,15 @@ import {
   Save as SaveIcon,
   MousePointer2,
   Info,
+  Copy,
+  Search,
+  Droplet,
+  GitBranch,
+  Dice3,
+  Edit3,
+  ArrowDownUp,
+  Book,
+  Type as TypeIcon,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -34,11 +43,29 @@ import { SplitNode } from '../../components/nodes/SplitNode';
 import { JoinNode } from '../../components/nodes/JoinNode';
 import { FilterColumn } from '../../components/nodes/FilterColumn';
 import { SaveFileNode } from '../../components/nodes/SaveFileNode';
+import { DeduplicateNode } from '../../components/nodes/DeduplicateNode';
+import { FindReplaceNode } from '../../components/nodes/FindReplaceNode';
+import { FillMissingNode } from '../../components/nodes/FillMissingNode';
+import { ConditionalRouterNode } from '../../components/nodes/ConditionalRouterNode';
+import { SamplerNode } from '../../components/nodes/SamplerNode';
+import { RenameColumnNode } from '../../components/nodes/RenameColumnNode';
+import { SortNode } from '../../components/nodes/SortNode';
+import { LookupNode } from '../../components/nodes/LookupNode';
+import { TypeCasterNode } from '../../components/nodes/TypeCasterNode';
 import {
   Row,
   FileNodeData,
   FilterNodeData,
   RemoveNodeData,
+  DeduplicateNodeData,
+  FindReplaceNodeData,
+  FillMissingNodeData,
+  ConditionalRouterNodeData,
+  SamplerNodeData,
+  RenameColumnNodeData,
+  SortNodeData,
+  LookupNodeData,
+  TypeCasterNodeData,
   SaveNodeData,
   PreviewNodeData,
   WorkflowNodeData,
@@ -50,6 +77,15 @@ const NODE_PALETTE = [
   { type: 'file', label: 'File Input', icon: FileInput, color: 'bg-blue-500' },
   { type: 'filter', label: 'Filter Rows', icon: Filter, color: 'bg-indigo-500' },
   { type: 'remove', label: 'Filter Columns', icon: Scissors, color: 'bg-orange-500' },
+  { type: 'deduplicate', label: 'Deduplicate', icon: Copy, color: 'bg-amber-500' },
+  { type: 'findReplace', label: 'Find & Replace', icon: Search, color: 'bg-pink-500' },
+  { type: 'fillMissing', label: 'Fill Missing', icon: Droplet, color: 'bg-cyan-500' },
+  { type: 'router', label: 'Conditional Router', icon: GitBranch, color: 'bg-rose-500' },
+  { type: 'sampler', label: 'Sampler / Limit', icon: Dice3, color: 'bg-slate-500' },
+  { type: 'rename', label: 'Rename Column', icon: Edit3, color: 'bg-yellow-500' },
+  { type: 'sort', label: 'Sort', icon: ArrowDownUp, color: 'bg-indigo-600' },
+  { type: 'lookup', label: 'Lookup', icon: Book, color: 'bg-emerald-600' },
+  { type: 'typeCast', label: 'Type Caster', icon: TypeIcon, color: 'bg-fuchsia-500' },
   { type: 'save', label: 'Save CSV', icon: SaveIcon, color: 'bg-green-500' },
   { type: 'split', label: 'Split Rows', icon: MousePointer2, color: 'bg-purple-500' },
   { type: 'join', label: 'Join Tables', icon: MousePointer2, color: 'bg-emerald-500' },
@@ -60,6 +96,15 @@ const nodeTypes = {
   file: FileInputNode,
   filter: FilterNode,
   remove: FilterColumn,
+  deduplicate: DeduplicateNode,
+  findReplace: FindReplaceNode,
+  fillMissing: FillMissingNode,
+  router: ConditionalRouterNode,
+  sampler: SamplerNode,
+  rename: RenameColumnNode,
+  sort: SortNode,
+  lookup: LookupNode,
+  typeCast: TypeCasterNode,
   save: SaveFileNode,
   split: SplitNode,
   join: JoinNode,
@@ -155,6 +200,24 @@ export const WorkflowEditorPage = () => {
       baseData = { label, field: '', operator: 'equals', value: '', description: '' } as FilterNodeData;
     } else if (type === 'remove') {
       baseData = { label, field: '', availableFields: [], description: '' } as RemoveNodeData;
+    } else if (type === 'deduplicate') {
+      baseData = { label, keys: [], availableFields: [], description: '' } as DeduplicateNodeData;
+    } else if (type === 'findReplace') {
+      baseData = { label, field: '', search: '', replace: '', availableFields: [], description: '' } as FindReplaceNodeData;
+    } else if (type === 'fillMissing') {
+      baseData = { label, field: '', strategy: 'static', value: '', availableFields: [], description: '' } as FillMissingNodeData;
+    } else if (type === 'router') {
+      baseData = { label, field: '', operator: 'equals', value: '', availableFields: [], description: '' } as ConditionalRouterNodeData;
+    } else if (type === 'sampler') {
+      baseData = { label, mode: 'top', amount: 100, description: '' } as SamplerNodeData;
+    } else if (type === 'rename') {
+      baseData = { label, field: '', newName: '', availableFields: [], description: '' } as RenameColumnNodeData;
+    } else if (type === 'sort') {
+      baseData = { label, field: '', direction: 'asc', availableFields: [], description: '' } as SortNodeData;
+    } else if (type === 'lookup') {
+      baseData = { label, field: '', newField: '', map: {}, availableFields: [], description: '' } as LookupNodeData;
+    } else if (type === 'typeCast') {
+      baseData = { label, field: '', targetType: 'string', availableFields: [], description: '' } as TypeCasterNodeData;
     } else if (type === 'save') {
       baseData = { label } as SaveNodeData;
     } else if (type === 'preview') {
