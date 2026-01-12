@@ -1,0 +1,41 @@
+import React, { useCallback } from 'react';
+import { Handle, Position, NodeProps } from 'reactflow';
+import Papa from 'papaparse'; // Best CSV parser for browser
+import { useWorkflowData } from '../../context/WorkflowContext';
+
+export const FileLoaderNode = ({ id, data }: NodeProps) => {
+  const { updateNodeData } = useWorkflowData();
+
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // In a real app, offload this parsing to a Web Worker!
+    Papa.parse(file, {
+      header: true,
+      dynamicTyping: true,
+      complete: (results) => {
+        // Propagate data to the engine
+        updateNodeData(id, results.data);
+      },
+    });
+  }, [id, updateNodeData]);
+
+  return (
+    <div className="bg-white border-2 border-gray-200 rounded-lg p-4 shadow-md w-64">
+      <div className="font-bold text-sm mb-2 text-gray-700">📄 CSV Loader</div>
+      <input 
+        type="file" 
+        accept=".csv" 
+        onChange={handleFileUpload} 
+        className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+      />
+      <div className="text-xs text-gray-400 mt-2">
+        {data.fileName ? `Loaded: ${data.fileName}` : "No file loaded"}
+      </div>
+      
+      {/* Output Handle only - Source of data */}
+      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-blue-500" />
+    </div>
+  );
+};
