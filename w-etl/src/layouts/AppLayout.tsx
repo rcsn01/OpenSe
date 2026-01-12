@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Settings, 
@@ -10,10 +10,37 @@ import {
   X
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export const AppLayout = () => {
+  const { session, user, loading } = useAuth();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
   const location = useLocation();
+
+  const handleSignOut = async () => {
+    try {
+      setSigningOut(true);
+      await supabase.auth.signOut();
+      navigate('/login', { replace: true });
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -72,11 +99,19 @@ export const AppLayout = () => {
                   <User className="w-5 h-5" />
                 </div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-white">Guest User</p>
-                <p className="text-xs text-slate-400">guest@example.com</p>
+              <div className="ml-3 overflow-hidden">
+                <p className="text-sm font-medium text-white truncate max-w-[120px]">
+                  {user?.email?.split('@')[0] || 'User'}
+                </p>
+                <p className="text-xs text-slate-400 truncate max-w-[120px]">
+                  {user?.email || 'user@example.com'}
+                </p>
               </div>
-              <button className="ml-auto flex-shrink-0 p-1 text-slate-400 hover:text-white">
+              <button
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="ml-auto flex-shrink-0 p-1 text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
