@@ -86,6 +86,26 @@ export type TypeCasterNodeData = BaseNodeData & {
   availableFields?: string[];
 };
 
+export type RenameNodeData = BaseNodeData & {
+  mappings: { oldColumn: string; newColumn: string }[];
+  availableFields?: string[];
+};
+
+export type UnpivotNodeData = BaseNodeData & {
+  keepColumns: string[];
+  pivotColumns: string[];
+  availableFields?: string[];
+};
+
+export type PivotNodeData = BaseNodeData & {
+  indexColumn: string;
+  pivotColumn: string;
+  valueColumn: string;
+  availableFields?: string[];
+};
+
+export type JoinVerticalNodeData = BaseNodeData & {};
+
 export type SaveNodeData = BaseNodeData & {
   lastSavedCsv?: string;
 };
@@ -107,5 +127,9 @@ export type WorkflowNodeData =
   | SortNodeData
   | LookupNodeData
   | TypeCasterNodeData
+  | RenameNodeData
+  | UnpivotNodeData
+  | PivotNodeData
+  | JoinVerticalNodeData
   | SaveNodeData
   | PreviewNodeData;
