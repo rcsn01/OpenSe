@@ -6,6 +6,10 @@ import { useWorkflowData } from '../../context/WorkflowContext';
 export const FileLoaderNode = ({ id, data }: NodeProps) => {
   const { updateNodeData } = useWorkflowData();
 
+  const stopPropagation = (event: React.SyntheticEvent) => {
+    event.stopPropagation();
+  };
+
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -16,18 +20,23 @@ export const FileLoaderNode = ({ id, data }: NodeProps) => {
       dynamicTyping: true,
       complete: (results) => {
         // Propagate data to the engine
-        updateNodeData(id, results.data);
+        updateNodeData(id, 'out', results.data);
+        if (typeof data === 'object' && data && 'setData' in data && typeof (data as any).setData === 'function') {
+          (data as any).setData((prev: any) => ({ ...prev, fileName: file.name }));
+        }
       },
     });
-  }, [id, updateNodeData]);
+  }, [data, id, updateNodeData]);
 
   return (
-    <div className="bg-white border-2 border-gray-200 rounded-lg p-4 shadow-md w-64">
+    <div className="bg-white border-2 border-gray-200 rounded-lg p-4 shadow-md w-64" onMouseDown={stopPropagation} onClick={stopPropagation}>
       <div className="font-bold text-sm mb-2 text-gray-700">📄 CSV Loader</div>
       <input 
         type="file" 
         accept=".csv" 
         onChange={handleFileUpload} 
+        onClick={stopPropagation}
+        onMouseDown={stopPropagation}
         className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
       />
       <div className="text-xs text-gray-400 mt-2">
@@ -35,7 +44,7 @@ export const FileLoaderNode = ({ id, data }: NodeProps) => {
       </div>
       
       {/* Output Handle only - Source of data */}
-      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-blue-500" />
+      <Handle id="out" type="source" position={Position.Right} className="w-3 h-3 bg-blue-500" />
     </div>
   );
 };
