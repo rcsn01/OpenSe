@@ -8,7 +8,9 @@ export type BaseNodeData = {
 };
 
 export type FileNodeData = BaseNodeData & {
-  rows: Row[];
+  rows?: Row[]; // optional small preview only
+  datasetId?: string;
+  count?: number;
   fileName?: string;
   schema?: string[];
 };

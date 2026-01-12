@@ -2,7 +2,7 @@
 // Web Worker for Heavy Data Processing
 import Papa from 'papaparse';
 
-self.onmessage = (e: MessageEvent) => {
+self.onmessage = async (e: MessageEvent) => {
   const { type, payload, id } = e.data;
 
   try {

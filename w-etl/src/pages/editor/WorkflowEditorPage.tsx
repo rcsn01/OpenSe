@@ -44,6 +44,7 @@ import {
   WorkflowNodeData,
 } from '../../components/nodes/types';
 import { runExecution } from '../../lib/execution/ExecutionEngine';
+import { useSchemaPropagation } from '../../hooks/useSchemaPropagation';
 
 const NODE_PALETTE = [
   { type: 'file', label: 'File Input', icon: FileInput, color: 'bg-blue-500' },
@@ -88,6 +89,8 @@ export const WorkflowEditorPage = () => {
   const [runMessage, setRunMessage] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  useSchemaPropagation(nodes, edges, setNodes);
 
   // Load existing workflow when a valid id is present
   useEffect(() => {
@@ -158,8 +161,8 @@ export const WorkflowEditorPage = () => {
     event.dataTransfer.dropEffect = 'move';
   };
 
-  const runAndApplyExecution = () => {
-    const result = runExecution(nodes, edges, workflowName);
+  const runAndApplyExecution = async () => {
+    const result = await runExecution(nodes, edges, workflowName);
     setNodes(result.updatedNodes);
 
     if (result.downloads.length) {
@@ -187,7 +190,7 @@ export const WorkflowEditorPage = () => {
     setIsRunning(true);
     setRunMessage('');
     try {
-      runAndApplyExecution();
+      await runAndApplyExecution();
     } finally {
       setIsRunning(false);
     }
