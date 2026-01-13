@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Play,
   Save,
@@ -152,6 +152,7 @@ export const WorkflowEditorPage = () => {
   const [runMessage, setRunMessage] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useSchemaPropagation(nodes, edges, setNodes);
 
@@ -269,6 +270,17 @@ export const WorkflowEditorPage = () => {
     event.dataTransfer.dropEffect = 'move';
   };
 
+  const sanitizeNodes = useCallback(() => nodes.map((node) => {
+    const { data, ...rest } = node;
+    const cleanedData = data && typeof data === 'object'
+      ? JSON.parse(JSON.stringify(data, (_key, val) => (typeof val === 'function' ? undefined : val)))
+      : data;
+    if (cleanedData && typeof cleanedData === 'object' && 'setData' in (cleanedData as Record<string, unknown>)) {
+      delete (cleanedData as Record<string, unknown>).setData;
+    }
+    return { ...rest, data: cleanedData };
+  }), [nodes]);
+
   const runAndApplyExecution = async () => {
     const result = await runExecution(nodes, edges, workflowName);
     setNodes(result.updatedNodes);
@@ -333,16 +345,7 @@ export const WorkflowEditorPage = () => {
     }
     setIsSaving(true);
     setRunMessage('');
-    const sanitizedNodes = nodes.map((node) => {
-      const { data, ...rest } = node;
-      const cleanedData = data && typeof data === 'object'
-        ? JSON.parse(JSON.stringify(data, (_key, val) => (typeof val === 'function' ? undefined : val)))
-        : data;
-      if (cleanedData && typeof cleanedData === 'object' && 'setData' in (cleanedData as Record<string, unknown>)) {
-        delete (cleanedData as Record<string, unknown>).setData;
-      }
-      return { ...rest, data: cleanedData };
-    });
+    const sanitizedNodes = sanitizeNodes();
     const payload = {
       name: workflowName.trim(),
       graph_data: { nodes: sanitizedNodes, edges },
@@ -372,7 +375,53 @@ export const WorkflowEditorPage = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [edges, nodes, user, workflowId, workflowName]);
+  }, [edges, sanitizeNodes, user, workflowId, workflowName]);
+
+  const handleExport = useCallback(() => {
+    const sanitizedNodes = sanitizeNodes();
+    const payload = {
+      name: workflowName?.trim() || 'workflow',
+      graph_data: { nodes: sanitizedNodes, edges },
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${(workflowName || 'workflow').replace(/\s+/g, '_')}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setRunMessage('Workflow exported');
+  }, [edges, sanitizeNodes, workflowName]);
+
+  const handleImportClick = useCallback(() => {
+    importInputRef.current?.click();
+  }, []);
+
+  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const raw = reader.result as string;
+        const parsed = JSON.parse(raw);
+        const graph = (parsed.graph_data || parsed) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
+        const incomingNodes = withSetters((graph.nodes || []) as Node<WorkflowNodeData>[]);
+        const incomingEdges = (graph.edges || []) as Edge[];
+        setNodes(incomingNodes);
+        setEdges(incomingEdges);
+        if (parsed.name) setWorkflowName(parsed.name);
+        setRunMessage('Workflow imported');
+      } catch (err: any) {
+        setRunMessage(err?.message || 'Failed to import workflow');
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }, [setEdges, setNodes, withSetters]);
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden">
@@ -396,9 +445,26 @@ export const WorkflowEditorPage = () => {
         </div>
 
         <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <button
+              onClick={handleImportClick}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+            >
                 <Download className="w-4 h-4" />
-                Export
+                Import
+            </button>
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+            >
+                <Download className="w-4 h-4" />
+              Export
             </button>
             <div className="h-6 w-px bg-slate-200 mx-1" />
             <button
