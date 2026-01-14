@@ -13,7 +13,7 @@ export const AuthLayout = () => {
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
-          Pearl Data Workflow
+          W-ETL
         </h2>
       </div>
 
