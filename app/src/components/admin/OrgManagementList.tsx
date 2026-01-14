@@ -1,17 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { 
-  Search, 
-  Loader2, 
-  Trash2, 
-  Settings, 
-  UserPlus, 
-  Mail, 
-  Shield, 
-  X, 
-  Check, 
+import {
+  Search,
+  Loader2,
+  Trash2,
+  Settings,
+  UserPlus,
+  Mail,
+  Shield,
+  X,
   Calendar,
-  Building2,
-  AlertTriangle
+  AlertTriangle,
+  Users,
 } from 'lucide-react';
 import { OrgRow } from './types';
 import { Button } from '../ui/Button';
@@ -35,6 +34,7 @@ type OrgManagementListProps = {
   onMemberInviteChange: (orgId: string, value: MemberInviteState) => void;
   onInviteMember: (orgId: string) => void;
   onDeleteOrg: (orgId: string) => void;
+  onManageMembers: (org: OrgRow) => void;
 };
 
 // Internal Modal Component for clean interaction
@@ -82,6 +82,7 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
   onMemberInviteChange,
   onInviteMember,
   onDeleteOrg,
+  onManageMembers,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeOrg, setActiveOrg] = useState<OrgRow | null>(null);
@@ -205,9 +206,13 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                      <button
+                        onClick={() => onManageMembers(org)}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 hover:bg-slate-200 transition-colors"
+                      >
+                        <Users className="w-3 h-3 mr-1" />
                         {org.member_count ?? 0} members
-                      </div>
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                       <div className="flex items-center">
@@ -217,6 +222,13 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => onManageMembers(org)}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          title="Manage Members"
+                        >
+                          <Users className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => openInvite(org)}
                           className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
