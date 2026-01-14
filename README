@@ -1,4 +1,4 @@
-# Pearl / W-ETL
+# W-ETL
 
 **⚠️ PROPRIETARY SOURCE CODE - VIEW ONLY**
 
@@ -20,13 +20,13 @@ For full legal terms, please refer to the [LICENSE](./LICENSE) file in this repo
 
 Terminal 1: The Backend Admin
 
-    Location: Pearl/ (Root)
+    Location: W-ETL/ (Root)
     Commands:
         npx supabase start (Start DB)
         npx supabase stop (Stop DB)
         npx supabase status (Check keys)
 Terminal 2: The Frontend Dev
-    Location: Pearl/w-etl/ (Inside the app)
+    Location: W-ETL/app/ (Inside the app)
     Commands:
         npm run dev (Start React)
         npm install ... (Add libraries)
