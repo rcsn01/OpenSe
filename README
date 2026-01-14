@@ -5,7 +5,7 @@
 This repository is hosted publicly for **educational and portfolio demonstration purposes only**. This project is **NOT Open Source**.
 
 ### ⛔ Licensing & Usage Restrictions
-The source code in this repository is **Proprietary** and confidential.
+The source code in this repository is **Proprietary** property of Rcsn01.
 **Copyright (c) 2026 Rcsn01. All rights reserved.**
 
 * **You MAY**: View, read, and inspect the code for educational or review purposes.
@@ -15,12 +15,6 @@ The source code in this repository is **Proprietary** and confidential.
 For full legal terms, please refer to the [LICENSE](./LICENSE) file in this repository.
 
 ---
-
-## 🚀 Getting Started (Internal Use Only)
-
-### Prerequisites
-* Node.js & npm
-* Supabase CLI
 
 ### Development Setup
 
