@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { UserPlus, Mail, Shield, Trash2, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -21,7 +22,7 @@ type Member = {
 };
 
 export const OrganizationSettingsPage = () => {
-    const { user } = useAuth();
+    const { user, isSuperAdmin } = useAuth();
 
     const [organization, setOrganization] = useState<Organization | null>(null);
     const [membershipRole, setMembershipRole] = useState<'owner' | 'admin' | 'member' | null>(null);
@@ -282,32 +283,27 @@ export const OrganizationSettingsPage = () => {
                         {error}
                     </div>
                 )}
-                <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
-                    <h1 className="text-xl font-semibold text-slate-900 mb-2">Create your organization</h1>
+                <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 text-center">
+                    <h1 className="text-xl font-semibold text-slate-900 mb-2">No Organization Found</h1>
                     <p className="text-sm text-slate-500 mb-4">
-                        You do not belong to an organization yet. Create one to start inviting teammates and sharing workflows.
+                        You are not a member of any organization yet.
                     </p>
-                    <form className="space-y-4" onSubmit={handleCreateOrganization}>
-                        <div>
-                            <label htmlFor="org-name" className="block text-sm font-medium text-slate-700">Organization name</label>
-                            <input
-                                id="org-name"
-                                value={creatingOrgName}
-                                onChange={(e) => setCreatingOrgName(e.target.value)}
-                                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                placeholder="Acme Data Team"
-                                required
-                            />
+                    <div className="bg-blue-50 text-blue-700 p-4 rounded-md text-sm">
+                        To set up a new organization, please contact support to arrange terms and payment.
+                    </div>
+
+                    {isSuperAdmin && (
+                        <div className="mt-8 border-t pt-6 text-left">
+                            <h2 className="text-sm font-bold text-slate-900 mb-2">Super Admin Controls</h2>
+                            <p className="text-xs text-slate-500 mb-4">Use the Super Admin Dashboard to onboard new clients.</p>
+                            <Link
+                                to="/admin"
+                                className="inline-flex items-center px-4 py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 text-sm"
+                            >
+                                Go to Super Admin Dashboard
+                            </Link>
                         </div>
-                        <button
-                            type="submit"
-                            disabled={creatingOrg}
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium disabled:opacity-60"
-                        >
-                            {creatingOrg ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                            Create organization
-                        </button>
-                    </form>
+                    )}
                 </div>
             </div>
         );

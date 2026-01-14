@@ -137,7 +137,7 @@ export const DashboardPage = () => {
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
-            Pearl Corp Workflows
+            W-ETL Workflows
           </button>
         </nav>
       </div>

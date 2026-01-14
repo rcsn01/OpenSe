@@ -6,31 +6,58 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  isSuperAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
+  isSuperAdmin: false,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      if (session?.user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('is_super_admin')
+          .eq('id', session.user.id)
+          .single();
+        setIsSuperAdmin(!!data?.is_super_admin);
+      } else {
+        setIsSuperAdmin(false);
+      }
+
       setLoading(false);
     });
 
     // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      if (session?.user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('is_super_admin')
+          .eq('id', session.user.id)
+          .single();
+        setIsSuperAdmin(!!data?.is_super_admin);
+      } else {
+        setIsSuperAdmin(false);
+      }
+
       setLoading(false);
     });
 
@@ -38,7 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, loading }}>
+    <AuthContext.Provider value={{ session, user, loading, isSuperAdmin }}>
       {children}
     </AuthContext.Provider>
   );
