@@ -1,25 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { UserPlus, Mail, Shield, Trash2, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-
-type Organization = {
-    id: string;
-    name: string;
-    owner_id: string;
-    created_at: string | null;
-};
-
-type Member = {
-    id: string;
-    user_id: string;
-    role: 'admin' | 'member';
-    profiles?: {
-        email: string | null;
-        full_name: string | null;
-    } | null;
-};
+import { Organization, Member } from '../../components/settings/types';
+import { OrgHeader } from '../../components/settings/OrgHeader';
+import { InviteMemberForm } from '../../components/settings/InviteMemberForm';
+import { MemberTable } from '../../components/settings/MemberTable';
 
 export const OrganizationSettingsPage = () => {
     const { user, isSuperAdmin } = useAuth();
@@ -62,7 +49,10 @@ export const OrganizationSettingsPage = () => {
     }, []);
 
     const loadOrganization = useCallback(async () => {
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         setError(null);
 
@@ -317,118 +307,30 @@ export const OrganizationSettingsPage = () => {
                 </div>
             )}
 
-            {/* Org Header */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="h-16 w-16 bg-blue-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold">
-                            {initialLetter}
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-slate-900">{organization.name}</h1>
-                            <p className="text-slate-500 text-sm">Created {organization.created_at ? new Date(organization.created_at).toLocaleDateString() : 'recently'} • {members.length} members</p>
-                            {membershipRole && (
-                                <p className="text-xs text-slate-500 mt-1">You are an {membershipRole === 'owner' ? 'owner' : membershipRole}</p>
-                            )}
-                        </div>
-                    </div>
+            <OrgHeader
+                organization={organization}
+                membershipRole={membershipRole}
+                membersCount={members.length}
+                initialLetter={initialLetter}
+                canManage={canManage}
+                editing={editing}
+                orgNameInput={orgNameInput}
+                savingOrg={savingOrg}
+                onEditToggle={setEditing}
+                onOrgNameChange={setOrgNameInput}
+                onSubmit={handleUpdateOrg}
+            />
 
-                    {canManage && !editing && (
-                        <button
-                            onClick={() => setEditing(true)}
-                            className="text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 px-4 py-2 rounded-md hover:bg-blue-50 transition-colors"
-                        >
-                            Edit Details
-                        </button>
-                    )}
-                </div>
-
-                {editing && (
-                    <form className="mt-4 flex flex-col gap-3" onSubmit={handleUpdateOrg}>
-                        <div>
-                            <label htmlFor="org-edit-name" className="block text-sm font-medium text-slate-700">Organization name</label>
-                            <input
-                                id="org-edit-name"
-                                value={orgNameInput}
-                                onChange={(e) => setOrgNameInput(e.target.value)}
-                                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            />
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="submit"
-                                disabled={savingOrg}
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium disabled:opacity-60"
-                            >
-                                {savingOrg ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                                Save changes
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setEditing(false)}
-                                className="text-sm text-slate-600 hover:text-slate-800 px-3 py-2"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-                )}
-            </div>
-
-            {/* Invite Form */}
             {canManage && (
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                        <div>
-                            <h2 className="text-lg font-semibold text-slate-900">Invite a member</h2>
-                            <p className="text-sm text-slate-500">Add teammates by email. Users must already have an account.</p>
-                        </div>
-                    </div>
-                    {inviteError && (
-                        <div className="mb-3 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-md text-sm">
-                            {inviteError}
-                        </div>
-                    )}
-                    <form className="grid grid-cols-1 md:grid-cols-3 gap-3" onSubmit={handleInvite}>
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-slate-700" htmlFor="invite-email">Email address</label>
-                            <div className="mt-1 relative">
-                                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                <input
-                                    id="invite-email"
-                                    type="email"
-                                    required
-                                    value={inviteEmail}
-                                    onChange={(e) => setInviteEmail(e.target.value)}
-                                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                    placeholder="teammate@example.com"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700" htmlFor="invite-role">Role</label>
-                            <select
-                                id="invite-role"
-                                value={inviteRole}
-                                onChange={(e) => setInviteRole(e.target.value as 'admin' | 'member')}
-                                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            >
-                                <option value="member">Member</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <div className="md:col-span-3 flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={inviting}
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm text-sm font-medium disabled:opacity-60"
-                            >
-                                {inviting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
-                                Send invite
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                <InviteMemberForm
+                    inviteEmail={inviteEmail}
+                    inviteRole={inviteRole}
+                    inviting={inviting}
+                    inviteError={inviteError}
+                    onInviteEmailChange={setInviteEmail}
+                    onInviteRoleChange={setInviteRole}
+                    onSubmit={handleInvite}
+                />
             )}
 
             {/* Members Section */}
@@ -440,69 +342,13 @@ export const OrganizationSettingsPage = () => {
                     </div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Member</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
-                            {members.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-6 text-center text-slate-500 text-sm">No members yet.</td>
-                                </tr>
-                            ) : members.map((member) => {
-                                const displayName = member.profiles?.full_name || member.profiles?.email || 'Unknown user';
-                                const email = member.profiles?.email || 'Unknown email';
-                                const roleLabel = member.user_id === organization.owner_id ? 'owner' : member.role;
-                                const statusLabel = 'Active';
-
-                                return (
-                                    <tr key={member.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-medium text-sm mr-3">
-                                                    {displayName.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-medium text-slate-900">{displayName}</div>
-                                                    <div className="text-sm text-slate-500">{email}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center text-sm text-slate-700 capitalize">
-                                                <Shield className="w-4 h-4 mr-1.5 text-slate-400" />
-                                                {roleLabel}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex px-2 text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                {statusLabel}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            {canManage && member.user_id !== organization.owner_id ? (
-                                                <button
-                                                    onClick={() => handleRemoveMember(member)}
-                                                    disabled={removingId === member.id}
-                                                    className="inline-flex items-center text-slate-400 hover:text-red-600 disabled:opacity-50"
-                                                >
-                                                    {removingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                                    <span className="sr-only">Remove member</span>
-                                                </button>
-                                            ) : null}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                <MemberTable
+                    members={members}
+                    organization={organization}
+                    canManage={canManage}
+                    removingId={removingId}
+                    onRemove={handleRemoveMember}
+                />
             </div>
         </div>
     );
