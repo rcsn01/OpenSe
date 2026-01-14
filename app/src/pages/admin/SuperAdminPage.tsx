@@ -204,18 +204,20 @@ export const SuperAdminPage = () => {
     };
 
     return (
-        <div className="p-8 max-w-2xl mx-auto">
+        <div className="p-8 max-w-7xl mx-auto">
             <h1 className="text-2xl font-bold text-slate-900 mb-6">Super Admin Dashboard</h1>
 
-            <CreateOrgForm
-                orgName={orgName}
-                ownerEmail={ownerEmail}
-                loading={loading}
-                message={message}
-                onOrgNameChange={setOrgName}
-                onOwnerEmailChange={setOwnerEmail}
-                onSubmit={handleCreateOrg}
-            />
+            <div className="max-w-2xl">
+                <CreateOrgForm
+                    orgName={orgName}
+                    ownerEmail={ownerEmail}
+                    loading={loading}
+                    message={message}
+                    onOrgNameChange={setOrgName}
+                    onOwnerEmailChange={setOwnerEmail}
+                    onSubmit={handleCreateOrg}
+                />
+            </div>
 
             <OrgManagementList
                 orgs={orgs}
