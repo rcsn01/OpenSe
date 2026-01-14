@@ -11,9 +11,12 @@ import { AuthLayout } from './layouts/AuthLayout';
 // Pages
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
+import { GodModePage } from './pages/auth/GodModePage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { WorkflowEditorPage } from './pages/editor/WorkflowEditorPage';
 import { OrganizationSettingsPage } from './pages/settings/OrganizationSettingsPage';
+import { SuperAdminPage } from './pages/admin/SuperAdminPage';
+import { SystemCheck } from './components/guards/SystemCheck';
 
 export default function App() {
   return (
@@ -21,25 +24,30 @@ export default function App() {
       <ReactFlowProvider>
         <AuthProvider>
           <WorkflowProvider>
-            <Routes>
-              {/* Public Routes */}
-              <Route element={<AuthLayout />}>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-              </Route>
+            <SystemCheck>
+              <Routes>
+                <Route path="/god-mode" element={<GodModePage />} />
 
-              {/* Protected Routes */}
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/settings/org" element={<OrganizationSettingsPage />} />
-              </Route>
+                {/* Public Routes */}
+                <Route element={<AuthLayout />}>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                </Route>
 
-              {/* Editor (Separate Layout or No Layout) */}
-              <Route path="/editor/:id" element={<WorkflowEditorPage />} />
+                {/* Protected Routes */}
+                <Route element={<AppLayout />}>
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/settings/org" element={<OrganizationSettingsPage />} />
+                  <Route path="/admin" element={<SuperAdminPage />} />
+                </Route>
 
-              {/* Catch all */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                {/* Editor (Separate Layout or No Layout) */}
+                <Route path="/editor/:id" element={<WorkflowEditorPage />} />
+
+                {/* Catch all */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </SystemCheck>
           </WorkflowProvider>
         </AuthProvider>
       </ReactFlowProvider>
