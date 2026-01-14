@@ -6,6 +6,11 @@ import {
   ShieldAlert,
   User,
   Mail,
+  Plus,
+  X,
+  Key,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Input } from '../ui/Input';
@@ -21,12 +26,52 @@ type Profile = {
   is_super_admin?: boolean;
 };
 
+// Internal Modal for Add/Reset actions
+const Modal = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  children 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  title: React.ReactNode; 
+  children: React.ReactNode 
+}) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const UserManagementList = () => {
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Modal State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+
+  // Form State
+  const [newUser, setNewUser] = useState({ email: '', fullName: '', password: '' });
+  const [resetPassword, setResetPassword] = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -51,18 +96,82 @@ export const UserManagementList = () => {
   }, []);
 
   const handleDelete = async (userId: string) => {
-    if (!window.confirm('Are you sure you want to remove this user? This removes their profile data but may not delete the account login if not cascaded.')) return;
+    if (!window.confirm('Are you sure you want to completely delete this user and their login access?')) return;
 
-    setDeletingId(userId);
+    setActionLoading(true);
     try {
-      const { error } = await supabase.from('profiles').delete().eq('id', userId);
+      // Call the new admin RPC to clean up auth.users + profiles
+      const { error } = await supabase.rpc('delete_user_admin', { target_user_id: userId });
+      
       if (error) throw error;
+      
       setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setSuccessMsg('User deleted successfully');
     } catch (err: any) {
-      alert('Failed to delete user: ' + err.message);
+      setError('Failed to delete user: ' + err.message);
     } finally {
-      setDeletingId(null);
+      setActionLoading(false);
+      setTimeout(() => setSuccessMsg(null), 3000);
     }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionLoading(true);
+    setError(null);
+
+    try {
+      const { data: _newId, error } = await supabase.rpc('create_user_admin', {
+        email: newUser.email,
+        password: newUser.password,
+        full_name: newUser.fullName,
+      });
+
+      if (error) throw error;
+
+      setSuccessMsg(`User ${newUser.email} created successfully.`);
+      setIsAddModalOpen(false);
+      setNewUser({ email: '', fullName: '', password: '' });
+      fetchUsers(); // Refresh list
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    
+    setActionLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase.rpc('reset_password_admin', {
+        target_user_id: selectedUser.id,
+        new_password: resetPassword,
+      });
+
+      if (error) throw error;
+
+      setSuccessMsg(`Password for ${selectedUser.email} reset successfully.`);
+      setIsResetModalOpen(false);
+      setResetPassword('');
+      setSelectedUser(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
+  };
+
+  const openResetModal = (user: Profile) => {
+    setSelectedUser(user);
+    setResetPassword('');
+    setIsResetModalOpen(true);
   };
 
   const filteredUsers = users.filter((u) =>
@@ -77,19 +186,33 @@ export const UserManagementList = () => {
           <h2 className="text-lg font-semibold text-slate-900">All Users</h2>
           <p className="text-sm text-slate-500">View and manage all registered users across the platform</p>
         </div>
-        <div className="w-full sm:w-72">
-          <Input
-            prefix={<Search className="w-4 h-4" />}
-            placeholder="Search users..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="w-full sm:w-64">
+            <Input
+              prefix={<Search className="w-4 h-4" />}
+              placeholder="Search users..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add User
+          </Button>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-md border border-red-200">
+        <div className="p-4 bg-red-50 text-red-700 rounded-md border border-red-200 flex items-center gap-2 animate-in slide-in-from-top-2">
+          <AlertTriangle className="w-5 h-5" />
           {error}
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="p-4 bg-green-50 text-green-700 rounded-md border border-green-200 flex items-center gap-2 animate-in slide-in-from-top-2">
+          <CheckCircle className="w-5 h-5" />
+          {successMsg}
         </div>
       )}
 
@@ -119,7 +242,7 @@ export const UserManagementList = () => {
               </tr>
             ) : (
               filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50">
+                <tr key={user.id} className="hover:bg-slate-50 group transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mr-3">
@@ -149,14 +272,25 @@ export const UserManagementList = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     {!user.is_super_admin && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleDelete(user.id)}
-                        disabled={deletingId === user.id}
-                        className="text-slate-400 hover:text-red-600"
-                      >
-                        {deletingId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          title="Reset Password"
+                          onClick={() => openResetModal(user)}
+                          className="text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                        >
+                          <Key className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          title="Delete User"
+                          onClick={() => handleDelete(user.id)}
+                          disabled={actionLoading}
+                          className="text-slate-400 hover:text-red-600 hover:bg-red-50"
+                        >
+                          {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </Button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -165,6 +299,102 @@ export const UserManagementList = () => {
           </tbody>
         </table>
       </Table>
+
+      {/* --- Add User Modal --- */}
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-100 rounded-md text-blue-700">
+              <Plus className="w-5 h-5" />
+            </div>
+            <span>Create New User</span>
+          </div>
+        }
+      >
+        <form onSubmit={handleCreateUser} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+            <Input 
+              required
+              value={newUser.fullName}
+              onChange={(e) => setNewUser({...newUser, fullName: e.target.value})}
+              placeholder="John Doe"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+            <Input 
+              type="email"
+              required
+              prefix={<Mail className="w-4 h-4" />}
+              value={newUser.email}
+              onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+              placeholder="john@example.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <Input 
+              type="password"
+              required
+              minLength={6}
+              prefix={<Key className="w-4 h-4" />}
+              value={newUser.password}
+              onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+              placeholder="••••••••"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={actionLoading}>
+              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Create User
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* --- Reset Password Modal --- */}
+      <Modal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-amber-100 rounded-md text-amber-700">
+              <Key className="w-5 h-5" />
+            </div>
+            <span>Reset Password</span>
+          </div>
+        }
+      >
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Enter a new password for <span className="font-semibold text-slate-900">{selectedUser?.email}</span>.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+            <Input 
+              type="password"
+              required
+              minLength={6}
+              prefix={<Key className="w-4 h-4" />}
+              value={resetPassword}
+              onChange={(e) => setResetPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="secondary" onClick={() => setIsResetModalOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={actionLoading}>
+              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Update Password
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
     </div>
   );
 };

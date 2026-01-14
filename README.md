@@ -30,3 +30,9 @@ Terminal 2: The Frontend Dev
     Commands:
         npm run dev (Start React)
         npm install ... (Add libraries)
+
+Apply Migrations:
+    npx supabase migration up
+
+Reset Migrations:
+    npx supabase db reset
