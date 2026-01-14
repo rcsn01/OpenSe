@@ -1,3 +1,5 @@
 /node_modules
 /w-etl/node_modules
 w-etl/.env.local
+.env
+.env.*
