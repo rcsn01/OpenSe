@@ -2,13 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Settings, 
+  Building2, // Updated Icon
   ChevronDown, 
   LogOut, 
   User, 
   Menu,
   X,
-  Building2,
   Check
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -98,7 +97,7 @@ export const AppLayout = () => {
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Settings', href: '/settings/org', icon: Settings },
+    { name: 'Organization', href: '/organization', icon: Building2 }, // Updated Link
   ];
 
   return (
