@@ -16,13 +16,11 @@ export function useSupabaseQuery<T>(
 ) {
   const { 
     enabled = true, 
-    timeout = 15000, // Increased default timeout to 15s
+    timeout = 10000, 
     refetchOnWindowFocus = true 
   } = options;
   
   const { user } = useAuth();
-  
-  // Data persists between fetches to prevent UI flashing
   const [data, setData] = useState<T | []>([]); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,25 +30,29 @@ export function useSupabaseQuery<T>(
   const fetchData = useCallback(async (isRetry = false) => {
     if (!enabled || !user) return;
 
-    // 1. Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    // Only set loading true if we aren't "background refreshing" (optional preference)
-    // For now, we set it true to show spinner if needed, or you can rely on old data.
     setLoading(true);
     if (!isRetry) setError(null);
 
     try {
-      // 2. Timeout Promise
+      // 1. Mark when we started
+      const startTime = Date.now();
+
       const timeoutPromise = new Promise((_, reject) => {
         const id = setTimeout(() => {
-          // If the page is hidden, don't error out—just abort silently to wait for focus
-          if (document.hidden) {
-             reject(new Error('Background_Timeout_Silent')); 
+          // 2. Calculate how much time REALLY passed
+          const timePassed = Date.now() - startTime;
+          const drift = timePassed - timeout;
+
+          // 3. If the timer is > 1 second late, the browser was sleeping.
+          // Don't fail the request; just cancel it silently.
+          if (drift > 1000) {
+             reject(new Error('Browser_Suspended'));
           } else {
              reject(new Error('Request timed out'));
           }
@@ -59,10 +61,9 @@ export function useSupabaseQuery<T>(
         controller.signal.addEventListener('abort', () => clearTimeout(id));
       });
 
-      // 3. Supabase Query
       const queryPromise = queryFn();
 
-      // 4. Race
+      // 4. Race the query against the smart timeout
       const result: any = await Promise.race([queryPromise, timeoutPromise]);
 
       if (!controller.signal.aborted) {
@@ -72,11 +73,13 @@ export function useSupabaseQuery<T>(
       }
     } catch (err: any) {
       if (!controller.signal.aborted) {
-        // Ignore silent background timeouts
-        if (err.message === 'Background_Timeout_Silent') {
-           console.log('Query paused in background.');
+        // 5. Catch the specific "Browser Suspended" error and ignore it
+        if (err.message === 'Browser_Suspended') {
+           console.log('Tab woke up: Ignoring old timeout.');
+        } else if (err.message === 'Request timed out') {
+           setError('Network request timed out.');
         } else {
-           console.error('Query failed:', err.message);
+           console.error('Query error:', err);
            setError(err.message || 'Failed to fetch data');
         }
       }
@@ -97,30 +100,23 @@ export function useSupabaseQuery<T>(
     };
   }, [fetchData]);
 
-  // Refetch on Window Focus (Solves the "Switch Back" issue)
+  // Refetch when tab becomes active again
   useEffect(() => {
     if (!refetchOnWindowFocus || !enabled) return;
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // Small delay to ensure network is awake
-        setTimeout(() => fetchData(true), 100);
-      }
-    };
-
     const handleFocus = () => {
-      // Only trigger if we haven't just triggered from visibility change
       if (document.visibilityState === 'visible') {
+         // Force a fresh fetch when user comes back
          fetchData(true);
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
     };
   }, [fetchData, refetchOnWindowFocus, enabled]);
 

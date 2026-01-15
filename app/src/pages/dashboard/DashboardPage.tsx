@@ -1,71 +1,41 @@
-import React, { useCallback, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useDataStore } from '../../store/dataStore';
 import { WorkflowTabs } from '../../components/dashboard/WorkflowTabs';
 import { WorkflowTable } from '../../components/dashboard/WorkflowTable';
-import { WorkflowRow } from '../../components/dashboard/types';
 
-import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 type OrgSimple = { id: string; name: string };
 type DashboardContextType = { currentOrg: OrgSimple | null };
 
 export const DashboardPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  // Get currentOrg from AppLayout via Outlet context
   const { currentOrg } = useOutletContext<DashboardContextType>();
-  const currentOrgId = currentOrg?.id || null;
+  
+  const { workflows, loading, error, fetchWorkflows, deleteWorkflow } = useDataStore();
   
   const [activeTab, setActiveTab] = useState<'personal' | 'org'>('org');
   const [search, setSearch] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const fetchWorkflows = useCallback(async () => {
-    let query = supabase
-      .from('workflows')
-      .select('id, name, created_at, owner_id, org_id')
-      .order('created_at', { ascending: false });
-
-    if (activeTab === 'personal') {
-      query = query.eq('owner_id', user?.id).is('org_id', null);
-    } else if (currentOrgId) {
-      query = query.eq('org_id', currentOrgId);
+  useEffect(() => {
+    if (user) {
+      // Fetch workflows for the current context
+      fetchWorkflows(user.id, activeTab === 'org' ? currentOrg?.id || null : null);
     }
+  }, [user, currentOrg, activeTab, fetchWorkflows]);
 
-    return await query;
-  }, [activeTab, currentOrgId, user?.id]);
-
-  const {
-    data: workflowData,
-    loading,
-    error: fetchError,
-    refresh,
-  } = useSupabaseQuery<WorkflowRow[]>(
-    fetchWorkflows,
-    [activeTab, currentOrgId, user?.id],
-    { enabled: !!user && (activeTab === 'personal' || !!currentOrgId) }
-  );
-
-  const workflows = workflowData || [];
-  const combinedError = fetchError || localError;
-
-  const handleDelete = useCallback(
-    async (id: string) => {
-      if (!window.confirm('Are you sure you want to delete this workflow?')) return;
-      setLocalError(null);
-      try {
-        const { error } = await supabase.from('workflows').delete().eq('id', id);
-        if (error) throw error;
-        await refresh();
-      } catch (err: any) {
-        setLocalError(err?.message || 'Failed to delete workflow');
-      }
-    },
-    [refresh]
-  );
+  const handleDelete = useCallback(async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this workflow?')) return;
+    setLocalError(null);
+    try {
+      await deleteWorkflow(id);
+    } catch (err: any) {
+      setLocalError(err.message || 'Failed to delete workflow');
+    }
+  }, [deleteWorkflow]);
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -75,10 +45,8 @@ export const DashboardPage = () => {
           <h1 className="text-2xl font-bold text-slate-900">Welcome back, {user?.user_metadata?.full_name || 'Guest'}</h1>
           <p className="text-slate-500 mt-1">Manage your data workflows and automations.</p>
         </div>
-        {/* Button removed from here */}
       </div>
 
-      {/* Tabs */}
       <WorkflowTabs
         activeTab={activeTab}
         onChange={setActiveTab}
@@ -88,14 +56,13 @@ export const DashboardPage = () => {
       <WorkflowTable
         workflows={workflows}
         loading={loading}
-        error={combinedError}
+        error={error || localError}
         search={search}
         onSearchChange={setSearch}
         onEdit={(id) => navigate(`/editor/${id}`)}
         onDelete={handleDelete}
       />
 
-      {/* New Workflow Area */}
       <Link
         to={activeTab === 'org' && currentOrg ? `/editor/new?orgId=${currentOrg.id}` : '/editor/new'}
         className="mt-6 block w-full rounded-xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 transition-all group bg-white/50"

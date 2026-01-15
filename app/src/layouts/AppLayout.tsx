@@ -15,6 +15,7 @@ import {
 import { clsx } from 'clsx';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { useDataStore } from '../store/dataStore';
 
 type OrgSimple = { id: string; name: string };
 
@@ -31,9 +32,12 @@ export const AppLayout = () => {
   const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
 
+  const { reset } = useDataStore();
+
   const handleSignOut = async () => {
     try {
       setSigningOut(true);
+      reset(); // Clear global data store
       await supabase.auth.signOut();
       navigate('/login', { replace: true });
     } finally {
