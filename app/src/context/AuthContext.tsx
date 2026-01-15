@@ -34,11 +34,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (session?.user) {
           const { data } = await supabase
-            .from('profiles')
-            .select('is_super_admin')
-            .eq('id', session.user.id)
-            .single();
-          setIsSuperAdmin(!!data?.is_super_admin);
+            .from('super_admin_members')
+            .select('user_id')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+          setIsSuperAdmin(!!data);
         } else {
           setIsSuperAdmin(false);
         }
@@ -59,11 +59,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (session?.user) {
         const { data } = await supabase
-          .from('profiles')
-          .select('is_super_admin')
-          .eq('id', session.user.id)
-          .single();
-        setIsSuperAdmin(!!data?.is_super_admin);
+          .from('super_admin_members')
+          .select('user_id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        setIsSuperAdmin(!!data);
       } else {
         setIsSuperAdmin(false);
       }

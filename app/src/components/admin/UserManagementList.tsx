@@ -23,7 +23,7 @@ type Profile = {
   email: string | null;
   full_name: string | null;
   created_at?: string;
-  is_super_admin?: boolean;
+  super_admin_members?: { user_id: string }[];
 };
 
 // Internal Modal for Add/Reset actions
@@ -79,7 +79,7 @@ export const UserManagementList = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, super_admin_members(user_id)')
         .order('email', { ascending: true });
 
       if (error) throw error;
@@ -241,60 +241,63 @@ export const UserManagementList = () => {
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50 group transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mr-3">
-                        <User className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">{user.full_name || 'No Name'}</div>
-                        <div className="text-sm text-slate-500 flex items-center gap-1">
-                          <Mail className="w-3 h-3" /> {user.email}
+              filteredUsers.map((user) => {
+                const isSuperAdmin = (user.super_admin_members?.length ?? 0) > 0;
+                return (
+                  <tr key={user.id} className="hover:bg-slate-50 group transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mr-3">
+                          <User className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-slate-900">{user.full_name || 'No Name'}</div>
+                          <div className="text-sm text-slate-500 flex items-center gap-1">
+                            <Mail className="w-3 h-3" /> {user.email}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {user.is_super_admin ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        <ShieldAlert className="w-3 h-3 mr-1" /> Super Admin
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                        User
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge label="Active" tone="success" />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    {!user.is_super_admin && (
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          title="Reset Password"
-                          onClick={() => openResetModal(user)}
-                          className="text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-                        >
-                          <Key className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          title="Delete User"
-                          onClick={() => handleDelete(user.id)}
-                          disabled={actionLoading}
-                          className="text-slate-400 hover:text-red-600 hover:bg-red-50"
-                        >
-                          {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                        </Button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {isSuperAdmin ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          <ShieldAlert className="w-3 h-3 mr-1" /> Super Admin
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                          User
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusBadge label="Active" tone="success" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      {!isSuperAdmin && (
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            title="Reset Password"
+                            onClick={() => openResetModal(user)}
+                            className="text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                          >
+                            <Key className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            title="Delete User"
+                            onClick={() => handleDelete(user.id)}
+                            disabled={actionLoading}
+                            className="text-slate-400 hover:text-red-600 hover:bg-red-50"
+                          >
+                            {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
