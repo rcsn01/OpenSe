@@ -23,24 +23,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Check active session safely
+    const initSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
 
-      if (session?.user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('is_super_admin')
-          .eq('id', session.user.id)
-          .single();
-        setIsSuperAdmin(!!data?.is_super_admin);
-      } else {
-        setIsSuperAdmin(false);
+        if (session?.user) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('is_super_admin')
+            .eq('id', session.user.id)
+            .single();
+          setIsSuperAdmin(!!data?.is_super_admin);
+        } else {
+          setIsSuperAdmin(false);
+        }
+      } catch (error) {
+        console.error('Auth initialization failed:', error);
+      } finally {
+        // ALWAYS turn off loading, even if there's an error
+        setLoading(false);
       }
+    };
 
-      setLoading(false);
-    });
+    initSession();
 
     // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
