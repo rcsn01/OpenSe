@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Building2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Organization, Member } from '../../components/settings/types';
@@ -8,7 +8,7 @@ import { OrgHeader } from '../../components/settings/OrgHeader';
 import { InviteMemberForm } from '../../components/settings/InviteMemberForm';
 import { MemberTable } from '../../components/settings/MemberTable';
 
-export const OrganizationSettingsPage = () => {
+export const OrganizationPage = () => {
     const { user, isSuperAdmin } = useAuth();
 
     const [organization, setOrganization] = useState<Organization | null>(null);
@@ -18,19 +18,19 @@ export const OrganizationSettingsPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Edit State
     const [editing, setEditing] = useState(false);
     const [orgNameInput, setOrgNameInput] = useState('');
     const [savingOrg, setSavingOrg] = useState(false);
 
+    // Invite State
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
     const [inviting, setInviting] = useState(false);
     const [inviteError, setInviteError] = useState<string | null>(null);
 
+    // Member Management State
     const [removingId, setRemovingId] = useState<string | null>(null);
-
-    const [creatingOrgName, setCreatingOrgName] = useState('');
-    const [creatingOrg, setCreatingOrg] = useState(false);
 
     const canManage = membershipRole === 'owner' || membershipRole === 'admin';
 
@@ -57,6 +57,7 @@ export const OrganizationSettingsPage = () => {
         setError(null);
 
         try {
+            // Get user's membership to find their Org ID and Role
             const { data: memberships, error: membershipsError } = await supabase
                 .from('organization_members')
                 .select('org_id, role')
@@ -64,6 +65,7 @@ export const OrganizationSettingsPage = () => {
 
             if (membershipsError) throw membershipsError;
 
+            // Determine which Org to load (Owner or Member)
             const orgIds = (memberships || []).map((m) => m.org_id).filter(Boolean);
             const filters = [`owner_id.eq.${user.id}`];
             if (orgIds.length) {
@@ -83,13 +85,17 @@ export const OrganizationSettingsPage = () => {
 
             if (primary) {
                 setOrgNameInput(primary.name);
-                const memberRole = (memberships || []).find((m) => m.org_id === primary.id)?.role;
-                const derivedRole: 'owner' | 'admin' | 'member' | null =
-                    memberRole === 'admin' || memberRole === 'member'
-                        ? memberRole
-                        : primary.owner_id === user.id
-                            ? 'owner'
-                            : null;
+                
+                // Calculate Role
+                const memberRecord = (memberships || []).find((m) => m.org_id === primary.id);
+                let derivedRole: 'owner' | 'admin' | 'member' | null = null;
+                
+                if (primary.owner_id === user.id) {
+                    derivedRole = 'owner';
+                } else if (memberRecord) {
+                    derivedRole = memberRecord.role as 'admin' | 'member';
+                }
+                
                 setMembershipRole(derivedRole);
                 await loadMembers(primary.id);
             } else {
@@ -150,6 +156,7 @@ export const OrganizationSettingsPage = () => {
         setInviteError(null);
 
         try {
+            // Check if user exists
             const { data: profileRows, error: profileError } = await supabase
                 .from('profiles')
                 .select('id, email, full_name')
@@ -190,7 +197,7 @@ export const OrganizationSettingsPage = () => {
 
     const handleRemoveMember = async (member: Member) => {
         if (!organization) return;
-        if (member.user_id === organization.owner_id) return;
+        if (member.user_id === organization.owner_id) return; // Cannot remove owner via this table
 
         setRemovingId(member.id);
         setError(null);
@@ -206,46 +213,6 @@ export const OrganizationSettingsPage = () => {
             setError(err.message || 'Failed to remove member');
         } finally {
             setRemovingId(null);
-        }
-    };
-
-    const handleCreateOrganization = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) return;
-
-        const name = creatingOrgName.trim();
-        if (!name) {
-            setError('Organization name is required');
-            return;
-        }
-
-        setCreatingOrg(true);
-        setError(null);
-        try {
-            const { data: orgRow, error: createError } = await supabase
-                .from('organizations')
-                .insert({ name, owner_id: user.id })
-                .select('id, name, owner_id, created_at')
-                .single();
-
-            if (createError) throw createError;
-
-            await supabase.from('organization_members').insert({
-                org_id: orgRow.id,
-                user_id: user.id,
-                role: 'admin',
-            });
-
-            setOrganization(orgRow);
-            setOrgNameInput(orgRow.name);
-            setMembershipRole('owner');
-            setCreatingOrgName('');
-            await loadMembers(orgRow.id);
-        } catch (err: any) {
-            setError(err.message || 'Failed to create organization');
-        } finally {
-            setCreatingOrg(false);
-            setLoading(false);
         }
     };
 
@@ -268,28 +235,17 @@ export const OrganizationSettingsPage = () => {
     if (!organization) {
         return (
             <div className="p-8 max-w-3xl mx-auto space-y-6">
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-                        {error}
-                    </div>
-                )}
                 <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 text-center">
+                    <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                        <Building2 className="w-6 h-6 text-slate-400" />
+                    </div>
                     <h1 className="text-xl font-semibold text-slate-900 mb-2">No Organization Found</h1>
                     <p className="text-sm text-slate-500 mb-4">
-                        You are not a member of any organization yet.
+                        You are not currently a member of any organization.
                     </p>
-                    <div className="bg-blue-50 text-blue-700 p-4 rounded-md text-sm">
-                        To set up a new organization, please contact support to arrange terms and payment.
-                    </div>
-
                     {isSuperAdmin && (
-                        <div className="mt-8 border-t pt-6 text-left">
-                            <h2 className="text-sm font-bold text-slate-900 mb-2">Super Admin Controls</h2>
-                            <p className="text-xs text-slate-500 mb-4">Use the Super Admin Dashboard to onboard new clients.</p>
-                            <Link
-                                to="/admin"
-                                className="inline-flex items-center px-4 py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 text-sm"
-                            >
+                        <div className="mt-6 border-t border-slate-100 pt-6">
+                            <Link to="/admin" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
                                 Go to Super Admin Dashboard
                             </Link>
                         </div>
@@ -307,6 +263,7 @@ export const OrganizationSettingsPage = () => {
                 </div>
             )}
 
+            {/* Header Section */}
             <OrgHeader
                 organization={organization}
                 membershipRole={membershipRole}
@@ -321,6 +278,7 @@ export const OrganizationSettingsPage = () => {
                 onSubmit={handleUpdateOrg}
             />
 
+            {/* Invite Section - Only visible to Admins/Owners */}
             {canManage && (
                 <InviteMemberForm
                     inviteEmail={inviteEmail}
@@ -338,7 +296,11 @@ export const OrganizationSettingsPage = () => {
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h2 className="text-lg font-semibold text-slate-900">Team Members</h2>
-                        <p className="text-sm text-slate-500">Manage who has access to your organization's workflows.</p>
+                        <p className="text-sm text-slate-500">
+                            {canManage 
+                                ? "Manage who has access to your organization's workflows." 
+                                : "View members of this organization."}
+                        </p>
                     </div>
                 </div>
 
