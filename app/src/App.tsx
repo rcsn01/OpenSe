@@ -18,6 +18,8 @@ import { OrganizationPage } from './pages/organization/OrganizationPage'; // New
 import { UserSettingsPage } from './pages/settings/UserSettingsPage';
 import { SuperAdminPage } from './pages/admin/SuperAdminPage';
 import { SystemCheck } from './components/guards/SystemCheck';
+import { GalleryPage } from './pages/gallery/GalleryPage';
+import { ActivitiesPage } from './pages/dashboard/ActivitiesPage';
 
 export default function App() {
   return (
@@ -38,7 +40,9 @@ export default function App() {
                 {/* Protected Routes */}
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<DashboardPage />} />
+                  <Route path="/gallery" element={<GalleryPage />} />
                   <Route path="/organization" element={<OrganizationPage />} /> {/* New Route */}
+                  <Route path="/activity" element={<ActivitiesPage />} />
                   <Route path="/settings/profile" element={<UserSettingsPage />} />
                   <Route path="/admin" element={<SuperAdminPage />} />
                 </Route>
