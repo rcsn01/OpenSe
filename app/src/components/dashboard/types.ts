@@ -9,6 +9,7 @@ export type WorkflowRow = {
 export type WorkflowTabsProps = {
   activeTab: 'personal' | 'org';
   onChange: (tab: 'personal' | 'org') => void;
+  orgName?: string;
 };
 
 export type WorkflowTableProps = {

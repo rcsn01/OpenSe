@@ -2,7 +2,7 @@ import React from 'react';
 import clsx from 'clsx';
 import { WorkflowTabsProps } from './types';
 
-export const WorkflowTabs: React.FC<WorkflowTabsProps> = ({ activeTab, onChange }) => {
+export const WorkflowTabs: React.FC<WorkflowTabsProps> = ({ activeTab, onChange, orgName }) => {
   return (
     <div className="border-b border-slate-200 mb-6">
       <nav className="-mb-px flex space-x-8">
@@ -26,7 +26,7 @@ export const WorkflowTabs: React.FC<WorkflowTabsProps> = ({ activeTab, onChange 
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           )}
         >
-          W-ETL Workflows
+          {orgName ? `${orgName} Workflows` : 'Organization Workflows'}
         </button>
       </nav>
     </div>
