@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Activity, Clock, XCircle, FileSpreadsheet } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 import { Table } from '../../components/ui/Table';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 
@@ -23,63 +24,38 @@ type ExecutionLog = {
 export const ActivitiesPage = () => {
   const { user } = useAuth();
   const { currentOrg } = useOutletContext<DashboardContextType>();
-  const [logs, setLogs] = useState<ExecutionLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const currentOrgId = currentOrg?.id || null;
+  const fetchLogs = useCallback(async () => {
+    let query = supabase
+      .from('workflow_executions')
+      .select(`
+        id,
+        workflow_id,
+        status,
+        started_at,
+        completed_at,
+        error_message,
+        workflows (name),
+        profiles (email, full_name)
+      `)
+      .order('started_at', { ascending: false })
+      .limit(50);
 
-  useEffect(() => {
-    let isMounted = true;
+    if (currentOrgId) {
+      query = query.eq('org_id', currentOrgId);
+    } else {
+      query = query.eq('user_id', user?.id).is('org_id', null);
+    }
 
-    const fetchLogs = async () => {
-      if (!user) {
-        if (isMounted) {
-          setLoading(false);
-          setLogs([]);
-        }
-        return;
-      }
+    return await query;
+  }, [currentOrgId, user?.id]);
 
-      if (isMounted) setLoading(true);
-
-      try {
-        let query = supabase
-          .from('workflow_executions')
-          .select(`
-            id,
-            workflow_id,
-            status,
-            started_at,
-            completed_at,
-            error_message,
-            workflows (name),
-            profiles (email, full_name)
-          `)
-          .order('started_at', { ascending: false })
-          .limit(50);
-
-        if (currentOrg) {
-          query = query.eq('org_id', currentOrg.id);
-        } else {
-          query = query.eq('user_id', user.id).is('org_id', null);
-        }
-
-        const { data, error } = await query;
-
-        if (isMounted && !error && data) {
-          setLogs(data as unknown as ExecutionLog[]);
-        }
-      } catch (err: any) {
-        console.error('Failed to load activity logs', err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    fetchLogs();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user, currentOrg]);
+  const { data: logsData, loading, error } = useSupabaseQuery<ExecutionLog[]>(
+    fetchLogs,
+    [currentOrgId, user?.id],
+    { enabled: !!user }
+  );
+  const logs = logsData || [];
 
   const formatDuration = (start: string, end: string | null) => {
     if (!end) return '—';

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Loader2, Building2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 import { Organization, Member } from '../../components/settings/types';
 import { OrgHeader } from '../../components/settings/OrgHeader';
 import { InviteMemberForm } from '../../components/settings/InviteMemberForm';
@@ -13,7 +14,6 @@ export const OrganizationPage = () => {
 
     const [organization, setOrganization] = useState<Organization | null>(null);
     const [membershipRole, setMembershipRole] = useState<'owner' | 'admin' | 'member' | null>(null);
-    const [members, setMembers] = useState<Member[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -33,22 +33,6 @@ export const OrganizationPage = () => {
     const [removingId, setRemovingId] = useState<string | null>(null);
 
     const canManage = membershipRole === 'owner' || membershipRole === 'admin';
-
-    const loadMembers = useCallback(async (orgId: string, mountRef?: { current: boolean }) => {
-        const { data, error: membersError } = await supabase
-            .from('organization_members')
-            .select('id, role, user_id, profiles:profiles!organization_members_user_id_fkey(email, full_name)')
-            .eq('org_id', orgId);
-
-        if (membersError) throw membersError;
-        const normalized = (data || []).map((m) => ({
-            ...m,
-            profiles: Array.isArray(m.profiles) ? m.profiles[0] ?? null : m.profiles ?? null,
-        }));
-        if (mountRef?.current !== false) {
-            setMembers(normalized as Member[]);
-        }
-    }, []);
 
     const loadOrganization = useCallback(async (mountRef: { current: boolean }) => {
         if (!mountRef.current) return;
@@ -103,24 +87,20 @@ export const OrganizationPage = () => {
                 if (mountRef.current) {
                     setMembershipRole(derivedRole);
                 }
-
-                await loadMembers(primary.id, mountRef);
             } else if (mountRef.current) {
-                setMembers([]);
                 setMembershipRole(null);
             }
         } catch (err: any) {
             if (mountRef.current) {
                 setError(err.message || 'Failed to load organization');
                 setOrganization(null);
-                setMembers([]);
             }
         } finally {
             if (mountRef.current) {
                 setLoading(false);
             }
         }
-    }, [user, loadMembers]);
+    }, [user]);
 
     useEffect(() => {
         const mountRef = { current: true };
@@ -129,6 +109,35 @@ export const OrganizationPage = () => {
             mountRef.current = false;
         };
     }, [loadOrganization]);
+
+    const fetchOrgMembers = useCallback(async () => {
+        if (!organization?.id) {
+            return { data: [], error: null };
+        }
+
+        const { data, error } = await supabase
+            .from('organization_members')
+            .select('id, role, user_id, profiles:profiles!organization_members_user_id_fkey(email, full_name)')
+            .eq('org_id', organization.id);
+
+        if (error) {
+            return { data: [], error };
+        }
+
+        const normalized = (data || []).map((m) => ({
+            ...m,
+            profiles: Array.isArray(m.profiles) ? m.profiles[0] ?? null : m.profiles ?? null,
+        }));
+
+        return { data: normalized as Member[], error: null };
+    }, [organization?.id]);
+
+    const { data: membersData, refresh: refreshMembers } = useSupabaseQuery<Member[]>(
+        fetchOrgMembers,
+        [organization?.id],
+        { enabled: !!organization }
+    );
+    const members = organization ? membersData || [] : [];
 
     const handleUpdateOrg = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -202,7 +211,7 @@ export const OrganizationPage = () => {
 
             setInviteEmail('');
             setInviteRole('member');
-            await loadMembers(organization.id);
+            await refreshMembers();
         } catch (err: any) {
             setInviteError(err.message || 'Failed to invite member');
         } finally {
@@ -223,7 +232,7 @@ export const OrganizationPage = () => {
                 .eq('id', member.id);
 
             if (deleteError) throw deleteError;
-            await loadMembers(organization.id);
+            await refreshMembers();
         } catch (err: any) {
             setError(err.message || 'Failed to remove member');
         } finally {
