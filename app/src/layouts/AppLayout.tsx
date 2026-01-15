@@ -178,12 +178,17 @@ export const AppLayout = () => {
                 </div>
               </div>
               <div className="ml-3 overflow-hidden">
-                <p className="text-sm font-medium text-white truncate max-w-[120px]">
-                  {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
-                </p>
-                <p className="text-xs text-slate-400 truncate max-w-[120px]">
-                  {user?.email || 'user@example.com'}
-                </p>
+                <Link
+                  to="/settings/profile"
+                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+                >
+                  <p className="text-sm font-medium text-white truncate max-w-[120px]">
+                    {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate max-w-[120px]">
+                    {user?.email || 'user@example.com'}
+                  </p>
+                </Link>
               </div>
               <button
                 onClick={handleSignOut}
