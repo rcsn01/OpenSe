@@ -285,7 +285,19 @@ export const WorkflowEditorPage = () => {
   }), [nodes]);
 
   const runAndApplyExecution = async () => {
-    const result = await runExecution(nodes, edges, workflowName);
+    if (!user) {
+        setRunMessage('You must be logged in to run workflows.');
+        return;
+    }
+
+    const result = await runExecution(
+        nodes, 
+        edges, 
+        workflowName,
+        workflowId,
+        user.id,
+        orgIdParam
+    );
     setNodes(result.updatedNodes);
 
     if (result.downloads.length) {

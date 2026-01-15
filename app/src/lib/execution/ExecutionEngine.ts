@@ -1,6 +1,7 @@
 import { Edge, Node } from 'reactflow';
 import { Row, WorkflowNodeData, FileNodeData, FilterNodeData, RemoveNodeData, PreviewNodeData, SaveNodeData, DeduplicateNodeData, FindReplaceNodeData, FillMissingNodeData, ConditionalRouterNodeData, SamplerNodeData, RenameColumnNodeData, SortNodeData, LookupNodeData, TypeCasterNodeData, RenameNodeData, UnpivotNodeData, PivotNodeData, JoinVerticalNodeData } from '../../components/nodes/types';
 import { db } from '../db';
+import { supabase } from '../supabase';
 
 export type ExecutionDownload = { csv: string; filename: string };
 
@@ -61,9 +62,17 @@ const persistRows = async (rows: Row[]): Promise<DataRef> => {
 export const runExecution = async (
   nodes: Node<WorkflowNodeData>[],
   edges: Edge[],
-  workflowName: string
+  workflowName: string,
+  // New Logging Params
+  workflowId: string | null,
+  userId: string,
+  orgId: string | null
 ): Promise<ExecutionResult> => {
-  const incoming: Record<string, Edge[]> = {};
+  const startTime = new Date();
+  let errorState: string | null = null;
+
+  try {
+    const incoming: Record<string, Edge[]> = {};
   edges.forEach((e) => {
     if (!incoming[e.target]) incoming[e.target] = [];
     incoming[e.target].push(e as Edge);
@@ -428,9 +437,31 @@ export const runExecution = async (
     }
   }
 
-  return {
-    updatedNodes,
-    downloads,
-    unresolved: Array.from(unresolved),
-  };
+    if (unresolved.size > 0) {
+      errorState = "Dependency cycle or disconnected nodes detected.";
+    }
+
+    return {
+      updatedNodes,
+      downloads,
+      unresolved: Array.from(unresolved),
+    };
+
+  } catch (err: any) {
+    errorState = err.message;
+    throw err;
+  } finally {
+    // LOGGING TO SUPABASE
+    if (workflowId && userId) {
+        await supabase.from('workflow_executions').insert({
+            workflow_id: workflowId,
+            user_id: userId,
+            org_id: orgId,
+            status: errorState ? 'failed' : 'success',
+            started_at: startTime.toISOString(),
+            completed_at: new Date().toISOString(),
+            error_message: errorState
+        });
+    }
+  }
 };
