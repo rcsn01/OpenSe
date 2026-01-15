@@ -34,7 +34,7 @@ export const OrganizationPage = () => {
 
     const canManage = membershipRole === 'owner' || membershipRole === 'admin';
 
-    const loadMembers = useCallback(async (orgId: string) => {
+    const loadMembers = useCallback(async (orgId: string, mountRef?: { current: boolean }) => {
         const { data, error: membersError } = await supabase
             .from('organization_members')
             .select('id, role, user_id, profiles:profiles!organization_members_user_id_fkey(email, full_name)')
@@ -45,19 +45,24 @@ export const OrganizationPage = () => {
             ...m,
             profiles: Array.isArray(m.profiles) ? m.profiles[0] ?? null : m.profiles ?? null,
         }));
-        setMembers(normalized as Member[]);
+        if (mountRef?.current !== false) {
+            setMembers(normalized as Member[]);
+        }
     }, []);
 
-    const loadOrganization = useCallback(async () => {
+    const loadOrganization = useCallback(async (mountRef: { current: boolean }) => {
+        if (!mountRef.current) return;
         if (!user) {
-            setLoading(false);
+            if (mountRef.current) setLoading(false);
             return;
         }
-        setLoading(true);
-        setError(null);
+
+        if (mountRef.current) {
+            setLoading(true);
+            setError(null);
+        }
 
         try {
-            // Get user's membership to find their Org ID and Role
             const { data: memberships, error: membershipsError } = await supabase
                 .from('organization_members')
                 .select('org_id, role')
@@ -65,7 +70,6 @@ export const OrganizationPage = () => {
 
             if (membershipsError) throw membershipsError;
 
-            // Determine which Org to load (Owner or Member)
             const orgIds = (memberships || []).map((m) => m.org_id).filter(Boolean);
             const filters = [`owner_id.eq.${user.id}`];
             if (orgIds.length) {
@@ -81,38 +85,49 @@ export const OrganizationPage = () => {
             if (orgError) throw orgError;
 
             const primary = orgs?.[0] || null;
+            if (!mountRef.current) return;
             setOrganization(primary);
 
             if (primary) {
                 setOrgNameInput(primary.name);
-                
-                // Calculate Role
+
                 const memberRecord = (memberships || []).find((m) => m.org_id === primary.id);
                 let derivedRole: 'owner' | 'admin' | 'member' | null = null;
-                
+
                 if (primary.owner_id === user.id) {
                     derivedRole = 'owner';
                 } else if (memberRecord) {
                     derivedRole = memberRecord.role as 'admin' | 'member';
                 }
-                
-                setMembershipRole(derivedRole);
-                await loadMembers(primary.id);
-            } else {
+
+                if (mountRef.current) {
+                    setMembershipRole(derivedRole);
+                }
+
+                await loadMembers(primary.id, mountRef);
+            } else if (mountRef.current) {
                 setMembers([]);
                 setMembershipRole(null);
             }
         } catch (err: any) {
-            setError(err.message || 'Failed to load organization');
-            setOrganization(null);
-            setMembers([]);
+            if (mountRef.current) {
+                setError(err.message || 'Failed to load organization');
+                setOrganization(null);
+                setMembers([]);
+            }
         } finally {
-            setLoading(false);
+            if (mountRef.current) {
+                setLoading(false);
+            }
         }
     }, [user, loadMembers]);
 
     useEffect(() => {
-        loadOrganization();
+        const mountRef = { current: true };
+        loadOrganization(mountRef);
+        return () => {
+            mountRef.current = false;
+        };
     }, [loadOrganization]);
 
     const handleUpdateOrg = async (e: React.FormEvent) => {

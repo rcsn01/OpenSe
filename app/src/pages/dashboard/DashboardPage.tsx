@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -16,6 +16,7 @@ export const DashboardPage = () => {
   
   // Get currentOrg from AppLayout via Outlet context
   const { currentOrg } = useOutletContext<DashboardContextType>();
+  const currentOrgId = currentOrg?.id || null;
   
   // Tabs & Workflow State
   const [activeTab, setActiveTab] = useState<'personal' | 'org'>('org');
@@ -25,10 +26,20 @@ export const DashboardPage = () => {
   const [search, setSearch] = useState('');
 
   // Fetch Workflows when Tab or Org changes
-  const fetchWorkflows = async () => {
-    if (!user) return;
-    setLoading(true);
-    setError(null);
+  const fetchWorkflows = useCallback(async (mountRef?: { current: boolean }) => {
+    if (mountRef?.current === false) return;
+    if (!user) {
+      if (mountRef?.current !== false) {
+        setWorkflows([]);
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (mountRef?.current !== false) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
       if (activeTab === 'personal') {
@@ -40,36 +51,47 @@ export const DashboardPage = () => {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setWorkflows(data || []);
+        if (mountRef?.current !== false) {
+          setWorkflows(data || []);
+        }
       } else {
-        // Org Mode
-        if (!currentOrg) {
-          setWorkflows([]);
-          setLoading(false);
+        if (!currentOrgId) {
+          if (mountRef?.current !== false) {
+            setWorkflows([]);
+          }
           return;
         }
 
         const { data, error } = await supabase
           .from('workflows')
           .select('id, name, created_at, owner_id, org_id')
-          .eq('org_id', currentOrg.id)
+          .eq('org_id', currentOrgId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setWorkflows(data || []);
+        if (mountRef?.current !== false) {
+          setWorkflows(data || []);
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load workflows');
-      setWorkflows([]);
+      if (mountRef?.current !== false) {
+        setError(err.message || 'Failed to load workflows');
+        setWorkflows([]);
+      }
     } finally {
-      setLoading(false);
+      if (mountRef?.current !== false) {
+        setLoading(false);
+      }
     }
-  };
+  }, [activeTab, currentOrgId, user?.id]);
 
   useEffect(() => {
-    fetchWorkflows();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, currentOrg?.id, user?.id]);
+    const mountRef = { current: true };
+    fetchWorkflows(mountRef);
+    return () => {
+      mountRef.current = false;
+    };
+  }, [fetchWorkflows]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this workflow?')) return;

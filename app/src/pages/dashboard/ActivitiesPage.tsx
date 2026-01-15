@@ -27,40 +27,58 @@ export const ActivitiesPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchLogs = async () => {
-      if (!user) return;
-      setLoading(true);
-
-      let query = supabase
-        .from('workflow_executions')
-        .select(`
-          id,
-          workflow_id,
-          status,
-          started_at,
-          completed_at,
-          error_message,
-          workflows (name),
-          profiles (email, full_name)
-        `)
-        .order('started_at', { ascending: false })
-        .limit(50);
-
-      if (currentOrg) {
-        query = query.eq('org_id', currentOrg.id);
-      } else {
-        query = query.eq('user_id', user.id).is('org_id', null);
+      if (!user) {
+        if (isMounted) {
+          setLoading(false);
+          setLogs([]);
+        }
+        return;
       }
 
-      const { data, error } = await query;
-      
-      if (!error && data) {
-        setLogs(data as unknown as ExecutionLog[]);
+      if (isMounted) setLoading(true);
+
+      try {
+        let query = supabase
+          .from('workflow_executions')
+          .select(`
+            id,
+            workflow_id,
+            status,
+            started_at,
+            completed_at,
+            error_message,
+            workflows (name),
+            profiles (email, full_name)
+          `)
+          .order('started_at', { ascending: false })
+          .limit(50);
+
+        if (currentOrg) {
+          query = query.eq('org_id', currentOrg.id);
+        } else {
+          query = query.eq('user_id', user.id).is('org_id', null);
+        }
+
+        const { data, error } = await query;
+
+        if (isMounted && !error && data) {
+          setLogs(data as unknown as ExecutionLog[]);
+        }
+      } catch (err: any) {
+        console.error('Failed to load activity logs', err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchLogs();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, currentOrg]);
 
   const formatDuration = (start: string, end: string | null) => {
