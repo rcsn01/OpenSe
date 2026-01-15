@@ -15,6 +15,7 @@ import { GodModePage } from './pages/auth/GodModePage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { WorkflowEditorPage } from './pages/editor/WorkflowEditorPage';
 import { OrganizationSettingsPage } from './pages/settings/OrganizationSettingsPage';
+import { UserSettingsPage } from './pages/settings/UserSettingsPage';
 import { SuperAdminPage } from './pages/admin/SuperAdminPage';
 import { SystemCheck } from './components/guards/SystemCheck';
 
@@ -38,6 +39,7 @@ export default function App() {
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/settings/org" element={<OrganizationSettingsPage />} />
+                  <Route path="/settings/profile" element={<UserSettingsPage />} />
                   <Route path="/admin" element={<SuperAdminPage />} />
                 </Route>
 
