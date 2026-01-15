@@ -14,7 +14,14 @@ export const useGallery = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchTemplates = async () => {
+      if (isMounted) {
+        setLoading(true);
+        setError(null);
+      }
+
       try {
         const { data, error } = await supabase
           .from('workflows')
@@ -29,15 +36,25 @@ export const useGallery = () => {
           owner: Array.isArray(item.owner) ? item.owner[0] : item.owner,
         }));
 
-        setTemplates(formatted as GalleryWorkflow[]);
+        if (isMounted) {
+          setTemplates(formatted as GalleryWorkflow[]);
+        }
       } catch (err: any) {
-        setError(err?.message || 'Failed to load templates');
+        if (isMounted) {
+          setError(err?.message || 'Failed to load templates');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchTemplates();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return { templates, loading, error };
