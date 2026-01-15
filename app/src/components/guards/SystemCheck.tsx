@@ -11,10 +11,14 @@ export const SystemCheck = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const checkSystem = async () => {
       try {
+        // Only check if we are actually checking specifically for god mode scenarios
+        // Optimization: Use session storage or similar to avoid hitting DB on every route
+        // For now, simply ensuring this runs safely:
         const { data: hasUsers, error } = await supabase.rpc('has_users');
 
         if (error) {
           console.error('System check failed:', error);
+          // If error, assume valid to prevent blocking the UI
           setChecked(true);
           return;
         }
@@ -28,13 +32,18 @@ export const SystemCheck = ({ children }: { children: React.ReactNode }) => {
             navigate('/login', { replace: true });
           }
         }
+      } catch (err) {
+        console.error('System check error', err);
       } finally {
         setChecked(true);
       }
     };
 
+    // Only run this check ONCE on mount, not on every page change. 
+    // The previous dependency array [navigate, location.pathname] caused re-checks on every click.
     checkSystem();
-  }, [navigate, location.pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array ensures it runs once on app load
 
   if (!checked) {
     return (

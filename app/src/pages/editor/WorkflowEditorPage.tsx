@@ -22,7 +22,7 @@ import {
   Table,
   Layers,
 } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import ReactFlow, {
@@ -141,6 +141,9 @@ const toCsv = (rows: Row[]) => {
 
 export const WorkflowEditorPage = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const orgIdParam = searchParams.get('orgId');
+
   const isValidUuid = (value: string | null | undefined) => !!value && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(value);
   const initialWorkflowId = id && id !== 'new' && isValidUuid(id) ? id : null;
   const { user } = useAuth();
@@ -350,7 +353,8 @@ export const WorkflowEditorPage = () => {
       name: workflowName.trim(),
       graph_data: { nodes: sanitizedNodes, edges },
       owner_id: user.id,
-    } as const;
+      org_id: orgIdParam || null,
+    };
 
     try {
       if (workflowId) {
@@ -375,7 +379,7 @@ export const WorkflowEditorPage = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [edges, sanitizeNodes, user, workflowId, workflowName]);
+  }, [edges, sanitizeNodes, user, workflowId, workflowName, orgIdParam]);
 
   const handleExport = useCallback(() => {
     const sanitizedNodes = sanitizeNodes();

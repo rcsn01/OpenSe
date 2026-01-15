@@ -90,13 +90,7 @@ export const DashboardPage = () => {
           <h1 className="text-2xl font-bold text-slate-900">Welcome back, {user?.user_metadata?.full_name || 'Guest'}</h1>
           <p className="text-slate-500 mt-1">Manage your data workflows and automations.</p>
         </div>
-        <Link
-            to="/editor/new"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm font-medium"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          New Workflow
-        </Link>
+        {/* Button removed from here */}
       </div>
 
       {/* Tabs */}
@@ -115,6 +109,22 @@ export const DashboardPage = () => {
         onEdit={(id) => navigate(`/editor/${id}`)}
         onDelete={handleDelete}
       />
+
+      {/* New Workflow Area */}
+      <Link
+        to={activeTab === 'org' && currentOrg ? `/editor/new?orgId=${currentOrg.id}` : '/editor/new'}
+        className="mt-6 block w-full rounded-xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 transition-all group bg-white/50"
+      >
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 group-hover:bg-blue-100 transition-colors">
+          <Plus className="h-6 w-6 text-slate-500 group-hover:text-blue-600 transition-colors" />
+        </div>
+        <h3 className="mt-3 text-sm font-semibold text-slate-900 group-hover:text-blue-700">Create a new workflow</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          {activeTab === 'org' && currentOrg 
+            ? `Start a new shared workflow in ${currentOrg.name}` 
+            : 'Start a new private workflow'}
+        </p>
+      </Link>
     </div>
   );
 };
