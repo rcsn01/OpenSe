@@ -1,11 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { WorkflowTabs } from '../../components/dashboard/WorkflowTabs';
 import { WorkflowTable } from '../../components/dashboard/WorkflowTable';
-import { WorkflowRow } from '../../components/dashboard/types';
+import { useDeleteWorkflow, useWorkflows } from '../../hooks/queries/useWorkflows';
 
 type OrgSimple = { id: string; name: string };
 type DashboardContextType = { currentOrg: OrgSimple | null };
@@ -17,57 +16,29 @@ export const DashboardPage = () => {
 
   const [activeTab, setActiveTab] = useState<'personal' | 'org'>('org');
   const [search, setSearch] = useState('');
-  const [actionError, setActionError] = useState<string | null>(null);
-  
-  // Data State
-  const [workflows, setWorkflows] = useState<WorkflowRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchWorkflows = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    setError(null);
+  const {
+    data: workflows = [],
+    isLoading,
+    error: queryError,
+  } = useWorkflows({
+    userId: user?.id,
+    orgId: currentOrg?.id,
+    mode: activeTab,
+  });
 
-    const orgId = activeTab === 'org' ? currentOrg?.id || null : null;
+  const deleteMutation = useDeleteWorkflow();
+  const errorMessage = queryError instanceof Error ? queryError.message : null;
 
-    let query = supabase
-      .from('workflows')
-      .select('id, name, created_at, owner_id, org_id')
-      .order('created_at', { ascending: false });
-
-    if (orgId) {
-      query = query.eq('org_id', orgId);
-    } else {
-      // Personal tab: workflows owned by user AND not part of any org
-      query = query.eq('owner_id', user.id).is('org_id', null);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-        setError(error.message);
-    } else {
-        setWorkflows(data || []);
-    }
-    setLoading(false);
-  }, [user, activeTab, currentOrg?.id]);
-
-  useEffect(() => {
-    fetchWorkflows();
-  }, [fetchWorkflows]);
-
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!window.confirm('Are you sure you want to delete this workflow?')) return;
-    setActionError(null);
-    try {
-      const { error } = await supabase.from('workflows').delete().eq('id', id);
-      if (error) throw error;
-      
-      await fetchWorkflows();
-    } catch (err: any) {
-      setActionError(err.message || 'Failed to delete workflow');
-    }
-  }, [fetchWorkflows]);
+
+    deleteMutation.mutate(id, {
+      onError: (err) => {
+        alert(err instanceof Error ? err.message : 'Failed to delete workflow');
+      },
+    });
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -87,8 +58,8 @@ export const DashboardPage = () => {
 
       <WorkflowTable
         workflows={workflows}
-        loading={loading}
-        error={error || actionError}
+        loading={isLoading}
+        error={errorMessage}
         search={search}
         onSearchChange={setSearch}
         onEdit={(id) => navigate(`/editor/${id}`)}
