@@ -81,7 +81,6 @@ import {
   WorkflowNodeData,
 } from '../../components/nodes/types';
 import { runExecution } from '../../lib/execution/ExecutionEngine';
-import { useSchemaPropagation } from '../../hooks/useSchemaPropagation';
 
 const NODE_PALETTE = [
   { type: 'file', label: 'File Input', icon: FileInput, color: 'bg-blue-500' },
@@ -156,8 +155,6 @@ export const WorkflowEditorPage = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
-
-  useSchemaPropagation(nodes, edges, setNodes);
 
   const withSetters = useCallback((list: Node<WorkflowNodeData>[]) => (
     list.map((node) => ({
