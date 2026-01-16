@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Loader2, Building2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 import { Organization, Member } from '../../components/settings/types';
 import { OrgHeader } from '../../components/settings/OrgHeader';
 import { InviteMemberForm } from '../../components/settings/InviteMemberForm';
@@ -17,6 +16,9 @@ export const OrganizationPage = () => {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Members State
+    const [members, setMembers] = useState<Member[]>([]);
 
     // Edit State
     const [editing, setEditing] = useState(false);
@@ -110,9 +112,10 @@ export const OrganizationPage = () => {
         };
     }, [loadOrganization]);
 
-    const fetchOrgMembers = useCallback(async () => {
+    const refreshMembers = useCallback(async () => {
         if (!organization?.id) {
-            return { data: [], error: null };
+            setMembers([]);
+            return;
         }
 
         const { data, error } = await supabase
@@ -120,24 +123,18 @@ export const OrganizationPage = () => {
             .select('id, role, user_id, profiles:profiles!organization_members_user_id_fkey(email, full_name)')
             .eq('org_id', organization.id);
 
-        if (error) {
-            return { data: [], error };
+        if (!error && data) {
+            const normalized = data.map((m) => ({
+                ...m,
+                profiles: Array.isArray(m.profiles) ? m.profiles[0] ?? null : m.profiles ?? null,
+            }));
+            setMembers(normalized as Member[]);
         }
-
-        const normalized = (data || []).map((m) => ({
-            ...m,
-            profiles: Array.isArray(m.profiles) ? m.profiles[0] ?? null : m.profiles ?? null,
-        }));
-
-        return { data: normalized as Member[], error: null };
     }, [organization?.id]);
 
-    const { data: membersData, refresh: refreshMembers } = useSupabaseQuery<Member[]>(
-        fetchOrgMembers,
-        [organization?.id],
-        { enabled: !!organization }
-    );
-    const members = organization ? membersData || [] : [];
+    useEffect(() => {
+        refreshMembers();
+    }, [refreshMembers]);
 
     const handleUpdateOrg = async (e: React.FormEvent) => {
         e.preventDefault();
