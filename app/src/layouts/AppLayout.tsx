@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, Navigate, useNavigate } from 'react-router-d
 import { 
   LayoutDashboard, 
   LayoutTemplate,
-  Building2, // Updated Icon
+  Building2, 
   ChevronDown, 
   LogOut, 
   User, 
@@ -15,7 +15,7 @@ import {
 import { clsx } from 'clsx';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { useDataStore } from '../store/dataStore';
+// REMOVED: import { useDataStore } from '../store/dataStore';
 
 type OrgSimple = { id: string; name: string };
 
@@ -32,12 +32,12 @@ export const AppLayout = () => {
   const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
 
-  const { reset } = useDataStore();
+  // REMOVED: const { reset } = useDataStore();
 
   const handleSignOut = async () => {
     try {
       setSigningOut(true);
-      reset(); // Clear global data store
+      // REMOVED: reset(); 
       await supabase.auth.signOut();
       navigate('/login', { replace: true });
     } finally {
@@ -104,7 +104,7 @@ export const AppLayout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Gallery', href: '/gallery', icon: LayoutTemplate },
-    { name: 'Organization', href: '/organization', icon: Building2 }, // Updated Link
+    { name: 'Organization', href: '/organization', icon: Building2 },
     { name: 'Activity', href: '/activity', icon: Activity },
   ];
 
