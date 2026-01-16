@@ -18,7 +18,8 @@ type AppContextType = {
 };
 
 export const GalleryPage = () => {
-  const { templates, loading, error } = useGallery();
+  const { data: templates = [], isLoading: loading, error: queryError } = useGallery();
+  const error = queryError instanceof Error ? queryError.message : null;
   const { user } = useAuth();
   const navigate = useNavigate();
   const { currentOrg } = useOutletContext<AppContextType>() || {};

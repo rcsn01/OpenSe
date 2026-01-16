@@ -13,6 +13,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAdminUsers } from '../../hooks/queries/useAdmin';
 import { Input } from '../ui/Input';
 import { Table } from '../ui/Table';
 import { Button } from '../ui/Button';
@@ -57,8 +59,8 @@ const Modal = ({
 };
 
 export const UserManagementList = () => {
-  const [users, setUsers] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: users = [], isLoading: loading, error: queryError } = useAdminUsers();
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,27 +75,11 @@ export const UserManagementList = () => {
   const [newUser, setNewUser] = useState({ email: '', fullName: '', password: '' });
   const [resetPassword, setResetPassword] = useState('');
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*, super_admin_members(user_id)')
-        .order('email', { ascending: true });
-
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (queryError) {
+      setError(queryError.message);
+    }
+  }, [queryError]);
 
   const handleDelete = async (userId: string) => {
     if (!window.confirm('Are you sure you want to completely delete this user and their login access?')) return;
@@ -105,7 +91,7 @@ export const UserManagementList = () => {
       
       if (error) throw error;
       
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       setSuccessMsg('User deleted successfully');
     } catch (err: any) {
       setError('Failed to delete user: ' + err.message);
@@ -132,7 +118,7 @@ export const UserManagementList = () => {
       setSuccessMsg(`User ${newUser.email} created successfully.`);
       setIsAddModalOpen(false);
       setNewUser({ email: '', fullName: '', password: '' });
-      fetchUsers(); // Refresh list
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
     } catch (err: any) {
       setError(err.message);
     } finally {

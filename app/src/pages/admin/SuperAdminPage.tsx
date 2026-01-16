@@ -8,6 +8,8 @@ import { Message, OrgRow } from '../../components/admin/types';
 import { UserManagementList } from '../../components/admin/UserManagementList';
 import { MemberTable } from '../../components/settings/MemberTable';
 import { Member } from '../../components/settings/types';
+import { useAdminOrgs } from '../../hooks/queries/useAdmin';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const SuperAdminPage = () => {
     const [activeTab, setActiveTab] = useState<'orgs' | 'users'>('orgs');
@@ -17,8 +19,8 @@ export const SuperAdminPage = () => {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<Message>(null);
 
-    const [orgs, setOrgs] = useState<OrgRow[]>([]);
-    const [orgsLoading, setOrgsLoading] = useState(false);
+    const queryClient = useQueryClient();
+    const { data: orgs = [], isLoading: orgsLoading, error: orgsError } = useAdminOrgs();
     const [deletingOrgId, setDeletingOrgId] = useState<string | null>(null);
     const [renaming, setRenaming] = useState<Record<string, string>>({});
     const [ownerChange, setOwnerChange] = useState<Record<string, string>>({});
@@ -29,46 +31,19 @@ export const SuperAdminPage = () => {
     const [currentOrgMembers, setCurrentOrgMembers] = useState<Member[]>([]);
     const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
-    const loadOrgs = useCallback(async () => {
-        setOrgsLoading(true);
-        setOrgActionMsg(null);
-        try {
-            const { data, error } = await supabase
-                .from('organizations')
-                .select('id, name, created_at, owner:profiles!organizations_owner_id_fkey(email, full_name), organization_members(count)')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            const mapped: OrgRow[] = (data || []).map((o) => ({
-                id: o.id,
-                name: o.name,
-                created_at: o.created_at,
-                owner: Array.isArray(o.owner) ? o.owner[0] ?? null : o.owner ?? null,
-                member_count: Array.isArray(o.organization_members) && o.organization_members[0]?.count != null
-                    ? o.organization_members[0].count
-                    : null,
-            }));
-            setOrgs(mapped);
+    useEffect(() => {
+        if (orgsError) setOrgActionMsg(orgsError.message);
+        if (orgs.length) {
             const renameSeed: Record<string, string> = {};
             const ownerSeed: Record<string, string> = {};
-            mapped.forEach((o) => {
+            orgs.forEach((o) => {
                 renameSeed[o.id] = o.name;
                 ownerSeed[o.id] = '';
             });
             setRenaming(renameSeed);
             setOwnerChange(ownerSeed);
-        } catch (err: any) {
-            setOrgActionMsg(err.message || 'Failed to load organizations');
-        } finally {
-            setOrgsLoading(false);
         }
-    }, []);
-
-    useEffect(() => {
-        if (activeTab === 'orgs') {
-            loadOrgs();
-        }
-    }, [activeTab, loadOrgs]);
+    }, [orgsError, orgs]);
 
     const loadOrgMembers = async (orgId: string) => {
         const { data, error } = await supabase
@@ -96,7 +71,7 @@ export const SuperAdminPage = () => {
         try {
             await supabase.from('organization_members').delete().eq('id', member.id);
             await loadOrgMembers(managingMembersOrg.id);
-            await loadOrgs();
+            queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (error) {
             console.error(error);
         } finally {
@@ -139,7 +114,7 @@ export const SuperAdminPage = () => {
             setMessage({ type: 'success', text: `Organization "${orgName}" created.` });
             setOrgName('');
             setOwnerEmail('');
-            await loadOrgs();
+            queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setMessage({ type: 'error', text: err.message });
         } finally {
@@ -152,7 +127,7 @@ export const SuperAdminPage = () => {
         if (!nextName) return;
         try {
             await supabase.from('organizations').update({ name: nextName }).eq('id', orgId);
-            await loadOrgs();
+            queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
         }
@@ -179,7 +154,7 @@ export const SuperAdminPage = () => {
             } else {
                 await supabase.from('organization_members').update({ role: 'admin' }).eq('id', member.id);
             }
-            await loadOrgs();
+            queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
         }
@@ -192,7 +167,7 @@ export const SuperAdminPage = () => {
             const { data: profile } = await supabase.from('profiles').select('id').eq('email', payload.email).single();
             if (!profile) throw new Error('User not found');
             await supabase.from('organization_members').insert({ org_id: orgId, user_id: profile.id, role: payload.role });
-            await loadOrgs();
+            queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
         }
@@ -202,7 +177,7 @@ export const SuperAdminPage = () => {
         setDeletingOrgId(orgId);
         try {
             await supabase.from('organizations').delete().eq('id', orgId);
-            await loadOrgs();
+            queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
         } finally {

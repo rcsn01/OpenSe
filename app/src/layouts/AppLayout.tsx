@@ -15,9 +15,7 @@ import {
 import { clsx } from 'clsx';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-// REMOVED: import { useDataStore } from '../store/dataStore';
-
-type OrgSimple = { id: string; name: string };
+import { OrgSimple, useUserOrganizations } from '../hooks/queries/useOrganizations';
 
 export const AppLayout = () => {
   const { session, user, loading } = useAuth();
@@ -27,10 +25,11 @@ export const AppLayout = () => {
   const location = useLocation();
 
   // Org Selection State
-  const [userOrgs, setUserOrgs] = useState<OrgSimple[]>([]);
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null);
   const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
+
+  const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
 
   // REMOVED: const { reset } = useDataStore();
 
@@ -56,40 +55,24 @@ export const AppLayout = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch User Organizations
+  // Default to first org if available and none selected; keep selection valid when org list changes
   useEffect(() => {
-    if (!user) return;
-    
-    const fetchOrgs = async () => {
-      const { data, error } = await supabase
-        .from('organization_members')
-        .select('organizations(id, name)')
-        .eq('user_id', user.id);
-
-      if (!error && data) {
-        // Flatten the structure: organization_members -> organizations
-        const mappedOrgs = data
-          .map((item: any) => (Array.isArray(item.organizations) ? item.organizations[0] : item.organizations))
-          .filter((o) => !!o) as OrgSimple[];
-        
-        setUserOrgs(mappedOrgs);
-        
-        // Default to first org if available and none selected
-        if (mappedOrgs.length > 0 && !currentOrg) {
-          setCurrentOrg(mappedOrgs[0]);
-        }
-      }
-    };
-    fetchOrgs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+    if (userOrgs.length > 0 && !currentOrg) {
+      setCurrentOrg(userOrgs[0]);
+    } else if (userOrgs.length > 0 && currentOrg) {
+      const exists = userOrgs.find((o) => o.id === currentOrg.id);
+      if (!exists) setCurrentOrg(userOrgs[0]);
+    } else if (userOrgs.length === 0 && currentOrg) {
+      setCurrentOrg(null);
+    }
+  }, [userOrgs, currentOrg]);
 
   const handleOrgSwitch = (org: OrgSimple) => {
     setCurrentOrg(org);
     setIsOrgMenuOpen(false);
   };
 
-  if (loading) {
+  if (loading || orgsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
