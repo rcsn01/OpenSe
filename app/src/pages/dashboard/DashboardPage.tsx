@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -14,8 +14,26 @@ export const DashboardPage = () => {
   const navigate = useNavigate();
   const { currentOrg } = useOutletContext<DashboardContextType>();
 
-  const [activeTab, setActiveTab] = useState<'personal' | 'org'>('org');
+  // Initialize from localStorage, default to 'org'
+  const [activeTab, setActiveTab] = useState<'personal' | 'org'>(() => {
+    const saved = localStorage.getItem('dashboard_active_tab');
+    return (saved === 'personal' || saved === 'org') ? saved : 'org';
+  });
+
   const [search, setSearch] = useState('');
+
+  // Automatically switch to personal if user has no org but tab is set to org
+  useEffect(() => {
+    if (!currentOrg && activeTab === 'org') {
+      setActiveTab('personal');
+      localStorage.setItem('dashboard_active_tab', 'personal');
+    }
+  }, [currentOrg, activeTab]);
+
+  const handleTabChange = (tab: 'personal' | 'org') => {
+    setActiveTab(tab);
+    localStorage.setItem('dashboard_active_tab', tab);
+  };
 
   const {
     data: workflows = [],
@@ -52,7 +70,7 @@ export const DashboardPage = () => {
 
       <WorkflowTabs
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
         orgName={currentOrg?.name}
       />
 
