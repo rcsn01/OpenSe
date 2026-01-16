@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Activity, Clock, XCircle, FileSpreadsheet } from 'lucide-react';
+import { Activity, Clock, XCircle, FileSpreadsheet, User, Building2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Table } from '../../components/ui/Table';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { useExecutionLogs } from '../../hooks/queries/useActivities';
+import clsx from 'clsx';
 
 type OrgSimple = { id: string; name: string };
 type DashboardContextType = { currentOrg: OrgSimple | null };
@@ -23,8 +24,55 @@ type ExecutionLog = {
 export const ActivitiesPage = () => {
   const { user } = useAuth();
   const { currentOrg } = useOutletContext<DashboardContextType>();
+  
+  // State for active tab
+  const [activeTab, setActiveTab] = useState<'personal' | 'org'>(currentOrg ? 'org' : 'personal');
+  const [logs, setLogs] = useState<ExecutionLog[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: logs = [], isLoading: loading } = useExecutionLogs(user?.id, currentOrg?.id);
+  // Automatically switch tab if organization context changes
+  useEffect(() => {
+    if (currentOrg) {
+      setActiveTab('org');
+    } else {
+      setActiveTab('personal');
+    }
+  }, [currentOrg?.id]);
+
+  const fetchLogs = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    
+    let query = supabase
+      .from('workflow_executions')
+      .select(`
+        id,
+        workflow_id,
+        status,
+        started_at,
+        completed_at,
+        error_message,
+        workflows (name),
+        profiles (email, full_name)
+      `)
+      .order('started_at', { ascending: false })
+      .limit(50);
+
+    if (activeTab === 'org' && currentOrg) {
+      query = query.eq('org_id', currentOrg.id);
+    } else {
+      // Personal logs (where org_id is null)
+      query = query.eq('user_id', user.id).is('org_id', null);
+    }
+
+    const { data } = await query;
+    setLogs((data as any) || []);
+    setLoading(false);
+  }, [activeTab, currentOrg, user]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const formatDuration = (start: string, end: string | null) => {
     if (!end) return '—';
@@ -48,9 +96,40 @@ export const ActivitiesPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Activity Log</h1>
           <p className="text-slate-500 text-sm">
-            {currentOrg ? `Recent executions for ${currentOrg.name}` : 'Your personal execution history'}
+            Monitor workflow executions and performance
           </p>
         </div>
+      </div>
+
+      <div className="border-b border-slate-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('personal')}
+            className={clsx(
+              'pb-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2',
+              activeTab === 'personal'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            )}
+          >
+            <User className="w-4 h-4" />
+            Personal Activities
+          </button>
+          {currentOrg && (
+            <button
+              onClick={() => setActiveTab('org')}
+              className={clsx(
+                'pb-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2',
+                activeTab === 'org'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              )}
+            >
+              <Building2 className="w-4 h-4" />
+              {currentOrg.name} Activities
+            </button>
+          )}
+        </nav>
       </div>
 
       <Table>
@@ -71,7 +150,11 @@ export const ActivitiesPage = () => {
               </tr>
             ) : logs.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">No activities recorded yet.</td>
+                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                  {activeTab === 'org' 
+                    ? `No activities recorded for ${currentOrg?.name}.` 
+                    : "No personal activities recorded."}
+                </td>
               </tr>
             ) : (
               logs.map((log) => (
@@ -79,6 +162,8 @@ export const ActivitiesPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     {log.status === 'success' ? (
                       <StatusBadge label="Success" tone="success" className="gap-1 pl-1" />
+                    ) : log.status === 'running' ? (
+                      <StatusBadge label="Running" tone="neutral" className="bg-blue-100 text-blue-800" />
                     ) : (
                       <div className="flex items-center text-red-700 bg-red-50 px-2 py-1 rounded-full text-xs font-medium w-fit">
                         <XCircle className="w-3 h-3 mr-1" /> Failed
