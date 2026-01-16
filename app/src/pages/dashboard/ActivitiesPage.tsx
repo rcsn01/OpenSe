@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Activity, Clock, XCircle, FileSpreadsheet } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Table } from '../../components/ui/Table';
 import { StatusBadge } from '../../components/ui/StatusBadge';
+import { useExecutionLogs } from '../../hooks/queries/useActivities';
 
 type OrgSimple = { id: string; name: string };
 type DashboardContextType = { currentOrg: OrgSimple | null };
@@ -23,45 +23,8 @@ type ExecutionLog = {
 export const ActivitiesPage = () => {
   const { user } = useAuth();
   const { currentOrg } = useOutletContext<DashboardContextType>();
-  const currentOrgId = currentOrg?.id || null;
 
-  const [logs, setLogs] = useState<ExecutionLog[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchLogs = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    
-    let query = supabase
-      .from('workflow_executions')
-      .select(`
-        id,
-        workflow_id,
-        status,
-        started_at,
-        completed_at,
-        error_message,
-        workflows (name),
-        profiles (email, full_name)
-      `)
-      .order('started_at', { ascending: false })
-      .limit(50);
-
-    if (currentOrgId) {
-      query = query.eq('org_id', currentOrgId);
-    } else {
-      query = query.eq('user_id', user.id).is('org_id', null);
-    }
-
-    const { data } = await query;
-    // Cast appropriately or rely on type inference if supabase types are generated
-    setLogs((data as any) || []);
-    setLoading(false);
-  }, [currentOrgId, user]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+  const { data: logs = [], isLoading: loading } = useExecutionLogs(user?.id, currentOrg?.id);
 
   const formatDuration = (start: string, end: string | null) => {
     if (!end) return '—';

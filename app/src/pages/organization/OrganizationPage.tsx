@@ -1,24 +1,31 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useOutletContext } from 'react-router-dom';
 import { Loader2, Building2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Organization, Member } from '../../components/settings/types';
 import { OrgHeader } from '../../components/settings/OrgHeader';
 import { InviteMemberForm } from '../../components/settings/InviteMemberForm';
 import { MemberTable } from '../../components/settings/MemberTable';
+import { useOrganizationMembers, useUserOrganizations } from '../../hooks/queries/useOrganizations';
+
+type OrganizationPageContext = {
+    currentOrg: { id: string; name: string } | null;
+};
 
 export const OrganizationPage = () => {
     const { user, isSuperAdmin } = useAuth();
+    const { currentOrg: contextOrg } = useOutletContext<OrganizationPageContext>();
+    const queryClient = useQueryClient();
 
-    const [organization, setOrganization] = useState<Organization | null>(null);
+    const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
+    const organization = userOrgs?.find((o) => o.id === contextOrg?.id) as (Organization | undefined);
+
+    const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useOrganizationMembers(organization?.id);
+
     const [membershipRole, setMembershipRole] = useState<'owner' | 'admin' | 'member' | null>(null);
-
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // Members State
-    const [members, setMembers] = useState<Member[]>([]);
 
     // Edit State
     const [editing, setEditing] = useState(false);
@@ -36,105 +43,21 @@ export const OrganizationPage = () => {
 
     const canManage = membershipRole === 'owner' || membershipRole === 'admin';
 
-    const loadOrganization = useCallback(async (mountRef: { current: boolean }) => {
-        if (!mountRef.current) return;
-        if (!user) {
-            if (mountRef.current) setLoading(false);
+    useEffect(() => {
+        if (!organization || !user) {
+            setMembershipRole(null);
+            setOrgNameInput('');
             return;
         }
 
-        if (mountRef.current) {
-            setLoading(true);
-            setError(null);
+        if (organization.owner_id === user.id) {
+            setMembershipRole('owner');
+        } else {
+            const memberRecord = members.find((m) => m.user_id === user.id);
+            setMembershipRole((memberRecord?.role as 'admin' | 'member' | null) ?? 'member');
         }
-
-        try {
-            const { data: memberships, error: membershipsError } = await supabase
-                .from('organization_members')
-                .select('org_id, role')
-                .eq('user_id', user.id);
-
-            if (membershipsError) throw membershipsError;
-
-            const orgIds = (memberships || []).map((m) => m.org_id).filter(Boolean);
-            const filters = [`owner_id.eq.${user.id}`];
-            if (orgIds.length) {
-                filters.push(`id.in.(${orgIds.join(',')})`);
-            }
-
-            const { data: orgs, error: orgError } = await supabase
-                .from('organizations')
-                .select('id, name, created_at, owner_id')
-                .or(filters.join(','))
-                .order('created_at', { ascending: true });
-
-            if (orgError) throw orgError;
-
-            const primary = orgs?.[0] || null;
-            if (!mountRef.current) return;
-            setOrganization(primary);
-
-            if (primary) {
-                setOrgNameInput(primary.name);
-
-                const memberRecord = (memberships || []).find((m) => m.org_id === primary.id);
-                let derivedRole: 'owner' | 'admin' | 'member' | null = null;
-
-                if (primary.owner_id === user.id) {
-                    derivedRole = 'owner';
-                } else if (memberRecord) {
-                    derivedRole = memberRecord.role as 'admin' | 'member';
-                }
-
-                if (mountRef.current) {
-                    setMembershipRole(derivedRole);
-                }
-            } else if (mountRef.current) {
-                setMembershipRole(null);
-            }
-        } catch (err: any) {
-            if (mountRef.current) {
-                setError(err.message || 'Failed to load organization');
-                setOrganization(null);
-            }
-        } finally {
-            if (mountRef.current) {
-                setLoading(false);
-            }
-        }
-    }, [user]);
-
-    useEffect(() => {
-        const mountRef = { current: true };
-        loadOrganization(mountRef);
-        return () => {
-            mountRef.current = false;
-        };
-    }, [loadOrganization]);
-
-    const refreshMembers = useCallback(async () => {
-        if (!organization?.id) {
-            setMembers([]);
-            return;
-        }
-
-        const { data, error } = await supabase
-            .from('organization_members')
-            .select('id, role, user_id, profiles:profiles!organization_members_user_id_fkey(email, full_name)')
-            .eq('org_id', organization.id);
-
-        if (!error && data) {
-            const normalized = data.map((m) => ({
-                ...m,
-                profiles: Array.isArray(m.profiles) ? m.profiles[0] ?? null : m.profiles ?? null,
-            }));
-            setMembers(normalized as Member[]);
-        }
-    }, [organization?.id]);
-
-    useEffect(() => {
-        refreshMembers();
-    }, [refreshMembers]);
+        setOrgNameInput(organization.name);
+    }, [organization, user, members]);
 
     const handleUpdateOrg = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -154,7 +77,7 @@ export const OrganizationPage = () => {
                 .eq('id', organization.id);
 
             if (updateError) throw updateError;
-            setOrganization((prev) => prev ? { ...prev, name: nextName } : prev);
+            queryClient.invalidateQueries({ queryKey: ['userOrganizations'] });
             setEditing(false);
         } catch (err: any) {
             setError(err.message || 'Failed to update organization');
@@ -208,7 +131,7 @@ export const OrganizationPage = () => {
 
             setInviteEmail('');
             setInviteRole('member');
-            await refreshMembers();
+            await refetchMembers();
         } catch (err: any) {
             setInviteError(err.message || 'Failed to invite member');
         } finally {
@@ -229,7 +152,7 @@ export const OrganizationPage = () => {
                 .eq('id', member.id);
 
             if (deleteError) throw deleteError;
-            await refreshMembers();
+            await refetchMembers();
         } catch (err: any) {
             setError(err.message || 'Failed to remove member');
         } finally {
@@ -237,12 +160,14 @@ export const OrganizationPage = () => {
         }
     };
 
+    const isLoading = orgsLoading || (!!organization && membersLoading);
+
     const initialLetter = useMemo(() => {
         if (organization?.name) return organization.name.charAt(0).toUpperCase();
         return 'W';
     }, [organization?.name]);
 
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="p-8 max-w-5xl mx-auto">
                 <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 flex items-center justify-center text-slate-500">
