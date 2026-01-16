@@ -97,6 +97,10 @@ export const SuperAdminPage = () => {
             }
             const ownerId = profiles[0].id;
 
+            // Check if owner is already in an org
+            const { data: existing } = await supabase.from('organization_members').select('id').eq('user_id', ownerId).limit(1);
+            if (existing && existing.length > 0) throw new Error('User is already assigned to an organization.');
+
             const { data: org, error: orgError } = await supabase
                 .from('organizations')
                 .insert({ name: orgName, owner_id: ownerId })
@@ -140,6 +144,11 @@ export const SuperAdminPage = () => {
             const { data: profiles } = await supabase.from('profiles').select('id').eq('email', email).limit(1).single();
             if (!profiles) throw new Error('User not found');
 
+            // Check if user is in ANOTHER org
+            const { data: existingMemberships } = await supabase.from('organization_members').select('org_id').eq('user_id', profiles.id);
+            const otherOrg = existingMemberships?.find(m => m.org_id !== orgId);
+            if (otherOrg) throw new Error('User is already a member of another organization.');
+
             await supabase.from('organizations').update({ owner_id: profiles.id }).eq('id', orgId);
 
             const { data: member } = await supabase
@@ -166,6 +175,11 @@ export const SuperAdminPage = () => {
         try {
             const { data: profile } = await supabase.from('profiles').select('id').eq('email', payload.email).single();
             if (!profile) throw new Error('User not found');
+
+            // Enforce Single Org
+            const { data: existing } = await supabase.from('organization_members').select('id').eq('user_id', profile.id).limit(1);
+            if (existing && existing.length > 0) throw new Error('User is already assigned to an organization.');
+
             await supabase.from('organization_members').insert({ org_id: orgId, user_id: profile.id, role: payload.role });
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {

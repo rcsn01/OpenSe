@@ -114,9 +114,22 @@ export const OrganizationPage = () => {
                 throw new Error('No user found with that email. Ask them to sign up first.');
             }
 
+            // Check if user is already a member of THIS organization
             const alreadyMember = members.some((m) => m.user_id === profile.id);
             if (alreadyMember) {
                 throw new Error('User is already a member of this organization.');
+            }
+
+            // Check if user is a member of ANY organization (Enforce Single Org)
+            const { data: existingMemberships, error: membershipError } = await supabase
+                .from('organization_members')
+                .select('id')
+                .eq('user_id', profile.id)
+                .limit(1);
+            
+            if (membershipError) throw membershipError;
+            if (existingMemberships && existingMemberships.length > 0) {
+                 throw new Error('User is already a member of another organization.');
             }
 
             const { error: insertError } = await supabase
@@ -141,7 +154,7 @@ export const OrganizationPage = () => {
 
     const handleRemoveMember = async (member: Member) => {
         if (!organization) return;
-        if (member.user_id === organization.owner_id) return; // Cannot remove owner via this table
+        if (member.user_id === organization.owner_id) return;
 
         setRemovingId(member.id);
         setError(null);
@@ -209,7 +222,6 @@ export const OrganizationPage = () => {
                 </div>
             )}
 
-            {/* Header Section */}
             <OrgHeader
                 organization={organization}
                 membershipRole={membershipRole}
@@ -224,7 +236,6 @@ export const OrganizationPage = () => {
                 onSubmit={handleUpdateOrg}
             />
 
-            {/* Invite Section - Only visible to Admins/Owners */}
             {canManage && (
                 <InviteMemberForm
                     inviteEmail={inviteEmail}
@@ -237,7 +248,6 @@ export const OrganizationPage = () => {
                 />
             )}
 
-            {/* Members Section */}
             <div>
                 <div className="flex items-center justify-between mb-6">
                     <div>
