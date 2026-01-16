@@ -23,6 +23,7 @@ export function useSupabaseQuery<T>(
   const { user } = useAuth();
   const [data, setData] = useState<T | []>([]); 
   const [loading, setLoading] = useState(false);
+  const [isRefetching, setIsRefetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -36,8 +37,12 @@ export function useSupabaseQuery<T>(
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    setLoading(true);
-    if (!isRetry) setError(null);
+    if (!isRetry) {
+      setLoading(true);
+      setError(null);
+    } else {
+      setIsRefetching(true);
+    }
 
     try {
       // 1. Mark when we started
@@ -74,18 +79,19 @@ export function useSupabaseQuery<T>(
     } catch (err: any) {
       if (!controller.signal.aborted) {
         // 5. Catch the specific "Browser Suspended" error and ignore it
-        if (err.message === 'Browser_Suspended') {
-           console.log('Tab woke up: Ignoring old timeout.');
-        } else if (err.message === 'Request timed out') {
-           setError('Network request timed out.');
-        } else {
-           console.error('Query error:', err);
-           setError(err.message || 'Failed to fetch data');
-        }
+          if (err.message === 'Browser_Suspended') {
+            console.log('Tab woke up: Ignoring old timeout.');
+          } else if (err.message === 'Request timed out') {
+            if (!isRetry) setError('Network request timed out.');
+          } else {
+            console.error('Query error:', err);
+            setError(err.message || 'Failed to fetch data');
+          }
       }
     } finally {
       if (!controller.signal.aborted) {
         setLoading(false);
+        setIsRefetching(false);
       }
     }
   }, [user, enabled, timeout, ...dependencies]);
@@ -120,5 +126,5 @@ export function useSupabaseQuery<T>(
     };
   }, [fetchData, refetchOnWindowFocus, enabled]);
 
-  return { data, loading, error, refresh: fetchData };
+  return { data, loading, isRefetching, error, refresh: () => fetchData(false) };
 }

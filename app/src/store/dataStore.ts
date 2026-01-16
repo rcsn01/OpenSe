@@ -6,10 +6,11 @@ interface DataState {
   workflows: WorkflowRow[];
   workflowsLoaded: boolean;
   loading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   
   // Actions
-  fetchWorkflows: (userId: string, orgId: string | null) => Promise<void>;
+  fetchWorkflows: (userId: string, orgId: string | null, isBackgroundRefresh?: boolean) => Promise<void>;
   deleteWorkflow: (id: string) => Promise<void>;
   reset: () => void;
 }
@@ -18,16 +19,18 @@ export const useDataStore = create<DataState>((set, get) => ({
   workflows: [],
   workflowsLoaded: false,
   loading: false,
+  isRefreshing: false,
   error: null,
 
-  fetchWorkflows: async (userId, orgId) => {
-    // If we're already loading or have data, don't fetch unless needed
-    // NOTE: In a real app, you might want a way to force refresh
-    if (get().loading) return;
-    
-    // If we have data and it's for the same context (simplified here), we could skip.
-    // For now, let's keep it simple as requested.
-    set({ loading: true, error: null });
+  fetchWorkflows: async (userId, orgId, isBackgroundRefresh = false) => {
+    const state = get();
+    if (state.loading && !isBackgroundRefresh) return;
+
+    if (state.workflows.length === 0 && !isBackgroundRefresh) {
+      set({ loading: true, error: null });
+    } else {
+      set({ isRefreshing: true, error: null });
+    }
 
     try {
       let query = supabase
@@ -44,9 +47,9 @@ export const useDataStore = create<DataState>((set, get) => ({
       const { data, error } = await query;
 
       if (error) throw error;
-      set({ workflows: data || [], workflowsLoaded: true, loading: false });
+      set({ workflows: data || [], workflowsLoaded: true, loading: false, isRefreshing: false });
     } catch (err: any) {
-      set({ error: err.message, loading: false });
+      set({ error: err.message, loading: false, isRefreshing: false });
     }
   },
 
@@ -65,5 +68,5 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
   },
 
-  reset: () => set({ workflows: [], workflowsLoaded: false, loading: false, error: null })
+  reset: () => set({ workflows: [], workflowsLoaded: false, loading: false, isRefreshing: false, error: null })
 }));
