@@ -1,9 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 import { WorkflowTabs } from '../../components/dashboard/WorkflowTabs';
 import { WorkflowTable } from '../../components/dashboard/WorkflowTable';
 import { WorkflowRow } from '../../components/dashboard/types';
@@ -19,9 +18,16 @@ export const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState<'personal' | 'org'>('org');
   const [search, setSearch] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
+  
+  // Data State
+  const [workflows, setWorkflows] = useState<WorkflowRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchWorkflows = useCallback(async () => {
-    if (!user) return { data: [], error: null };
+    if (!user) return;
+    setLoading(true);
+    setError(null);
 
     const orgId = activeTab === 'org' ? currentOrg?.id || null : null;
 
@@ -37,16 +43,18 @@ export const DashboardPage = () => {
       query = query.eq('owner_id', user.id).is('org_id', null);
     }
 
-    return await query;
+    const { data, error } = await query;
+    if (error) {
+        setError(error.message);
+    } else {
+        setWorkflows(data || []);
+    }
+    setLoading(false);
   }, [user, activeTab, currentOrg?.id]);
 
-  const { data, loading, error, refresh } = useSupabaseQuery<WorkflowRow[]>(
-    fetchWorkflows,
-    [activeTab, currentOrg?.id],
-    { enabled: !!user }
-  );
-
-  const workflows = data || [];
+  useEffect(() => {
+    fetchWorkflows();
+  }, [fetchWorkflows]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this workflow?')) return;
@@ -55,11 +63,11 @@ export const DashboardPage = () => {
       const { error } = await supabase.from('workflows').delete().eq('id', id);
       if (error) throw error;
       
-      await refresh();
+      await fetchWorkflows();
     } catch (err: any) {
       setActionError(err.message || 'Failed to delete workflow');
     }
-  }, [refresh]);
+  }, [fetchWorkflows]);
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
