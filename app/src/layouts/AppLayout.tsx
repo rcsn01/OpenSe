@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   LayoutTemplate,
   Building2, 
-  ChevronDown, 
   LogOut, 
   User, 
   Menu,
   X,
-  Check,
   Activity
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -24,19 +22,13 @@ export const AppLayout = () => {
   const [signingOut, setSigningOut] = useState(false);
   const location = useLocation();
 
-  // Org Selection State
+  // Org State
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null);
-  const [isOrgMenuOpen, setIsOrgMenuOpen] = useState(false);
-  const orgMenuRef = useRef<HTMLDivElement>(null);
-
   const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
-
-  // REMOVED: const { reset } = useDataStore();
 
   const handleSignOut = async () => {
     try {
       setSigningOut(true);
-      // REMOVED: reset(); 
       await supabase.auth.signOut();
       navigate('/login', { replace: true });
     } finally {
@@ -44,33 +36,18 @@ export const AppLayout = () => {
     }
   };
 
-  // Close org menu on click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (orgMenuRef.current && !orgMenuRef.current.contains(event.target as Node)) {
-        setIsOrgMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Default to first org if available and none selected; keep selection valid when org list changes
+  // Default to first org (Single Org Mode)
   useEffect(() => {
     if (userOrgs.length > 0 && !currentOrg) {
       setCurrentOrg(userOrgs[0]);
     } else if (userOrgs.length > 0 && currentOrg) {
+      // Ensure current org is still valid
       const exists = userOrgs.find((o) => o.id === currentOrg.id);
       if (!exists) setCurrentOrg(userOrgs[0]);
     } else if (userOrgs.length === 0 && currentOrg) {
       setCurrentOrg(null);
     }
   }, [userOrgs, currentOrg]);
-
-  const handleOrgSwitch = (org: OrgSimple) => {
-    setCurrentOrg(org);
-    setIsOrgMenuOpen(false);
-  };
 
   if (loading || orgsLoading) {
     return (
@@ -99,38 +76,23 @@ export const AppLayout = () => {
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          {/* Organization Switcher */}
-          {userOrgs.length > 0 && (
-            <div className="p-4 bg-slate-950 relative" ref={orgMenuRef}>
-              <button 
-                onClick={() => setIsOrgMenuOpen(!isOrgMenuOpen)}
-                className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-white bg-slate-800 rounded-md hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500"
-              >
-                <span className="flex items-center gap-2 truncate">
+          {/* Organization Display (No Switcher) */}
+          {currentOrg ? (
+            <div className="p-4 bg-slate-950">
+              <div className="flex items-center w-full px-3 py-2 text-sm font-medium text-white bg-slate-800 rounded-md shadow-sm border border-slate-700">
+                <div className="flex items-center gap-2 truncate">
                   <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-xs shrink-0">
                     <Building2 className="w-3.5 h-3.5" />
                   </div>
-                  <span className="truncate">{currentOrg?.name || 'Select Org'}</span>
-                </span>
-                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-              </button>
-
-              {isOrgMenuOpen && (
-                <div className="absolute left-4 right-4 top-16 z-20 mt-1 origin-top-right rounded-md bg-slate-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none border border-slate-700">
-                  <div className="py-1">
-                    {userOrgs.map((org) => (
-                      <button
-                        key={org.id}
-                        onClick={() => handleOrgSwitch(org)}
-                        className="flex items-center justify-between w-full px-4 py-2 text-sm text-left text-slate-300 hover:bg-slate-700 hover:text-white"
-                      >
-                        <span className="truncate">{org.name}</span>
-                        {currentOrg?.id === org.id && <Check className="w-4 h-4 text-blue-500" />}
-                      </button>
-                    ))}
-                  </div>
+                  <span className="truncate">{currentOrg.name}</span>
                 </div>
-              )}
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-slate-950">
+               <div className="px-3 py-2 text-xs text-slate-500 text-center border border-dashed border-slate-700 rounded-md">
+                 No Organization
+               </div>
             </div>
           )}
 
@@ -201,7 +163,6 @@ export const AppLayout = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto w-full">
-        {/* Pass currentOrg down to children via Context */}
         <Outlet context={{ currentOrg }} />
       </main>
     </div>
