@@ -3,7 +3,7 @@ import { NodeProps } from 'reactflow';
 import { FileInput } from 'lucide-react';
 import { BaseNode } from '../../_base/BaseNode';
 import { FileNodeData } from '../../types';
-import { useWorker } from '../../../hooks/useWorker';
+import { useWorker } from '../../../../hooks/useWorker';
 
 export const FileInputNode = ({ data, selected }: NodeProps<FileNodeData>) => {
   const { runWorkerTask } = useWorker();
