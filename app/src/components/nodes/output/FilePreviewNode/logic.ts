@@ -13,7 +13,7 @@ export const processPreview: NodeProcessor<PreviewNodeData> = async ({ inputs, h
     },
     updatedData: {
       ...(node.data as PreviewNodeData),
-      previewRows: rows.slice(0, 10),
+      previewRows: rows,
     },
   };
 };
