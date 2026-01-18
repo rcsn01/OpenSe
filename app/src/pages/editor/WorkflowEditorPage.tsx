@@ -135,6 +135,9 @@ export const WorkflowEditorPage = () => {
     if (cleanedData && typeof cleanedData === 'object' && 'setData' in (cleanedData as Record<string, unknown>)) {
       delete (cleanedData as Record<string, unknown>).setData;
     }
+    if (node.type === 'preview' && cleanedData && 'previewRows' in (cleanedData as Record<string, unknown>)) {
+      delete (cleanedData as Record<string, unknown>).previewRows;
+    }
     return { ...rest, data: cleanedData };
   }), [nodes]);
 
