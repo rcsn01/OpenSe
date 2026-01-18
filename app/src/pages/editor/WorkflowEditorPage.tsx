@@ -1,27 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Play,
-  Save,
-  Download,
-  ArrowLeft,
-  FileInput,
-  Filter,
-  Scissors,
-  Save as SaveIcon,
-  MousePointer2,
-  Info,
-  Copy,
-  Search,
-  Droplet,
-  GitBranch,
-  Dice3,
-  Edit3,
-  ArrowDownUp,
-  Book,
-  Type as TypeIcon,
-  Table,
-  Layers,
-} from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Play, Save, Download, ArrowLeft, MousePointer2, Info } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -38,105 +16,11 @@ import ReactFlow, {
   useNodesState,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { FileInputNode } from '../../components/nodes/FileInputNode';
-import { FilePreviewNode } from '../../components/nodes/FilePreviewNode';
-import { FilterNode } from '../../components/nodes/FilterNode';
-import { SplitNode } from '../../components/nodes/SplitNode';
-import { JoinNode } from '../../components/nodes/JoinNode';
-import { JoinVerticalNode } from '../../components/nodes/JoinVerticalNode';
-import { FilterColumn } from '../../components/nodes/FilterColumn';
-import { SaveFileNode } from '../../components/nodes/SaveFileNode';
-import { DeduplicateNode } from '../../components/nodes/DeduplicateNode';
-import { FindReplaceNode } from '../../components/nodes/FindReplaceNode';
-import { FillMissingNode } from '../../components/nodes/FillMissingNode';
-import { ConditionalRouterNode } from '../../components/nodes/ConditionalRouterNode';
-import { SamplerNode } from '../../components/nodes/SamplerNode';
-import { RenameColumnNode } from '../../components/nodes/RenameColumnNode';
-import { SortNode } from '../../components/nodes/SortNode';
-import { LookupNode } from '../../components/nodes/LookupNode';
-import { TypeCasterNode } from '../../components/nodes/TypeCasterNode';
-import { RenameNode } from '../../components/nodes/RenameNode';
-import { UnpivotNode } from '../../components/nodes/UnpivotNode';
-import { PivotNode } from '../../components/nodes/PivotNode';
-import {
-  Row,
-  FileNodeData,
-  FilterNodeData,
-  RemoveNodeData,
-  DeduplicateNodeData,
-  FindReplaceNodeData,
-  FillMissingNodeData,
-  ConditionalRouterNodeData,
-  SamplerNodeData,
-  RenameColumnNodeData,
-  SortNodeData,
-  LookupNodeData,
-  TypeCasterNodeData,
-  RenameNodeData,
-  UnpivotNodeData,
-  PivotNodeData,
-  JoinVerticalNodeData,
-  SaveNodeData,
-  PreviewNodeData,
-  WorkflowNodeData,
-} from '../../components/nodes/types';
+import { NODE_REGISTRY, nodeTypes, nodesByCategory } from '../../components/nodes/registry';
+import { WorkflowNodeData } from '../../components/nodes/types';
 import { runExecution } from '../../lib/execution/ExecutionEngine';
 
-const NODE_PALETTE = [
-  { type: 'file', label: 'File Input', icon: FileInput, color: 'bg-blue-500' },
-  { type: 'filter', label: 'Filter Rows', icon: Filter, color: 'bg-indigo-500' },
-  { type: 'remove', label: 'Filter Columns', icon: Scissors, color: 'bg-orange-500' },
-  { type: 'deduplicate', label: 'Deduplicate', icon: Copy, color: 'bg-amber-500' },
-  { type: 'findReplace', label: 'Find & Replace', icon: Search, color: 'bg-pink-500' },
-  { type: 'fillMissing', label: 'Fill Missing', icon: Droplet, color: 'bg-cyan-500' },
-  { type: 'router', label: 'Conditional Router', icon: GitBranch, color: 'bg-rose-500' },
-  { type: 'sampler', label: 'Sampler / Limit', icon: Dice3, color: 'bg-slate-500' },
-  { type: 'rename', label: 'Rename Column', icon: Edit3, color: 'bg-yellow-500' },
-  { type: 'sort', label: 'Sort', icon: ArrowDownUp, color: 'bg-indigo-600' },
-  { type: 'lookup', label: 'Lookup', icon: Book, color: 'bg-emerald-600' },
-  { type: 'typeCast', label: 'Type Caster', icon: TypeIcon, color: 'bg-fuchsia-500' },
-  { type: 'renameMap', label: 'Rename (Mappings)', icon: Edit3, color: 'bg-yellow-600' },
-  { type: 'unpivot', label: 'Unpivot (Melt)', icon: GitBranch, color: 'bg-rose-600' },
-  { type: 'pivot', label: 'Pivot', icon: Table, color: 'bg-emerald-700' },
-  { type: 'save', label: 'Save CSV', icon: SaveIcon, color: 'bg-green-500' },
-  { type: 'split', label: 'Split Rows', icon: MousePointer2, color: 'bg-purple-500' },
-  { type: 'join', label: 'Join Tables', icon: MousePointer2, color: 'bg-emerald-500' },
-  { type: 'joinVertical', label: 'Stack Tables', icon: Layers, color: 'bg-emerald-700' },
-  { type: 'preview', label: 'File Preview', icon: Info, color: 'bg-teal-500' },
-];
-
-const nodeTypes = {
-  file: FileInputNode,
-  filter: FilterNode,
-  remove: FilterColumn,
-  deduplicate: DeduplicateNode,
-  findReplace: FindReplaceNode,
-  fillMissing: FillMissingNode,
-  router: ConditionalRouterNode,
-  sampler: SamplerNode,
-  rename: RenameColumnNode,
-  sort: SortNode,
-  lookup: LookupNode,
-  typeCast: TypeCasterNode,
-  renameMap: RenameNode,
-  unpivot: UnpivotNode,
-  pivot: PivotNode,
-  save: SaveFileNode,
-  split: SplitNode,
-  join: JoinNode,
-  joinVertical: JoinVerticalNode,
-  preview: FilePreviewNode,
-};
-
-const toCsv = (rows: Row[]) => {
-  if (!rows.length) return '';
-  const headers = Object.keys(rows[0]);
-  const lines = [headers.join(',')];
-  rows.forEach((r) => {
-    lines.push(headers.map((h) => JSON.stringify(r[h] ?? '')).join(','));
-  });
-  return lines.join('\n');
-};
+const CATEGORY_ORDER = ['Input', 'Data', 'Logic', 'Output'];
 
 export const WorkflowEditorPage = () => {
   const { id } = useParams();
@@ -155,6 +39,15 @@ export const WorkflowEditorPage = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const paletteGroups = useMemo(() => {
+    const ordered = CATEGORY_ORDER.map((category) => ({ category, nodes: nodesByCategory[category] || [] }))
+      .filter((entry) => entry.nodes.length);
+    const remaining = Object.entries(nodesByCategory)
+      .filter(([category]) => !CATEGORY_ORDER.includes(category))
+      .map(([category, nodes]) => ({ category, nodes }));
+    return [...ordered, ...remaining];
+  }, []);
 
   const withSetters = useCallback((list: Node<WorkflowNodeData>[]) => (
     list.map((node) => ({
@@ -214,56 +107,20 @@ export const WorkflowEditorPage = () => {
     const type = event.dataTransfer.getData('application/reactflow');
     if (!type) return;
 
+    const config = NODE_REGISTRY[type as keyof typeof NODE_REGISTRY];
+    if (!config) {
+      setRunMessage('Unknown node type');
+      return;
+    }
+
     const position = rfInstance?.project({ x: event.clientX - 320, y: event.clientY - 80 }) || { x: 100, y: 100 };
     const id = `${type}-${Date.now()}`;
 
-    const label = NODE_PALETTE.find((p) => p.type === type)?.label || 'Node';
-
-    let baseData: WorkflowNodeData;
-    if (type === 'file') {
-      baseData = { label, rows: [], description: '' } as FileNodeData;
-    } else if (type === 'filter') {
-      baseData = { label, field: '', operator: 'equals', value: '', description: '' } as FilterNodeData;
-    } else if (type === 'remove') {
-      baseData = { label, field: '', availableFields: [], description: '' } as RemoveNodeData;
-    } else if (type === 'deduplicate') {
-      baseData = { label, keys: [], availableFields: [], description: '' } as DeduplicateNodeData;
-    } else if (type === 'findReplace') {
-      baseData = { label, field: '', search: '', replace: '', availableFields: [], description: '' } as FindReplaceNodeData;
-    } else if (type === 'fillMissing') {
-      baseData = { label, field: '', strategy: 'static', value: '', availableFields: [], description: '' } as FillMissingNodeData;
-    } else if (type === 'router') {
-      baseData = { label, field: '', operator: 'equals', value: '', availableFields: [], description: '' } as ConditionalRouterNodeData;
-    } else if (type === 'sampler') {
-      baseData = { label, mode: 'top', amount: 100, description: '' } as SamplerNodeData;
-    } else if (type === 'rename') {
-      baseData = { label, field: '', newName: '', availableFields: [], description: '' } as RenameColumnNodeData;
-    } else if (type === 'sort') {
-      baseData = { label, field: '', direction: 'asc', availableFields: [], description: '' } as SortNodeData;
-    } else if (type === 'lookup') {
-      baseData = { label, field: '', newField: '', map: {}, availableFields: [], description: '' } as LookupNodeData;
-    } else if (type === 'typeCast') {
-      baseData = { label, field: '', targetType: 'string', availableFields: [], description: '' } as TypeCasterNodeData;
-    } else if (type === 'renameMap') {
-      baseData = { label, mappings: [], availableFields: [], description: '' } as RenameNodeData;
-    } else if (type === 'unpivot') {
-      baseData = { label, keepColumns: [], pivotColumns: [], availableFields: [], description: '' } as UnpivotNodeData;
-    } else if (type === 'pivot') {
-      baseData = { label, indexColumn: '', pivotColumn: '', valueColumn: '', availableFields: [], description: '' } as PivotNodeData;
-    } else if (type === 'joinVertical') {
-      baseData = { label } as JoinVerticalNodeData;
-    } else if (type === 'save') {
-      baseData = { label } as SaveNodeData;
-    } else if (type === 'preview') {
-      baseData = { label, previewRows: [], description: '' } as PreviewNodeData;
-    } else {
-      baseData = { label } as WorkflowNodeData;
-    }
-
+    const baseData = { ...config.initialData } as WorkflowNodeData;
     const dataWithSetter = { ...baseData, setData: (updater: any) => setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: typeof updater === 'function' ? updater(n.data) : updater } : n)) };
 
-    setNodes((nds) => nds.concat({ id, type: type as any, position, data: dataWithSetter }));
-  }, [rfInstance, setNodes]);
+    setNodes((nds) => nds.concat({ id, type: config.type as any, position, data: dataWithSetter }));
+  }, [rfInstance, setNodes, setRunMessage]);
 
   const onDragOver = (event: React.DragEvent) => {
     event.preventDefault();
@@ -512,20 +369,30 @@ export const WorkflowEditorPage = () => {
                 <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Nodes</h3>
             </div>
             
-            <div className="p-4 space-y-3 overflow-y-auto flex-1">
-                {NODE_PALETTE.map((node) => (
-                    <div
+            <div className="p-4 space-y-5 overflow-y-auto flex-1">
+              {paletteGroups.map((group) => (
+                <div key={group.category} className="space-y-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{group.category}</div>
+                  <div className="space-y-2">
+                    {group.nodes.map((node) => (
+                      <div
                         key={node.type}
                         onDragStart={(event) => onDragStart(event, node.type)}
                         draggable
                         className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm cursor-grab hover:border-blue-300 hover:ring-1 hover:ring-blue-100 transition-all active:cursor-grabbing"
-                    >
+                      >
                         <div className={`p-2 rounded-md ${node.color} text-white`}>
-                            <node.icon className="w-4 h-4" />
+                          <node.icon className="w-4 h-4" />
                         </div>
-                        <span className="text-sm font-medium text-slate-700">{node.label}</span>
-                    </div>
-                ))}
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-slate-800">{node.label}</span>
+                          <span className="text-[11px] text-slate-500">{node.type}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="mt-auto p-4 border-t border-slate-200 bg-slate-100/50">
