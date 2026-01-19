@@ -121,23 +121,4 @@ export type PreviewNodeData = BaseNodeData & {
   previewRows?: Row[];
 };
 
-export type WorkflowNodeData =
-  | FileNodeData
-  | FilterNodeData
-  | RemoveNodeData
-  | DeduplicateNodeData
-  | FindReplaceNodeData
-  | FillMissingNodeData
-  | ConditionalRouterNodeData
-  | SamplerNodeData
-  | RenameColumnNodeData
-  | SortNodeData
-  | LookupNodeData
-  | TypeCasterNodeData
-  | RenameNodeData
-  | UnpivotNodeData
-  | PivotNodeData
-  | MultiPivotNodeData
-  | JoinVerticalNodeData
-  | SaveNodeData
-  | PreviewNodeData;
+export type WorkflowNodeData = BaseNodeData;
