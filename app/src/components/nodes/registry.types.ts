@@ -45,6 +45,8 @@ export interface NodeConfig<TData = WorkflowNodeData> {
   description?: string;
   inputs?: string[];
   outputs?: string[];
+  initialWidth?: number;
+  initialHeight?: number;
 }
 
 export type RegistryMap = Record<string, NodeConfig>;
