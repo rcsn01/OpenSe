@@ -36,3 +36,6 @@ Apply Migrations:
 
 Reset Migrations:
     npx supabase db reset
+
+Running seeding
+    npx ts-node scripts/seed.ts

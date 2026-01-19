@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import 'dotenv/config';
 
 // ⚠️ REPLACE WITH YOUR LOCAL SUPABASE URL AND SERVICE_ROLE KEY
 const SUPABASE_URL = 'http://127.0.0.1:54321';
@@ -12,11 +13,12 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 const users = [
-  { email: 'ivan.earth2024@gmail.com', password: 'watermelon', name: 'Ivan Super Admin', role: 'Super Admin' },
-  { email: 'admin1@gmail.com', password: 'Orange', name: 'Admin One', role: 'Org 1 Admin' },
-  { email: 'user1@gmail.com', password: 'Orange', name: 'User One', role: 'Org 1 Member' },
-  { email: 'admin2@gmail.com', password: 'Orange', name: 'Admin Two', role: 'Org 2 Admin' },
-  { email: 'user2@gmail.com', password: 'Orange', name: 'User Two', role: 'Org 2 Member' },
+  { email: 'ivan.earth2024@gmail.com', password: 'watermelon', name: 'Ivan Super Admin'},
+  { email: 'ivany@speedx.com.au', password: 'watermelon', name: 'Ivany SpeedX'},
+  { email: 'admin1@gmail.com', password: 'Orange', name: 'Admin One'},
+  { email: 'user1@gmail.com', password: 'Orange', name: 'User One'},
+  { email: 'admin2@gmail.com', password: 'Orange', name: 'Admin Two'},
+  { email: 'user2@gmail.com', password: 'Orange', name: 'User Two'},
 ];
 
 async function seed() {
@@ -59,6 +61,7 @@ async function seed() {
   const orgs = [
     { name: 'Organisation 1', ownerEmail: 'admin1@gmail.com', members: ['user1@gmail.com'] },
     { name: 'Organisation 2', ownerEmail: 'admin2@gmail.com', members: ['user2@gmail.com'] },
+    { name: 'SpeeDx', ownerEmail: 'ivan.earth2024@gmail.com', members: ['ivany@speedx.com.au'] },
   ];
 
   for (const org of orgs) {
