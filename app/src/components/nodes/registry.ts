@@ -32,6 +32,7 @@ import { TypeCasterNode } from './data/TypeCasterNode';
 import { RenameNode } from './data/RenameNode';
 import { UnpivotNode } from './data/UnpivotNode';
 import { PivotNode } from './data/PivotNode';
+import { MultiPivotNode } from './data/MultiPivotNode';
 import { SaveFileNode } from './output/SaveFileNode';
 import { SplitNode } from './logic/SplitNode';
 import { JoinNode } from './data/JoinNode';
@@ -53,6 +54,7 @@ import { processTypeCast } from './data/TypeCasterNode/logic';
 import { processRenameMap } from './data/RenameNode/logic';
 import { processUnpivot } from './data/UnpivotNode/logic';
 import { processPivot } from './data/PivotNode/logic';
+import { processMultiPivot } from './data/MultiPivotNode/logic';
 import { processSave } from './output/SaveFileNode/logic';
 import { processSplit } from './logic/SplitNode/logic';
 import { processJoin } from './data/JoinNode/logic';
@@ -66,6 +68,7 @@ import {
   BaseNodeData,
   LookupNodeData,
   PivotNodeData,
+  MultiPivotNodeData,
   PreviewNodeData,
   RemoveNodeData,
   RenameColumnNodeData,
@@ -255,6 +258,18 @@ export const NODE_REGISTRY: RegistryMap = {
     component: PivotNode,
     processor: processPivot,
     initialData: { label: 'Pivot', indexColumn: '', pivotColumn: '', valueColumn: '', availableFields: [], description: '' } as PivotNodeData,
+    inputs: ['in'],
+    outputs: ['out'],
+  },
+  multiPivot: {
+    type: 'multiPivot',
+    label: 'Multi-Pivot',
+    category: 'Data',
+    icon: Table,
+    color: 'bg-emerald-800',
+    component: MultiPivotNode,
+    processor: processMultiPivot,
+    initialData: { label: 'Multi-Pivot', indexColumns: [], pivotColumn: '', valueColumns: [], availableFields: [], description: '' } as MultiPivotNodeData,
     inputs: ['in'],
     outputs: ['out'],
   },
