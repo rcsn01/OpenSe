@@ -104,6 +104,13 @@ export type PivotNodeData = BaseNodeData & {
   availableFields?: string[];
 };
 
+export type MultiPivotNodeData = BaseNodeData & {
+  indexColumns: string[];
+  pivotColumn: string;
+  valueColumns: string[];
+  availableFields?: string[];
+};
+
 export type JoinVerticalNodeData = BaseNodeData & {};
 
 export type SaveNodeData = BaseNodeData & {
@@ -130,6 +137,7 @@ export type WorkflowNodeData =
   | RenameNodeData
   | UnpivotNodeData
   | PivotNodeData
+  | MultiPivotNodeData
   | JoinVerticalNodeData
   | SaveNodeData
   | PreviewNodeData;
