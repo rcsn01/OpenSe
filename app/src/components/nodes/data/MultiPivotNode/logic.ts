@@ -6,10 +6,16 @@ const collectInputEntries = (inputs: Record<string, { rows: Row[]; ref?: string 
 export const processMultiPivot: NodeProcessor<MultiPivotNodeData> = async ({ data, inputs, helpers }) => {
   const inputEntries = collectInputEntries(inputs);
   const sourceRows = inputEntries.flatMap((entry) => entry.rows);
+
+  const availableFields = sourceRows.length > 0 ? Object.keys(sourceRows[0]) : [];
+
   if (!data.pivotColumn || !data.indexColumns?.length || !data.valueColumns?.length) {
     return {
       outputs: {
         out: inputEntries[0]?.ref || (await helpers.persistRows(sourceRows)),
+      },
+      updatedData: {
+        availableFields,
       },
     };
   }
@@ -40,6 +46,9 @@ export const processMultiPivot: NodeProcessor<MultiPivotNodeData> = async ({ dat
   return {
     outputs: {
       out: await helpers.persistRows(result),
+    },
+    updatedData: {
+      availableFields,
     },
   };
 };
