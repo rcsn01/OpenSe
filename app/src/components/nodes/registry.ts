@@ -317,6 +317,8 @@ export const NODE_REGISTRY: RegistryMap = {
     initialData: { label: 'Preview', previewRows: [], description: '' } as PreviewNodeData,
     inputs: ['in'],
     outputs: ['out'],
+    initialWidth: 400,
+    initialHeight: 300,
   },
 };
 

@@ -53,7 +53,7 @@ export const FileInputNode = ({ data, selected }: NodeProps<FileNodeData>) => {
         onChange={handleFileUpload}
         onClick={stopPropagation}
         onMouseDown={stopPropagation}
-        className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-200 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        className="w-full text-xs text-transparent file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-200 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
       />
       <div className="text-xs text-slate-600 space-y-1">
         <p>Rows: {data.count || data.rows?.length || 0}</p>

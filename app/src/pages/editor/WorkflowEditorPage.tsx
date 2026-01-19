@@ -138,6 +138,15 @@ export const WorkflowEditorPage = () => {
     if (node.type === 'preview' && cleanedData && 'previewRows' in (cleanedData as Record<string, unknown>)) {
       delete (cleanedData as Record<string, unknown>).previewRows;
     }
+    // Clear file data from FileInputNode on save
+    if (node.type === 'file' && cleanedData) {
+      delete (cleanedData as Record<string, unknown>).rows;
+      delete (cleanedData as Record<string, unknown>).datasetId;
+      delete (cleanedData as Record<string, unknown>).count;
+      delete (cleanedData as Record<string, unknown>).chunkCount;
+      delete (cleanedData as Record<string, unknown>).fileName;
+      delete (cleanedData as Record<string, unknown>).schema;
+    }
     return { ...rest, data: cleanedData };
   }), [nodes]);
 
