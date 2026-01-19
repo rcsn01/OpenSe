@@ -1,5 +1,8 @@
 # W-ETL
 
+W-ETL is a web-based ETL page that processes the data in a seperate thread inside the web page.
+This project is made to tackle 
+
 **⚠️ PROPRIETARY SOURCE CODE - VIEW ONLY**
 
 This repository is hosted publicly for **educational and portfolio demonstration purposes only**. This project is **NOT Open Source**.
