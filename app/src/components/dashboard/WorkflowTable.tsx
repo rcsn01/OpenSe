@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
-import { FileSpreadsheet, Search, Clock, Edit, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, Search, CalendarDays, Edit, Trash2, Loader2 } from 'lucide-react';
 import { WorkflowTableProps } from './types';
 import { Input } from '../ui/Input';
-import { Table } from '../ui/Table';
 
 const formatDate = (value: string | null) => {
   if (!value) return '—';
@@ -26,79 +25,117 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
   }, [workflows, search]);
 
   return (
-    <>
-      <div className="flex items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">Your workflows</h2>
+          <p className="text-sm text-slate-500">Quickly jump back into any workflow or create something new.</p>
+        </div>
         <Input
           placeholder="Search workflows..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           prefix={<Search className="w-4 h-4" />}
-          className="max-w-sm"
+          className="max-w-xs"
         />
       </div>
 
-      <Table>
-        <div className="min-w-full divide-y divide-slate-200">
-          <div className="bg-slate-50 grid grid-cols-12 gap-4 px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-            <div className="col-span-4">Name</div>
-            <div className="col-span-3">Owner</div>
-            <div className="col-span-3">Created</div>
-            <div className="col-span-2 text-right">Actions</div>
-          </div>
-          <div className="divide-y divide-slate-200 bg-white">
-            {loading ? (
-              <div className="px-6 py-10 text-center text-slate-500">Loading workflows...</div>
-            ) : error ? (
-              <div className="px-6 py-10 text-center text-red-600">{error}</div>
-            ) : filtered.length > 0 ? (
-              filtered.map((workflow) => (
-                <div key={workflow.id} className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-slate-50 transition-colors">
-                  <div className="col-span-4 flex items-center">
-                    <div className="p-2 bg-blue-100 rounded-lg mr-3 text-blue-600">
-                      <FileSpreadsheet className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-slate-900">
-                        {workflow.name}
-                      </div>
-                      <span className="text-xs text-slate-500">ID: {workflow.id}</span>
-                    </div>
+      {loading ? (
+        <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-white/60 p-6 text-sm text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+          Loading workflows...
+        </div>
+      ) : error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm font-medium text-red-700">{error}</div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white/80 p-10 text-center text-slate-500">
+          <FileSpreadsheet className="mx-auto mb-3 h-12 w-12 text-slate-300" />
+          No workflows match that search. Try another keyword or create a new draft.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {filtered.map((workflow) => {
+            const ownerLabel =
+              workflow.owner?.full_name || workflow.owner?.email || workflow.owner_id || 'Unknown';
+            const ownerInitial = ownerLabel?.charAt(0).toUpperCase() || '?';
+
+            return (
+              <div
+                key={workflow.id}
+                className="group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-blue-300 hover:shadow-lg cursor-pointer"
+                role="button"
+                tabIndex={0}
+                onClick={() => onEdit(workflow.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onEdit(workflow.id)
+                  }
+                }}
+              >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Workflow</p>
+                  <h3 className="text-lg font-semibold text-slate-900">{workflow.name}</h3>
+                  <p className="text-xs text-slate-500">ID: {workflow.id}</p>
+                </div>
+                <div className="rounded-full border border-slate-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+                  Draft
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 text-sm text-slate-500">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-100 font-semibold text-slate-600">
+                    {ownerInitial}
                   </div>
-                  <div className="col-span-3 text-sm text-slate-600 flex items-center">
-                    <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center mr-2 text-xs font-bold text-slate-500">
-                      {workflow.owner_id ? workflow.owner_id.charAt(0).toUpperCase() : '?'}
-                    </div>
-                    <span className="truncate" title={workflow.owner_id}>{workflow.owner_id || 'Unknown'}</span>
-                  </div>
-                  <div className="col-span-3 text-sm text-slate-500 flex items-center">
-                    <Clock className="w-4 h-4 mr-1.5 text-slate-400" />
-                    {formatDate(workflow.created_at)}
-                  </div>
-                  <div className="col-span-2 flex justify-end gap-2">
-                    <button
-                      onClick={() => onEdit(workflow.id)}
-                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onDelete(workflow.id)}
-                      className="p-1 text-slate-400 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">Owner</p>
+                    <p className="text-sm text-slate-700">{ownerLabel}</p>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="px-6 py-12 text-center text-slate-500">
-                <FileSpreadsheet className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-                <p>No workflows found in this view.</p>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-slate-400" />
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">Created</p>
+                    <p className="text-sm text-slate-700">{formatDate(workflow.created_at)}</p>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                  Ready to run
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onEdit(workflow.id)
+                    }}
+                    className="rounded-full bg-slate-900 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-slate-800"
+                    type="button"
+                  >
+                    Open editor
+                  </button>
+                  <button
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onDelete(workflow.id)
+                    }}
+                    className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500 transition hover:text-red-600"
+                    type="button"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
         </div>
-      </Table>
-    </>
+      )}
+    </div>
   );
 };
