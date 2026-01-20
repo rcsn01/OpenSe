@@ -1,9 +1,9 @@
 import { Edge, Node } from 'reactflow';
 import { WorkflowNodeData } from '../../components/nodes/types';
-import { supabase } from '../supabase';
 import { NODE_REGISTRY } from '../../components/nodes/registry';
 import { DataRef, ExecutionDownload, loadRows, persistRows, toCsv } from './utils';
 import { ProcessorInput } from '../../components/nodes/registry.types';
+import { logExecutionRun } from '../../api/execution';
 
 export type ExecutionResult = {
   updatedNodes: Node<WorkflowNodeData>[];
@@ -113,15 +113,15 @@ export const runExecution = async (
   } finally {
     // LOGGING TO SUPABASE
     if (workflowId && userId) {
-        await supabase.from('workflow_executions').insert({
-            workflow_id: workflowId,
-            user_id: userId,
-            org_id: orgId,
-            status: errorState ? 'failed' : 'success',
-            started_at: startTime.toISOString(),
-            completed_at: new Date().toISOString(),
-            error_message: errorState
-        });
+      await logExecutionRun({
+        workflowId,
+        userId,
+        orgId,
+        status: errorState ? 'failed' : 'success',
+        startedAt: startTime.toISOString(),
+        completedAt: new Date().toISOString(),
+        errorMessage: errorState,
+      });
     }
   }
 };

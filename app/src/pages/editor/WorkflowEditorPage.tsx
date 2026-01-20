@@ -155,6 +155,7 @@ export const WorkflowEditorPage = () => {
         return;
     }
 
+    console.log('[WorkflowEditor] run start', { workflowId, userId: user.id, orgId: orgIdParam });
     const result = await runExecution(
         nodes, 
         edges, 
@@ -163,6 +164,7 @@ export const WorkflowEditorPage = () => {
         user.id,
         orgIdParam
     );
+    console.log('[WorkflowEditor] run result', { unresolved: result.unresolved.length, downloads: result.downloads.length });
     setNodes(result.updatedNodes);
 
     if (result.downloads.length) {
@@ -190,6 +192,7 @@ export const WorkflowEditorPage = () => {
     setIsRunning(true);
     setRunMessage('');
     try {
+      console.log('[WorkflowEditor] handleRun clicked');
       await runAndApplyExecution();
     } finally {
       setIsRunning(false);
@@ -219,8 +222,17 @@ export const WorkflowEditorPage = () => {
       return;
     }
 
+    console.log('[WorkflowEditor] save clicked');
     setRunMessage('Saving...');
-    const sanitizedNodes = sanitizeNodes();
+    let sanitizedNodes: ReturnType<typeof sanitizeNodes>;
+    try {
+      sanitizedNodes = sanitizeNodes();
+      console.log('[WorkflowEditor] sanitized nodes', { nodeCount: sanitizedNodes.length, edgeCount: edges.length });
+    } catch (err) {
+      console.error('[WorkflowEditor] sanitize failed', err);
+      setRunMessage('Failed to prepare workflow data');
+      return;
+    }
 
     saveMutation.mutate(
       {
@@ -232,6 +244,7 @@ export const WorkflowEditorPage = () => {
       },
       {
         onSuccess: (data) => {
+          console.log('[WorkflowEditor] save success', { id: data.id });
           setWorkflowId(data.id || workflowId);
           setRunMessage('Workflow saved');
           if (!workflowId && data.id) {
@@ -239,6 +252,7 @@ export const WorkflowEditorPage = () => {
           }
         },
         onError: (err: any) => {
+          console.error('[WorkflowEditor] save error', err);
           setRunMessage(err?.message || 'Failed to save workflow');
         },
       },
