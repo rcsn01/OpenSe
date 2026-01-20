@@ -48,6 +48,7 @@ type SaveWorkflowParams = {
 }
 
 export const saveWorkflow = async (payload: SaveWorkflowParams) => {
+  console.log('[api/workflows] saveWorkflow', { hasId: !!payload.id, owner_id: payload.owner_id, org_id: payload.org_id })
   if (payload.id) {
     const { data, error } = await supabase
       .from('workflows')
