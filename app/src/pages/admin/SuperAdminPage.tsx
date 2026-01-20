@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { X, Building2, Users } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { OrgManagementList } from '../../components/admin/OrgManagementList';
 import { CreateOrgForm } from '../../components/admin/CreateOrgForm';
 import { Message, OrgRow } from '../../components/admin/types';
@@ -10,6 +9,15 @@ import { MemberTable } from '../../components/settings/MemberTable';
 import { Member } from '../../components/settings/types';
 import { useAdminOrgs } from '../../hooks/queries/useAdmin';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+    changeOrganizationOwner,
+    createOrganizationWithOwner,
+    deleteOrganization,
+    deleteOrganizationMember,
+    inviteMemberToOrganization,
+    loadOrganizationMembers,
+    renameOrganization,
+} from '../../api/admin';
 
 export const SuperAdminPage = () => {
     const [activeTab, setActiveTab] = useState<'orgs' | 'users'>('orgs');
@@ -46,18 +54,8 @@ export const SuperAdminPage = () => {
     }, [orgsError, orgs]);
 
     const loadOrgMembers = async (orgId: string) => {
-        const { data, error } = await supabase
-            .from('organization_members')
-            .select('id, role, user_id, profiles:profiles!organization_members_user_id_fkey(email, full_name)')
-            .eq('org_id', orgId);
-
-        if (!error && data) {
-            const normalized = data.map((m) => ({
-                ...m,
-                profiles: Array.isArray(m.profiles) ? m.profiles[0] : m.profiles,
-            }));
-            setCurrentOrgMembers(normalized as Member[]);
-        }
+        const data = await loadOrganizationMembers(orgId);
+        setCurrentOrgMembers(data as Member[]);
     };
 
     const handleOpenMemberManager = async (org: OrgRow) => {
@@ -69,7 +67,7 @@ export const SuperAdminPage = () => {
         if (!managingMembersOrg) return;
         setRemovingMemberId(member.id);
         try {
-            await supabase.from('organization_members').delete().eq('id', member.id);
+            await deleteOrganizationMember(member.id);
             await loadOrgMembers(managingMembersOrg.id);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (error) {
@@ -85,36 +83,7 @@ export const SuperAdminPage = () => {
         setMessage(null);
 
         try {
-            const { data: profiles, error: profileError } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('email', ownerEmail.trim().toLowerCase())
-                .limit(1);
-
-            if (profileError) throw profileError;
-            if (!profiles || profiles.length === 0) {
-                throw new Error('User not found. Please ask them to sign up first.');
-            }
-            const ownerId = profiles[0].id;
-
-            // Check if owner is already in an org
-            const { data: existing } = await supabase.from('organization_members').select('id').eq('user_id', ownerId).limit(1);
-            if (existing && existing.length > 0) throw new Error('User is already assigned to an organization.');
-
-            const { data: org, error: orgError } = await supabase
-                .from('organizations')
-                .insert({ name: orgName, owner_id: ownerId })
-                .select()
-                .single();
-
-            if (orgError) throw orgError;
-
-            await supabase.from('organization_members').insert({
-                org_id: org.id,
-                user_id: ownerId,
-                role: 'admin',
-            });
-
+            const org = await createOrganizationWithOwner(orgName, ownerEmail);
             setMessage({ type: 'success', text: `Organization "${orgName}" created.` });
             setOrgName('');
             setOwnerEmail('');
@@ -130,7 +99,7 @@ export const SuperAdminPage = () => {
         const nextName = (renaming[orgId] || '').trim();
         if (!nextName) return;
         try {
-            await supabase.from('organizations').update({ name: nextName }).eq('id', orgId);
+            await renameOrganization(orgId, nextName);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
@@ -141,28 +110,7 @@ export const SuperAdminPage = () => {
         const email = (ownerChange[orgId] || '').trim().toLowerCase();
         if (!email) return;
         try {
-            const { data: profiles } = await supabase.from('profiles').select('id').eq('email', email).limit(1).single();
-            if (!profiles) throw new Error('User not found');
-
-            // Check if user is in ANOTHER org
-            const { data: existingMemberships } = await supabase.from('organization_members').select('org_id').eq('user_id', profiles.id);
-            const otherOrg = existingMemberships?.find(m => m.org_id !== orgId);
-            if (otherOrg) throw new Error('User is already a member of another organization.');
-
-            await supabase.from('organizations').update({ owner_id: profiles.id }).eq('id', orgId);
-
-            const { data: member } = await supabase
-                .from('organization_members')
-                .select('id')
-                .eq('org_id', orgId)
-                .eq('user_id', profiles.id)
-                .single();
-
-            if (!member) {
-                await supabase.from('organization_members').insert({ org_id: orgId, user_id: profiles.id, role: 'admin' });
-            } else {
-                await supabase.from('organization_members').update({ role: 'admin' }).eq('id', member.id);
-            }
+            await changeOrganizationOwner(orgId, email);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
@@ -173,14 +121,7 @@ export const SuperAdminPage = () => {
         const payload = memberInvite[orgId];
         if (!payload?.email) return;
         try {
-            const { data: profile } = await supabase.from('profiles').select('id').eq('email', payload.email).single();
-            if (!profile) throw new Error('User not found');
-
-            // Enforce Single Org
-            const { data: existing } = await supabase.from('organization_members').select('id').eq('user_id', profile.id).limit(1);
-            if (existing && existing.length > 0) throw new Error('User is already assigned to an organization.');
-
-            await supabase.from('organization_members').insert({ org_id: orgId, user_id: profile.id, role: payload.role });
+            await inviteMemberToOrganization(orgId, payload.email, payload.role);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
@@ -190,7 +131,7 @@ export const SuperAdminPage = () => {
     const handleDeleteOrg = async (orgId: string) => {
         setDeletingOrgId(orgId);
         try {
-            await supabase.from('organizations').delete().eq('id', orgId);
+            await deleteOrganization(orgId);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);

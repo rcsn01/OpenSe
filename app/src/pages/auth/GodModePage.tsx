@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { ShieldAlert } from 'lucide-react';
+import { hasUsers, signUp } from '../../api/auth';
 
 export const GodModePage = () => {
   const navigate = useNavigate();
@@ -10,8 +10,8 @@ export const GodModePage = () => {
 
   useEffect(() => {
     const checkStatus = async () => {
-      const { data } = await supabase.rpc('has_users');
-      if (data === true) {
+      const anyUsers = await hasUsers();
+      if (anyUsers) {
         navigate('/login');
       }
     };
@@ -35,8 +35,7 @@ export const GodModePage = () => {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
+      await signUp(email, password);
 
       alert('System Initialized! You are now the Super Admin. Please sign in.');
       navigate('/login');

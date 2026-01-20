@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Search, Copy, LayoutTemplate, Loader2, GitFork, AlertCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useGallery, GalleryWorkflow } from '../../hooks/useGallery';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { cloneWorkflowFromTemplate } from '../../api/workflows';
 
 const getNodeCount = (graphData: any) => {
   if (!graphData) return 0;
@@ -37,25 +37,13 @@ export const GalleryPage = () => {
     setCloningId(template.id);
 
     try {
-      const newName = `Copy of ${template.name}`;
-      const payload = {
-        name: newName,
-        description: template.description,
-        graph_data: template.graph_data,
-        owner_id: user.id,
-        org_id: currentOrg?.id || null,
-        is_template: false,
-      };
+      const newId = await cloneWorkflowFromTemplate({
+        template: { id: template.id, name: template.name, description: template.description, graph_data: template.graph_data },
+        ownerId: user.id,
+        orgId: currentOrg?.id || null,
+      });
 
-      const { data, error } = await supabase
-        .from('workflows')
-        .insert([payload])
-        .select('id')
-        .single();
-
-      if (error) throw error;
-
-      navigate(`/editor/${data.id}`);
+      navigate(`/editor/${newId}`);
     } catch (err: any) {
       console.error('Failed to clone workflow:', err);
       alert('Failed to clone workflow: ' + (err?.message || '')); 

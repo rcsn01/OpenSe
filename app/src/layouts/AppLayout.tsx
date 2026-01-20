@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
 import { OrgSimple, useUserOrganizations } from '../hooks/queries/useOrganizations';
+import { signOut } from '../api/auth';
 
 export const AppLayout = () => {
   const { session, user, loading } = useAuth();
@@ -29,7 +29,7 @@ export const AppLayout = () => {
   const handleSignOut = async () => {
     try {
       setSigningOut(true);
-      await supabase.auth.signOut();
+      await signOut();
       navigate('/login', { replace: true });
     } finally {
       setSigningOut(false);
