@@ -19,7 +19,7 @@ import { UserSettingsPage } from './pages/settings/UserSettingsPage';
 import { SuperAdminPage } from './pages/admin/SuperAdminPage';
 import { SystemCheck } from './components/guards/SystemCheck';
 import { GalleryPage } from './pages/gallery/GalleryPage';
-import { ActivitiesPage } from './pages/dashboard/ActivitiesPage';
+import { ActivitiesPage } from './pages/activity/ActivitiesPage';
 
 export default function App() {
   return (
