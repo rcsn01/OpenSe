@@ -12,7 +12,7 @@ type ListWorkflowsParams = {
 export const listWorkflows = async ({ userId, orgId, mode }: ListWorkflowsParams) => {
   let query = supabase
     .from('workflows')
-    .select('id, name, created_at, owner_id, org_id')
+    .select('id, name, created_at, owner_id, org_id, owner:profiles!workflows_owner_id_fkey(full_name, email)')
     .order('created_at', { ascending: false })
 
   if (mode === 'org') {
