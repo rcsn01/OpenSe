@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Play, Save, Download, ArrowLeft, MousePointer2, Info } from 'lucide-react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ReactFlow, {
   Background,
@@ -19,6 +18,7 @@ import 'reactflow/dist/style.css';
 import { NODE_REGISTRY, nodeTypes, nodesByCategory } from '../../components/nodes/registry';
 import { WorkflowNodeData } from '../../components/nodes/types';
 import { runExecution } from '../../lib/execution/ExecutionEngine';
+import { useSaveWorkflow, useUpdateWorkflowName, useWorkflow } from '../../hooks/queries/useWorkflows';
 
 const CATEGORY_ORDER = ['Input', 'Data', 'Logic', 'Output'];
 
@@ -26,19 +26,23 @@ export const WorkflowEditorPage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const orgIdParam = searchParams.get('orgId');
+  const navigate = useNavigate();
 
   const isValidUuid = (value: string | null | undefined) => !!value && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(value);
   const initialWorkflowId = id && id !== 'new' && isValidUuid(id) ? id : null;
   const { user } = useAuth();
-  const [workflowName, setWorkflowName] = useState(initialWorkflowId ? `Workflow ${id}` : 'New Workflow');
+  const [workflowName, setWorkflowName] = useState('New Workflow');
   const [workflowId, setWorkflowId] = useState<string | null>(initialWorkflowId);
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [runMessage, setRunMessage] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const { data: workflowData, error: workflowError } = useWorkflow(workflowId);
+  const saveMutation = useSaveWorkflow();
+  const nameMutation = useUpdateWorkflowName();
 
   const paletteGroups = useMemo(() => {
     const ordered = CATEGORY_ORDER.map((category) => ({ category, nodes: nodesByCategory[category] || [] }))
@@ -61,37 +65,32 @@ export const WorkflowEditorPage = () => {
     }))
   ), [setNodes]);
 
-  // Load existing workflow when a valid id is present
   useEffect(() => {
-    const loadWorkflow = async () => {
-      if (!initialWorkflowId) return;
-      const { data, error } = await supabase
-        .from('workflows')
-        .select('id, name, graph_data')
-        .eq('id', initialWorkflowId)
-        .single();
-      if (error) {
-        setRunMessage(error.message || 'Failed to load workflow');
-        return;
-      }
-      setWorkflowId(data.id);
-      setWorkflowName(data.name || 'Untitled Workflow');
-      const rawGraph = data.graph_data;
-      let graph: { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
-      try {
-        graph = (typeof rawGraph === 'string' ? JSON.parse(rawGraph) : rawGraph || {}) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
-      } catch (parseErr) {
-        setRunMessage('Failed to parse saved workflow');
-        return;
-      }
-      const incomingNodes = withSetters((graph.nodes || []) as Node<WorkflowNodeData>[]);
-      const incomingEdges = (graph.edges || []) as Edge[];
-      setNodes(incomingNodes);
-      setEdges(incomingEdges);
-      setRunMessage('Workflow loaded');
-    };
-    loadWorkflow();
-  }, [initialWorkflowId, setEdges, setNodes]);
+    if (!workflowData) return;
+
+    setWorkflowId(workflowData.id);
+    setWorkflowName(workflowData.name || 'Untitled Workflow');
+
+    const rawGraph = workflowData.graph_data;
+    let graph: { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] } = {};
+
+    try {
+      graph = (typeof rawGraph === 'string' ? JSON.parse(rawGraph) : rawGraph || {}) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
+    } catch (_err) {
+      setRunMessage('Failed to parse saved workflow');
+      return;
+    }
+
+    const incomingNodes = withSetters((graph.nodes || []) as Node<WorkflowNodeData>[]);
+    const incomingEdges = (graph.edges || []) as Edge[];
+    setNodes(incomingNodes);
+    setEdges(incomingEdges);
+    setRunMessage('Workflow loaded');
+  }, [workflowData, setEdges, setNodes, withSetters]);
+
+  useEffect(() => {
+    if (workflowError) setRunMessage('Failed to load workflow');
+  }, [workflowError]);
 
   const onConnect = useCallback((connection: Edge | Connection) => {
     setEdges((eds) => addEdge({ ...connection, animated: true, type: 'smoothstep' }, eds));
@@ -197,23 +196,18 @@ export const WorkflowEditorPage = () => {
     }
   };
 
-  const persistNameIfPossible = useCallback(async () => {
+  const persistNameIfPossible = useCallback(() => {
     if (!workflowName?.trim()) return;
-    if (!workflowId) return; // Name will be stored on first save
-    if (!user) {
-      setRunMessage('Please sign in to save changes.');
-      return;
-    }
-    const { error } = await supabase
-      .from('workflows')
-      .update({ name: workflowName.trim() })
-      .eq('id', workflowId);
-    if (error) {
-      setRunMessage(error.message || 'Failed to update name');
-    } else {
-      setRunMessage('Name updated');
-    }
-  }, [user, workflowId, workflowName]);
+    if (!workflowId) return;
+
+    nameMutation.mutate(
+      { id: workflowId, name: workflowName.trim() },
+      {
+        onError: () => setRunMessage('Failed to update name'),
+        onSuccess: () => setRunMessage('Name updated'),
+      },
+    );
+  }, [nameMutation, workflowId, workflowName]);
 
   const handleSaveWorkflow = useCallback(async () => {
     if (!workflowName?.trim()) {
@@ -224,40 +218,32 @@ export const WorkflowEditorPage = () => {
       setRunMessage('Please sign in to save your workflow.');
       return;
     }
-    setIsSaving(true);
-    setRunMessage('');
-    const sanitizedNodes = sanitizeNodes();
-    const payload = {
-      name: workflowName.trim(),
-      graph_data: { nodes: sanitizedNodes, edges },
-      owner_id: user.id,
-      org_id: orgIdParam || null,
-    };
 
-    try {
-      if (workflowId) {
-        const { error } = await supabase
-          .from('workflows')
-          .update({ name: payload.name, graph_data: payload.graph_data })
-          .eq('id', workflowId);
-        if (error) throw error;
-        setRunMessage('Workflow updated');
-      } else {
-        const { data, error } = await supabase
-          .from('workflows')
-          .insert([{ ...payload }])
-          .select('id')
-          .single();
-        if (error) throw error;
-        setWorkflowId(data?.id || null);
-        setRunMessage('Workflow saved');
-      }
-    } catch (err: any) {
-      setRunMessage(err?.message || 'Failed to save workflow');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [edges, sanitizeNodes, user, workflowId, workflowName, orgIdParam]);
+    setRunMessage('Saving...');
+    const sanitizedNodes = sanitizeNodes();
+
+    saveMutation.mutate(
+      {
+        id: workflowId,
+        name: workflowName.trim(),
+        graph_data: { nodes: sanitizedNodes, edges },
+        owner_id: user.id,
+        org_id: orgIdParam || null,
+      },
+      {
+        onSuccess: (data) => {
+          setWorkflowId(data.id || workflowId);
+          setRunMessage('Workflow saved');
+          if (!workflowId && data.id) {
+            navigate(`/editor/${data.id}`, { replace: true });
+          }
+        },
+        onError: (err: any) => {
+          setRunMessage(err?.message || 'Failed to save workflow');
+        },
+      },
+    );
+  }, [edges, navigate, orgIdParam, sanitizeNodes, saveMutation, user, workflowId, workflowName]);
 
   const handleExport = useCallback(() => {
     const sanitizedNodes = sanitizeNodes();
@@ -351,11 +337,11 @@ export const WorkflowEditorPage = () => {
             <div className="h-6 w-px bg-slate-200 mx-1" />
             <button
               onClick={handleSaveWorkflow}
-              disabled={isSaving}
+              disabled={saveMutation.isPending}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 rounded-md shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
                 <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 'Save'}
+                {saveMutation.isPending ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={handleRun}
