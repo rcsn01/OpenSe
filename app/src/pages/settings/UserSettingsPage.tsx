@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lock, Trash2, Loader2, Save, AlertCircle, CheckCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import {
+    fetchProfileFullName,
+    updateAuthFullName,
+    updatePassword,
+    updateProfileFullName,
+} from '../../api/auth';
 
 export const UserSettingsPage = () => {
     const { user } = useAuth();
@@ -20,13 +25,8 @@ export const UserSettingsPage = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             if (!user) return;
-            const { data } = await supabase
-                .from('profiles')
-                .select('full_name')
-                .eq('id', user.id)
-                .single();
-            
-            if (data?.full_name) setFullName(data.full_name);
+            const name = await fetchProfileFullName(user.id);
+            if (name) setFullName(name);
         };
         fetchProfile();
     }, [user]);
@@ -39,17 +39,8 @@ export const UserSettingsPage = () => {
         setMessage(null);
 
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ full_name: fullName })
-                .eq('id', user.id);
-
-            if (error) throw error;
-            
-            // Also update auth metadata so the sidebar updates immediately
-            await supabase.auth.updateUser({
-                data: { full_name: fullName }
-            });
+            await updateProfileFullName(user.id, fullName);
+            await updateAuthFullName(fullName);
 
             setMessage({ type: 'success', text: 'Profile updated successfully.' });
         } catch (err: any) {
@@ -71,8 +62,7 @@ export const UserSettingsPage = () => {
         setMessage(null);
 
         try {
-            const { error } = await supabase.auth.updateUser({ password: password });
-            if (error) throw error;
+            await updatePassword(password);
             
             setMessage({ type: 'success', text: 'Password updated successfully.' });
             setPassword('');

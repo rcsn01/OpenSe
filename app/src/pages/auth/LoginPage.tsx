@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { signIn } from '../../api/auth';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -17,12 +17,7 @@ export const LoginPage = () => {
     const password = formData.get('password') as string;
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
+      await signIn(email, password);
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');

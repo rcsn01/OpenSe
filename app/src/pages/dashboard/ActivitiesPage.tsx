@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Activity, Clock, XCircle, FileSpreadsheet, User, Building2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Table } from '../../components/ui/Table';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import clsx from 'clsx';
+import { useExecutionLogs } from '../../hooks/queries/useActivities';
 
 type OrgSimple = { id: string; name: string };
 type DashboardContextType = { currentOrg: OrgSimple | null };
@@ -27,8 +27,8 @@ export const ActivitiesPage = () => {
   
   // State for active tab
   const [activeTab, setActiveTab] = useState<'personal' | 'org'>(currentOrg ? 'org' : 'personal');
-  const [logs, setLogs] = useState<ExecutionLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const orgIdForTab = activeTab === 'org' ? currentOrg?.id ?? null : null;
+  const { data: logs = [], isLoading: loading } = useExecutionLogs(user?.id, orgIdForTab);
 
   // Automatically switch tab if organization context changes
   useEffect(() => {
@@ -38,41 +38,6 @@ export const ActivitiesPage = () => {
       setActiveTab('personal');
     }
   }, [currentOrg?.id]);
-
-  const fetchLogs = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    
-    let query = supabase
-      .from('workflow_executions')
-      .select(`
-        id,
-        workflow_id,
-        status,
-        started_at,
-        completed_at,
-        error_message,
-        workflows (name),
-        profiles (email, full_name)
-      `)
-      .order('started_at', { ascending: false })
-      .limit(50);
-
-    if (activeTab === 'org' && currentOrg) {
-      query = query.eq('org_id', currentOrg.id);
-    } else {
-      // Personal logs (where org_id is null)
-      query = query.eq('user_id', user.id).is('org_id', null);
-    }
-
-    const { data } = await query;
-    setLogs((data as any) || []);
-    setLoading(false);
-  }, [activeTab, currentOrg, user]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
 
   const formatDuration = (start: string, end: string | null) => {
     if (!end) return '—';

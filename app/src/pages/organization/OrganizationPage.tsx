@@ -2,13 +2,19 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { Loader2, Building2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Organization, Member } from '../../components/settings/types';
 import { OrgHeader } from '../../components/settings/OrgHeader';
 import { InviteMemberForm } from '../../components/settings/InviteMemberForm';
 import { MemberTable } from '../../components/settings/MemberTable';
 import { useOrganizationMembers, useUserOrganizations } from '../../hooks/queries/useOrganizations';
+import {
+    addOrganizationMember,
+    findProfileByEmail,
+    removeOrganizationMember,
+    updateOrganizationName,
+    userHasAnyMembership,
+} from '../../api/organizations';
 
 type OrganizationPageContext = {
     currentOrg: { id: string; name: string } | null;
@@ -71,12 +77,7 @@ export const OrganizationPage = () => {
         setSavingOrg(true);
         setError(null);
         try {
-            const { error: updateError } = await supabase
-                .from('organizations')
-                .update({ name: nextName })
-                .eq('id', organization.id);
-
-            if (updateError) throw updateError;
+            await updateOrganizationName(organization.id, nextName);
             queryClient.invalidateQueries({ queryKey: ['userOrganizations'] });
             setEditing(false);
         } catch (err: any) {
@@ -100,15 +101,7 @@ export const OrganizationPage = () => {
         setInviteError(null);
 
         try {
-            // Check if user exists
-            const { data: profileRows, error: profileError } = await supabase
-                .from('profiles')
-                .select('id, email, full_name')
-                .eq('email', email)
-                .limit(1);
-
-            if (profileError) throw profileError;
-            const profile = profileRows?.[0];
+            const profile = await findProfileByEmail(email);
 
             if (!profile) {
                 throw new Error('No user found with that email. Ask them to sign up first.');
@@ -120,27 +113,12 @@ export const OrganizationPage = () => {
                 throw new Error('User is already a member of this organization.');
             }
 
-            // Check if user is a member of ANY organization (Enforce Single Org)
-            const { data: existingMemberships, error: membershipError } = await supabase
-                .from('organization_members')
-                .select('id')
-                .eq('user_id', profile.id)
-                .limit(1);
-            
-            if (membershipError) throw membershipError;
-            if (existingMemberships && existingMemberships.length > 0) {
+            const alreadyInOrg = await userHasAnyMembership(profile.id);
+            if (alreadyInOrg) {
                  throw new Error('User is already a member of another organization.');
             }
 
-            const { error: insertError } = await supabase
-                .from('organization_members')
-                .insert({
-                    org_id: organization.id,
-                    user_id: profile.id,
-                    role: inviteRole,
-                });
-
-            if (insertError) throw insertError;
+            await addOrganizationMember(organization.id, profile.id, inviteRole);
 
             setInviteEmail('');
             setInviteRole('member');
@@ -159,12 +137,7 @@ export const OrganizationPage = () => {
         setRemovingId(member.id);
         setError(null);
         try {
-            const { error: deleteError } = await supabase
-                .from('organization_members')
-                .delete()
-                .eq('id', member.id);
-
-            if (deleteError) throw deleteError;
+            await removeOrganizationMember(member.id);
             await refetchMembers();
         } catch (err: any) {
             setError(err.message || 'Failed to remove member');
