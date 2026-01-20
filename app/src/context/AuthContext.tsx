@@ -1,6 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, readStoredSession } from '../lib/supabase';
+
+// Guard against a hung getSession by timing it out; fall back to null session if it stalls.
+const getSessionSafe = async (timeoutMs = 4000) => {
+  try {
+    const result = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), timeoutMs)),
+    ]);
+    return result as Awaited<ReturnType<typeof supabase.auth.getSession>>;
+  } catch (error) {
+    console.error('Auth getSession failed or timed out:', error);
+    return { data: { session: readStoredSession() }, error: error as any };
+  }
+};
 
 interface AuthContextType {
   session: Session | null;
@@ -28,15 +42,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
+        } = await getSessionSafe();
+        const effectiveSession = session ?? readStoredSession();
+        setSession(effectiveSession);
+        setUser(effectiveSession?.user ?? null);
 
-        if (session?.user) {
+        if (effectiveSession?.user) {
           const { data } = await supabase
             .from('super_admin_members')
             .select('user_id')
-            .eq('user_id', session.user.id)
+            .eq('user_id', effectiveSession.user.id)
             .maybeSingle();
           setIsSuperAdmin(!!data);
         } else {
@@ -54,14 +69,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      const nextSession = session ?? readStoredSession();
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
 
-      if (session?.user) {
+      if (nextSession?.user) {
         const { data } = await supabase
           .from('super_admin_members')
           .select('user_id')
-          .eq('user_id', session.user.id)
+          .eq('user_id', nextSession.user.id)
           .maybeSingle();
         setIsSuperAdmin(!!data);
       } else {
