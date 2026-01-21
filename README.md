@@ -32,6 +32,7 @@ Terminal 2: The Frontend Dev
     Location: W-ETL/app/ (Inside the app)
     Commands:
         npm run dev (Start React)
+        npm run dev -- --host 0.0.0.0 --port 5173 (network access)
         npm install ... (Add libraries)
 
 Apply Migrations:
