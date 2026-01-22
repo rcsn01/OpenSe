@@ -22,8 +22,11 @@ export const FilePreviewNode = ({ data, selected }: NodeProps<PreviewNodeData>) 
         minWidth={288}
         minHeight={200}
         isVisible={selected}
-        lineClassName="border-blue-500"
-        handleClassName="h-3 w-3 bg-blue-500 rounded border-none"
+        // Invisible line keeps drag target without visual clutter
+        lineClassName="border-transparent !border-[10px] opacity-100"
+        lineStyle={{ borderColor: 'transparent' }}
+        // Large, easy-to-grab handles with white border for contrast
+        handleClassName="h-5 w-5 bg-blue-500 rounded-full border-2 border-white shadow-sm"
       />
       <BaseNode
         label={data.label || 'Preview'}
