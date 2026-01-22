@@ -44,6 +44,16 @@ export const WorkflowEditorPage = () => {
   const saveMutation = useSaveWorkflow();
   const nameMutation = useUpdateWorkflowName();
 
+  // Aesthetics: Define global style for connection lines
+  const defaultEdgeOptions = useMemo(() => ({
+    type: 'smoothstep',
+    animated: true,
+    style: { 
+      strokeWidth: 3, 
+      stroke: '#64748b' // Slate-500 for high visibility
+    },
+  }), []);
+
   const paletteGroups = useMemo(() => {
     const ordered = CATEGORY_ORDER.map((category) => ({ category, nodes: nodesByCategory[category] || [] }))
       .filter((entry) => entry.nodes.length);
@@ -93,7 +103,7 @@ export const WorkflowEditorPage = () => {
   }, [workflowError]);
 
   const onConnect = useCallback((connection: Edge | Connection) => {
-    setEdges((eds) => addEdge({ ...connection, animated: true, type: 'smoothstep' }, eds));
+    setEdges((eds) => addEdge(connection, eds));
   }, [setEdges]);
 
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
@@ -428,6 +438,7 @@ export const WorkflowEditorPage = () => {
               nodes={nodes}
               edges={edges}
               nodeTypes={nodeTypes}
+              defaultEdgeOptions={defaultEdgeOptions}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
