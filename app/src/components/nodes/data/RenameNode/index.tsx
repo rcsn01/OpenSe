@@ -61,7 +61,10 @@ export const RenameNode = ({ data, selected }: NodeProps<RenameNodeData>) => {
           <Plus className="w-3 h-3" /> Add
         </button>
       </div>
-      <div className="max-h-40 overflow-y-auto space-y-2 pr-1" onWheel={(e) => e.stopPropagation()}>
+      <div
+        className="max-h-40 overflow-y-auto space-y-2 pr-1"
+        onWheelCapture={(e) => e.stopPropagation()}
+      >
         {mappings.map((m, idx) => (
           <div key={idx} className="flex items-center gap-2">
             <div className="flex-1 space-y-1">
@@ -72,7 +75,11 @@ export const RenameNode = ({ data, selected }: NodeProps<RenameNodeData>) => {
                 onChange={(e) => updateMapping(idx, 'newColumn', e.target.value)}
               />
             </div>
-            <button type="button" className="p-1 text-slate-400 hover:text-slate-600" onClick={() => removeMapping(idx)}>
+            <button
+              type="button"
+              className="p-1 text-slate-400 hover:text-slate-600"
+              onClick={() => removeMapping(idx)}
+            >
               <X className="w-3 h-3" />
             </button>
           </div>

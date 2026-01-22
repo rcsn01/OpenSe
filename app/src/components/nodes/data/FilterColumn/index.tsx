@@ -53,7 +53,10 @@ export const FilterColumn = ({ data, selected }: NodeProps<RemoveNodeData>) => {
               De-select all
             </button>
           </div>
-          <div className="max-h-32 overflow-y-auto space-y-1 pr-1" onWheel={(e) => e.stopPropagation()}>
+          <div
+            className="max-h-32 overflow-y-auto space-y-1 pr-1"
+            onWheelCapture={(e) => e.stopPropagation()}
+          >
             {available.map((field) => (
               <label key={field} className="flex items-center gap-2">
                 <input
