@@ -35,7 +35,10 @@ export const UnpivotNode = ({ data, selected }: NodeProps<UnpivotNodeData>) => {
           <div className="flex items-center justify-between text-[11px] text-slate-500">
             <span>Keep</span><span>{keep.length}</span>
           </div>
-          <div className="max-h-32 overflow-y-auto space-y-1 pr-1" onWheel={(e) => e.stopPropagation()}>
+          <div
+            className="max-h-32 overflow-y-auto space-y-1 pr-1"
+            onWheelCapture={(e) => e.stopPropagation()}
+          >
             {available.map((field) => (
               <label key={field} className="flex items-center gap-2">
                 <input
@@ -54,7 +57,10 @@ export const UnpivotNode = ({ data, selected }: NodeProps<UnpivotNodeData>) => {
           <div className="flex items-center justify-between text-[11px] text-slate-500">
             <span>Melt</span><span>{melt.length}</span>
           </div>
-          <div className="max-h-32 overflow-y-auto space-y-1 pr-1" onWheel={(e) => e.stopPropagation()}>
+          <div
+            className="max-h-32 overflow-y-auto space-y-1 pr-1"
+            onWheelCapture={(e) => e.stopPropagation()}
+          >
             {available.map((field) => (
               <label key={field} className="flex items-center gap-2">
                 <input

@@ -58,7 +58,7 @@ export const MultiPivotNode = ({ data, selected }: NodeProps<MultiPivotNodeData>
           </div>
           <div
             className="max-h-24 overflow-y-auto border border-slate-200 rounded-md bg-slate-50/50 p-1 space-y-0.5"
-            onWheel={(e) => e.stopPropagation()}
+            onWheelCapture={(e) => e.stopPropagation()}
           >
             {available.length ? (
               available.map((field) => (
@@ -90,7 +90,7 @@ export const MultiPivotNode = ({ data, selected }: NodeProps<MultiPivotNodeData>
           </div>
           <div
             className="max-h-24 overflow-y-auto border border-slate-200 rounded-md bg-slate-50/50 p-1 space-y-0.5"
-            onWheel={(e) => e.stopPropagation()}
+            onWheelCapture={(e) => e.stopPropagation()}
           >
             {available.length ? (
               available.map((field) => (
