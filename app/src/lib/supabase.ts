@@ -70,19 +70,13 @@ export const supabase =
 			persistSession: true,
 			storage: safeLocalStorage,
 			storageKey: STORAGE_KEY,
-			detectSessionInUrl: false,
+				detectSessionInUrl: true, // needed for OAuth redirects to capture the session
 		},
 	})
 
 if (!globalForSupabase._supabaseClient) {
 	globalForSupabase._supabaseClient = supabase
 }
-
-// Override getSession to use local storage directly, avoiding hangs.
-supabase.auth.getSession = async () => ({
-	data: { session: readStoredSession() },
-	error: null,
-})
 
 // Expose for console debugging so you can run `(await supabase.auth.getSession()).data.session`
 if (!globalForSupabase.supabase) {

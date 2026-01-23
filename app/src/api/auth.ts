@@ -15,6 +15,21 @@ export const signOut = async () => {
   if (error) throw error
 }
 
+// Sign in with Google OAuth (full-page redirect handled by Supabase)
+export const signInWithGoogle = async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/`,
+      queryParams: {
+        prompt: 'select_account',
+      },
+    },
+  })
+
+  if (error) throw error
+}
+
 export const fetchProfileFullName = async (userId: string) => {
   const { data, error } = await supabase.from('profiles').select('full_name').eq('id', userId).single()
   if (error) throw error
