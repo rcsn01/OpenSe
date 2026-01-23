@@ -21,14 +21,13 @@ For full legal terms, please refer to the [LICENSE](./LICENSE) file in this repo
 
 ### Development Setup
 
-Terminal 1: The Backend Admin
-
+## Local Backend Dev
     Location: W-ETL/ (Root)
     Commands:
         npx supabase start (Start DB)
         npx supabase stop (Stop DB)
         npx supabase status (Check keys)
-Terminal 2: The Frontend Dev
+## Frontend Dev
     Location: W-ETL/app/ (Inside the app)
     Commands:
         npm run dev (Start React)
@@ -39,7 +38,13 @@ Apply Migrations:
     npx supabase migration up
 
 Reset Migrations:
+    npx supabase db reset --linked
     npx supabase db reset
+
 
 Running seeding
     npx ts-node scripts/seed.ts
+
+Push to Supabase server
+
+    npx supabase db push
