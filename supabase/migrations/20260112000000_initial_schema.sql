@@ -67,6 +67,10 @@ create table if not exists public.workflow_executions (
 );
 create index if not exists workflow_executions_org_idx on public.workflow_executions(org_id);
 create index if not exists workflow_executions_user_idx on public.workflow_executions(user_id);
+create index if not exists workflow_executions_workflow_idx on public.workflow_executions(workflow_id);
+
+-- Covering index for organizations.owner_id FK
+create index if not exists organizations_owner_idx on public.organizations(owner_id);
 
 -- Enable RLS (policies are defined in later migration)
 alter table if exists public.profiles enable row level security;

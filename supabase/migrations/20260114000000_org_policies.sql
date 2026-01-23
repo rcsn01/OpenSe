@@ -6,7 +6,7 @@ drop policy if exists "Profiles are viewable by authenticated users" on public.p
 drop policy if exists "Users can update own profile" on public.profiles;
 
 create policy "profiles_select_authenticated" on public.profiles
-for select using (auth.role() = 'authenticated');
+for select using ((select auth.role()) = 'authenticated');
 
 create policy "profiles_update_self" on public.profiles
 for update using ((select auth.uid()) = id);
@@ -101,7 +101,7 @@ for select using (
     where om.org_id = public.workflows.org_id
       and om.user_id = (select auth.uid())
   )
-  or (is_template = true and auth.role() = 'authenticated')
+  or (is_template = true and (select auth.role()) = 'authenticated')
 );
 
 create policy "workflows_insert_owner_only" on public.workflows
