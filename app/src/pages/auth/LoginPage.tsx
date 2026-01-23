@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signIn } from '../../api/auth';
+import { signIn, signInWithGoogle } from '../../api/auth';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -22,6 +22,17 @@ export const LoginPage = () => {
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await signInWithGoogle();
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in with Google');
       setLoading(false);
     }
   };
@@ -118,15 +129,17 @@ export const LoginPage = () => {
 
         <div className="mt-6 grid grid-cols-1 gap-3">
           <div>
-            <a
-              href="#"
-              className="w-full inline-flex justify-center py-2 px-4 border border-slate-300 rounded-md shadow-sm bg-white text-sm font-medium text-slate-500 hover:bg-slate-50"
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full inline-flex justify-center py-2 px-4 border border-slate-300 rounded-md shadow-sm bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
               <span className="sr-only">Sign in with Google</span>
               <svg className="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.813.96 6.493 2.507l2.56-2.56C19.093 1.253 16.133 0 12.48 0 5.867 0 .533 5.333.533 12S5.867 24 12.48 24c3.44 0 6.027-1.133 7.827-2.96 1.867-1.867 2.44-4.573 2.44-6.653 0-.613-.053-1.187-.147-1.72h-10.12z" />
               </svg>
-            </a>
+            </button>
           </div>
         </div>
       </div>
