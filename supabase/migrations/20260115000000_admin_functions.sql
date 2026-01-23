@@ -1,4 +1,6 @@
--- Enable pgcrypto for password hashing
+-- CATEGORY: Admin-only RPCs (super admin gated)
+-- Uses helper public.is_app_super_admin() defined in 20260113000000_add_user_trigger.sql
+
 create extension if not exists pgcrypto;
 
 -- 1. RPC to Create a User (Admin Only)
