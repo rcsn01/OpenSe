@@ -41,10 +41,8 @@ Reset Migrations:
     npx supabase db reset --linked
     npx supabase db reset
 
-
 Running seeding
     npx ts-node scripts/seed.ts
 
 Push to Supabase server
-
     npx supabase db push
