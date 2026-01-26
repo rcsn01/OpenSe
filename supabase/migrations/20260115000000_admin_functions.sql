@@ -121,3 +121,5 @@ $$;
 
 revoke all on function public.delete_user_admin(target_user_id uuid) from public;
 grant execute on function public.delete_user_admin(target_user_id uuid) to authenticated;
+
+-- Grant super admins the ability to read/control the data they manage
