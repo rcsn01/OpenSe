@@ -14,7 +14,7 @@ import { RegisterPage } from './pages/auth/RegisterPage';
 import { GodModePage } from './pages/auth/GodModePage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { WorkflowEditorPage } from './pages/editor/WorkflowEditorPage';
-import { OrganizationPage } from './pages/organization/OrganizationPage'; // New Import
+import { OrganizationPage } from './pages/organisation/OrganisationPage'; // New Import
 import { UserSettingsPage } from './pages/settings/UserSettingsPage';
 import { SuperAdminPage } from './pages/admin/SuperAdminPage';
 import { SystemCheck } from './components/guards/SystemCheck';
