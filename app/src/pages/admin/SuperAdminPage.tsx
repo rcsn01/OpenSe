@@ -32,7 +32,7 @@ export const SuperAdminPage = () => {
     const [deletingOrgId, setDeletingOrgId] = useState<string | null>(null);
     const [renaming, setRenaming] = useState<Record<string, string>>({});
     const [ownerChange, setOwnerChange] = useState<Record<string, string>>({});
-    const [memberInvite, setMemberInvite] = useState<Record<string, { email: string; role: 'admin' | 'member' }>>({});
+    const [memberInvite, setMemberInvite] = useState<Record<string, { email: string; role: 'admin' | 'editor' | 'member' }>>({});
     const [orgActionMsg, setOrgActionMsg] = useState<string | null>(null);
 
     const [managingMembersOrg, setManagingMembersOrg] = useState<OrgRow | null>(null);

@@ -8,7 +8,7 @@ export type Organization = {
 export type Member = {
   id: string;
   user_id: string;
-  role: 'admin' | 'member';
+  role: 'admin' | 'editor' | 'member';
   profiles?: {
     email: string | null;
     full_name: string | null;

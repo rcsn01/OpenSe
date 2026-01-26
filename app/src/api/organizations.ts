@@ -24,7 +24,11 @@ export const userHasAnyMembership = async (userId: string) => {
   return (data?.length ?? 0) > 0
 }
 
-export const addOrganizationMember = async (orgId: string, userId: string, role: 'admin' | 'member') => {
+export const addOrganizationMember = async (
+  orgId: string,
+  userId: string,
+  role: 'admin' | 'editor' | 'member'
+) => {
   const { error } = await supabase.from('organization_members').insert({ org_id: orgId, user_id: userId, role })
   if (error) throw error
 }

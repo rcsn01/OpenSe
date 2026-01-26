@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { Loader2, Building2 } from 'lucide-react';
+import { Building2, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
-import { Organization, Member } from '../../components/settings/types';
+import { Member } from '../../components/settings/types';
 import { OrgHeader } from '../../components/settings/OrgHeader';
 import { InviteMemberForm } from '../../components/settings/InviteMemberForm';
 import { MemberTable } from '../../components/settings/MemberTable';
@@ -15,9 +15,10 @@ import {
     updateOrganizationName,
     userHasAnyMembership,
 } from '../../api/organizations';
+import { OrgSimple } from '../../types/organization';
 
 type OrganizationPageContext = {
-    currentOrg: { id: string; name: string } | null;
+    currentOrg: OrgSimple | null;
 };
 
 export const OrganizationPage = () => {
@@ -26,60 +27,53 @@ export const OrganizationPage = () => {
     const queryClient = useQueryClient();
 
     const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
-    const organization = userOrgs?.find((o) => o.id === contextOrg?.id) as (Organization | undefined);
+    const organization = contextOrg ?? userOrgs[0] ?? null;
 
-    const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useOrganizationMembers(organization?.id);
+    const {
+        data: members = [],
+        isLoading: membersLoading,
+        refetch: refetchMembers,
+    } = useOrganizationMembers(organization?.id);
 
-    const [membershipRole, setMembershipRole] = useState<'owner' | 'admin' | 'member' | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
-    // Edit State
     const [editing, setEditing] = useState(false);
     const [orgNameInput, setOrgNameInput] = useState('');
     const [savingOrg, setSavingOrg] = useState(false);
-
-    // Invite State
     const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
+    const [inviteRole, setInviteRole] = useState<'admin' | 'editor' | 'member'>('member');
     const [inviting, setInviting] = useState(false);
     const [inviteError, setInviteError] = useState<string | null>(null);
-
-    // Member Management State
+    const [error, setError] = useState<string | null>(null);
     const [removingId, setRemovingId] = useState<string | null>(null);
-
-    const canManage = membershipRole === 'owner' || membershipRole === 'admin';
+    const [activeTab, setActiveTab] = useState<'team' | 'payments'>('team');
 
     useEffect(() => {
-        if (!organization || !user) {
-            setMembershipRole(null);
-            setOrgNameInput('');
-            return;
+        if (organization?.name) {
+            setOrgNameInput(organization.name);
         }
+    }, [organization?.name]);
 
-        if (organization.owner_id === user.id) {
-            setMembershipRole('owner');
-        } else {
-            const memberRecord = members.find((m) => m.user_id === user.id);
-            setMembershipRole((memberRecord?.role as 'admin' | 'member' | null) ?? 'member');
-        }
-        setOrgNameInput(organization.name);
+    const membershipRole = useMemo(() => {
+        if (!organization || !user) return null;
+        if (organization.owner_id === user.id) return 'owner';
+        const member = members.find((m) => m.user_id === user.id);
+        return member?.role ?? 'member';
     }, [organization, user, members]);
+
+    const isOwner = membershipRole === 'owner';
+    const canManageTeam = isOwner || membershipRole === 'admin';
 
     const handleUpdateOrg = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!organization) return;
         const nextName = orgNameInput.trim();
-        if (!nextName) {
-            setError('Organization name cannot be empty');
-            return;
-        }
+        if (!nextName) return;
 
         setSavingOrg(true);
         setError(null);
         try {
             await updateOrganizationName(organization.id, nextName);
-            queryClient.invalidateQueries({ queryKey: ['userOrganizations'] });
             setEditing(false);
+            queryClient.invalidateQueries({ queryKey: ['userOrganizations', user?.id] });
         } catch (err: any) {
             setError(err.message || 'Failed to update organization');
         } finally {
@@ -107,7 +101,6 @@ export const OrganizationPage = () => {
                 throw new Error('No user found with that email. Ask them to sign up first.');
             }
 
-            // Check if user is already a member of THIS organization
             const alreadyMember = members.some((m) => m.user_id === profile.id);
             if (alreadyMember) {
                 throw new Error('User is already a member of this organization.');
@@ -115,7 +108,7 @@ export const OrganizationPage = () => {
 
             const alreadyInOrg = await userHasAnyMembership(profile.id);
             if (alreadyInOrg) {
-                 throw new Error('User is already a member of another organization.');
+                throw new Error('User is already a member of another organization.');
             }
 
             await addOrganizationMember(organization.id, profile.id, inviteRole);
@@ -172,9 +165,7 @@ export const OrganizationPage = () => {
                         <Building2 className="w-6 h-6 text-slate-400" />
                     </div>
                     <h1 className="text-xl font-semibold text-slate-900 mb-2">No Organization Found</h1>
-                    <p className="text-sm text-slate-500 mb-4">
-                        You are not currently a member of any organization.
-                    </p>
+                    <p className="text-sm text-slate-500 mb-4">You are not currently a member of any organization.</p>
                     {isSuperAdmin && (
                         <div className="mt-6 border-t border-slate-100 pt-6">
                             <Link to="/admin" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
@@ -200,7 +191,7 @@ export const OrganizationPage = () => {
                 membershipRole={membershipRole}
                 membersCount={members.length}
                 initialLetter={initialLetter}
-                canManage={canManage}
+                canManage={canManageTeam}
                 editing={editing}
                 orgNameInput={orgNameInput}
                 savingOrg={savingOrg}
@@ -209,38 +200,74 @@ export const OrganizationPage = () => {
                 onSubmit={handleUpdateOrg}
             />
 
-            {canManage && (
-                <InviteMemberForm
-                    inviteEmail={inviteEmail}
-                    inviteRole={inviteRole}
-                    inviting={inviting}
-                    inviteError={inviteError}
-                    onInviteEmailChange={setInviteEmail}
-                    onInviteRoleChange={setInviteRole}
-                    onSubmit={handleInvite}
-                />
-            )}
+            <div className="border-b border-slate-200">
+                <nav className="-mb-px flex space-x-8">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('team')}
+                        className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                            activeTab === 'team' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500'
+                        }`}
+                    >
+                        Team
+                    </button>
+                    {isOwner && (
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('payments')}
+                            className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                                activeTab === 'payments' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500'
+                            }`}
+                        >
+                            Payments
+                        </button>
+                    )}
+                </nav>
+            </div>
 
-            <div>
-                <div className="flex items-center justify-between mb-6">
+            {activeTab === 'team' && (
+                <div className="space-y-6">
+                    {canManageTeam && (
+                        <InviteMemberForm
+                            inviteEmail={inviteEmail}
+                            inviteRole={inviteRole}
+                            inviting={inviting}
+                            inviteError={inviteError}
+                            onInviteEmailChange={setInviteEmail}
+                            onInviteRoleChange={setInviteRole}
+                            onSubmit={handleInvite}
+                        />
+                    )}
+
                     <div>
-                        <h2 className="text-lg font-semibold text-slate-900">Team Members</h2>
-                        <p className="text-sm text-slate-500">
-                            {canManage 
-                                ? "Manage who has access to your organization's workflows." 
-                                : "View members of this organization."}
-                        </p>
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-900">Team Members</h2>
+                                <p className="text-sm text-slate-500">
+                                    {canManageTeam
+                                        ? "Manage who has access to your organization's workflows."
+                                        : 'View members of this organization.'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <MemberTable
+                            members={members}
+                            organization={organization}
+                            canManage={canManageTeam}
+                            removingId={removingId}
+                            onRemove={handleRemoveMember}
+                        />
                     </div>
                 </div>
+            )}
 
-                <MemberTable
-                    members={members}
-                    organization={organization}
-                    canManage={canManage}
-                    removingId={removingId}
-                    onRemove={handleRemoveMember}
-                />
-            </div>
+            {activeTab === 'payments' && isOwner && (
+                <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                    <h2 className="text-lg font-semibold mb-4">Subscription Management</h2>
+                    <p className="text-slate-600">This section is visible to owners only.</p>
+                </div>
+            )}
         </div>
     );
 };
