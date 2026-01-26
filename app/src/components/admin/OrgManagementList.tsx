@@ -135,12 +135,12 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
       {/* Header & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Organizations</h2>
-          <p className="text-sm text-slate-500">Manage {orgs.length} registered organizations</p>
+          <h2 className="text-lg font-semibold text-slate-900">Organisations</h2>
+          <p className="text-sm text-slate-500">Manage {orgs.length} registered organisations</p>
         </div>
         <div className="w-full sm:w-72">
           <Input
-            placeholder="Search organizations..."
+            placeholder="Search organisations..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             prefix={<Search className="w-4 h-4" />}
@@ -161,7 +161,7 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50/80">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Organization</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Organisation</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Owner</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Members</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</th>
@@ -179,7 +179,7 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
               ) : filteredOrgs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                    No organizations found matching "{searchTerm}"
+                    No organisations found matching "{searchTerm}"
                   </td>
                 </tr>
               ) : (
@@ -246,7 +246,7 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
                         <button
                           onClick={() => openDelete(org)}
                           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete Organization"
+                          title="Delete Organisation"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -336,12 +336,12 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
         <div className="space-y-6">
           {/* Rename Section */}
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">Rename Organization</h4>
+            <h4 className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">Rename Organisation</h4>
             <div className="flex gap-2">
               <Input 
                 value={activeOrg ? (renaming[activeOrg.id] || '') : ''}
                 onChange={(e) => activeOrg && onRenameChange(activeOrg.id, e.target.value)}
-                placeholder="New organization name"
+                placeholder="New organisation name"
               />
               <Button 
                 variant="secondary"
@@ -383,14 +383,14 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
         title={
           <div className="flex items-center gap-2 text-red-600">
             <AlertTriangle className="w-5 h-5" />
-            <span>Delete Organization</span>
+            <span>Delete Organisation</span>
           </div>
         }
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
             Are you sure you want to delete <span className="font-semibold text-slate-900">{activeOrg?.name}</span>? 
-            This action cannot be undone and will remove all workflows and members associated with this organization.
+            This action cannot be undone and will remove all workflows and members associated with this organisation.
           </p>
           
           <div className="flex justify-end gap-3 pt-2">

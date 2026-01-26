@@ -10,13 +10,13 @@ import { Member } from '../../components/settings/types';
 import { useAdminOrgs } from '../../hooks/queries/useAdmin';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-    changeOrganizationOwner,
-    createOrganizationWithOwner,
-    deleteOrganization,
-    deleteOrganizationMember,
-    inviteMemberToOrganization,
-    loadOrganizationMembers,
-    renameOrganization,
+    changeOrganisationOwner,
+    createOrganisationWithOwner,
+    deleteOrganisation,
+    deleteOrganisationMember,
+    inviteMemberToOrganisation,
+    loadOrganisationMembers,
+    renameOrganisation,
 } from '../../api/admin';
 
 export const SuperAdminPage = () => {
@@ -54,7 +54,7 @@ export const SuperAdminPage = () => {
     }, [orgsError, orgs]);
 
     const loadOrgMembers = async (orgId: string) => {
-        const data = await loadOrganizationMembers(orgId);
+        const data = await loadOrganisationMembers(orgId);
         setCurrentOrgMembers(data as Member[]);
     };
 
@@ -67,7 +67,7 @@ export const SuperAdminPage = () => {
         if (!managingMembersOrg) return;
         setRemovingMemberId(member.id);
         try {
-            await deleteOrganizationMember(member.id);
+            await deleteOrganisationMember(member.id);
             await loadOrgMembers(managingMembersOrg.id);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (error) {
@@ -83,8 +83,8 @@ export const SuperAdminPage = () => {
         setMessage(null);
 
         try {
-            const org = await createOrganizationWithOwner(orgName, ownerEmail);
-            setMessage({ type: 'success', text: `Organization "${orgName}" created.` });
+            const org = await createOrganisationWithOwner(orgName, ownerEmail);
+            setMessage({ type: 'success', text: `Organisation "${orgName}" created.` });
             setOrgName('');
             setOwnerEmail('');
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
@@ -99,7 +99,7 @@ export const SuperAdminPage = () => {
         const nextName = (renaming[orgId] || '').trim();
         if (!nextName) return;
         try {
-            await renameOrganization(orgId, nextName);
+            await renameOrganisation(orgId, nextName);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
@@ -110,7 +110,7 @@ export const SuperAdminPage = () => {
         const email = (ownerChange[orgId] || '').trim().toLowerCase();
         if (!email) return;
         try {
-            await changeOrganizationOwner(orgId, email);
+            await changeOrganisationOwner(orgId, email);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
@@ -121,7 +121,7 @@ export const SuperAdminPage = () => {
         const payload = memberInvite[orgId];
         if (!payload?.email) return;
         try {
-            await inviteMemberToOrganization(orgId, payload.email, payload.role);
+            await inviteMemberToOrganisation(orgId, payload.email, payload.role);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
@@ -131,7 +131,7 @@ export const SuperAdminPage = () => {
     const handleDeleteOrg = async (orgId: string) => {
         setDeletingOrgId(orgId);
         try {
-            await deleteOrganization(orgId);
+            await deleteOrganisation(orgId);
             queryClient.invalidateQueries({ queryKey: ['adminOrgs'] });
         } catch (err: any) {
             setOrgActionMsg(err.message);
@@ -156,7 +156,7 @@ export const SuperAdminPage = () => {
                         )}
                     >
                         <Building2 className="w-4 h-4" />
-                        Organizations
+                        Organisations
                     </button>
                     <button
                         onClick={() => setActiveTab('users')}
@@ -224,7 +224,7 @@ export const SuperAdminPage = () => {
                         <div className="p-6 overflow-y-auto">
                             <MemberTable
                                 members={currentOrgMembers}
-                                organization={{ id: managingMembersOrg.id, name: managingMembersOrg.name, owner_id: '', created_at: '' }}
+                                organisation={{ id: managingMembersOrg.id, name: managingMembersOrg.name, owner_id: '', created_at: '' }}
                                 canManage
                                 removingId={removingMemberId}
                                 onRemove={handleRemoveMember}

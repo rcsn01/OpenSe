@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '../context/AuthContext';
-import { OrgSimple, useUserOrganizations } from '../hooks/queries/useOrganizations';
+import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations';
 import { signOut } from '../api/auth';
 
 export const AppLayout = () => {
@@ -24,7 +24,7 @@ export const AppLayout = () => {
 
   // Org State
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null);
-  const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
+  const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganisations(user?.id);
 
   const handleSignOut = async () => {
     try {
@@ -56,7 +56,7 @@ export const AppLayout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Gallery', href: '/gallery', icon: LayoutTemplate },
-    { name: 'Organization', href: '/organization', icon: Building2 },
+    { name: 'Organisation', href: '/organisation', icon: Building2 },
     { name: 'Activity', href: '/activity', icon: Activity },
   ];
 
@@ -68,7 +68,7 @@ export const AppLayout = () => {
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          {/* Organization Display (No Switcher) */}
+          {/* Organisation Display (No Switcher) */}
           {currentOrg ? (
             <div className="p-4 bg-slate-950">
               <div className="flex items-center w-full px-3 py-2 text-sm font-medium text-white bg-slate-800 rounded-md shadow-sm border border-slate-700">
@@ -83,7 +83,7 @@ export const AppLayout = () => {
           ) : (
             <div className="p-4 bg-slate-950">
                <div className="px-3 py-2 text-xs text-slate-500 text-center border border-dashed border-slate-700 rounded-md">
-                 No Organization
+                 No Organisation
                </div>
             </div>
           )}

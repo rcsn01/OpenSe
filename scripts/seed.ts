@@ -53,11 +53,11 @@ async function seed() {
     userMap[u.email] = userId;
   }
 
-  // 2. Create Organizations
+  // 2. Create Organisations
   // Note: We use the 'public' schema now, assuming RLS allows insert or we are bypassing it.
   // Ideally, use the service role key to insert directly into DB via Supabase client.
   
-  console.log('Buildings Organizations...');
+  console.log('Buildings Organisations...');
 
   const orgs = [
     { name: 'Organisation 1', ownerEmail: 'admin1@gmail.com', members: ['user1@gmail.com'] },
@@ -71,7 +71,7 @@ async function seed() {
 
     // Insert Org
     const { data: orgData, error: orgError } = await supabase
-      .from('organizations')
+      .from('organisations')
       .insert({ name: org.name, owner_id: ownerId })
       .select()
       .single();
@@ -84,7 +84,7 @@ async function seed() {
     const orgId = orgData.id;
 
     // Add Owner as Admin member
-    await supabase.from('organization_members').insert({
+    await supabase.from('organisation_members').insert({
       org_id: orgId,
       user_id: ownerId,
       role: 'admin',
@@ -94,7 +94,7 @@ async function seed() {
     for (const memberEmail of org.members) {
       const memberId = userMap[memberEmail];
       if (memberId) {
-        await supabase.from('organization_members').insert({
+        await supabase.from('organisation_members').insert({
           org_id: orgId,
           user_id: memberId,
           role: 'member',

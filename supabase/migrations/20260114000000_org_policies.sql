@@ -11,45 +11,45 @@ for select using ((select auth.role()) = 'authenticated');
 create policy "profiles_update_self" on public.profiles
 for update using ((select auth.uid()) = id);
 
--- ORGANIZATIONS
-drop policy if exists "Organizations are viewable by owners or members" on public.organizations;
-drop policy if exists "Organizations can be inserted by owner" on public.organizations;
-drop policy if exists "Organizations can be inserted by super admin" on public.organizations;
-drop policy if exists "Organizations can be updated by owner or super admin" on public.organizations;
-drop policy if exists "Organizations can be updated by owner, admin, or super admin" on public.organizations;
-drop policy if exists "Organizations can be deleted by owner or super admin" on public.organizations;
+-- ORGANISATIONS
+drop policy if exists "Organisations are viewable by owners or members" on public.organisations;
+drop policy if exists "Organisations can be inserted by owner" on public.organisations;
+drop policy if exists "Organisations can be inserted by super admin" on public.organisations;
+drop policy if exists "Organisations can be updated by owner or super admin" on public.organisations;
+drop policy if exists "Organisations can be updated by owner, admin, or super admin" on public.organisations;
+drop policy if exists "Organisations can be deleted by owner or super admin" on public.organisations;
 
-create policy "organizations_select_unified" on public.organizations
+create policy "organisations_select_unified" on public.organisations
 for select using (
   owner_id = (select auth.uid())
   or public.is_org_member(id, (select auth.uid()))
   or public.is_app_super_admin()
 );
 
-create policy "organizations_insert_super_admin" on public.organizations
+create policy "organisations_insert_super_admin" on public.organisations
 for insert with check (public.is_app_super_admin());
 
-create policy "organizations_update_unified" on public.organizations
+create policy "organisations_update_unified" on public.organisations
 for update using (
   owner_id = (select auth.uid())
   or public.is_org_admin(id, (select auth.uid()))
   or public.is_app_super_admin()
 );
 
-create policy "organizations_delete_owner_or_super" on public.organizations
+create policy "organisations_delete_owner_or_super" on public.organisations
 for delete using (
   owner_id = (select auth.uid())
   or public.is_app_super_admin()
 );
 
--- ORGANIZATION MEMBERS
-drop policy if exists "Organization members are viewable by members" on public.organization_members;
-drop policy if exists "Organization members can be inserted by owner or admin" on public.organization_members;
-drop policy if exists "Organization members can be inserted by owner, admin, or super admin" on public.organization_members;
-drop policy if exists "Organization members can be updated by owner or admin" on public.organization_members;
-drop policy if exists "Organization members can be deleted by owner or admin" on public.organization_members;
+-- ORGANISATION MEMBERS
+drop policy if exists "Organisation members are viewable by members" on public.organisation_members;
+drop policy if exists "Organisation members can be inserted by owner or admin" on public.organisation_members;
+drop policy if exists "Organisation members can be inserted by owner, admin, or super admin" on public.organisation_members;
+drop policy if exists "Organisation members can be updated by owner or admin" on public.organisation_members;
+drop policy if exists "Organisation members can be deleted by owner or admin" on public.organisation_members;
 
-create policy "org_members_select_unified" on public.organization_members
+create policy "org_members_select_unified" on public.organisation_members
 for select using (
   user_id = (select auth.uid())
   or public.is_org_owner(org_id, (select auth.uid()))
@@ -57,21 +57,21 @@ for select using (
   or public.is_app_super_admin()
 );
 
-create policy "org_members_insert_unified" on public.organization_members
+create policy "org_members_insert_unified" on public.organisation_members
 for insert with check (
   public.is_org_owner(org_id, (select auth.uid()))
   or public.is_org_admin(org_id, (select auth.uid()))
   or public.is_app_super_admin()
 );
 
-create policy "org_members_update_unified" on public.organization_members
+create policy "org_members_update_unified" on public.organisation_members
 for update using (
   public.is_org_owner(org_id, (select auth.uid()))
   or public.is_org_admin(org_id, (select auth.uid()))
   or public.is_app_super_admin()
 );
 
-create policy "org_members_delete_unified" on public.organization_members
+create policy "org_members_delete_unified" on public.organisation_members
 for delete using (
   (
     public.is_org_owner(org_id, (select auth.uid()))
@@ -79,9 +79,9 @@ for delete using (
     or public.is_app_super_admin()
   )
   and not exists (
-    select 1 from public.organizations o
-    where o.id = organization_members.org_id
-      and o.owner_id = organization_members.user_id
+    select 1 from public.organisations o
+    where o.id = organisation_members.org_id
+      and o.owner_id = organisation_members.user_id
   )
 );
 
@@ -97,7 +97,7 @@ create policy "workflows_select_unified" on public.workflows
 for select using (
   (org_id is null and owner_id = (select auth.uid()))
   or exists (
-    select 1 from public.organization_members om
+    select 1 from public.organisation_members om
     where om.org_id = public.workflows.org_id
       and om.user_id = (select auth.uid())
   )
@@ -111,7 +111,7 @@ create policy "workflows_update_owner_or_member" on public.workflows
 for update using (
   (select auth.uid()) = owner_id
   or exists (
-    select 1 from public.organization_members om
+    select 1 from public.organisation_members om
     where om.org_id = public.workflows.org_id
       and om.user_id = (select auth.uid())
   )
@@ -121,7 +121,7 @@ create policy "workflows_delete_owner_or_member" on public.workflows
 for delete using (
   (select auth.uid()) = owner_id
   or exists (
-    select 1 from public.organization_members om
+    select 1 from public.organisation_members om
     where om.org_id = public.workflows.org_id
       and om.user_id = (select auth.uid())
   )
@@ -136,7 +136,7 @@ create policy "workflow_executions_select_unified" on public.workflow_executions
 for select using (
   (select auth.uid()) = user_id
   or exists (
-    select 1 from public.organization_members om
+    select 1 from public.organisation_members om
     where om.org_id = public.workflow_executions.org_id
       and om.user_id = (select auth.uid())
   )

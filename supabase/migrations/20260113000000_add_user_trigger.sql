@@ -13,7 +13,7 @@ $$;
 create or replace function public.is_org_owner(p_org_id uuid, p_user_id uuid)
 returns boolean language sql security definer set search_path = public as $$
   select exists (
-    select 1 from public.organizations
+    select 1 from public.organisations
     where id = p_org_id and owner_id = p_user_id
   );
 $$;
@@ -21,7 +21,7 @@ $$;
 create or replace function public.is_org_member(p_org_id uuid, p_user_id uuid)
 returns boolean language sql security definer set search_path = public as $$
   select exists (
-    select 1 from public.organization_members
+    select 1 from public.organisation_members
     where org_id = p_org_id and user_id = p_user_id
   );
 $$;
@@ -29,7 +29,7 @@ $$;
 create or replace function public.is_org_admin(p_org_id uuid, p_user_id uuid)
 returns boolean language sql security definer set search_path = public as $$
   select exists (
-    select 1 from public.organization_members
+    select 1 from public.organisation_members
     where org_id = p_org_id and user_id = p_user_id and role = 'admin'
   );
 $$;

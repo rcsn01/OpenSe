@@ -1,4 +1,4 @@
-export type Organization = {
+export type Organisation = {
   id: string;
   name: string;
   owner_id: string;

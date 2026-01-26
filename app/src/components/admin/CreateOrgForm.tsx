@@ -38,7 +38,7 @@ export const CreateOrgForm: React.FC<CreateOrgFormProps> = ({
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700">Organization Name</label>
+          <label className="block text-sm font-medium text-slate-700">Organisation Name</label>
           <input
             type="text"
             required
@@ -67,7 +67,7 @@ export const CreateOrgForm: React.FC<CreateOrgFormProps> = ({
           disabled={loading}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
         >
-          {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Create & Assign Organization'}
+          {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Create & Assign Organisation'}
         </button>
       </form>
     </div>

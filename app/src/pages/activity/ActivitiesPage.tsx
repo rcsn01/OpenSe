@@ -30,7 +30,7 @@ export const ActivitiesPage = () => {
   const orgIdForTab = activeTab === 'org' ? currentOrg?.id ?? null : null;
   const { data: logs = [], isLoading: loading } = useExecutionLogs(user?.id, orgIdForTab);
 
-  // Automatically switch tab if organization context changes
+  // Automatically switch tab if organisation context changes
   useEffect(() => {
     if (currentOrg) {
       setActiveTab('org');

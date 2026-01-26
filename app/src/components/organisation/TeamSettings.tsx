@@ -1,11 +1,11 @@
 import React from 'react';
 import { Users, UserPlus } from 'lucide-react';
-import { Member, Organization } from '../settings/types';
+import { Member, Organisation } from '../settings/types';
 import { InviteMemberForm } from '../settings/InviteMemberForm';
 import { MemberTable } from '../settings/MemberTable';
 
 type TeamSettingsProps = {
-  organization: Organization;
+  organisation: Organisation;
   members: Member[];
   canManageTeam: boolean;
   inviteEmail: string;
@@ -20,7 +20,7 @@ type TeamSettingsProps = {
 };
 
 export const TeamSettings: React.FC<TeamSettingsProps> = ({
-  organization,
+  organisation,
   members,
   canManageTeam,
   inviteEmail,
@@ -64,7 +64,7 @@ export const TeamSettings: React.FC<TeamSettingsProps> = ({
         
         <MemberTable
           members={members}
-          organization={organization}
+          organisation={organisation}
           canManage={canManageTeam}
           removingId={removingId}
           onRemove={onRemoveMember}
