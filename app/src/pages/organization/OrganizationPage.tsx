@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { Building2, Loader2 } from 'lucide-react';
+import { Building2, Loader2, Users, CreditCard } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { Member } from '../../components/settings/types';
 import { OrgHeader } from '../../components/settings/OrgHeader';
-import { InviteMemberForm } from '../../components/settings/InviteMemberForm';
-import { MemberTable } from '../../components/settings/MemberTable';
+import { TeamSettings } from '../../components/organization/TeamSettings';
+import { PaymentSettings } from '../../components/organization/PaymentSettings';
 import { useOrganizationMembers, useUserOrganizations } from '../../hooks/queries/useOrganizations';
 import {
     addOrganizationMember,
@@ -16,10 +16,9 @@ import {
     userHasAnyMembership,
 } from '../../api/organizations';
 import { OrgSimple } from '../../types/organization';
+import clsx from 'clsx';
 
-type OrganizationPageContext = {
-    currentOrg: OrgSimple | null;
-};
+type OrganizationPageContext = { currentOrg: OrgSimple | null; };
 
 export const OrganizationPage = () => {
     const { user, isSuperAdmin } = useAuth();
@@ -29,12 +28,10 @@ export const OrganizationPage = () => {
     const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
     const organization = contextOrg ?? userOrgs[0] ?? null;
 
-    const {
-        data: members = [],
-        isLoading: membersLoading,
-        refetch: refetchMembers,
-    } = useOrganizationMembers(organization?.id);
+    const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useOrganizationMembers(organization?.id);
 
+    // Form/UI States
+    const [activeTab, setActiveTab] = useState<'team' | 'payments'>('team');
     const [editing, setEditing] = useState(false);
     const [orgNameInput, setOrgNameInput] = useState('');
     const [savingOrg, setSavingOrg] = useState(false);
@@ -44,38 +41,34 @@ export const OrganizationPage = () => {
     const [inviteError, setInviteError] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [removingId, setRemovingId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'team' | 'payments'>('team');
 
-    useEffect(() => {
-        if (organization?.name) {
-            setOrgNameInput(organization.name);
-        }
-    }, [organization?.name]);
+    useEffect(() => { if (organization?.name) setOrgNameInput(organization.name); }, [organization?.name]);
 
     const membershipRole = useMemo(() => {
         if (!organization || !user) return null;
         if (organization.owner_id === user.id) return 'owner';
-        const member = members.find((m) => m.user_id === user.id);
-        return member?.role ?? 'member';
+        return members.find((m) => m.user_id === user.id)?.role ?? 'member';
     }, [organization, user, members]);
 
-    const isOwner = membershipRole === 'owner';
-    const canManageTeam = isOwner || membershipRole === 'admin';
+    const canManageTeam = membershipRole === 'owner' || membershipRole === 'admin';
 
     const handleUpdateOrg = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!organization) return;
         const nextName = orgNameInput.trim();
-        if (!nextName) return;
+        if (!nextName || nextName === organization.name) {
+            setEditing(false);
+            return;
+        }
 
         setSavingOrg(true);
         setError(null);
         try {
             await updateOrganizationName(organization.id, nextName);
+            await queryClient.invalidateQueries({ queryKey: ['userOrganizations', user?.id] });
             setEditing(false);
-            queryClient.invalidateQueries({ queryKey: ['userOrganizations', user?.id] });
         } catch (err: any) {
-            setError(err.message || 'Failed to update organization');
+            setError(err?.message ?? 'Failed to update organization.');
         } finally {
             setSavingOrg(false);
         }
@@ -86,38 +79,30 @@ export const OrganizationPage = () => {
         if (!organization) return;
 
         const email = inviteEmail.trim().toLowerCase();
-        if (!email) {
-            setInviteError('Email is required');
-            return;
-        }
+        if (!email) return;
 
         setInviting(true);
         setInviteError(null);
-
         try {
             const profile = await findProfileByEmail(email);
-
             if (!profile) {
-                throw new Error('No user found with that email. Ask them to sign up first.');
+                setInviteError('User not found. Please ask them to sign up first.');
+                return;
             }
 
-            const alreadyMember = members.some((m) => m.user_id === profile.id);
+            const alreadyMember = await userHasAnyMembership(profile.id);
             if (alreadyMember) {
-                throw new Error('User is already a member of this organization.');
-            }
-
-            const alreadyInOrg = await userHasAnyMembership(profile.id);
-            if (alreadyInOrg) {
-                throw new Error('User is already a member of another organization.');
+                setInviteError('User is already assigned to an organization.');
+                return;
             }
 
             await addOrganizationMember(organization.id, profile.id, inviteRole);
-
             setInviteEmail('');
             setInviteRole('member');
             await refetchMembers();
+            queryClient.invalidateQueries({ queryKey: ['userOrganizations', user?.id] });
         } catch (err: any) {
-            setInviteError(err.message || 'Failed to invite member');
+            setInviteError(err?.message ?? 'Failed to invite member.');
         } finally {
             setInviting(false);
         }
@@ -132,46 +117,33 @@ export const OrganizationPage = () => {
         try {
             await removeOrganizationMember(member.id);
             await refetchMembers();
+            queryClient.invalidateQueries({ queryKey: ['userOrganizations', user?.id] });
         } catch (err: any) {
-            setError(err.message || 'Failed to remove member');
+            setError(err?.message ?? 'Failed to remove member.');
         } finally {
             setRemovingId(null);
         }
     };
 
-    const isLoading = orgsLoading || (!!organization && membersLoading);
-
-    const initialLetter = useMemo(() => {
-        if (organization?.name) return organization.name.charAt(0).toUpperCase();
-        return 'W';
-    }, [organization?.name]);
-
-    if (isLoading) {
+    if (orgsLoading || (!!organization && membersLoading)) {
         return (
-            <div className="p-8 max-w-5xl mx-auto">
-                <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 flex items-center justify-center text-slate-500">
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Loading organization...
-                </div>
+            <div className="p-8 max-w-5xl mx-auto flex justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             </div>
         );
     }
 
     if (!organization) {
         return (
-            <div className="p-8 max-w-3xl mx-auto space-y-6">
-                <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 text-center">
-                    <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                        <Building2 className="w-6 h-6 text-slate-400" />
-                    </div>
+            <div className="p-8 max-w-3xl mx-auto">
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-12 text-center">
+                    <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                     <h1 className="text-xl font-semibold text-slate-900 mb-2">No Organization Found</h1>
-                    <p className="text-sm text-slate-500 mb-4">You are not currently a member of any organization.</p>
+                    <p className="text-slate-500 mb-6">You are not currently a member of any organization.</p>
                     {isSuperAdmin && (
-                        <div className="mt-6 border-t border-slate-100 pt-6">
-                            <Link to="/admin" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
-                                Go to Super Admin Dashboard
-                            </Link>
-                        </div>
+                        <Link to="/admin" className="text-blue-600 hover:underline font-medium text-sm">
+                            Go to Super Admin Dashboard
+                        </Link>
                     )}
                 </div>
             </div>
@@ -180,17 +152,11 @@ export const OrganizationPage = () => {
 
     return (
         <div className="p-8 max-w-5xl mx-auto space-y-8">
-            {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-                    {error}
-                </div>
-            )}
-
             <OrgHeader
                 organization={organization}
                 membershipRole={membershipRole}
                 membersCount={members.length}
-                initialLetter={initialLetter}
+                initialLetter={organization.name.charAt(0).toUpperCase()}
                 canManage={canManageTeam}
                 editing={editing}
                 orgNameInput={orgNameInput}
@@ -202,72 +168,55 @@ export const OrganizationPage = () => {
 
             <div className="border-b border-slate-200">
                 <nav className="-mb-px flex space-x-8">
-                    <button
-                        type="button"
+                    <TabButton 
+                        active={activeTab === 'team'} 
                         onClick={() => setActiveTab('team')}
-                        className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                            activeTab === 'team' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500'
-                        }`}
-                    >
-                        Team
-                    </button>
-                    {isOwner && (
-                        <button
-                            type="button"
+                        icon={<Users className="w-4 h-4" />}
+                        label="Team"
+                    />
+                    {membershipRole === 'owner' && (
+                        <TabButton 
+                            active={activeTab === 'payments'} 
                             onClick={() => setActiveTab('payments')}
-                            className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                                activeTab === 'payments' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500'
-                            }`}
-                        >
-                            Payments
-                        </button>
+                            icon={<CreditCard className="w-4 h-4" />}
+                            label="Payments"
+                        />
                     )}
                 </nav>
             </div>
 
-            {activeTab === 'team' && (
-                <div className="space-y-6">
-                    {canManageTeam && (
-                        <InviteMemberForm
-                            inviteEmail={inviteEmail}
-                            inviteRole={inviteRole}
-                            inviting={inviting}
-                            inviteError={inviteError}
-                            onInviteEmailChange={setInviteEmail}
-                            onInviteRoleChange={setInviteRole}
-                            onSubmit={handleInvite}
-                        />
-                    )}
-
-                    <div>
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h2 className="text-lg font-semibold text-slate-900">Team Members</h2>
-                                <p className="text-sm text-slate-500">
-                                    {canManageTeam
-                                        ? "Manage who has access to your organization's workflows."
-                                        : 'View members of this organization.'}
-                                </p>
-                            </div>
-                        </div>
-
-                        <MemberTable
-                            members={members}
-                            organization={organization}
-                            canManage={canManageTeam}
-                            removingId={removingId}
-                            onRemove={handleRemoveMember}
-                        />
-                    </div>
-                </div>
-            )}
-
-            {activeTab === 'payments' && isOwner && (
-                <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-                    <h2 className="text-lg font-semibold mb-4">Subscription Management</h2>
-                    <p className="text-slate-600">This section is visible to owners only.</p>
-                </div>
+            {activeTab === 'team' ? (
+                <TeamSettings
+                    organization={organization}
+                    members={members}
+                    canManageTeam={canManageTeam}
+                    inviteEmail={inviteEmail}
+                    inviteRole={inviteRole}
+                    inviting={inviting}
+                    inviteError={inviteError}
+                    removingId={removingId}
+                    onInviteEmailChange={setInviteEmail}
+                    onInviteRoleChange={setInviteRole}
+                    onInviteSubmit={handleInvite}
+                    onRemoveMember={handleRemoveMember}
+                />
+            ) : (
+                <PaymentSettings />
             )}
         </div>
     );
 };
+
+const TabButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        className={clsx(
+            "pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all",
+            active ? "border-blue-500 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"
+        )}
+    >
+        {icon}
+        {label}
+    </button>
+);
