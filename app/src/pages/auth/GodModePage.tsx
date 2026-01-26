@@ -2,21 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import { hasUsers, signUp } from '../../api/auth';
+import { useAuth } from '../../context/AuthContext';
 
 export const GodModePage = () => {
   const navigate = useNavigate();
+  const { isSuperAdmin, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+
     const checkStatus = async () => {
       const anyUsers = await hasUsers();
-      if (anyUsers) {
+      if (anyUsers && !isSuperAdmin) {
         navigate('/login');
       }
     };
     checkStatus();
-  }, [navigate]);
+  }, [authLoading, isSuperAdmin, navigate]);
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

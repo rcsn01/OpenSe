@@ -1,20 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, readStoredSession } from '../lib/supabase';
-
-// Guard against a hung getSession by timing it out; fall back to null session if it stalls.
-const getSessionSafe = async (timeoutMs = 4000) => {
-  try {
-    const result = await Promise.race([
-      supabase.auth.getSession(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('getSession timeout')), timeoutMs)),
-    ]);
-    return result as Awaited<ReturnType<typeof supabase.auth.getSession>>;
-  } catch (error) {
-    console.error('Auth getSession failed or timed out:', error);
-    return { data: { session: readStoredSession() }, error: error as any };
-  }
-};
+import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   session: Session | null;
@@ -35,59 +21,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const loadSuperAdmin = async (userId: string | null | undefined) => {
+    if (!userId) {
+      setIsSuperAdmin(false);
+      return;
+    }
+
+    const { data, error } = await supabase.rpc('get_super_admin_status');
+    if (error) {
+      console.error('Failed to fetch super admin status:', error);
+      setIsSuperAdmin(false);
+      return;
+    }
+    setIsSuperAdmin(Boolean(data));
+  };
 
   useEffect(() => {
-    // Check active session safely
-    const initSession = async () => {
-      try {
-        const {
-          data: { session },
-        } = await getSessionSafe();
-        const effectiveSession = session ?? readStoredSession();
-        setSession(effectiveSession);
-        setUser(effectiveSession?.user ?? null);
+    let isMounted = true;
 
-        if (effectiveSession?.user) {
-          const { data } = await supabase
-            .from('super_admin_members')
-            .select('user_id')
-            .eq('user_id', effectiveSession.user.id)
-            .maybeSingle();
-          setIsSuperAdmin(!!data);
-        } else {
-          setIsSuperAdmin(false);
-        }
-      } catch (error) {
-        console.error('Auth initialization failed:', error);
-      } finally {
-        // ALWAYS turn off loading, even if there's an error
-        setLoading(false);
-      }
-    };
-
-    initSession();
-
-    // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const nextSession = session ?? readStoredSession();
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-
-      if (nextSession?.user) {
-        const { data } = await supabase
-          .from('super_admin_members')
-          .select('user_id')
-          .eq('user_id', nextSession.user.id)
-          .maybeSingle();
-        setIsSuperAdmin(!!data);
-      } else {
-        setIsSuperAdmin(false);
-      }
-
+    supabase.auth.getSession().then(({ data }) => {
+      if (!isMounted) return;
+      setSession(data.session ?? null);
+      setUser(data.session?.user ?? null);
       setLoading(false);
+      loadSuperAdmin(data.session?.user?.id);
     });
 
-    return () => subscription.unsubscribe();
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+      loadSuperAdmin(session?.user?.id);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
