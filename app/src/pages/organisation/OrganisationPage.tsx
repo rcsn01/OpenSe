@@ -5,30 +5,30 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { Member } from '../../components/settings/types';
 import { OrgHeader } from '../../components/settings/OrgHeader';
-import { TeamSettings } from '../../components/organization/TeamSettings';
-import { PaymentSettings } from '../../components/organization/PaymentSettings';
-import { useOrganizationMembers, useUserOrganizations } from '../../hooks/queries/useOrganizations';
+import { TeamSettings } from '../../components/organisation/TeamSettings';
+import { PaymentSettings } from '../../components/organisation/PaymentSettings';
+import { useOrganisationMembers, useUserOrganisations } from '../../hooks/queries/useOrganisations';
 import {
-    addOrganizationMember,
+    addOrganisationMember,
     findProfileByEmail,
-    removeOrganizationMember,
-    updateOrganizationName,
+    removeOrganisationMember,
+    updateOrganisationName,
     userHasAnyMembership,
-} from '../../api/organizations';
-import { OrgSimple } from '../../types/organization';
+} from '../../api/organisations';
+import { OrgSimple } from '../../types/organisation';
 import clsx from 'clsx';
 
-type OrganizationPageContext = { currentOrg: OrgSimple | null; };
+type OrganisationPageContext = { currentOrg: OrgSimple | null; };
 
-export const OrganizationPage = () => {
+export const OrganisationPage = () => {
     const { user, isSuperAdmin } = useAuth();
-    const { currentOrg: contextOrg } = useOutletContext<OrganizationPageContext>();
+    const { currentOrg: contextOrg } = useOutletContext<OrganisationPageContext>();
     const queryClient = useQueryClient();
 
-    const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
-    const organization = contextOrg ?? userOrgs[0] ?? null;
+    const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganisations(user?.id);
+    const organisation = contextOrg ?? userOrgs[0] ?? null;
 
-    const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useOrganizationMembers(organization?.id);
+    const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useOrganisationMembers(organisation?.id);
 
     // Form/UI States
     const [activeTab, setActiveTab] = useState<'team' | 'payments'>('team');
@@ -42,21 +42,21 @@ export const OrganizationPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [removingId, setRemovingId] = useState<string | null>(null);
 
-    useEffect(() => { if (organization?.name) setOrgNameInput(organization.name); }, [organization?.name]);
+    useEffect(() => { if (organisation?.name) setOrgNameInput(organisation.name); }, [organisation?.name]);
 
     const membershipRole = useMemo(() => {
-        if (!organization || !user) return null;
-        if (organization.owner_id === user.id) return 'owner';
+        if (!organisation || !user) return null;
+        if (organisation.owner_id === user.id) return 'owner';
         return members.find((m) => m.user_id === user.id)?.role ?? 'member';
-    }, [organization, user, members]);
+    }, [organisation, user, members]);
 
     const canManageTeam = membershipRole === 'owner' || membershipRole === 'admin';
 
     const handleUpdateOrg = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!organization) return;
+        if (!organisation) return;
         const nextName = orgNameInput.trim();
-        if (!nextName || nextName === organization.name) {
+        if (!nextName || nextName === organisation.name) {
             setEditing(false);
             return;
         }
@@ -64,11 +64,11 @@ export const OrganizationPage = () => {
         setSavingOrg(true);
         setError(null);
         try {
-            await updateOrganizationName(organization.id, nextName);
-            await queryClient.invalidateQueries({ queryKey: ['userOrganizations', user?.id] });
+            await updateOrganisationName(organisation.id, nextName);
+            await queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
             setEditing(false);
         } catch (err: any) {
-            setError(err?.message ?? 'Failed to update organization.');
+            setError(err?.message ?? 'Failed to update organisation.');
         } finally {
             setSavingOrg(false);
         }
@@ -76,7 +76,7 @@ export const OrganizationPage = () => {
 
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!organization) return;
+        if (!organisation) return;
 
         const email = inviteEmail.trim().toLowerCase();
         if (!email) return;
@@ -92,15 +92,15 @@ export const OrganizationPage = () => {
 
             const alreadyMember = await userHasAnyMembership(profile.id);
             if (alreadyMember) {
-                setInviteError('User is already assigned to an organization.');
+                setInviteError('User is already assigned to an organisation.');
                 return;
             }
 
-            await addOrganizationMember(organization.id, profile.id, inviteRole);
+            await addOrganisationMember(organisation.id, profile.id, inviteRole);
             setInviteEmail('');
             setInviteRole('member');
             await refetchMembers();
-            queryClient.invalidateQueries({ queryKey: ['userOrganizations', user?.id] });
+            queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
         } catch (err: any) {
             setInviteError(err?.message ?? 'Failed to invite member.');
         } finally {
@@ -109,15 +109,15 @@ export const OrganizationPage = () => {
     };
 
     const handleRemoveMember = async (member: Member) => {
-        if (!organization) return;
-        if (member.user_id === organization.owner_id) return;
+        if (!organisation) return;
+        if (member.user_id === organisation.owner_id) return;
 
         setRemovingId(member.id);
         setError(null);
         try {
-            await removeOrganizationMember(member.id);
+            await removeOrganisationMember(member.id);
             await refetchMembers();
-            queryClient.invalidateQueries({ queryKey: ['userOrganizations', user?.id] });
+            queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
         } catch (err: any) {
             setError(err?.message ?? 'Failed to remove member.');
         } finally {
@@ -125,7 +125,7 @@ export const OrganizationPage = () => {
         }
     };
 
-    if (orgsLoading || (!!organization && membersLoading)) {
+    if (orgsLoading || (!!organisation && membersLoading)) {
         return (
             <div className="p-8 max-w-5xl mx-auto flex justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -133,13 +133,13 @@ export const OrganizationPage = () => {
         );
     }
 
-    if (!organization) {
+    if (!organisation) {
         return (
             <div className="p-8 max-w-3xl mx-auto">
                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-12 text-center">
                     <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <h1 className="text-xl font-semibold text-slate-900 mb-2">No Organization Found</h1>
-                    <p className="text-slate-500 mb-6">You are not currently a member of any organization.</p>
+                    <h1 className="text-xl font-semibold text-slate-900 mb-2">No Organisation Found</h1>
+                    <p className="text-slate-500 mb-6">You are not currently a member of any organisation.</p>
                     {isSuperAdmin && (
                         <Link to="/admin" className="text-blue-600 hover:underline font-medium text-sm">
                             Go to Super Admin Dashboard
@@ -153,10 +153,10 @@ export const OrganizationPage = () => {
     return (
         <div className="p-8 max-w-5xl mx-auto space-y-8">
             <OrgHeader
-                organization={organization}
+                organisation={organisation}
                 membershipRole={membershipRole}
                 membersCount={members.length}
-                initialLetter={organization.name.charAt(0).toUpperCase()}
+                initialLetter={organisation.name.charAt(0).toUpperCase()}
                 canManage={canManageTeam}
                 editing={editing}
                 orgNameInput={orgNameInput}
@@ -187,7 +187,7 @@ export const OrganizationPage = () => {
 
             {activeTab === 'team' ? (
                 <TeamSettings
-                    organization={organization}
+                    organisation={organisation}
                     members={members}
                     canManageTeam={canManageTeam}
                     inviteEmail={inviteEmail}

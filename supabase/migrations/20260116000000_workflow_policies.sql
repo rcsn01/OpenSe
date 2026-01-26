@@ -12,7 +12,7 @@ create policy "workflows_select_unified" on public.workflows
 for select using (
 	(org_id is null and owner_id = (select auth.uid()))
 	or exists (
-		select 1 from public.organization_members om
+		select 1 from public.organisation_members om
 		where om.org_id = public.workflows.org_id
 			and om.user_id = (select auth.uid())
 	)

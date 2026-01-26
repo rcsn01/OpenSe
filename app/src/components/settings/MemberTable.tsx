@@ -1,17 +1,17 @@
 import React from 'react';
 import { Shield, Trash2, Loader2 } from 'lucide-react';
-import { Member, Organization } from './types';
+import { Member, Organisation } from './types';
 import { StatusBadge } from '../ui/StatusBadge';
 
 type MemberTableProps = {
   members: Member[];
-  organization: Organization;
+  organisation: Organisation;
   canManage: boolean;
   removingId: string | null;
   onRemove: (member: Member) => void;
 };
 
-export const MemberTable: React.FC<MemberTableProps> = ({ members, organization, canManage, removingId, onRemove }) => {
+export const MemberTable: React.FC<MemberTableProps> = ({ members, organisation, canManage, removingId, onRemove }) => {
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
       <table className="min-w-full divide-y divide-slate-200">
@@ -31,7 +31,7 @@ export const MemberTable: React.FC<MemberTableProps> = ({ members, organization,
           ) : members.map((member) => {
             const displayName = member.profiles?.full_name || member.profiles?.email || 'Unknown user';
             const email = member.profiles?.email || 'Unknown email';
-            const roleLabel = member.user_id === organization.owner_id
+            const roleLabel = member.user_id === organisation.owner_id
               ? 'Owner'
               : member.role === 'admin'
                 ? 'Admin'
@@ -62,7 +62,7 @@ export const MemberTable: React.FC<MemberTableProps> = ({ members, organization,
                   <StatusBadge tone="success" label="Active" />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {canManage && member.user_id !== organization.owner_id ? (
+                  {canManage && member.user_id !== organisation.owner_id ? (
                     <button
                       onClick={() => onRemove(member)}
                       disabled={removingId === member.id}

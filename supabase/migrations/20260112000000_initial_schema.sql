@@ -12,25 +12,25 @@ create table if not exists public.profiles (
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
--- Organizations
-create table if not exists public.organizations (
+-- Organisations
+create table if not exists public.organisations (
   id uuid default gen_random_uuid() primary key,
   name text not null,
   created_at timestamptz default timezone('utc'::text, now()) not null,
   owner_id uuid not null references public.profiles(id)
 );
 
--- Organization members (many-to-many)
-create table if not exists public.organization_members (
+-- Organisation members (many-to-many)
+create table if not exists public.organisation_members (
   id uuid default gen_random_uuid() primary key,
-  org_id uuid not null references public.organizations(id) on delete cascade,
+  org_id uuid not null references public.organisations(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
   role text not null default 'member' check (role in ('admin', 'member')),
   created_at timestamptz default timezone('utc'::text, now()) not null,
   unique (org_id, user_id)
 );
-create index if not exists organization_members_org_idx on public.organization_members(org_id);
-create index if not exists organization_members_user_idx on public.organization_members(user_id);
+create index if not exists organisation_members_org_idx on public.organisation_members(org_id);
+create index if not exists organisation_members_user_idx on public.organisation_members(user_id);
 
 -- Workflows (includes template support)
 create table if not exists public.workflows (
@@ -40,7 +40,7 @@ create table if not exists public.workflows (
   description text,
   graph_data jsonb,
   owner_id uuid not null references public.profiles(id),
-  org_id uuid references public.organizations(id) on delete cascade,
+  org_id uuid references public.organisations(id) on delete cascade,
   is_template boolean default false
 );
 create index if not exists workflows_org_idx on public.workflows(org_id);
@@ -59,7 +59,7 @@ create table if not exists public.workflow_executions (
   id uuid default gen_random_uuid() primary key,
   workflow_id uuid references public.workflows(id) on delete set null,
   user_id uuid not null references public.profiles(id) on delete cascade,
-  org_id uuid references public.organizations(id) on delete cascade,
+  org_id uuid references public.organisations(id) on delete cascade,
   status text not null check (status in ('success', 'failed', 'running')),
   started_at timestamptz default timezone('utc'::text, now()) not null,
   completed_at timestamptz,
@@ -69,13 +69,13 @@ create index if not exists workflow_executions_org_idx on public.workflow_execut
 create index if not exists workflow_executions_user_idx on public.workflow_executions(user_id);
 create index if not exists workflow_executions_workflow_idx on public.workflow_executions(workflow_id);
 
--- Covering index for organizations.owner_id FK
-create index if not exists organizations_owner_idx on public.organizations(owner_id);
+-- Covering index for organisations.owner_id FK
+create index if not exists organisations_owner_idx on public.organisations(owner_id);
 
 -- Enable RLS (policies are defined in later migration)
 alter table if exists public.profiles enable row level security;
-alter table if exists public.organizations enable row level security;
-alter table if exists public.organization_members enable row level security;
+alter table if exists public.organisations enable row level security;
+alter table if exists public.organisation_members enable row level security;
 alter table if exists public.workflows enable row level security;
 alter table if exists public.workflow_executions enable row level security;
 alter table if exists public.super_admin_members enable row level security;

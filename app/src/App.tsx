@@ -14,7 +14,7 @@ import { RegisterPage } from './pages/auth/RegisterPage';
 import { GodModePage } from './pages/auth/GodModePage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { WorkflowEditorPage } from './pages/editor/WorkflowEditorPage';
-import { OrganizationPage } from './pages/organisation/OrganisationPage'; // New Import
+import { OrganisationPage } from './pages/organisation/OrganisationPage'; // New Import
 import { UserSettingsPage } from './pages/settings/UserSettingsPage';
 import { SuperAdminPage } from './pages/admin/SuperAdminPage';
 import { SystemCheck } from './components/guards/SystemCheck';
@@ -41,7 +41,7 @@ export default function App() {
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/gallery" element={<GalleryPage />} />
-                  <Route path="/organization" element={<OrganizationPage />} /> {/* New Route */}
+                  <Route path="/organisation" element={<OrganisationPage />} /> {/* New Route */}
                   <Route path="/activity" element={<ActivitiesPage />} />
                   <Route path="/settings/profile" element={<UserSettingsPage />} />
                   <Route path="/admin" element={<SuperAdminPage />} />

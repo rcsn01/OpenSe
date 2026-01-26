@@ -1,9 +1,9 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
-import { Organization } from './types';
+import { Organisation } from './types';
 
 export type OrgHeaderProps = {
-  organization: Organization;
+  organisation: Organisation;
   membershipRole: 'owner' | 'admin' | 'editor' | 'member' | null;
   membersCount: number;
   initialLetter: string;
@@ -17,7 +17,7 @@ export type OrgHeaderProps = {
 };
 
 export const OrgHeader: React.FC<OrgHeaderProps> = ({
-  organization,
+  organisation,
   membershipRole,
   membersCount,
   initialLetter,
@@ -37,9 +37,9 @@ export const OrgHeader: React.FC<OrgHeaderProps> = ({
             {initialLetter}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{organization.name}</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{organisation.name}</h1>
             <p className="text-slate-500 text-sm">
-              Created {organization.created_at ? new Date(organization.created_at).toLocaleDateString() : 'recently'} • {membersCount} members
+              Created {organisation.created_at ? new Date(organisation.created_at).toLocaleDateString() : 'recently'} • {membersCount} members
             </p>
             {membershipRole && (
               <p className="text-xs text-slate-500 mt-1">You are an {membershipRole === 'owner' ? 'owner' : membershipRole}</p>
@@ -60,7 +60,7 @@ export const OrgHeader: React.FC<OrgHeaderProps> = ({
       {editing && (
         <form className="mt-4 flex flex-col gap-3" onSubmit={onSubmit}>
           <div>
-            <label htmlFor="org-edit-name" className="block text-sm font-medium text-slate-700">Organization name</label>
+            <label htmlFor="org-edit-name" className="block text-sm font-medium text-slate-700">Organisation name</label>
             <input
               id="org-edit-name"
               value={orgNameInput}

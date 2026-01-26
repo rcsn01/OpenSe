@@ -26,7 +26,7 @@ export const WorkflowTabs: React.FC<WorkflowTabsProps> = ({ activeTab, onChange,
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           )}
         >
-          {orgName ? `${orgName} Workflows` : 'Organization Workflows'}
+          {orgName ? `${orgName} Workflows` : 'Organisation Workflows'}
         </button>
       </nav>
     </div>
