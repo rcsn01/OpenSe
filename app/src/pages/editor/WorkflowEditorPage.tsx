@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Save, Download, ArrowLeft, MousePointer2, Info } from 'lucide-react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ReactFlow, {
   Background,
@@ -13,14 +12,19 @@ import ReactFlow, {
   Node,
   useEdgesState,
   useNodesState,
+  useOnSelectionChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { NODE_REGISTRY, nodeTypes, nodesByCategory } from '../../components/nodes/registry';
+import { NODE_REGISTRY, nodeTypes } from '../../components/nodes/registry';
 import { WorkflowNodeData } from '../../components/nodes/types';
 import { runExecution } from '../../lib/execution/ExecutionEngine';
 import { useSaveWorkflow, useUpdateWorkflowName, useWorkflow } from '../../hooks/queries/useWorkflows';
 
-const CATEGORY_ORDER = ['Input', 'Data', 'Logic', 'Output'];
+// New Components
+import { EditorHeader } from '../../components/editor/EditorHeader';
+import { NodeSidebar } from '../../components/editor/NodeSidebar';
+import { PropertiesPanel } from '../../components/editor/PropertiesPanel';
+import { Info } from 'lucide-react';
 
 export const WorkflowEditorPage = () => {
   const { id } = useParams();
@@ -40,6 +44,9 @@ export const WorkflowEditorPage = () => {
   const [isRunning, setIsRunning] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Selection State
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
   const { data: workflowData, error: workflowError } = useWorkflow(workflowId);
   const saveMutation = useSaveWorkflow();
   const nameMutation = useUpdateWorkflowName();
@@ -48,20 +55,11 @@ export const WorkflowEditorPage = () => {
   const defaultEdgeOptions = useMemo(() => ({
     type: 'smoothstep',
     animated: true,
-    style: { 
-      strokeWidth: 3, 
+    style: {
+      strokeWidth: 3,
       stroke: '#64748b' // Slate-500 for high visibility
     },
   }), []);
-
-  const paletteGroups = useMemo(() => {
-    const ordered = CATEGORY_ORDER.map((category) => ({ category, nodes: nodesByCategory[category] || [] }))
-      .filter((entry) => entry.nodes.length);
-    const remaining = Object.entries(nodesByCategory)
-      .filter(([category]) => !CATEGORY_ORDER.includes(category))
-      .map(([category, nodes]) => ({ category, nodes }));
-    return [...ordered, ...remaining];
-  }, []);
 
   const withSetters = useCallback((list: Node<WorkflowNodeData>[]) => (
     list.map((node) => ({
@@ -102,6 +100,14 @@ export const WorkflowEditorPage = () => {
     if (workflowError) setRunMessage('Failed to load workflow');
   }, [workflowError]);
 
+  // Hook to track selection
+  useOnSelectionChange({
+    onChange: ({ nodes }) => {
+      // If multiple selected, just take the first one, or null if none
+      setSelectedNodeId(nodes.length > 0 ? nodes[0].id : null);
+    },
+  });
+
   const onConnect = useCallback((connection: Edge | Connection) => {
     setEdges((eds) => addEdge(connection, eds));
   }, [setEdges]);
@@ -122,13 +128,15 @@ export const WorkflowEditorPage = () => {
       return;
     }
 
-    const position = rfInstance?.project({ x: event.clientX - 320, y: event.clientY - 80 }) || { x: 100, y: 100 };
+    const position = rfInstance?.project({ x: event.clientX - 288, y: event.clientY - 64 }) || { x: 100, y: 100 }; // Adjusted for Sidebar width
     const id = `${type}-${Date.now()}`;
 
     const baseData = { ...config.initialData } as WorkflowNodeData;
     const dataWithSetter = { ...baseData, setData: (updater: any) => setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: typeof updater === 'function' ? updater(n.data) : updater } : n)) };
 
-    setNodes((nds) => nds.concat({ id, type: config.type as any, position, data: dataWithSetter }));
+    const newNode = { id, type: config.type as any, position, data: dataWithSetter };
+    setNodes((nds) => nds.concat(newNode));
+    setSelectedNodeId(id); // Auto-select new node
   }, [rfInstance, setNodes, setRunMessage]);
 
   const onDragOver = (event: React.DragEvent) => {
@@ -136,18 +144,29 @@ export const WorkflowEditorPage = () => {
     event.dataTransfer.dropEffect = 'move';
   };
 
+  const updateNodeData = (nodeId: string, newData: any) => {
+    setNodes((nds) => nds.map((node) => {
+      if (node.id === nodeId) {
+        return { ...node, data: newData };
+      }
+      return node;
+    }));
+  };
+
+  const selectedNode = useMemo(() => nodes.find(n => n.id === selectedNodeId) || null, [nodes, selectedNodeId]);
+
   const sanitizeNodes = useCallback(() => nodes.map((node) => {
     const { data, ...rest } = node;
     const cleanedData = data && typeof data === 'object'
       ? JSON.parse(JSON.stringify(data, (_key, val) => (typeof val === 'function' ? undefined : val)))
       : data;
+    // ... same sanitization logic ...
     if (cleanedData && typeof cleanedData === 'object' && 'setData' in (cleanedData as Record<string, unknown>)) {
       delete (cleanedData as Record<string, unknown>).setData;
     }
     if (node.type === 'preview' && cleanedData && 'previewRows' in (cleanedData as Record<string, unknown>)) {
       delete (cleanedData as Record<string, unknown>).previewRows;
     }
-    // Clear file data from FileInputNode on save
     if (node.type === 'file' && cleanedData) {
       delete (cleanedData as Record<string, unknown>).rows;
       delete (cleanedData as Record<string, unknown>).datasetId;
@@ -161,20 +180,18 @@ export const WorkflowEditorPage = () => {
 
   const runAndApplyExecution = async () => {
     if (!user) {
-        setRunMessage('You must be logged in to run workflows.');
-        return;
+      setRunMessage('You must be logged in to run workflows.');
+      return;
     }
 
-    console.log('[WorkflowEditor] run start', { workflowId, userId: user.id, orgId: orgIdParam });
     const result = await runExecution(
-        nodes, 
-        edges, 
-        workflowName,
-        workflowId,
-        user.id,
-        orgIdParam
+      nodes,
+      edges,
+      workflowName,
+      workflowId,
+      user.id,
+      orgIdParam
     );
-    console.log('[WorkflowEditor] run result', { unresolved: result.unresolved.length, downloads: result.downloads.length });
     setNodes(result.updatedNodes);
 
     if (result.downloads.length) {
@@ -194,7 +211,7 @@ export const WorkflowEditorPage = () => {
     if (result.unresolved.length) {
       setRunMessage('Some nodes could not run. Please check connections.');
     } else {
-      setRunMessage('Run complete. Outputs updated.');
+      setRunMessage('Run complete.');
     }
   };
 
@@ -202,7 +219,6 @@ export const WorkflowEditorPage = () => {
     setIsRunning(true);
     setRunMessage('');
     try {
-      console.log('[WorkflowEditor] handleRun clicked');
       await runAndApplyExecution();
     } finally {
       setIsRunning(false);
@@ -232,14 +248,11 @@ export const WorkflowEditorPage = () => {
       return;
     }
 
-    console.log('[WorkflowEditor] save clicked');
     setRunMessage('Saving...');
     let sanitizedNodes: ReturnType<typeof sanitizeNodes>;
     try {
       sanitizedNodes = sanitizeNodes();
-      console.log('[WorkflowEditor] sanitized nodes', { nodeCount: sanitizedNodes.length, edgeCount: edges.length });
     } catch (err) {
-      console.error('[WorkflowEditor] sanitize failed', err);
       setRunMessage('Failed to prepare workflow data');
       return;
     }
@@ -254,7 +267,6 @@ export const WorkflowEditorPage = () => {
       },
       {
         onSuccess: (data) => {
-          console.log('[WorkflowEditor] save success', { id: data.id });
           setWorkflowId(data.id || workflowId);
           setRunMessage('Workflow saved');
           if (!workflowId && data.id) {
@@ -262,7 +274,6 @@ export const WorkflowEditorPage = () => {
           }
         },
         onError: (err: any) => {
-          console.error('[WorkflowEditor] save error', err);
           setRunMessage(err?.message || 'Failed to save workflow');
         },
       },
@@ -317,141 +328,63 @@ export const WorkflowEditorPage = () => {
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden">
-      <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-4 z-10 shrink-0">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="p-2 text-slate-400 hover:bg-slate-100 rounded-md">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div className="h-6 w-px bg-slate-200" />
-          <input
-            value={workflowName}
-            onChange={(e) => setWorkflowName(e.target.value)}
-            onBlur={persistNameIfPossible}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.currentTarget.blur();
-              }
-            }}
-            className="text-lg font-semibold text-slate-900 border-none focus:ring-0 p-0 hover:bg-slate-50 rounded px-2"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-            <input
-              ref={importInputRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={handleImportFile}
-            />
-            <button
-              onClick={handleImportClick}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
-            >
-                <Download className="w-4 h-4" />
-                Import
-            </button>
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
-            >
-                <Download className="w-4 h-4" />
-              Export
-            </button>
-            <div className="h-6 w-px bg-slate-200 mx-1" />
-            <button
-              onClick={handleSaveWorkflow}
-              disabled={saveMutation.isPending}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 rounded-md shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-                <Save className="w-4 h-4" />
-                {saveMutation.isPending ? 'Saving...' : 'Save'}
-            </button>
-            <button
-              onClick={handleRun}
-              disabled={isRunning}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                <Play className="w-4 h-4 fill-current" />
-                {isRunning ? 'Running...' : 'Run'}
-            </button>
-        </div>
-      </header>
+      <EditorHeader
+        workflowName={workflowName}
+        onNameChange={setWorkflowName}
+        onNameBlur={persistNameIfPossible}
+        onImportClick={handleImportClick}
+        onExportClick={handleExport}
+        onSave={handleSaveWorkflow}
+        onRun={handleRun}
+        isSaving={saveMutation.isPending}
+        isRunning={isRunning}
+        importInputRef={importInputRef}
+        onImportFile={handleImportFile}
+      />
 
       {runMessage && (
-        <div className="px-4 py-2 text-sm text-blue-700 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+        <div className="px-4 py-2 text-sm text-blue-700 bg-blue-50 border-b border-blue-100 flex items-center gap-2 animate-in slide-in-from-top-1">
           <Info className="w-4 h-4" />
           {runMessage}
         </div>
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-64 bg-slate-50 border-r border-slate-200 flex flex-col shrink-0">
-            <div className="p-4 border-b border-slate-200">
-                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Nodes</h3>
-            </div>
-            
-            <div className="p-4 space-y-5 overflow-y-auto flex-1">
-              {paletteGroups.map((group) => (
-                <div key={group.category} className="space-y-2">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{group.category}</div>
-                  <div className="space-y-2">
-                    {group.nodes.map((node) => (
-                      <div
-                        key={node.type}
-                        onDragStart={(event) => onDragStart(event, node.type)}
-                        draggable
-                        className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm cursor-grab hover:border-blue-300 hover:ring-1 hover:ring-blue-100 transition-all active:cursor-grabbing"
-                      >
-                        <div className={`p-2 rounded-md ${node.color} text-white`}>
-                          <node.icon className="w-4 h-4" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-slate-800">{node.label}</span>
-                          <span className="text-[11px] text-slate-500">{node.type}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-auto p-4 border-t border-slate-200 bg-slate-100/50">
-                <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded text-xs text-blue-700">
-                   <MousePointer2 className="w-4 h-4 shrink-0 mt-0.5" />
-                   <p>Drag nodes from this panel onto the canvas to build your workflow.</p>
-                </div>
-            </div>
-        </aside>
+        <NodeSidebar onDragStart={onDragStart} />
 
         <main className="flex-1 relative bg-slate-100 overflow-hidden">
-            <div 
-                className="absolute inset-0 opacity-[0.4]"
-                style={{
-                    backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
-                    backgroundSize: '20px 20px'
-                }}
-            />
+          <div
+            className="absolute inset-0 opacity-[0.4]"
+            style={{
+              backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
+              backgroundSize: '20px 20px'
+            }}
+          />
 
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              defaultEdgeOptions={defaultEdgeOptions}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onInit={setRfInstance}
-              onDrop={onDrop}
-              onDragOver={onDragOver}
-              fitView
-            >
-              <Background gap={20} size={1} color="#cbd5e1" />
-              <MiniMap nodeColor={() => '#0ea5e9'} />
-              <Controls />
-            </ReactFlow>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            defaultEdgeOptions={defaultEdgeOptions}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onInit={setRfInstance}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            fitView
+          >
+            <Background gap={20} size={1} color="#cbd5e1" />
+            <MiniMap nodeColor={() => '#0ea5e9'} />
+            <Controls />
+          </ReactFlow>
         </main>
+
+        <PropertiesPanel
+          selectedNode={selectedNode as any} // Cast safely based on internal content
+          onClose={() => setSelectedNodeId(null)}
+          onChange={updateNodeData}
+        />
       </div>
     </div>
   );
