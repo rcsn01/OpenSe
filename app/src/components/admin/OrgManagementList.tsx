@@ -17,7 +17,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Table } from '../ui/Table'; // Reusing your existing UI wrapper
 
-type MemberInviteState = { email: string; role: 'admin' | 'member' };
+type MemberInviteState = { email: string; role: 'admin' | 'editor' | 'member' };
 
 type OrgManagementListProps = {
   orgs: OrgRow[];
@@ -296,10 +296,11 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
               value={activeOrg ? (memberInvite[activeOrg.id]?.role || 'member') : 'member'}
               onChange={(e) => activeOrg && onMemberInviteChange(activeOrg.id, {
                 email: memberInvite[activeOrg.id]?.email || '',
-                role: e.target.value as 'admin' | 'member'
+                role: e.target.value as 'admin' | 'editor' | 'member'
               })}
             >
               <option value="member">Member</option>
+              <option value="editor">Editor</option>
               <option value="admin">Admin</option>
             </select>
           </div>

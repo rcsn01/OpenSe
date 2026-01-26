@@ -31,7 +31,13 @@ export const MemberTable: React.FC<MemberTableProps> = ({ members, organization,
           ) : members.map((member) => {
             const displayName = member.profiles?.full_name || member.profiles?.email || 'Unknown user';
             const email = member.profiles?.email || 'Unknown email';
-            const roleLabel = member.user_id === organization.owner_id ? 'owner' : member.role;
+            const roleLabel = member.user_id === organization.owner_id
+              ? 'Owner'
+              : member.role === 'admin'
+                ? 'Admin'
+                : member.role === 'editor'
+                  ? 'Editor'
+                  : 'Member';
 
             return (
               <tr key={member.id} className="hover:bg-slate-50 transition-colors">

@@ -3,11 +3,11 @@ import { UserPlus, Mail, Loader2 } from 'lucide-react';
 
 export type InviteMemberFormProps = {
   inviteEmail: string;
-  inviteRole: 'admin' | 'member';
+  inviteRole: 'admin' | 'editor' | 'member';
   inviting: boolean;
   inviteError: string | null;
   onInviteEmailChange: (value: string) => void;
-  onInviteRoleChange: (value: 'admin' | 'member') => void;
+  onInviteRoleChange: (value: 'admin' | 'editor' | 'member') => void;
   onSubmit: (e: React.FormEvent) => void;
 };
 
@@ -54,10 +54,11 @@ export const InviteMemberForm: React.FC<InviteMemberFormProps> = ({
           <select
             id="invite-role"
             value={inviteRole}
-            onChange={(e) => onInviteRoleChange(e.target.value as 'admin' | 'member')}
+            onChange={(e) => onInviteRoleChange(e.target.value as 'admin' | 'editor' | 'member')}
             className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           >
             <option value="member">Member</option>
+            <option value="editor">Editor</option>
             <option value="admin">Admin</option>
           </select>
         </div>

@@ -4,7 +4,7 @@ import { Organization } from './types';
 
 export type OrgHeaderProps = {
   organization: Organization;
-  membershipRole: 'owner' | 'admin' | 'member' | null;
+  membershipRole: 'owner' | 'admin' | 'editor' | 'member' | null;
   membersCount: number;
   initialLetter: string;
   canManage: boolean;

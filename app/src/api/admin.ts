@@ -78,7 +78,7 @@ export const changeOrganizationOwner = async (orgId: string, email: string) => {
 export const inviteMemberToOrganization = async (
   orgId: string,
   email: string,
-  role: 'admin' | 'member'
+  role: 'admin' | 'editor' | 'member'
 ) => {
   const profile = await findProfileByEmail(email.trim().toLowerCase())
   if (!profile) throw new Error('User not found')
