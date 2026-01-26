@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Search,
   Trash2,
@@ -10,15 +10,20 @@ import {
   X,
   Key,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAdminUsers } from '../../hooks/queries/useAdmin';
+import { updateUserProfile } from '../../api/admin'; // Add import
 import { Input } from '../ui/Input';
 import { Table } from '../ui/Table';
 import { Button } from '../ui/Button';
 import { StatusBadge } from '../ui/StatusBadge';
+import { Pagination } from '../ui/Pagination';
 
 type Profile = {
   id: string;
@@ -29,16 +34,16 @@ type Profile = {
 };
 
 // Internal Modal for Add/Reset actions
-const Modal = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  title: React.ReactNode; 
-  children: React.ReactNode 
+const Modal = ({
+  isOpen,
+  onClose,
+  title,
+  children
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: React.ReactNode;
+  children: React.ReactNode
 }) => {
   if (!isOpen) return null;
   return (
@@ -60,11 +65,18 @@ const Modal = ({
 
 export const UserManagementList = () => {
   const queryClient = useQueryClient();
-  const { data: users = [], isLoading: loading, error: queryError } = useAdminUsers();
+  const { data: usersData = [], isLoading: loading, error: queryError } = useAdminUsers();
+  const users = usersData as Profile[];
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Pagination & Sort State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'created_at', direction: 'desc' });
+
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -74,6 +86,8 @@ export const UserManagementList = () => {
   // Form State
   const [newUser, setNewUser] = useState({ email: '', fullName: '', password: '' });
   const [resetPassword, setResetPassword] = useState('');
+  const [editFullName, setEditFullName] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (queryError) {
@@ -88,9 +102,9 @@ export const UserManagementList = () => {
     try {
       // Call the new admin RPC to clean up auth.users + profiles
       const { error } = await supabase.rpc('delete_user_admin', { target_user_id: userId });
-      
+
       if (error) throw error;
-      
+
       queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       setSuccessMsg('User deleted successfully');
     } catch (err: any) {
@@ -130,7 +144,7 @@ export const UserManagementList = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
-    
+
     setActionLoading(true);
     setError(null);
 
@@ -154,16 +168,91 @@ export const UserManagementList = () => {
     }
   };
 
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+
+    setActionLoading(true);
+    setError(null);
+
+    try {
+      await updateUserProfile(selectedUser.id, { full_name: editFullName });
+
+      setSuccessMsg(`User ${selectedUser.email} updated successfully.`);
+      setIsEditModalOpen(false);
+      setEditFullName('');
+      setSelectedUser(null);
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
+  };
+
+  const openEditModal = (user: Profile) => {
+    setSelectedUser(user);
+    setEditFullName(user.full_name || '');
+    setIsEditModalOpen(true);
+  };
+
   const openResetModal = (user: Profile) => {
     setSelectedUser(user);
     setResetPassword('');
     setIsResetModalOpen(true);
   };
 
-  const filteredUsers = users.filter((u) =>
-    (u.email?.toLowerCase() || '').includes(search.toLowerCase()) ||
-    (u.full_name?.toLowerCase() || '').includes(search.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) =>
+      (u.email?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      (u.full_name?.toLowerCase() || '').includes(search.toLowerCase())
+    );
+  }, [users, search]);
+
+  // Sorting
+  const sortedUsers = useMemo(() => {
+    if (!sortConfig) return filteredUsers;
+
+    return [...filteredUsers].sort((a, b) => {
+      let aValue: any = a[sortConfig.key as keyof Profile];
+      let bValue: any = b[sortConfig.key as keyof Profile];
+
+      // Handle nested or special keys
+      if (sortConfig.key === 'role') {
+        aValue = (a.super_admin_members?.length ?? 0) > 0 ? 1 : 0;
+        bValue = (b.super_admin_members?.length ?? 0) > 0 ? 1 : 0;
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredUsers, sortConfig]);
+
+  // Pagination
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedUsers.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedUsers, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+    setCurrentPage(1);
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (sortConfig?.key !== columnKey) return <ArrowUpDown className="w-3 h-3 ml-1 text-slate-300" />;
+    return sortConfig.direction === 'asc'
+      ? <ArrowUp className="w-3 h-3 ml-1 text-blue-600" />
+      : <ArrowDown className="w-3 h-3 ml-1 text-blue-600" />;
+  };
 
   return (
     <div className="space-y-6 mt-8">
@@ -206,8 +295,18 @@ export const UserManagementList = () => {
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Role</th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => handleSort('full_name')}
+              >
+                <div className="flex items-center">User <SortIcon columnKey="full_name" /></div>
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => handleSort('role')}
+              >
+                <div className="flex items-center">Role <SortIcon columnKey="role" /></div>
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
             </tr>
@@ -227,7 +326,7 @@ export const UserManagementList = () => {
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((user) => {
+              paginatedUsers.map((user) => {
                 const isSuperAdmin = (user.super_admin_members?.length ?? 0) > 0;
                 return (
                   <tr key={user.id} className="hover:bg-slate-50 group transition-colors">
@@ -263,6 +362,15 @@ export const UserManagementList = () => {
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
+                            title="Edit User"
+                            onClick={() => openEditModal(user)}
+                            className="text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                          >
+                            <Trash2 className="w-4 h-4 hidden" /> {/* Hack to reuse style or just use Pencil */}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil w-4 h-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                          </Button>
+                          <Button
+                            variant="ghost"
                             title="Reset Password"
                             onClick={() => openResetModal(user)}
                             className="text-slate-400 hover:text-blue-600 hover:bg-blue-50"
@@ -289,6 +397,22 @@ export const UserManagementList = () => {
         </table>
       </Table>
 
+      {
+        !loading && filteredUsers.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            totalItems={filteredUsers.length}
+            onItemsPerPageChange={(val) => {
+              setItemsPerPage(val);
+              setCurrentPage(1);
+            }}
+          />
+        )
+      }
+
       {/* --- Add User Modal --- */}
       <Modal
         isOpen={isAddModalOpen}
@@ -305,33 +429,33 @@ export const UserManagementList = () => {
         <form onSubmit={handleCreateUser} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-            <Input 
+            <Input
               required
               value={newUser.fullName}
-              onChange={(e) => setNewUser({...newUser, fullName: e.target.value})}
+              onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })}
               placeholder="John Doe"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-            <Input 
+            <Input
               type="email"
               required
               prefix={<Mail className="w-4 h-4" />}
               value={newUser.email}
-              onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
               placeholder="john@example.com"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <Input 
+            <Input
               type="password"
               required
               minLength={6}
               prefix={<Key className="w-4 h-4" />}
               value={newUser.password}
-              onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
               placeholder="••••••••"
             />
           </div>
@@ -364,7 +488,7 @@ export const UserManagementList = () => {
           </p>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-            <Input 
+            <Input
               type="password"
               required
               minLength={6}
@@ -379,6 +503,40 @@ export const UserManagementList = () => {
             <Button type="submit" disabled={actionLoading}>
               {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Update Password
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+
+      {/* --- Edit User Modal --- */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-100 rounded-md text-blue-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil w-5 h-5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+            </div>
+            <span>Edit User</span>
+          </div>
+        }
+      >
+        <form onSubmit={handleEditUser} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+            <Input
+              required
+              value={editFullName}
+              onChange={(e) => setEditFullName(e.target.value)}
+              placeholder="John Doe"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={actionLoading}>
+              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Changes
             </Button>
           </div>
         </form>
