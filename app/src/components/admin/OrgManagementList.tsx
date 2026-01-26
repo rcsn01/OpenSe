@@ -8,17 +8,17 @@ import {
   Mail,
   Shield,
   X,
-  Calendar,
-  AlertTriangle,
-  Users,
-  Building2,
-  Check,
-  MoreHorizontal
+  Users, // Used in Members button
+  AlertTriangle, // Used in Settings modal
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { OrgRow } from './types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Table } from '../ui/Table';
+import { Pagination } from '../ui/Pagination';
 
 type OrgManagementListProps = {
   orgs: OrgRow[];
@@ -58,11 +58,16 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [activeOrg, setActiveOrg] = useState<OrgRow | null>(null);
   const [modalView, setModalView] = useState<'settings' | 'invite' | 'delete' | null>(null);
-  
+
+  // Pagination & Sort State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'created_at', direction: 'desc' });
+
   // Local State for Actions
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Form Values (Transient)
   const [renameValue, setRenameValue] = useState('');
   const [transferEmail, setTransferEmail] = useState('');
@@ -73,11 +78,58 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
   const filteredOrgs = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return orgs;
-    return orgs.filter(o => 
-      o.name.toLowerCase().includes(term) || 
+    return orgs.filter(o =>
+      o.name.toLowerCase().includes(term) ||
       o.owner?.email?.toLowerCase().includes(term)
     );
   }, [orgs, searchTerm]);
+
+  // Sorting
+  const sortedOrgs = useMemo(() => {
+    if (!sortConfig) return filteredOrgs;
+
+    return [...filteredOrgs].sort((a, b) => {
+      let aValue: any = a[sortConfig.key as keyof OrgRow];
+      let bValue: any = b[sortConfig.key as keyof OrgRow];
+
+      // Handle nested or special keys
+      if (sortConfig.key === 'owner') {
+        aValue = a.owner?.full_name || '';
+        bValue = b.owner?.full_name || '';
+      } else if (sortConfig.key === 'member_count') {
+        aValue = a.member_count || 0;
+        bValue = b.member_count || 0;
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredOrgs, sortConfig]);
+
+  // Pagination
+  const paginatedOrgs = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedOrgs.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedOrgs, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(sortedOrgs.length / itemsPerPage);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+    setCurrentPage(1); // Reset to first page on sort
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (sortConfig?.key !== columnKey) return <ArrowUpDown className="w-3 h-3 ml-1 text-slate-300" />;
+    return sortConfig.direction === 'asc'
+      ? <ArrowUp className="w-3 h-3 ml-1 text-blue-600" />
+      : <ArrowDown className="w-3 h-3 ml-1 text-blue-600" />;
+  };
 
   // Open Handlers
   const openSettings = (org: OrgRow) => {
@@ -171,9 +223,9 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
       {/* Toolbar */}
       <div className="flex justify-between items-center">
         <div className="relative w-72">
-          <Input 
+          <Input
             prefix={<Search className="w-4 h-4" />}
-            placeholder="Search organisations..." 
+            placeholder="Search organisations..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
@@ -185,10 +237,30 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50/80">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Organisation</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Owner</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Size</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</th>
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center">Organisation <SortIcon columnKey="name" /></div>
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => handleSort('owner')}
+              >
+                <div className="flex items-center">Owner <SortIcon columnKey="owner" /></div>
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => handleSort('member_count')}
+              >
+                <div className="flex items-center">Size <SortIcon columnKey="member_count" /></div>
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => handleSort('created_at')}
+              >
+                <div className="flex items-center">Created <SortIcon columnKey="created_at" /></div>
+              </th>
               <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Manage</th>
             </tr>
           </thead>
@@ -198,7 +270,7 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
             ) : filteredOrgs.length === 0 ? (
               <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-500">No organisations found.</td></tr>
             ) : (
-              filteredOrgs.map((org) => (
+              paginatedOrgs.map((org) => (
                 <tr key={org.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -270,7 +342,24 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
             )}
           </tbody>
         </table>
+
       </Table>
+
+      {
+        !orgsLoading && filteredOrgs.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            totalItems={filteredOrgs.length}
+            onItemsPerPageChange={(val) => {
+              setItemsPerPage(val);
+              setCurrentPage(1);
+            }}
+          />
+        )
+      }
 
       {/* --- Modals --- */}
 
@@ -302,7 +391,7 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
       <Modal isOpen={modalView === 'settings'} onClose={closeModal} title={<div className="flex items-center gap-2"><Settings className="w-5 h-5 text-blue-600" />Settings: {activeOrg?.name}</div>}>
         <div className="space-y-6">
           {error && <div className="p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>}
-          
+
           <div className="space-y-3 pb-6 border-b border-slate-100">
             <h4 className="text-sm font-semibold text-slate-900">Rename</h4>
             <div className="flex gap-2">
@@ -337,6 +426,6 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
           </div>
         </div>
       </Modal>
-    </div>
+    </div >
   );
 };
