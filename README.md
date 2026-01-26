@@ -1,6 +1,6 @@
-# W-ETL
+# Open-ETL
 
-W-ETL is a web-based ETL page that processes the data in a seperate thread inside the web page.
+Open-ETL is a web-based ETL page that processes the data in a seperate thread inside the web page.
 This project is made to tackle 
 
 **⚠️ PROPRIETARY SOURCE CODE - VIEW ONLY**
@@ -22,13 +22,13 @@ For full legal terms, please refer to the [LICENSE](./LICENSE) file in this repo
 ### Development Setup
 
 ## Local Backend Dev
-    Location: W-ETL/ (Root)
+    Location: Open-ETL/ (Root)
     Commands:
         npx supabase start (Start DB)
         npx supabase stop (Stop DB)
         npx supabase status (Check keys)
 ## Frontend Dev
-    Location: W-ETL/app/ (Inside the app)
+    Location: Open-ETL/app/ (Inside the app)
     Commands:
         npm run dev (Start React)
         npm run dev -- --host 0.0.0.0 --port 5173 (network access)
