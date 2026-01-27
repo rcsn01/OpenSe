@@ -47,6 +47,10 @@ export interface NodeConfig<TData = WorkflowNodeData> {
   outputs?: string[];
   initialWidth?: number;
   initialHeight?: number;
+  propertiesComponent?: React.ComponentType<{
+    data: TData;
+    onChange: (key: string, value: any) => void;
+  }>;
 }
 
 export type RegistryMap = Record<string, NodeConfig>;

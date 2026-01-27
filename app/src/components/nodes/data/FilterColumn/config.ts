@@ -4,13 +4,16 @@ import { processFilterColumns } from './logic';
 import { NodeConfig } from '../../registry.types';
 import { RemoveNodeData } from '../../types';
 
-const config: NodeConfig = {
+import { FilterColumnProperties } from './properties';
+
+const config: NodeConfig<RemoveNodeData> = {
   type: 'remove',
   label: 'Filter Columns',
   category: 'Data',
   icon: Scissors,
   color: 'bg-orange-500',
   component: FilterColumn,
+  propertiesComponent: FilterColumnProperties,
   processor: processFilterColumns,
   initialData: {
     label: 'Filter Columns',
