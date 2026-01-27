@@ -4,6 +4,7 @@ import { Info, X } from 'lucide-react';
 
 import { Input } from '../ui/Input';
 import { WorkflowNodeData, FilterNodeData, SortNodeData, RenameColumnNodeData, FindReplaceNodeData, FileNodeData } from '../../components/nodes/types';
+import { NODE_REGISTRY } from '../../components/nodes/registry';
 
 interface PropertiesPanelProps {
     selectedNode: Node<WorkflowNodeData> | null;
@@ -28,6 +29,12 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, 
     };
 
     const renderContent = () => {
+        const config = type ? NODE_REGISTRY[type] : undefined;
+        if (config?.propertiesComponent) {
+            const PropertiesComponent = config.propertiesComponent;
+            return <PropertiesComponent data={data} onChange={handleChange} />;
+        }
+
         switch (type) {
             case 'file': {
                 const fileData = data as FileNodeData;

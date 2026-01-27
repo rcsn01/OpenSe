@@ -4,13 +4,16 @@ import { processRenameMap } from './logic';
 import { NodeConfig } from '../../registry.types';
 import { RenameNodeData } from '../../types';
 
-const config: NodeConfig = {
+import { RenameProperties } from './properties';
+
+const config: NodeConfig<RenameNodeData> = {
   type: 'renameMap',
   label: 'Rename (Mappings)',
   category: 'Data',
   icon: Edit3,
   color: 'bg-yellow-600',
   component: RenameNode,
+  propertiesComponent: RenameProperties,
   processor: processRenameMap,
   initialData: {
     label: 'Rename (Mappings)',
