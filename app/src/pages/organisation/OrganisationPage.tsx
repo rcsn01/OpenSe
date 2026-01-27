@@ -7,6 +7,8 @@ import { Member } from '../../components/settings/types';
 import { OrgHeader } from '../../components/settings/OrgHeader';
 import { TeamSettings } from '../../components/organisation/TeamSettings';
 import { PaymentSettings } from '../../components/organisation/PaymentSettings';
+import { InvitesList } from '../../components/organisation/InvitesList';
+import { CreateOrgForm } from '../../components/organisation/CreateOrgForm';
 import { useOrganisationMembers, useUserOrganisations } from '../../hooks/queries/useOrganisations';
 import {
     addOrganisationMember,
@@ -41,6 +43,8 @@ export const OrganisationPage = () => {
     const [inviteError, setInviteError] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [removingId, setRemovingId] = useState<string | null>(null);
+    // State for No-Org view
+    const [noOrgTab, setNoOrgTab] = useState<'invites' | 'create'>('invites');
 
     useEffect(() => { if (organisation?.name) setOrgNameInput(organisation.name); }, [organisation?.name]);
 
@@ -125,6 +129,11 @@ export const OrganisationPage = () => {
         }
     };
 
+    const handleUpdateRole = async (memberId: string, newRole: 'admin' | 'editor' | 'member') => {
+        // Mock role update - in real app would call API
+        console.log('Update role', memberId, newRole);
+    };
+
     if (orgsLoading || (!!organisation && membersLoading)) {
         return (
             <div className="p-8 max-w-5xl mx-auto flex justify-center py-20">
@@ -133,19 +142,56 @@ export const OrganisationPage = () => {
         );
     }
 
+
+
     if (!organisation) {
         return (
-            <div className="p-8 max-w-3xl mx-auto">
-                <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-12 text-center">
-                    <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <h1 className="text-xl font-semibold text-slate-900 mb-2">No Organisation Found</h1>
-                    <p className="text-slate-500 mb-6">You are not currently a member of any organisation.</p>
-                    {isSuperAdmin && (
+            <div className="p-8 max-w-4xl mx-auto">
+                <div className="mb-8">
+                    <h1 className="text-2xl font-bold text-slate-900">Welcome to OpenETL</h1>
+                    <p className="text-slate-500">Join an existing team or create a new one to get started.</p>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div className="border-b border-slate-200">
+                        <div className="flex">
+                            <button
+                                onClick={() => setNoOrgTab('invites')}
+                                className={clsx(
+                                    "flex-1 py-4 text-sm font-medium text-center border-b-2 transition-colors",
+                                    noOrgTab === 'invites' ? "border-blue-500 text-blue-600 bg-blue-50/30" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                                )}
+                            >
+                                Invitations
+                            </button>
+                            <button
+                                onClick={() => setNoOrgTab('create')}
+                                className={clsx(
+                                    "flex-1 py-4 text-sm font-medium text-center border-b-2 transition-colors",
+                                    noOrgTab === 'create' ? "border-blue-500 text-blue-600 bg-blue-50/30" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                                )}
+                            >
+                                Create Organisation
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="p-8">
+                        {noOrgTab === 'invites' ? (
+                            <InvitesList onAccepted={() => queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] })} />
+                        ) : (
+                            <CreateOrgForm onCreated={() => queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] })} />
+                        )}
+                    </div>
+                </div>
+
+                {isSuperAdmin && (
+                    <div className="mt-8 text-center">
                         <Link to="/admin" className="text-blue-600 hover:underline font-medium text-sm">
                             Go to Super Admin Dashboard
                         </Link>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -168,15 +214,15 @@ export const OrganisationPage = () => {
 
             <div className="border-b border-slate-200">
                 <nav className="-mb-px flex space-x-8">
-                    <TabButton 
-                        active={activeTab === 'team'} 
+                    <TabButton
+                        active={activeTab === 'team'}
                         onClick={() => setActiveTab('team')}
                         icon={<Users className="w-4 h-4" />}
                         label="Team"
                     />
                     {membershipRole === 'owner' && (
-                        <TabButton 
-                            active={activeTab === 'payments'} 
+                        <TabButton
+                            active={activeTab === 'payments'}
                             onClick={() => setActiveTab('payments')}
                             icon={<CreditCard className="w-4 h-4" />}
                             label="Payments"
@@ -199,9 +245,10 @@ export const OrganisationPage = () => {
                     onInviteRoleChange={setInviteRole}
                     onInviteSubmit={handleInvite}
                     onRemoveMember={handleRemoveMember}
+                    onUpdateRole={handleUpdateRole}
                 />
             ) : (
-                <PaymentSettings />
+                <PaymentSettings organisation={organisation} />
             )}
         </div>
     );
