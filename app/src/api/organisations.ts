@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { OrgRow } from '../components/admin/types'
-import { OrgSimple } from '../types/organisation'
+import { OrgSimple, OrgInvite } from '../types/organisation'
 
 export const updateOrganisationName = async (orgId: string, name: string) => {
   const { error } = await supabase.from('organisations').update({ name }).eq('id', orgId)
@@ -96,4 +96,76 @@ export const listAdminOrgs = async () => {
         ? o.organisation_members[0].count
         : null,
   })) as OrgRow[]
+}
+
+export const createOrganisation = async (name: string, tier: 'tier-1' | 'tier-2' | 'tier-3') => {
+  const { data: user } = await supabase.auth.getUser()
+  if (!user.user) throw new Error('Not authenticated')
+
+  // In a real app, this would be a single RPC or transaction that:
+  // 1. Creates the organisation with the selected tier
+  // 2. Adds the creator as the owner
+  // 3. Sets up stripe subscription
+
+  // For now, we'll just insert into organisations
+  const { data, error } = await supabase
+    .from('organisations')
+    .insert({ name, owner_id: user.user.id })
+    .select('id')
+    .single()
+
+  if (error) throw error
+
+  // And add the member
+  if (data) {
+    await addOrganisationMember(data.id, user.user.id, 'admin')
+  }
+
+  return data
+}
+
+// Mocked Invites
+export const getPendingInvites = async (): Promise<OrgInvite[]> => {
+  // Simulate network delay
+  await new Promise((resolve) => setTimeout(resolve, 500))
+
+  // Mock data - in real app would query 'organisation_invites' table
+  return [
+    {
+      id: 'inv-1',
+      org_name: 'Acme Corp',
+      org_id: 'org-123',
+      inviter_name: 'John Doe',
+      role: 'editor',
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: 'inv-2',
+      org_name: 'Stark Industries',
+      org_id: 'org-456',
+      inviter_name: 'Tony Stark',
+      role: 'member',
+      created_at: new Date(Date.now() - 86400000).toISOString(),
+    }
+  ]
+}
+
+export const acceptInvite = async (inviteId: string) => {
+  // In real app: call RPC to accept invite
+  await new Promise((resolve) => setTimeout(resolve, 800))
+  // We can't really "accept" the mock invite into the real DB without a real invite system
+  // So we'll just return success 
+  return true
+}
+
+export const rejectInvite = async (inviteId: string) => {
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  return true
+}
+
+export const updateOrganisationTier = async (orgId: string, tier: 'tier-1' | 'tier-2' | 'tier-3') => {
+  // Mock API call to update tier and seat limit
+  // In real app, this would call Stripe and update DB
+  await new Promise((resolve) => setTimeout(resolve, 1000))
+  return true
 }
