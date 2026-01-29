@@ -1,34 +1,61 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import './App.css'
+import { Layout } from './components/Layout'
+import { CompanyProvider, useCompany } from './contexts/CompanyContext'
+import { Auth } from './pages/Auth'
+import { CompanySetup } from './pages/CompanySetup'
+import { Dashboard } from './pages/Dashboard'
+import { InventoryList } from './pages/InventoryList'
+import { Scan } from './pages/Scan'
+import { LabelStudio } from './pages/LabelStudio'
+import { ProductDetail } from './pages/ProductDetail'
+import { TeamSettings } from './pages/TeamSettings'
+import { Attributes } from './pages/Attributes'
+import { useSession } from './hooks/useSession'
+
+const CompanyGate = () => {
+  const { companies, isLoading } = useCompany()
+
+  if (isLoading) {
+    return <div className="empty-state">Loading workspace...</div>
+  }
+
+  if (companies.length === 0) {
+    return <CompanySetup />
+  }
+
+  return <Outlet />
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { session, isLoading } = useSession()
+
+  if (isLoading) {
+    return <div className="empty-state">Loading session...</div>
+  }
+
+  if (!session) {
+    return <Auth />
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <CompanyProvider userId={session.user.id}>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route element={<CompanyGate />}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/inventory" element={<InventoryList />} />
+            <Route path="/inventory/:id" element={<ProductDetail />} />
+            <Route path="/scan" element={<Scan />} />
+            <Route path="/tools/labels" element={<LabelStudio />} />
+            <Route path="/settings/team" element={<TeamSettings />} />
+            <Route path="/settings/attributes" element={<Attributes />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+      </Routes>
+    </CompanyProvider>
   )
 }
 
