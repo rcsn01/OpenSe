@@ -11,6 +11,9 @@ import { LabelStudio } from './pages/LabelStudio'
 import { ProductDetail } from './pages/ProductDetail'
 import { TeamSettings } from './pages/TeamSettings'
 import { Attributes } from './pages/Attributes'
+import { Reports } from './pages/Reports'
+import { Procurement } from './pages/Procurement'
+import { Alerts } from './pages/Alerts'
 import { useSession } from './hooks/useSession'
 
 const CompanyGate = () => {
@@ -51,6 +54,9 @@ function App() {
             <Route path="/tools/labels" element={<LabelStudio />} />
             <Route path="/settings/team" element={<TeamSettings />} />
             <Route path="/settings/attributes" element={<Attributes />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/procurement" element={<Procurement />} />
+            <Route path="/alerts" element={<Alerts />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
