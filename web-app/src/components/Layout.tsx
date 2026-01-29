@@ -7,6 +7,9 @@ const navItems = [
   { label: 'Inventory', path: '/inventory' },
   { label: 'Scanner', path: '/scan' },
   { label: 'Label Studio', path: '/tools/labels' },
+  { label: 'Reports', path: '/reports' },
+  { label: 'Procurement', path: '/procurement' },
+  { label: 'Alerts', path: '/alerts' },
   { label: 'Team Settings', path: '/settings/team' },
   { label: 'Attributes', path: '/settings/attributes' },
 ]
@@ -16,6 +19,9 @@ const titleMap: Record<string, string> = {
   '/inventory': 'Inventory',
   '/scan': 'Scanner',
   '/tools/labels': 'Label Studio',
+  '/reports': 'Reports',
+  '/procurement': 'Procurement',
+  '/alerts': 'Alerts',
   '/settings/team': 'Team Settings',
   '/settings/attributes': 'Attributes',
 }
