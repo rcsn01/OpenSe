@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 import type { Folder, Tag } from '../types'
@@ -15,6 +16,7 @@ import type { InventoryProduct, SortDirection, SortField } from '../components/I
 
 export const InventoryList = () => {
   const { companyId } = useCompany()
+  const [searchParams] = useSearchParams()
 
   const [products, setProducts] = useState<InventoryProduct[]>([])
   const [folders, setFolders] = useState<Folder[]>([])
@@ -105,6 +107,13 @@ export const InventoryList = () => {
     loadFilters()
     loadStats()
   }, [companyId])
+
+  useEffect(() => {
+    const stockParam = searchParams.get('stock')
+    if (stockParam === 'low' || stockParam === 'out' || stockParam === 'all') {
+      setStockFilter(stockParam)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     loadProducts()
@@ -204,6 +213,10 @@ export const InventoryList = () => {
                 setPage={setPage}
                 folders={folders}
                 handleBulkDelete={handleBulkDelete}
+                onRefresh={() => {
+                  loadProducts()
+                  loadStats()
+                }}
               />
             ),
           },
