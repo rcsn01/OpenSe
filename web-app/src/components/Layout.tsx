@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
@@ -30,6 +31,7 @@ export const Layout = () => {
   const { companyId, companyName, companies, setCompanyId } = useCompany()
   const location = useLocation()
   const navigate = useNavigate()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -40,7 +42,7 @@ export const Layout = () => {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="brand">
           <div className="brand-logo">FS</div>
           <div>
@@ -49,6 +51,13 @@ export const Layout = () => {
               Phase 1
             </div>
           </div>
+          <button
+            className="icon-button mobile-only"
+            aria-label="Close navigation"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            ✕
+          </button>
         </div>
         <div>
           <h2>Workspace</h2>
@@ -72,7 +81,12 @@ export const Layout = () => {
           <h2>Navigation</h2>
           <nav className="nav">
             {navItems.map((item) => (
-              <NavLink key={item.path} to={item.path} className={({ isActive }) => (isActive ? 'active' : '')}>
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => (isActive ? 'active' : '')}
+                onClick={() => setIsSidebarOpen(false)}
+              >
                 {item.label}
               </NavLink>
             ))}
@@ -84,11 +98,21 @@ export const Layout = () => {
           </button>
         </div>
       </aside>
+      {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
       <main className="main">
         <div className="topbar">
-          <div>
+          <div className="row">
+            <button
+              className="icon-button mobile-only"
+              aria-label="Open navigation"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              ☰
+            </button>
+            <div>
             <h1 className="page-title">{title}</h1>
             <div className="muted small">{companyName ?? 'No company selected'}</div>
+            </div>
           </div>
         </div>
         <Outlet />
