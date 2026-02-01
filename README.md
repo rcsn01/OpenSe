@@ -1,7 +1,28 @@
-# Open-ETL
+# StoQR
 
-Open-ETL is a web-based ETL page that processes the data in a seperate thread inside the web page.
-This project is made to tackle 
+**Open Source Inventory Management System**
+
+StoQR is a modern, web-based inventory management platform designed to tackle the high cost of enterprise SaaS solutions. It provides a powerful, self-hostable alternative for businesses to track stock, manage procurement, and streamline operations without the expensive subscription fees.
+
+> **Note:** This project is currently in active development.
+
+## 🚀 Features
+
+StoQR offers a comprehensive suite of tools to manage your physical assets:
+
+* **Dashboard & Analytics:** Real-time overview of inventory value, low stock alerts, and top-moving products.
+* **Inventory Management:** Organize products with folders, variants (matrices), bundles, and infinite custom attributes.
+* **Label Studio:** Built-in tools to design and print QR codes/Barcodes for items, shelf locations, and shipping labels.
+* **Scanner Support:** Integrated camera scanner and support for handheld barcode scanners for quick lookups, pick/pack, and cycle counts.
+* **Procurement:** Manage suppliers, create Purchase Orders (POs), and track receiving logs.
+* **Reporting:** Detailed audit trails, stock valuation history, turnover rates, and profitability analysis.
+* **Team & Security:** Role-based access control (RBAC) to manage staff permissions securely.
+
+## 🛠️ Tech Stack
+
+* **Frontend:** React 19, TypeScript, Vite, Tailwind CSS
+* **Backend:** Supabase (PostgreSQL, Auth, Storage, Realtime)
+* **Database:** PostgreSQL 15+
 
 **⚠️ PROPRIETARY SOURCE CODE - VIEW ONLY**
 
