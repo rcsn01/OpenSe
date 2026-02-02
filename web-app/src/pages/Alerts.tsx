@@ -3,6 +3,8 @@ import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 import type { Product } from '../types'
 import { EmptyState } from '../components/EmptyState'
+import { ExpiryList } from '../components/Alerts/ExpiryList'
+import { LowStockList } from '../components/Alerts/LowStockList'
 
 const DAYS_NOTICE = 30
 
@@ -58,48 +60,8 @@ export const Alerts = () => {
 
   return (
     <div className="grid grid-2">
-      <div className="card">
-        <div className="flex-between" style={{ marginBottom: 12 }}>
-          <h3 className="section-title">Low stock</h3>
-          <span className="pill">{lowStock.length} items</span>
-        </div>
-        {lowStock.length === 0 ? (
-          <EmptyState title="All clear" description="No items need reorder." />
-        ) : (
-          <div className="list">
-            {lowStock.map((product) => (
-              <div key={product.id} className="flex-between">
-                <div>
-                  <div style={{ fontWeight: 600 }}>{product.name}</div>
-                  <div className="small muted">SKU {product.sku}</div>
-                </div>
-                <span className="badge warning">{product.quantity_on_hand} left</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="card">
-        <div className="flex-between" style={{ marginBottom: 12 }}>
-          <h3 className="section-title">Expiry alerts</h3>
-          <span className="pill">{expiring.length} items</span>
-        </div>
-        {expiring.length === 0 ? (
-          <EmptyState title="No expirations" description="No items expiring in the next 30 days." />
-        ) : (
-          <div className="list">
-            {expiring.map((product) => (
-              <div key={product.id} className="flex-between">
-                <div>
-                  <div style={{ fontWeight: 600 }}>{product.name}</div>
-                  <div className="small muted">SKU {product.sku}</div>
-                </div>
-                <span className="badge danger">{product.expiry_date}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <LowStockList products={lowStock} />
+      <ExpiryList products={expiring} />
     </div>
   )
 }
