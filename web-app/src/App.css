@@ -636,3 +636,148 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* --- Modern Tabs Redesign --- */
+.tabs-header {
+  display: inline-flex;
+  background: #f1f5f9; /* Muted background container */
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+  border-bottom: none; /* Remove old border */
+  margin-bottom: 24px;
+}
+
+.tabs-button {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 13px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.tabs-button:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.tabs-button.active {
+  background: #ffffff;
+  color: #2563eb; /* Primary color text */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06);
+  font-weight: 600;
+  border-bottom: none;
+}
+
+/* --- Modern Folder Explorer --- */
+.folder-explorer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  background: #fff;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.breadcrumb-item {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  color: var(--muted);
+  border: none;
+  background: transparent;
+}
+
+.breadcrumb-item:hover {
+  background: #f1f5f9;
+  color: var(--text);
+}
+
+.breadcrumb-item.active {
+  color: var(--text);
+  background: #f1f5f9;
+  font-weight: 600;
+}
+
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.modern-folder-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  height: 140px;
+}
+
+.modern-folder-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.folder-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #eff6ff; /* Light blue bg */
+  color: #3b82f6; /* Blue icon */
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+}
+
+.folder-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.folder-meta {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  gap: 8px;
+}
+
+.folder-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.modern-folder-card:hover .folder-actions,
+.folder-actions.open {
+  opacity: 1;
+}
