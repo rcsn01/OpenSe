@@ -4,43 +4,132 @@ import { supabase } from '../../supabaseClient'
 import type { Folder } from '../../types'
 import { formatCurrency, toNumber } from '../../utils'
 import type { InventoryProduct } from './types'
-import { Folder as FolderIcon, ChevronRight, MoreVertical, Plus, FolderOpen, ArrowLeft, Trash2, Edit2, MoveRight } from 'lucide-react'
+import { 
+  Folder as FolderIcon, 
+  FolderOpen, 
+  ChevronRight, 
+  ChevronDown, 
+  Package, 
+  Search, 
+  Plus, 
+  MoreHorizontal, 
+  ArrowUp,
+  LayoutGrid,
+  List as ListIcon
+} from 'lucide-react'
 import { toast } from 'sonner'
+
+// --- Helper: Build Tree Structure ---
+type TreeNode = Folder & { children: TreeNode[] }
+
+const buildTree = (folders: Folder[], parentId: string | null = null): TreeNode[] => {
+  return folders
+    .filter((f) => f.parent_id === parentId)
+    .map((f) => ({
+      ...f,
+      children: buildTree(folders, f.id),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// --- Component: Recursive Tree Item ---
+const TreeItem = ({ 
+  node, 
+  level = 0, 
+  activeId, 
+  onSelect, 
+  expandedIds, 
+  toggleExpand 
+}: { 
+  node: TreeNode
+  level?: number
+  activeId: string | null
+  onSelect: (id: string) => void
+  expandedIds: Set<string>
+  toggleExpand: (id: string) => void
+}) => {
+  const isExpanded = expandedIds.has(node.id)
+  const hasChildren = node.children.length > 0
+  const isActive = activeId === node.id
+
+  return (
+    <div>
+      <div 
+        className={`tree-item ${isActive ? 'active' : ''}`} 
+        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        onClick={() => onSelect(node.id)}
+      >
+        <div 
+          className="tree-toggle"
+          onClick={(e) => {
+            e.stopPropagation()
+            toggleExpand(node.id)
+          }}
+        >
+          {hasChildren && (
+            isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+          )}
+        </div>
+        
+        {isActive || isExpanded ? (
+          <FolderOpen size={16} style={{ marginRight: 8, color: isActive ? '#2563eb' : '#3b82f6' }} />
+        ) : (
+          <FolderIcon size={16} style={{ marginRight: 8, color: '#3b82f6' }} />
+        )}
+        
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {node.name}
+        </span>
+      </div>
+      
+      {isExpanded && node.children.map((child) => (
+        <TreeItem 
+          key={child.id} 
+          node={child} 
+          level={level + 1} 
+          activeId={activeId} 
+          onSelect={onSelect}
+          expandedIds={expandedIds}
+          toggleExpand={toggleExpand}
+        />
+      ))}
+    </div>
+  )
+}
 
 export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: string; allFolders: Folder[]; onRefresh: () => void }) => {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
   const [products, setProducts] = useState<InventoryProduct[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [view, setView] = useState<'list' | 'grid'>('list')
 
-  // Actions state
+  // Actions
   const [isCreating, setIsCreating] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
-  const [renamingId, setRenamingId] = useState<string | null>(null)
-  const [renameValue, setRenameValue] = useState('')
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [folderStats, setFolderStats] = useState<Record<string, { count: number; value: number }>>({})
 
-  // Derived state
-  const currentFolder = allFolders.find((f) => f.id === currentFolderId)
-  const subfolders = allFolders.filter((f) => f.parent_id === currentFolderId)
+  // Build the tree
+  const tree = useMemo(() => buildTree(allFolders, null), [allFolders])
+  
+  // Current folder data
+  const currentFolder = allFolders.find(f => f.id === currentFolderId)
+  const subfolders = allFolders.filter(f => f.parent_id === currentFolderId)
 
-  const breadcrumbs = useMemo(() => {
-    const path = [] as Folder[]
-    let curr = currentFolder
-    while (curr) {
-      path.unshift(curr)
-      curr = allFolders.find((f) => f.id === curr?.parent_id)
-    }
-    return path
-  }, [currentFolder, allFolders])
+  // Expand parent folders when selecting a deep child (optional, but good UX)
+  // Simple version: just toggle expand manually
+  const toggleExpand = (id: string) => {
+    const next = new Set(expandedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setExpandedIds(next)
+  }
 
-  // --- Data Loading ---
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true)
       let query = supabase
         .from('products')
-        .select('id, name, sku, quantity_on_hand, selling_price')
+        .select('id, name, sku, quantity_on_hand, selling_price, category')
         .eq('company_id', companyId)
 
       if (currentFolderId) {
@@ -56,232 +145,208 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
     fetchProducts()
   }, [currentFolderId, companyId])
 
-  useEffect(() => {
-    const fetchFolderStats = async () => {
-      const { data } = await supabase
-        .from('products')
-        .select('folder_id, quantity_on_hand, selling_price')
-        .eq('company_id', companyId)
-
-      const stats: Record<string, { count: number; value: number }> = {}
-      ;(data as any[] | null)?.forEach((p) => {
-        const key = p.folder_id ?? 'root'
-        if (!stats[key]) stats[key] = { count: 0, value: 0 }
-        stats[key].count += 1
-        stats[key].value += toNumber(p.quantity_on_hand) * toNumber(p.selling_price)
-      })
-      setFolderStats(stats)
-    }
-    if (companyId) fetchFolderStats()
-  }, [companyId, allFolders])
-
-  // --- Handlers ---
-  const handleCreate = async () => {
+  const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return
     const { error } = await supabase.from('folders').insert({
       company_id: companyId,
       name: newFolderName,
-      parent_id: currentFolderId,
+      parent_id: currentFolderId
     })
-    if(error) toast.error(error.message)
-    else {
+    if (!error) {
       toast.success("Folder created")
       setNewFolderName('')
       setIsCreating(false)
       onRefresh()
+      // If we are in a folder, ensure it is expanded so we see the new child
+      if (currentFolderId) setExpandedIds(prev => new Set(prev).add(currentFolderId))
     }
   }
 
-  const handleRename = async (id: string) => {
-    if (!renameValue.trim()) return
-    await supabase.from('folders').update({ name: renameValue }).eq('id', id)
-    setRenamingId(null)
-    onRefresh()
-    toast.success("Folder renamed")
-  }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this folder? Items inside will be moved to Root.')) return
-    await supabase.from('folders').delete().eq('id', id)
-    onRefresh()
-    toast.success("Folder deleted")
-  }
-
+  // --- Render ---
   return (
     <div className="stack">
-      {/* --- Breadcrumb & Actions Header --- */}
-      <div className="folder-explorer-header">
-        <div className="breadcrumb-nav">
+      {/* --- Toolbar --- */}
+      <div className="explorer-toolbar" style={{ borderRadius: '12px 12px 0 0', border: '1px solid var(--border)', borderBottom: 'none' }}>
+        <div className="row">
           <button 
-            className={`breadcrumb-item ${!currentFolderId ? 'active' : ''}`}
-            onClick={() => setCurrentFolderId(null)}
+            className="button ghost small icon-button" 
+            disabled={!currentFolderId}
+            onClick={() => setCurrentFolderId(currentFolder?.parent_id ?? null)}
+            title="Go Up"
           >
-            <FolderIcon size={16} style={{display: 'inline', marginRight: 6, verticalAlign: 'text-bottom'}}/>
-            Root
+            <ArrowUp size={16} />
           </button>
           
-          {breadcrumbs.map((f) => (
-            <div key={f.id} style={{ display: 'flex', alignItems: 'center' }}>
-              <ChevronRight size={14} className="muted" />
-              <button 
-                className={`breadcrumb-item ${currentFolderId === f.id ? 'active' : ''}`}
-                onClick={() => setCurrentFolderId(f.id)}
-              >
-                {f.name}
-              </button>
-            </div>
-          ))}
+          <div className="input row" style={{ padding: '6px 10px', width: 300, background: '#f1f5f9' }}>
+            <span className="muted" style={{ marginRight: 8, fontSize: 13 }}>
+              {currentFolderId ? `/${currentFolder?.name}` : '/Root'}
+            </span>
+          </div>
         </div>
 
         <div className="row">
           {isCreating ? (
-            <div className="row bg-slate-50 p-1 rounded-lg border border-slate-200">
+            <div className="row bg-slate-50 p-1 rounded border border-slate-200">
               <input 
                 className="input small" 
-                style={{ width: 160 }}
+                style={{ width: 140 }}
                 autoFocus
                 placeholder="Folder Name"
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
               />
-              <button className="button small" onClick={handleCreate}>Save</button>
+              <button className="button small" onClick={handleCreateFolder}>Save</button>
               <button className="button ghost small" onClick={() => setIsCreating(false)}>✕</button>
             </div>
           ) : (
             <button className="button small" onClick={() => setIsCreating(true)}>
-              <Plus size={16} style={{ marginRight: 6 }} />
-              New Folder
+              <Plus size={16} style={{ marginRight: 4 }} /> New Folder
             </button>
           )}
+          <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 8px' }} />
+          <button 
+            className={`button ghost small ${view === 'list' ? 'active' : ''}`} 
+            onClick={() => setView('list')}
+            style={{ padding: 6 }}
+          >
+            <ListIcon size={16} />
+          </button>
+          <button 
+            className={`button ghost small ${view === 'grid' ? 'active' : ''}`} 
+            onClick={() => setView('grid')}
+            style={{ padding: 6 }}
+          >
+            <LayoutGrid size={16} />
+          </button>
         </div>
       </div>
 
-      {/* --- Folders Grid --- */}
-      {subfolders.length > 0 ? (
-        <div className="folder-grid">
-          {subfolders.map((folder) => (
+      {/* --- Main Explorer --- */}
+      <div className="explorer-container" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0, height: '600px' }}>
+        {/* Left Pane: Tree */}
+        <div className="explorer-sidebar">
+          <div className="sidebar-header">Folders</div>
+          <div className="tree-content">
             <div 
-              key={folder.id} 
-              className="modern-folder-card"
-              onClick={(e) => {
-                // Prevent navigation if clicking actions
-                if ((e.target as HTMLElement).closest('.folder-actions, .input')) return;
-                setCurrentFolderId(folder.id)
-              }}
+              className={`tree-item ${!currentFolderId ? 'active' : ''}`}
+              onClick={() => setCurrentFolderId(null)}
             >
-              <div className="folder-top">
-                <div className="folder-icon-wrapper">
-                  <FolderIcon size={20} fill="currentColor" fillOpacity={0.2} />
+              <div className="tree-toggle" />
+              <FolderIcon size={16} style={{ marginRight: 8, color: '#64748b' }} />
+              Root
+            </div>
+            {tree.map(node => (
+              <TreeItem 
+                key={node.id} 
+                node={node} 
+                activeId={currentFolderId} 
+                onSelect={setCurrentFolderId}
+                expandedIds={expandedIds}
+                toggleExpand={toggleExpand}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Right Pane: Content */}
+        <div className="explorer-main">
+          {view === 'list' ? (
+            // LIST VIEW
+            <div className="file-list">
+              <div className="file-row header">
+                <div></div>
+                <div>Name</div>
+                <div>Type</div>
+                <div>Stock / Items</div>
+                <div style={{ textAlign: 'right' }}>Price</div>
+              </div>
+
+              {/* Render Subfolders */}
+              {subfolders.map((folder) => (
+                <div 
+                  key={folder.id} 
+                  className="file-row folder"
+                  onClick={() => {
+                    setCurrentFolderId(folder.id)
+                    setExpandedIds(prev => new Set(prev).add(folder.id))
+                  }}
+                >
+                  <div className="file-icon"><FolderIcon size={18} fill="currentColor" fillOpacity={0.2} /></div>
+                  <div className="file-name">{folder.name}</div>
+                  <div className="muted small">Folder</div>
+                  <div className="muted small">—</div>
+                  <div style={{ textAlign: 'right' }} className="muted small">—</div>
                 </div>
-                <div className="folder-info">
-                  {renamingId === folder.id ? (
-                    <input 
-                      className="input small"
-                      value={renameValue}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={() => handleRename(folder.id)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleRename(folder.id)}
-                      autoFocus
-                    />
-                  ) : (
-                    <h4>{folder.name}</h4>
-                  )}
-                  <div className="folder-meta">
-                    <span>{folderStats[folder.id]?.count ?? 0} items</span>
-                    <span>•</span>
-                    <span>{formatCurrency(folderStats[folder.id]?.value ?? 0)}</span>
+              ))}
+
+              {/* Render Products */}
+              {products.map((product) => (
+                <div key={product.id} className="file-row">
+                  <div className="file-icon"><Package size={18} /></div>
+                  <div className="file-name">
+                    <Link to={`/inventory/${product.id}`} style={{ display: 'block' }}>
+                      {product.name}
+                    </Link>
+                    <span className="muted small" style={{ fontSize: 11, fontWeight: 400 }}>{product.sku}</span>
+                  </div>
+                  <div className="muted small">{product.category || 'Product'}</div>
+                  <div>
+                    <span className={`badge-pill ${product.quantity_on_hand === 0 ? 'danger' : 'neutral'} small`}>
+                      {product.quantity_on_hand} units
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+                    {formatCurrency(product.selling_price)}
                   </div>
                 </div>
-              </div>
+              ))}
 
-              <div className={`folder-actions ${openMenuId === folder.id ? 'open' : ''}`}>
-                <div className="kebab-menu">
-                  <button
-                    className="kebab-button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setOpenMenuId(openMenuId === folder.id ? null : folder.id)
+              {subfolders.length === 0 && products.length === 0 && (
+                <div className="explorer-empty">
+                  <FolderOpen size={48} strokeWidth={1} style={{ marginBottom: 16, opacity: 0.5 }} />
+                  <p>This folder is empty</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            // GRID VIEW
+            <div style={{ padding: 20, overflowY: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 16 }}>
+                {subfolders.map((folder) => (
+                  <div 
+                    key={folder.id} 
+                    className="card hover:shadow-md transition-shadow cursor-pointer"
+                    style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}
+                    onClick={() => {
+                      setCurrentFolderId(folder.id)
+                      setExpandedIds(prev => new Set(prev).add(folder.id))
                     }}
                   >
-                    <MoreVertical size={14} />
-                  </button>
-                  {openMenuId === folder.id && (
-                    <div className="kebab-dropdown">
-                      <button onClick={(e) => { e.stopPropagation(); setRenamingId(folder.id); setRenameValue(folder.name); setOpenMenuId(null); }}>
-                        <Edit2 size={14} style={{marginRight: 8}}/> Rename
-                      </button>
-                      <button style={{ color: 'var(--danger)' }} onClick={(e) => { e.stopPropagation(); handleDelete(folder.id); setOpenMenuId(null); }}>
-                        <Trash2 size={14} style={{marginRight: 8}}/> Delete
-                      </button>
+                    <FolderIcon size={48} className="text-blue-500" fill="#eff6ff" />
+                    <div style={{ fontSize: 14, fontWeight: 500, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {folder.name}
                     </div>
-                  )}
-                </div>
+                  </div>
+                ))}
+                {products.map((product) => (
+                  <Link to={`/inventory/${product.id}`} key={product.id}>
+                    <div 
+                      className="card hover:shadow-md transition-shadow cursor-pointer"
+                      style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8, height: '100%' }}
+                    >
+                      <Package size={48} className="text-slate-400" />
+                      <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.2 }}>
+                        {product.name}
+                      </div>
+                      <div className="small muted">{product.quantity_on_hand} in stock</div>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
-      ) : (
-        // Only show empty state if we are deep in a folder, otherwise root might just have products
-        currentFolderId && products.length === 0 && (
-          <div className="empty-state" style={{ padding: '40px 0' }}>
-            <FolderOpen size={48} color="#cbd5e1" />
-            <h3 style={{ marginTop: 16 }}>Empty Folder</h3>
-            <p className="muted">This folder contains no subfolders or items.</p>
-          </div>
-        )
-      )}
-
-      {/* --- Files (Products) List --- */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: '#f8fafc', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#475569' }}>
-            Products in {currentFolder ? currentFolder.name : 'Root'}
-          </h4>
-          <span className="pill" style={{ fontSize: 11, padding: '2px 8px' }}>{products.length}</span>
-        </div>
-        
-        {isLoading ? (
-          <div className="empty-state">Loading items...</div>
-        ) : products.length === 0 ? (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontStyle: 'italic' }}>
-            No products found in this location.
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th style={{ paddingLeft: 24 }}>Name</th>
-                  <th>SKU</th>
-                  <th style={{ textAlign: 'right' }}>Stock Level</th>
-                  <th style={{ textAlign: 'right', paddingRight: 24 }}>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td style={{ paddingLeft: 24 }}>
-                      <Link to={`/inventory/${p.id}`} style={{ fontWeight: 500, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {p.name}
-                      </Link>
-                    </td>
-                    <td className="muted small">{p.sku}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span className={`badge ${p.quantity_on_hand <= p.reorder_point ? 'warning' : 'neutral'}`}>
-                        {p.quantity_on_hand}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right', paddingRight: 24, fontFamily: 'monospace' }}>
-                      {formatCurrency(p.selling_price)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </div>
   )
