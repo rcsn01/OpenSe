@@ -1,18 +1,37 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
+import { 
+  LayoutDashboard, 
+  Package, 
+  ScanBarcode, 
+  Tags, 
+  FileText, 
+  Truck, 
+  Bell, 
+  Settings, 
+  Database,
+  LogOut,
+  User,
+  Menu,
+  X
+} from 'lucide-react'
 
-const navItems = [
-  { label: 'Dashboard', path: '/dashboard' },
-  { label: 'Inventory', path: '/inventory' },
-  { label: 'Scanner', path: '/scan' },
-  { label: 'Label Studio', path: '/tools/labels' },
-  { label: 'Reports', path: '/reports' },
-  { label: 'Procurement', path: '/procurement' },
-  { label: 'Alerts', path: '/alerts' },
-  { label: 'Team Settings', path: '/settings/team' },
-  { label: 'Attributes', path: '/settings/attributes' },
+// Define navigation groups for better visual hierarchy
+const MAIN_NAV = [
+  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { label: 'Inventory', path: '/inventory', icon: Package },
+  { label: 'Scanner', path: '/scan', icon: ScanBarcode },
+  { label: 'Label Studio', path: '/tools/labels', icon: Tags },
+  { label: 'Reports', path: '/reports', icon: FileText },
+  { label: 'Procurement', path: '/procurement', icon: Truck },
+]
+
+const SETTINGS_NAV = [
+  { label: 'Alerts', path: '/alerts', icon: Bell },
+  { label: 'Team Settings', path: '/settings/team', icon: Settings },
+  { label: 'Attributes', path: '/settings/attributes', icon: Database },
 ]
 
 const titleMap: Record<string, string> = {
@@ -28,10 +47,17 @@ const titleMap: Record<string, string> = {
 }
 
 export const Layout = () => {
-  const { companyId, companyName, companies, setCompanyId } = useCompany()
+  const { companyName } = useCompany()
   const location = useLocation()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [userEmail, setUserEmail] = useState<string>('')
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserEmail(data.user?.email || 'User')
+    })
+  }, [])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -42,63 +68,76 @@ export const Layout = () => {
 
   return (
     <div className="app-shell">
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
+
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="brand">
+        {/* 1. Brand Header */}
+        <div className="sidebar-header">
           <div className="brand-logo">FS</div>
-          <div>
-            <div style={{ fontWeight: 600 }}>Fill The Shelf</div>
-            <div className="small" style={{ color: '#94a3b8' }}>
-              Phase 1
+          <div className="brand-info">
+            <span className="brand-name">Fill The Shelf</span>
+            <span className="brand-version">v1.0</span>
+          </div>
+          <button className="icon-button mobile-only" onClick={() => setIsSidebarOpen(false)}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* 2. Navigation Links */}
+        <div className="sidebar-content">
+          <div className="nav-group">
+            <div className="nav-label">PLATFORM</div>
+            <nav className="nav">
+              {MAIN_NAV.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  onClick={() => setIsSidebarOpen(false)}
+                >
+                  <item.icon size={20} strokeWidth={2} />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+
+          <div className="nav-group">
+            <div className="nav-label">CONFIGURATION</div>
+            <nav className="nav">
+              {SETTINGS_NAV.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  onClick={() => setIsSidebarOpen(false)}
+                >
+                  <item.icon size={20} strokeWidth={2} />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* 3. User Profile / Logout Footer */}
+        <div className="sidebar-footer">
+          <div className="user-profile">
+            <div className="avatar">
+              <User size={18} />
             </div>
+            <div className="user-info">
+              <span className="user-email" title={userEmail}>{userEmail}</span>
+              <span className="user-role">Admin</span>
+            </div>
+            <button className="logout-btn" onClick={handleSignOut} title="Sign out">
+              <LogOut size={18} />
+            </button>
           </div>
-          <button
-            className="icon-button mobile-only"
-            aria-label="Close navigation"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            ✕
-          </button>
-        </div>
-        <div>
-          <h2>Workspace</h2>
-          <select
-            className="select"
-            style={{ marginTop: 8 }}
-            value={companyId ?? ''}
-            onChange={(event) => setCompanyId(event.target.value)}
-          >
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name}
-              </option>
-            ))}
-          </select>
-          <div className="small" style={{ marginTop: 6, color: '#94a3b8' }}>
-            Active: {companyName ?? '—'}
-          </div>
-        </div>
-        <div>
-          <h2>Navigation</h2>
-          <nav className="nav">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) => (isActive ? 'active' : '')}
-                onClick={() => setIsSidebarOpen(false)}
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-        <div style={{ marginTop: 'auto' }}>
-          <button className="button ghost" onClick={handleSignOut}>
-            Sign out
-          </button>
         </div>
       </aside>
-      {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
+
       <main className="main">
         <div className="topbar">
           <div className="row">
@@ -107,11 +146,11 @@ export const Layout = () => {
               aria-label="Open navigation"
               onClick={() => setIsSidebarOpen(true)}
             >
-              ☰
+              <Menu size={20} />
             </button>
             <div>
-            <h1 className="page-title">{title}</h1>
-            <div className="muted small">{companyName ?? 'No company selected'}</div>
+              <h1 className="page-title">{title}</h1>
+              <div className="muted small">{companyName ?? 'Loading...'}</div>
             </div>
           </div>
         </div>
