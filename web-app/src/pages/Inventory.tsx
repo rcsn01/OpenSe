@@ -5,7 +5,6 @@ import { useCompany } from '../contexts/CompanyContext'
 import type { Folder, Tag } from '../types'
 import { EmptyState } from '../components/EmptyState'
 import { Pagination } from '../components/Pagination'
-import { InventoryStats } from '../components/InventoryStats'
 import { Tabs } from '../components/Tabs'
 import { parseCsv, toNumber, formatCurrency } from '../utils'
 
@@ -27,6 +26,245 @@ type SortField = 'name' | 'sku' | 'quantity_on_hand' | 'selling_price'
 type SortDirection = 'asc' | 'desc'
 
 // --- Sub-Components ---
+
+const FoldersView = ({ companyId, allFolders, onRefresh }: { companyId: string, allFolders: Folder[], onRefresh: () => void }) => {
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
+  const [products, setProducts] = useState<InventoryProduct[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  
+  // Actions
+  const [isCreating, setIsCreating] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [movingId, setMovingId] = useState<string | null>(null)
+  const [moveTarget, setMoveTarget] = useState<string>('')
+
+  // Derived
+  const currentFolder = allFolders.find(f => f.id === currentFolderId)
+  const subfolders = allFolders.filter(f => f.parent_id === currentFolderId)
+  
+  // Breadcrumbs logic
+  const breadcrumbs = useMemo(() => {
+    const path = []
+    let curr = currentFolder
+    while (curr) {
+      path.unshift(curr)
+      curr = allFolders.find(f => f.id === curr?.parent_id)
+    }
+    return path
+  }, [currentFolder, allFolders])
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true)
+      let query = supabase.from('products').select('id, name, sku, quantity_on_hand, selling_price').eq('company_id', companyId)
+      
+      if (currentFolderId) {
+        query = query.eq('folder_id', currentFolderId)
+      } else {
+        query = query.is('folder_id', null)
+      }
+      
+      const { data } = await query
+      setProducts((data as any) || [])
+      setIsLoading(false)
+    }
+    fetchProducts()
+  }, [currentFolderId, companyId])
+
+  const handleCreate = async () => {
+    if (!newFolderName.trim()) return
+    await supabase.from('folders').insert({
+      company_id: companyId,
+      name: newFolderName,
+      parent_id: currentFolderId
+    })
+    setNewFolderName('')
+    setIsCreating(false)
+    onRefresh()
+  }
+
+  const handleRename = async (id: string) => {
+    if (!renameValue.trim()) return
+    await supabase.from('folders').update({ name: renameValue }).eq('id', id)
+    setRenamingId(null)
+    onRefresh()
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this folder? Products inside will be unassigned (moved to root).')) return
+    await supabase.from('folders').delete().eq('id', id)
+    onRefresh()
+  }
+
+  const handleMove = async () => {
+    if (!movingId) return
+    const target = moveTarget === 'root' ? null : moveTarget
+    // Simple check to prevent moving into itself (basic cycle prevention)
+    if (target === movingId) return
+    
+    await supabase.from('folders').update({ parent_id: target }).eq('id', movingId)
+    setMovingId(null)
+    onRefresh()
+  }
+
+  const getMoveOptions = (id: string) => {
+     // Exclude self from targets
+     return allFolders.filter(f => f.id !== id)
+  }
+
+  return (
+    <div className="stack">
+       {/* Breadcrumbs & Header */}
+       <div className="card" style={{ padding: '12px 16px' }}>
+          <div className="flex-between">
+             <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button 
+                   className={`button ghost small ${!currentFolderId ? 'active' : ''}`}
+                   onClick={() => setCurrentFolderId(null)}
+                >
+                   Root
+                </button>
+                {breadcrumbs.map(f => (
+                   <span key={f.id} className="row" style={{ gap: 8 }}>
+                      <span className="muted">/</span>
+                      <button 
+                         className={`button ghost small ${currentFolderId === f.id ? 'active' : ''}`}
+                         onClick={() => setCurrentFolderId(f.id)}
+                      >
+                         {f.name}
+                      </button>
+                   </span>
+                ))}
+             </div>
+             <button className="button small" onClick={() => setIsCreating(true)}>+ New Folder</button>
+          </div>
+          
+          {/* Create Inline */}
+          {isCreating && (
+             <div className="row" style={{ marginTop: 12, padding: 12, background: '#f8fafc', borderRadius: 8 }}>
+                <input 
+                   className="input small" 
+                   autoFocus
+                   placeholder="Folder Name"
+                   value={newFolderName}
+                   onChange={e => setNewFolderName(e.target.value)}
+                />
+                <button className="button small" onClick={handleCreate}>Save</button>
+                <button className="button ghost small" onClick={() => setIsCreating(false)}>Cancel</button>
+             </div>
+          )}
+       </div>
+
+       {/* Subfolders Grid */}
+       {subfolders.length > 0 && (
+          <div className="grid grid-3">
+             {subfolders.map(folder => (
+                <div key={folder.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                   {renamingId === folder.id ? (
+                      <div className="row">
+                         <input 
+                            className="input small" 
+                            value={renameValue} 
+                            onChange={e => setRenameValue(e.target.value)}
+                         />
+                         <button className="button small" onClick={() => handleRename(folder.id)}>OK</button>
+                      </div>
+                   ) : (
+                      <div 
+                         style={{ fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                         onClick={() => setCurrentFolderId(folder.id)}
+                      >
+                         <span style={{ fontSize: 20 }}>📁</span>
+                         {folder.name}
+                      </div>
+                   )}
+                   
+                   <div className="row" style={{ marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                      <button 
+                         className="button ghost small" 
+                         style={{ flex: 1 }}
+                         onClick={() => { setRenamingId(folder.id); setRenameValue(folder.name); }}
+                      >
+                         Rename
+                      </button>
+                      <button 
+                         className="button ghost small" 
+                         style={{ flex: 1 }}
+                         onClick={() => { setMovingId(folder.id); setMoveTarget(folder.parent_id || 'root'); }}
+                      >
+                         Move
+                      </button>
+                      <button 
+                         className="button ghost small" 
+                         style={{ flex: 1, color: 'var(--danger)' }}
+                         onClick={() => handleDelete(folder.id)}
+                      >
+                         Delete
+                      </button>
+                   </div>
+                </div>
+             ))}
+          </div>
+       )}
+
+       {/* Move Modal */}
+       {movingId && (
+          <div className="modal-backdrop">
+             <div className="modal" style={{ maxWidth: 400 }}>
+                <h3>Move Folder</h3>
+                <div className="stack">
+                   <select className="select" value={moveTarget} onChange={e => setMoveTarget(e.target.value)}>
+                      <option value="root">Root (No Parent)</option>
+                      {getMoveOptions(movingId).map(f => (
+                         <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                   </select>
+                   <div className="row">
+                      <button className="button" onClick={handleMove}>Move</button>
+                      <button className="button ghost" onClick={() => setMovingId(null)}>Cancel</button>
+                   </div>
+                </div>
+             </div>
+          </div>
+       )}
+
+       {/* Folder Products */}
+       <div className="card" style={{ padding: 0 }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
+             <h4 style={{ margin: 0 }}>Products in {currentFolder ? currentFolder.name : 'Root'}</h4>
+          </div>
+          {isLoading ? (
+             <div className="empty-state">Loading items...</div>
+          ) : products.length === 0 ? (
+             <div className="empty-state">No products in this folder.</div>
+          ) : (
+             <table className="table">
+                <thead>
+                   <tr>
+                      <th>Name</th>
+                      <th>SKU</th>
+                      <th style={{ textAlign: 'right' }}>Qty</th>
+                      <th style={{ textAlign: 'right' }}>Price</th>
+                   </tr>
+                </thead>
+                <tbody>
+                   {products.map(p => (
+                      <tr key={p.id}>
+                         <td><Link to={`/inventory/${p.id}`} style={{ fontWeight: 500 }}>{p.name}</Link></td>
+                         <td className="muted small">{p.sku}</td>
+                         <td style={{ textAlign: 'right' }}>{p.quantity_on_hand}</td>
+                         <td style={{ textAlign: 'right' }}>{formatCurrency(p.selling_price)}</td>
+                      </tr>
+                   ))}
+                </tbody>
+             </table>
+          )}
+       </div>
+    </div>
+  )
+}
 
 const CreateProductModal = ({ 
   isOpen, 
@@ -126,24 +364,31 @@ const ProductListView = ({
   const folderName = (id: string | null) => folders.find((f: any) => f.id === id)?.name ?? '—'
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div className="flex-between" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+    <div style={{ overflow: 'hidden' }}>
+      {/* Table Toolbar / Header */}
+      <div className="flex-between" style={{ padding: '12px 20px', background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
           <div className="row">
-            <h3 className="section-title" style={{ margin: 0 }}>All Products</h3>
-            {selectedRowIds.size > 0 && (
-              <div className="row" style={{ marginLeft: 16 }}>
-                <span className="pill">{selectedRowIds.size} selected</span>
-                <button className="button ghost small" style={{ color: 'var(--danger)' }} onClick={handleBulkDelete}>Delete</button>
+            {selectedRowIds.size > 0 ? (
+              <div className="row">
+                <span className="pill" style={{ background: 'var(--primary)', color: 'white' }}>{selectedRowIds.size} selected</span>
+                <button className="button ghost small" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete}>
+                  Delete Selection
+                </button>
               </div>
+            ) : (
+              <span className="small muted font-semibold">
+                {totalCount} products
+              </span>
             )}
           </div>
+          
           <div className="row">
             <span className="small muted">Sort by:</span>
             <select 
-            className="select small" 
-            style={{ width: 140 }}
-            value={sortField}
-            onChange={(e) => setSortField(e.target.value as SortField)}
+              className="select small" 
+              style={{ width: 140, padding: '4px 8px', height: 32 }}
+              value={sortField}
+              onChange={(e) => setSortField(e.target.value as SortField)}
             >
               <option value="name">Name</option>
               <option value="quantity_on_hand">Stock Level</option>
@@ -151,9 +396,10 @@ const ProductListView = ({
               <option value="selling_price">Price</option>
             </select>
             <button 
-            className="button ghost small"
-            onClick={() => setSortDir((prev: any) => prev === 'asc' ? 'desc' : 'asc')}
-            title="Toggle Direction"
+              className="button ghost small"
+              onClick={() => setSortDir((prev: any) => prev === 'asc' ? 'desc' : 'asc')}
+              title="Toggle Direction"
+              style={{ height: 32, width: 32, padding: 0, display: 'grid', placeItems: 'center' }}
             >
               {sortDir === 'asc' ? '↑' : '↓'}
             </button>
@@ -167,7 +413,7 @@ const ProductListView = ({
       ) : (
         <>
           <table className="table">
-            <thead style={{ background: '#f8fafc' }}>
+            <thead>
               <tr>
                 <th style={{ width: 40, textAlign: 'center' }}>
                   <input 
@@ -189,7 +435,6 @@ const ProductListView = ({
               {products.map((product: any) => {
                 const isLow = product.quantity_on_hand <= product.reorder_point
                 const isOut = product.quantity_on_hand === 0
-                // Mock allocated for now until Order module exists
                 const allocated = 0 
                 const available = product.quantity_on_hand - allocated
 
@@ -245,11 +490,9 @@ const ProductListView = ({
 }
 
 const VariantsView = ({ products }: { products: InventoryProduct[] }) => {
-  // Simulate grouping by splitting name
   const matrices = useMemo(() => {
     const groups: Record<string, InventoryProduct[]> = {}
     products.forEach(p => {
-      // Very naive grouping logic for demo: Group by first word
       const key = p.name.split(' ')[0]
       if (!groups[key]) groups[key] = []
       groups[key].push(p)
@@ -388,7 +631,7 @@ export const InventoryList = () => {
   
   // UI State
   const [isLoading, setIsLoading] = useState(true)
-  const [isStatsLoading, setIsStatsLoading] = useState(true)
+  // const [isStatsLoading, setIsStatsLoading] = useState(true) // Not used for now as we inline the values
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [importRows, setImportRows] = useState<Record<string, string>[]>([])
@@ -424,7 +667,7 @@ export const InventoryList = () => {
 
   const loadStats = async () => {
     if (!companyId) return
-    setIsStatsLoading(true)
+    // setIsStatsLoading(true)
     const { data } = await supabase
       .from('products')
       .select('quantity_on_hand, cost_price, reorder_point')
@@ -436,7 +679,7 @@ export const InventoryList = () => {
       const low = all.filter(p => p.quantity_on_hand <= p.reorder_point).length
       setStats({ totalItems: all.length, lowStockItems: low, totalValue: value })
     }
-    setIsStatsLoading(false)
+    // setIsStatsLoading(false)
   }
 
   const loadProducts = async () => {
@@ -545,96 +788,122 @@ export const InventoryList = () => {
   if (!companyId) return <EmptyState title="No company selected" description="Select a company to manage inventory." />
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: '260px 1fr', gap: 24 }}>
-      
-      {/* --- Sidebar Filters --- */}
-      <div className="stack">
-        <div className="card stack">
-          <h3 className="section-title">Filters</h3>
-          <div className="stack" style={{ gap: 8 }}>
-            <label className="small muted">Search</label>
-            <input className="input" placeholder="Name or SKU..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <div className="stack" style={{ gap: 8 }}>
-            <label className="small muted">Stock Status</label>
-            <select className="select" value={stockFilter} onChange={(e) => setStockFilter(e.target.value as any)}>
-              <option value="all">All Statuses</option>
-              <option value="low">Low Stock</option>
-              <option value="out">Out of Stock</option>
-            </select>
-          </div>
-          <div className="stack" style={{ gap: 8 }}>
-             <label className="small muted">Tags</label>
-             <div className="row wrap">
-               {tags.map(tag => (
-                  <button
-                    key={tag.id}
-                    className={`tag ${selectedTag === tag.id ? 'active' : ''}`}
-                    style={{ borderColor: tag.color, color: selectedTag === tag.id ? 'var(--primary)' : tag.color, cursor: 'pointer' }}
-                    onClick={() => setSelectedTag(selectedTag === tag.id ? null : tag.id)}
-                  >
-                    {tag.name}
-                  </button>
-               ))}
-               {tags.length === 0 && <span className="small muted">No tags created</span>}
-             </div>
-          </div>
-        </div>
+    <div className="stack">
+      <Tabs 
+        tabs={[
+          { 
+            id: 'all', 
+            label: 'All Products', 
+            content: (
+              <div className="stack">
+                
+                {/* Stats Row (Reduced) */}
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+                   <div className="card stat" style={{ borderLeft: stats.lowStockItems > 0 ? '4px solid var(--warning)' : undefined }}>
+                      <div className="flex-between">
+                        <h3 style={{margin:0}}>Low Stock Alerts</h3>
+                        {stats.lowStockItems > 0 && <span className="badge warning">Action needed</span>}
+                      </div>
+                      <div className="value">{stats.lowStockItems}</div>
+                   </div>
+                   
+                   <div className="card stat">
+                      <div className="flex-between">
+                        <h3 style={{margin:0}}>Total Asset Value</h3>
+                        <span className="pill">Cost Basis</span>
+                      </div>
+                      <div className="value">{formatCurrency(stats.totalValue)}</div>
+                   </div>
+                </div>
 
-        <div className="card stack">
-           <h3 className="section-title">Actions</h3>
-           <button className="button" onClick={() => setIsCreateOpen(true)}>Create Product</button>
-           <button className="button secondary" onClick={() => setIsImportOpen(true)}>Import CSV</button>
-        </div>
-      </div>
+                {/* Integrated Filter & Action Panel */}
+                <div className="card stack" style={{ padding: 0 }}>
+                   
+                   {/* Toolbar */}
+                   <div className="flex-between wrap" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', gap: 16 }}>
+                      {/* Left: Filters */}
+                      <div className="row wrap" style={{ flex: 1 }}>
+                         <input 
+                            className="input" 
+                            placeholder="Search products..." 
+                            value={search} 
+                            onChange={(e) => setSearch(e.target.value)} 
+                            style={{ width: 220 }}
+                         />
+                         <select 
+                            className="select" 
+                            value={stockFilter} 
+                            onChange={(e) => setStockFilter(e.target.value as any)}
+                            style={{ width: 160 }}
+                         >
+                            <option value="all">All Statuses</option>
+                            <option value="low">Low Stock</option>
+                            <option value="out">Out of Stock</option>
+                         </select>
+                         <select 
+                            className="select" 
+                            value={selectedTag ?? ''} 
+                            onChange={(e) => setSelectedTag(e.target.value || null)}
+                            style={{ width: 160 }}
+                         >
+                            <option value="">All Tags</option>
+                            {tags.map(tag => (
+                               <option key={tag.id} value={tag.id}>{tag.name}</option>
+                            ))}
+                         </select>
+                      </div>
 
-      {/* --- Main Content --- */}
-      <div className="stack">
-        <InventoryStats totalItems={stats.totalItems} lowStockItems={stats.lowStockItems} totalValue={stats.totalValue} isLoading={isStatsLoading} />
+                      {/* Right: Actions */}
+                      <div className="row">
+                         <button className="button secondary" onClick={() => setIsImportOpen(true)}>Import CSV</button>
+                         <button className="button" onClick={() => setIsCreateOpen(true)}>Create Product</button>
+                      </div>
+                   </div>
 
-        <Tabs 
-          tabs={[
-            { 
-              id: 'all', 
-              label: 'All Products', 
-              content: (
-                <ProductListView 
-                  products={products}
-                  isLoading={isLoading}
-                  selectedRowIds={selectedRowIds}
-                  toggleSelection={toggleSelection}
-                  toggleAll={toggleAll}
-                  sortField={sortField}
-                  setSortField={setSortField}
-                  sortDir={sortDir}
-                  setSortDir={setSortDir}
-                  page={page}
-                  pageSize={pageSize}
-                  totalCount={totalCount}
-                  setPage={setPage}
-                  folders={folders}
-                  handleBulkDelete={handleBulkDelete}
-                />
-              )
-            },
-            {
-              id: 'matrix',
-              label: 'Variants & Matrices',
-              content: <VariantsView products={products} />
-            },
-            {
-              id: 'transfer',
-              label: 'Stock Transfers',
-              content: <StockTransferView products={products} />
-            },
-            {
-              id: 'bundles',
-              label: 'Kitting & Bundles',
-              content: <KittingView products={products} />
-            }
-          ]}
-        />
-      </div>
+                   {/* Products Table */}
+                   <ProductListView 
+                      products={products}
+                      isLoading={isLoading}
+                      selectedRowIds={selectedRowIds}
+                      toggleSelection={toggleSelection}
+                      toggleAll={toggleAll}
+                      sortField={sortField}
+                      setSortField={setSortField}
+                      sortDir={sortDir}
+                      setSortDir={setSortDir}
+                      page={page}
+                      pageSize={pageSize}
+                      totalCount={totalCount}
+                      setPage={setPage}
+                      folders={folders}
+                      handleBulkDelete={handleBulkDelete}
+                   />
+                </div>
+              </div>
+            )
+          },
+          {
+            id: 'folders',
+            label: 'Folders',
+            content: <FoldersView companyId={companyId} allFolders={folders} onRefresh={loadFilters} />
+          },
+          {
+            id: 'matrix',
+            label: 'Variants & Matrices',
+            content: <VariantsView products={products} />
+          },
+          {
+            id: 'transfer',
+            label: 'Stock Transfers',
+            content: <StockTransferView products={products} />
+          },
+          {
+            id: 'bundles',
+            label: 'Kitting & Bundles',
+            content: <KittingView products={products} />
+          }
+        ]}
+      />
 
       <CreateProductModal 
         isOpen={isCreateOpen} 

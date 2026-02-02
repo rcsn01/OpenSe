@@ -1,0 +1,1 @@
+1. Each Page in the /pages folder has multiple tabs. You need to refactor out each tab into their own file in this repo under /components/(pagename)/tab. For example, for inventory, there should be /components/inventory
