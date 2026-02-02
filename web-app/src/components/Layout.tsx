@@ -67,22 +67,20 @@ export const Layout = () => {
   const title = titleMap[location.pathname] ?? 'Inventory'
 
   return (
-    <div className="app-shell">
-      {/* Mobile Backdrop */}
-      {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
+      <div className="app-shell">
+        {/* Mobile Backdrop */}
+        {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
 
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        {/* 1. Brand Header */}
-        <div className="sidebar-header">
-          <div className="brand-logo">FS</div>
-          <div className="brand-info">
-            <span className="brand-name">Fill The Shelf</span>
-            <span className="brand-version">v1.0</span>
+        <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+          {/* 1. Brand Header */}
+          <div className="sidebar-header">
+            <div className="brand-logo">OS</div> {/* Changed FS to OS */}
+            <div className="brand-info">
+              <span className="brand-name">Open-StoQR</span> {/* Changed App Name */}
+              <span className="brand-version">v1.0</span>
+            </div>
+            {/* "X" button removed here */}
           </div>
-          <button className="icon-button mobile-only" onClick={() => setIsSidebarOpen(false)}>
-            <X size={20} />
-          </button>
-        </div>
 
         {/* 2. Navigation Links */}
         <div className="sidebar-content">
