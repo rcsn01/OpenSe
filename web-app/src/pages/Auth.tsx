@@ -41,7 +41,7 @@ export const Auth = () => {
   return (
     <div className="auth-shell">
       <div className="auth-card">
-        <h1>Fill The Shelf</h1>
+        <h1>Open-StoQR</h1>
         <p className="muted" style={{ marginTop: 0 }}>
           Sign in to manage inventory and your team.
         </p>
