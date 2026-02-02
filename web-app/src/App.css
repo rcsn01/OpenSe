@@ -6,6 +6,7 @@
 .app-shell {
   display: flex;
   min-height: 100vh;
+  background: var(--bg);
 }
 
 .sidebar {
@@ -65,7 +66,8 @@
 
 .main {
   flex: 1;
-  padding: 28px 36px 48px;
+  padding: 36px 44px 64px;
+  background: var(--bg);
 }
 
 .topbar {
@@ -106,6 +108,11 @@
   padding: 20px;
 }
 
+.stat-card {
+  border-radius: 22px;
+  box-shadow: 0 26px 55px rgba(15, 23, 42, 0.14);
+}
+
 .grid {
   display: grid;
   gap: 20px;
@@ -142,6 +149,40 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge-pill.success {
+  background: rgba(22, 163, 74, 0.16);
+  color: #166534;
+}
+
+.badge-pill.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #92400e;
+}
+
+.badge-pill.danger {
+  background: rgba(239, 68, 68, 0.18);
+  color: #991b1b;
+}
+
+.badge-pill.neutral {
+  background: rgba(100, 116, 139, 0.16);
+  color: #334155;
+}
+
+.badge-pill.info {
+  background: rgba(59, 130, 246, 0.16);
+  color: #1d4ed8;
 }
 
 .badge.success {
@@ -186,6 +227,10 @@
   font-weight: 600;
 }
 
+.table-header-selected {
+  background: rgba(59, 130, 246, 0.08);
+}
+
 .input,
 .select,
 .textarea {
@@ -221,6 +266,29 @@
   border-color: var(--primary);
   color: var(--primary);
   background: rgba(37, 99, 235, 0.08);
+}
+
+.tabs-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+  gap: 0;
+}
+
+.tabs-button {
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  background: transparent;
+  padding: 12px 16px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.tabs-button.active {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
 }
 
 .pill {
@@ -329,6 +397,118 @@
   padding: 32px;
   text-align: center;
   color: var(--muted);
+  display: grid;
+  place-items: center;
+  gap: 10px;
+}
+
+.empty-state-illustration {
+  width: 64px;
+  height: 64px;
+  color: #cbd5f5;
+}
+
+.editable-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.editable-cell .edit-icon {
+  opacity: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.editable-cell:hover .edit-icon {
+  opacity: 1;
+}
+
+.action-bar {
+  background: rgba(59, 130, 246, 0.08);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 12px 20px;
+}
+
+.action-bar .button {
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.kebab-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kebab-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.kebab-dropdown {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+  min-width: 160px;
+  z-index: 20;
+}
+
+.kebab-dropdown button {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.kebab-dropdown button:hover {
+  background: #f1f5f9;
+}
+
+.folder-card {
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.folder-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+}
+
+.hover-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.queue-item {
+  position: relative;
+}
+
+.queue-item:hover .hover-remove {
+  opacity: 1;
+}
+
+.label-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
 .image-grid {

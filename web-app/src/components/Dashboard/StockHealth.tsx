@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { ProgressBar } from '../ProgressBar'
 
 export const StockHealth = ({
@@ -9,6 +10,8 @@ export const StockHealth = ({
   lowStockCount: number
   outOfStockCount: number
 }) => {
+  const navigate = useNavigate()
+
   return (
     <div className="card stack">
       <h3 className="section-title">Stock Health</h3>
@@ -24,6 +27,7 @@ export const StockHealth = ({
           value={lowStockCount}
           max={totalProducts}
           color="var(--warning)"
+          onClick={() => navigate('/inventory?stock=low')}
         />
         <ProgressBar
           label="Out of Stock"

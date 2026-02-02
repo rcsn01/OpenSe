@@ -1,58 +1,102 @@
-"Refactor the Folder Card component in the Folder view. Currently, the 'Rename', 'Move', and 'Delete' buttons are always visible, which clutters the UI. Please redesign this to use a 'kebab' menu (three vertical dots icon) located in the top-right corner of each card. When clicked, this icon should open a dropdown menu containing the actions. This will free up space to make the Folder Name prominent and perhaps display metadata like 'Item Count' or 'Total Value' inside the folder card. Use a subtle hover effect on the card to indicate it is clickable."
+Role: Expert React/TypeScript Developer Context: We are refactoring the web-app project (Vite + React + TypeScript + Supabase + Tailwind CSS). Task: Implement the following comprehensive UI/UX improvements and feature enhancements. Please follow the implementation details strictly.
+1. Global UI & System Enhancements
 
+    Layout & Spacing: Refine the global layout in App.css and Layout.tsx.
 
+        Change the main page background to a very light gray (e.g., bg-gray-50) while keeping Cards and Tables white to create a layered effect.
 
-"Redesign the Dashboard KPI cards (Low Stock Alerts and Total Asset Value) to look more professional.
+        Increase padding inside the main content area for better "breathing room."
 
-    Add a relevant icon to each card (e.g., an alert triangle for Low Stock, a dollar sign or stack of coins for Asset Value). Place the icon in a rounded, colored container (e.g., light red background for the alert icon).
+        Add a subtle bottom border to secondary navigation tabs (e.g., in Tabs.tsx) to anchor them to the page structure.
 
-    Increase the font weight of the main number to make it pop.
+    Toast Notifications: Implement a global toast notification system (using sonner or react-hot-toast).
 
-    If possible, add a 'trend' indicator (e.g., a small green arrow saying '+5% from last month') to give the user more context.
+        Trigger a success toast when labels are added to the queue in Label Studio.
 
-    Ensure the cards have a subtle shadow and rounded corners (lg or xl) to lift them off the background."
+        Show a "Generating label..." loading state followed by a success toast when creating a Shipping Label.
 
+        Show success/error toasts after inline editing in the Inventory table.
 
-"Enhance the main Inventory Table component to support 'Inline Editing' for the 'On Hand' and 'Price' columns.
+2. Dashboard Redesign (src/pages/Dashboard.tsx)
 
-    When a user hovers over a cell in the 'On Hand' column, show a subtle pencil icon or border to indicate it is editable.
+    KPI Cards (StatsCards.tsx): Redesign to look professional.
 
-    On click, turn the text into an input field.
+        Add relevant icons (e.g., alert triangle for Low Stock, dollar sign for Asset Value) inside rounded, colored containers (e.g., light red bg for alerts).
 
-    On blur or 'Enter' key press, trigger a Supabase update function to save the new value immediately.
+        Increase the font weight of the main number.
 
-    Add a toast notification (success/error) upon completion. This will allow users to do stock-takes much faster without opening a modal for every product."
+        Add a "trend" indicator (e.g., small green arrow "+5% from last month").
 
+        Apply shadow-lg or shadow-xl and rounded corners to lift cards off the background.
 
-"Update the 'Status' column in the product table to use a standardized Badge component.
+    Valuation Trend: Refactor ValuationChart.tsx. Replace the static placeholder with a Recharts AreaChart. If no data exists, show a faint gray baseline or a sample "projected" dotted line.
 
-    'In Stock' should use a green background with dark green text.
+    Stock Health: Make the progress bars in StockHealth.tsx interactive. Clicking the orange "Low Stock" bar should navigate to the Inventory page with the "Low Stock" filter pre-applied.
 
-    'Low Stock' should use a vibrant amber/yellow background with dark yellow text.
+    Empty States: Create a dedicated EmptyState component with a subtle SVG illustration (e.g., grayed-out box or ghost icon) for TopMovers and RecentActivity cards.
 
-    'Out of Stock' should use a light red background with red text.
+3. Inventory Management (src/components/Inventory/)
 
-    'Allocated' could use a blue or neutral gray. Ensure the badges have a pill shape (fully rounded corners) and slightly bolder font weight for better readability at a glance."
+    Folder Card (FoldersTab.tsx): Remove the always-visible "Rename/Move/Delete" buttons.
 
+        Implement a "Kebab" menu (three vertical dots) in the top-right corner.
 
-"Implement a 'Bulk Action Bar' for the inventory table. When one or more rows are selected via the checkbox:
+        Clicking the icon opens a dropdown with the actions.
 
-    Hide the standard table filters (Search, Status dropdown).
+        Display metadata inside the card (e.g., "Item Count" or "Total Value").
 
-    Replace them with an Action Bar showing 'X items selected' on the left.
+        Add a subtle hover effect to the card.
 
-    On the right, show bulk action buttons such as 'Bulk Delete', 'Move to Folder', 'Print Labels', or 'Export Selected'.
+    Inventory Table (AllProductsTab.tsx):
 
-    Use a distinct background color (like a very light blue) for the header when in 'Selection Mode' to make it obvious to the user."
+        Inline Editing: Make "On Hand" and "Price" columns editable. Hover shows a pencil icon; click converts to input. On Blur/Enter, trigger a Supabase update and show a Toast.
 
+        Status Badges: Create a standardized Badge component:
 
-"Refine the overall layout structure and spacing using Tailwind CSS:
+            In Stock: Green bg / Dark Green text.
 
-    Add a subtle bottom border to the secondary navigation tabs (All Products, Folders, etc.) so they feel anchored to the page structure.
+            Low Stock: Vibrant Amber bg / Dark Yellow text.
 
-    Increase the padding inside the main content area container to give the table more 'breathing room'.
+            Out of Stock: Light Red bg / Red text.
 
-    Change the page background to a very light gray (e.g., bg-gray-50) and keep the Table and Cards white. This creates a 'layered' effect that separates content from the background and reduces eye strain."
+            Allocated: Blue or Neutral Gray.
 
+            Style: Pill shape, fully rounded, bold font weight.
 
+        Bulk Action Bar: When rows are selected:
 
+            Hide standard filters (Search, Status).
+
+            Show an Action Bar with "X items selected" on the left.
+
+            Show buttons on the right: "Bulk Delete", "Move to Folder", "Print Labels", "Export Selected".
+
+            Change header background to a distinct color (e.g., very light blue) in Selection Mode.
+
+4. Label Studio Enhancements (src/components/LabelStudio/)
+
+    Item Labels (ItemLabelsTab.tsx):
+
+        When an item is selected, reveal a number input/stepper (+/-) next to the name to specify print quantity per SKU.
+
+        Update "Label Preview": Add a toggle for "Single Label View" vs "Sheet View" (e.g., Avery 5160).
+
+        If "Sheet View" is active, render a CSS grid showing the dynamic layout of labels based on quantities.
+
+    Location/Shelf Labels (LocationLabelsTab.tsx):
+
+        Add a toggle for "Single" vs "Bulk" creation.
+
+        Bulk Mode: Allow range inputs (e.g., Aisle "1-5", Shelf "A-D").
+
+        "Add to Queue" should programmatically generate all permutations (1-A, 1-B... 5-D).
+
+        Allow users to hover over items in the Print Queue to see a "Remove" (trash can) icon.
+
+    Shipping Labels (ShippingLabelsTab.tsx):
+
+        Add a "Select Order" searchable dropdown at the top. Selecting an order auto-fills Recipient and Address.
+
+        Structured Address: Break the textarea into: "Street 1", "Street 2", "City", "State", "Zip".
+
+        Rate Calculation: Add a "Calculate Rate" button below the Service dropdown. Clicking it displays a mocked "Estimated Cost" price tag next to the Create button.

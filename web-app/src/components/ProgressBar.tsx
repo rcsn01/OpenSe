@@ -2,16 +2,18 @@ export const ProgressBar = ({
   value, 
   max, 
   color = 'var(--primary)', 
-  label 
+  label,
+  onClick
 }: { 
   value: number
   max: number
   color?: string
-  label?: string 
+  label?: string
+  onClick?: () => void
 }) => {
   const percent = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
   return (
-    <div style={{ marginBottom: 8 }}>
+    <div style={{ marginBottom: 8, cursor: onClick ? 'pointer' : 'default' }} onClick={onClick}>
       <div className="flex-between small" style={{ marginBottom: 4 }}>
         <span>{label}</span>
         <span className="muted">{value} / {max}</span>

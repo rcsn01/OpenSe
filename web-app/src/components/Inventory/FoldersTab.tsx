@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../supabaseClient'
 import type { Folder } from '../../types'
-import { formatCurrency } from '../../utils'
+import { formatCurrency, toNumber } from '../../utils'
 import type { InventoryProduct } from './types'
 
 export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: string; allFolders: Folder[]; onRefresh: () => void }) => {
@@ -16,6 +16,8 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
   const [renameValue, setRenameValue] = useState('')
   const [movingId, setMovingId] = useState<string | null>(null)
   const [moveTarget, setMoveTarget] = useState<string>('')
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [folderStats, setFolderStats] = useState<Record<string, { count: number; value: number }>>({})
 
   const currentFolder = allFolders.find((f) => f.id === currentFolderId)
   const subfolders = allFolders.filter((f) => f.parent_id === currentFolderId)
@@ -50,6 +52,26 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
     }
     fetchProducts()
   }, [currentFolderId, companyId])
+
+  useEffect(() => {
+    const fetchFolderStats = async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('folder_id, quantity_on_hand, selling_price')
+        .eq('company_id', companyId)
+
+      const stats: Record<string, { count: number; value: number }> = {}
+      ;(data as any[] | null)?.forEach((p) => {
+        const key = p.folder_id ?? 'root'
+        if (!stats[key]) stats[key] = { count: 0, value: 0 }
+        stats[key].count += 1
+        stats[key].value += toNumber(p.quantity_on_hand) * toNumber(p.selling_price)
+      })
+      setFolderStats(stats)
+    }
+
+    if (companyId) fetchFolderStats()
+  }, [companyId, allFolders])
 
   const handleCreate = async () => {
     if (!newFolderName.trim()) return
@@ -132,7 +154,67 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
       {subfolders.length > 0 && (
         <div className="grid grid-3">
           {subfolders.map((folder) => (
-            <div key={folder.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div key={folder.id} className="card folder-card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="flex-between" style={{ alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 20 }}>📁</span>
+                  <div>
+                    <div style={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => setCurrentFolderId(folder.id)}>
+                      {folder.name}
+                    </div>
+                    <div className="small muted">{folderStats[folder.id]?.count ?? 0} items</div>
+                  </div>
+                </div>
+                <div className="kebab-menu">
+                  <button
+                    className="kebab-button"
+                    type="button"
+                    onClick={() => setOpenMenuId(openMenuId === folder.id ? null : folder.id)}
+                    aria-label="Open folder actions"
+                  >
+                    ⋮
+                  </button>
+                  {openMenuId === folder.id && (
+                    <div className="kebab-dropdown">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRenamingId(folder.id)
+                          setRenameValue(folder.name)
+                          setOpenMenuId(null)
+                        }}
+                      >
+                        Rename
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMovingId(folder.id)
+                          setMoveTarget(folder.parent_id || 'root')
+                          setOpenMenuId(null)
+                        }}
+                      >
+                        Move
+                      </button>
+                      <button
+                        type="button"
+                        style={{ color: 'var(--danger)' }}
+                        onClick={() => {
+                          setOpenMenuId(null)
+                          handleDelete(folder.id)
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="row" style={{ gap: 10, marginTop: 8 }}>
+                <span className="pill">Item Count: {folderStats[folder.id]?.count ?? 0}</span>
+                <span className="pill">Total Value: {formatCurrency(folderStats[folder.id]?.value ?? 0)}</span>
+              </div>
               {renamingId === folder.id ? (
                 <div className="row">
                   <input 
@@ -142,39 +224,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                   />
                   <button className="button small" onClick={() => handleRename(folder.id)}>OK</button>
                 </div>
-              ) : (
-                <div 
-                  style={{ fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-                  onClick={() => setCurrentFolderId(folder.id)}
-                >
-                  <span style={{ fontSize: 20 }}>📁</span>
-                  {folder.name}
-                </div>
-              )}
-
-              <div className="row" style={{ marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-                <button 
-                  className="button ghost small" 
-                  style={{ flex: 1 }}
-                  onClick={() => { setRenamingId(folder.id); setRenameValue(folder.name) }}
-                >
-                  Rename
-                </button>
-                <button 
-                  className="button ghost small" 
-                  style={{ flex: 1 }}
-                  onClick={() => { setMovingId(folder.id); setMoveTarget(folder.parent_id || 'root') }}
-                >
-                  Move
-                </button>
-                <button 
-                  className="button ghost small" 
-                  style={{ flex: 1, color: 'var(--danger)' }}
-                  onClick={() => handleDelete(folder.id)}
-                >
-                  Delete
-                </button>
-              </div>
+              ) : null}
             </div>
           ))}
         </div>

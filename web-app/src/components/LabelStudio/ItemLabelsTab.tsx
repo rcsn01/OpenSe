@@ -3,13 +3,16 @@ import { supabase } from '../../supabaseClient'
 import { useCompany } from '../../contexts/CompanyContext'
 import type { Product } from '../../types'
 import { EmptyState } from '../EmptyState'
+import { toast } from 'sonner'
 
 export const ItemLabelsTab = () => {
   const { companyId } = useCompany()
   const [products, setProducts] = useState<Product[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'single' | 'sheet'>('single')
 
   const loadProducts = async () => {
     if (!companyId) return
@@ -42,6 +45,18 @@ export const ItemLabelsTab = () => {
     return products.filter((product) => selectedIds.includes(product.id))
   }, [products, selectedIds])
 
+  const updateQuantity = (id: string, next: number) => {
+    setQuantities((prev) => ({ ...prev, [id]: Math.max(1, next) }))
+  }
+
+  const labelQueue = selectedProducts.flatMap((product) => {
+    const qty = quantities[product.id] ?? 1
+    return Array.from({ length: qty }).map((_, index) => ({
+      id: `${product.id}-${index}`,
+      product
+    }))
+  })
+
   return (
     <div className="grid" style={{ gridTemplateColumns: '320px 1fr', gap: 24 }}>
       <div className="card stack">
@@ -73,23 +88,72 @@ export const ItemLabelsTab = () => {
                   <div style={{ fontWeight: 600 }}>{product.name}</div>
                   <div className="small muted">SKU {product.sku}</div>
                 </div>
+                {selectedIds.includes(product.id) && (
+                  <div className="row" style={{ marginLeft: 'auto' }}>
+                    <button
+                      type="button"
+                      className="button ghost small"
+                      onClick={() => updateQuantity(product.id, (quantities[product.id] ?? 1) - 1)}
+                    >
+                      −
+                    </button>
+                    <input
+                      className="input small"
+                      type="number"
+                      min={1}
+                      value={quantities[product.id] ?? 1}
+                      onChange={(e) => updateQuantity(product.id, Number(e.target.value) || 1)}
+                      style={{ width: 64, textAlign: 'center' }}
+                    />
+                    <button
+                      type="button"
+                      className="button ghost small"
+                      onClick={() => updateQuantity(product.id, (quantities[product.id] ?? 1) + 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
               </label>
             ))}
           </div>
         )}
-        <button className="button" type="button" onClick={() => window.print()} disabled={selectedIds.length === 0}>
-          Print labels
+        <button
+          className="button"
+          type="button"
+          onClick={() => toast.success('Labels added to the queue')}
+          disabled={selectedIds.length === 0}
+        >
+          Add to queue
         </button>
         <div className="muted small">Selected: {selectedIds.length}</div>
       </div>
       <div className="card stack">
-        <h3 className="section-title">Label preview</h3>
+        <div className="flex-between">
+          <h3 className="section-title">Label preview</h3>
+          <div className="row">
+            <button
+              className={`button ghost small ${viewMode === 'single' ? 'active' : ''}`}
+              type="button"
+              onClick={() => setViewMode('single')}
+            >
+              Single Label View
+            </button>
+            <button
+              className={`button ghost small ${viewMode === 'sheet' ? 'active' : ''}`}
+              type="button"
+              onClick={() => setViewMode('sheet')}
+            >
+              Sheet View
+            </button>
+          </div>
+        </div>
         {selectedProducts.length === 0 ? (
           <EmptyState title="No labels" description="Select items to generate labels." />
         ) : (
-          <div className="label-grid">
-            {selectedProducts.map((product) => (
-              <div key={product.id} className="label-card">
+          <div className={viewMode === 'sheet' ? 'label-sheet-grid' : 'label-grid'}>
+            {labelQueue.map(({ id, product }) => (
+              <div key={id} className="label-card" style={{ padding: viewMode === 'sheet' ? 10 : 16 }}>
                 <div style={{ fontWeight: 700 }}>{product.name}</div>
                 <div className="small muted">SKU {product.sku}</div>
                 <img

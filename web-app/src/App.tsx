@@ -15,6 +15,7 @@ import { Reports } from './pages/Reports'
 import { Procurement } from './pages/Procurement'
 import { Alerts } from './pages/Alerts'
 import { useSession } from './hooks/useSession'
+import { Toaster } from 'sonner'
 
 const CompanyGate = () => {
   const { companies, isLoading } = useCompany()
@@ -43,6 +44,7 @@ function App() {
 
   return (
     <CompanyProvider userId={session.user.id}>
+      <Toaster position="top-right" richColors />
       <Routes>
         <Route element={<Layout />}>
           <Route element={<CompanyGate />}>
