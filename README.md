@@ -49,7 +49,7 @@ For full legal terms, please refer to the [LICENSE](./LICENSE) file in this repo
         npx supabase stop (Stop DB)
         npx supabase status (Check keys)
 ## Frontend Dev
-    Location: Open-ETL/app/ (Inside the app)
+    Location: Open-ETL/web-app/ (Inside the app)
     Commands:
         npm run dev (Start React)
         npm run dev -- --host 0.0.0.0 --port 5173 (network access)
