@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import ReactFlow, {
   Background,
   Controls,
@@ -15,15 +15,15 @@ import ReactFlow, {
   useOnSelectionChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { NODE_REGISTRY, nodeTypes } from '../../components/nodes/registry';
-import { WorkflowNodeData } from '../../components/nodes/types';
-import { runExecution } from '../../lib/execution/ExecutionEngine';
-import { useSaveWorkflow, useUpdateWorkflowName, useWorkflow } from '../../hooks/queries/useWorkflows';
+import { NODE_REGISTRY, nodeTypes } from '../components/nodes/registry';
+import { WorkflowNodeData } from '../components/nodes/types';
+import { runExecution } from '../lib/execution/ExecutionEngine';
+import { useSaveWorkflow, useUpdateWorkflowName, useWorkflow } from '../hooks/queries/useWorkflows';
 
 // New Components
-import { EditorHeader } from '../../components/editor/EditorHeader';
-import { NodeSidebar } from '../../components/editor/NodeSidebar';
-import { PropertiesPanel } from '../../components/editor/PropertiesPanel';
+import { EditorHeader } from '../components/editor/EditorHeader';
+import { NodeSidebar } from '../components/editor/NodeSidebar';
+import { PropertiesPanel } from '../components/editor/PropertiesPanel';
 import { Info } from 'lucide-react';
 
 export const WorkflowEditorPage = () => {

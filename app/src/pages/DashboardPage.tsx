@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { WorkflowTabs } from '../../components/dashboard/WorkflowTabs';
-import { WorkflowTable } from '../../components/dashboard/WorkflowTable';
-import { useDeleteWorkflow, useWorkflows } from '../../hooks/queries/useWorkflows';
+import { useAuth } from '../context/AuthContext';
+import { WorkflowTabs } from '../components/dashboard/WorkflowTabs';
+import { WorkflowTable } from '../components/dashboard/WorkflowTable';
+import { useDeleteWorkflow, useWorkflows } from '../hooks/queries/useWorkflows';
 
 type OrgSimple = { id: string; name: string };
 type DashboardContextType = { currentOrg: OrgSimple | null };

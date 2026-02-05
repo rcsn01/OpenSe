@@ -19,33 +19,7 @@ For full legal terms, please refer to the [LICENSE](./LICENSE) file in this repo
 
 ---
 
-### Development Setup
 
-## Local Backend Dev
-    Location: Open-ETL/ (Root)
-    Commands:
-        npx supabase start (Start DB)
-        npx supabase stop (Stop DB)
-        npx supabase status (Check keys)
-## Frontend Dev
-    Location: Open-ETL/app/ (Inside the app)
-    Commands:
-        npm run dev (Start React)
-        npm run dev -- --host 0.0.0.0 --port 5173 (network access)
-        npm install ... (Add libraries)
-
-Apply Migrations:
-    npx supabase migration up
-
-Reset Migrations:
-    npx supabase db reset --linked
-    npx supabase db reset
-
-Running seeding
-    npx ts-node scripts/seed.ts
-
-Push to Supabase server
-    npx supabase db push
 
 ## Docker Compose quick test
 
