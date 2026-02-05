@@ -1,252 +1,142 @@
-1. Database Schema Changes
+# Organization Creation Stack - FIXED ✅
 
-You need to create a table to store pending invitations and update the organisations table to support subscription tiers.
+The organization creation flow with Stripe & Supabase has been re-implemented with robust error handling, idempotency, and a solution for the race condition.
 
-New Migration SQL: Create a new migration file (e.g., supabase/migrations/20260201000000_invites_and_subs.sql):
-SQL
+## ✅ What Was Fixed
 
--- 1. Create table for invitations
-CREATE TABLE public.organisation_invites (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  org_id uuid NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
-  email text NOT NULL,
-  role text NOT NULL CHECK (role IN ('admin', 'editor', 'member')),
-  invited_by uuid REFERENCES public.profiles(id),
-  created_at timestamptz DEFAULT now() NOT NULL,
-  UNIQUE(org_id, email)
-);
+### 1. Edge Function: `create-checkout/index.ts`
+- **Environment-based Price IDs**: Now reads from `STRIPE_PRICE_ID_TIER_1`, `STRIPE_PRICE_ID_TIER_2`, `STRIPE_PRICE_ID_TIER_3` instead of hardcoded placeholders
+- **Robust Error Handling**: All errors return proper JSON with status codes and details
+- **Detailed Logging**: Console logs for debugging in Supabase dashboard
+- **Input Validation**: Validates all required fields before calling Stripe
+- **Subscription Metadata**: Adds metadata to both session and subscription for durability
 
--- 2. Add Subscription fields to Organisations
-ALTER TABLE public.organisations 
-ADD COLUMN IF NOT EXISTS tier text DEFAULT 'tier-1' CHECK (tier IN ('tier-1', 'tier-2', 'tier-3')),
-ADD COLUMN IF NOT EXISTS subscription_status text DEFAULT 'active',
-ADD COLUMN IF NOT EXISTS stripe_customer_id text,
-ADD COLUMN IF NOT EXISTS stripe_subscription_id text;
+### 2. Edge Function: `stripe-webhook/index.ts`
+- **Idempotency**: Checks both by `stripe_subscription_id` and by `owner_id + name` to prevent duplicates
+- **Timestamp Validation**: Prevents replay attacks with 5-minute tolerance
+- **Rollback on Failure**: If member insertion fails, the organisation is rolled back
+- **Subscription Status Updates**: Handles `subscription.updated` and `subscription.deleted` events
+- **Detailed Logging**: Full audit trail in Supabase logs
 
--- 3. RLS Policies for Invites
+### 3. Frontend: `OrganisationPage.tsx`
+- **Provisioning State**: Shows "Setting up your organisation..." when returning from Stripe
+- **Polling Mechanism**: Polls every 2 seconds for up to 30 seconds until org appears
+- **Canceled Handling**: Shows friendly message when user cancels checkout
+- **Auto-redirect**: Cleans URL params and redirects after success
 
--- Enable RLS
-ALTER TABLE public.organisation_invites ENABLE ROW LEVEL SECURITY;
+### 4. New Component: `OrganisationProvisioning.tsx`
+- Visual progress indicator during provisioning
+- Retry mechanism if provisioning times out
+- Success/error states with appropriate actions
 
--- Allow users to see invites sent TO their email
-CREATE POLICY "Users can view their own invites" ON public.organisation_invites
-FOR SELECT USING (
-  email = (select auth.jwt() ->> 'email')
-);
+### 5. API: `organisations.ts`
+- Added `pollForOrganisation()` function with configurable polling
+- Proper type annotations for `findProfileByEmail()`
 
--- Allow Org Admins to see invites sent FROM their org
-CREATE POLICY "Admins can view org invites" ON public.organisation_invites
-FOR SELECT USING (
-  public.is_org_admin(org_id, auth.uid()) OR 
-  public.is_org_owner(org_id, auth.uid())
-);
+---
 
--- Allow Admins to insert invites
-CREATE POLICY "Admins can create invites" ON public.organisation_invites
-FOR INSERT WITH CHECK (
-  public.is_org_admin(org_id, auth.uid()) OR 
-  public.is_org_owner(org_id, auth.uid())
-);
+## 🔧 Environment Variables to Set
 
--- Allow Admins to delete (revoke) and Users to delete (decline)
-CREATE POLICY "Admins revoke or Users decline" ON public.organisation_invites
-FOR DELETE USING (
-  public.is_org_admin(org_id, auth.uid()) OR 
-  public.is_org_owner(org_id, auth.uid()) OR
-  email = (select auth.jwt() ->> 'email')
-);
+Set these in your **Supabase Dashboard** → **Project Settings** → **Edge Functions** → **Secrets**:
 
-2. Backend Logic (RPCs)
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `STRIPE_SECRET_KEY` | Your Stripe secret key (starts with `sk_`) | `sk_live_abc123...` or `sk_test_abc123...` |
+| `STRIPE_WEBHOOK_SECRET` | Webhook signing secret (starts with `whsec_`) | `whsec_abc123...` |
+| `STRIPE_PRICE_ID_TIER_1` | Price ID for Starter tier | `price_1234abcd` |
+| `STRIPE_PRICE_ID_TIER_2` | Price ID for Pro tier | `price_5678efgh` |
+| `STRIPE_PRICE_ID_TIER_3` | Price ID for Enterprise tier | `price_9012ijkl` |
 
-Create a secure Postgres function to handle "Accept Invite". This ensures the invite is verified and deleted in a single transaction.
+### How to Get These Values:
 
-Add to Migration SQL:
-SQL
+1. **Stripe Secret Key**: Stripe Dashboard → Developers → API Keys
+2. **Webhook Secret**: Created when you add a webhook endpoint (see below)
+3. **Price IDs**: Stripe Dashboard → Products → Click your product → Copy Price ID
 
-CREATE OR REPLACE FUNCTION public.accept_invite(invite_id uuid)
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_invite record;
-  v_user_email text;
-  v_user_id uuid;
-BEGIN
-  -- Get current user details
-  v_user_id := auth.uid();
-  v_user_email := (select auth.jwt() ->> 'email');
+---
 
-  -- Fetch invite
-  SELECT * INTO v_invite FROM public.organisation_invites WHERE id = invite_id;
+## 🧪 Testing Locally with Stripe CLI
 
-  -- Validation
-  IF v_invite IS NULL THEN
-    RAISE EXCEPTION 'Invite not found';
-  END IF;
+### 1. Install Stripe CLI
+```bash
+brew install stripe/stripe-cli/stripe
+```
 
-  IF v_invite.email <> v_user_email THEN
-    RAISE EXCEPTION 'This invite does not belong to you';
-  END IF;
+### 2. Login to Stripe
+```bash
+stripe login
+```
 
-  -- Create Member
-  INSERT INTO public.organisation_members (org_id, user_id, role)
-  VALUES (v_invite.org_id, v_user_id, v_invite.role)
-  ON CONFLICT (org_id, user_id) DO UPDATE SET role = EXCLUDED.role;
+### 3. Forward Webhooks to Local Supabase
+```bash
+# Forward to your local Supabase (if running locally)
+stripe listen --forward-to http://localhost:54321/functions/v1/stripe-webhook
 
-  -- Delete Invite
-  DELETE FROM public.organisation_invites WHERE id = invite_id;
+# OR forward to production Supabase
+stripe listen --forward-to https://olpzobhscfrksdufivle.supabase.co/functions/v1/stripe-webhook
+```
 
-  RETURN true;
-END;
-$$;
+The CLI will output a webhook signing secret like `whsec_abc123...` — use this for local testing.
 
-3. Frontend API Integration
+### 4. Trigger Test Events
+```bash
+# Trigger a checkout completion event
+stripe trigger checkout.session.completed
 
-Update app/src/api/organisations.ts to use the real tables instead of mocks.
+# Trigger with custom metadata
+stripe trigger checkout.session.completed --add checkout_session:metadata.org_name="Test Org" --add checkout_session:metadata.tier="tier-1" --add checkout_session:metadata.user_id="your-user-uuid"
+```
 
-Updated getPendingInvites:
-TypeScript
+---
 
-export const getPendingInvites = async (): Promise<OrgInvite[]> => {
-  const { data: session } = await supabase.auth.getSession();
-  const userEmail = session.session?.user?.email;
+## 🔗 Production Webhook Setup
 
-  if (!userEmail) return [];
+1. Go to **Stripe Dashboard** → **Developers** → **Webhooks**
+2. Click **Add endpoint**
+3. Enter URL: `https://olpzobhscfrksdufivle.supabase.co/functions/v1/stripe-webhook`
+4. Select events to listen for:
+   - `checkout.session.completed`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.payment_failed`
+5. Click **Add endpoint**
+6. Copy the **Signing secret** and add it as `STRIPE_WEBHOOK_SECRET` in Supabase
 
-  // Join with organisations table to get the name
-  const { data, error } = await supabase
-    .from('organisation_invites')
-    .select(`
-      id, 
-      role, 
-      created_at, 
-      organisations (id, name),
-      inviter:profiles!organisation_invites_invited_by_fkey (full_name)
-    `)
-    .eq('email', userEmail);
+---
 
-  if (error) throw error;
+## 🚀 Testing the Full Flow
 
-  return data.map((i: any) => ({
-    id: i.id,
-    org_id: i.organisations.id,
-    org_name: i.organisations.name,
-    role: i.role,
-    created_at: i.created_at,
-    inviter_name: i.inviter?.full_name || 'Unknown',
-  }));
-};
+1. **Start the dev server**:
+   ```bash
+   cd app && npm run dev
+   ```
 
-Updated acceptInvite / rejectInvite:
-TypeScript
+2. **Navigate to** `/organisation` (logged in, no org)
 
-export const acceptInvite = async (inviteId: string) => {
-  const { error } = await supabase.rpc('accept_invite', { invite_id: inviteId });
-  if (error) throw error;
-  return true;
-};
+3. **Click "Create Organisation"** tab
 
-export const rejectInvite = async (inviteId: string) => {
-  const { error } = await supabase.from('organisation_invites').delete().eq('id', inviteId);
-  if (error) throw error;
-  return true;
-};
+4. **Select a tier** and enter an org name
 
-Updated inviteMemberToOrganisation (Admin Side):
-TypeScript
+5. **Click "Create Organisation"** — should redirect to Stripe
 
-// Add this to api/organisations.ts
-export const inviteMember = async (orgId: string, email: string, role: string) => {
-  const { data: user } = await supabase.auth.getUser();
-  const { error } = await supabase.from('organisation_invites').insert({
-    org_id: orgId,
-    email: email,
-    role: role,
-    invited_by: user.user?.id
-  });
-  if (error) throw error;
-};
+6. **Complete checkout** with test card `4242 4242 4242 4242`
 
-4. Create Organisation & Stripe Integration Plan
+7. **After redirect**, you should see:
+   - "Setting up your organisation..." progress indicator
+   - After a few seconds, your new org dashboard
 
-Since createOrganisation involves payments, you cannot simply insert into the database from the client. You need a server-side environment (Edge Functions) to talk to Stripe securely.
-A. Set up Stripe Edge Function
+8. **Check Supabase logs** for webhook processing details
 
-    Initialize Supabase functions: supabase functions new create-checkout
+---
 
-    Add Stripe Secret Key to Supabase secrets: supabase secrets set STRIPE_SECRET_KEY=sk_...
+## 📋 Debugging Checklist
 
-B. create-checkout Function Logic
+If something isn't working:
 
-This function will generate a Stripe Checkout URL.
-TypeScript
-
-// functions/create-checkout/index.ts
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
-
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2022-11-15' })
-
-serve(async (req) => {
-  const { orgName, tier, successUrl, cancelUrl } = await req.json()
-  // Map tier to Price ID
-  const prices = { 'tier-1': 'price_starter_id', 'tier-2': 'price_pro_id', 'tier-3': 'price_ent_id' }
-  
-  // Create Session
-  const session = await stripe.checkout.sessions.create({
-    line_items: [{ price: prices[tier], quantity: 1 }],
-    mode: 'subscription',
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    // Pass metadata to webhook
-    metadata: { 
-      org_name: orgName, 
-      tier: tier, 
-      user_id: (await getSupabaseUser(req)).id // Helper to get Auth User
-    },
-  })
-
-  return new Response(JSON.stringify({ url: session.url }), { headers: { 'Content-Type': 'application/json' } })
-})
-
-C. Stripe Webhook Handler
-
-You need a second function (or route) stripe-webhook to listen for checkout.session.completed.
-
-    Event Trigger: When payment succeeds, Stripe calls this webhook.
-
-    Action: The webhook uses the SERVICE_ROLE_KEY to:
-
-        Insert the new Organisation into public.organisations.
-
-        Insert the User (from metadata) as the owner in public.organisation_members.
-
-        Store the stripe_customer_id and subscription_status in the DB.
-
-D. Frontend createOrganisation Update
-
-Update api/organisations.ts to call the Edge Function instead of the DB directly.
-TypeScript
-
-export const createOrganisation = async (name: string, tier: string) => {
-  const { data, error } = await supabase.functions.invoke('create-checkout', {
-    body: { 
-      orgName: name, 
-      tier: tier,
-      successUrl: window.location.origin + '/organisation?success=true',
-      cancelUrl: window.location.origin + '/organisation?canceled=true'
-    }
-  })
-  
-  if (error) throw error;
-  // Redirect user to Stripe
-  window.location.href = data.url; 
-}
-
-Summary of Workflow
-
-    Invites: Handled entirely via Supabase RLS and the accept_invite RPC.
-
-    Create Org: Handled via Stripe Checkout -> Webhook -> DB Insert pattern to ensure payment is secured before the organization is provisioned.
+- [ ] Check Supabase Edge Function logs: Dashboard → Edge Functions → Logs
+- [ ] Verify all env vars are set in Supabase Secrets
+- [ ] Ensure Price IDs start with `price_` and exist in Stripe
+- [ ] Check webhook is registered in Stripe Dashboard
+- [ ] Run `stripe listen` locally to see webhook payloads
+- [ ] Verify user exists in `profiles` table (webhook needs valid `user_id`)
+- [ ] Check RLS policies allow service role to insert into `organisations` and `organisation_members`
