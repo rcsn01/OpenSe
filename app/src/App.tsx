@@ -12,14 +12,14 @@ import { AuthLayout } from './layouts/AuthLayout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { GodModePage } from './pages/auth/GodModePage';
-import { DashboardPage } from './pages/dashboard/DashboardPage';
-import { WorkflowEditorPage } from './pages/editor/WorkflowEditorPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { WorkflowEditorPage } from './pages/WorkflowEditorPage';
 import { OrganisationPage } from './pages/OrganisationPage'; // New Import
-import { UserSettingsPage } from './pages/settings/UserSettingsPage';
-import { SuperAdminPage } from './pages/admin/SuperAdminPage';
+import { UserSettingsPage } from './pages/UserSettingsPage';
+import { SuperAdminPage } from './pages/SuperAdminPage';
 import { SystemCheck } from './components/guards/SystemCheck';
-import { GalleryPage } from './pages/gallery/GalleryPage';
-import { ActivitiesPage } from './pages/activity/ActivitiesPage';
+import { GalleryPage } from './pages/GalleryPage';
+import { ActivitiesPage } from './pages/ActivitiesPage';
 
 export default function App() {
   return (

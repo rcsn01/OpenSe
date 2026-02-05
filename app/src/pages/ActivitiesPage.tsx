@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Activity, Clock, XCircle, FileSpreadsheet, User, Building2 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { Table } from '../../components/ui/Table';
-import { StatusBadge } from '../../components/ui/StatusBadge';
+import { useAuth } from '../context/AuthContext';
+import { Table } from '../components/ui/Table';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import clsx from 'clsx';
-import { useExecutionLogs } from '../../hooks/queries/useActivities';
+import { useExecutionLogs } from '../hooks/queries/useActivities';
 
 type OrgSimple = { id: string; name: string };
 type DashboardContextType = { currentOrg: OrgSimple | null };

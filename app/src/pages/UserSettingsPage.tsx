@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, Lock, Trash2, Loader2, Save, AlertCircle, CheckCircle } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
+import { useAuth } from '../context/AuthContext';
+import { Input } from '../components/ui/Input';
+import { Button } from '../components/ui/Button';
 import {
     fetchProfileFullName,
     updateAuthFullName,
     updatePassword,
     updateProfileFullName,
-} from '../../api/auth';
+} from '../api/auth';
 
 export const UserSettingsPage = () => {
     const { user, isSuperAdmin } = useAuth();

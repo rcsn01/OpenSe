@@ -10,7 +10,7 @@ import {
     X 
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAdminOrgs, useAdminUsers } from '../../hooks/queries/useAdmin';
+import { useAdminOrgs, useAdminUsers } from '../hooks/queries/useAdmin';
 import { 
     createOrganisationWithOwner, 
     renameOrganisation, 
@@ -19,16 +19,16 @@ import {
     deleteOrganisation,
     deleteOrganisationMember, 
     loadOrganisationMembers
-} from '../../api/admin';
+} from '../api/admin';
 
 // Components
-import { OrgManagementList } from '../../components/admin/OrgManagementList';
-import { UserManagementList } from '../../components/admin/UserManagementList';
-import { CreateOrgForm } from '../../components/admin/CreateOrgForm';
-import { MemberTable } from '../../components/settings/MemberTable';
-import { Member } from '../../components/settings/types';
-import { OrgRow, Message } from '../../components/admin/types';
-import { Button } from '../../components/ui/Button';
+import { OrgManagementList } from '../components/admin/OrgManagementList';
+import { UserManagementList } from '../components/admin/UserManagementList';
+import { CreateOrgForm } from '../components/admin/CreateOrgForm';
+import { MemberTable } from '../components/settings/MemberTable';
+import { Member } from '../components/settings/types';
+import { OrgRow, Message } from '../components/admin/types';
+import { Button } from '../components/ui/Button';
 
 // Internal Modal for specific page actions
 const PageModal = ({ 
