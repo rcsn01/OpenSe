@@ -175,12 +175,14 @@ async function handleCheckoutCompleted(session: Record<string, unknown>) {
 
 /**
  * Handle subscription status changes (cancel, payment_failed, etc.)
+ * Also syncs tier changes from metadata when subscription is updated
  */
 async function handleSubscriptionUpdate(subscription: Record<string, unknown>) {
   const subscriptionId = subscription.id as string;
   const status = subscription.status as string;
+  const metadata = (subscription.metadata as Record<string, string>) || {};
 
-  console.log(`[stripe-webhook] Subscription ${subscriptionId} status: ${status}`);
+  console.log(`[stripe-webhook] Subscription ${subscriptionId} status: ${status}, metadata:`, metadata);
 
   // Map Stripe status to our status
   const statusMap: Record<string, string> = {
@@ -195,17 +197,28 @@ async function handleSubscriptionUpdate(subscription: Record<string, unknown>) {
 
   const mappedStatus = statusMap[status] ?? status;
 
+  // Prepare update object
+  const updates: Record<string, unknown> = { 
+    subscription_status: mappedStatus 
+  };
+
+  // If metadata contains tier info (from update-subscription call), sync it to DB
+  if (metadata.tier && ["tier-1", "tier-2", "tier-3"].includes(metadata.tier)) {
+    updates.tier = metadata.tier;
+    console.log(`[stripe-webhook] Syncing tier change to: ${metadata.tier}`);
+  }
+
   const { error } = await supabase
     .from("organisations")
-    .update({ subscription_status: mappedStatus })
+    .update(updates)
     .eq("stripe_subscription_id", subscriptionId);
 
   if (error) {
-    console.error("[stripe-webhook] Failed to update subscription status:", error);
+    console.error("[stripe-webhook] Failed to update subscription:", error);
     throw error;
   }
 
-  console.log(`[stripe-webhook] Updated org subscription status to: ${mappedStatus}`);
+  console.log(`[stripe-webhook] Updated org subscription: ${JSON.stringify(updates)}`);
   return { success: true };
 }
 
