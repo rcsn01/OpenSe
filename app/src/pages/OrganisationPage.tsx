@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
-import { Loader2, Users, CreditCard, Loader } from 'lucide-react';
+import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
+import { Loader2, Users, CreditCard, Loader, XCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { Member } from '../components/settings/types';
@@ -8,6 +8,7 @@ import { Member } from '../components/settings/types';
 // New Imports
 import { ModernOrgHeader } from '../components/organisation/OrgHeader';
 import { ModernTeamSettings } from '../components/organisation/TeamSettings';
+import { OrganisationProvisioning } from '../components/organisation/OrganisationProvisioning';
 
 // Existing Imports
 import { PaymentSettings } from '../components/organisation/PaymentSettings';
@@ -32,8 +33,13 @@ export const OrganisationPage = () => {
     const { user, isSuperAdmin } = useAuth();
     const { currentOrg: contextOrg } = useOutletContext<OrganisationPageContext>();
     const queryClient = useQueryClient();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganisations(user?.id);
+    // Check for Stripe redirect status
+    const isStripeSuccess = searchParams.get('success') === 'true';
+    const isStripeCanceled = searchParams.get('canceled') === 'true';
+
+    const { data: userOrgs = [], isLoading: orgsLoading, refetch: refetchOrgs } = useUserOrganisations(user?.id);
     const organisation = contextOrg ?? userOrgs[0] ?? null;
 
     const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useOrganisationMembers(organisation?.id);
@@ -54,10 +60,32 @@ export const OrganisationPage = () => {
     
     // Member Action State
     const [removingId, setRemovingId] = useState<string | null>(null);
-    const [genericError, setGenericError] = useState<string | null>(null);
+    // Note: genericError is used for setting errors but display may be handled by components
+    const [_genericError, setGenericError] = useState<string | null>(null);
 
     // No-Org View State
     const [noOrgTab, setNoOrgTab] = useState<'invites' | 'create'>('invites');
+
+    // Provisioning state - show when returning from Stripe success
+    const [isProvisioning, setIsProvisioning] = useState(isStripeSuccess && !organisation);
+
+    // Clear URL params after reading them
+    useEffect(() => {
+        if (isStripeSuccess || isStripeCanceled) {
+            // Clear the query params from URL without triggering navigation
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('success');
+            newParams.delete('canceled');
+            setSearchParams(newParams, { replace: true });
+        }
+    }, [isStripeSuccess, isStripeCanceled, searchParams, setSearchParams]);
+
+    // If org appears while provisioning, update state
+    useEffect(() => {
+        if (organisation && isProvisioning) {
+            setIsProvisioning(false);
+        }
+    }, [organisation, isProvisioning]);
 
     // Sync org name to input when loaded
     useEffect(() => { 
@@ -112,13 +140,14 @@ export const OrganisationPage = () => {
                 return;
             }
 
-            const alreadyMember = await userHasAnyMembership(profile.id);
+            const profileId = profile.id;
+            const alreadyMember = await userHasAnyMembership(profileId);
             if (alreadyMember) {
                 setInviteError('User is already assigned to an organisation.');
                 return;
             }
 
-            await addOrganisationMember(organisation.id, profile.id, inviteRole);
+            await addOrganisationMember(organisation.id, profileId, inviteRole);
             setInviteEmail('');
             setInviteRole('member');
             await refetchMembers();
@@ -159,6 +188,54 @@ export const OrganisationPage = () => {
         console.log('Role update requested:', memberId, newRole);
         // In a real app: await updateMemberRole(memberId, newRole); refetchMembers();
     };
+
+    // Handler for successful provisioning
+    const handleProvisioningSuccess = (_org: OrgSimple) => {
+        setIsProvisioning(false);
+        queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
+        refetchOrgs();
+    };
+
+    // Handler for canceling provisioning
+    const handleProvisioningCancel = () => {
+        setIsProvisioning(false);
+    };
+
+    // --- Render Provisioning State (after Stripe success) ---
+    if (isProvisioning && user?.id) {
+        return (
+            <OrganisationProvisioning
+                userId={user.id}
+                onSuccess={handleProvisioningSuccess}
+                onCancel={handleProvisioningCancel}
+            />
+        );
+    }
+
+    // --- Render Canceled State ---
+    if (isStripeCanceled && !organisation) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center p-8">
+                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
+                    <div className="flex justify-center mb-6">
+                        <XCircle className="w-12 h-12 text-amber-500" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-slate-900 mb-2">
+                        Checkout Canceled
+                    </h2>
+                    <p className="text-slate-500 mb-6">
+                        Your checkout was canceled. No charges were made. You can try again whenever you're ready.
+                    </p>
+                    <button
+                        onClick={() => setNoOrgTab('create')}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     // --- Render Loading ---
     if (orgsLoading || (!!organisation && membersLoading)) {

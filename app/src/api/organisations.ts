@@ -7,7 +7,7 @@ export const updateOrganisationName = async (orgId: string, name: string) => {
   if (error) throw error
 }
 
-export const findProfileByEmail = async (email: string) => {
+export const findProfileByEmail = async (email: string): Promise<{ id: string; email: string; full_name: string | null } | null> => {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, email, full_name')
@@ -174,4 +174,66 @@ export const updateOrganisationTier = async (orgId: string, tier: 'tier-1' | 'ti
   // In real app, this would call Stripe and update DB
   await new Promise((resolve) => setTimeout(resolve, 1000))
   return true
+}
+
+/**
+ * Poll for organisation to appear after Stripe checkout.
+ * The webhook creates the org asynchronously, so we poll until it appears.
+ * 
+ * @param userId - The user ID to check organisations for
+ * @param options - Polling options
+ * @returns The first organisation found, or null if timeout
+ */
+export const pollForOrganisation = async (
+  userId: string,
+  options: {
+    maxAttempts?: number
+    intervalMs?: number
+    onAttempt?: (attempt: number, maxAttempts: number) => void
+  } = {}
+): Promise<OrgSimple | null> => {
+  const { 
+    maxAttempts = 15, 
+    intervalMs = 2000,
+    onAttempt 
+  } = options
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    onAttempt?.(attempt, maxAttempts)
+    
+    try {
+      const orgs = await listUserOrganisations(userId)
+      if (orgs.length > 0) {
+        console.log(`[pollForOrganisation] Found org after ${attempt} attempts`)
+        return orgs[0]
+      }
+    } catch (error) {
+      console.warn(`[pollForOrganisation] Attempt ${attempt} failed:`, error)
+    }
+
+    // Don't wait after the last attempt
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, intervalMs))
+    }
+  }
+
+  console.warn(`[pollForOrganisation] Timed out after ${maxAttempts} attempts`)
+  return null
+}
+
+/**
+ * Check the status of a Stripe checkout session
+ * This can be used to verify payment completed before polling
+ */
+export const checkCheckoutSession = async (sessionId: string): Promise<{
+  status: 'complete' | 'open' | 'expired' | 'unknown'
+  paymentStatus: string | null
+}> => {
+  // Note: For security, checking session status should go through a backend function
+  // For now, we just assume success if we have a session ID
+  // In production, create an edge function to verify this
+  return {
+    status: sessionId ? 'complete' : 'unknown',
+    paymentStatus: 'paid'
+  }
 }
