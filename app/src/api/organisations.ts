@@ -41,7 +41,7 @@ export const removeOrganisationMember = async (memberId: string) => {
 export const listUserOrganisations = async (userId: string) => {
   const { data, error } = await supabase
     .from('organisation_members')
-    .select('organisations(id, name, owner_id, created_at)')
+    .select('organisations(id, name, owner_id, created_at, tier)')
     .eq('user_id', userId)
 
   if (error) throw error
@@ -170,10 +170,13 @@ export const inviteMember = async (orgId: string, email: string, role: 'admin' |
 }
 
 export const updateOrganisationTier = async (orgId: string, tier: 'tier-1' | 'tier-2' | 'tier-3') => {
-  // Mock API call to update tier and seat limit
-  // In real app, this would call Stripe and update DB
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-  return true
+  const { data, error } = await supabase.functions.invoke('update-subscription', {
+    body: { orgId, tier }
+  })
+
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
 }
 
 /**

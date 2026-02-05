@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Check, CreditCard, ShieldCheck, Zap, Loader2 } from 'lucide-react';
+import { Check, CreditCard, ShieldCheck, Zap, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { OrgSimple } from '../../types/organisation';
 import clsx from 'clsx';
 import { updateOrganisationTier } from '../../api/organisations';
+import { useQueryClient } from '@tanstack/react-query';
 
 const TIERS = [
   {
@@ -33,17 +34,31 @@ const TIERS = [
 ] as const;
 
 export const PaymentSettings = ({ organisation }: { organisation: OrgSimple }) => {
+  const queryClient = useQueryClient();
   const [updating, setUpdating] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const currentTierId = organisation.tier || 'tier-1';
 
   const handleSwitchPlan = async (tierId: string) => {
     setUpdating(tierId);
+    setError(null);
+    setSuccess(null);
     try {
-      await updateOrganisationTier(organisation.id, tierId as any);
-      // In real app, we would toast success or refetch
-      console.log(`Switched to ${tierId}`);
-    } catch (err) {
+      const result = await updateOrganisationTier(organisation.id, tierId as any);
+
+      if (result?.paymentUrl) {
+        window.location.href = result.paymentUrl;
+        return;
+      }
+
+      // Invalidate queries to refresh org data
+      await queryClient.invalidateQueries({ queryKey: ['userOrganisations'] });
+      setSuccess(result.message || `Successfully switched to ${TIERS.find(t => t.id === tierId)?.name} plan`);
+      console.log(`Switched to ${tierId}`, result);
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || 'Failed to switch plan. Please try again.');
     } finally {
       setUpdating(null);
     }
@@ -69,6 +84,20 @@ export const PaymentSettings = ({ organisation }: { organisation: OrgSimple }) =
               Your organisation is currently on the <span className="font-bold">{TIERS.find(t => t.id === currentTierId)?.name} Plan</span>.
             </span>
           </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-3 rounded-lg border border-red-100 mb-6">
+              <AlertCircle className="w-5 h-5" />
+              <span className="text-sm font-medium">{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-3 rounded-lg border border-emerald-100 mb-6">
+              <CheckCircle className="w-5 h-5" />
+              <span className="text-sm font-medium">{success}</span>
+            </div>
+          )}
 
           <h3 className="font-semibold text-slate-900 mb-4">Available Plans</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
