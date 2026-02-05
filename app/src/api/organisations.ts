@@ -99,68 +99,74 @@ export const listAdminOrgs = async () => {
 }
 
 export const createOrganisation = async (name: string, tier: 'tier-1' | 'tier-2' | 'tier-3') => {
-  const { data: user } = await supabase.auth.getUser()
-  if (!user.user) throw new Error('Not authenticated')
-
-  // In a real app, this would be a single RPC or transaction that:
-  // 1. Creates the organisation with the selected tier
-  // 2. Adds the creator as the owner
-  // 3. Sets up stripe subscription
-
-  // For now, we'll just insert into organisations
-  const { data, error } = await supabase
-    .from('organisations')
-    .insert({ name, owner_id: user.user.id })
-    .select('id')
-    .single()
+  const { data, error } = await supabase.functions.invoke('create-checkout', {
+    body: {
+      orgName: name,
+      tier,
+      successUrl: `${window.location.origin}/organisation?success=true`,
+      cancelUrl: `${window.location.origin}/organisation?canceled=true`,
+    },
+  })
 
   if (error) throw error
+  if (!data?.url) throw new Error('Checkout URL not returned')
 
-  // And add the member
-  if (data) {
-    await addOrganisationMember(data.id, user.user.id, 'admin')
-  }
-
+  window.location.href = data.url
   return data
 }
 
-// Mocked Invites
 export const getPendingInvites = async (): Promise<OrgInvite[]> => {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  const { data: session } = await supabase.auth.getSession()
+  const userEmail = session.session?.user?.email
 
-  // Mock data - in real app would query 'organisation_invites' table
-  return [
-    {
-      id: 'inv-1',
-      org_name: 'Acme Corp',
-      org_id: 'org-123',
-      inviter_name: 'John Doe',
-      role: 'editor',
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 'inv-2',
-      org_name: 'Stark Industries',
-      org_id: 'org-456',
-      inviter_name: 'Tony Stark',
-      role: 'member',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-    }
-  ]
+  if (!userEmail) return []
+
+  const { data, error } = await supabase
+    .from('organisation_invites')
+    .select(
+      `
+        id,
+        role,
+        created_at,
+        organisations (id, name),
+        inviter:profiles!organisation_invites_invited_by_fkey (full_name)
+      `
+    )
+    .eq('email', userEmail)
+
+  if (error) throw error
+
+  return (data ?? []).map((i: any) => ({
+    id: i.id,
+    org_id: i.organisations?.id,
+    org_name: i.organisations?.name ?? 'Unknown',
+    role: i.role,
+    created_at: i.created_at,
+    inviter_name: i.inviter?.full_name || 'Unknown',
+  }))
 }
 
 export const acceptInvite = async (inviteId: string) => {
-  // In real app: call RPC to accept invite
-  await new Promise((resolve) => setTimeout(resolve, 800))
-  // We can't really "accept" the mock invite into the real DB without a real invite system
-  // So we'll just return success 
+  const { error } = await supabase.rpc('accept_invite', { invite_id: inviteId })
+  if (error) throw error
   return true
 }
 
 export const rejectInvite = async (inviteId: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  const { error } = await supabase.from('organisation_invites').delete().eq('id', inviteId)
+  if (error) throw error
   return true
+}
+
+export const inviteMember = async (orgId: string, email: string, role: 'admin' | 'editor' | 'member') => {
+  const { data: user } = await supabase.auth.getUser()
+  const { error } = await supabase.from('organisation_invites').insert({
+    org_id: orgId,
+    email,
+    role,
+    invited_by: user.user?.id,
+  })
+  if (error) throw error
 }
 
 export const updateOrganisationTier = async (orgId: string, tier: 'tier-1' | 'tier-2' | 'tier-3') => {
