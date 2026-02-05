@@ -1,16 +1,54 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@12.0.0?target=deno";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
-  apiVersion: "2022-11-15",
-});
+const serve = Deno.serve;
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: { persistSession: false },
 });
+
+const textEncoder = new TextEncoder();
+
+const toHex = (buffer: ArrayBuffer) => {
+  const bytes = new Uint8Array(buffer);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+};
+
+const computeHmacSha256 = async (secret: string, payload: string) => {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    textEncoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, textEncoder.encode(payload));
+  return toHex(signature);
+};
+
+const timingSafeEqual = (a: string, b: string) => {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+};
+
+const parseStripeSignature = (signatureHeader: string) => {
+  const parts = signatureHeader.split(",");
+  const result: Record<string, string> = {};
+  for (const part of parts) {
+    const [key, value] = part.split("=");
+    if (key && value) {
+      result[key] = value;
+    }
+  }
+  return result;
+};
 
 serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
@@ -22,15 +60,25 @@ serve(async (req) => {
 
   const body = await req.text();
 
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch (err) {
-    return new Response(`Webhook Error: ${(err as Error).message}`, { status: 400 });
+  const signatureParams = parseStripeSignature(signature);
+  const timestamp = signatureParams.t;
+  const v1Signature = signatureParams.v1;
+
+  if (!timestamp || !v1Signature) {
+    return new Response("Invalid signature header", { status: 400 });
   }
 
+  const signedPayload = `${timestamp}.${body}`;
+  const expectedSignature = await computeHmacSha256(webhookSecret, signedPayload);
+
+  if (!timingSafeEqual(expectedSignature, v1Signature)) {
+    return new Response("Invalid signature", { status: 400 });
+  }
+
+  const event = JSON.parse(body);
+
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
+    const session = event.data?.object ?? {};
     const metadata = session.metadata ?? {};
     const orgName = metadata.org_name;
     const tier = metadata.tier;
