@@ -69,6 +69,17 @@ serve(async (req) => {
     const supabaseKey = supabaseAnonKey || supabaseServiceRoleKey;
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
 
+    console.log("[create-checkout] Environment check:", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseAnonKey: !!supabaseAnonKey,
+      hasSupabaseServiceRoleKey: !!supabaseServiceRoleKey,
+      hasSupabaseKey: !!supabaseKey,
+      hasStripeSecretKey: !!stripeSecretKey,
+      hasTier1Price: !!Deno.env.get("STRIPE_PRICE_ID_TIER_1"),
+      hasTier2Price: !!Deno.env.get("STRIPE_PRICE_ID_TIER_2"),
+      hasTier3Price: !!Deno.env.get("STRIPE_PRICE_ID_TIER_3"),
+    });
+
     if (!supabaseUrl || !supabaseKey) {
       return errorResponse("Server configuration error", 500, "Missing Supabase environment variables");
     }
