@@ -61,7 +61,8 @@ export const AppLayout = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    // Changed min-h-screen to h-screen and added overflow-hidden to fix the sidebar
+    <div className="h-screen bg-slate-50 flex overflow-hidden">
       {/* Sidebar */}
       <div className={clsx(
         "fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
