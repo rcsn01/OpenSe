@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   LayoutTemplate,
-  Building2, 
-  LogOut, 
-  User, 
+  Building2,
+  LogOut,
+  User,
   Menu,
   X,
   Activity
@@ -13,10 +13,9 @@ import {
 import { clsx } from 'clsx';
 import { useAuth } from '../context/AuthContext';
 import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations';
-import { signOut } from '../api/auth';
 
 export const AppLayout = () => {
-  const { session, user, loading } = useAuth();
+  const { session, user, loading, isDemoUser, logout } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
@@ -29,7 +28,7 @@ export const AppLayout = () => {
   const handleSignOut = async () => {
     try {
       setSigningOut(true);
-      await signOut();
+      await logout();
       navigate('/login', { replace: true });
     } finally {
       setSigningOut(false);
@@ -49,7 +48,7 @@ export const AppLayout = () => {
     }
   }, [userOrgs, currentOrg]);
 
-  if (!session && !loading) {
+  if (!session && !isDemoUser && !loading) {
     return <Navigate to="/login" replace />;
   }
 
@@ -83,9 +82,9 @@ export const AppLayout = () => {
             </div>
           ) : (
             <div className="p-4 bg-slate-950">
-               <div className="px-3 py-2 text-xs text-slate-500 text-center border border-dashed border-slate-700 rounded-md">
-                 No Organisation
-               </div>
+              <div className="px-3 py-2 text-xs text-slate-500 text-center border border-dashed border-slate-700 rounded-md">
+                No Organisation
+              </div>
             </div>
           )}
 
@@ -149,9 +148,9 @@ export const AppLayout = () => {
 
       {/* Mobile Sidebar Toggle */}
       <div className="lg:hidden fixed top-0 left-0 p-4 z-40">
-         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-md bg-slate-800 text-white">
-            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-         </button>
+        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-md bg-slate-800 text-white">
+          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
 
       {/* Main Content */}

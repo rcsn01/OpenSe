@@ -107,3 +107,40 @@ export const defaultDemoGraphData = {
         { id: 'e2', source: 'transform-1', target: 'destination-1', animated: true },
     ],
 };
+
+// Mock Gallery Templates
+export const mockGalleryTemplates = [
+    {
+        id: 'tpl-1',
+        name: 'Daily Email Digest',
+        description: 'Collects data from multiple sources and sends a summary email.',
+        created_at: daysAgo(30),
+        owner_id: 'system',
+        org_id: null,
+        graph_data: defaultDemoGraphData,
+        owner: { full_name: 'System Template' },
+        is_template: true
+    },
+    {
+        id: 'tpl-2',
+        name: 'Slack Notification Bot',
+        description: 'Post updates to Slack based on webhook events.',
+        created_at: daysAgo(25),
+        owner_id: 'system',
+        org_id: null,
+        graph_data: defaultDemoGraphData,
+        owner: { full_name: 'System Template' },
+        is_template: true
+    },
+    {
+        id: 'tpl-3',
+        name: 'Data Cleanup Job',
+        description: 'Periodically cleans up old records from the database.',
+        created_at: daysAgo(20),
+        owner_id: 'system',
+        org_id: null,
+        graph_data: defaultDemoGraphData,
+        owner: { full_name: 'System Template' },
+        is_template: true
+    }
+];
