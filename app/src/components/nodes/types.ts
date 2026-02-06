@@ -121,4 +121,71 @@ export type PreviewNodeData = BaseNodeData & {
   previewRows?: Row[];
 };
 
+export type ColumnResorterNodeData = BaseNodeData & {
+  columnOrder: string[];
+  availableFields?: string[];
+};
+
+export type ColumnSplitterNodeData = BaseNodeData & {
+  selectedColumns: string[];
+  availableFields?: string[];
+};
+
+export type NominalValueRowFilterNodeData = BaseNodeData & {
+  field?: string;
+  selectedValues: string[];
+  availableValues?: string[];
+  availableFields?: string[];
+};
+
+export type MathFormulaNodeData = BaseNodeData & {
+  expression: string;
+  newColumn: string;
+  availableFields?: string[];
+};
+
+export type GroupByNodeData = BaseNodeData & {
+  groupByColumns: string[];
+  aggregations: { column: string; function: 'sum' | 'count' | 'avg' | 'min' | 'max' }[];
+  availableFields?: string[];
+};
+
+export type ConcatenateNodeData = BaseNodeData & {};
+
+export type ChartNodeData = BaseNodeData & {
+  xAxis?: string;
+  yAxis?: string;
+  previewRows?: Row[];
+  availableFields?: string[];
+};
+
+export type PieChartNodeData = BaseNodeData & {
+  nameKey?: string;
+  valueKey?: string;
+  previewRows?: Row[];
+  availableFields?: string[];
+};
+
+export type HistogramNodeData = BaseNodeData & {
+  field?: string;
+  bins: number;
+  previewRows?: Row[];
+  availableFields?: string[];
+};
+
+export type BoxPlotNodeData = BaseNodeData & {
+  field?: string;
+  groupBy?: string;
+  previewRows?: Row[];
+  availableFields?: string[];
+};
+
+export type HeatmapNodeData = BaseNodeData & {
+  xAxis?: string;
+  yAxis?: string;
+  valueField?: string;
+  previewRows?: Row[];
+  availableFields?: string[];
+};
+
 export type WorkflowNodeData = BaseNodeData;

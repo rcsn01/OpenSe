@@ -1,31 +1,25 @@
-import React from 'react';
 import { NodeProps } from 'reactflow';
 import { Dice3 } from 'lucide-react';
 import { BaseNode } from '../../_base/BaseNode';
-import { Select, NumberInput } from '../../_base/NodeControls';
 import { SamplerNodeData } from '../../types';
 
-export const SamplerNode = ({ data, selected }: NodeProps<SamplerNodeData>) => (
-  <BaseNode
-    label={data.label || 'Sampler / Limit'}
-    description="Take top or random sample"
-    icon={Dice3}
-    color="bg-slate-500"
-    inputs={['in']}
-    outputs={['out']}
-    selected={selected}
-  >
-    <Select
-      value={data.mode}
-      onChange={(e) => data.setData?.((prev: SamplerNodeData) => ({ ...prev, mode: e.target.value as SamplerNodeData['mode'] }))}
+export const SamplerNode = ({ data, selected }: NodeProps<SamplerNodeData>) => {
+  const modeLabel = data.mode === 'random' ? 'Random' : 'Top';
+
+  return (
+    <BaseNode
+      label={data.label || 'Sampler / Limit'}
+      description="Take top or random sample"
+      icon={Dice3}
+      color="bg-slate-500"
+      inputs={['in']}
+      outputs={['out']}
+      selected={selected}
     >
-      <option value="top">Top N rows</option>
-      <option value="random">Random sample (rows)</option>
-    </Select>
-    <NumberInput
-      min={1}
-      value={data.amount}
-      onChange={(e) => data.setData?.((prev: SamplerNodeData) => ({ ...prev, amount: Number(e.target.value) || 0 }))}
-    />
-  </BaseNode>
-);
+      <p className="text-[11px] text-slate-600 text-center">
+        <span className="font-semibold text-slate-700">{modeLabel}</span>{' '}
+        <span className="text-slate-500">{data.amount} rows</span>
+      </p>
+    </BaseNode>
+  );
+};

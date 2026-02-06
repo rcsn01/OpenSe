@@ -3,3 +3,4 @@
 w-etl/.env.local
 .env
 .env.*
+.DS_Store

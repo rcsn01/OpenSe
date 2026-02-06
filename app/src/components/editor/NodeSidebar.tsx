@@ -4,7 +4,7 @@ import { nodesByCategory } from '../../components/nodes/registry';
 import { Input } from '../ui/Input';
 import clsx from 'clsx';
 
-const CATEGORY_ORDER = ['Input', 'Data', 'Logic', 'Output'];
+const CATEGORY_ORDER = ['Input', 'Data', 'Logic', 'Visualization', 'Output'];
 
 interface NodeSidebarProps {
     onDragStart: (event: React.DragEvent, nodeType: string) => void;
