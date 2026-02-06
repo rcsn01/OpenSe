@@ -46,16 +46,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loadSuperAdmin = async (userId: string | null | undefined) => {
     if (!userId || userId === DEMO_USER_ID) {
       setIsSuperAdmin(false);
-      return;
+      return false;
     }
 
     const { data, error } = await supabase.rpc('get_super_admin_status');
     if (error) {
       console.error('Failed to fetch super admin status:', error);
       setIsSuperAdmin(false);
-      return;
+      return false;
     }
-    setIsSuperAdmin(Boolean(data));
+    const isAdmin = Boolean(data);
+    setIsSuperAdmin(isAdmin);
+    return isAdmin;
   };
 
   // Login as demo user (no Supabase)
@@ -88,7 +90,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let isMounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    const initializeSession = async () => {
+      setLoading(true);
+      const { data } = await supabase.auth.getSession();
       if (!isMounted) return;
 
       // If a real session exists, it always takes precedence
@@ -96,7 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsDemoUser(false);
         setSession(data.session);
         setUser(data.session.user);
-        loadSuperAdmin(data.session.user.id);
+        await loadSuperAdmin(data.session.user.id);
       } else if (isDemoUser) {
         // Keep demo state if explicitly in demo mode
       } else {
@@ -105,17 +109,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsSuperAdmin(false);
       }
       setLoading(false);
-    });
+    };
+    void initializeSession();
 
     // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setLoading(true);
       if (session) {
         // Real user logged in -> force demo mode OFF and use real session
         setIsDemoUser(false);
         setSession(session);
         setUser(session.user);
-        setLoading(false);
-        loadSuperAdmin(session.user.id);
+        await loadSuperAdmin(session.user.id);
       } else {
         // Session cleared
         // Only clear user state if we are NOT in demo mode
@@ -123,10 +128,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!isDemoUser) {
           setSession(null);
           setUser(null);
-          setLoading(false);
           setIsSuperAdmin(false);
         }
       }
+      setLoading(false);
     });
 
     return () => {

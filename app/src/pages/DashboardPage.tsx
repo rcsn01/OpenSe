@@ -1,5 +1,5 @@
-import React from 'react';
-import { useOutletContext, Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useOutletContext, Outlet, useLocation, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { OrgSimple } from '../types/organisation';
 import clsx from 'clsx';
@@ -10,6 +10,15 @@ type DashboardContextType = { currentOrg: OrgSimple | null };
 export const DashboardPage = () => {
   const { user } = useAuth();
   const { currentOrg } = useOutletContext<DashboardContextType>();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/dashboard/org')) {
+      localStorage.setItem('dashboardLastTab', 'org');
+    } else if (location.pathname.startsWith('/dashboard/personal')) {
+      localStorage.setItem('dashboardLastTab', 'personal');
+    }
+  }, [location.pathname]);
 
   // Pass context down to Outlet (WorkflowList)
   return (

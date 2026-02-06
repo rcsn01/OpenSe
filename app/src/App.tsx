@@ -45,6 +45,12 @@ const AdminLoadingFallback = () => (
   </div>
 );
 
+const DashboardIndexRedirect = () => {
+  const lastTab = typeof window !== 'undefined' ? window.localStorage.getItem('dashboardLastTab') : null;
+  const target = lastTab === 'org' ? 'org' : 'personal';
+  return <Navigate to={target} replace />;
+};
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -68,7 +74,7 @@ export default function App() {
                   <Route element={<AppLayout />}>
                     {/* Dashboard with Nested Routes */}
                     <Route path="/dashboard" element={<DashboardPage />}>
-                      <Route index element={<Navigate to="org" replace />} />
+                      <Route index element={<DashboardIndexRedirect />} />
                       <Route path="personal" element={<WorkflowList mode="personal" />} />
                       <Route path="org" element={<WorkflowList mode="org" />} />
                     </Route>
@@ -100,7 +106,7 @@ export default function App() {
                   <Route path="/editor/:id" element={<WorkflowEditorPage />} />
 
                   {/* Catch all */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
               </SystemCheck>
             </WorkflowProvider>
