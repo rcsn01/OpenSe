@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { WorkflowRow } from '../../components/dashboard/types'
 import {
   deleteWorkflow,
   getWorkflow,
@@ -7,6 +6,9 @@ import {
   saveWorkflow,
   updateWorkflowName,
 } from '../../api/workflows'
+import { useAuth } from '../../context/AuthContext'
+import { useDemoContext } from '../../context/DemoContext'
+import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME } from '../../lib/demoData'
 
 type UseWorkflowsParams = {
   userId: string | undefined
@@ -15,18 +17,34 @@ type UseWorkflowsParams = {
 }
 
 export const useWorkflows = ({ userId, orgId, mode }: UseWorkflowsParams) => {
+  const { isDemoUser } = useAuth()
+  const { listDemoWorkflows } = useDemoContext()
+
   return useQuery({
-    queryKey: ['workflows', userId, orgId, mode],
-    queryFn: () => (userId ? listWorkflows({ userId, orgId, mode }) : []),
+    queryKey: ['workflows', userId, orgId, mode, isDemoUser],
+    queryFn: () => {
+      if (isDemoUser) {
+        return listDemoWorkflows(mode)
+      }
+      return userId ? listWorkflows({ userId, orgId, mode }) : []
+    },
     enabled: !!userId,
   })
 }
 
 // Fetch a single workflow
 export const useWorkflow = (id: string | null) => {
+  const { isDemoUser } = useAuth()
+  const { getDemoWorkflow } = useDemoContext()
+
   return useQuery({
-    queryKey: ['workflow', id],
-    queryFn: () => (id ? getWorkflow(id) : null),
+    queryKey: ['workflow', id, isDemoUser],
+    queryFn: () => {
+      if (isDemoUser && id) {
+        return getDemoWorkflow(id)
+      }
+      return id ? getWorkflow(id) : null
+    },
     enabled: !!id && id !== 'new',
     staleTime: 1000 * 60 * 5,
   })
@@ -43,9 +61,22 @@ type SaveWorkflowParams = {
 // Insert or update a workflow
 export const useSaveWorkflow = () => {
   const queryClient = useQueryClient()
+  const { isDemoUser } = useAuth()
+  const { saveDemoWorkflow } = useDemoContext()
 
   return useMutation({
     mutationFn: async (payload: SaveWorkflowParams) => {
+      if (isDemoUser) {
+        return saveDemoWorkflow({
+          id: payload.id || `demo-wf-${Date.now()}`,
+          name: payload.name,
+          graph_data: payload.graph_data,
+          owner_id: DEMO_USER_ID,
+          org_id: payload.org_id,
+          created_at: new Date().toISOString(),
+          owner: { full_name: DEMO_USER_NAME, email: DEMO_USER_EMAIL },
+        })
+      }
       return saveWorkflow(payload)
     },
     onSuccess: (data) => {
@@ -58,9 +89,18 @@ export const useSaveWorkflow = () => {
 // Update workflow name only
 export const useUpdateWorkflowName = () => {
   const queryClient = useQueryClient()
+  const { isDemoUser } = useAuth()
+  const { getDemoWorkflow, saveDemoWorkflow } = useDemoContext()
 
   return useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      if (isDemoUser) {
+        const existing = getDemoWorkflow(id)
+        if (existing) {
+          return saveDemoWorkflow({ ...existing, name })
+        }
+        return { id, name }
+      }
       return updateWorkflowName({ id, name })
     },
     onSuccess: (data) => {
@@ -72,9 +112,15 @@ export const useUpdateWorkflowName = () => {
 
 export const useDeleteWorkflow = () => {
   const queryClient = useQueryClient()
+  const { isDemoUser } = useAuth()
+  const { deleteDemoWorkflow } = useDemoContext()
 
   return useMutation({
     mutationFn: async (workflowId: string) => {
+      if (isDemoUser) {
+        deleteDemoWorkflow(workflowId)
+        return
+      }
       await deleteWorkflow(workflowId)
     },
     onSuccess: () => {
