@@ -21,6 +21,11 @@ import { UserSettingsPage } from './pages/UserSettingsPage';
 import { SystemCheck } from './components/guards/SystemCheck';
 import { GalleryPage } from './pages/GalleryPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
+import { LandingPage } from './pages/LandingPage';
+import { WorkflowList } from './components/dashboard/WorkflowList';
+import { TeamTab } from './components/organisation/TeamTab';
+import { PaymentSettings } from './components/organisation/PaymentSettings';
+import { UsageAnalytics } from './components/organisation/UsageAnalytics';
 
 // Guards
 import { AdminRoute } from './components/guards/AdminRoute';
@@ -49,9 +54,11 @@ export default function App() {
             <WorkflowProvider>
               <SystemCheck>
                 <Routes>
+                  {/* Public Landing Page */}
+                  <Route path="/" element={<LandingPage />} />
                   <Route path="/god-mode" element={<GodModePage />} />
 
-                  {/* Public Routes */}
+                  {/* Auth Routes */}
                   <Route element={<AuthLayout />}>
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
@@ -59,9 +66,22 @@ export default function App() {
 
                   {/* Protected Routes */}
                   <Route element={<AppLayout />}>
-                    <Route path="/" element={<DashboardPage />} />
+                    {/* Dashboard with Nested Routes */}
+                    <Route path="/dashboard" element={<DashboardPage />}>
+                      <Route index element={<Navigate to="org" replace />} />
+                      <Route path="personal" element={<WorkflowList mode="personal" />} />
+                      <Route path="org" element={<WorkflowList mode="org" />} />
+                    </Route>
+
+                    {/* Organisation with Nested Routes */}
+                    <Route path="/organisation" element={<OrganisationPage />}>
+                      <Route index element={<Navigate to="team" replace />} />
+                      <Route path="team" element={<TeamTab />} />
+                      <Route path="billing" element={<PaymentSettings />} />
+                      <Route path="usage" element={<UsageAnalytics />} />
+                    </Route>
+
                     <Route path="/gallery" element={<GalleryPage />} />
-                    <Route path="/organisation" element={<OrganisationPage />} />
                     <Route path="/activity" element={<ActivitiesPage />} />
                     <Route path="/settings/profile" element={<UserSettingsPage />} />
                     <Route

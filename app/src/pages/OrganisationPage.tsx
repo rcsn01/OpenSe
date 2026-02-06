@@ -1,33 +1,37 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
-import { Loader2, Users, CreditCard, Loader, XCircle } from 'lucide-react';
+import { Link, useOutletContext, useSearchParams, Outlet, NavLink } from 'react-router-dom';
+import { Loader2, Users, CreditCard, Loader, XCircle, Activity } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { Member } from '../components/settings/types';
 
 // New Imports
 import { ModernOrgHeader } from '../components/organisation/OrgHeader';
-import { ModernTeamSettings } from '../components/organisation/TeamSettings';
 import { OrganisationProvisioning } from '../components/organisation/OrganisationProvisioning';
 
+
 // Existing Imports
-import { PaymentSettings } from '../components/organisation/PaymentSettings';
 import { InvitesList } from '../components/organisation/InvitesList';
 import { CreateOrgForm } from '../components/organisation/CreateOrgForm';
 import { useOrganisationMembers, useUserOrganisations } from '../hooks/queries/useOrganisations';
 import {
-    addOrganisationMember,
-    findProfileByEmail,
-    removeOrganisationMember,
     updateOrganisationName,
-    userHasAnyMembership,
 } from '../api/organisations';
 import { OrgSimple } from '../types/organisation';
 import clsx from 'clsx';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
+// Context for AppLayout
 type OrganisationPageContext = { currentOrg: OrgSimple | null; };
+
+// Context passed to child routes
+type OutletContextType = {
+    currentOrg: OrgSimple | null;
+    members: Member[];
+    refetchMembers: () => Promise<any>;
+    userRole: string | null;
+};
 
 export const OrganisationPage = () => {
     const { user, isSuperAdmin } = useAuth();
@@ -44,23 +48,10 @@ export const OrganisationPage = () => {
 
     const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useOrganisationMembers(organisation?.id);
 
-    // View State
-    const [activeTab, setActiveTab] = useState<'team' | 'payments'>('team');
-    
     // Edit Org State
     const [isEditingOrg, setIsEditingOrg] = useState(false);
     const [orgNameInput, setOrgNameInput] = useState('');
     const [savingOrg, setSavingOrg] = useState(false);
-    
-    // Invite State
-    const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteRole, setInviteRole] = useState<'admin' | 'editor' | 'member'>('member');
-    const [inviting, setInviting] = useState(false);
-    const [inviteError, setInviteError] = useState<string | null>(null);
-    
-    // Member Action State
-    const [removingId, setRemovingId] = useState<string | null>(null);
-    // Note: genericError is used for setting errors but display may be handled by components
     const [_genericError, setGenericError] = useState<string | null>(null);
 
     // No-Org View State
@@ -88,8 +79,8 @@ export const OrganisationPage = () => {
     }, [organisation, isProvisioning]);
 
     // Sync org name to input when loaded
-    useEffect(() => { 
-        if (organisation?.name) setOrgNameInput(organisation.name); 
+    useEffect(() => {
+        if (organisation?.name) setOrgNameInput(organisation.name);
     }, [organisation?.name]);
 
     const membershipRole = useMemo(() => {
@@ -98,7 +89,6 @@ export const OrganisationPage = () => {
         return members.find((m) => m.user_id === user.id)?.role ?? 'member';
     }, [organisation, user, members]);
 
-    const canManageTeam = membershipRole === 'owner' || membershipRole === 'admin';
 
     // --- Handlers ---
 
@@ -122,71 +112,6 @@ export const OrganisationPage = () => {
         } finally {
             setSavingOrg(false);
         }
-    };
-
-    const handleInvite = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!organisation) return;
-
-        const email = inviteEmail.trim().toLowerCase();
-        if (!email) return;
-
-        setInviting(true);
-        setInviteError(null);
-        try {
-            const profile = await findProfileByEmail(email);
-            if (!profile) {
-                setInviteError('User not found. Please ask them to sign up first.');
-                return;
-            }
-
-            const profileId = profile.id;
-            const alreadyMember = await userHasAnyMembership(profileId);
-            if (alreadyMember) {
-                setInviteError('User is already assigned to an organisation.');
-                return;
-            }
-
-            await addOrganisationMember(organisation.id, profileId, inviteRole);
-            setInviteEmail('');
-            setInviteRole('member');
-            await refetchMembers();
-            // Optional: Close modal here if you want to control it from parent, 
-            // but currently the modal control is inside ModernTeamSettings. 
-            // We'd ideally lift that state up if we wanted to close it programmatically on success.
-            // For now, the user manually closes it or sees the success state.
-            
-            queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
-        } catch (err: any) {
-            setInviteError(err?.message ?? 'Failed to invite member.');
-        } finally {
-            setInviting(false);
-        }
-    };
-
-    const handleRemoveMember = async (member: Member) => {
-        if (!organisation) return;
-        if (member.user_id === organisation.owner_id) return;
-
-        if(!window.confirm(`Are you sure you want to remove ${member.profiles?.email}?`)) return;
-
-        setRemovingId(member.id);
-        setGenericError(null);
-        try {
-            await removeOrganisationMember(member.id);
-            await refetchMembers();
-            queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
-        } catch (err: any) {
-            alert(err?.message ?? 'Failed to remove member.');
-        } finally {
-            setRemovingId(null);
-        }
-    };
-
-    const handleUpdateRole = async (memberId: string, newRole: 'admin' | 'editor' | 'member') => {
-        // Mock implementation until API supports it
-        console.log('Role update requested:', memberId, newRole);
-        // In a real app: await updateMemberRole(memberId, newRole); refetchMembers();
     };
 
     // Handler for successful provisioning
@@ -304,61 +229,50 @@ export const OrganisationPage = () => {
     return (
         <div className="min-h-screen bg-slate-50/50 pb-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                
+
                 {/* 1. Header Command Center */}
-                <ModernOrgHeader 
+                <ModernOrgHeader
                     organisation={organisation}
                     membersCount={members.length}
                     userRole={membershipRole || 'member'}
                     onEdit={() => setIsEditingOrg(true)}
                 />
 
-                {/* 2. Page Tabs */}
+                {/* 2. Page Tabs (Navigation) */}
                 <div className="flex border-b border-slate-200 mb-8 overflow-x-auto gap-8">
-                    <button
-                        onClick={() => setActiveTab('team')}
-                        className={clsx(
+                    <NavLink
+                        to="team"
+                        className={({ isActive }) => clsx(
                             "pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap",
-                            activeTab === 'team' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                            isActive ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
                         )}
                     >
                         <Users className="w-4 h-4" /> Team Management
-                    </button>
+                    </NavLink>
+                    <NavLink
+                        to="usage"
+                        className={({ isActive }) => clsx(
+                            "pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap",
+                            isActive ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                        )}
+                    >
+                        <Activity className="w-4 h-4" /> Usage Analytics
+                    </NavLink>
                     {membershipRole === 'owner' && (
-                        <button
-                            onClick={() => setActiveTab('payments')}
-                            className={clsx(
+                        <NavLink
+                            to="billing"
+                            className={({ isActive }) => clsx(
                                 "pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap",
-                                activeTab === 'payments' ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                                isActive ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
                             )}
                         >
-                            <CreditCard className="w-4 h-4" /> Billing & Usage
-                        </button>
+                            <CreditCard className="w-4 h-4" /> Billing & Settings
+                        </NavLink>
                     )}
                 </div>
 
                 {/* 3. Tab Content */}
-                {activeTab === 'team' ? (
-                    <ModernTeamSettings
-                        organisation={organisation}
-                        members={members}
-                        canManageTeam={canManageTeam}
-                        // Invite Props
-                        inviteEmail={inviteEmail}
-                        inviteRole={inviteRole}
-                        inviting={inviting}
-                        inviteError={inviteError}
-                        onInviteEmailChange={setInviteEmail}
-                        onInviteRoleChange={setInviteRole}
-                        onInviteSubmit={handleInvite}
-                        // Member Props
-                        removingId={removingId}
-                        onRemoveMember={handleRemoveMember}
-                        onUpdateRole={handleUpdateRole}
-                    />
-                ) : (
-                    <PaymentSettings organisation={organisation} />
-                )}
+                <Outlet context={{ currentOrg: organisation, members, refetchMembers, userRole: membershipRole } satisfies OutletContextType} />
             </div>
 
             {/* Edit Organisation Modal */}
@@ -366,23 +280,23 @@ export const OrganisationPage = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200 animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold text-slate-900 mb-4">Edit Organisation Details</h3>
-                        
+
                         <form onSubmit={handleUpdateOrg} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Organisation Name</label>
-                                <Input 
+                                <Input
                                     autoFocus
-                                    value={orgNameInput} 
+                                    value={orgNameInput}
                                     onChange={(e) => setOrgNameInput(e.target.value)}
                                 />
                             </div>
-                            
+
                             <div className="flex justify-end gap-3 mt-6">
                                 <Button type="button" variant="secondary" onClick={() => setIsEditingOrg(false)}>
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={savingOrg}>
-                                    {savingOrg ? <Loader className="w-4 h-4 animate-spin mr-2"/> : null}
+                                    {savingOrg ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
                                     Save Changes
                                 </Button>
                             </div>

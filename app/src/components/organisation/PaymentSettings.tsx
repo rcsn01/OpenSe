@@ -33,8 +33,18 @@ const TIERS = [
   }
 ] as const;
 
-export const PaymentSettings = ({ organisation }: { organisation: OrgSimple }) => {
+import { useOutletContext } from 'react-router-dom';
+
+// ... (keep TIERS const)
+
+export const PaymentSettings = ({ organisation: propOrg }: { organisation?: OrgSimple }) => {
+  const context = useOutletContext<{ currentOrg: OrgSimple }>();
+  const organisation = propOrg || context?.currentOrg;
+
   const queryClient = useQueryClient();
+
+  if (!organisation) return null;
+
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
