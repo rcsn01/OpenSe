@@ -289,18 +289,12 @@ export const pollForOrganisation = async (
 }
 
 /**
- * Check the status of a Stripe checkout session
- * This can be used to verify payment completed before polling
+ * REMOVED: checkCheckoutSession stub (Audit S1 - OWASP A01: Broken Access Control).
+ *
+ * The previous implementation returned status: 'complete' for ANY session ID
+ * without server-side verification, allowing trivial payment bypass.
+ *
+ * Checkout verification is now handled server-side by the stripe-webhook
+ * edge function, which creates the organisation only after Stripe confirms
+ * payment. The client uses pollForOrganisation() to wait for the result.
  */
-export const checkCheckoutSession = async (sessionId: string): Promise<{
-  status: 'complete' | 'open' | 'expired' | 'unknown'
-  paymentStatus: string | null
-}> => {
-  // Note: For security, checking session status should go through a backend function
-  // For now, we just assume success if we have a session ID
-  // In production, create an edge function to verify this
-  return {
-    status: sessionId ? 'complete' : 'unknown',
-    paymentStatus: 'paid'
-  }
-}

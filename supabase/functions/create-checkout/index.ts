@@ -1,163 +1,93 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const serve = Deno.serve;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 /**
- * Helper to create a JSON error response
+ * Edge Function: create-checkout
+ *
+ * Refactored (Audit Q1): Uses shared helpers from _shared/ to eliminate
+ * ~40 lines of duplicated CORS, auth, response, and Stripe logic.
+ * Refactored (Audit S3): CORS origin now driven by ALLOWED_ORIGIN env var.
  */
-function errorResponse(message: string, status: number, details?: unknown) {
-  console.error(`[create-checkout] Error (${status}):`, message, details ?? "");
-  return new Response(
-    JSON.stringify({ error: message, details: details ?? null }),
-    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
+import { handleCorsPreflightIfOptions } from "../_shared/cors.ts";
+import { errorResponse, successResponse } from "../_shared/response.ts";
+import { extractBearerToken, authenticateUser } from "../_shared/auth.ts";
+import { getPriceIdForTier, getStripeSecretKey, isValidTier } from "../_shared/stripe.ts";
 
-/**
- * Helper to create a JSON success response
- */
-function successResponse(data: unknown) {
-  return new Response(
-    JSON.stringify(data),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
+const LABEL = "create-checkout";
 
-/**
- * Get Stripe Price ID from environment variables
- * Set these in your Supabase project secrets:
- * - STRIPE_PRICE_ID_TIER_1
- * - STRIPE_PRICE_ID_TIER_2
- * - STRIPE_PRICE_ID_TIER_3
- */
-function getPriceIdForTier(tier: string): string | null {
-  const tierMap: Record<string, string> = {
-    "tier-1": Deno.env.get("STRIPE_PRICE_ID_TIER_1") ?? "",
-    "tier-2": Deno.env.get("STRIPE_PRICE_ID_TIER_2") ?? "",
-    "tier-3": Deno.env.get("STRIPE_PRICE_ID_TIER_3") ?? "",
-  };
-  const priceId = tierMap[tier];
-  return priceId && priceId.startsWith("price_") ? priceId : null;
-}
-
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+Deno.serve(async (req) => {
+  // Handle CORS preflight
+  const preflight = handleCorsPreflightIfOptions(req);
+  if (preflight) return preflight;
 
   try {
-    // 1. Extract and validate Authorization header
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      return errorResponse("Missing Authorization header", 401);
-    }
-    const token = authHeader.replace(/^Bearer /i, "").trim();
-    if (!token) {
-      return errorResponse("Invalid Authorization header format", 401);
-    }
+    // 1. Extract and verify auth token
+    const tokenOrError = extractBearerToken(req, LABEL);
+    if (tokenOrError instanceof Response) return tokenOrError;
 
-    // 2. Validate environment variables
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const supabaseKey = supabaseAnonKey || supabaseServiceRoleKey;
-    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const authResult = await authenticateUser(tokenOrError, LABEL);
+    if (authResult instanceof Response) return authResult;
 
-    console.log("[create-checkout] Environment check:", {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseAnonKey: !!supabaseAnonKey,
-      hasSupabaseServiceRoleKey: !!supabaseServiceRoleKey,
-      hasSupabaseKey: !!supabaseKey,
-      hasStripeSecretKey: !!stripeSecretKey,
-      hasTier1Price: !!Deno.env.get("STRIPE_PRICE_ID_TIER_1"),
-      hasTier2Price: !!Deno.env.get("STRIPE_PRICE_ID_TIER_2"),
-      hasTier3Price: !!Deno.env.get("STRIPE_PRICE_ID_TIER_3"),
-    });
+    const { user } = authResult;
+    console.log(`[${LABEL}] Authenticated user: ${user.id} (${user.email})`);
 
-    if (!supabaseUrl || !supabaseKey) {
-      return errorResponse("Server configuration error", 500, "Missing Supabase environment variables");
-    }
+    // 2. Validate Stripe secret key
+    const stripeSecretKey = getStripeSecretKey();
     if (!stripeSecretKey) {
-      return errorResponse("Server configuration error", 500, "Missing STRIPE_SECRET_KEY");
+      return errorResponse(LABEL, "Server configuration error", 500, "Missing STRIPE_SECRET_KEY");
     }
 
-    // 3. Initialize Supabase Client with user's token
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: { persistSession: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    // 4. Verify User
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return errorResponse("Unauthorized", 401, userError?.message ?? "Invalid or expired token");
-    }
-
-    console.log(`[create-checkout] Authenticated user: ${user.id} (${user.email})`);
-
-    // 5. Parse and validate request body
+    // 3. Parse and validate request body
     let body: { orgName?: string; tier?: string; successUrl?: string; cancelUrl?: string };
     try {
       body = await req.json();
     } catch {
-      return errorResponse("Invalid JSON body", 400);
+      return errorResponse(LABEL, "Invalid JSON body", 400);
     }
 
     const { orgName, tier, successUrl, cancelUrl } = body;
 
-    // Validate required fields
     if (!orgName || typeof orgName !== "string" || orgName.trim().length === 0) {
-      return errorResponse("Missing or invalid 'orgName'", 400);
+      return errorResponse(LABEL, "Missing or invalid 'orgName'", 400);
     }
-    if (!tier || !["tier-1", "tier-2", "tier-3"].includes(tier)) {
-      return errorResponse("Invalid 'tier'. Must be 'tier-1', 'tier-2', or 'tier-3'", 400);
+    if (!isValidTier(tier)) {
+      return errorResponse(LABEL, "Invalid 'tier'. Must be 'tier-1', 'tier-2', or 'tier-3'", 400);
     }
     if (!successUrl || !cancelUrl) {
-      return errorResponse("Missing 'successUrl' or 'cancelUrl'", 400);
+      return errorResponse(LABEL, "Missing 'successUrl' or 'cancelUrl'", 400);
     }
 
-    // 6. Get Price ID from environment
+    // 4. Get Price ID
     const priceId = getPriceIdForTier(tier);
     if (!priceId) {
       return errorResponse(
+        LABEL,
         `Stripe Price ID not configured for ${tier}`,
         500,
         `Set STRIPE_PRICE_ID_${tier.toUpperCase().replace("-", "_")} in your Supabase secrets`
       );
     }
 
-    console.log(`[create-checkout] Creating session for tier: ${tier}, priceId: ${priceId}`);
+    console.log(`[${LABEL}] Creating session for tier: ${tier}, priceId: ${priceId}`);
 
-    // 7. Build Stripe Checkout Session parameters
+    // 5. Build Stripe Checkout Session parameters
     const params = new URLSearchParams();
     params.append("mode", "subscription");
     params.append("success_url", successUrl);
     params.append("cancel_url", cancelUrl);
     params.append("line_items[0][price]", priceId);
     params.append("line_items[0][quantity]", "1");
-    
-    // Pre-fill customer email if available
+
     if (user.email) {
       params.append("customer_email", user.email);
     }
-    
+
     // Store metadata for webhook to create the organisation
     params.append("metadata[org_name]", orgName.trim());
     params.append("metadata[tier]", tier);
     params.append("metadata[user_id]", user.id);
-
-    // Also store on subscription for future reference
     params.append("subscription_data[metadata][org_name]", orgName.trim());
     params.append("subscription_data[metadata][tier]", tier);
     params.append("subscription_data[metadata][user_id]", user.id);
 
-    // 8. Create Stripe Checkout Session
+    // 6. Create Stripe Checkout Session
     const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: {
@@ -168,10 +98,11 @@ serve(async (req) => {
     });
 
     const stripePayload = await stripeResponse.json();
-    
+
     if (!stripeResponse.ok) {
-      console.error("[create-checkout] Stripe API error:", stripePayload);
+      console.error(`[${LABEL}] Stripe API error:`, stripePayload);
       return errorResponse(
+        LABEL,
         "Failed to create checkout session",
         stripeResponse.status,
         stripePayload.error?.message ?? stripePayload
@@ -179,19 +110,19 @@ serve(async (req) => {
     }
 
     if (!stripePayload.url) {
-      return errorResponse("Stripe did not return a checkout URL", 500);
+      return errorResponse(LABEL, "Stripe did not return a checkout URL", 500);
     }
 
-    console.log(`[create-checkout] Session created: ${stripePayload.id}`);
+    console.log(`[${LABEL}] Session created: ${stripePayload.id}`);
 
-    return successResponse({ 
+    return successResponse({
       url: stripePayload.url,
-      sessionId: stripePayload.id 
+      sessionId: stripePayload.id,
     });
-
   } catch (error) {
-    console.error("[create-checkout] Unexpected error:", error);
+    console.error(`[${LABEL}] Unexpected error:`, error);
     return errorResponse(
+      LABEL,
       "An unexpected error occurred",
       500,
       error instanceof Error ? error.message : String(error)

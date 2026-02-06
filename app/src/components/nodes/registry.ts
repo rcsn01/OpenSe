@@ -1,3 +1,9 @@
+/**
+ * Node registry – auto-discovers all node config files via Vite glob.
+ *
+ * Refactored (Audit Q4): Removed production console.log/warn/error calls.
+ * Debug logging is now gated behind import.meta.env.DEV.
+ */
 import { NodeConfig, RegistryMap } from './registry.types';
 
 // Support both "config.ts" and "*.config.ts" naming conventions
@@ -6,12 +12,13 @@ const configModules = {
   ...import.meta.glob('./**/*.config.ts', { eager: true }) as Record<string, Record<string, unknown>>,
 };
 
-// Debug discovery of node configs to ensure Vite glob finds everything
-console.log('🔍 Scanning for node configs...');
-console.log('Found files:', Object.keys(configModules));
-
-if (Object.keys(configModules).length === 0) {
-  console.error('❌ No config files found! Check naming (*.config.ts) and location under nodes/.');
+// Debug discovery only in development (Audit Q4)
+if (import.meta.env.DEV) {
+  console.log('[registry] Scanning for node configs...');
+  console.log('[registry] Found files:', Object.keys(configModules));
+  if (Object.keys(configModules).length === 0) {
+    console.error('[registry] No config files found! Check naming (*.config.ts) and location under nodes/.');
+  }
 }
 
 const isNodeConfig = (value: unknown): value is NodeConfig =>
@@ -25,7 +32,9 @@ export const NODE_REGISTRY: RegistryMap = {};
 for (const [modulePath, exports] of Object.entries(configModules)) {
   const config = Object.values(exports).find(isNodeConfig);
   if (!config) {
-    console.warn(`⚠️ File found but config invalid: ${modulePath}`, exports);
+    if (import.meta.env.DEV) {
+      console.warn(`[registry] File found but config invalid: ${modulePath}`, exports);
+    }
     continue;
   }
   NODE_REGISTRY[config.type] = config;

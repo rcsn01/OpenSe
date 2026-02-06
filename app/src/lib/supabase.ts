@@ -32,8 +32,8 @@ if (!globalForSupabase._supabaseClient) {
 	globalForSupabase._supabaseClient = supabase
 }
 
-// Expose for console debugging so you can run `(await supabase.auth.getSession()).data.session`
-if (!globalForSupabase.supabase) {
+// Only expose for console debugging in development (Audit S4: removed production exposure)
+if (import.meta.env.DEV && !globalForSupabase.supabase) {
 	globalForSupabase.supabase = supabase
 }
 

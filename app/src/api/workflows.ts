@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { WorkflowRow } from '../components/dashboard/types'
+import { sanitizeText } from '../lib/validation'
 
 type WorkflowMode = 'personal' | 'org'
 
@@ -47,13 +48,18 @@ type SaveWorkflowParams = {
   org_id: string | null
 }
 
+/**
+ * Saves (inserts or updates) a workflow.
+ * Sanitises the name to prevent stored XSS (Audit Q5: removed console.log).
+ */
 export const saveWorkflow = async (payload: SaveWorkflowParams) => {
-  console.log('[api/workflows] saveWorkflow', { hasId: !!payload.id, owner_id: payload.owner_id, org_id: payload.org_id })
+  const safeName = sanitizeText(payload.name, 100);
+
   if (payload.id) {
     const { data, error } = await supabase
       .from('workflows')
       .update({
-        name: payload.name,
+        name: safeName,
         graph_data: payload.graph_data,
       })
       .eq('id', payload.id)
@@ -67,7 +73,7 @@ export const saveWorkflow = async (payload: SaveWorkflowParams) => {
   const { data, error } = await supabase
     .from('workflows')
     .insert({
-      name: payload.name,
+      name: safeName,
       graph_data: payload.graph_data,
       owner_id: payload.owner_id,
       org_id: payload.org_id,
