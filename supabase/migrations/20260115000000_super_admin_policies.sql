@@ -1,9 +1,27 @@
 -- CATEGORY: Admin-only RPCs (super admin gated)
 -- Uses helper public.is_app_super_admin() defined in 20260113000000_add_user_trigger.sql
+--
+-- SECURITY AUDIT NOTES:
+-- ----------------------
+-- 1. All admin RPCs use `public.is_app_super_admin()` which checks the `super_admin_members` 
+--    table server-side using `auth.uid()`. This is a SECURE method because:
+--    - It uses `security definer` to execute with elevated privileges
+--    - It checks `auth.uid()` which is cryptographically verified from the JWT
+--    - It does NOT rely on any client-side data or claims
+-- 
+-- 2. The `super_admin_members` table itself is protected by RLS policies that only allow
+--    existing super admins to modify it (defense-in-depth).
+--
+-- 3. Each RPC explicitly validates admin status BEFORE performing any sensitive operation.
+--
+-- 4. NEVER add admin logic that relies on client-provided data. Always use auth.uid().
+--
 
 create extension if not exists pgcrypto;
 
 -- 0. RPC to Check Super Admin Status (used by UI gating)
+-- NOTE: This is safe to call from the client because it only returns true/false
+-- and performs no mutations. The actual is_app_super_admin() check is done server-side.
 create or replace function public.get_super_admin_status()
 returns boolean
 language sql
