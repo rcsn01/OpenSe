@@ -12,6 +12,7 @@ interface AuthContextType {
   isDemoUser: boolean;
   loginAsDemo: () => void;
   logoutDemo: () => void;
+  logout: () => Promise<void>;
 }
 
 // Synthetic demo user object (partial User type)
@@ -32,6 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   isDemoUser: false,
   loginAsDemo: () => { },
   logoutDemo: () => { },
+  logout: async () => { },
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -74,36 +76,64 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsSuperAdmin(false);
   }, []);
 
+  // Logout (handles both demo and real users)
+  const logout = useCallback(async () => {
+    if (isDemoUser) {
+      logoutDemo();
+    } else {
+      await supabase.auth.signOut();
+    }
+  }, [isDemoUser, logoutDemo]);
+
   useEffect(() => {
     let isMounted = true;
 
     supabase.auth.getSession().then(({ data }) => {
       if (!isMounted) return;
-      // Don't overwrite demo user if already in demo mode
-      if (isDemoUser) return;
 
-      setSession(data.session ?? null);
-      setUser(data.session?.user ?? null);
+      // If a real session exists, it always takes precedence
+      if (data.session) {
+        setIsDemoUser(false);
+        setSession(data.session);
+        setUser(data.session.user);
+        loadSuperAdmin(data.session.user.id);
+      } else if (isDemoUser) {
+        // Keep demo state if explicitly in demo mode
+      } else {
+        setSession(null);
+        setUser(null);
+        setIsSuperAdmin(false);
+      }
       setLoading(false);
-      loadSuperAdmin(data.session?.user?.id);
     });
 
     // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Don't overwrite demo user state
-      if (isDemoUser) return;
-
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      loadSuperAdmin(session?.user?.id);
+      if (session) {
+        // Real user logged in -> force demo mode OFF and use real session
+        setIsDemoUser(false);
+        setSession(session);
+        setUser(session.user);
+        setLoading(false);
+        loadSuperAdmin(session.user.id);
+      } else {
+        // Session cleared
+        // Only clear user state if we are NOT in demo mode
+        // If we are in demo mode, session is meant to be null
+        if (!isDemoUser) {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          setIsSuperAdmin(false);
+        }
+      }
     });
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [isDemoUser]);
+  }, [isDemoUser]); // Re-run effect when isDemoUser changes to ensure correct logic
 
   return (
     <AuthContext.Provider value={{
@@ -114,6 +144,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isDemoUser,
       loginAsDemo,
       logoutDemo,
+      logout,
     }}>
       {children}
     </AuthContext.Provider>
