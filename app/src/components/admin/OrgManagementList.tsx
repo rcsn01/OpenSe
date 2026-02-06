@@ -8,17 +8,20 @@ import {
   Mail,
   Shield,
   X,
-  Users, // Used in Members button
-  AlertTriangle, // Used in Settings modal
+  Users,
+  AlertTriangle,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Crown
 } from 'lucide-react';
 import { OrgRow } from './types';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Table } from '../ui/Table';
 import { Pagination } from '../ui/Pagination';
+import { UsageStatsBadge } from './UsageStatsBadge';
+import { useOrgUsageStats } from '../../hooks/queries/useAdmin';
 
 type OrgManagementListProps = {
   orgs: OrgRow[];
@@ -55,6 +58,8 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
   onDelete,
   onManageMembers,
 }) => {
+  // Fetch usage stats
+  const { data: usageStatsMap, isLoading: usageLoading } = useOrgUsageStats();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeOrg, setActiveOrg] = useState<OrgRow | null>(null);
   const [modalView, setModalView] = useState<'settings' | 'invite' | 'delete' | null>(null);
@@ -209,13 +214,9 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
       closeModal();
     } catch (err: any) {
       setError(err.message);
+    } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   return (
@@ -251,94 +252,139 @@ export const OrgManagementList: React.FC<OrgManagementListProps> = ({
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
-                onClick={() => handleSort('member_count')}
+                onClick={() => handleSort('tier')}
               >
-                <div className="flex items-center">Size <SortIcon columnKey="member_count" /></div>
+                <div className="flex items-center">Tier <SortIcon columnKey="tier" /></div>
               </th>
               <th
                 className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
-                onClick={() => handleSort('created_at')}
+                onClick={() => handleSort('subscription_status')}
               >
-                <div className="flex items-center">Created <SortIcon columnKey="created_at" /></div>
+                <div className="flex items-center">Status <SortIcon columnKey="subscription_status" /></div>
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Usage
+              </th>
+              <th
+                className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
+                onClick={() => handleSort('member_count')}
+              >
+                <div className="flex items-center">Size <SortIcon columnKey="member_count" /></div>
               </th>
               <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Manage</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-200">
             {orgsLoading ? (
-              <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-500"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />Loading...</td></tr>
+              <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-500"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />Loading...</td></tr>
             ) : filteredOrgs.length === 0 ? (
-              <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-500">No organisations found.</td></tr>
+              <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-500">No organisations found.</td></tr>
             ) : (
-              paginatedOrgs.map((org) => (
-                <tr key={org.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 shrink-0 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shadow-sm">
-                        {org.name.charAt(0).toUpperCase()}
+              paginatedOrgs.map((org) => {
+                const usageStats = usageStatsMap?.get(org.id) || { success: 0, failed: 0, total: 0 };
+                return (
+                  <tr key={org.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 shrink-0 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shadow-sm">
+                          {org.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-semibold text-slate-900">{org.name}</div>
+                          <div className="text-xs text-slate-400 font-mono" title={org.id}>ID: {org.id.split('-')[0]}...</div>
+                        </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-semibold text-slate-900">{org.name}</div>
-                        <div className="text-xs text-slate-400 font-mono" title={org.id}>ID: {org.id.split('-')[0]}...</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <Crown className="w-3 h-3 text-amber-500" />
+                        <div className="flex flex-col">
+                          <span className="text-sm text-slate-900 font-medium">{org.owner?.full_name || '—'}</span>
+                          <span className="text-xs text-slate-500">{org.owner?.email}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col">
-                      <span className="text-sm text-slate-900 font-medium">{org.owner?.full_name || '—'}</span>
-                      <span className="text-xs text-slate-500">{org.owner?.email}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
-                      {org.member_count ?? 0} members
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                    {formatDate(org.created_at)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onManageMembers(org)}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                        aria-label="Manage members"
-                      >
-                        <Users className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={1.8} />
-                        Members
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openInvite(org)}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                        aria-label="Invite member"
-                      >
-                        <UserPlus className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={1.8} />
-                        Invite
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openSettings(org)}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                        aria-label="Organisation settings"
-                      >
-                        <Settings className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={1.8} />
-                        Settings
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openDelete(org)}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-50"
-                        aria-label="Delete organisation"
-                      >
-                        <Trash2 className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={1.8} />
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {org.tier ? (
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${org.tier === 'tier-3' ? 'bg-purple-100 text-purple-800' :
+                          org.tier === 'tier-2' ? 'bg-blue-100 text-blue-800' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>
+                          {org.tier === 'tier-3' ? 'Enterprise' : org.tier === 'tier-2' ? 'Pro' : 'Starter'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {org.subscription_status ? (
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${org.subscription_status === 'active' ? 'bg-emerald-100 text-emerald-800' :
+                          org.subscription_status === 'past_due' ? 'bg-amber-100 text-amber-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                          {org.subscription_status === 'active' ? 'Active' :
+                            org.subscription_status === 'past_due' ? 'Past Due' :
+                              org.subscription_status.charAt(0).toUpperCase() + org.subscription_status.slice(1)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <UsageStatsBadge
+                        success={usageStats.success}
+                        failed={usageStats.failed}
+                        loading={usageLoading}
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
+                        {org.member_count ?? 0} members
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onManageMembers(org)}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                          aria-label="Manage members"
+                        >
+                          <Users className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={1.8} />
+                          Members
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openInvite(org)}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                          aria-label="Invite member"
+                        >
+                          <UserPlus className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={1.8} />
+                          Invite
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openSettings(org)}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                          aria-label="Organisation settings"
+                        >
+                          <Settings className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={1.8} />
+                          Settings
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openDelete(org)}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-600 shadow-sm hover:bg-red-50"
+                          aria-label="Delete organisation"
+                        >
+                          <Trash2 className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={1.8} />
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

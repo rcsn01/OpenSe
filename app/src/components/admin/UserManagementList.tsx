@@ -13,25 +13,20 @@ import {
   AlertTriangle,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Building2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAdminUsers } from '../../hooks/queries/useAdmin';
-import { updateUserProfile } from '../../api/admin'; // Add import
+import { useAdminUsers, useUserUsageStats } from '../../hooks/queries/useAdmin';
+import { updateUserProfile } from '../../api/admin';
 import { Input } from '../ui/Input';
 import { Table } from '../ui/Table';
 import { Button } from '../ui/Button';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Pagination } from '../ui/Pagination';
-
-type Profile = {
-  id: string;
-  email: string | null;
-  full_name: string | null;
-  created_at?: string;
-  super_admin_members?: { user_id: string }[];
-};
+import { UserUsageStatsBadge } from './UsageStatsBadge';
+import { AdminUserRow } from './types';
 
 // Internal Modal for Add/Reset actions
 const Modal = ({
@@ -66,7 +61,8 @@ const Modal = ({
 export const UserManagementList = () => {
   const queryClient = useQueryClient();
   const { data: usersData = [], isLoading: loading, error: queryError } = useAdminUsers();
-  const users = usersData as Profile[];
+  const { data: usageStatsMap, isLoading: usageLoading } = useUserUsageStats();
+  const users = usersData as AdminUserRow[];
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +77,7 @@ export const UserManagementList = () => {
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
 
   // Form State
   const [newUser, setNewUser] = useState({ email: '', fullName: '', password: '' });
@@ -191,13 +187,13 @@ export const UserManagementList = () => {
     }
   };
 
-  const openEditModal = (user: Profile) => {
+  const openEditModal = (user: AdminUserRow) => {
     setSelectedUser(user);
     setEditFullName(user.full_name || '');
     setIsEditModalOpen(true);
   };
 
-  const openResetModal = (user: Profile) => {
+  const openResetModal = (user: AdminUserRow) => {
     setSelectedUser(user);
     setResetPassword('');
     setIsResetModalOpen(true);
@@ -215,8 +211,8 @@ export const UserManagementList = () => {
     if (!sortConfig) return filteredUsers;
 
     return [...filteredUsers].sort((a, b) => {
-      let aValue: any = a[sortConfig.key as keyof Profile];
-      let bValue: any = b[sortConfig.key as keyof Profile];
+      let aValue: any = a[sortConfig.key as keyof AdminUserRow];
+      let bValue: any = b[sortConfig.key as keyof AdminUserRow];
 
       // Handle nested or special keys
       if (sortConfig.key === 'role') {
@@ -307,6 +303,8 @@ export const UserManagementList = () => {
               >
                 <div className="flex items-center">Role <SortIcon columnKey="role" /></div>
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Organisations</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Usage</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
             </tr>
@@ -314,20 +312,21 @@ export const UserManagementList = () => {
           <tbody className="bg-white divide-y divide-slate-200">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
                   Loading users...
                 </td>
               </tr>
             ) : filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                   No users found.
                 </td>
               </tr>
             ) : (
               paginatedUsers.map((user) => {
                 const isSuperAdmin = (user.super_admin_members?.length ?? 0) > 0;
+                const userUsage = usageStatsMap?.get(user.id);
                 return (
                   <tr key={user.id} className="hover:bg-slate-50 group transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -352,6 +351,44 @@ export const UserManagementList = () => {
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
                           User
                         </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.memberships && user.memberships.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {user.memberships.map((m) => (
+                            <span
+                              key={m.org_id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"
+                              title={m.org_name}
+                            >
+                              <Building2 className="w-3 h-3" />
+                              {m.org_name.length > 15 ? m.org_name.slice(0, 15) + '...' : m.org_name}
+                              <span className="text-blue-400">({m.role})</span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">No orgs</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {userUsage ? (
+                        <UserUsageStatsBadge
+                          personalSuccess={userUsage.personalSuccess}
+                          personalFailed={userUsage.personalFailed}
+                          orgSuccess={userUsage.orgSuccess}
+                          orgFailed={userUsage.orgFailed}
+                          loading={usageLoading}
+                        />
+                      ) : (
+                        <UserUsageStatsBadge
+                          personalSuccess={0}
+                          personalFailed={0}
+                          orgSuccess={0}
+                          orgFailed={0}
+                          loading={usageLoading}
+                        />
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
