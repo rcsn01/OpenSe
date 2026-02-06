@@ -69,10 +69,25 @@ export const runExecution = async (
 
         const inputs = await buildInputs(deps, dataOut);
 
+        // ── Schema propagation: collect available columns from all inputs ──
+        const inputSchemas: string[] = [];
+        for (const inp of Object.values(inputs)) {
+          if (inp.ref?.schema) {
+            inputSchemas.push(...inp.ref.schema);
+          }
+        }
+        const availableFields = [...new Set(inputSchemas)];
+
+        // Enrich node data with upstream column information before processing
+        const enrichedData = { ...(node.data as any) };
+        if (availableFields.length > 0) {
+          enrichedData.availableFields = availableFields;
+        }
+
         const result = await nodeConfig.processor({
-          data: node.data as any,
+          data: enrichedData,
           inputs,
-          node,
+          node: { ...node, data: enrichedData },
           helpers: { persistRows, loadRows, toCsv, workflowName },
         });
 
@@ -83,10 +98,9 @@ export const runExecution = async (
 
         Object.entries(result.outputs || {}).forEach(([handle, ref]) => setOutput(handle, ref));
 
-        if (result.updatedData) {
-          const nextData = { ...(node.data as any), ...result.updatedData };
-          updatedNodes = updatedNodes.map((n, idx) => (idx === nodeIndex ? { ...n, data: nextData } : n));
-        }
+        // Always persist enriched data (with availableFields), merged with any processor updates
+        const finalData = { ...enrichedData, ...result.updatedData };
+        updatedNodes = updatedNodes.map((n, idx) => (idx === nodeIndex ? { ...n, data: finalData } : n));
 
         if (result.downloads?.length) {
           downloads.push(...result.downloads);

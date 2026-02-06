@@ -166,7 +166,8 @@ export const WorkflowEditorPage = () => {
     if (cleanedData && typeof cleanedData === 'object' && 'setData' in (cleanedData as Record<string, unknown>)) {
       delete (cleanedData as Record<string, unknown>).setData;
     }
-    if (node.type === 'preview' && cleanedData && 'previewRows' in (cleanedData as Record<string, unknown>)) {
+    // Strip previewRows from all nodes that use them (preview + chart/visualization nodes)
+    if (cleanedData && 'previewRows' in (cleanedData as Record<string, unknown>)) {
       delete (cleanedData as Record<string, unknown>).previewRows;
     }
     if (node.type === 'file' && cleanedData) {
@@ -194,7 +195,7 @@ export const WorkflowEditorPage = () => {
       user.id,
       orgIdParam
     );
-    setNodes(result.updatedNodes);
+    setNodes(withSetters(result.updatedNodes));
 
     if (result.downloads.length) {
       result.downloads.forEach((dl) => {
