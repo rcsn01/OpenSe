@@ -16,3 +16,11 @@ export type OrgInvite = {
     role: 'admin' | 'editor' | 'member'
     created_at: string
 }
+
+export type OrgMember = {
+    user_id: string
+    email: string | null
+    full_name: string | null
+    role: 'admin' | 'editor' | 'member'
+    avatar_url: string | null
+}
