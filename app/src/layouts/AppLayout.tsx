@@ -53,7 +53,7 @@ export const AppLayout = () => {
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Gallery', href: '/gallery', icon: LayoutTemplate },
     { name: 'Organisation', href: '/organisation', icon: Building2 },
     { name: 'Activity', href: '/activity', icon: Activity },

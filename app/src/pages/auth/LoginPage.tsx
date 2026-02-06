@@ -21,7 +21,7 @@ export const LoginPage = () => {
 
     try {
       await signIn(email, password);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {
@@ -42,7 +42,7 @@ export const LoginPage = () => {
 
   const handleDemoLogin = () => {
     loginAsDemo();
-    navigate('/');
+    navigate('/dashboard');
   };
 
   return (

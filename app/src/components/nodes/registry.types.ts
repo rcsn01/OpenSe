@@ -4,7 +4,7 @@ import { Node } from 'reactflow';
 import { Row, WorkflowNodeData } from './types';
 import { DataRef, ExecutionDownload } from '../../lib/execution/utils';
 
-export type NodeCategory = 'Input' | 'Data' | 'Logic' | 'Output';
+export type NodeCategory = 'Input' | 'Data' | 'Logic' | 'Output' | 'Visualization';
 
 export type ProcessorHelpers = {
   persistRows: (rows: Row[]) => Promise<DataRef>;

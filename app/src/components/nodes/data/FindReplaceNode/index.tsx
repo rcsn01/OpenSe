@@ -1,49 +1,36 @@
-import React from 'react';
 import { NodeProps } from 'reactflow';
 import { Search } from 'lucide-react';
 import { BaseNode } from '../../_base/BaseNode';
-import { Checkbox, Select, TextInput } from '../../_base/NodeControls';
 import { FindReplaceNodeData } from '../../types';
 
-export const FindReplaceNode = ({ data, selected }: NodeProps<FindReplaceNodeData>) => (
-  <BaseNode
-    label={data.label || 'Find & Replace'}
-    description="Replace text in a column"
-    icon={Search}
-    color="bg-pink-500"
-    inputs={['in']}
-    outputs={['out']}
-    selected={selected}
-  >
-    {data.availableFields?.length ? (
-      <Select
-        value={data.field || ''}
-        onChange={(e) => data.setData?.((prev: FindReplaceNodeData) => ({ ...prev, field: e.target.value }))}
-      >
-        <option value="">Select column...</option>
-        {data.availableFields.map((f) => <option key={f} value={f}>{f}</option>)}
-      </Select>
-    ) : (
-      <TextInput
-        placeholder="Column name"
-        value={data.field || ''}
-        onChange={(e) => data.setData?.((prev: FindReplaceNodeData) => ({ ...prev, field: e.target.value }))}
-      />
-    )}
-    <TextInput
-      placeholder="Find"
-      value={data.search}
-      onChange={(e) => data.setData?.((prev: FindReplaceNodeData) => ({ ...prev, search: e.target.value }))}
-    />
-    <TextInput
-      placeholder="Replace"
-      value={data.replace}
-      onChange={(e) => data.setData?.((prev: FindReplaceNodeData) => ({ ...prev, replace: e.target.value }))}
-    />
-    <Checkbox
-      label="Case sensitive"
-      checked={!!data.caseSensitive}
-      onChange={(e) => data.setData?.((prev: FindReplaceNodeData) => ({ ...prev, caseSensitive: e.target.checked }))}
-    />
-  </BaseNode>
-);
+export const FindReplaceNode = ({ data, selected }: NodeProps<FindReplaceNodeData>) => {
+  return (
+    <BaseNode
+      label={data.label || 'Find & Replace'}
+      description="Replace text in a column"
+      icon={Search}
+      color="bg-pink-500"
+      inputs={['in']}
+      outputs={['out']}
+      selected={selected}
+    >
+      {data.field && data.search ? (
+        <div className="space-y-0.5">
+          <p className="text-[11px] text-slate-600 truncate">
+            In <span className="font-semibold text-pink-700">[{data.field}]</span>
+          </p>
+          <p className="text-[11px] text-slate-600 truncate">
+            <span className="font-mono text-red-500">"{data.search}"</span>
+            {' → '}
+            <span className="font-mono text-green-600">"{data.replace}"</span>
+          </p>
+          {data.caseSensitive && (
+            <span className="text-[9px] text-slate-400 uppercase tracking-wider">Case sensitive</span>
+          )}
+        </div>
+      ) : (
+        <p className="text-[10px] text-slate-400 italic text-center py-1">No replacement configured</p>
+      )}
+    </BaseNode>
+  );
+};

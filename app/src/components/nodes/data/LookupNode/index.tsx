@@ -1,22 +1,10 @@
-import React from 'react';
 import { NodeProps } from 'reactflow';
 import { Book } from 'lucide-react';
 import { BaseNode } from '../../_base/BaseNode';
-import { Select, TextArea, TextInput } from '../../_base/NodeControls';
 import { LookupNodeData } from '../../types';
 
-const parseMap = (text: string) => {
-  try {
-    const obj = JSON.parse(text);
-    if (obj && typeof obj === 'object' && !Array.isArray(obj)) return obj as Record<string, string>;
-  } catch (_) {
-    return undefined;
-  }
-  return undefined;
-};
-
 export const LookupNode = ({ data, selected }: NodeProps<LookupNodeData>) => {
-  const mapText = JSON.stringify(data.map || {}, null, 0);
+  const mapSize = Object.keys(data.map || {}).length;
 
   return (
     <BaseNode
@@ -28,32 +16,21 @@ export const LookupNode = ({ data, selected }: NodeProps<LookupNodeData>) => {
       outputs={['out']}
       selected={selected}
     >
-      {data.availableFields?.length ? (
-        <Select
-          value={data.field || ''}
-          onChange={(e) => data.setData?.((prev: LookupNodeData) => ({ ...prev, field: e.target.value }))}
-        >
-          <option value="">Select key column...</option>
-          {data.availableFields.map((f) => <option key={f} value={f}>{f}</option>)}
-        </Select>
+      {data.field ? (
+        <div className="space-y-0.5">
+          <p className="text-[11px] text-slate-600 truncate">
+            Key: <span className="font-semibold text-emerald-700">[{data.field}]</span>
+          </p>
+          {data.newField && (
+            <p className="text-[11px] text-slate-600 truncate">
+              Output: <span className="text-emerald-600">[{data.newField}]</span>
+            </p>
+          )}
+          <p className="text-[10px] text-slate-400">{mapSize} mapping{mapSize !== 1 ? 's' : ''}</p>
+        </div>
       ) : (
-        <TextInput
-          placeholder="Key column"
-          value={data.field || ''}
-          onChange={(e) => data.setData?.((prev: LookupNodeData) => ({ ...prev, field: e.target.value }))}
-        />
+        <p className="text-[10px] text-slate-400 italic text-center py-1">No key column selected</p>
       )}
-      <TextInput
-        placeholder="New field name (optional)"
-        value={data.newField || ''}
-        onChange={(e) => data.setData?.((prev: LookupNodeData) => ({ ...prev, newField: e.target.value }))}
-      />
-      <TextArea
-        className="h-24"
-        placeholder='Lookup map JSON, e.g. {"US":"United States"}'
-        value={mapText}
-        onChange={(e) => data.setData?.((prev: LookupNodeData) => ({ ...prev, map: parseMap(e.target.value) || prev.map || {} }))}
-      />
     </BaseNode>
   );
 };

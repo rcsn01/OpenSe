@@ -3,7 +3,7 @@ import { Node } from 'reactflow';
 import { Info, X } from 'lucide-react';
 
 import { Input } from '../ui/Input';
-import { WorkflowNodeData, FilterNodeData, SortNodeData, RenameColumnNodeData, FindReplaceNodeData, FileNodeData } from '../../components/nodes/types';
+import { WorkflowNodeData, FileNodeData } from '../../components/nodes/types';
 import { NODE_REGISTRY } from '../../components/nodes/registry';
 
 interface PropertiesPanelProps {
@@ -30,11 +30,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, 
 
     const renderContent = () => {
         const config = type ? NODE_REGISTRY[type] : undefined;
+
+        // Use the registered propertiesComponent if available
         if (config?.propertiesComponent) {
             const PropertiesComponent = config.propertiesComponent;
             return <PropertiesComponent data={data} onChange={handleChange} />;
         }
 
+        // Fallback for nodes without a propertiesComponent (e.g., FileInput)
         switch (type) {
             case 'file': {
                 const fileData = data as FileNodeData;
@@ -55,146 +58,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, 
                     </div>
                 );
             }
-            case 'filter_rows': {
-                const filterData = data as FilterNodeData;
-                return (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Column</label>
-                            <select
-                                value={filterData.field || ''}
-                                onChange={(e) => handleChange('field', e.target.value)}
-                                className="w-full rounded-md border border-slate-300 py-1.5 px-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="" disabled>Select column...</option>
-                                {filterData.availableFields?.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Condition</label>
-                            <select
-                                value={filterData.operator || 'equals'}
-                                onChange={(e) => handleChange('operator', e.target.value)}
-                                className="w-full rounded-md border border-slate-300 py-1.5 px-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="equals">Equals</option>
-                                <option value="contains">Contains</option>
-                                <option value="starts_with">Starts With</option>
-                                <option value="ends_with">Ends With</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Value</label>
-                            <Input
-                                value={filterData.value || ''}
-                                onChange={(e) => handleChange('value', e.target.value)}
-                                placeholder="Value to match..."
-                            />
-                        </div>
-                    </div>
-                );
-            }
-            case 'sort': {
-                const sortData = data as SortNodeData;
-                return (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Sort By</label>
-                            <select
-                                value={sortData.field || ''}
-                                onChange={(e) => handleChange('field', e.target.value)}
-                                className="w-full rounded-md border border-slate-300 py-1.5 px-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="" disabled>Select column...</option>
-                                {sortData.availableFields?.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Direction</label>
-                            <select
-                                value={sortData.direction || 'asc'}
-                                onChange={(e) => handleChange('direction', e.target.value)}
-                                className="w-full rounded-md border border-slate-300 py-1.5 px-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="asc">Ascending (A-Z)</option>
-                                <option value="desc">Descending (Z-A)</option>
-                            </select>
-                        </div>
-                    </div>
-                );
-            }
-            case 'rename_column': {
-                const renameData = data as RenameColumnNodeData;
-                return (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Column to Rename</label>
-                            <select
-                                value={renameData.field || ''}
-                                onChange={(e) => handleChange('field', e.target.value)}
-                                className="w-full rounded-md border border-slate-300 py-1.5 px-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="" disabled>Select column...</option>
-                                {renameData.availableFields?.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">New Name</label>
-                            <Input
-                                value={renameData.newName || ''}
-                                onChange={(e) => handleChange('newName', e.target.value)}
-                                placeholder="New column name"
-                            />
-                        </div>
-                    </div>
-                );
-            }
-            case 'find_replace': {
-                const frData = data as FindReplaceNodeData;
-                return (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Target Column</label>
-                            <select
-                                value={frData.field || ''}
-                                onChange={(e) => handleChange('field', e.target.value)}
-                                className="w-full rounded-md border border-slate-300 py-1.5 px-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="" disabled>Select column...</option>
-                                {frData.availableFields?.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Find</label>
-                            <Input
-                                value={frData.search || ''}
-                                onChange={(e) => handleChange('search', e.target.value)}
-                                placeholder="Text to find"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1">Replace With</label>
-                            <Input
-                                value={frData.replace || ''}
-                                onChange={(e) => handleChange('replace', e.target.value)}
-                                placeholder="Replacement text"
-                            />
-                        </div>
-                        <div className="flex items-center gap-2 mt-2">
-                            <input
-                                type="checkbox"
-                                id="caseSensitive"
-                                checked={frData.caseSensitive || false}
-                                onChange={(e) => handleChange('caseSensitive', e.target.checked)}
-                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <label htmlFor="caseSensitive" className="text-sm text-slate-700">Case Sensitive</label>
-                        </div>
-                    </div>
-                );
-            }
             default:
-                // Generic renderer for unknown types or simple label editing
                 return (
                     <div className="text-sm text-slate-500 italic">
                         No specific properties available for this node type ({type}).

@@ -3,14 +3,16 @@ import { RenameColumnNode } from './index';
 import { processRenameColumn } from './logic';
 import { NodeConfig } from '../../registry.types';
 import { RenameColumnNodeData } from '../../types';
+import { RenameColumnNodeProperties } from './properties';
 
-const config: NodeConfig = {
+const config: NodeConfig<RenameColumnNodeData> = {
   type: 'rename',
   label: 'Rename Column',
   category: 'Data',
   icon: Edit3,
   color: 'bg-yellow-500',
   component: RenameColumnNode,
+  propertiesComponent: RenameColumnNodeProperties,
   processor: processRenameColumn,
   initialData: {
     label: 'Rename Column',
