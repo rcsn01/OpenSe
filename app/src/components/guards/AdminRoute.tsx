@@ -34,7 +34,7 @@ export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 
     // Redirect if not a super admin
     if (!isSuperAdmin) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/dashboard" replace />;
     }
 
     // User is authenticated and is a super admin
