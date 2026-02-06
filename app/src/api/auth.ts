@@ -1,6 +1,19 @@
+/**
+ * Auth API module.
+ *
+ * Refactored (Audit S2): signUp now enforces password strength via the
+ * centralized validatePassword() helper before hitting Supabase.
+ */
 import { supabase } from '../lib/supabase'
+import { validatePassword } from '../lib/validation'
 
 export const signUp = async (email: string, password: string) => {
+  // Enforce password strength before sending to Supabase (Audit S2)
+  const strength = validatePassword(password)
+  if (!strength.valid) {
+    throw new Error(strength.errors.join(' '))
+  }
+
   const { error } = await supabase.auth.signUp({ email, password })
   if (error) throw error
 }
@@ -47,6 +60,12 @@ export const updateAuthFullName = async (fullName: string) => {
 }
 
 export const updatePassword = async (password: string) => {
+  // Also enforce strength on password change
+  const strength = validatePassword(password)
+  if (!strength.valid) {
+    throw new Error(strength.errors.join(' '))
+  }
+
   const { error } = await supabase.auth.updateUser({ password })
   if (error) throw error
 }

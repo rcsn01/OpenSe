@@ -25,6 +25,8 @@ import { EditorHeader } from '../components/editor/EditorHeader';
 import { NodeSidebar } from '../components/editor/NodeSidebar';
 import { PropertiesPanel } from '../components/editor/PropertiesPanel';
 import { Info } from 'lucide-react';
+// Validation (Audit S5: sanitize imported workflows)
+import { validateWorkflowImport, sanitizeText } from '../lib/validation';
 
 export const WorkflowEditorPage = () => {
   const { id } = useParams();
@@ -302,6 +304,11 @@ export const WorkflowEditorPage = () => {
     importInputRef.current?.click();
   }, []);
 
+  /**
+   * Import workflow from file with schema validation (Audit S5).
+   * Previously parsed arbitrary JSON with no validation, allowing
+   * injection of unexpected node types or malformed data.
+   */
   const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -310,12 +317,20 @@ export const WorkflowEditorPage = () => {
       try {
         const raw = reader.result as string;
         const parsed = JSON.parse(raw);
+
+        // Validate the imported structure before applying (Audit S5)
+        const validation = validateWorkflowImport(parsed);
+        if (!validation.valid) {
+          setRunMessage(`Import failed: ${validation.error}`);
+          return;
+        }
+
         const graph = (parsed.graph_data || parsed) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
         const incomingNodes = withSetters((graph.nodes || []) as Node<WorkflowNodeData>[]);
         const incomingEdges = (graph.edges || []) as Edge[];
         setNodes(incomingNodes);
         setEdges(incomingEdges);
-        if (parsed.name) setWorkflowName(parsed.name);
+        if (parsed.name) setWorkflowName(sanitizeText(parsed.name, 100));
         setRunMessage('Workflow imported');
       } catch (err: any) {
         setRunMessage(err?.message || 'Failed to import workflow');

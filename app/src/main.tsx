@@ -1,3 +1,14 @@
+/**
+ * Application entry point.
+ *
+ * Refactored (Audit P5): Removed the duplicate QueryResumer component
+ * that registered visibilitychange/focus event listeners overlapping with
+ * the focusManager setup above. React Query's built-in focusManager
+ * already handles refetching on tab focus.
+ *
+ * The pageshow listener (for bfcache restoration) is the only addition
+ * not covered by focusManager, so it's kept as a lightweight component.
+ */
 import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
@@ -24,7 +35,7 @@ const queryClient = new QueryClient({
   },
 })
 
-// Ensure queries resume after tab/app switches and visibility changes.
+// React Query's built-in focus management handles visibilitychange, focus, and blur
 focusManager.setEventListener((handleFocus) => {
   const onVisibility = () => handleFocus(document.visibilityState === 'visible')
   const onFocus = () => handleFocus(true)
@@ -54,38 +65,25 @@ onlineManager.setEventListener((setOnline) => {
   }
 })
 
-const QueryResumer = () => {
+/**
+ * Handles bfcache restoration (pageshow with persisted=true).
+ * This is the only case not covered by focusManager's built-in listeners.
+ * (Audit P5: removed duplicate visibilitychange/focus listeners)
+ */
+const BfcacheResumer = () => {
   const client = useQueryClient()
 
   useEffect(() => {
-    const resume = () => {
-      client.invalidateQueries({})
-      client.refetchQueries({ type: 'active' })
-    }
-
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        resume()
-      }
-    }
-
-    const onFocus = () => {
-      resume()
-    }
-
     const onPageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
-        resume()
+        client.invalidateQueries({})
+        client.refetchQueries({ type: 'active' })
       }
     }
 
-    window.addEventListener('visibilitychange', onVisibility, false)
-    window.addEventListener('focus', onFocus, false)
     window.addEventListener('pageshow', onPageShow, false)
 
     return () => {
-      window.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('focus', onFocus)
       window.removeEventListener('pageshow', onPageShow)
     }
   }, [client])
@@ -96,7 +94,7 @@ const QueryResumer = () => {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <QueryResumer />
+      <BfcacheResumer />
       <App />
     </QueryClientProvider>
   </StrictMode>,
