@@ -188,4 +188,10 @@ export type HeatmapNodeData = BaseNodeData & {
   availableFields?: string[];
 };
 
+export type CodeNodeData = BaseNodeData & {
+  language: 'javascript';
+  code: string;
+  availableFields?: string[];
+};
+
 export type WorkflowNodeData = BaseNodeData;
