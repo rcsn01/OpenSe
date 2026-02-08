@@ -1,7 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 
-type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix'> & {
   prefix?: React.ReactNode;
 };
 

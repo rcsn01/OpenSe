@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { useDemoContext } from '../../context/DemoContext'
 import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME } from '../../lib/demoData'
+import type { WorkflowRow } from '../../components/dashboard/types'
 
 type UseWorkflowsParams = {
   userId: string | undefined
@@ -16,11 +17,19 @@ type UseWorkflowsParams = {
   mode: 'personal' | 'org'
 }
 
+type WorkflowDetail = {
+  id: string
+  name: string
+  graph_data: any
+  owner_id: string
+  org_id: string | null
+}
+
 export const useWorkflows = ({ userId, orgId, mode }: UseWorkflowsParams) => {
   const { isDemoUser } = useAuth()
   const { listDemoWorkflows } = useDemoContext()
 
-  return useQuery({
+  return useQuery<WorkflowRow[]>({
     queryKey: ['workflows', userId, orgId, mode, isDemoUser],
     queryFn: () => {
       if (isDemoUser) {
@@ -37,7 +46,7 @@ export const useWorkflow = (id: string | null) => {
   const { isDemoUser } = useAuth()
   const { getDemoWorkflow } = useDemoContext()
 
-  return useQuery({
+  return useQuery<WorkflowDetail | null>({
     queryKey: ['workflow', id, isDemoUser],
     queryFn: () => {
       if (isDemoUser && id) {

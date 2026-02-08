@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { FileSpreadsheet, Search, CalendarDays, Edit, Trash2, Loader2 } from 'lucide-react';
+import { useMemo } from 'react';
+import { FileSpreadsheet, Search, CalendarDays, Loader2 } from 'lucide-react';
 import { WorkflowTableProps } from './types';
 import { Input } from '../ui/Input';
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext, useSearchParams, Outlet, NavLink } from 'react-router-dom';
+import { Link, useOutletContext, useSearchParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Loader2, Users, CreditCard, Loader, XCircle, Activity, FileText } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
@@ -21,6 +21,7 @@ import { OrgSimple } from '../types/organisation';
 import clsx from 'clsx';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Tabs } from '../components/ui/Tabs';
 
 // Context for AppLayout
 type OrganisationPageContext = { currentOrg: OrgSimple | null; };
@@ -38,6 +39,8 @@ export const OrganisationPage = () => {
     const { currentOrg: contextOrg } = useOutletContext<OrganisationPageContext>();
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
+    const location = useLocation();
+    const navigate = useNavigate();
 
     // Check for Stripe redirect status
     const isStripeSuccess = searchParams.get('success') === 'true';
@@ -244,46 +247,18 @@ export const OrganisationPage = () => {
                 />
 
                 {/* 2. Page Tabs (Navigation) */}
-                <div className="flex border-b border-slate-200 mb-8 overflow-x-auto gap-8">
-                    <NavLink
-                        to="team"
-                        className={({ isActive }) => clsx(
-                            "pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap",
-                            isActive ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-                        )}
-                    >
-                        <Users className="w-4 h-4" /> Team Management
-                    </NavLink>
-                    <NavLink
-                        to="usage"
-                        className={({ isActive }) => clsx(
-                            "pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap",
-                            isActive ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-                        )}
-                    >
-                        <Activity className="w-4 h-4" /> Usage
-                    </NavLink>
-                    <NavLink
-                        to="logs"
-                        className={({ isActive }) => clsx(
-                            "pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap",
-                            isActive ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-                        )}
-                    >
-                        <FileText className="w-4 h-4" /> Logs
-                    </NavLink>
-                    {membershipRole === 'owner' && (
-                        <NavLink
-                            to="billing"
-                            className={({ isActive }) => clsx(
-                                "pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap",
-                                isActive ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-                            )}
-                        >
-                            <CreditCard className="w-4 h-4" /> Billing & Settings
-                        </NavLink>
-                    )}
-                </div>
+                <Tabs
+                    tabs={[
+                        { id: 'team', label: 'Team Management', icon: <Users className="w-4 h-4" /> },
+                        { id: 'usage', label: 'Usage', icon: <Activity className="w-4 h-4" /> },
+                        { id: 'logs', label: 'Logs', icon: <FileText className="w-4 h-4" /> },
+                        ...(membershipRole === 'owner'
+                            ? [{ id: 'billing', label: 'Billing & Settings', icon: <CreditCard className="w-4 h-4" /> }]
+                            : []),
+                    ]}
+                    activeTab={location.pathname.split('/').pop() || 'team'}
+                    onTabChange={(id) => navigate(id)}
+                />
 
                 {/* 3. Tab Content */}
                 <Outlet context={{ currentOrg: organisation, members, refetchMembers, userRole: membershipRole } satisfies OutletContextType} />

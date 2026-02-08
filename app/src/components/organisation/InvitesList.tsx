@@ -1,6 +1,6 @@
 
-import React, { useEffect, useState } from 'react';
-import { Check, X, Building2, UserPlus, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, UserPlus, Loader2 } from 'lucide-react';
 import { OrgInvite } from '../../types/organisation';
 import { getPendingInvites, acceptInvite, rejectInvite } from '../../api/organisations';
 

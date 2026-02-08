@@ -1,11 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-
-// Define the worker type for TypeScript
-interface WorkerMessage {
-  id: string;
-  type: string;
-  payload: any;
-}
+import { useCallback, useRef, useEffect } from 'react';
 
 interface WorkerResponse {
   id: string;

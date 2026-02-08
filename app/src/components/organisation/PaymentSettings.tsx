@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Check, CreditCard, ShieldCheck, Zap, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { OrgSimple } from '../../types/organisation';
 import clsx from 'clsx';

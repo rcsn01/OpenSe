@@ -1,4 +1,3 @@
-import React from 'react';
 import { NodeProps } from 'reactflow';
 import { Save as SaveIcon } from 'lucide-react';
 import { BaseNode } from '../../_base/BaseNode';

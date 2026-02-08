@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -23,7 +23,7 @@ export const AppLayout = () => {
 
   // Org State
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null);
-  const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganisations(user?.id);
+  const { data: userOrgs = [] } = useUserOrganisations(user?.id);
 
   const handleSignOut = async () => {
     try {

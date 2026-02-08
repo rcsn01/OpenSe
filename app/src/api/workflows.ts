@@ -26,7 +26,14 @@ export const listWorkflows = async ({ userId, orgId, mode }: ListWorkflowsParams
   const { data, error } = await query
 
   if (error) throw error
-  return data as WorkflowRow[]
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    created_at: row.created_at,
+    owner_id: row.owner_id,
+    org_id: row.org_id,
+    owner: Array.isArray(row.owner) ? row.owner[0] ?? null : row.owner ?? null,
+  })) as WorkflowRow[]
 }
 
 export const getWorkflow = async (id: string) => {

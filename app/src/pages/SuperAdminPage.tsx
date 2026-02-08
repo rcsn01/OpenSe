@@ -1,12 +1,9 @@
-import React, { useState } from 'react';
-import clsx from 'clsx';
+import { useState } from 'react';
 import { 
     Building2, 
     Users, 
     Plus, 
     ShieldCheck, 
-    Activity,
-    Search,
     X 
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -29,6 +26,7 @@ import { MemberTable } from '../components/settings/MemberTable';
 import { Member } from '../components/settings/types';
 import { OrgRow, Message } from '../components/admin/types';
 import { Button } from '../components/ui/Button';
+import { Tabs } from '../components/ui/Tabs';
 
 // Internal Modal for specific page actions
 const PageModal = ({ 
@@ -199,34 +197,15 @@ export const SuperAdminPage = () => {
 
             {/* Main Content Area */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
-                {/* Tabs */}
-                <div className="border-b border-slate-200 px-6 pt-4">
-                    <nav className="-mb-px flex space-x-8">
-                        <button
-                            onClick={() => setActiveTab('orgs')}
-                            className={clsx(
-                                'pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors',
-                                activeTab === 'orgs'
-                                    ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                            )}
-                        >
-                            <Building2 className="w-4 h-4" />
-                            Organisations
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('users')}
-                            className={clsx(
-                                'pb-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors',
-                                activeTab === 'users'
-                                    ? 'border-blue-500 text-blue-600'
-                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                            )}
-                        >
-                            <Users className="w-4 h-4" />
-                            User Directory
-                        </button>
-                    </nav>
+                <div className="px-6 pt-4">
+                    <Tabs
+                        tabs={[
+                            { id: 'orgs', label: 'Organisations', icon: <Building2 className="w-4 h-4" /> },
+                            { id: 'users', label: 'User Directory', icon: <Users className="w-4 h-4" /> },
+                        ]}
+                        activeTab={activeTab}
+                        onTabChange={(id) => setActiveTab(id as 'orgs' | 'users')}
+                    />
                 </div>
 
                 <div className="p-6">

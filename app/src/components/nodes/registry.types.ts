@@ -25,13 +25,13 @@ export type ProcessorContext<TData = WorkflowNodeData> = {
   helpers: ProcessorHelpers;
 };
 
-export type ProcessorResult = {
+export type ProcessorResult<TData = WorkflowNodeData> = {
   outputs: Record<string, DataRef>;
-  updatedData?: Partial<WorkflowNodeData>;
+  updatedData?: Partial<TData>;
   downloads?: ExecutionDownload[];
 };
 
-export type NodeProcessor<TData = WorkflowNodeData> = (ctx: ProcessorContext<TData>) => Promise<ProcessorResult>;
+export type NodeProcessor<TData = WorkflowNodeData> = (ctx: ProcessorContext<TData>) => Promise<ProcessorResult<TData>>;
 
 export interface NodeConfig<TData = WorkflowNodeData> {
   type: string;

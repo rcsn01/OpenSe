@@ -1,7 +1,7 @@
-import { NodeProcessor } from '../../registry.types';
+import { NodeProcessor, ProcessorInput } from '../../registry.types';
 import { MultiPivotNodeData, Row } from '../../types';
 
-const collectInputEntries = (inputs: Record<string, { rows: Row[]; ref?: string }>) => Object.values(inputs);
+const collectInputEntries = (inputs: Record<string, ProcessorInput>) => Object.values(inputs);
 
 export const processMultiPivot: NodeProcessor<MultiPivotNodeData> = async ({ data, inputs, helpers }) => {
   const inputEntries = collectInputEntries(inputs);
