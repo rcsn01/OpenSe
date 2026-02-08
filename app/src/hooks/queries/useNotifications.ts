@@ -3,7 +3,6 @@ import {
   listNotificationSettings,
   upsertNotificationSetting,
   deleteNotificationSetting,
-  NotificationChannel,
 } from '../../api/notifications'
 
 /**

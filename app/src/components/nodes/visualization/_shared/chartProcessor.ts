@@ -14,7 +14,7 @@ const getInputRows = (inputs: Record<string, { rows: Row[] }>, preferred: string
  * Caps preview at 500 rows for performance.
  */
 export const createChartProcessor = <T extends { previewRows?: Row[] }>(): NodeProcessor<T> => {
-  return async (ctx: ProcessorContext<T>): Promise<ProcessorResult> => {
+  return async (ctx: ProcessorContext<T>): Promise<ProcessorResult<T>> => {
     const { inputs, helpers } = ctx;
     const sourceRows = getInputRows(inputs, ['in']);
     const previewRows = sourceRows.slice(0, 500);
@@ -25,7 +25,7 @@ export const createChartProcessor = <T extends { previewRows?: Row[] }>(): NodeP
       },
       updatedData: {
         previewRows,
-      } as any,
+      } as Partial<T>,
     };
   };
 };

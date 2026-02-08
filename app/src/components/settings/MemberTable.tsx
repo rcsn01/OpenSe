@@ -1,5 +1,4 @@
-import React from 'react';
-import { Shield, Trash2, Loader2, User, MoreHorizontal, Check } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import { Member, Organisation } from './types';
 import clsx from 'clsx';
 

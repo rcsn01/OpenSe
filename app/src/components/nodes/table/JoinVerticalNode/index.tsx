@@ -1,4 +1,3 @@
-import React from 'react';
 import { NodeProps, Handle, Position } from 'reactflow';
 import { Layers } from 'lucide-react';
 import { BaseNode } from '../../_base/BaseNode';

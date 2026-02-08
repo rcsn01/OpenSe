@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowRight, Shield, Zap, Lock, Database, Activity, CheckCircle } from 'lucide-react';

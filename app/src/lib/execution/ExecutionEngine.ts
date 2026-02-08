@@ -55,7 +55,8 @@ export const runExecution = async (
         if (nodeIndex === -1) continue;
         const node = updatedNodes[nodeIndex];
 
-        const nodeConfig = NODE_REGISTRY[node.type];
+        const nodeType = node.type ?? '';
+        const nodeConfig = nodeType ? NODE_REGISTRY[nodeType] : undefined;
         if (!nodeConfig) {
           console.warn(`No node config found for type: ${node.type}`);
           unresolved.delete(id);
@@ -96,7 +97,8 @@ export const runExecution = async (
           dataOut[id][handleId || 'default'] = ref;
         };
 
-        Object.entries(result.outputs || {}).forEach(([handle, ref]) => setOutput(handle, ref));
+        const outputs: Record<string, DataRef> = result.outputs ?? {};
+        Object.entries(outputs).forEach(([handle, ref]) => setOutput(handle, ref));
 
         // Always persist enriched data (with availableFields), merged with any processor updates
         const finalData = { ...enrichedData, ...result.updatedData };

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Clock, XCircle, FileSpreadsheet } from 'lucide-react';
 import { Table } from '../ui/Table';
 import { StatusBadge } from '../ui/StatusBadge';

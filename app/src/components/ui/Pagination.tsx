@@ -86,7 +86,6 @@ export const Pagination: React.FC<PaginationProps> = ({
             <div className="flex items-center gap-1">
                 <Button
                     variant="secondary"
-                    size="sm"
                     onClick={() => onPageChange(1)}
                     disabled={currentPage === 1}
                     className="h-8 w-8 p-0"
@@ -96,7 +95,6 @@ export const Pagination: React.FC<PaginationProps> = ({
                 </Button>
                 <Button
                     variant="secondary"
-                    size="sm"
                     onClick={() => onPageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                     className="h-8 w-8 p-0"
@@ -129,7 +127,6 @@ export const Pagination: React.FC<PaginationProps> = ({
 
                 <Button
                     variant="secondary"
-                    size="sm"
                     onClick={() => onPageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     className="h-8 w-8 p-0"
@@ -139,7 +136,6 @@ export const Pagination: React.FC<PaginationProps> = ({
                 </Button>
                 <Button
                     variant="secondary"
-                    size="sm"
                     onClick={() => onPageChange(totalPages)}
                     disabled={currentPage === totalPages}
                     className="h-8 w-8 p-0"

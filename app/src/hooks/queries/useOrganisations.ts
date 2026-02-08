@@ -3,13 +3,14 @@ import { listOrganisationMembers, listUserOrganisations } from '../../api/organi
 import { OrgSimple } from '../../types/organisation'
 import { useAuth } from '../../context/AuthContext'
 import { mockOrganisation, mockOrgMembers, DEMO_ORG_ID } from '../../lib/demoData'
+import type { Member } from '../../components/settings/types'
 
 export type { OrgSimple }
 
 export const useUserOrganisations = (userId: string | undefined) => {
   const { isDemoUser } = useAuth()
 
-  return useQuery({
+  return useQuery<OrgSimple[]>({
     queryKey: ['userOrganisations', userId, isDemoUser],
     queryFn: () => {
       if (isDemoUser) {
@@ -26,12 +27,19 @@ export const useUserOrganisations = (userId: string | undefined) => {
 export const useOrganisationMembers = (orgId: string | undefined) => {
   const { isDemoUser } = useAuth()
 
-  return useQuery({
+  return useQuery<Member[]>({
     queryKey: ['organisationMembers', orgId, isDemoUser],
     queryFn: () => {
       if (isDemoUser && orgId === DEMO_ORG_ID) {
-        // Return mock members for demo org
-        return mockOrgMembers
+        return mockOrgMembers.map((m) => ({
+          id: m.user_id,
+          user_id: m.user_id,
+          role: m.role,
+          profiles: {
+            email: m.email,
+            full_name: m.full_name,
+          },
+        }))
       }
       return orgId ? listOrganisationMembers(orgId) : []
     },

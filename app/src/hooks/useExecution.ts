@@ -5,7 +5,7 @@ import { useWorkflowData } from '../context/WorkflowContext';
 // Logic to propagate data from one node to another
 export const useExecution = () => {
   const edges = useEdges();
-  const { dataMap, updateNodeData } = useWorkflowData();
+  const { dataMap } = useWorkflowData();
 
   const propagate = useCallback((sourceNodeId: string) => {
     // Find downstream nodes

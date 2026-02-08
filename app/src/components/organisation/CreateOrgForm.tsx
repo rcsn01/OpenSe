@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Check, Building2, Loader2, Sparkles } from 'lucide-react';
 import { createOrganisation } from '../../api/organisations';
 import clsx from 'clsx';
@@ -10,6 +10,7 @@ const TIERS = [
         name: 'Starter',
         price: 15,
         seats: 5,
+        popular: false,
         features: ['5 Team Members', 'Basic Analytics', 'Standard Support'],
         color: 'blue'
     },
@@ -27,6 +28,7 @@ const TIERS = [
         name: 'Enterprise',
         price: 90,
         seats: 50,
+        popular: false,
         features: ['50 Team Members', 'Custom Analytics', '24/7 Support', 'SSO', 'Audit Logs'],
         color: 'indigo'
     }

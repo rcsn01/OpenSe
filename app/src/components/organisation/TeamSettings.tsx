@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { Search, UserPlus, Filter, MoreHorizontal, Mail, X, Loader2, ShieldCheck, User } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, UserPlus, Mail, X, Loader2, User } from 'lucide-react';
 import { Member, Organisation } from '../settings/types';
 import { MemberTable } from '../settings/MemberTable'; // Reusing your existing table logic, but wrapped
 import { Button } from '../ui/Button'; // Assuming you have this
-import { Input } from '../ui/Input';   // Assuming you have this
 
 type ModernTeamSettingsProps = {
   organisation: Organisation;

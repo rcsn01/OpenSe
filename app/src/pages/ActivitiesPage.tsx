@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Activity, BarChart3, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import clsx from 'clsx';
 import { useExecutionLogs } from '../hooks/queries/useActivities';
 import { usePersonalUsageStats } from '../hooks/queries/useUsageStats';
 import { ActivityLogTable } from '../components/shared/ActivityLogTable';
 import { UsageCharts } from '../components/organisation/UsageAnalytics';
+import { Tabs } from '../components/ui/Tabs';
 
 export const ActivitiesPage = () => {
   const { user } = useAuth();
@@ -31,34 +31,14 @@ export const ActivitiesPage = () => {
         </div>
       </div>
 
-      <div className="border-b border-slate-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('usage')}
-            className={clsx(
-              'pb-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2',
-              activeTab === 'usage'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            )}
-          >
-            <BarChart3 className="w-4 h-4" />
-            Usage Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab('logs')}
-            className={clsx(
-              'pb-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2',
-              activeTab === 'logs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            )}
-          >
-            <FileText className="w-4 h-4" />
-            Logs (Personal)
-          </button>
-        </nav>
-      </div>
+      <Tabs
+        tabs={[
+          { id: 'usage', label: 'Usage Analytics', icon: <BarChart3 className="w-4 h-4" /> },
+          { id: 'logs', label: 'Logs (Personal)', icon: <FileText className="w-4 h-4" /> },
+        ]}
+        activeTab={activeTab}
+        onTabChange={(id) => setActiveTab(id as 'usage' | 'logs')}
+      />
 
       {activeTab === 'usage' ? (
         <UsageCharts

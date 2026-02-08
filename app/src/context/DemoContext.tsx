@@ -9,7 +9,7 @@ import {
 
 // Type for workflow with graph data
 type DemoWorkflow = WorkflowRow & {
-    graph_data?: any;
+    graph_data: any;
 };
 
 interface DemoContextType {
