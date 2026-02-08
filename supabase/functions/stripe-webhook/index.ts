@@ -75,6 +75,7 @@ async function handleCheckoutCompleted(session: Record<string, unknown>) {
   const orgName = metadata.org_name;
   const tier = metadata.tier;
   const userId = metadata.user_id;
+  const orgId = metadata.org_id;
 
   console.log(`[${LABEL}] Processing checkout for user: ${userId}, org: ${orgName}, tier: ${tier}`);
 
@@ -84,6 +85,32 @@ async function handleCheckoutCompleted(session: Record<string, unknown>) {
 
   const stripeCustomerId = typeof session.customer === "string" ? session.customer : null;
   const stripeSubscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+
+  // If org_id provided, attach subscription directly to that org
+  if (orgId) {
+    const { data: existingOrg, error: existingOrgError } = await supabase
+      .from("organisations")
+      .select("id")
+      .eq("id", orgId)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingOrgError) {
+      console.error(`[${LABEL}] Failed to fetch org by org_id:`, existingOrgError);
+    } else if (existingOrg?.id) {
+      await supabase
+        .from("organisations")
+        .update({
+          stripe_customer_id: stripeCustomerId,
+          stripe_subscription_id: stripeSubscriptionId,
+          subscription_status: "active",
+          tier,
+        })
+        .eq("id", existingOrg.id);
+
+      return { success: true, orgId: existingOrg.id, status: "updated_by_id" };
+    }
+  }
 
   // IDEMPOTENCY CHECK 1: subscription already processed?
   if (stripeSubscriptionId) {
@@ -110,13 +137,14 @@ async function handleCheckoutCompleted(session: Record<string, unknown>) {
     .maybeSingle();
 
   if (existingByOwner?.id) {
-    console.log(`[${LABEL}] User ${userId} already owns org "${orgName}", updating Stripe IDs`);
+    console.log(`[${LABEL}] User ${userId} already owns org "${orgName}", updating Stripe IDs and tier`);
     await supabase
       .from("organisations")
       .update({
         stripe_customer_id: stripeCustomerId,
         stripe_subscription_id: stripeSubscriptionId,
         subscription_status: "active",
+        tier,
       })
       .eq("id", existingByOwner.id);
 

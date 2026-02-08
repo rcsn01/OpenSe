@@ -35,14 +35,14 @@ Deno.serve(async (req) => {
     }
 
     // 3. Parse and validate request body
-    let body: { orgName?: string; tier?: string; successUrl?: string; cancelUrl?: string };
+    let body: { orgName?: string; tier?: string; successUrl?: string; cancelUrl?: string; orgId?: string };
     try {
       body = await req.json();
     } catch {
       return errorResponse(LABEL, "Invalid JSON body", 400);
     }
 
-    const { orgName, tier, successUrl, cancelUrl } = body;
+    const { orgName, tier, successUrl, cancelUrl, orgId } = body;
 
     if (!orgName || typeof orgName !== "string" || orgName.trim().length === 0) {
       return errorResponse(LABEL, "Missing or invalid 'orgName'", 400);
@@ -79,10 +79,14 @@ Deno.serve(async (req) => {
       params.append("customer_email", user.email);
     }
 
-    // Store metadata for webhook to create the organisation
+    // Store metadata for webhook to create/update the organisation
     params.append("metadata[org_name]", orgName.trim());
     params.append("metadata[tier]", tier);
     params.append("metadata[user_id]", user.id);
+    if (orgId) {
+      params.append("metadata[org_id]", orgId);
+      params.append("subscription_data[metadata][org_id]", orgId);
+    }
     params.append("subscription_data[metadata][org_name]", orgName.trim());
     params.append("subscription_data[metadata][tier]", tier);
     params.append("subscription_data[metadata][user_id]", user.id);

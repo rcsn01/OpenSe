@@ -60,9 +60,14 @@ export const OrganisationPage = () => {
     // Provisioning state - show when returning from Stripe success
     const [isProvisioning, setIsProvisioning] = useState(isStripeSuccess && !organisation);
 
-    // Clear URL params after reading them
+    // Clear URL params after reading them, and refresh org data on Stripe success
     useEffect(() => {
         if (isStripeSuccess || isStripeCanceled) {
+            if (isStripeSuccess && organisation) {
+                // Upgrade case: org exists, webhook should have updated tier — refetch
+                queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
+                refetchOrgs();
+            }
             // Clear the query params from URL without triggering navigation
             const newParams = new URLSearchParams(searchParams);
             newParams.delete('success');

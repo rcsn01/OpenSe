@@ -86,7 +86,68 @@ Deno.serve(async (req) => {
     }
 
     if (!org.stripe_subscription_id) {
-      return errorResponse(LABEL, "No active subscription found. Please create a subscription first.", 400);
+      // No active subscription yet – start a new checkout session for this org
+      const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") ?? req.headers.get("origin") ?? "";
+      if (!allowedOrigin) {
+        return errorResponse(LABEL, "Missing origin for checkout redirect", 500, "Set ALLOWED_ORIGIN or send Origin header");
+      }
+
+      const successUrl = `${allowedOrigin}/organisation?success=true`;
+      const cancelUrl = `${allowedOrigin}/organisation?canceled=true`;
+
+      const params = new URLSearchParams();
+      params.append("mode", "subscription");
+      params.append("success_url", successUrl);
+      params.append("cancel_url", cancelUrl);
+      params.append("line_items[0][price]", newPriceId);
+      params.append("line_items[0][quantity]", "1");
+
+      if (user.email) {
+        params.append("customer_email", user.email);
+      }
+
+      // Metadata for webhook to attach subscription to existing org
+      params.append("metadata[org_name]", org.name);
+      params.append("metadata[tier]", tier);
+      params.append("metadata[user_id]", user.id);
+      params.append("metadata[org_id]", org.id);
+      params.append("subscription_data[metadata][org_name]", org.name);
+      params.append("subscription_data[metadata][tier]", tier);
+      params.append("subscription_data[metadata][user_id]", user.id);
+      params.append("subscription_data[metadata][org_id]", org.id);
+
+      const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${stripeSecretKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      });
+
+      const stripePayload = await stripeResponse.json();
+      if (!stripeResponse.ok) {
+        console.error(`[${LABEL}] Stripe API error (checkout):`, stripePayload);
+        return errorResponse(
+          LABEL,
+          "Failed to create checkout session",
+          stripeResponse.status,
+          stripePayload.error?.message ?? stripePayload
+        );
+      }
+
+      if (!stripePayload.url) {
+        return errorResponse(LABEL, "Stripe did not return a checkout URL", 500);
+      }
+
+      return successResponse({
+        success: true,
+        tier,
+        previousTier: org.tier,
+        isUpgrade: true,
+        paymentUrl: stripePayload.url,
+        message: "Checkout started",
+      });
     }
 
     // 7. Check if tier is actually changing
