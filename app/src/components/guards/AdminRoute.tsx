@@ -13,10 +13,10 @@ type AdminRouteProps = {
  * - Shows loading state while auth status is being determined.
  */
 export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-    const { user, loading, isSuperAdmin } = useAuth();
+    const { user, loading, isSuperAdmin, superAdminChecked } = useAuth();
 
     // Show loading spinner while auth state is being determined
-    if (loading) {
+    if (loading || !superAdminChecked) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-100">
                 <div className="text-center">

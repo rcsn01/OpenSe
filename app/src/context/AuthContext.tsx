@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   isSuperAdmin: boolean;
+  superAdminChecked: boolean;
   // Demo mode support
   isDemoUser: boolean;
   loginAsDemo: () => void;
@@ -30,6 +31,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isSuperAdmin: false,
+  superAdminChecked: false,
   isDemoUser: false,
   loginAsDemo: () => { },
   logoutDemo: () => { },
@@ -41,11 +43,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [superAdminChecked, setSuperAdminChecked] = useState(false);
   const [isDemoUser, setIsDemoUser] = useState(false);
 
   const loadSuperAdmin = async (userId: string | null | undefined) => {
+    setSuperAdminChecked(false);
     if (!userId || userId === DEMO_USER_ID) {
       setIsSuperAdmin(false);
+      setSuperAdminChecked(true);
       return false;
     }
 
@@ -53,10 +58,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (error) {
       console.error('Failed to fetch super admin status:', error);
       setIsSuperAdmin(false);
+      setSuperAdminChecked(true);
       return false;
     }
     const isAdmin = Boolean(data);
     setIsSuperAdmin(isAdmin);
+    setSuperAdminChecked(true);
     return isAdmin;
   };
 
@@ -67,6 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setSession(null); // No real session for demo
     setIsDemoUser(true);
     setIsSuperAdmin(false); // Demo users are never super admins
+    setSuperAdminChecked(true);
     setLoading(false);
   }, []);
 
@@ -76,6 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setSession(null);
     setIsDemoUser(false);
     setIsSuperAdmin(false);
+    setSuperAdminChecked(false);
   }, []);
 
   // Logout (handles both demo and real users)
@@ -100,13 +109,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsDemoUser(false);
         setSession(data.session);
         setUser(data.session.user);
-        await loadSuperAdmin(data.session.user.id);
+        // Do not block UI on admin RPC
+        void loadSuperAdmin(data.session.user.id);
       } else if (isDemoUser) {
         // Keep demo state if explicitly in demo mode
       } else {
         setSession(null);
         setUser(null);
         setIsSuperAdmin(false);
+        setSuperAdminChecked(true);
       }
       setLoading(false);
     };
@@ -120,7 +131,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsDemoUser(false);
         setSession(session);
         setUser(session.user);
-        await loadSuperAdmin(session.user.id);
+        // Do not block UI on admin RPC
+        void loadSuperAdmin(session.user.id);
       } else {
         // Session cleared
         // Only clear user state if we are NOT in demo mode
@@ -129,6 +141,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(null);
           setUser(null);
           setIsSuperAdmin(false);
+          setSuperAdminChecked(true);
         }
       }
       setLoading(false);
@@ -146,6 +159,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user,
       loading,
       isSuperAdmin,
+      superAdminChecked,
       isDemoUser,
       loginAsDemo,
       logoutDemo,

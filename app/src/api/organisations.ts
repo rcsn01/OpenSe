@@ -233,14 +233,68 @@ export const inviteMember = async (orgId: string, email: string, role: 'admin' |
   if (error) throw error
 }
 
-export const updateOrganisationTier = async (orgId: string, tier: 'tier-1' | 'tier-2' | 'tier-3') => {
-  const { data, error } = await supabase.functions.invoke('update-subscription', {
-    body: { orgId, tier }
-  })
+export const updateOrganisationTier = async (
+  orgId: string,
+  tier: 'tier-1' | 'tier-2' | 'tier-3',
+  orgName?: string
+) => {
+  // Get fresh session for edge function calls
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  if (error) throw error
-  if (data?.error) throw new Error(data.error)
-  return data
+  // Try update-subscription first via direct fetch
+  let updateResult: { data: any; error: any } = { data: null, error: null };
+  try {
+    const updateRes = await window.fetch(`${supabaseUrl}/functions/v1/update-subscription`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': anonKey,
+      },
+      body: JSON.stringify({ orgId, tier }),
+    });
+    const updateBody = await updateRes.json();
+
+    if (!updateRes.ok) {
+      updateResult.error = new Error(updateBody?.error || updateBody?.message || `HTTP ${updateRes.status}`);
+    } else {
+      updateResult.data = updateBody;
+    }
+  } catch (e: any) {
+    updateResult.error = e;
+  }
+
+  if (updateResult.error) {
+    // Fallback: create-checkout via direct fetch
+    if (orgName) {
+      const successUrl = `${window.location.origin}/organisation?success=true`;
+      const cancelUrl = `${window.location.origin}/organisation?canceled=true`;
+
+      const checkoutRes = await window.fetch(`${supabaseUrl}/functions/v1/create-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+          'apikey': anonKey,
+        },
+        body: JSON.stringify({ orgName, tier, successUrl, cancelUrl, orgId }),
+      });
+      const checkoutBody = await checkoutRes.json();
+
+      if (!checkoutRes.ok) {
+        throw new Error(checkoutBody?.error || checkoutBody?.message || `HTTP ${checkoutRes.status}`);
+      }
+      if (!checkoutBody?.url) throw new Error('Checkout URL not returned');
+      return { paymentUrl: checkoutBody.url, message: 'Checkout started' };
+    }
+
+    throw updateResult.error;
+  }
+  if (updateResult.data?.error) throw new Error(updateResult.data.error);
+  return updateResult.data;
 }
 
 /**

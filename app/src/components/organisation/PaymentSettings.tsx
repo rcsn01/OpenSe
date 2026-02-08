@@ -55,7 +55,7 @@ export const PaymentSettings = ({ organisation: propOrg }: { organisation?: OrgS
     setError(null);
     setSuccess(null);
     try {
-      const result = await updateOrganisationTier(organisation.id, tierId as any);
+      const result = await updateOrganisationTier(organisation.id, tierId as any, organisation.name);
 
       if (result?.paymentUrl) {
         window.location.href = result.paymentUrl;
@@ -65,7 +65,6 @@ export const PaymentSettings = ({ organisation: propOrg }: { organisation?: OrgS
       // Invalidate queries to refresh org data
       await queryClient.invalidateQueries({ queryKey: ['userOrganisations'] });
       setSuccess(result.message || `Successfully switched to ${TIERS.find(t => t.id === tierId)?.name} plan`);
-      console.log(`Switched to ${tierId}`, result);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to switch plan. Please try again.');
