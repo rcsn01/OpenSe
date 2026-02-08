@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext, useSearchParams, Outlet, NavLink } from 'react-router-dom';
-import { Loader2, Users, CreditCard, Loader, XCircle, Activity } from 'lucide-react';
+import { Loader2, Users, CreditCard, Loader, XCircle, Activity, FileText } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { Member } from '../components/settings/types';
@@ -261,7 +261,16 @@ export const OrganisationPage = () => {
                             isActive ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
                         )}
                     >
-                        <Activity className="w-4 h-4" /> Usage Analytics
+                        <Activity className="w-4 h-4" /> Usage
+                    </NavLink>
+                    <NavLink
+                        to="logs"
+                        className={({ isActive }) => clsx(
+                            "pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap",
+                            isActive ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                        )}
+                    >
+                        <FileText className="w-4 h-4" /> Logs
                     </NavLink>
                     {membershipRole === 'owner' && (
                         <NavLink
