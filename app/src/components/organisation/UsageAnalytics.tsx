@@ -7,10 +7,7 @@ import { Activity, CheckCircle, XCircle, Users, TrendingUp, Loader2, BarChart3 }
 import { OrgSimple } from '../../types/organisation';
 import { useOutletContext } from 'react-router-dom';
 import { useOrgUsageStats, useOrgActiveUsers } from '../../hooks/queries/useUsageStats';
-
-type UsageAnalyticsProps = {
-  organisation?: OrgSimple;
-};
+import { UsageSummary, ActiveUser } from '../../api/usage';
 
 const COLORS = {
   success: '#10b981',
@@ -22,14 +19,17 @@ const COLORS = {
 
 const PIE_COLORS = [COLORS.success, COLORS.failed, COLORS.running];
 
-export const UsageAnalytics = ({ organisation: propOrg }: UsageAnalyticsProps) => {
-  const context = useOutletContext<{ currentOrg: OrgSimple }>();
-  const organisation = propOrg || context?.currentOrg;
+// ── Presentational Component (accepts data as props) ──
 
-  const { data: usageStats, isLoading: statsLoading } = useOrgUsageStats(organisation?.id);
-  const { data: activeUsers = [], isLoading: usersLoading } = useOrgActiveUsers(organisation?.id);
+type UsageChartsProps = {
+  usageStats: UsageSummary | null;
+  activeUsers?: ActiveUser[];
+  isLoading: boolean;
+  /** Hide the Active Users table (e.g. for personal view) */
+  hideActiveUsers?: boolean;
+};
 
-  // Format daily stats for charts
+export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiveUsers }: UsageChartsProps) => {
   const chartData = useMemo(() => {
     if (!usageStats?.dailyStats?.length) return [];
     return usageStats.dailyStats.map((d) => ({
@@ -48,10 +48,6 @@ export const UsageAnalytics = ({ organisation: propOrg }: UsageAnalyticsProps) =
     ].filter((d) => d.value > 0);
   }, [usageStats]);
 
-  if (!organisation) return null;
-
-  const isLoading = statsLoading || usersLoading;
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {isLoading && (
@@ -64,7 +60,7 @@ export const UsageAnalytics = ({ organisation: propOrg }: UsageAnalyticsProps) =
       {!isLoading && (
         <>
           {/* ── Metric Cards ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${hideActiveUsers ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-5`}>
             <MetricCard
               icon={Activity}
               iconColor="bg-blue-50 text-blue-600"
@@ -88,13 +84,15 @@ export const UsageAnalytics = ({ organisation: propOrg }: UsageAnalyticsProps) =
                 : undefined
               }
             />
-            <MetricCard
-              icon={Users}
-              iconColor="bg-purple-50 text-purple-600"
-              label="Active Users (30d)"
-              value={activeUsers.length.toString()}
-              subtitle={activeUsers.length > 0 ? `Top: ${activeUsers[0]?.full_name || activeUsers[0]?.email || 'N/A'}` : undefined}
-            />
+            {!hideActiveUsers && (
+              <MetricCard
+                icon={Users}
+                iconColor="bg-purple-50 text-purple-600"
+                label="Active Users (30d)"
+                value={activeUsers.length.toString()}
+                subtitle={activeUsers.length > 0 ? `Top: ${activeUsers[0]?.full_name || activeUsers[0]?.email || 'N/A'}` : undefined}
+              />
+            )}
           </div>
 
           {/* ── Charts Row ── */}
@@ -192,7 +190,7 @@ export const UsageAnalytics = ({ organisation: propOrg }: UsageAnalyticsProps) =
           )}
 
           {/* ── Active Users Table ── */}
-          {activeUsers.length > 0 && (
+          {!hideActiveUsers && activeUsers.length > 0 && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100">
                 <div className="flex items-center gap-2">
@@ -243,6 +241,33 @@ export const UsageAnalytics = ({ organisation: propOrg }: UsageAnalyticsProps) =
     </div>
   );
 };
+
+// ── OrgUsageAnalytics Wrapper (fetches data for an org) ──
+
+type OrgUsageAnalyticsProps = {
+  organisation?: OrgSimple;
+};
+
+export const OrgUsageAnalytics = ({ organisation: propOrg }: OrgUsageAnalyticsProps) => {
+  const context = useOutletContext<{ currentOrg: OrgSimple }>();
+  const organisation = propOrg || context?.currentOrg;
+
+  const { data: usageStats = null, isLoading: statsLoading } = useOrgUsageStats(organisation?.id);
+  const { data: activeUsers = [], isLoading: usersLoading } = useOrgActiveUsers(organisation?.id);
+
+  if (!organisation) return null;
+
+  return (
+    <UsageCharts
+      usageStats={usageStats}
+      activeUsers={activeUsers}
+      isLoading={statsLoading || usersLoading}
+    />
+  );
+};
+
+// ── Keep backward-compatible default export name ──
+export const UsageAnalytics = OrgUsageAnalytics;
 
 // ── Helper Components ──
 

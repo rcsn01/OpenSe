@@ -25,7 +25,8 @@ import { LandingPage } from './pages/LandingPage';
 import { WorkflowList } from './components/dashboard/WorkflowList';
 import { TeamTab } from './components/organisation/TeamTab';
 import { PaymentSettings } from './components/organisation/PaymentSettings';
-import { UsageAnalytics } from './components/organisation/UsageAnalytics';
+import { OrgUsageAnalytics } from './components/organisation/UsageAnalytics';
+import { OrgLogsTab } from './components/organisation/OrgLogsTab';
 
 // Guards
 import { AdminRoute } from './components/guards/AdminRoute';
@@ -84,7 +85,8 @@ export default function App() {
                       <Route index element={<Navigate to="team" replace />} />
                       <Route path="team" element={<TeamTab />} />
                       <Route path="billing" element={<PaymentSettings />} />
-                      <Route path="usage" element={<UsageAnalytics />} />
+                      <Route path="usage" element={<OrgUsageAnalytics />} />
+                      <Route path="logs" element={<OrgLogsTab />} />
                     </Route>
 
                     <Route path="/gallery" element={<GalleryPage />} />
