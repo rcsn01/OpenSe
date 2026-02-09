@@ -17,7 +17,6 @@ import {
   AlertTriangle, 
   TrendingUp,
   Package,
-  Calendar,
   DollarSign,
   Pencil
 } from 'lucide-react'

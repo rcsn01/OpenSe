@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
+import { BasePage } from '../components/BasePage'
 import type { Folder, Tag } from '../types'
-import { EmptyState } from '../components/EmptyState'
 
 type CustomField = { key: string; type: 'text' | 'number' | 'boolean' | 'date' }
 
@@ -98,16 +98,14 @@ export const Attributes = () => {
 
   const folderOptions = useMemo(() => [{ id: '', name: 'No parent', parent_id: null }, ...folders], [folders])
 
-  if (!companyId) {
-    return <EmptyState title="No company selected" description="Choose a company to edit attributes." />
-  }
-
-  if (isLoading) {
-    return <div className="empty-state">Loading settings...</div>
-  }
-
   return (
-    <div className="stack">
+    <BasePage
+      companyId={companyId}
+      isLoading={isLoading}
+      emptyStateTitle="No company selected"
+      emptyStateDescription="Choose a company to edit attributes."
+      loadingMessage="Loading settings..."
+    >
       <div className="grid grid-2">
         <div className="card stack">
           <h3 className="section-title">Custom fields</h3>
@@ -258,6 +256,6 @@ export const Attributes = () => {
           </div>
         )}
       </div>
-    </div>
+    </BasePage>
   )
 }
