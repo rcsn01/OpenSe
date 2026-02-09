@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabaseClient'
+import { supabase, db } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 
 export const CompanySetup = () => {
@@ -28,7 +28,7 @@ export const CompanySetup = () => {
 
   const loadInvites = async () => {
     if (!userEmail) return
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('company_invitations')
       .select('id, company_id, role_id, email, token, companies (id, name)')
       .eq('email', userEmail)
@@ -59,7 +59,7 @@ export const CompanySetup = () => {
     setIsLoading(true)
     setMessage(null)
 
-    const { error } = await supabase.from('companies').insert({ name, description })
+    const { error } = await db.from('companies').insert({ name, description })
     if (error) {
       setMessage(error.message)
     } else {
@@ -74,7 +74,7 @@ export const CompanySetup = () => {
   const acceptInvite = async (token: string) => {
     if (!token || !userId) return
     setInviteMessage(null)
-    const { data: invite, error: inviteError } = await supabase
+    const { data: invite, error: inviteError } = await db
       .from('company_invitations')
       .select('id, company_id, role_id, email')
       .eq('token', token)
@@ -86,7 +86,7 @@ export const CompanySetup = () => {
       return
     }
 
-    const { error: memberError } = await supabase.from('company_members').insert({
+    const { error: memberError } = await db.from('company_members').insert({
       company_id: invite.company_id,
       role_id: invite.role_id,
       user_id: userId,
@@ -97,7 +97,7 @@ export const CompanySetup = () => {
       return
     }
 
-    await supabase
+    await db
       .from('company_invitations')
       .update({ accepted_at: new Date().toISOString() })
       .eq('id', invite.id)

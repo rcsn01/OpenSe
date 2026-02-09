@@ -2,6 +2,56 @@
 -- Migration 0005: ETL Policies & RPCs
 -- ============================================================
 
+-- ─── ETL Org Helpers ─────────────────────────────────
+
+CREATE OR REPLACE FUNCTION public.is_org_owner(p_org_id UUID, p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, etl
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM etl.organisations
+    WHERE id = p_org_id AND owner_id = p_user_id
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_org_member(p_org_id UUID, p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, etl
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM etl.organisation_members
+    WHERE org_id = p_org_id AND user_id = p_user_id
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_org_admin(p_org_id UUID, p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, etl
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM etl.organisation_members
+    WHERE org_id = p_org_id AND user_id = p_user_id AND role = 'admin'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_org_owner_strictly(p_org_id UUID, p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, etl
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM etl.organisations
+    WHERE id = p_org_id AND owner_id = p_user_id
+  );
+$$;
+
 -- ─── ORGANISATIONS ───────────────────────────────────
 
 CREATE POLICY "organisations_select_unified" ON etl.organisations

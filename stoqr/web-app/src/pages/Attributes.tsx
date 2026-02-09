@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../supabaseClient'
+import { db } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import type { Folder, Tag } from '../types'
@@ -29,9 +29,9 @@ export const Attributes = () => {
     setIsLoading(true)
 
     const [{ data: companyData }, { data: folderData }, { data: tagData }] = await Promise.all([
-      supabase.from('companies').select('settings').eq('id', companyId).single(),
-      supabase.from('folders').select('id, name, parent_id').eq('company_id', companyId),
-      supabase.from('tags').select('id, name, color').eq('company_id', companyId),
+      db.from('companies').select('settings').eq('id', companyId).single(),
+      db.from('folders').select('id, name, parent_id').eq('company_id', companyId),
+      db.from('tags').select('id, name, color').eq('company_id', companyId),
     ])
 
     setSettings((companyData?.settings as CompanySettings) ?? {})
@@ -48,7 +48,7 @@ export const Attributes = () => {
 
   const handleSaveFields = async () => {
     if (!companyId) return
-    await supabase
+    await db
       .from('companies')
       .update({ settings: { ...settings, custom_fields: customFields } })
       .eq('id', companyId)
@@ -64,7 +64,7 @@ export const Attributes = () => {
 
   const handleCreateFolder = async () => {
     if (!companyId || !newFolderName.trim()) return
-    await supabase.from('folders').insert({
+    await db.from('folders').insert({
       company_id: companyId,
       name: newFolderName.trim(),
       parent_id: newFolderParent,
@@ -74,25 +74,25 @@ export const Attributes = () => {
   }
 
   const handleFolderUpdate = async (folderId: string, updates: Partial<Folder>) => {
-    await supabase.from('folders').update(updates).eq('id', folderId)
+    await db.from('folders').update(updates).eq('id', folderId)
     loadData()
   }
 
   const handleCreateTag = async () => {
     if (!companyId || !newTagName.trim()) return
-    await supabase.from('tags').insert({ company_id: companyId, name: newTagName.trim(), color: newTagColor })
+    await db.from('tags').insert({ company_id: companyId, name: newTagName.trim(), color: newTagColor })
     setNewTagName('')
     setNewTagColor('#64748b')
     loadData()
   }
 
   const handleTagUpdate = async (tagId: string, updates: Partial<Tag>) => {
-    await supabase.from('tags').update(updates).eq('id', tagId)
+    await db.from('tags').update(updates).eq('id', tagId)
     loadData()
   }
 
   const handleTagDelete = async (tagId: string) => {
-    await supabase.from('tags').delete().eq('id', tagId)
+    await db.from('tags').delete().eq('id', tagId)
     loadData()
   }
 

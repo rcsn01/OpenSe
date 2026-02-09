@@ -30,6 +30,19 @@ CREATE TABLE IF NOT EXISTS public.super_admin_members (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.super_admin_members ENABLE ROW LEVEL SECURITY;
 
+-- Super admin check (needed for policies below)
+CREATE OR REPLACE FUNCTION public.is_app_super_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.super_admin_members
+    WHERE user_id = (SELECT auth.uid())
+  );
+$$;
+
 -- Profile policies
 CREATE POLICY "profiles_select_authenticated" ON public.profiles
   FOR SELECT USING ((SELECT auth.role()) = 'authenticated');

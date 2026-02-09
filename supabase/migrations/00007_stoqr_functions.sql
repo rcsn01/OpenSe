@@ -2,6 +2,27 @@
 -- Migration 0007: StoQR Functions & Triggers
 -- ============================================================
 
+-- ─── StoQR Permission Helper ────────────────────────
+
+CREATE OR REPLACE FUNCTION public.has_permission(_company_id UUID, _permission_code TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public, stoqr
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM stoqr.company_members cm
+    JOIN stoqr.role_permissions rp ON cm.role_id = rp.role_id
+    WHERE cm.user_id = auth.uid()
+      AND cm.company_id = _company_id
+      AND rp.permission_code = _permission_code
+  );
+END;
+$$;
+
 -- Company creation trigger - auto-assigns creator as Owner
 CREATE OR REPLACE FUNCTION stoqr.add_creator_as_admin()
 RETURNS TRIGGER AS $$

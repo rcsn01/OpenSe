@@ -69,7 +69,7 @@ export const CreateProduct = () => {
     if (!companyId) return
     const loadData = async () => {
       // Fetch Folders
-      const { data: folderData } = await supabase
+      const { data: folderData } = await db
         .from('folders')
         .select('id, name')
         .eq('company_id', companyId)
@@ -78,7 +78,7 @@ export const CreateProduct = () => {
       if (folderData) setFolders(folderData)
 
       // Fetch Custom Field Definitions
-      const { data: companyData } = await supabase
+      const { data: companyData } = await db
         .from('companies')
         .select('settings')
         .eq('id', companyId)
@@ -147,7 +147,7 @@ export const CreateProduct = () => {
     setIsLoading(true)
 
     try {
-        const { data: product, error: insertError } = await supabase
+        const { data: product, error: insertError } = await db
             .from('products')
             .insert({
                 company_id: companyId,
@@ -189,7 +189,7 @@ export const CreateProduct = () => {
             })
 
             if (uploadedUrls.length > 0) {
-                await supabase
+                await db
                     .from('products')
                     .update({ image_urls: uploadedUrls })
                     .eq('id', product.id)
