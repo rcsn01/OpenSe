@@ -9,7 +9,7 @@ import { InventoryList } from './pages/Inventory'
 import { CreateProduct } from './pages/product/CreateProduct' // Added Import
 import { Scan } from './pages/Scan'
 import { LabelStudio } from './pages/LabelStudio'
-import { ProductDetail } from './pages/ProductDetail'
+import { ProductDetail } from './pages/product/ProductDetail'
 import { TeamSettings } from './pages/TeamSettings'
 import { Attributes } from './pages/Attributes'
 import { Reports } from './pages/Reports'
