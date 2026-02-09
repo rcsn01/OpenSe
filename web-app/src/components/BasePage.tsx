@@ -4,6 +4,7 @@ import { EmptyState } from './EmptyState'
 export interface BasePageProps {
   companyId: string | null
   isLoading: boolean
+  children: ReactNode
   loadingMessage?: string
   emptyStateTitle?: string
   emptyStateDescription?: string
