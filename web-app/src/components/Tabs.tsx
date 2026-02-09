@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { TabsHeader } from './TabsHeader'
 
 type Tab = {
   id: string
@@ -11,17 +12,7 @@ export const Tabs = ({ tabs }: { tabs: Tab[] }) => {
 
   return (
     <div className="stack">
-      <div className="row tabs-header">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`button ghost tabs-button ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <TabsHeader tabs={tabs} activeTabId={activeTab} onTabChange={setActiveTab} />
       <div style={{ paddingTop: 24 }}>
         {tabs.find((t) => t.id === activeTab)?.content}
       </div>

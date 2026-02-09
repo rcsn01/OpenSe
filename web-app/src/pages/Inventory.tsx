@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom' // Added useNavigate
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
+import { BasePage } from '../components/BasePage'
 import type { Folder, Tag } from '../types'
-import { EmptyState } from '../components/EmptyState'
 import { Tabs } from '../components/Tabs'
 import { parseCsv, toNumber } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
 import { BundlesTab } from '../components/Inventory/BundlesTab'
-// Removed CreateProductModal import
 import { FoldersTab } from '../components/Inventory/FoldersTab'
 import { TransferTab } from '../components/Inventory/TransferTab'
 import { VariantsTab } from '../components/Inventory/VariantsTab'
@@ -178,10 +177,13 @@ export const InventoryList = () => {
     }
   }
 
-  if (!companyId) return <EmptyState title="No company selected" description="Select a company to manage inventory." />
-
   return (
-    <div className="stack">
+    <BasePage
+      companyId={companyId}
+      isLoading={isLoading}
+      emptyStateTitle="No company selected"
+      emptyStateDescription="Select a company to manage inventory."
+    >
       <Tabs
         tabs={[
           {
@@ -224,7 +226,7 @@ export const InventoryList = () => {
           {
             id: 'folders',
             label: 'Folders',
-            content: <FoldersTab companyId={companyId} allFolders={folders} onRefresh={loadFilters} />,
+            content: <FoldersTab companyId={companyId!} allFolders={folders} onRefresh={loadFilters} />,
           },
           {
             id: 'matrix',
@@ -280,6 +282,6 @@ export const InventoryList = () => {
           </div>
         </div>
       )}
-    </div>
+    </BasePage>
   )
 }

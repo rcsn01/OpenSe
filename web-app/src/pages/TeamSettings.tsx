@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
-import { EmptyState } from '../components/EmptyState'
+import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { ActivityLogsTab } from '../components/TeamSettings/ActivityLogsTab'
 import { MembersTab } from '../components/TeamSettings/MembersTab'
@@ -146,16 +146,14 @@ export const TeamSettings = () => {
     loadData()
   }
 
-  if (!companyId) {
-    return <EmptyState title="No company selected" description="Choose a company to manage your team." />
-  }
-
-  if (isLoading) {
-    return <div className="empty-state">Loading team settings...</div>
-  }
-
   return (
-    <div className="stack">
+    <BasePage
+      companyId={companyId}
+      isLoading={isLoading}
+      emptyStateTitle="No company selected"
+      emptyStateDescription="Choose a company to manage your team."
+      loadingMessage="Loading team settings..."
+    >
       <Tabs
         tabs={[
           {
@@ -193,6 +191,6 @@ export const TeamSettings = () => {
           },
         ]}
       />
-    </div>
+    </BasePage>
   )
 }
