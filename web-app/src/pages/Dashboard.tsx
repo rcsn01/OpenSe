@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
-import { EmptyState } from '../components/EmptyState'
+import { BasePage } from '../components/BasePage'
 import { toNumber } from '../utils'
 import { RecentActivity } from '../components/Dashboard/RecentActivity'
 import { StatsCards } from '../components/Dashboard/StatsCards'
@@ -166,16 +166,16 @@ export const Dashboard = () => {
     loadDashboardData()
   }, [companyId])
 
-  if (!companyId) {
-    return <EmptyState title="Welcome to Fill The Shelf" description="Select or create a company to get started." />
-  }
-
-  if (isLoading || !data) {
-    return <div className="empty-state">Loading dashboard...</div>
-  }
-
   return (
-    <div className="stack">
+    <BasePage
+      companyId={companyId}
+      isLoading={isLoading || !data}
+      emptyStateTitle="Welcome to Fill The Shelf"
+      emptyStateDescription="Select or create a company to get started."
+      loadingMessage="Loading dashboard..."
+    >
+      {data && (
+      <div className="stack">
       {/* Quick Actions */}
       <div className="flex-between">
         <h2 className="section-title" style={{ margin: 0 }}>Overview</h2>
@@ -213,6 +213,8 @@ export const Dashboard = () => {
         {/* Recent Activity */}
         <RecentActivity transactions={data.transactions} />
       </div>
-    </div>
+      </div>
+      )}
+    </BasePage>
   )
 }

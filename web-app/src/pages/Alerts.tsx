@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
+import { BasePage } from '../components/BasePage'
 import type { Product } from '../types'
-import { EmptyState } from '../components/EmptyState'
 import { ExpiryList } from '../components/Alerts/ExpiryList'
 import { LowStockList } from '../components/Alerts/LowStockList'
 
@@ -50,18 +50,16 @@ export const Alerts = () => {
     })
   }, [products])
 
-  if (!companyId) {
-    return <EmptyState title="No company selected" description="Choose a company to view alerts." />
-  }
-
-  if (isLoading) {
-    return <div className="empty-state">Loading alerts...</div>
-  }
-
   return (
-    <div className="grid grid-2">
+    <BasePage
+      companyId={companyId}
+      isLoading={isLoading}
+      emptyStateTitle="No company selected"
+      emptyStateDescription="Choose a company to view alerts."
+      containerClassName="grid grid-2"
+    >
       <LowStockList products={lowStock} />
       <ExpiryList products={expiring} />
-    </div>
+    </BasePage>
   )
 }
