@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom' // Added useNavigate
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 import type { Folder, Tag } from '../types'
@@ -8,7 +8,7 @@ import { Tabs } from '../components/Tabs'
 import { parseCsv, toNumber } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
 import { BundlesTab } from '../components/Inventory/BundlesTab'
-import { CreateProductModal } from '../components/Inventory/CreateProductModal'
+// Removed CreateProductModal import
 import { FoldersTab } from '../components/Inventory/FoldersTab'
 import { TransferTab } from '../components/Inventory/TransferTab'
 import { VariantsTab } from '../components/Inventory/VariantsTab'
@@ -16,6 +16,7 @@ import type { InventoryProduct, SortDirection, SortField } from '../components/I
 
 export const InventoryList = () => {
   const { companyId } = useCompany()
+  const navigate = useNavigate() // Hook
   const [searchParams] = useSearchParams()
 
   const [products, setProducts] = useState<InventoryProduct[]>([])
@@ -24,7 +25,7 @@ export const InventoryList = () => {
   const [stats, setStats] = useState({ totalItems: 0, lowStockItems: 0, totalValue: 0 })
 
   const [isLoading, setIsLoading] = useState(true)
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  // Removed isCreateOpen state
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [importRows, setImportRows] = useState<Record<string, string>[]>([])
   const [importMessage, setImportMessage] = useState<string | null>(null)
@@ -197,7 +198,7 @@ export const InventoryList = () => {
                 setSelectedTag={setSelectedTag}
                 tags={tags}
                 onImportOpen={() => setIsImportOpen(true)}
-                onCreateOpen={() => setIsCreateOpen(true)}
+                onCreateOpen={() => navigate('/inventory/new')} // Changed handler
                 products={products}
                 isLoading={isLoading}
                 selectedRowIds={selectedRowIds}
@@ -243,15 +244,7 @@ export const InventoryList = () => {
         ]}
       />
 
-      <CreateProductModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSuccess={() => {
-          loadProducts()
-          loadStats()
-        }}
-        companyId={companyId}
-      />
+      {/* Removed CreateProductModal */}
 
       {isImportOpen && (
         <div className="modal-backdrop" role="dialog">

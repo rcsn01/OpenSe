@@ -6,6 +6,7 @@ import { Auth } from './pages/Auth'
 import { CompanySetup } from './pages/CompanySetup'
 import { Dashboard } from './pages/Dashboard'
 import { InventoryList } from './pages/Inventory'
+import { CreateProduct } from './pages/product/CreateProduct' // Added Import
 import { Scan } from './pages/Scan'
 import { LabelStudio } from './pages/LabelStudio'
 import { ProductDetail } from './pages/ProductDetail'
@@ -51,6 +52,7 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/inventory" element={<InventoryList />} />
+            <Route path="/inventory/new" element={<CreateProduct />} /> {/* Added Route */}
             <Route path="/inventory/:id" element={<ProductDetail />} />
             <Route path="/scan" element={<Scan />} />
             <Route path="/tools/labels" element={<LabelStudio />} />
