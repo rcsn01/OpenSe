@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Upload, X } from 'lucide-react'
+import { ArrowLeft, Upload, X, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '../../supabaseClient'
 import { useCompany } from '../../contexts/CompanyContext'
@@ -32,6 +32,10 @@ export const CreateProduct = () => {
   const [customFields, setCustomFields] = useState<Record<string, any>>({})
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
+
+  // New Custom Field State
+  const [newFieldKey, setNewFieldKey] = useState('')
+  const [newFieldType, setNewFieldType] = useState<CustomFieldDefinition['type']>('text')
 
   useEffect(() => {
     if (!companyId) return
@@ -87,6 +91,35 @@ export const CreateProduct = () => {
 
   const handleCustomFieldChange = (key: string, value: any) => {
     setCustomFields(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleAddField = () => {
+    if (!newFieldKey.trim()) {
+        toast.error("Please enter a field name")
+        return
+    }
+    if (customFieldDefs.some(d => d.key === newFieldKey.trim())) {
+        toast.error("Field already exists")
+        return
+    }
+    
+    const newDef: CustomFieldDefinition = { key: newFieldKey.trim(), type: newFieldType }
+    setCustomFieldDefs([...customFieldDefs, newDef])
+    setCustomFields(prev => ({
+        ...prev,
+        [newDef.key]: newDef.type === 'boolean' ? false : ''
+    }))
+    setNewFieldKey('')
+    setNewFieldType('text')
+  }
+
+  const handleRemoveField = (key: string) => {
+    setCustomFieldDefs(prev => prev.filter(d => d.key !== key))
+    setCustomFields(prev => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -267,13 +300,24 @@ export const CreateProduct = () => {
         </div>
 
         {/* Custom Fields */}
-        {customFieldDefs.length > 0 && (
-          <div className="card stack">
-            <h3 className="section-title">Additional Attributes</h3>
+        <div className="card stack">
+          <h3 className="section-title">Additional Attributes</h3>
+          {customFieldDefs.length > 0 ? (
             <div className="grid grid-2">
               {customFieldDefs.map(def => (
-                <label key={def.key} className="stack">
-                  {def.key}
+                <div key={def.key} style={{ position: 'relative' }}>
+                  <div className="flex-between" style={{ marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>{def.key}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveField(def.key)}
+                      className="button ghost small"
+                      style={{ padding: 4, height: 'auto', border: 'none', color: 'var(--danger)' }}
+                      title="Remove field"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                   {def.type === 'boolean' ? (
                     <select 
                       className="select"
@@ -291,11 +335,45 @@ export const CreateProduct = () => {
                       onChange={e => handleCustomFieldChange(def.key, def.type === 'number' ? toNumber(e.target.value) : e.target.value)}
                     />
                   )}
-                </label>
+                </div>
               ))}
             </div>
+          ) : (
+            <p className="muted small">No custom attributes defined. Add one below.</p>
+          )}
+
+          {/* Add New Field UI */}
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <div className="small" style={{ fontWeight: 600, marginBottom: 8 }}>Add New Field</div>
+            <div className="row wrap" style={{ alignItems: 'flex-end' }}>
+                <label style={{ flex: 1, minWidth: 140 }}>
+                    <div className="small muted" style={{ marginBottom: 4 }}>Name</div>
+                    <input 
+                        className="input small" 
+                        placeholder="e.g. Material" 
+                        value={newFieldKey}
+                        onChange={e => setNewFieldKey(e.target.value)}
+                    />
+                </label>
+                <label style={{ width: 100 }}>
+                    <div className="small muted" style={{ marginBottom: 4 }}>Type</div>
+                    <select 
+                        className="select small" 
+                        value={newFieldType} 
+                        onChange={e => setNewFieldType(e.target.value as any)}
+                    >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Yes/No</option>
+                        <option value="date">Date</option>
+                    </select>
+                </label>
+                <button type="button" className="button secondary small" onClick={handleAddField}>
+                    <Plus size={16} style={{ marginRight: 4 }} /> Add
+                </button>
+            </div>
           </div>
-        )}
+        </div>
 
         <div className="row" style={{ justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
           <button type="button" className="button ghost" onClick={() => navigate('/inventory')}>Cancel</button>
