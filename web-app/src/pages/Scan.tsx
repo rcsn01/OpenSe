@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { useCompany } from '../contexts/CompanyContext'
+import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { CycleCountTab } from '../components/Scan/CycleCountTab'
 import { PickPackTab } from '../components/Scan/PickPackTab'
@@ -91,9 +92,10 @@ export const Scan = () => {
   )
 
   return (
-    <div className="stack" style={{ maxWidth: 1100, margin: '0 auto', width: '100%', paddingBottom: 80 }}>
-      {/* Page Title removed as it's in Layout, similar to other pages */}
-      
+    <BasePage
+      companyId={companyId}
+      isLoading={false}
+    >
       <Tabs
         tabs={[
           { 
@@ -157,6 +159,6 @@ export const Scan = () => {
           },
         ]}
       />
-    </div>
+    </BasePage>
   )
 }

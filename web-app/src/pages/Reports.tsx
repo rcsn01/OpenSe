@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
-import { EmptyState } from '../components/EmptyState'
+import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { AuditTrailTab } from '../components/Reports/AuditTrailTab'
 import { ProfitabilityTab } from '../components/Reports/ProfitabilityTab'
@@ -88,16 +88,14 @@ export const Reports = () => {
     return sum / series.length
   }, [series])
 
-  if (!companyId) return <EmptyState title="No company" description="Select a company." />
-  if (isLoading) return <div className="empty-state">Loading reports...</div>
-
   return (
-    <Tabs
+    <BasePage companyId={companyId} isLoading={isLoading}>
+      <Tabs
       tabs={[
         {
           id: 'valuation',
           label: 'Inventory Valuation',
-          content: <ValuationTab series={series} schedules={schedules} companyId={companyId} onScheduleChange={loadData} />,
+          content: <ValuationTab series={series} schedules={schedules} companyId={companyId!} onScheduleChange={loadData} />,
         },
         {
           id: 'profit',
@@ -115,6 +113,7 @@ export const Reports = () => {
           content: <AuditTrailTab transactions={transactions} />,
         },
       ]}
-    />
+      />
+    </BasePage>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
-import { EmptyState } from '../components/EmptyState'
+import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import type { Product } from '../types'
 import { PurchaseOrdersTab } from '../components/Procurement/PurchaseOrdersTab'
@@ -30,32 +30,37 @@ export const Procurement = () => {
     load()
   }, [companyId])
 
-  if (!companyId) return <EmptyState title="No company selected" description="Select a company to manage procurement." />
-
   return (
-    <Tabs
-      tabs={[
-        {
-          id: 'replenishment',
-          label: 'Replenishment',
-          content: <ReplenishmentTab products={products} isLoading={isLoading} />,
-        },
-        {
-          id: 'pos',
-          label: 'Purchase Orders',
-          content: <PurchaseOrdersTab companyId={companyId} />,
-        },
-        {
-          id: 'suppliers',
-          label: 'Suppliers',
-          content: <SuppliersTab companyId={companyId} />,
-        },
-        {
-          id: 'receiving',
-          label: 'Receiving Log',
-          content: <ReceivingLogTab companyId={companyId} />,
-        },
-      ]}
-    />
+    <BasePage
+      companyId={companyId}
+      isLoading={isLoading}
+      emptyStateTitle="No company selected"
+      emptyStateDescription="Select a company to manage procurement."
+    >
+      <Tabs
+        tabs={[
+          {
+            id: 'replenishment',
+            label: 'Replenishment',
+            content: <ReplenishmentTab products={products} isLoading={isLoading} />,
+          },
+          {
+            id: 'pos',
+            label: 'Purchase Orders',
+            content: <PurchaseOrdersTab companyId={companyId} />,
+          },
+          {
+            id: 'suppliers',
+            label: 'Suppliers',
+            content: <SuppliersTab companyId={companyId} />,
+          },
+          {
+            id: 'receiving',
+            label: 'Receiving Log',
+            content: <ReceivingLogTab companyId={companyId} />,
+          },
+        ]}
+      />
+    </BasePage>
   )
 }
