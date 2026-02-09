@@ -1,20 +1,29 @@
 {
+  "name": "opense-stack",
   "private": true,
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
-  },
-  "devDependencies": {
-    "eslint": "^8.57.0",
-    "prettier": "^3.2.5",
-    "turbo": "^2.8.3"
-  },
-  "name": "with-vite",
   "packageManager": "npm@11.6.2",
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "dev:etl": "turbo run dev --filter=@repo/etl",
+    "dev:stoqr": "turbo run dev --filter=@repo/stoqr",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:migrate": "supabase migration up",
+    "db:status": "supabase status"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.1",
+    "prettier": "^3.2.5",
+    "turbo": "^2.8.3",
+    "supabase": "^2.22.0"
+  }
 }
