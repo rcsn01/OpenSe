@@ -1,0 +1,56 @@
+import React from 'react';
+import { LucideIcon } from 'lucide-react';
+import { Node } from 'reactflow';
+import { Row, WorkflowNodeData } from './types';
+import { DataRef, ExecutionDownload } from '../../lib/execution/utils';
+
+export type NodeCategory = 'Input' | 'Data' | 'Logic' | 'Output' | 'Visualization';
+
+export type ProcessorHelpers = {
+  persistRows: (rows: Row[]) => Promise<DataRef>;
+  loadRows: (ref: DataRef | undefined, fallback?: Row[]) => Promise<Row[]>;
+  toCsv: (rows: Row[]) => string;
+  workflowName: string;
+};
+
+export type ProcessorInput = {
+  rows: Row[];
+  ref?: DataRef;
+};
+
+export type ProcessorContext<TData = WorkflowNodeData> = {
+  data: TData;
+  inputs: Record<string, ProcessorInput>;
+  node: Node<WorkflowNodeData>;
+  helpers: ProcessorHelpers;
+};
+
+export type ProcessorResult<TData = WorkflowNodeData> = {
+  outputs: Record<string, DataRef>;
+  updatedData?: Partial<TData>;
+  downloads?: ExecutionDownload[];
+};
+
+export type NodeProcessor<TData = WorkflowNodeData> = (ctx: ProcessorContext<TData>) => Promise<ProcessorResult<TData>>;
+
+export interface NodeConfig<TData = WorkflowNodeData> {
+  type: string;
+  label: string;
+  category: NodeCategory;
+  icon: LucideIcon;
+  color: string;
+  component: React.ComponentType<any>;
+  processor: NodeProcessor<TData>;
+  initialData: TData;
+  description?: string;
+  inputs?: string[];
+  outputs?: string[];
+  initialWidth?: number;
+  initialHeight?: number;
+  propertiesComponent?: React.ComponentType<{
+    data: TData;
+    onChange: (key: string, value: any) => void;
+  }>;
+}
+
+export type RegistryMap = Record<string, NodeConfig>;
