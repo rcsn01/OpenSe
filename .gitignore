@@ -5,3 +5,4 @@
 # (Optional) Keep .env.example if you have one
 !.env.example
 web-app/.env
+cloudflared.exe
