@@ -41,7 +41,8 @@ For full legal terms, please refer to the [LICENSE](./LICENSE) file in this repo
 ---
 
 ### Development Setup
-
+if running on company laptop
+    $env:Path += ";C:\Program Files\nodejs\"
 ## Local Backend Dev
     Location: Open-ETL/ (Root)
     Commands:
