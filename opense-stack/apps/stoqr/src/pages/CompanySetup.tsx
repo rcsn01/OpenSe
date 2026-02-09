@@ -28,7 +28,7 @@ export const CompanySetup = () => {
 
   const loadInvites = async () => {
     if (!userEmail) return
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('company_invitations')
       .select('id, company_id, role_id, email, token, companies (id, name)')
       .eq('email', userEmail)
@@ -74,7 +74,7 @@ export const CompanySetup = () => {
   const acceptInvite = async (token: string) => {
     if (!token || !userId) return
     setInviteMessage(null)
-    const { data: invite, error: inviteError } = await supabase
+    const { data: invite, error: inviteError } = await db
       .from('company_invitations')
       .select('id, company_id, role_id, email')
       .eq('token', token)
@@ -97,7 +97,7 @@ export const CompanySetup = () => {
       return
     }
 
-    await supabase
+    await db
       .from('company_invitations')
       .update({ accepted_at: new Date().toISOString() })
       .eq('id', invite.id)

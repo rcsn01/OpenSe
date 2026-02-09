@@ -42,7 +42,7 @@ export const TeamSettings = () => {
     setIsLoading(true)
 
     const [{ data: memberData }, { data: roleData }, { data: permissionData }] = await Promise.all([
-      supabase
+      db
         .from('company_members')
         .select('id, user_id, role_id, joined_at, profiles (id, full_name, username, avatar_url), roles (id, name)')
         .eq('company_id', companyId),
@@ -61,7 +61,7 @@ export const TeamSettings = () => {
     setPermissions((permissionData as Permission[]) ?? [])
 
     if (rolesList.length) {
-      const { data: rolePermissionData } = await supabase
+      const { data: rolePermissionData } = await db
         .from('role_permissions')
         .select('role_id, permission_code')
         .in(
@@ -102,7 +102,7 @@ export const TeamSettings = () => {
   }
 
   const handleRoleSave = async (role: Role) => {
-    await supabase
+    await db
       .from('roles')
       .update({ name: role.name, description: role.description })
       .eq('id', role.id)
@@ -114,7 +114,7 @@ export const TeamSettings = () => {
     const toAdd = Array.from(desired).filter((code) => !current.has(code))
 
     if (toDelete.length) {
-      await supabase
+      await db
         .from('role_permissions')
         .delete()
         .eq('role_id', role.id)
@@ -132,7 +132,7 @@ export const TeamSettings = () => {
 
   const handleCreateRole = async (name: string, description: string, perms: string[]) => {
     if (!companyId || !name) return
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('roles')
       .insert({ company_id: companyId, name, description })
       .select('id')

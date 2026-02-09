@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { supabase } from '../supabaseClient'
+import { supabase, db } from '../supabaseClient'
 import type { CompanyOption } from '../types'
 
 type CompanyContextValue = {
@@ -28,7 +28,7 @@ export const CompanyProvider = ({
 
   const refreshCompanies = useCallback(async () => {
     setIsLoading(true)
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('company_members')
       .select('company_id, companies (id, name)')
       .eq('user_id', userId)

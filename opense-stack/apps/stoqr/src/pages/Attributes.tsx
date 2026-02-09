@@ -48,7 +48,7 @@ export const Attributes = () => {
 
   const handleSaveFields = async () => {
     if (!companyId) return
-    await supabase
+    await db
       .from('companies')
       .update({ settings: { ...settings, custom_fields: customFields } })
       .eq('id', companyId)
