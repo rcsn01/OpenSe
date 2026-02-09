@@ -5,7 +5,7 @@ import { Tabs } from '../components/Tabs'
 import { CycleCountTab } from '../components/Scan/CycleCountTab'
 import { PickPackTab } from '../components/Scan/PickPackTab'
 import { PutawayTab } from '../components/Scan/PutawayTab'
-import { QuickScanTab } from '../components/Scan/QuickScanTab'
+import { QuickScanTab, ScannerModule } from '../components/Scan/QuickScanTab'
 import { toast } from 'sonner'
 
 export const Scan = () => {
@@ -28,7 +28,6 @@ export const Scan = () => {
       try {
         await scannerRef.current.stop()
         setIsScanning(false)
-        // Clear the reference to allow re-initialization if needed
         scannerRef.current.clear()
         scannerRef.current = null
       } catch (err) {
@@ -40,16 +39,14 @@ export const Scan = () => {
   }, [])
 
   const startCamera = useCallback(async () => {
-    // Prevent multiple instances
     if (scannerRef.current?.isScanning) return
 
     try {
-      // Initialize the scanner
       const scanner = new Html5Qrcode("reader")
       scannerRef.current = scanner
 
       const config = {
-        fps: 10,
+        fps: 2,
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0,
         formatsToSupport: [
@@ -64,17 +61,13 @@ export const Scan = () => {
         { facingMode: "environment" },
         config,
         (decodedText) => {
-          // Success callback
           if (decodedText !== scanValue) {
             setScanValue(decodedText)
             toast.success(`Scanned: ${decodedText}`)
-            // Optional: Auto-stop after scan?
-            // stopCamera() 
+            stopCamera()
           }
         },
-        () => {
-          // Error callback (called frequently when no code is found, usually ignore)
-        }
+        () => {}
       )
       
       setIsScanning(true)
@@ -83,94 +76,82 @@ export const Scan = () => {
       toast.error(`Camera error: ${error.message || 'Could not start camera'}`)
       setIsScanning(false)
     }
-  }, [scanValue])
+  }, [scanValue, stopCamera])
 
-  const ScannerInterface = (
-    <div className="card stack">
-      <div className="flex-between">
-        <div>
-          <h3 className="section-title">Scanner</h3>
-          <div className="muted small">Use your camera or manually enter a barcode.</div>
-        </div>
-        <div className="row">
-          {isScanning ? (
-            <button className="button ghost" onClick={stopCamera}>Stop Camera</button>
-          ) : (
-            <button className="button" onClick={startCamera}>Start Camera</button>
-          )}
-        </div>
-      </div>
-
-      <div className="grid" style={{ gridTemplateColumns: '1fr 240px', gap: 16 }}>
-        {/* Camera Viewport */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden', background: '#000', minHeight: 300, position: 'relative' }}>
-          
-          {/* Placeholder when not scanning */}
-          {!isScanning && (
-            <div style={{ 
-              position: 'absolute', inset: 0, 
-              display: 'flex', alignItems: 'center', justifyContent: 'center', 
-              color: 'white', opacity: 0.5, zIndex: 1 
-            }}>
-              Camera Off
-            </div>
-          )}
-
-          {/* HTML5-QRCode Target Element */}
-          <div id="reader" style={{ width: '100%', height: '100%' }} />
-          
-        </div>
-
-        {/* Manual Entry */}
-        <div className="card stack" style={{ boxShadow: 'none', background: '#f8fafc', height: 'fit-content' }}>
-          <label className="stack">
-            Manual entry
-            <input
-              className="input"
-              value={scanValue}
-              onChange={(event) => setScanValue(event.target.value)}
-              placeholder="Scan or type barcode"
-            />
-          </label>
-          <button className="button secondary" onClick={() => setScanValue('')}>Clear</button>
-          <div className="small muted">Last scan: {scanValue || '—'}</div>
-        </div>
-      </div>
-    </div>
+  // Reusable Scanner UI Component - Fluid Width
+  const ScannerModuleComponent = (
+    <ScannerModule
+      scanValue={scanValue}
+      setScanValue={setScanValue}
+      isScanning={isScanning}
+      startCamera={startCamera}
+      stopCamera={stopCamera}
+      scannerRef={scannerRef}
+    />
   )
 
   return (
-    <div className="stack">
+    <div className="stack" style={{ maxWidth: 1100, margin: '0 auto', width: '100%', paddingBottom: 80 }}>
+      {/* Page Title removed as it's in Layout, similar to other pages */}
+      
       <Tabs
         tabs={[
           { 
             id: 'quick', 
             label: 'Quick Scan', 
             content: (
-              <div className="stack">
-                {ScannerInterface}
-                <QuickScanTab scanValue={scanValue} companyId={companyId || ''} />
+              <div className="grid grid-2" style={{ alignItems: 'start', gap: 24 }}>
+                {/* Column 1: Scanner */}
+                <div style={{ position: 'sticky', top: 24 }}>
+                  {ScannerModuleComponent}
+                </div>
+                
+                {/* Column 2: Results & Actions */}
+                <div className="stack">
+                  <QuickScanTab scanValue={scanValue} companyId={companyId || ''} />
+                </div>
               </div>
             )
           },
-          { id: 'pick', label: 'Pick & Pack', content: (
-              <div className="stack">
-                {ScannerInterface}
-                <PickPackTab scanValue={scanValue} /> 
+          { 
+            id: 'pick', 
+            label: 'Pick & Pack', 
+            content: (
+              <div className="grid grid-2" style={{ alignItems: 'start', gap: 24 }}>
+                <div style={{ position: 'sticky', top: 24 }}>
+                  {ScannerModuleComponent}
+                </div>
+                <div className="stack">
+                  <PickPackTab scanValue={scanValue} /> 
+                </div>
               </div>
             )
           },
-          { id: 'cycle', label: 'Cycle Count', content: (
-              <div className="stack">
-                {ScannerInterface}
-                <CycleCountTab scanValue={scanValue} />
+          { 
+            id: 'cycle', 
+            label: 'Cycle Count', 
+            content: (
+              <div className="grid grid-2" style={{ alignItems: 'start', gap: 24 }}>
+                <div style={{ position: 'sticky', top: 24 }}>
+                  {ScannerModuleComponent}
+                </div>
+                <div className="stack">
+                  <CycleCountTab scanValue={scanValue} />
+                </div>
               </div>
             ) 
           },
-          { id: 'putaway', label: 'Putaway', content: (
-              <div className="stack">
-                {ScannerInterface}
-                <PutawayTab scanValue={scanValue} />
+          { 
+            id: 'putaway', 
+            label: 'Putaway', 
+            content: (
+              <div className="grid grid-2" style={{ alignItems: 'start', gap: 24 }}>
+                <div style={{ position: 'sticky', top: 24 }}>
+                  {ScannerModuleComponent}
+                </div>
+                <div className="stack">
+                  <PutawayTab scanValue={scanValue} />
+                </div>
               </div>
             ) 
           },
