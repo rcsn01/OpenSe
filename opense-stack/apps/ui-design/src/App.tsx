@@ -19,12 +19,13 @@ import {
   Dropdown, DropdownItem, DropdownSeparator,
   Pagination,
   ToastProvider, useToast,
+  ColorPalette,
+  Container, VStack, HStack, Grid,
 } from './components/ui'
-import { Container, VStack, HStack, Grid } from './components/layout/Layout'
 import {
   Type, MousePointerClick, FormInput, LayoutGrid, AlertCircle,
   Layers, Navigation, Paintbrush, Box, SeparatorHorizontal, Ruler,
-  Sun, Moon,
+  Sun, Moon, Palette,
 } from 'lucide-react'
 
 /* ── Section wrapper ──────────────────────────────────── */
@@ -50,6 +51,7 @@ function SubSection({ title, children }: { title: string; children: React.ReactN
 /* ── Sidebar nav items ────────────────────────────────── */
 
 const navItems = [
+  { id: 'colors', label: 'Color Palette', icon: <Palette className="h-4 w-4" /> },
   { id: 'typography', label: 'Typography', icon: <Type className="h-4 w-4" /> },
   { id: 'spacing', label: 'Spacing & Layout', icon: <Ruler className="h-4 w-4" /> },
   { id: 'buttons', label: 'Buttons', icon: <MousePointerClick className="h-4 w-4" /> },
@@ -120,6 +122,7 @@ export default function App() {
                   </Body>
                 </div>
 
+                <ColorPaletteSection />
                 <TypographySection />
                 <SpacingSection />
                 <ButtonsSection />
@@ -143,6 +146,17 @@ export default function App() {
 /* ─────────────────────────────────────────────────────── */
 /*  SECTION COMPONENTS                                     */
 /* ─────────────────────────────────────────────────────── */
+
+function ColorPaletteSection() {
+  return (
+    <Section id="colors" title="Color Palette">
+      <Body size="body4" muted>
+        Two primary colors with 2% lightness steps from dark to clear. Each has duplicate rows: 2 grey (lighter/desaturated) and 2 darker variants.
+      </Body>
+      <ColorPalette />
+    </Section>
+  )
+}
 
 function TypographySection() {
   return (
