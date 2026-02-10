@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Play, Save, Download, ArrowLeft, Undo2, Redo2, History, Bell } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Button } from '@repo/ui';
 
 interface EditorHeaderProps {
     workflowName: string;

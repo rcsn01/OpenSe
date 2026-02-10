@@ -1,6 +1,6 @@
 import { Clock, XCircle, FileSpreadsheet } from 'lucide-react';
 import { Table } from '../ui/Table';
-import { StatusBadge } from '../ui/StatusBadge';
+import { StatusBadge } from '@repo/ui';
 
 export type ExecutionLog = {
   id: string;

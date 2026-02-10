@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Bell, X, Mail, MessageSquare, Globe, Trash2, Loader2 } from 'lucide-react';
 import { useNotificationSettings, useUpsertNotificationSetting, useDeleteNotificationSetting } from '../../hooks/queries/useNotifications';
 import { NotificationChannel } from '../../api/notifications';
-import { Button } from '../ui/Button';
+import { Button } from '@repo/ui';
 
 interface NotificationSettingsPanelProps {
   workflowId: string | null;

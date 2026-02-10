@@ -2,7 +2,7 @@ import React from 'react';
 import { Node } from 'reactflow';
 import { Info, X } from 'lucide-react';
 
-import { Input } from '../ui/Input';
+import { Input } from '@repo/ui';
 import { WorkflowNodeData, FileNodeData } from '../../components/nodes/types';
 import { NODE_REGISTRY } from '../../components/nodes/registry';
 

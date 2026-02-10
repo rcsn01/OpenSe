@@ -21,6 +21,8 @@ export { Pagination } from './ui/Pagination'
 export { ToastProvider, useToast } from './ui/Toast'
 export { Sidebar, SidebarItem, SidebarSection } from './ui/Sidebar'
 export { ColorPalette } from './ui/ColorPalette'
+export { AppSidebar, AppSidebarLinkProvider, useAppSidebarLinkRenderer, type AppSidebarProps, type NavItem, type NavGroup } from './ui/AppSidebar'
+export { ThemeProvider, useTheme } from './ui/ThemeProvider'
 
 // Components – Layout
 export { Container, VStack, HStack, Grid } from './layout/Layout'

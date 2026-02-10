@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, X } from 'lucide-react';
 import { RenameNodeData } from '../../types';
-import { Input } from '../../../ui/Input';
+import { Input } from '@repo/ui';
 
 interface RenamePropertiesProps {
     data: RenameNodeData;

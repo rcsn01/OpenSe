@@ -25,7 +25,7 @@ import { CreateOrgForm } from '../components/admin/CreateOrgForm';
 import { MemberTable } from '../components/settings/MemberTable';
 import { Member } from '../components/settings/types';
 import { OrgRow, Message } from '../components/admin/types';
-import { Button } from '../components/ui/Button';
+import { Button } from '@repo/ui';
 import { Tabs } from '../components/ui/Tabs';
 
 // Internal Modal for specific page actions

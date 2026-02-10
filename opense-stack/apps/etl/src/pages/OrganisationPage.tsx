@@ -19,8 +19,7 @@ import {
 } from '../api/organisations';
 import { OrgSimple } from '../types/organisation';
 import clsx from 'clsx';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { Button, Input } from '@repo/ui';
 import { Tabs } from '../components/ui/Tabs';
 
 // Context for AppLayout
