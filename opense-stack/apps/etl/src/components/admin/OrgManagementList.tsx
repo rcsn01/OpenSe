@@ -16,10 +16,8 @@ import {
   Crown
 } from 'lucide-react';
 import { OrgRow } from './types';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button, Input, Pagination } from '@repo/ui';
 import { Table } from '../ui/Table';
-import { Pagination } from '../ui/Pagination';
 import { UsageStatsBadge } from './UsageStatsBadge';
 import { useOrgUsageStats } from '../../hooks/queries/useAdmin';
 

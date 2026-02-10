@@ -20,11 +20,8 @@ import { supabase } from '../../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAdminUsers, useUserUsageStats } from '../../hooks/queries/useAdmin';
 import { updateUserProfile } from '../../api/admin';
-import { Input } from '../ui/Input';
+import { Input, Button, StatusBadge, Pagination } from '@repo/ui';
 import { Table } from '../ui/Table';
-import { Button } from '../ui/Button';
-import { StatusBadge } from '../ui/StatusBadge';
-import { Pagination } from '../ui/Pagination';
 import { UserUsageStatsBadge } from './UsageStatsBadge';
 import { AdminUserRow } from './types';
 

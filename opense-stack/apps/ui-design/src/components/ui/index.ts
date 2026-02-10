@@ -27,6 +27,9 @@ export {
   Breadcrumb,
   Pagination,
   Sidebar, SidebarItem, SidebarSection,
+  AppSidebar, AppSidebarLinkProvider, useAppSidebarLinkRenderer,
+  // Theme
+  ThemeProvider, useTheme,
   // Layout
   Divider,
   ColorPalette,
@@ -35,4 +38,4 @@ export {
   cn,
 } from '@repo/ui'
 
-export type { ButtonProps, InputProps, BadgeProps, AlertProps, AvatarProps, BreadcrumbItem, TabItem, DropdownArrayItem } from '@repo/ui'
+export type { ButtonProps, InputProps, BadgeProps, AlertProps, AvatarProps, BreadcrumbItem, TabItem, DropdownArrayItem, AppSidebarProps, NavItem, NavGroup } from '@repo/ui'

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { MousePointer2, Search, ChevronDown, ChevronRight, GripVertical } from 'lucide-react';
 import { nodesByCategory } from '../../components/nodes/registry';
-import { Input } from '../ui/Input';
+import { Input } from '@repo/ui';
 import clsx from 'clsx';
 
 const CATEGORY_ORDER = ['Input', 'Data', 'Logic', 'Visualization', 'Output'];

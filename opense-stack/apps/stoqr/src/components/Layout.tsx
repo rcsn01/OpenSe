@@ -1,38 +1,28 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { supabase, db } from '../supabaseClient'
+import { supabase } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
-import { 
-  LayoutDashboard, 
-  Package, 
-  ScanBarcode, 
-  Tags, 
-  FileText, 
-  Truck, 
-  Bell, 
-  Settings, 
+import { AppSidebar, AppSidebarLinkProvider, Heading, Body, type NavGroup } from '@repo/ui'
+import {
+  LayoutDashboard,
+  Package,
+  ScanBarcode,
+  Tags,
+  FileText,
+  Truck,
+  Bell,
+  Settings,
   Database,
-  LogOut,
-  User,
-  Menu,
-  X
 } from 'lucide-react'
 
-// Define navigation groups for better visual hierarchy
-const MAIN_NAV = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'Inventory', path: '/inventory', icon: Package },
-  { label: 'Scanner', path: '/scan', icon: ScanBarcode },
-  { label: 'Label Studio', path: '/tools/labels', icon: Tags },
-  { label: 'Reports', path: '/reports', icon: FileText },
-  { label: 'Procurement', path: '/procurement', icon: Truck },
-]
-
-const SETTINGS_NAV = [
-  { label: 'Alerts', path: '/alerts', icon: Bell },
-  { label: 'Team Settings', path: '/settings/team', icon: Settings },
-  { label: 'Attributes', path: '/settings/attributes', icon: Database },
-]
+/** Adapter: renders react-router <NavLink> instead of plain <a> */
+const linkRenderer = {
+  renderLink: ({ href, className, onClick, children, key }: any) => (
+    <NavLink key={key} to={href} className={className} onClick={onClick}>
+      {children}
+    </NavLink>
+  ),
+}
 
 const titleMap: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -50,7 +40,6 @@ export const Layout = () => {
   const { companyName } = useCompany()
   const location = useLocation()
   const navigate = useNavigate()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [userEmail, setUserEmail] = useState<string>('')
 
   useEffect(() => {
@@ -66,94 +55,51 @@ export const Layout = () => {
 
   const title = titleMap[location.pathname] ?? 'Inventory'
 
+  const navigation: NavGroup[] = [
+    {
+      title: 'PLATFORM',
+      items: [
+        { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+        { label: 'Inventory', href: '/inventory', icon: <Package className="w-5 h-5" /> },
+        { label: 'Scanner', href: '/scan', icon: <ScanBarcode className="w-5 h-5" /> },
+        { label: 'Label Studio', href: '/tools/labels', icon: <Tags className="w-5 h-5" /> },
+        { label: 'Reports', href: '/reports', icon: <FileText className="w-5 h-5" /> },
+        { label: 'Procurement', href: '/procurement', icon: <Truck className="w-5 h-5" /> },
+      ],
+    },
+    {
+      title: 'CONFIGURATION',
+      items: [
+        { label: 'Alerts', href: '/alerts', icon: <Bell className="w-5 h-5" /> },
+        { label: 'Team Settings', href: '/settings/team', icon: <Settings className="w-5 h-5" /> },
+        { label: 'Attributes', href: '/settings/attributes', icon: <Database className="w-5 h-5" /> },
+      ],
+    },
+  ]
+
   return (
-      <div className="app-shell">
-        {/* Mobile Backdrop */}
-        {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
-
-        <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-          {/* 1. Brand Header */}
-          <div className="sidebar-header">
-            <div className="brand-logo">OS</div> {/* Changed FS to OS */}
-            <div className="brand-info">
-              <span className="brand-name">Open-StoQR</span> {/* Changed App Name */}
-              <span className="brand-version">v1.0</span>
-            </div>
-            {/* "X" button removed here */}
-          </div>
-
-        {/* 2. Navigation Links */}
-        <div className="sidebar-content">
-          <div className="nav-group">
-            <div className="nav-label">PLATFORM</div>
-            <nav className="nav">
-              {MAIN_NAV.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                  onClick={() => setIsSidebarOpen(false)}
-                >
-                  <item.icon size={20} strokeWidth={2} />
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
-            </nav>
-          </div>
-
-          <div className="nav-group">
-            <div className="nav-label">CONFIGURATION</div>
-            <nav className="nav">
-              {SETTINGS_NAV.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                  onClick={() => setIsSidebarOpen(false)}
-                >
-                  <item.icon size={20} strokeWidth={2} />
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
-            </nav>
-          </div>
-        </div>
-
-        {/* 3. User Profile / Logout Footer */}
-        <div className="sidebar-footer">
-          <div className="user-profile">
-            <div className="avatar">
-              <User size={18} />
-            </div>
-            <div className="user-info">
-              <span className="user-email" title={userEmail}>{userEmail}</span>
-              <span className="user-role">Admin</span>
-            </div>
-            <button className="logout-btn" onClick={handleSignOut} title="Sign out">
-              <LogOut size={18} />
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <main className="main">
-        <div className="topbar">
-          <div className="row">
-            <button
-              className="icon-button mobile-only"
-              aria-label="Open navigation"
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <Menu size={20} />
-            </button>
+    <AppSidebarLinkProvider value={linkRenderer}>
+      <AppSidebar
+        brandName="Open-StoQR"
+        brandLogo="OS"
+        brandVersion="v1.0"
+        navigation={navigation}
+        currentPath={location.pathname}
+        onNavigate={(href) => navigate(href)}
+        userName={userEmail}
+        userEmail={userEmail}
+        onSignOut={handleSignOut}
+      >
+        <div className="p-8 pb-16">
+          <div className="flex items-center justify-between gap-6 mb-8">
             <div>
-              <h1 className="page-title">{title}</h1>
-              <div className="muted small">{companyName ?? 'Loading...'}</div>
+              <Heading level="h4" className="!text-[28px] !font-bold tracking-[-0.02em]">{title}</Heading>
+              <Body size="body4" muted>{companyName ?? 'Loading...'}</Body>
             </div>
           </div>
+          <Outlet />
         </div>
-        <Outlet />
-      </main>
-    </div>
+      </AppSidebar>
+    </AppSidebarLinkProvider>
   )
 }

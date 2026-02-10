@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { RemoveNodeData } from '../../types';
-import { Input } from '../../../ui/Input';
+import { Input } from '@repo/ui';
 
 interface FilterColumnPropertiesProps {
     data: RemoveNodeData;
