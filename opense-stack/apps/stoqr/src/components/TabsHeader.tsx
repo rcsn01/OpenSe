@@ -1,3 +1,5 @@
+// Uses @repo/ui TabBar under the hood, maintaining StoQR's API
+import { TabBar } from '@repo/ui'
 import type { ReactNode } from 'react'
 
 export interface TabsHeaderItem {
@@ -12,17 +14,6 @@ export interface TabsHeaderProps {
 }
 
 export const TabsHeader = ({ tabs, activeTabId, onTabChange }: TabsHeaderProps) => {
-  return (
-    <div className="row tabs-header">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          className={`button ghost tabs-button ${activeTabId === tab.id ? 'active' : ''}`}
-          onClick={() => onTabChange(tab.id)}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  )
+  const tabItems = tabs.map((t) => ({ id: t.id, label: typeof t.label === 'string' ? t.label : String(t.label) }))
+  return <TabBar tabs={tabItems} activeTab={activeTabId} onTabChange={onTabChange} />
 }
