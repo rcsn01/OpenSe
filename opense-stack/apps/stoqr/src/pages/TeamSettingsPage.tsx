@@ -28,7 +28,7 @@ type Permission = {
 }
 
 export const TeamSettingsPage = () => {
-  const { companyId, companyName } = useCompany()
+  const { companyId } = useCompany()
   const [members, setMembers] = useState<Member[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [permissions, setPermissions] = useState<Permission[]>([])
@@ -150,8 +150,6 @@ export const TeamSettingsPage = () => {
     <BasePage
       companyId={companyId}
       isLoading={isLoading}
-      title="Team Settings"
-      subtitle={companyName ?? undefined}
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to manage your team."
       loadingMessage="Loading team settings..."
