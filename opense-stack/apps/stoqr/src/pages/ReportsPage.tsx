@@ -35,7 +35,7 @@ const buildSeries = (currentValue: number, deltasByDay: Record<string, number>) 
   return series
 }
 
-export const Reports = () => {
+export const ReportsPage = () => {
   const { companyId } = useCompany()
   const [isLoading, setIsLoading] = useState(true)
   

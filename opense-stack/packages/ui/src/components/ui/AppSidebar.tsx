@@ -210,12 +210,21 @@ export function AppSidebar({
         />
       )}
 
-      {/* Sidebar */}
+      {/* Mobile sidebar - fixed overlay, hidden on desktop. Separate from flow to avoid Safari grid+fixed bug. */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex-shrink-0 bg-[var(--sidebar-bg)] text-[var(--sidebar-nav-text)] border-r border-[var(--sidebar-border)] flex flex-col transition-all duration-200 ease-in-out',
-          'lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-[var(--sidebar-bg)] text-[var(--sidebar-nav-text)] border-r border-[var(--sidebar-border)] transition-all duration-200 ease-in-out lg:hidden',
           isMobileOpen ? 'translate-x-0 shadow-[5px_0_25px_rgba(0,0,0,0.5)]' : '-translate-x-full',
+          isCollapsed ? 'w-16' : 'w-[280px]',
+        )}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop sidebar - in-flow flex child, hidden on mobile. No position:fixed to avoid Safari bugs. */}
+      <aside
+        className={cn(
+          'hidden lg:flex flex-shrink-0 flex-col bg-[var(--sidebar-bg)] text-[var(--sidebar-nav-text)] border-r border-[var(--sidebar-border)] transition-all duration-200 ease-in-out',
           isCollapsed ? 'w-16' : 'w-[280px]',
         )}
       >
@@ -232,8 +241,8 @@ export function AppSidebar({
         </button>
       </div>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      {/* Main content - flex-1, no overlap with in-flow sidebar */}
+      <main className="flex-1 min-w-0 overflow-y-auto">
         {children}
       </main>
     </div>
