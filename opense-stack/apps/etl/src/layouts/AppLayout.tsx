@@ -29,6 +29,17 @@ export const AppLayout = () => {
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null);
   const { data: userOrgs = [] } = useUserOrganisations(user?.id);
 
+  // Default to first org (Single Org Mode)
+  useEffect(() => {
+    if (userOrgs.length > 0 && !currentOrg) {
+      setCurrentOrg(userOrgs[0]);
+    } else if (userOrgs.length > 0 && currentOrg) {
+      const exists = userOrgs.find((o) => o.id === currentOrg.id);
+      if (!exists) setCurrentOrg(userOrgs[0]);
+    } else if (userOrgs.length === 0 && currentOrg) {
+      setCurrentOrg(null);
+    }
+  }, [userOrgs, currentOrg]);
   const handleSignOut = async () => {
     try {
       setSigningOut(true);
@@ -38,19 +49,6 @@ export const AppLayout = () => {
       setSigningOut(false);
     }
   };
-
-  // Default to first org (Single Org Mode)
-  useEffect(() => {
-    if (userOrgs.length > 0 && !currentOrg) {
-      setCurrentOrg(userOrgs[0]);
-    } else if (userOrgs.length > 0 && currentOrg) {
-      // Ensure current org is still valid
-      const exists = userOrgs.find((o) => o.id === currentOrg.id);
-      if (!exists) setCurrentOrg(userOrgs[0]);
-    } else if (userOrgs.length === 0 && currentOrg) {
-      setCurrentOrg(null);
-    }
-  }, [userOrgs, currentOrg]);
 
   if (!session && !isDemoUser && !loading) {
     return <Navigate to="/login" replace />;
@@ -67,25 +65,10 @@ export const AppLayout = () => {
     },
   ];
 
-  const orgHeader = currentOrg ? (
-    <div className="flex items-center w-full px-3 py-2 text-sm font-medium text-[var(--sidebar-text)] bg-[var(--sidebar-hover)] rounded-md border border-[var(--sidebar-border)]">
-      <div className="flex items-center gap-2 truncate">
-        <div className="w-6 h-6 bg-[var(--color-primary)] rounded flex items-center justify-center text-xs shrink-0 text-white">
-          <Building2 className="w-3.5 h-3.5" />
-        </div>
-        <span className="truncate">{currentOrg.name}</span>
-      </div>
-    </div>
-  ) : (
-    <div className="px-3 py-2 text-xs text-[var(--sidebar-muted)] text-center border border-dashed border-[var(--sidebar-border)] rounded-md">
-      No Organisation
-    </div>
-  );
-
   return (
     <AppSidebarLinkProvider value={linkRenderer}>
       <AppSidebar
-        brandName="Open-ETL"
+        brandName="Open ETL"
         brandLogo="OE"
         navigation={navigation}
         currentPath={location.pathname}
@@ -94,7 +77,6 @@ export const AppLayout = () => {
         userEmail={user?.email || 'user@example.com'}
         onSignOut={handleSignOut}
         signingOut={signingOut}
-        headerSlot={orgHeader}
       >
         <Outlet context={{ currentOrg }} />
       </AppSidebar>
