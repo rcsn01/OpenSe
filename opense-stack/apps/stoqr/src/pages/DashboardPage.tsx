@@ -36,7 +36,7 @@ type ProductSummary = {
 
 // --- Main Component ---
 
-export const Dashboard = () => {
+export const DashboardPage = () => {
   const { companyId } = useCompany()
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)

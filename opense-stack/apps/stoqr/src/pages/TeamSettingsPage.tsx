@@ -27,7 +27,7 @@ type Permission = {
   description: string
 }
 
-export const TeamSettings = () => {
+export const TeamSettingsPage = () => {
   const { companyId } = useCompany()
   const [members, setMembers] = useState<Member[]>([])
   const [roles, setRoles] = useState<Role[]>([])
