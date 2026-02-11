@@ -1,21 +1,14 @@
 import type { ReactNode, CSSProperties } from 'react'
-import { EmptyState } from './EmptyState'
+import { BasePage as SharedBasePage, type BasePageProps } from '@repo/ui'
 
-export interface BasePageProps {
+export interface StoqrBasePageProps extends Omit<BasePageProps, 'emptyState'> {
   companyId: string | null
-  isLoading: boolean
-  children: ReactNode
-  loadingMessage?: string
   emptyStateTitle?: string
   emptyStateDescription?: string
-  containerClassName?: string
-  containerStyle?: CSSProperties
 }
 
 /**
- * BasePage - matches ETL page layout structure
- * Handles company validation, loading state, and EmptyState display
- * Wraps content in p-8 max-w-7xl mx-auto
+ * Stoqr-specific BasePage wrapper - maps companyId to shared BasePage emptyState
  */
 export const BasePage = ({
   companyId,
@@ -26,20 +19,21 @@ export const BasePage = ({
   emptyStateDescription = 'Select a company to continue.',
   containerClassName = 'stack',
   containerStyle,
-}: BasePageProps) => {
-  if (!companyId) {
-    return <EmptyState title={emptyStateTitle} description={emptyStateDescription} />
-  }
-
-  if (isLoading) {
-    return <div className="empty-state">{loadingMessage}</div>
-  }
+}: StoqrBasePageProps) => {
+  const emptyState =
+    !companyId
+      ? { title: emptyStateTitle, description: emptyStateDescription }
+      : undefined
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className={containerClassName} style={containerStyle}>
-        {children}
-      </div>
-    </div>
+    <SharedBasePage
+      isLoading={isLoading}
+      loadingMessage={loadingMessage}
+      emptyState={emptyState}
+      containerClassName={containerClassName}
+      containerStyle={containerStyle}
+    >
+      {children}
+    </SharedBasePage>
   )
 }
