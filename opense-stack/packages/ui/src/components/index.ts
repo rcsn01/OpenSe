@@ -27,7 +27,11 @@ export { ThemeProvider, useTheme } from './ui/ThemeProvider'
 // Components – Layout
 export { Container, VStack, HStack, Grid } from './layout/Layout'
 export { AppLayout, type AppLayoutProps } from './layout/AppLayout'
+export { BasePage, type BasePageProps } from './layout/BasePage'
 export { TopBar, type TopBarProps } from './layout/TopBar'
+
+// Empty state
+export { EmptyState, type EmptyStateProps } from './ui/EmptyState'
 
 // Side navigation (for use with AppLayout sidebar)
 export {

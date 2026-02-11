@@ -10,9 +10,7 @@ import {
   ChevronRight, 
   ChevronDown, 
   Package, 
-  Search, 
   Plus, 
-  MoreHorizontal, 
   ArrowUp,
   LayoutGrid,
   List as ListIcon
@@ -115,6 +113,17 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
   const currentFolder = allFolders.find(f => f.id === currentFolderId)
   const subfolders = allFolders.filter(f => f.parent_id === currentFolderId)
 
+  // Breadcrumb path (e.g. Root > Folder1 > Folder2)
+  const breadcrumbPath = useMemo(() => {
+    const path: { id: string | null; name: string }[] = [{ id: null, name: 'Root' }]
+    let f = currentFolder
+    while (f) {
+      path.unshift({ id: f.id, name: f.name })
+      f = allFolders.find(x => x.id === f!.parent_id)
+    }
+    return path.reverse()
+  }, [currentFolder, allFolders])
+
   // Expand parent folders when selecting a deep child (optional, but good UX)
   // Simple version: just toggle expand manually
   const toggleExpand = (id: string) => {
@@ -127,7 +136,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true)
-      let query = supabase
+      let query = db
         .from('products')
         .select('id, name, sku, quantity_on_hand, selling_price, category')
         .eq('company_id', companyId)
@@ -177,10 +186,20 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
             <ArrowUp size={16} />
           </button>
           
-          <div className="input row" style={{ padding: '6px 10px', width: 300, background: '#f1f5f9' }}>
-            <span className="muted" style={{ marginRight: 8, fontSize: 13 }}>
-              {currentFolderId ? `/${currentFolder?.name}` : '/Root'}
-            </span>
+          <div className="explorer-breadcrumb" style={{ padding: '6px 12px', minWidth: 200, maxWidth: 400, background: 'var(--color-muted)', borderRadius: 8, fontSize: 13 }}>
+            {breadcrumbPath.map((item, i) => (
+              <span key={item.id ?? 'root'}>
+                {i > 0 && <span className="muted" style={{ margin: '0 6px' }}>/</span>}
+                <button
+                  type="button"
+                  className={item.id === currentFolderId ? 'font-medium' : ''}
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: item.id === currentFolderId ? 'var(--primary)' : 'inherit' }}
+                  onClick={() => setCurrentFolderId(item.id)}
+                >
+                  {item.name}
+                </button>
+              </span>
+            ))}
           </div>
         </div>
 
@@ -251,7 +270,11 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
 
         {/* Right Pane: Content */}
         <div className="explorer-main">
-          {view === 'list' ? (
+          {isLoading ? (
+            <div className="explorer-empty">
+              <p className="muted">Loading...</p>
+            </div>
+          ) : view === 'list' ? (
             // LIST VIEW
             <div className="file-list">
               <div className="file-row header">
@@ -311,7 +334,13 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
             </div>
           ) : (
             // GRID VIEW
-            <div style={{ padding: 20, overflowY: 'auto' }}>
+            <div style={{ padding: 20, overflowY: 'auto', flex: 1, minHeight: 0 }}>
+              {subfolders.length === 0 && products.length === 0 ? (
+                <div className="explorer-empty">
+                  <FolderOpen size={48} strokeWidth={1} style={{ marginBottom: 16, opacity: 0.5 }} />
+                  <p>This folder is empty</p>
+                </div>
+              ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 16 }}>
                 {subfolders.map((folder) => (
                   <div 
@@ -344,6 +373,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                   </Link>
                 ))}
               </div>
+              )}
             </div>
           )}
         </div>
