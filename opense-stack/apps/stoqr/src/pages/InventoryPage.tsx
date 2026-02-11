@@ -14,7 +14,7 @@ import { VariantsTab } from '../components/Inventory/VariantsTab'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
 
 export const InventoryListPage = () => {
-  const { companyId } = useCompany()
+  const { companyId, companyName } = useCompany()
   const navigate = useNavigate() // Hook
   const [searchParams] = useSearchParams()
 
@@ -181,6 +181,8 @@ export const InventoryListPage = () => {
     <BasePage
       companyId={companyId}
       isLoading={isLoading}
+      title="Inventory"
+      subtitle={companyName ?? undefined}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage inventory."
     >
