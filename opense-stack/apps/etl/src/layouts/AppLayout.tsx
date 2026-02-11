@@ -91,7 +91,10 @@ export const AppLayout = () => {
   )
 
   return (
-    <SharedAppLayout sidebar={sidebar}>
+    <SharedAppLayout
+      sidebar={sidebar}
+      profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
+    >
       <Outlet context={{ currentOrg }} />
     </SharedAppLayout>
   )

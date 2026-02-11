@@ -27,6 +27,7 @@ export { ThemeProvider, useTheme } from './ui/ThemeProvider'
 // Components – Layout
 export { Container, VStack, HStack, Grid } from './layout/Layout'
 export { AppLayout, type AppLayoutProps } from './layout/AppLayout'
+export { TopBar, type TopBarProps } from './layout/TopBar'
 
 // Side navigation (for use with AppLayout sidebar)
 export {
