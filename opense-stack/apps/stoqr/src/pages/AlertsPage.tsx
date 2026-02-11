@@ -9,7 +9,7 @@ import { LowStockList } from '../components/Alerts/LowStockList'
 const DAYS_NOTICE = 30
 
 export const AlertsPage = () => {
-  const { companyId, companyName } = useCompany()
+  const { companyId } = useCompany()
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -54,8 +54,6 @@ export const AlertsPage = () => {
     <BasePage
       companyId={companyId}
       isLoading={isLoading}
-      title="Alerts"
-      subtitle={companyName ?? undefined}
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to view alerts."
       containerClassName="grid grid-2"
