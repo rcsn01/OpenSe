@@ -23,7 +23,7 @@ export {
   Tooltip,
   Dropdown, DropdownItem, DropdownSeparator, DropdownMenu,
   // Navigation
-  Tabs, TabsList, TabsTrigger, TabsContent, TabBar, AccordionItem,
+  TabBar, AccordionItem,
   Breadcrumb,
   Pagination,
   Sidebar, SidebarItem, SidebarSection,

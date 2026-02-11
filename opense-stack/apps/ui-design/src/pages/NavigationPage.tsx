@@ -2,10 +2,7 @@ import { useState } from 'react'
 import {
   Button,
   Breadcrumb,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
+  TabBar,
   AccordionItem,
   Card,
   Body,
@@ -17,6 +14,36 @@ import {
   VStack,
 } from '../components/ui'
 import { Section, SubSection } from '../components/shared/PageSection'
+
+const tabs = [
+  { id: 'tab1', label: 'Overview' },
+  { id: 'tab2', label: 'Settings' },
+  { id: 'tab3', label: 'Members' },
+]
+
+function TabsDemo() {
+  const [activeTab, setActiveTab] = useState('tab1')
+  return (
+    <>
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      {activeTab === 'tab1' && (
+        <Card>
+          <Body size="body4">Overview content goes here.</Body>
+        </Card>
+      )}
+      {activeTab === 'tab2' && (
+        <Card>
+          <Body size="body4">Settings content goes here.</Body>
+        </Card>
+      )}
+      {activeTab === 'tab3' && (
+        <Card>
+          <Body size="body4">Members list goes here.</Body>
+        </Card>
+      )}
+    </>
+  )
+}
 
 export function NavigationPage() {
   const [page, setPage] = useState(3)
@@ -37,28 +64,7 @@ export function NavigationPage() {
         </SubSection>
 
         <SubSection title="Tabs">
-          <Tabs defaultValue="tab1">
-            <TabsList>
-              <TabsTrigger value="tab1">Overview</TabsTrigger>
-              <TabsTrigger value="tab2">Settings</TabsTrigger>
-              <TabsTrigger value="tab3">Members</TabsTrigger>
-            </TabsList>
-            <TabsContent value="tab1">
-              <Card>
-                <Body size="body4">Overview content goes here.</Body>
-              </Card>
-            </TabsContent>
-            <TabsContent value="tab2">
-              <Card>
-                <Body size="body4">Settings content goes here.</Body>
-              </Card>
-            </TabsContent>
-            <TabsContent value="tab3">
-              <Card>
-                <Body size="body4">Members list goes here.</Body>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <TabsDemo />
         </SubSection>
 
         <SubSection title="Accordion">
