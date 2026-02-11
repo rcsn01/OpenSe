@@ -37,7 +37,7 @@ type ProductSummary = {
 // --- Main Component ---
 
 export const DashboardPage = () => {
-  const { companyId, companyName } = useCompany()
+  const { companyId } = useCompany()
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -170,8 +170,6 @@ export const DashboardPage = () => {
     <BasePage
       companyId={companyId}
       isLoading={isLoading || !data}
-      title="Dashboard"
-      subtitle={companyName ?? undefined}
       emptyStateTitle="Welcome to Fill The Shelf"
       emptyStateDescription="Select or create a company to get started."
       loadingMessage="Loading dashboard..."
