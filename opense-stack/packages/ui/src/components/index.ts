@@ -26,3 +26,22 @@ export { ThemeProvider, useTheme } from './ui/ThemeProvider'
 
 // Components – Layout
 export { Container, VStack, HStack, Grid } from './layout/Layout'
+export { AppLayout, type AppLayoutProps } from './layout/AppLayout'
+
+// Side navigation (for use with AppLayout sidebar)
+export {
+  SideNav,
+  SideNavItem,
+  SideNavGroup,
+  SideNavGroupList,
+  SideNavUserProfile,
+  SideNavBrandSlot,
+  SIDE_NAV_CATEGORIES,
+  type SideNavProps,
+  type SideNavItemProps,
+  type SideNavGroupProps,
+  type SideNavGroupListProps,
+  type SideNavUserProfileProps,
+  type SideNavBrandSlotProps,
+  type SideNavCategory,
+} from './ui/SideNav'

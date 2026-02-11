@@ -41,6 +41,8 @@
   --sidebar-muted: #64748b;
   --sidebar-hover: rgba(255, 255, 255, 0.03);
   --sidebar-border: #1e293b;
+  --sidebar-gap-nav-item: 0.125rem;
+  --sidebar-gap-nav-group: 1.5rem;
 
   /* Radius */
   --radius-sm: 0.25rem;
@@ -116,6 +118,8 @@
   --sidebar-muted: #475569;
   --sidebar-hover: rgba(255, 255, 255, 0.05);
   --sidebar-border: #1e293b;
+  --sidebar-gap-nav-item: 0.125rem;
+  --sidebar-gap-nav-group: 1.5rem;
 }
 
 /* Global resets */
@@ -135,3 +139,10 @@ button, input, select, textarea { font: inherit; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: var(--radius-full); }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-border-hover); }
+
+/* AppSidebar main content - reserve left space for fixed sidebar on desktop (1024px+) */
+@media (min-width: 1024px) {
+  .app-sidebar-main {
+    margin-left: 280px;
+  }
+}

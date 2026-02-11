@@ -119,15 +119,25 @@ export function AppSidebar({
       )}
 
       {/* Navigation */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-6">
+      <div
+        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col"
+        style={{ gap: 'var(--sidebar-gap-nav-group)' }}
+      >
         {navigation.map((group, gi) => (
-          <div key={gi} className="flex flex-col gap-1">
+          <div
+            key={gi}
+            className="flex flex-col"
+            style={{ gap: 'var(--sidebar-gap-nav-item)' }}
+          >
             {group.title && !isCollapsed && (
               <p className="px-3 text-[11px] font-bold text-[var(--sidebar-muted)] mb-1 tracking-[0.05em] uppercase">
                 {group.title}
               </p>
             )}
-            <nav className="flex flex-col gap-0.5">
+            <nav
+              className="flex flex-col"
+              style={{ gap: 'var(--sidebar-gap-nav-item)' }}
+            >
               {group.items.map((item) => {
                 const isActive = currentPath === item.href || currentPath.startsWith(item.href + '/')
                 return renderLink({
@@ -210,21 +220,11 @@ export function AppSidebar({
         />
       )}
 
-      {/* Mobile sidebar - fixed overlay, hidden on desktop. Separate from flow to avoid Safari grid+fixed bug. */}
+      {/* Sidebar - fixed overlay on mobile, fixed left on desktop */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col bg-[var(--sidebar-bg)] text-[var(--sidebar-nav-text)] border-r border-[var(--sidebar-border)] transition-all duration-200 ease-in-out lg:hidden',
-          isMobileOpen ? 'translate-x-0 shadow-[5px_0_25px_rgba(0,0,0,0.5)]' : '-translate-x-full',
-          isCollapsed ? 'w-16' : 'w-[280px]',
-        )}
-      >
-        {sidebarContent}
-      </aside>
-
-      {/* Desktop sidebar - in-flow flex child, hidden on mobile. No position:fixed to avoid Safari bugs. */}
-      <aside
-        className={cn(
-          'hidden lg:flex flex-shrink-0 flex-col bg-[var(--sidebar-bg)] text-[var(--sidebar-nav-text)] border-r border-[var(--sidebar-border)] transition-all duration-200 ease-in-out',
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-[var(--sidebar-bg)] text-[var(--sidebar-nav-text)] border-r border-[var(--sidebar-border)] transition-all duration-200 ease-in-out',
+          isMobileOpen ? 'translate-x-0 shadow-[5px_0_25px_rgba(0,0,0,0.5)]' : '-translate-x-full lg:translate-x-0',
           isCollapsed ? 'w-16' : 'w-[280px]',
         )}
       >
@@ -241,8 +241,8 @@ export function AppSidebar({
         </button>
       </div>
 
-      {/* Main content - flex-1, no overlap with in-flow sidebar */}
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      {/* Main content - reserved left space for fixed sidebar on desktop (see styles.css) */}
+      <main className="app-sidebar-main flex-1 min-w-0 overflow-y-auto">
         {children}
       </main>
     </div>

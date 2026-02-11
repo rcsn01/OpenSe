@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { ThemeProvider } from '@repo/ui'
 import './App.css'
-import { Layout } from './components/Layout'
+import { AppLayout } from './layouts/AppLayout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
 import { AuthPage } from './pages/AuthPage'
 import { CompanySetupPage } from './pages/CompanySetupPage'
@@ -44,28 +45,30 @@ function App() {
   }
 
   return (
-    <CompanyProvider userId={session.user.id}>
-      <Toaster position="top-right" richColors />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route element={<CompanyGate />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/inventory" element={<InventoryListPage />} />
-            <Route path="/inventory/new" element={<CreateProductPage />} />
-            <Route path="/inventory/:id" element={<ProductDetailPage />} />
-            <Route path="/scan" element={<ScanPage />} />
-            <Route path="/tools/labels" element={<LabelStudioPage />} />
-            <Route path="/settings/team" element={<TeamSettingsPage />} />
-            <Route path="/settings/attributes" element={<AttributesPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/procurement" element={<ProcurementPage />} />
-            <Route path="/alerts" element={<AlertsPage />} />
+    <ThemeProvider>
+      <CompanyProvider userId={session.user.id}>
+        <Toaster position="top-right" richColors />
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route element={<CompanyGate />}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/inventory" element={<InventoryListPage />} />
+              <Route path="/inventory/new" element={<CreateProductPage />} />
+              <Route path="/inventory/:id" element={<ProductDetailPage />} />
+              <Route path="/scan" element={<ScanPage />} />
+              <Route path="/tools/labels" element={<LabelStudioPage />} />
+              <Route path="/settings/team" element={<TeamSettingsPage />} />
+              <Route path="/settings/attributes" element={<AttributesPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/procurement" element={<ProcurementPage />} />
+              <Route path="/alerts" element={<AlertsPage />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Route>
-      </Routes>
-    </CompanyProvider>
+        </Routes>
+      </CompanyProvider>
+    </ThemeProvider>
   )
 }
 
