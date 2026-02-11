@@ -24,6 +24,7 @@ import {
   Navigation,
   Box,
   SeparatorHorizontal,
+  FlaskConical,
 } from 'lucide-react'
 
 const foundationItems = [
@@ -45,6 +46,10 @@ const componentItems = [
 
 const layoutItems = [
   { path: '/dividers', label: 'Dividers', icon: <SeparatorHorizontal className="h-4 w-4" /> },
+]
+
+const testPagesItems = [
+  { path: '/test', label: 'Test Page', icon: <FlaskConical className="h-4 w-4" /> },
 ]
 
 function AppLayoutContent() {
@@ -120,6 +125,26 @@ function AppLayoutContent() {
               )
             })}
           </SideNavGroup>
+          <SideNavGroup category="test-pages">
+            {testPagesItems.map((item) => {
+              const isActive =
+                location.pathname === item.path || location.pathname.startsWith(item.path + '/')
+              return (
+                <SideNavItem
+                  key={item.path}
+                  active={isActive}
+                  renderLink={({ className, children }) => (
+                    <NavLink to={item.path} className={className}>
+                      {children}
+                    </NavLink>
+                  )}
+                >
+                  {item.icon}
+                  {item.label}
+                </SideNavItem>
+              )
+            })}
+          </SideNavGroup>
         </SideNavGroupList>
       </SideNav>
       <SideNavUserProfile
@@ -133,7 +158,7 @@ function AppLayoutContent() {
   )
 
   return (
-    <SharedAppLayout sidebar={sidebar}>
+    <SharedAppLayout sidebar={sidebar} profileFallback="U">
       <Outlet />
     </SharedAppLayout>
   )
