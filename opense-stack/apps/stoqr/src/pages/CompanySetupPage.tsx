@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase, db } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 
-export const CompanySetup = () => {
+export const CompanySetupPage = () => {
   const { refreshCompanies } = useCompany()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')

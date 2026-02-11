@@ -23,7 +23,7 @@ import {
 import { Badge } from '../../components/Badge'
 import { toast } from 'sonner'
 
-export const ProductDetail = () => {
+export const ProductDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { companyId } = useCompany()

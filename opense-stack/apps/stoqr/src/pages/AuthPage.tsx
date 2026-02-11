@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase, db } from '../supabaseClient'
 
-export const Auth = () => {
+export const AuthPage = () => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

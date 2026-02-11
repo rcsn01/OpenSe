@@ -9,7 +9,7 @@ import { PutawayTab } from '../components/Scan/PutawayTab'
 import { QuickScanTab, ScannerModule } from '../components/Scan/QuickScanTab'
 import { toast } from 'sonner'
 
-export const Scan = () => {
+export const ScanPage = () => {
   const { companyId } = useCompany()
   const [scanValue, setScanValue] = useState('')
   const [isScanning, setIsScanning] = useState(false)

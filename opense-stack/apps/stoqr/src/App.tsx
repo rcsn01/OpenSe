@@ -2,19 +2,19 @@ import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import './App.css'
 import { Layout } from './components/Layout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
-import { Auth } from './pages/Auth'
-import { CompanySetup } from './pages/CompanySetup'
-import { Dashboard } from './pages/Dashboard'
-import { InventoryList } from './pages/Inventory'
-import { CreateProduct } from './pages/product/CreateProduct' // Added Import
-import { Scan } from './pages/Scan'
-import { LabelStudio } from './pages/LabelStudio'
-import { ProductDetail } from './pages/product/ProductDetail'
-import { TeamSettings } from './pages/TeamSettings'
-import { Attributes } from './pages/Attributes'
-import { Reports } from './pages/Reports'
-import { Procurement } from './pages/Procurement'
-import { Alerts } from './pages/Alerts'
+import { AuthPage } from './pages/AuthPage'
+import { CompanySetupPage } from './pages/CompanySetupPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { InventoryListPage } from './pages/InventoryPage'
+import { CreateProductPage } from './pages/product/CreateProductPage'
+import { ScanPage } from './pages/ScanPage'
+import { LabelStudioPage } from './pages/LabelStudioPage'
+import { ProductDetailPage } from './pages/product/ProductDetailPage'
+import { TeamSettingsPage } from './pages/TeamSettingsPage'
+import { AttributesPage } from './pages/AttributesPage'
+import { ReportsPage } from './pages/ReportsPage'
+import { ProcurementPage } from './pages/ProcurementPage'
+import { AlertsPage } from './pages/AlertsPage'
 import { useSession } from './hooks/useSession'
 import { Toaster } from 'sonner'
 
@@ -26,7 +26,7 @@ const CompanyGate = () => {
   }
 
   if (companies.length === 0) {
-    return <CompanySetup />
+    return <CompanySetupPage />
   }
 
   return <Outlet />
@@ -40,7 +40,7 @@ function App() {
   }
 
   if (!session) {
-    return <Auth />
+    return <AuthPage />
   }
 
   return (
@@ -50,17 +50,17 @@ function App() {
         <Route element={<Layout />}>
           <Route element={<CompanyGate />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/inventory" element={<InventoryList />} />
-            <Route path="/inventory/new" element={<CreateProduct />} /> {/* Added Route */}
-            <Route path="/inventory/:id" element={<ProductDetail />} />
-            <Route path="/scan" element={<Scan />} />
-            <Route path="/tools/labels" element={<LabelStudio />} />
-            <Route path="/settings/team" element={<TeamSettings />} />
-            <Route path="/settings/attributes" element={<Attributes />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/procurement" element={<Procurement />} />
-            <Route path="/alerts" element={<Alerts />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/inventory" element={<InventoryListPage />} />
+            <Route path="/inventory/new" element={<CreateProductPage />} />
+            <Route path="/inventory/:id" element={<ProductDetailPage />} />
+            <Route path="/scan" element={<ScanPage />} />
+            <Route path="/tools/labels" element={<LabelStudioPage />} />
+            <Route path="/settings/team" element={<TeamSettingsPage />} />
+            <Route path="/settings/attributes" element={<AttributesPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/procurement" element={<ProcurementPage />} />
+            <Route path="/alerts" element={<AlertsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
