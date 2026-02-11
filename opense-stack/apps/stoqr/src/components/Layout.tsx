@@ -80,7 +80,7 @@ export const Layout = () => {
   return (
     <AppSidebarLinkProvider value={linkRenderer}>
       <AppSidebar
-        brandName="Open-StoQR"
+        brandName="Open StoQR"
         brandLogo="OS"
         brandVersion="v1.0"
         navigation={navigation}
