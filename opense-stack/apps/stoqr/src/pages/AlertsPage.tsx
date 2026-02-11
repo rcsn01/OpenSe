@@ -8,7 +8,7 @@ import { LowStockList } from '../components/Alerts/LowStockList'
 
 const DAYS_NOTICE = 30
 
-export const Alerts = () => {
+export const AlertsPage = () => {
   const { companyId } = useCompany()
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)

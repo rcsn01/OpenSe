@@ -10,7 +10,7 @@ type CompanySettings = {
   custom_fields?: CustomField[]
 }
 
-export const Attributes = () => {
+export const AttributesPage = () => {
   const { companyId } = useCompany()
   const [folders, setFolders] = useState<Folder[]>([])
   const [tags, setTags] = useState<Tag[]>([])
