@@ -34,8 +34,35 @@ export {
   Divider,
   ColorPalette,
   Container, VStack, HStack, Grid,
+  AppLayout,
+  SideNav,
+  SideNavItem,
+  SideNavGroup,
+  SideNavGroupList,
+  SideNavBrandSlot,
+  SideNavUserProfile,
+  SIDE_NAV_CATEGORIES,
   // Utilities
   cn,
 } from '@repo/ui'
 
-export type { ButtonProps, InputProps, BadgeProps, AlertProps, AvatarProps, BreadcrumbItem, TabItem, DropdownArrayItem, AppSidebarProps, NavItem, NavGroup } from '@repo/ui'
+export type {
+  ButtonProps,
+  InputProps,
+  BadgeProps,
+  AlertProps,
+  AvatarProps,
+  BreadcrumbItem,
+  TabItem,
+  DropdownArrayItem,
+  AppSidebarProps,
+  NavItem,
+  NavGroup,
+  AppLayoutProps,
+  SideNavProps,
+  SideNavItemProps,
+  SideNavGroupProps,
+  SideNavGroupListProps,
+  SideNavUserProfileProps,
+  SideNavCategory,
+} from '@repo/ui'
