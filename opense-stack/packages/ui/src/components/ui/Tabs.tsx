@@ -1,51 +1,8 @@
-import { type ReactNode, useState, createContext, useContext } from 'react'
+import { type ReactNode, useState } from 'react'
 import { cn } from '../../lib/cn'
 import { ChevronDown } from 'lucide-react'
 
-/* ── Compound Tabs ────────────────────────────────────── */
-
-interface TabsContextValue { activeTab: string; setActiveTab: (v: string) => void }
-const TabsContext = createContext<TabsContextValue>({ activeTab: '', setActiveTab: () => {} })
-
-export function Tabs({ children, defaultValue, className }: { children: ReactNode; defaultValue: string; className?: string }) {
-  const [activeTab, setActiveTab] = useState(defaultValue)
-  return (
-    <TabsContext.Provider value={{ activeTab, setActiveTab }}>
-      <div className={cn('w-full', className)}>{children}</div>
-    </TabsContext.Provider>
-  )
-}
-
-export function TabsList({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div role="tablist" className={cn('inline-flex items-center gap-1 rounded-[var(--radius-lg)] bg-[var(--color-muted)] p-1', className)}>
-      {children}
-    </div>
-  )
-}
-
-export function TabsTrigger({ children, value, className }: { children: ReactNode; value: string; className?: string }) {
-  const { activeTab, setActiveTab } = useContext(TabsContext)
-  const isActive = activeTab === value
-  return (
-    <button
-      role="tab" aria-selected={isActive} onClick={() => setActiveTab(value)}
-      className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition-all duration-[var(--transition-fast)]',
-        isActive ? 'bg-[var(--color-card)] text-[var(--color-foreground)] shadow-[var(--shadow-sm)]' : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]',
-        className,
-      )}
-    >{children}</button>
-  )
-}
-
-export function TabsContent({ children, value, className }: { children: ReactNode; value: string; className?: string }) {
-  const { activeTab } = useContext(TabsContext)
-  if (activeTab !== value) return null
-  return <div className={cn('mt-3', className)}>{children}</div>
-}
-
-/* ── TabBar (ETL compat: props-based tabs) ────────────── */
+/* ── TabBar: props-based tab navigation ───────────────── */
 
 export type TabItem = { id: string; label: string; icon?: ReactNode; count?: number }
 
