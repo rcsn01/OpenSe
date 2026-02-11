@@ -66,6 +66,7 @@ export const SIDE_NAV_CATEGORIES = {
   foundation: 'FOUNDATION',
   components: 'COMPONENTS',
   layout: 'LAYOUT',
+  'test-pages': 'TEST PAGES',
 } as const
 
 export type SideNavCategory = keyof typeof SIDE_NAV_CATEGORIES
