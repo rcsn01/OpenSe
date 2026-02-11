@@ -5,7 +5,7 @@ import { ItemLabelsTab } from '../components/LabelStudio/ItemLabelsTab'
 import { LocationLabelsTab } from '../components/LabelStudio/LocationLabelsTab'
 import { ShippingLabelsTab } from '../components/LabelStudio/ShippingLabelsTab'
 
-export const LabelStudio = () => {
+export const LabelStudioPage = () => {
   const { companyId } = useCompany()
 
   return (

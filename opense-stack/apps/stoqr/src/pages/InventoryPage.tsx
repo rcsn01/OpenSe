@@ -13,7 +13,7 @@ import { TransferTab } from '../components/Inventory/TransferTab'
 import { VariantsTab } from '../components/Inventory/VariantsTab'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
 
-export const InventoryList = () => {
+export const InventoryListPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate() // Hook
   const [searchParams] = useSearchParams()
