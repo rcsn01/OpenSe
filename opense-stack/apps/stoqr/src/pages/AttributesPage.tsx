@@ -11,7 +11,7 @@ type CompanySettings = {
 }
 
 export const AttributesPage = () => {
-  const { companyId } = useCompany()
+  const { companyId, companyName } = useCompany()
   const [folders, setFolders] = useState<Folder[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [settings, setSettings] = useState<CompanySettings>({})
@@ -102,6 +102,8 @@ export const AttributesPage = () => {
     <BasePage
       companyId={companyId}
       isLoading={isLoading}
+      title="Attributes"
+      subtitle={companyName ?? undefined}
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to edit attributes."
       loadingMessage="Loading settings..."

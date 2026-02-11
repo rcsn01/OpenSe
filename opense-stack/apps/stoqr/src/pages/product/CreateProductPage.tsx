@@ -207,6 +207,7 @@ export const CreateProductPage = () => {
   }
 
   return (
+    <div className="p-8 max-w-7xl mx-auto">
     <div className="stack" style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 80 }}>
       {/* Header */}
       <div className="flex-between sticky top-0 bg-slate-50 py-4 z-10" style={{ margin: '-32px -40px 24px', padding: '32px 40px 16px', background: 'var(--bg)' }}>
@@ -456,6 +457,7 @@ export const CreateProductPage = () => {
 
         </div>
       </form>
+    </div>
     </div>
   )
 }
