@@ -1,85 +1,98 @@
-import { useState, useEffect } from 'react';
-import { Outlet, useLocation, Navigate, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react'
+import { Outlet, useLocation, Navigate, useNavigate, NavLink } from 'react-router-dom'
+import { LayoutDashboard, LayoutTemplate, Building2, Activity } from 'lucide-react'
 import {
-  LayoutDashboard,
-  LayoutTemplate,
-  Building2,
-  Activity
-} from 'lucide-react';
-import { AppSidebar, AppSidebarLinkProvider, type NavGroup } from '@repo/ui';
-import { useAuth } from '../context/AuthContext';
-import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations';
+  AppLayout as SharedAppLayout,
+  SideNav,
+  SideNavItem,
+  SideNavGroup,
+  SideNavGroupList,
+  SideNavBrandSlot,
+  SideNavUserProfile,
+} from '@repo/ui'
+import { useAuth } from '../context/AuthContext'
+import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations'
 
-/** Adapter: renders react-router <Link> instead of plain <a> */
-const linkRenderer = {
-  renderLink: ({ href, className, onClick, children, key }: any) => (
-    <Link key={key} to={href} className={className} onClick={onClick}>
-      {children}
-    </Link>
-  ),
-};
+const mainNavItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+  { href: '/gallery', label: 'Gallery', icon: <LayoutTemplate className="w-5 h-5" /> },
+  { href: '/organisation', label: 'Organisation', icon: <Building2 className="w-5 h-5" /> },
+  { href: '/activity', label: 'Activity', icon: <Activity className="w-5 h-5" /> },
+]
 
 export const AppLayout = () => {
-  const { session, user, loading, isDemoUser, logout } = useAuth();
-  const navigate = useNavigate();
-  const [signingOut, setSigningOut] = useState(false);
-  const location = useLocation();
+  const { session, user, loading, isDemoUser, logout } = useAuth()
+  const navigate = useNavigate()
+  const [signingOut, setSigningOut] = useState(false)
+  const location = useLocation()
 
-  // Org State
-  const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null);
-  const { data: userOrgs = [] } = useUserOrganisations(user?.id);
+  const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null)
+  const { data: userOrgs = [] } = useUserOrganisations(user?.id)
 
-  // Default to first org (Single Org Mode)
   useEffect(() => {
     if (userOrgs.length > 0 && !currentOrg) {
-      setCurrentOrg(userOrgs[0]);
+      setCurrentOrg(userOrgs[0])
     } else if (userOrgs.length > 0 && currentOrg) {
-      const exists = userOrgs.find((o) => o.id === currentOrg.id);
-      if (!exists) setCurrentOrg(userOrgs[0]);
+      const exists = userOrgs.find((o) => o.id === currentOrg.id)
+      if (!exists) setCurrentOrg(userOrgs[0])
     } else if (userOrgs.length === 0 && currentOrg) {
-      setCurrentOrg(null);
+      setCurrentOrg(null)
     }
-  }, [userOrgs, currentOrg]);
+  }, [userOrgs, currentOrg])
+
   const handleSignOut = async () => {
     try {
-      setSigningOut(true);
-      await logout();
-      navigate('/login', { replace: true });
+      setSigningOut(true)
+      await logout()
+      navigate('/login', { replace: true })
     } finally {
-      setSigningOut(false);
+      setSigningOut(false)
     }
-  };
-
-  if (!session && !isDemoUser && !loading) {
-    return <Navigate to="/login" replace />;
   }
 
-  const navigation: NavGroup[] = [
-    {
-      items: [
-        { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-        { label: 'Gallery', href: '/gallery', icon: <LayoutTemplate className="w-5 h-5" /> },
-        { label: 'Organisation', href: '/organisation', icon: <Building2 className="w-5 h-5" /> },
-        { label: 'Activity', href: '/activity', icon: <Activity className="w-5 h-5" /> },
-      ],
-    },
-  ];
+  if (!session && !isDemoUser && !loading) {
+    return <Navigate to="/login" replace />
+  }
 
-  return (
-    <AppSidebarLinkProvider value={linkRenderer}>
-      <AppSidebar
-        brandName="Open ETL"
-        brandLogo="OE"
-        navigation={navigation}
-        currentPath={location.pathname}
-        onNavigate={(href) => navigate(href)}
+  const sidebar = (
+    <>
+      <SideNavBrandSlot icon="OE" name="Open ETL" version="v1.0" />
+      <SideNav>
+        <SideNavGroupList>
+          <SideNavGroup category="main">
+            {mainNavItems.map((item) => {
+              const isActive =
+                location.pathname === item.href || location.pathname.startsWith(item.href + '/')
+              return (
+                <SideNavItem
+                  key={item.href}
+                  active={isActive}
+                  renderLink={({ className, children }) => (
+                    <NavLink to={item.href} className={className}>
+                      {children}
+                    </NavLink>
+                  )}
+                >
+                  {item.icon}
+                  {item.label}
+                </SideNavItem>
+              )
+            })}
+          </SideNavGroup>
+        </SideNavGroupList>
+      </SideNav>
+      <SideNavUserProfile
         userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
         userEmail={user?.email || 'user@example.com'}
-        onSignOut={handleSignOut}
+        onLogout={handleSignOut}
         signingOut={signingOut}
-      >
-        <Outlet context={{ currentOrg }} />
-      </AppSidebar>
-    </AppSidebarLinkProvider>
-  );
-};
+      />
+    </>
+  )
+
+  return (
+    <SharedAppLayout sidebar={sidebar}>
+      <Outlet context={{ currentOrg }} />
+    </SharedAppLayout>
+  )
+}

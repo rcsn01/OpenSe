@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@repo/ui';
 import { AuthProvider } from './context/AuthContext';
 import { DemoProvider } from './context/DemoContext';
 import { WorkflowProvider } from './context/WorkflowContext';
@@ -54,8 +55,9 @@ const DashboardIndexRedirect = () => {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ReactFlowProvider>
+    <ThemeProvider>
+      <BrowserRouter>
+        <ReactFlowProvider>
         <DemoProvider>
           <AuthProvider>
             <WorkflowProvider>
@@ -114,7 +116,8 @@ export default function App() {
             </WorkflowProvider>
           </AuthProvider>
         </DemoProvider>
-      </ReactFlowProvider>
-    </BrowserRouter>
+        </ReactFlowProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
