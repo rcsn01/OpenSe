@@ -21,7 +21,7 @@ import type { Folder } from '../../types'
 
 type CustomFieldDefinition = { key: string; type: 'text' | 'number' | 'boolean' | 'date' }
 
-export const CreateProduct = () => {
+export const CreateProductPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)

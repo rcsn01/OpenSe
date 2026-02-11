@@ -9,7 +9,7 @@ import { ReceivingLogTab } from '../components/Procurement/ReceivingLogTab'
 import { ReplenishmentTab } from '../components/Procurement/ReplenishmentTab'
 import { SuppliersTab } from '../components/Procurement/SuppliersTab'
 
-export const Procurement = () => {
+export const ProcurementPage = () => {
   const { companyId } = useCompany()
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
