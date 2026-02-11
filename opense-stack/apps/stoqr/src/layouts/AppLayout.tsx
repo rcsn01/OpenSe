@@ -100,7 +100,7 @@ export const AppLayout = () => {
   )
 
   return (
-    <SharedAppLayout sidebar={sidebar}>
+    <SharedAppLayout sidebar={sidebar} profileFallback={userName?.[0] || 'U'}>
       <Outlet />
     </SharedAppLayout>
   )
