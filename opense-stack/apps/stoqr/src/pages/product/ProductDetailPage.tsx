@@ -101,18 +101,20 @@ export const ProductDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="stack">
-        <div className="flex-between" style={{ marginBottom: 24 }}>
-          <div className="row">
-            <div style={{ width: 32, height: 32, background: '#e2e8f0', borderRadius: 8 }} />
-            <div className="stack" style={{ gap: 4 }}>
-              <div style={{ width: 120, height: 24, background: '#e2e8f0', borderRadius: 4 }} />
-              <div style={{ width: 80, height: 16, background: '#f1f5f9', borderRadius: 4 }} />
+      <div className="p-8 max-w-7xl mx-auto">
+        <div className="stack">
+          <div className="flex-between" style={{ marginBottom: 24 }}>
+            <div className="row">
+              <div style={{ width: 32, height: 32, background: '#e2e8f0', borderRadius: 8 }} />
+              <div className="stack" style={{ gap: 4 }}>
+                <div style={{ width: 120, height: 24, background: '#e2e8f0', borderRadius: 4 }} />
+                <div style={{ width: 80, height: 16, background: '#f1f5f9', borderRadius: 4 }} />
+              </div>
             </div>
           </div>
-        </div>
-        <div className="grid grid-3" style={{ height: 100 }}>
-           {[1,2,3].map(i => <div key={i} className="card" style={{ background: '#f8fafc' }} />)}
+          <div className="grid grid-3" style={{ height: 100 }}>
+             {[1,2,3].map(i => <div key={i} className="card" style={{ background: '#f8fafc' }} />)}
+          </div>
         </div>
       </div>
     )
@@ -125,6 +127,7 @@ export const ProductDetailPage = () => {
   const qrValue = product.sku || product.id
 
   return (
+    <div className="p-8 max-w-7xl mx-auto">
     <div className="stack" style={{ paddingBottom: 64 }}>
       {/* Top Navigation & Header */}
       <div className="stack" style={{ gap: 24 }}>
@@ -275,6 +278,7 @@ export const ProductDetailPage = () => {
           },
         ]}
       />
+    </div>
     </div>
   )
 }
