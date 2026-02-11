@@ -10,7 +10,7 @@ import { QuickScanTab, ScannerModule } from '../components/Scan/QuickScanTab'
 import { toast } from 'sonner'
 
 export const ScanPage = () => {
-  const { companyId, companyName } = useCompany()
+  const { companyId } = useCompany()
   const [scanValue, setScanValue] = useState('')
   const [isScanning, setIsScanning] = useState(false)
   const scannerRef = useRef<Html5Qrcode | null>(null)
@@ -92,12 +92,7 @@ export const ScanPage = () => {
   )
 
   return (
-    <BasePage
-      companyId={companyId}
-      isLoading={false}
-      title="Scanner"
-      subtitle={companyName ?? undefined}
-    >
+    <BasePage companyId={companyId} isLoading={false}>
       <Tabs
         tabs={[
           { 

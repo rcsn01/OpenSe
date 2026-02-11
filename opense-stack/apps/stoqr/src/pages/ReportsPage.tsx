@@ -36,7 +36,7 @@ const buildSeries = (currentValue: number, deltasByDay: Record<string, number>) 
 }
 
 export const ReportsPage = () => {
-  const { companyId, companyName } = useCompany()
+  const { companyId } = useCompany()
   const [isLoading, setIsLoading] = useState(true)
   
   // Data State
@@ -89,7 +89,7 @@ export const ReportsPage = () => {
   }, [series])
 
   return (
-    <BasePage companyId={companyId} isLoading={isLoading} title="Reports" subtitle={companyName ?? undefined}>
+    <BasePage companyId={companyId} isLoading={isLoading}>
       <Tabs
       tabs={[
         {
