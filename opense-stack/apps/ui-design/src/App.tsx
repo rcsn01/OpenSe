@@ -13,6 +13,7 @@ import { DataDisplayPage } from './pages/DataDisplayPage'
 import { NavigationPage } from './pages/NavigationPage'
 import { OverlaysPage } from './pages/OverlaysPage'
 import { DividersPage } from './pages/DividersPage'
+import { TestPage } from './pages/TestPage'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/navigation" element={<NavigationPage />} />
           <Route path="/overlays" element={<OverlaysPage />} />
           <Route path="/dividers" element={<DividersPage />} />
+          <Route path="/test" element={<TestPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
