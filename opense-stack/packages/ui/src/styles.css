@@ -1,8 +1,8 @@
 /* ── Shared Design Tokens ─────────────────────────────── */
 :root {
   /* Brand palette */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
+  --color-primary: #66c13f;
+  --color-primary-hover: #8ed674;
   --color-primary-light: #dbeafe;
   --color-primary-foreground: #ffffff;
 
@@ -53,12 +53,12 @@
   --radius-full: 9999px;
 
   /* Spacing scale */
-  --gap-1: 0.25rem;
-  --gap-2: 0.5rem;
-  --gap-3: 0.75rem;
-  --gap-4: 1rem;
-  --gap-5: 1.5rem;
-  --gap-6: 2rem;
+  --gap-1: 0rem;
+  --gap-2: 0.15rem;
+  --gap-3: 0.25rem;
+  --gap-4: 0.5rem;
+  --gap-5: 0.75rem;
+  --gap-6: 1rem;
 
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -139,6 +139,29 @@ button, input, select, textarea { font: inherit; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: var(--radius-full); }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-border-hover); }
+
+/* BasePage content wrapper - reduced padding for tighter layout */
+.base-page-content {
+  padding: var(--gap-4);
+}
+
+/* EmptyState & utility */
+.muted { color: var(--color-muted-foreground); }
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--color-muted-foreground);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.empty-state-illustration {
+  width: 64px;
+  height: 64px;
+  color: var(--color-muted-foreground);
+}
 
 /* AppSidebar main content - reserve left space for fixed sidebar on desktop (1024px+) */
 @media (min-width: 1024px) {
