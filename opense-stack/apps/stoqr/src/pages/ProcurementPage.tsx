@@ -10,7 +10,7 @@ import { ReplenishmentTab } from '../components/Procurement/ReplenishmentTab'
 import { SuppliersTab } from '../components/Procurement/SuppliersTab'
 
 export const ProcurementPage = () => {
-  const { companyId, companyName } = useCompany()
+  const { companyId } = useCompany()
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -34,8 +34,6 @@ export const ProcurementPage = () => {
     <BasePage
       companyId={companyId}
       isLoading={isLoading}
-      title="Procurement"
-      subtitle={companyName ?? undefined}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
     >

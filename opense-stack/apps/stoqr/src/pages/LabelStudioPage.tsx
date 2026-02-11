@@ -6,14 +6,12 @@ import { LocationLabelsTab } from '../components/LabelStudio/LocationLabelsTab'
 import { ShippingLabelsTab } from '../components/LabelStudio/ShippingLabelsTab'
 
 export const LabelStudioPage = () => {
-  const { companyId, companyName } = useCompany()
+  const { companyId } = useCompany()
 
   return (
     <BasePage
       companyId={companyId}
       isLoading={false}
-      title="Label Studio"
-      subtitle={companyName ?? undefined}
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to access label tools."
     >
