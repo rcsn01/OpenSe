@@ -53,7 +53,7 @@ export const InventoryListPage = () => {
 
   const loadStats = async () => {
     if (!companyId) return
-    const { data } = await supabase
+    const { data } = await db
       .from('products')
       .select('quantity_on_hand, cost_price, reorder_point')
       .eq('company_id', companyId)
@@ -70,7 +70,7 @@ export const InventoryListPage = () => {
     if (!companyId) return
     setIsLoading(true)
 
-    let query = supabase
+    let query = db
       .from('products')
       .select('id, name, sku, quantity_on_hand, reorder_point, folder_id, cost_price, selling_price, category', { count: 'exact' })
       .eq('company_id', companyId)
