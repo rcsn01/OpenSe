@@ -7,6 +7,8 @@ interface EditorHeaderProps {
     workflowName: string;
     onNameChange: (name: string) => void;
     onNameBlur: () => void;
+    /** Tab to show when returning to dashboard (personal vs org). Ensures saved workflow appears in the list. */
+    dashboardTab?: 'personal' | 'org';
     onImportClick: () => void;
     onExportClick: () => void;
     onSave: () => void;
@@ -32,6 +34,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
     workflowName,
     onNameChange,
     onNameBlur,
+    dashboardTab = 'personal',
     onImportClick,
     onExportClick,
     onSave,
@@ -52,7 +55,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
     return (
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-4 z-10 shrink-0 shadow-sm">
             <div className="flex items-center gap-4">
-                <Link to="/dashboard" className="p-2 text-slate-400 hover:bg-slate-100 rounded-md transition-colors" title="Back to Dashboard">
+                <Link to={`/dashboard/${dashboardTab}`} className="p-2 text-slate-400 hover:bg-slate-100 rounded-md transition-colors" title="Back to Dashboard">
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div className="h-6 w-px bg-slate-200" />
