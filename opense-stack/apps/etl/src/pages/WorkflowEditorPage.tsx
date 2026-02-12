@@ -371,19 +371,28 @@ export const WorkflowEditorPage = () => {
 
     const graphData = { nodes: sanitizedNodes, edges };
 
+    // Personal tab uses /editor/new (no orgId); org tab uses /editor/new?orgId=xxx
+    // Only set org_id when URL explicitly has orgId — otherwise workflow stays personal
+    const orgIdForSave = orgIdParam?.trim() ? orgIdParam.trim() : null;
+
     saveMutation.mutate(
       {
         id: workflowId,
         name: workflowName.trim(),
         graph_data: graphData,
         owner_id: user.id,
-        org_id: orgIdParam || null,
+        org_id: orgIdForSave,
       },
       {
         onSuccess: (data) => {
           const savedId = data.id || workflowId;
           setWorkflowId(savedId);
           setRunMessage('Workflow saved');
+          // Ensure "Back to Dashboard" redirects to the tab where this workflow will appear
+          const tab = data.org_id ? 'org' : 'personal';
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem('dashboardLastTab', tab);
+          }
           if (!workflowId && data.id) {
             navigate(`/editor/${data.id}`, { replace: true });
           }
@@ -483,6 +492,7 @@ export const WorkflowEditorPage = () => {
         workflowName={workflowName}
         onNameChange={setWorkflowName}
         onNameBlur={persistNameIfPossible}
+        dashboardTab={orgIdParam?.trim() || workflowData?.org_id ? 'org' : 'personal'}
         onImportClick={handleImportClick}
         onExportClick={handleExport}
         onSave={handleSaveWorkflow}
