@@ -5,6 +5,9 @@ import { resolve } from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 5991,
+  },
   // Load .env from workspace root (opense-stack) so opense-stack/.env is used
   envDir: resolve(__dirname, '../..'),
   test: {
