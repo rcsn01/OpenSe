@@ -2,14 +2,14 @@
 
 ### Prereqs
 
-- Node.js 20+ and npm
-- Supabase CLI (`npm i -g supabase` or use the repo devDependency)
+- Node.js 20+ and pnpm
+- Supabase CLI (`pnpm add -g supabase` or use the repo devDependency)
 
 ### Install dependencies
 
 ```bash
 cd /Users/arcsin/Syncthing/Projects/OpenSe/opense-stack
-npm install
+pnpm install
 ```
 
 ### Frontend (ETL or StoQR)
@@ -18,21 +18,21 @@ Start a single app:
 
 ```bash
 cd /Users/arcsin/Syncthing/Projects/OpenSe/opense-stack
-npm run dev:etl
+ppnpm run dev:etl
 ```
 
 or
 
 ```bash
 cd /Users/arcsin/Syncthing/Projects/OpenSe/opense-stack
-npm run dev:stoqr
+ppnpm run dev:stoqr
 ```
 
 Start all frontends managed by Turborepo:
 
 ```bash
 cd /Users/arcsin/Syncthing/Projects/OpenSe/opense-stack
-npm run dev
+pnpm run dev
 ```
 
 ### Backend (Supabase)
@@ -41,28 +41,28 @@ Start local Supabase (Postgres, Auth, Storage, Functions):
 
 ```bash
 cd /Users/arcsin/Syncthing/Projects/OpenSe/opense-stack
-npm run db:start
+pnpm run db:start
 ```
 
 Apply migrations:
 
 ```bash
 cd /Users/arcsin/Syncthing/Projects/OpenSe/opense-stack
-npm run db:migrate
+pnpm run db:migrate
 ```
 
 Reset local database (drops and recreates):
 
 ```bash
 cd /Users/arcsin/Syncthing/Projects/OpenSe/opense-stack
-npm run db:reset
+pnpm run db:reset
 ```
 
 Stop Supabase:
 
 ```bash
 cd /Users/arcsin/Syncthing/Projects/OpenSe/opense-stack
-npm run db:stop
+pnpm run db:stop
 ```
 
 ### Environment variables
