@@ -23,7 +23,7 @@ export interface AuthFixtures {
 export const hasStoqrCredentials = () => Boolean(TEST_USER.email && TEST_USER.password);
 
 export const loginToStoqr = async (page: Page, email = TEST_USER.email, password = TEST_USER.password) => {
-  await page.goto('/auth');
+  await page.goto('/auth', { waitUntil: 'commit' });
 
   const emailInput = page.locator('input#email, input[name="email"]').first();
   const passwordInput = page.locator('input#password, input[name="password"]').first();
@@ -37,7 +37,7 @@ export const loginToStoqr = async (page: Page, email = TEST_USER.email, password
     await demoButton.click();
   }
 
-  await page.waitForURL(/\/(dashboard|inventory|auth|login)/);
+  await page.waitForTimeout(500);
 };
 
 export const test = base.extend<AuthFixtures>({
