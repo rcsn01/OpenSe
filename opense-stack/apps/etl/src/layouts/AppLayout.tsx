@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Outlet, useLocation, Navigate, NavLink } from 'react-router-dom'
-import { LayoutDashboard, LayoutTemplate, Building2, Activity } from 'lucide-react'
+import { LayoutDashboard, LayoutTemplate, Building2, Activity, Search } from 'lucide-react'
 import {
   AppLayout as SharedAppLayout,
   SideNav,
@@ -9,6 +9,8 @@ import {
   SideNavGroupList,
   SideNavBrandSlot,
   SideNavUserProfile,
+  TopBar,
+  Input,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
 import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations'
@@ -28,7 +30,9 @@ export const AppLayout = () => {
   const redirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null)
+  const [dashboardSearch, setDashboardSearch] = useState('')
   const { data: userOrgs = [] } = useUserOrganisations(user?.id)
+  const isDashboard = location.pathname.startsWith('/dashboard')
 
   useEffect(() => {
     if (userOrgs.length > 0 && !currentOrg) {
@@ -134,12 +138,32 @@ export const AppLayout = () => {
     </>
   )
 
+  const topBar = isDashboard ? (
+    <TopBar
+      left={
+        <Input
+          placeholder="Search workflows..."
+          value={dashboardSearch}
+          onChange={(e) => setDashboardSearch(e.target.value)}
+          prefix={<Search className="w-4 h-4" />}
+          className="max-w-xs"
+        />
+      }
+      profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
+    />
+  ) : undefined
+
+  const outletContext = isDashboard
+    ? { currentOrg, dashboardSearch, setDashboardSearch }
+    : { currentOrg }
+
   return (
     <SharedAppLayout
       sidebar={sidebar}
+      topBar={topBar}
       profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
     >
-      <Outlet context={{ currentOrg }} />
+      <Outlet context={outletContext} />
     </SharedAppLayout>
   )
 }
