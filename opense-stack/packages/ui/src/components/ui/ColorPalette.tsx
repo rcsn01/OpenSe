@@ -48,43 +48,47 @@ interface PrimaryColor {
   hex: string
 }
 
-interface PaletteRowConfig {
-  label: string
-  saturationMultiplier: number   // 1 = normal, 0 = grey, 0.5 = muted
-  lightnessOffset: number        // additional offset: e.g. +10 for lighter, -10 for darker
-}
-
 interface ColorPaletteProps {
   colors?: PrimaryColor[]
-  step?: number
+  steps?: number
   className?: string
 }
 
 /* ── Component ────────────────────────────────────────── */
 
+const TOTAL_STEPS = 10
+const BASE_STEP = 5 // base color is in the middle (step 5 of 10)
+
 export function ColorPalette({
   colors = [
-    { name: 'Primary Blue', hex: '#2563eb' },
-    { name: 'Primary Violet', hex: '#7c3aed' },
+    { name: 'Primary1', hex: '#ccd5ae' },
+    { name: 'Primary2', hex: '#d4a373' },
   ],
-  step = 2,
+  steps = TOTAL_STEPS,
   className,
 }: ColorPaletteProps) {
   const [hoveredSwatch, setHoveredSwatch] = useState<string | null>(null)
-
-  // Row configurations: original, grey-lighter x2, darker x2
-  const rowConfigs: PaletteRowConfig[] = [
-    { label: 'Original', saturationMultiplier: 1, lightnessOffset: 0 },
-    { label: 'Grey (Light 1)', saturationMultiplier: 0.15, lightnessOffset: 8 },
-    { label: 'Grey (Light 2)', saturationMultiplier: 0.08, lightnessOffset: 14 },
-    { label: 'Dark 1', saturationMultiplier: 0.75, lightnessOffset: -8 },
-    { label: 'Dark 2', saturationMultiplier: 0.55, lightnessOffset: -16 },
-  ]
 
   return (
     <div className={cn('space-y-12', className)}>
       {colors.map((color) => {
         const [baseH, baseS, baseL] = hexToHsl(color.hex)
+
+        // Generate 10 steps: 1=brightest, 5=base, 10=darkest
+        // Linear interpolation: L=100 at step 1, L=baseL at step 5, L=0 at step 10
+        const swatches: { step: number; hex: string; l: number }[] = []
+        for (let i = 1; i <= steps; i++) {
+          let l: number
+          if (i <= BASE_STEP) {
+            // Steps 1–5: 100 → baseL
+            l = 100 - ((100 - baseL) * (i - 1)) / (BASE_STEP - 1)
+          } else {
+            // Steps 5–10: baseL → 0
+            l = baseL - (baseL * (i - BASE_STEP)) / (steps - BASE_STEP)
+          }
+          l = Math.max(0, Math.min(100, Math.round(l)))
+          swatches.push({ step: i, hex: hslToHex(baseH, baseS, l), l })
+        }
 
         return (
           <div key={color.hex} className="space-y-6">
@@ -99,80 +103,47 @@ export function ColorPalette({
               </div>
             </div>
 
-            {/* Rows */}
-            {rowConfigs.map((rowConfig) => {
-              const rowS = Math.max(0, Math.min(100, Math.round(baseS * rowConfig.saturationMultiplier)))
-              const rowBaseL = Math.max(0, Math.min(100, baseL + rowConfig.lightnessOffset))
-
-              // Generate lighter steps (toward white: increase L by step% each time)
-              const lighterSteps: { hex: string; l: number }[] = []
-              for (let l = rowBaseL; l <= 100; l += step) {
-                const clamped = Math.min(100, l)
-                lighterSteps.push({ hex: hslToHex(baseH, rowS, clamped), l: clamped })
-              }
-              if (lighterSteps[lighterSteps.length - 1]?.l !== 100) {
-                lighterSteps.push({ hex: hslToHex(baseH, rowS, 100), l: 100 })
-              }
-
-              // Generate darker steps (toward black: decrease L by step% each time)
-              const darkerSteps: { hex: string; l: number }[] = []
-              for (let l = rowBaseL - step; l >= 0; l -= step) {
-                const clamped = Math.max(0, l)
-                darkerSteps.push({ hex: hslToHex(baseH, rowS, clamped), l: clamped })
-              }
-              if (darkerSteps.length === 0 || darkerSteps[darkerSteps.length - 1]?.l !== 0) {
-                darkerSteps.push({ hex: hslToHex(baseH, rowS, 0), l: 0 })
-              }
-
-              // Combine: darker (reversed) → base → lighter
-              const allSteps = [...darkerSteps.reverse(), ...lighterSteps]
-
-              return (
-                <div key={rowConfig.label} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase tracking-wider">
-                      {rowConfig.label}
-                    </span>
-                    <span className="text-xs text-[var(--color-muted-foreground)]">
-                      S: {rowS}% · Base L: {rowBaseL}%
-                    </span>
-                  </div>
-                  <div className="flex overflow-x-auto pb-2">
-                    {allSteps.map((swatch, i) => {
-                      const swatchKey = `${color.hex}-${rowConfig.label}-${i}`
-                      const isHovered = hoveredSwatch === swatchKey
-                      const isBase = swatch.l === rowBaseL
-                      const textColor = getContrastColor(swatch.hex)
-                      return (
-                        <div
-                          key={swatchKey}
-                          className={cn(
-                            'relative flex-shrink-0 transition-all duration-150 cursor-pointer',
-                            isBase ? 'w-10 h-14 z-10 ring-2 ring-[var(--color-foreground)]/30 rounded-sm' : 'w-4 h-12',
-                            isHovered && 'scale-y-110 z-20',
-                          )}
-                          style={{ backgroundColor: swatch.hex }}
-                          onMouseEnter={() => setHoveredSwatch(swatchKey)}
-                          onMouseLeave={() => setHoveredSwatch(null)}
-                          title={`${swatch.hex.toUpperCase()} · L: ${swatch.l}%`}
-                        >
-                          {isHovered && (
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[var(--color-foreground)] px-1.5 py-0.5 text-[10px] text-[var(--color-background)] shadow z-30">
-                              {swatch.hex.toUpperCase()}
-                            </div>
-                          )}
-                          {isBase && (
-                            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold" style={{ color: textColor }}>
-                              BASE
-                            </span>
-                          )}
+            {/* 10-step scale: 1=brightest, 5=base, 10=darkest */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase tracking-wider">
+                  1 (brightest) → 10 (darkest) · Base at {BASE_STEP}
+                </span>
+              </div>
+              <div className="flex overflow-x-auto pb-2 gap-0.5">
+                {swatches.map((swatch) => {
+                  const swatchKey = `${color.hex}-${swatch.step}`
+                  const isHovered = hoveredSwatch === swatchKey
+                  const isBase = swatch.step === BASE_STEP
+                  const textColor = getContrastColor(swatch.hex)
+                  return (
+                    <div
+                      key={swatchKey}
+                      className={cn(
+                        'relative flex-shrink-0 transition-all duration-150 cursor-pointer',
+                        isBase ? 'w-10 h-14 z-10 ring-2 ring-[var(--color-foreground)]/30 rounded-sm' : 'w-4 h-12',
+                        isHovered && 'scale-y-110 z-20',
+                      )}
+                      style={{ backgroundColor: swatch.hex }}
+                      onMouseEnter={() => setHoveredSwatch(swatchKey)}
+                      onMouseLeave={() => setHoveredSwatch(null)}
+                      title={`${swatch.step}: ${swatch.hex.toUpperCase()} · L: ${swatch.l}%`}
+                    >
+                      {isHovered && (
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-[var(--color-foreground)] px-1.5 py-0.5 text-[10px] text-[var(--color-background)] shadow z-30">
+                          {swatch.step}: {swatch.hex.toUpperCase()}
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
+                      )}
+                      {isBase && (
+                        <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold" style={{ color: textColor }}>
+                          BASE
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         )
       })}
