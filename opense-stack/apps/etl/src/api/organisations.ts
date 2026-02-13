@@ -1,6 +1,22 @@
 import { supabase, db } from '../lib/supabase'
 import { OrgSimple, OrgInvite } from '../types/organisation'
 
+const parseResponseBody = async (response: Response): Promise<any> => {
+  const contentType = response.headers.get('content-type') ?? ''
+  if (contentType.includes('application/json')) {
+    return response.json()
+  }
+
+  const text = await response.text()
+  if (!text) return null
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { message: text }
+  }
+}
+
 export const updateOrganisationName = async (orgId: string, name: string) => {
   const { error } = await db.from('organisations').update({ name }).eq('id', orgId)
   if (error) throw error
@@ -145,13 +161,21 @@ export const updateOrganisationTier = async (
   orgName?: string
 ) => {
   // Get fresh session for edge function calls
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData?.session?.access_token;
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData?.session?.access_token
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+  if (!accessToken) {
+    throw new Error('Missing authenticated session. Please sign in again and retry.')
+  }
+
+  if (!supabaseUrl || !anonKey) {
+    throw new Error('Missing Supabase environment variables for edge-function calls.')
+  }
 
   // Try update-subscription first via direct fetch
-  let updateResult: { data: any; error: any } = { data: null, error: null };
+  let updateResult: { data: any; error: any } = { data: null, error: null }
   try {
     const updateRes = await window.fetch(`${supabaseUrl}/functions/v1/update-subscription`, {
       method: 'POST',
@@ -161,23 +185,23 @@ export const updateOrganisationTier = async (
         'apikey': anonKey,
       },
       body: JSON.stringify({ orgId, tier }),
-    });
-    const updateBody = await updateRes.json();
+    })
+    const updateBody = await parseResponseBody(updateRes)
 
     if (!updateRes.ok) {
-      updateResult.error = new Error(updateBody?.error || updateBody?.message || `HTTP ${updateRes.status}`);
+      updateResult.error = new Error(updateBody?.error || updateBody?.message || `HTTP ${updateRes.status}`)
     } else {
-      updateResult.data = updateBody;
+      updateResult.data = updateBody
     }
-  } catch (e: any) {
-    updateResult.error = e;
+  } catch (error: unknown) {
+    updateResult.error = error
   }
 
   if (updateResult.error) {
     // Fallback: create-checkout via direct fetch
     if (orgName) {
-      const successUrl = `${window.location.origin}/organisation?success=true`;
-      const cancelUrl = `${window.location.origin}/organisation?canceled=true`;
+      const successUrl = `${window.location.origin}/organisation?success=true`
+      const cancelUrl = `${window.location.origin}/organisation?canceled=true`
 
       const checkoutRes = await window.fetch(`${supabaseUrl}/functions/v1/create-checkout`, {
         method: 'POST',
@@ -187,20 +211,20 @@ export const updateOrganisationTier = async (
           'apikey': anonKey,
         },
         body: JSON.stringify({ orgName, tier, successUrl, cancelUrl, orgId }),
-      });
-      const checkoutBody = await checkoutRes.json();
+      })
+      const checkoutBody = await parseResponseBody(checkoutRes)
 
       if (!checkoutRes.ok) {
-        throw new Error(checkoutBody?.error || checkoutBody?.message || `HTTP ${checkoutRes.status}`);
+        throw new Error(checkoutBody?.error || checkoutBody?.message || `HTTP ${checkoutRes.status}`)
       }
-      if (!checkoutBody?.url) throw new Error('Checkout URL not returned');
-      return { paymentUrl: checkoutBody.url, message: 'Checkout started' };
+      if (!checkoutBody?.url) throw new Error('Checkout URL not returned')
+      return { paymentUrl: checkoutBody.url, message: 'Checkout started' }
     }
 
-    throw updateResult.error;
+    throw updateResult.error
   }
-  if (updateResult.data?.error) throw new Error(updateResult.data.error);
-  return updateResult.data;
+  if (updateResult.data?.error) throw new Error(updateResult.data.error)
+  return updateResult.data
 }
 
 /**
