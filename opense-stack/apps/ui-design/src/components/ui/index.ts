@@ -33,6 +33,7 @@ export {
   // Layout
   Divider,
   ColorPalette,
+  Shades,
   Container, VStack, HStack, Grid,
   AppLayout,
   TopBar,

@@ -1,4 +1,5 @@
 import { DollarSign, Package, AlertTriangle, XCircle } from 'lucide-react'
+import { StackLayout } from '@repo/ui'
 import { formatCurrency } from '../../utils'
 
 export const StatsCards = ({
@@ -54,7 +55,7 @@ export const StatsCards = ({
   ]
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+    <StackLayout variant="stats">
       {items.map((item) => {
         const Icon = item.icon
         return (
@@ -86,6 +87,6 @@ export const StatsCards = ({
           </div>
         )
       })}
-    </div>
+    </StackLayout>
   )
 }
