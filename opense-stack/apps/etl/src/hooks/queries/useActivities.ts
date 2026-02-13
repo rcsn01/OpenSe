@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { listExecutionLogs } from '../../api/activities'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '@repo/shared/auth/context'
 import { mockExecutionLogs } from '../../lib/demoData'
 import type { ExecutionLog } from '../../components/shared/ActivityLogTable'
 

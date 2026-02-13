@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext, useSearchParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Loader2, Users, CreditCard, Loader, XCircle, Activity, FileText } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@repo/shared/auth/context';
 import { Member } from '../components/settings/types';
 
 // New Imports

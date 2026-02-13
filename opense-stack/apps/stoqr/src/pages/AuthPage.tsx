@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase, db } from '../supabaseClient'
+import { signIn, signUp } from '@repo/shared/auth'
 
 export const AuthPage = () => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
@@ -17,19 +17,19 @@ export const AuthPage = () => {
     setMessage(null)
 
     if (mode === 'signin') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      setMessage(error ? error.message : 'Welcome back!')
+      try {
+        await signIn(email, password)
+        setMessage('Welcome back!')
+      } catch (error: any) {
+        setMessage(error?.message ?? 'Failed to sign in')
+      }
     } else {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
-      })
-      setMessage(
-        error
-          ? error.message
-          : 'Check your email to confirm your account before signing in.',
-      )
+      try {
+        await signUp(email, password, { fullName })
+        setMessage('Check your email to confirm your account before signing in.')
+      } catch (error: any) {
+        setMessage(error?.message ?? 'Failed to sign up')
+      }
     }
 
     if (inviteToken.trim()) {

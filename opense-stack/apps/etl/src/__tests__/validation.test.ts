@@ -9,8 +9,8 @@
  * - Workflow import schema validation (Audit S5)
  */
 import { describe, it, expect } from 'vitest'
+import { validatePassword } from '@repo/shared/auth/validation'
 import {
-  validatePassword,
   isValidUUID,
   sanitizeText,
   isValidEmail,

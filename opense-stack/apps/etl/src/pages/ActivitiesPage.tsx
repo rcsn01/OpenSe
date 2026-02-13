@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BarChart3, FileText } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@repo/shared/auth/context';
 import { useExecutionLogs } from '../hooks/queries/useActivities';
 import { usePersonalUsageStats } from '../hooks/queries/useUsageStats';
 import { ActivityLogTable } from '../components/shared/ActivityLogTable';

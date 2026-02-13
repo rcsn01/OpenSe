@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Search, Copy, LayoutTemplate, Loader2, GitFork, AlertCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@repo/shared/auth/context';
 import { useGallery, GalleryWorkflow } from '../hooks/useGallery';
 import { Input, Button } from '@repo/ui';
 import { cloneWorkflowFromTemplate } from '../api/workflows';

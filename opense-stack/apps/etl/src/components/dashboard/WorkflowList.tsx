@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@repo/shared/auth/context';
 import { WorkflowTable } from './WorkflowTable';
 import { useDeleteWorkflow, useWorkflows } from '../../hooks/queries/useWorkflows';
 import { OrgSimple } from '../../types/organisation';
