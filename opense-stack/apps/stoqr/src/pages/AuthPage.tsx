@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase, db } from '../supabaseClient'
 
 export const AuthPage = () => {
@@ -41,7 +42,9 @@ export const AuthPage = () => {
   return (
     <div className="auth-shell">
       <div className="auth-card">
-        <h1>Open-StoQR</h1>
+        <Link to="/" className="text-inherit no-underline hover:opacity-90">
+          <h1>Open-StoQR</h1>
+        </Link>
         <p className="muted" style={{ marginTop: 0 }}>
           Sign in to manage inventory and your team.
         </p>
