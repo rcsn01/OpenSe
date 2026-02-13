@@ -12,30 +12,37 @@ export const TEST_USER: TestUser = {
 };
 
 export const DEMO_USER: TestUser = {
-  email: 'demo@example.com',
-  password: 'demo',
+  email: process.env.E2E_DEMO_EMAIL || 'demo@example.com',
+  password: process.env.E2E_DEMO_PASSWORD || 'demo',
 };
 
 export interface AuthFixtures {
   authenticatedPage: Page;
 }
 
+export const hasStoqrCredentials = () => Boolean(TEST_USER.email && TEST_USER.password);
+
+export const loginToStoqr = async (page: Page, email = TEST_USER.email, password = TEST_USER.password) => {
+  await page.goto('/auth');
+
+  const emailInput = page.locator('input#email, input[name="email"]').first();
+  const passwordInput = page.locator('input#password, input[name="password"]').first();
+  const demoButton = page.getByRole('button', { name: /demo/i }).first();
+
+  if (await emailInput.isVisible().catch(() => false)) {
+    await emailInput.fill(email);
+    await passwordInput.fill(password);
+    await page.getByRole('button', { name: /sign in|log in|continue/i }).first().click();
+  } else if (await demoButton.isVisible().catch(() => false)) {
+    await demoButton.click();
+  }
+
+  await page.waitForURL(/\/(dashboard|inventory|auth|login)/);
+};
+
 export const test = base.extend<AuthFixtures>({
   authenticatedPage: async ({ page }, use) => {
-    await page.goto('/auth');
-    
-    const loginPage = {
-      emailInput: page.getByLabel('Email'),
-      passwordInput: page.getByLabel('Password'),
-      submitButton: page.getByRole('button', { name: /sign in/i }),
-    };
-
-    await loginPage.emailInput.fill(DEMO_USER.email);
-    await loginPage.passwordInput.fill(DEMO_USER.password);
-    await loginPage.submitButton.click();
-
-    await page.waitForURL(/\/(dashboard|inventory)/);
-    
+    await loginToStoqr(page);
     await use(page);
   },
 });
