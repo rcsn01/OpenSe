@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@repo/shared/auth/context';
 import { ModernTeamSettings } from './TeamSettings';
 import { Member } from '../settings/types';
 import { OrgSimple } from '../../types/organisation';

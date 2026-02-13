@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@repo/ui';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from '@repo/shared/auth/context';
 import { DemoProvider } from './context/DemoContext';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { ReactFlowProvider } from 'reactflow';
@@ -59,7 +59,7 @@ export default function App() {
       <BrowserRouter>
         <ReactFlowProvider>
         <DemoProvider>
-          <AuthProvider>
+          <AuthProvider demoMode superAdmin>
             <WorkflowProvider>
               <SystemCheck>
                 <Routes>

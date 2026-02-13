@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { listOrganisationMembers, listUserOrganisations } from '../../api/organisations'
 import { OrgSimple } from '../../types/organisation'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '@repo/shared/auth/context'
 import { mockOrganisation, mockOrgMembers, DEMO_ORG_ID } from '../../lib/demoData'
 import type { Member } from '../../components/settings/types'
 

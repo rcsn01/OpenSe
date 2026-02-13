@@ -1,5 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@repo/shared/auth/context';
 import { useExecutionLogs } from '../../hooks/queries/useActivities';
 import { ActivityLogTable } from '../shared/ActivityLogTable';
 import { OrgSimple } from '../../types/organisation';

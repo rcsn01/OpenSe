@@ -11,9 +11,9 @@
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
 import { Loader2 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@repo/shared/auth/context';
+import { hasUsers } from '@repo/shared/auth';
 
 const SESSION_KEY = 'system_check_passed';
 
@@ -39,14 +39,7 @@ export const SystemCheck = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
-        const { data: hasUsersResult, error } = await supabase.rpc('has_users');
-
-        if (error) {
-          console.error('System check failed:', error);
-          setChecked(true);
-          return;
-        }
-
+        const hasUsersResult = await hasUsers();
         if (hasUsersResult === false) {
           if (location.pathname !== '/god-mode') {
             navigate('/god-mode', { replace: true });
