@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { supabase } from '../supabaseClient'
+import { useAuth } from '@repo/shared/auth/context'
 import {
   LayoutDashboard,
   Package,
@@ -40,22 +40,20 @@ const configNavItems = [
 export const AppLayout = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user, logout } = useAuth()
   const [userName, setUserName] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
   const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data.user
-      setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
-      setUserEmail(user?.email || '')
-    })
-  }, [])
+    setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
+    setUserEmail(user?.email || '')
+  }, [user])
 
   const handleSignOut = async () => {
     try {
       setSigningOut(true)
-      await supabase.auth.signOut()
+      await logout()
       navigate('/')
     } finally {
       setSigningOut(false)

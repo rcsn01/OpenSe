@@ -10,7 +10,7 @@ import {
   SideNavBrandSlot,
   SideNavUserProfile,
 } from '@repo/ui'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@repo/shared/auth/context'
 import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations'
 
 const mainNavItems = [

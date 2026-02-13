@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { signUp } from '../../api/auth';
+import { signUp } from '@repo/shared/auth';
 
 export const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
