@@ -8,6 +8,7 @@ import {
   Lock,
   CheckCircle,
 } from 'lucide-react'
+import { buildAccountsAuthUrl } from '../lib/authRedirect'
 
 export const LandingPage = () => {
   const { user } = useAuth()
@@ -43,18 +44,18 @@ export const LandingPage = () => {
               </Link>
             ) : (
               <>
-                <Link
-                  to="/auth"
+                <a
+                  href={buildAccountsAuthUrl('signin')}
                   className="text-slate-600 hover:text-slate-900 font-medium text-sm"
                 >
                   Log in
-                </Link>
-                <Link
-                  to="/auth"
+                </a>
+                <a
+                  href={buildAccountsAuthUrl('signup')}
                   className="px-4 py-2 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors text-sm"
                 >
                   Get Started
-                </Link>
+                </a>
               </>
             )}
           </div>
@@ -85,18 +86,18 @@ export const LandingPage = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-            <Link
-              to="/auth"
+            <a
+              href={buildAccountsAuthUrl('signup')}
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 shadow-lg shadow-blue-600/20 hover:shadow-xl hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
             >
               Start Free <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
-              to="/auth"
+            </a>
+            <a
+              href={buildAccountsAuthUrl('signin')}
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white text-slate-700 border border-slate-200 font-semibold text-lg hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2"
             >
               Sign in
-            </Link>
+            </a>
           </div>
         </div>
 
@@ -181,12 +182,12 @@ export const LandingPage = () => {
                 Built on Supabase for reliability and scale. Your data stays secure and
                 accessible when you need it.
               </p>
-              <Link
-                to="/auth"
+              <a
+                href={buildAccountsAuthUrl('signup')}
                 className="text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
               >
                 Get Started <ArrowRight className="w-4 h-4" />
-              </Link>
+              </a>
             </div>
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -mr-16 -mt-16" />
           </div>

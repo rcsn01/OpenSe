@@ -12,8 +12,7 @@ import { AppLayout } from './layouts/AppLayout';
 import { AuthLayout } from './layouts/AuthLayout';
 
 // Pages (eagerly loaded)
-import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
+import { AuthRedirectPage } from './pages/auth/AuthRedirectPage';
 import { GodModePage } from './pages/auth/GodModePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { WorkflowEditorPage } from './pages/WorkflowEditorPage';
@@ -72,11 +71,11 @@ function AppContent() {
                   {/* Public Landing Page */}
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/god-mode" element={<GodModePage />} />
-                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/login" element={<AuthRedirectPage mode="signin" />} />
 
                   {/* Auth Routes */}
                   <Route element={<AuthLayout />}>
-                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/register" element={<AuthRedirectPage mode="signup" />} />
                   </Route>
 
                   {/* Protected Routes */}

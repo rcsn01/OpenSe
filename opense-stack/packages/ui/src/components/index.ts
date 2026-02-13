@@ -23,7 +23,6 @@ export { Sidebar, SidebarItem, SidebarSection } from './ui/Sidebar'
 export { ColorPalette } from './ui/ColorPalette'
 export { AppSidebar, AppSidebarLinkProvider, useAppSidebarLinkRenderer, type AppSidebarProps, type NavItem, type NavGroup } from './ui/AppSidebar'
 export { ThemeProvider, useTheme } from './ui/ThemeProvider'
-export { SharedLoginPage, type SharedLoginPageProps } from './auth/SharedLoginPage'
 
 // Components – Layout
 export { Container, VStack, HStack, Grid } from './layout/Layout'
