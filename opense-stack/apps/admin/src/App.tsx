@@ -4,6 +4,8 @@ import { ThemeProvider } from '@repo/ui'
 import { GodModePage } from './pages/GodModePage'
 import { LoginPage } from './pages/LoginPage'
 import { StoqrAdminPage } from './pages/StoqrAdminPage'
+import { SuperAdminPage } from './pages/SuperAdminPage'
+import { PlatformOverviewPage } from './pages/PlatformOverviewPage'
 
 const ProtectedSuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation()
@@ -32,6 +34,23 @@ const AppRoutes = () => {
       <Route path="/god-mode" element={<GodModePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
+        path="/platform"
+        element={
+          <ProtectedSuperAdminRoute>
+            <PlatformOverviewPage />
+          </ProtectedSuperAdminRoute>
+        }
+      />
+      <Route
+        path="/etl-admin"
+        element={
+          <ProtectedSuperAdminRoute>
+            <SuperAdminPage />
+          </ProtectedSuperAdminRoute>
+        }
+      />
+      <Route path="/super-admin" element={<Navigate to="/etl-admin" replace />} />
+      <Route
         path="/stoqr"
         element={
           <ProtectedSuperAdminRoute>
@@ -45,7 +64,7 @@ const AppRoutes = () => {
           loading ? (
             <div className="min-h-screen grid place-items-center text-sm text-slate-500">Loading session...</div>
           ) : user && isSuperAdmin ? (
-            <Navigate to="/stoqr" replace />
+            <Navigate to="/platform" replace />
           ) : (
             <Navigate to="/login" replace />
           )
