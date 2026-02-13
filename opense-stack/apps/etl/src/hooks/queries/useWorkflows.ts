@@ -6,7 +6,7 @@ import {
   saveWorkflow,
   updateWorkflowName,
 } from '../../api/workflows'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '@repo/shared/auth/context'
 import { useDemoContext } from '../../context/DemoContext'
 import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME } from '../../lib/demoData'
 import type { WorkflowRow } from '../../components/dashboard/types'

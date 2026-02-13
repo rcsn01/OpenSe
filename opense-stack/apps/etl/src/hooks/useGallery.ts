@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { WorkflowRow } from '../components/dashboard/types'
 import { listGalleryTemplates } from '../api/gallery'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '@repo/shared/auth/context'
 import { mockGalleryTemplates } from '../lib/demoData'
 
 export type GalleryWorkflow = WorkflowRow & {

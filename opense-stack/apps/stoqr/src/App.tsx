@@ -17,7 +17,7 @@ import { AttributesPage } from './pages/AttributesPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ProcurementPage } from './pages/ProcurementPage'
 import { AlertsPage } from './pages/AlertsPage'
-import { useSession } from './hooks/useSession'
+import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { Toaster } from 'sonner'
 
 const CompanyGate = () => {
@@ -35,13 +35,13 @@ const CompanyGate = () => {
 }
 
 function App() {
-  const { session, isLoading } = useSession()
+  const { user, loading } = useAuth()
 
-  if (isLoading) {
+  if (loading) {
     return <div className="empty-state">Loading session...</div>
   }
 
-  if (!session) {
+  if (!user) {
     return (
       <ThemeProvider>
         <Toaster position="top-right" richColors />
@@ -56,7 +56,7 @@ function App() {
 
   return (
     <ThemeProvider>
-      <CompanyProvider userId={session.user.id}>
+      <CompanyProvider userId={user.id}>
         <Toaster position="top-right" richColors />
         <Routes>
           <Route element={<AppLayout />}>
@@ -82,4 +82,10 @@ function App() {
   )
 }
 
-export default App
+const AppWithProviders = () => (
+  <AuthProvider>
+    <App />
+  </AuthProvider>
+)
+
+export default AppWithProviders

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useSession } from '../hooks/useSession'
+import { useAuth } from '@repo/shared/auth/context'
 import {
   ArrowRight,
   Package,
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 
 export const LandingPage = () => {
-  const { session } = useSession()
+  const { user } = useAuth()
 
   return (
     <div className="min-h-screen bg-white">
@@ -34,7 +34,7 @@ export const LandingPage = () => {
             </a>
           </div>
           <div className="flex items-center gap-4">
-            {session ? (
+            {user ? (
               <Link
                 to="/dashboard"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"

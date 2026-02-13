@@ -1,5 +1,5 @@
 /**
- * Test suite for api/auth.ts
+ * Test suite for shared auth API.
  *
  * Tests the refactored signUp and updatePassword functions
  * which now enforce password strength (Audit S2).
@@ -16,7 +16,7 @@ const mockUpdateUser = vi.fn()
 const mockRpc = vi.fn()
 const mockSingle = vi.fn()
 
-vi.mock('../lib/supabase', () => ({
+vi.mock('@repo/shared/supabase', () => ({
   supabase: {
     auth: {
       signUp: (...args: unknown[]) => mockSignUp(...args),
@@ -40,7 +40,7 @@ vi.mock('../lib/supabase', () => ({
 }))
 
 // Import AFTER mock is set up
-import { signUp, signIn, signOut, updatePassword, hasUsers } from '../api/auth'
+import { signUp, signIn, signOut, updatePassword, hasUsers } from '@repo/shared/auth'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -55,6 +55,12 @@ describe('signUp', () => {
       expect(mockSignUp).toHaveBeenCalledWith({
         email: 'test@example.com',
         password: 'MyStr0ng!Pass',
+        options: {
+          data: {
+            full_name: undefined,
+            username: undefined,
+          },
+        },
       })
     })
   })

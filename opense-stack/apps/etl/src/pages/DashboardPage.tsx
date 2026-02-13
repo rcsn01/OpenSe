@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@repo/shared/auth/context';
 import { OrgSimple } from '../types/organisation';
 import { User, Building2 } from 'lucide-react';
 import { Tabs } from '../components/ui/Tabs';
