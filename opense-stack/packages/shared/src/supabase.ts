@@ -74,7 +74,15 @@ const crossSubdomainStorage = {
     const cookieValue = readCookie(key)
     if (cookieValue !== null) return cookieValue
 
-    return window.localStorage.getItem(key)
+    // Cookie is the cross-domain authority for shared auth.
+    // If no cookie exists but localStorage still holds a value, the session
+    // was signed-out from another app — clean up the stale remnant to
+    // prevent redirect loops between apps.
+    const lsValue = window.localStorage.getItem(key)
+    if (lsValue !== null) {
+      window.localStorage.removeItem(key)
+    }
+    return null
   },
   setItem: (key: string, value: string) => {
     if (typeof window === 'undefined') return

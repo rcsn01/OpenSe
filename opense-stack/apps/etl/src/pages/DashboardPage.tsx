@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@repo/shared/auth/context';
+import { BasePage } from '@repo/ui';
 import { OrgSimple } from '../types/organisation';
 import { User, Building2 } from 'lucide-react';
 import { Tabs } from '../components/ui/Tabs';
@@ -23,9 +24,9 @@ export const DashboardPage = () => {
 
   // Pass context down to Outlet (WorkflowList)
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <BasePage>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Welcome back, {user?.user_metadata?.full_name || 'Guest'}</h1>
           <p className="text-slate-500 mt-1">Manage your data workflows and automations.</p>
@@ -43,6 +44,6 @@ export const DashboardPage = () => {
       />
 
       <Outlet context={{ currentOrg }} />
-    </div>
+    </BasePage>
   );
 };
