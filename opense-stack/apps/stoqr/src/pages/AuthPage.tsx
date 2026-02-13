@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { signIn, signUp } from '@repo/shared/auth'
+import { signIn, signInWithGoogle, signUp } from '@repo/shared/auth'
 import { SharedLoginPage } from '@repo/ui'
 
 export const AuthPage = () => {
@@ -44,6 +44,18 @@ export const AuthPage = () => {
     setIsLoading(false)
   }
 
+  const handleGoogleLogin = async () => {
+    setIsLoading(true)
+    setMessage(null)
+
+    try {
+      await signInWithGoogle('/dashboard')
+    } catch (error: any) {
+      setMessage(error?.message ?? 'Failed to sign in with Google')
+      setIsLoading(false)
+    }
+  }
+
   if (mode === 'signin') {
     return (
       <SharedLoginPage
@@ -53,6 +65,8 @@ export const AuthPage = () => {
         loading={isLoading}
         error={message}
         onEmailSignIn={handleSignIn}
+        onGoogleSignIn={handleGoogleLogin}
+        googleLabel="Continue with Google"
         footer={(
           <div className="text-center">
             <button
