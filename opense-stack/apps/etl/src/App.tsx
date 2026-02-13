@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@repo/ui';
-import { AuthProvider } from '@repo/shared/auth/context';
+import { AuthProvider, useAuth } from '@repo/shared/auth/context';
 import { DemoProvider } from './context/DemoContext';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { ReactFlowProvider } from 'reactflow';
@@ -54,8 +54,15 @@ const DashboardIndexRedirect = () => {
 };
 
 export default function App() {
+  const { user } = useAuth();
+
   return (
-    <ThemeProvider>
+    <ThemeProvider
+      defaultTheme="light"
+      storageKey="opense-theme"
+      cookieKey="opense-theme"
+      respectStoredTheme={Boolean(user)}
+    >
       <BrowserRouter>
         <ReactFlowProvider>
         <DemoProvider>
