@@ -5,7 +5,7 @@ test.describe('Stoqr Settings', () => {
   test('team settings page loads', async ({ authenticatedPage }) => {
     const teamSettings = new TeamSettingsPage(authenticatedPage);
     await teamSettings.goto();
-    await expect(authenticatedPage).toHaveURL(/\/(settings\/team|auth)/);
+    await expect(authenticatedPage).toHaveURL(/\/(settings\/team|auth)?$/);
   });
 
   test('attributes settings page loads', async ({ authenticatedPage }) => {

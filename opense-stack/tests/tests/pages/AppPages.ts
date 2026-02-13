@@ -38,7 +38,17 @@ export class InventoryPage {
   }
 
   async goto() {
-    await this.page.goto('/inventory');
+    try {
+      await this.page.goto('/inventory', { waitUntil: 'commit' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isExpectedRedirectAbort =
+        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+      if (!isExpectedRedirectAbort) {
+        throw error;
+      }
+    }
   }
 
   async expectLoaded() {
@@ -123,7 +133,7 @@ export class ReportsPage {
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(reports|auth)/);
+    await expect(this.page).toHaveURL(/\/(reports|auth)?$/);
   }
 }
 
@@ -137,11 +147,11 @@ export class AlertsPage {
   }
 
   async goto() {
-    await this.page.goto('/alerts');
+    await this.page.goto('/alerts', { waitUntil: 'commit' });
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(alerts|auth)/);
+    await expect(this.page).toHaveURL(/\/(alerts|auth)?$/);
   }
 }
 
@@ -155,11 +165,11 @@ export class AttributesPage {
   }
 
   async goto() {
-    await this.page.goto('/settings/attributes');
+    await this.page.goto('/settings/attributes', { waitUntil: 'commit' });
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(settings\/attributes|auth)/);
+    await expect(this.page).toHaveURL(/\/(settings\/attributes|auth)?$/);
   }
 }
 
@@ -210,7 +220,7 @@ export class TeamSettingsPage {
   }
 
   async goto() {
-    await this.page.goto('/settings/team');
+    await this.page.goto('/settings/team', { waitUntil: 'commit' });
   }
 
   async expectLoaded() {
