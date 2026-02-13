@@ -1,11 +1,9 @@
-import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@repo/ui';
 import { AuthProvider, useAuth } from '@repo/shared/auth/context';
 import { DemoProvider } from './context/DemoContext';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { ReactFlowProvider } from 'reactflow';
-import { Loader2 } from 'lucide-react';
 
 // Layouts
 import { AppLayout } from './layouts/AppLayout';
@@ -26,24 +24,6 @@ import { TeamTab } from './components/organisation/TeamTab';
 import { PaymentSettings } from './components/organisation/PaymentSettings';
 import { OrgUsageAnalytics } from './components/organisation/UsageAnalytics';
 import { OrgLogsTab } from './components/organisation/OrgLogsTab';
-
-// Guards
-import { AdminRoute } from './components/guards/AdminRoute';
-
-// Lazy-loaded admin page (code split - never downloaded by non-admins)
-const SuperAdminPage = React.lazy(() =>
-  import('./pages/SuperAdminPage').then((module) => ({ default: module.SuperAdminPage }))
-);
-
-// Loading fallback for Suspense
-const AdminLoadingFallback = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-100">
-    <div className="text-center">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
-      <p className="text-slate-500 text-sm">Loading admin panel...</p>
-    </div>
-  </div>
-);
 
 const DashboardIndexRedirect = () => {
   const lastTab = typeof window !== 'undefined' ? window.localStorage.getItem('dashboardLastTab') : null;
@@ -97,16 +77,6 @@ function AppContent() {
                     <Route path="/gallery" element={<GalleryPage />} />
                     <Route path="/activity" element={<ActivitiesPage />} />
                     <Route path="/settings/profile" element={<UserSettingsPage />} />
-                    <Route
-                      path="/admin"
-                      element={
-                        <AdminRoute>
-                          <Suspense fallback={<AdminLoadingFallback />}>
-                            <SuperAdminPage />
-                          </Suspense>
-                        </AdminRoute>
-                      }
-                    />
                   </Route>
 
                   {/* Editor (Separate Layout or No Layout) */}
@@ -126,7 +96,7 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider demoMode superAdmin>
+    <AuthProvider demoMode>
       <AppContent />
     </AuthProvider>
   );
