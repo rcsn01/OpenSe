@@ -10,6 +10,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "dev:accounts": "turbo run dev --filter=@repo/accounts",
+    "dev:admin": "turbo run dev --filter=@repo/admin",
     "dev:etl": "turbo run dev --filter=@repo/etl",
     "dev:stoqr": "lsof -ti :5992 | xargs kill 2>/dev/null || true && turbo run dev --filter=@repo/stoqr",
     "dev:ui-design": "turbo run dev --filter=@repo/ui-design",
