@@ -1,5 +1,4 @@
 import { supabase, db } from '../lib/supabase'
-import { OrgRow, AdminUserRow, UsageStats, UserUsageStats } from '../components/admin/types'
 import { OrgSimple, OrgInvite } from '../types/organisation'
 
 export const updateOrganisationName = async (orgId: string, name: string) => {
@@ -67,99 +66,6 @@ export const listOrganisationMembers = async (orgId: string) => {
       profiles: Array.isArray(m.profiles) ? m.profiles[0] ?? null : m.profiles ?? null,
     })) ?? []
   )
-}
-
-export const listAdminUsers = async (): Promise<AdminUserRow[]> => {
-  // Fetch all profiles with super admin status
-  const { data: profilesData, error: profilesError } = await supabase
-    .from('profiles')
-    .select('*, super_admin_members(user_id)')
-    .order('email', { ascending: true })
-
-  if (profilesError) throw profilesError
-
-  // Fetch all organisation memberships with org names
-  const { data: membershipsData, error: membershipsError } = await db
-    .from('organisation_members')
-    .select('user_id, role, org_id, organisations(name)')
-
-  if (membershipsError) throw membershipsError
-
-  // Build a lookup map for memberships by user_id
-  const membershipsByUser = new Map<string, { org_id: string; org_name: string; role: 'admin' | 'editor' | 'member' }[]>()
-  for (const m of membershipsData || []) {
-    const orgName = (m.organisations as any)?.name || 'Unknown'
-    const membership = {
-      org_id: m.org_id,
-      org_name: orgName,
-      role: m.role as 'admin' | 'editor' | 'member',
-    }
-    if (!membershipsByUser.has(m.user_id)) {
-      membershipsByUser.set(m.user_id, [])
-    }
-    membershipsByUser.get(m.user_id)!.push(membership)
-  }
-
-  // Merge memberships into profiles
-  return (profilesData || []).map((p: any) => ({
-    ...p,
-    memberships: membershipsByUser.get(p.id) || [],
-  }))
-}
-
-export const listAdminOrgs = async (): Promise<OrgRow[]> => {
-  const { data, error } = await db
-    .from('organisations')
-    .select('id, name, created_at, tier, subscription_status, owner:profiles!organisations_owner_id_fkey(email, full_name), organisation_members(count)')
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-
-  return (data || []).map((o: any) => ({
-    id: o.id,
-    name: o.name,
-    created_at: o.created_at,
-    tier: o.tier ?? null,
-    subscription_status: o.subscription_status ?? null,
-    owner: Array.isArray(o.owner) ? o.owner[0] ?? null : o.owner ?? null,
-    member_count:
-      Array.isArray(o.organisation_members) && o.organisation_members[0]?.count != null
-        ? o.organisation_members[0].count
-        : null,
-  })) as OrgRow[]
-}
-
-// Fetch bulk usage stats for all organisations
-export const getAllOrgsUsageStats = async (): Promise<Map<string, UsageStats>> => {
-  const { data, error } = await db.rpc('get_all_orgs_usage_stats')
-  if (error) throw error
-
-  const statsMap = new Map<string, UsageStats>()
-  for (const row of data || []) {
-    statsMap.set(row.org_id, {
-      success: Number(row.success_count) || 0,
-      failed: Number(row.failed_count) || 0,
-      total: Number(row.total_count) || 0,
-    })
-  }
-  return statsMap
-}
-
-// Fetch bulk usage stats for all users
-export const getAllUsersUsageStats = async (): Promise<Map<string, UserUsageStats>> => {
-  const { data, error } = await db.rpc('get_all_users_usage_stats')
-  if (error) throw error
-
-  const statsMap = new Map<string, UserUsageStats>()
-  for (const row of data || []) {
-    statsMap.set(row.user_id, {
-      personalSuccess: Number(row.personal_success) || 0,
-      personalFailed: Number(row.personal_failed) || 0,
-      orgSuccess: Number(row.org_success) || 0,
-      orgFailed: Number(row.org_failed) || 0,
-    })
-  }
-  return statsMap
 }
 
 export const createOrganisation = async (name: string, tier: 'tier-1' | 'tier-2' | 'tier-3') => {

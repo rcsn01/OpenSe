@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { User, Lock, Trash2, Loader2, Save, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@repo/shared/auth/context';
 import { Input, Button } from '@repo/ui';
@@ -11,7 +10,7 @@ import {
 } from '@repo/shared/auth';
 
 export const UserSettingsPage = () => {
-    const { user, isSuperAdmin } = useAuth();
+    const { user } = useAuth();
     
     // State
     const [fullName, setFullName] = useState('');
@@ -186,15 +185,6 @@ export const UserSettingsPage = () => {
                     </Button>
                 </div>
             </div>
-
-            {/* Super Admin */}
-            {isSuperAdmin && (
-                <div className="pt-2">
-                    <Link to="/admin">
-                        <Button variant="secondary">Admin Panel</Button>
-                    </Link>
-                </div>
-            )}
         </div>
     );
 };
