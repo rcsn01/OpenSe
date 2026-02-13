@@ -25,7 +25,7 @@ import { CreateOrgForm } from '../components/admin/CreateOrgForm';
 import { MemberTable } from '../components/settings/MemberTable';
 import { Member } from '../components/settings/types';
 import { OrgRow, Message } from '../components/admin/types';
-import { Button } from '@repo/ui';
+import { Button, BasePage } from '@repo/ui';
 import { Tabs } from '../components/ui/Tabs';
 
 // Internal Modal for specific page actions
@@ -149,7 +149,7 @@ export const SuperAdminPage = () => {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto min-h-screen space-y-8">
+        <BasePage containerClassName="stack min-h-screen gap-8">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -295,6 +295,6 @@ export const SuperAdminPage = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </BasePage>
     );
 };

@@ -145,6 +145,13 @@ button, input, select, textarea { font: inherit; }
   padding: var(--gap-4);
 }
 
+/* Stack layout - flex column with gap (used by BasePage default container) */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* EmptyState & utility */
 .muted { color: var(--color-muted-foreground); }
 .empty-state {
