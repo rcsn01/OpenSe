@@ -109,6 +109,95 @@ export class ScanPage {
   }
 }
 
+export class ReportsPage {
+  readonly page: Page;
+  readonly heading: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.heading = page.getByRole('heading', { name: /reports/i }).first();
+  }
+
+  async goto() {
+    await this.page.goto('/reports');
+  }
+
+  async expectLoaded() {
+    await expect(this.page).toHaveURL(/\/(reports|auth)/);
+  }
+}
+
+export class AlertsPage {
+  readonly page: Page;
+  readonly heading: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.heading = page.getByRole('heading', { name: /alerts/i }).first();
+  }
+
+  async goto() {
+    await this.page.goto('/alerts');
+  }
+
+  async expectLoaded() {
+    await expect(this.page).toHaveURL(/\/(alerts|auth)/);
+  }
+}
+
+export class AttributesPage {
+  readonly page: Page;
+  readonly heading: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.heading = page.getByRole('heading', { name: /attributes/i }).first();
+  }
+
+  async goto() {
+    await this.page.goto('/settings/attributes');
+  }
+
+  async expectLoaded() {
+    await expect(this.page).toHaveURL(/\/(settings\/attributes|auth)/);
+  }
+}
+
+export class LabelStudioPage {
+  readonly page: Page;
+  readonly heading: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.heading = page.getByRole('heading', { name: /label studio|labels/i }).first();
+  }
+
+  async goto() {
+    await this.page.goto('/tools/labels');
+  }
+
+  async expectLoaded() {
+    await expect(this.page).toHaveURL(/\/(tools\/labels|auth)/);
+  }
+}
+
+export class ProductDetailPage {
+  readonly page: Page;
+  readonly heading: Locator;
+  readonly editButton: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.heading = page.locator('h1').first();
+    this.editButton = page.getByRole('button', { name: /edit|save/i }).first();
+  }
+
+  async expectLoaded() {
+    await expect(this.page).toHaveURL(/\/inventory\//);
+    await expect(this.heading).toBeVisible();
+  }
+}
+
 export class TeamSettingsPage {
   readonly page: Page;
   readonly heading: Locator;
