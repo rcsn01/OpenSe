@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signIn, signInWithGoogle } from '../../api/auth';
-import { useAuth } from '../../context/AuthContext';
+import { signIn, signInWithGoogle } from '@repo/shared/auth';
+import { useAuth } from '@repo/shared/auth/context';
 import { Play } from 'lucide-react';
 
 export const LoginPage = () => {
@@ -41,7 +41,7 @@ export const LoginPage = () => {
   };
 
   const handleDemoLogin = () => {
-    loginAsDemo();
+    loginAsDemo?.();
     navigate('/dashboard');
   };
 
