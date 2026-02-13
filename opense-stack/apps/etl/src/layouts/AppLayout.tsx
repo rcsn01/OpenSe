@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Outlet, useLocation, Navigate, useNavigate, NavLink } from 'react-router-dom'
 import { LayoutDashboard, LayoutTemplate, Building2, Activity } from 'lucide-react'
 import {
@@ -25,6 +25,8 @@ export const AppLayout = () => {
   const navigate = useNavigate()
   const [signingOut, setSigningOut] = useState(false)
   const location = useLocation()
+  const [pendingRedirect, setPendingRedirect] = useState(false)
+  const redirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null)
   const { data: userOrgs = [] } = useUserOrganisations(user?.id)
@@ -44,13 +46,44 @@ export const AppLayout = () => {
     try {
       setSigningOut(true)
       await logout()
-      navigate('/login', { replace: true })
+      navigate('/', { replace: true })
     } finally {
       setSigningOut(false)
     }
   }
 
+  // Delay redirect to allow session to restore from shared cookie (avoids flash loop with accounts login)
+  useEffect(() => {
+    if (session || isDemoUser || loading) {
+      if (redirectTimeout.current) {
+        clearTimeout(redirectTimeout.current)
+        redirectTimeout.current = null
+      }
+      setPendingRedirect(false)
+      return
+    }
+    if (!redirectTimeout.current) {
+      redirectTimeout.current = setTimeout(() => {
+        redirectTimeout.current = null
+        setPendingRedirect(true)
+      }, 250)
+    }
+    return () => {
+      if (redirectTimeout.current) {
+        clearTimeout(redirectTimeout.current)
+        redirectTimeout.current = null
+      }
+    }
+  }, [session, isDemoUser, loading])
+
   if (!session && !isDemoUser && !loading) {
+    if (!pendingRedirect) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-100">
+          <div className="animate-pulse text-slate-500">Loading...</div>
+        </div>
+      )
+    }
     return <Navigate to="/login" replace />
   }
 

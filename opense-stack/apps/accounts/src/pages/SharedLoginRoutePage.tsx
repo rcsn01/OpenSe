@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { signIn, signInWithGoogle } from '@repo/shared/auth'
 import { useAuth } from '@repo/shared/auth/context'
@@ -9,10 +9,14 @@ export const SharedLoginRoutePage = () => {
   const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const hasRedirected = useRef(false)
 
   useEffect(() => {
-    if (!authLoading && user) {
-      redirectBackToApp()
+    if (!authLoading && user && !hasRedirected.current) {
+      hasRedirected.current = true
+      // Brief delay so auth state is fully settled before redirect (avoids flash loop with dashboard)
+      const id = setTimeout(redirectBackToApp, 150)
+      return () => clearTimeout(id)
     }
   }, [authLoading, user])
 
