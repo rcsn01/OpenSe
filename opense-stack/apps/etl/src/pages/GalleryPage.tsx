@@ -3,7 +3,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Search, Copy, LayoutTemplate, Loader2, GitFork, AlertCircle } from 'lucide-react';
 import { useAuth } from '@repo/shared/auth/context';
 import { useGallery, GalleryWorkflow } from '../hooks/useGallery';
-import { Input, Button } from '@repo/ui';
+import { Input, Button, BasePage } from '@repo/ui';
 import { cloneWorkflowFromTemplate } from '../api/workflows';
 
 const getNodeCount = (graphData: any) => {
@@ -52,8 +52,8 @@ export const GalleryPage = () => {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+    <BasePage>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <LayoutTemplate className="w-6 h-6 text-blue-600" />
@@ -141,6 +141,6 @@ export const GalleryPage = () => {
           )}
         </div>
       )}
-    </div>
+    </BasePage>
   );
 };
