@@ -3,7 +3,7 @@ import { ThemeProvider } from '@repo/ui'
 import './App.css'
 import { AppLayout } from './layouts/AppLayout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
-import { AuthPage } from './pages/AuthPage'
+import { AuthRedirectPage } from './pages/AuthRedirectPage'
 import { LandingPage } from './pages/LandingPage'
 import { CompanySetupPage } from './pages/CompanySetupPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -52,7 +52,8 @@ function App() {
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth" element={<AuthRedirectPage mode="signin" />} />
+          <Route path="/signup" element={<AuthRedirectPage mode="signup" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ThemeProvider>
