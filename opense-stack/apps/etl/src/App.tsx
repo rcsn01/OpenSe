@@ -13,7 +13,6 @@ import { AuthLayout } from './layouts/AuthLayout';
 
 // Pages (eagerly loaded)
 import { AuthRedirectPage } from './pages/auth/AuthRedirectPage';
-import { GodModePage } from './pages/auth/GodModePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { WorkflowEditorPage } from './pages/WorkflowEditorPage';
 import { OrganisationPage } from './pages/OrganisationPage';
@@ -70,7 +69,6 @@ function AppContent() {
                 <Routes>
                   {/* Public Landing Page */}
                   <Route path="/" element={<LandingPage />} />
-                  <Route path="/god-mode" element={<GodModePage />} />
                   <Route path="/login" element={<AuthRedirectPage mode="signin" />} />
 
                   {/* Auth Routes */}
