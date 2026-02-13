@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, Lock, Trash2, Loader2, Save, AlertCircle, CheckCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@repo/shared/auth/context';
 import { Input, Button } from '@repo/ui';
 import {
     fetchProfileFullName,
     updateAuthFullName,
     updatePassword,
     updateProfileFullName,
-} from '../api/auth';
+} from '@repo/shared/auth';
 
 export const UserSettingsPage = () => {
     const { user, isSuperAdmin } = useAuth();

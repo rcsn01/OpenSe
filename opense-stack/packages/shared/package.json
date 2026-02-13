@@ -6,13 +6,17 @@
   "exports": {
     "./supabase": "./src/supabase.ts",
     "./auth": "./src/auth/index.ts",
+    "./auth/context": "./src/auth/AuthContext.tsx",
+    "./auth/validation": "./src/auth/validation.ts",
+    "./auth/demo": "./src/auth/demo.ts",
     "./hooks": "./src/hooks/index.ts",
     "./types": "./src/types/index.ts",
     "./utils": "./src/utils/index.ts"
   },
   "scripts": {
-    "lint": "eslint \"src/**/*.ts\"",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.2"
@@ -21,7 +25,13 @@
     "react": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
+    "@types/react": "^19.2.8",
+    "@types/react-dom": "^19.2.3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@repo/typescript-config": "*",
-    "typescript": "^5.9.3"
+    "jsdom": "^28.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }

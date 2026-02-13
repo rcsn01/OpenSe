@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
-import { hasUsers, signUp } from '../../api/auth';
-import { useAuth } from '../../context/AuthContext';
+import { hasUsers, signUp } from '@repo/shared/auth';
+import { useAuth } from '@repo/shared/auth/context';
 
 export const GodModePage = () => {
   const navigate = useNavigate();
