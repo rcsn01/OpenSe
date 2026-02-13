@@ -1,33 +1,22 @@
-# `Turborepo` Vite starter
+# OpenSe Monorepo
 
-This is a community-maintained example. If you experience a problem, please submit a pull request with a fix. GitHub Issues will be closed.
+## Security guardrails
 
-## Using this example
-
-Run the following command:
+- Keep real credentials in untracked local files (for example `.env` and `tests/tests/.env.test.local`).
+- Keep placeholders only in tracked env templates such as `.env.example`.
+- Run the secret scanner before pushing changes:
 
 ```sh
-npx create-turbo@latest -e with-vite
+pnpm security:check-secrets
 ```
 
-## What's inside?
+The scanner checks tracked files for common leaked credential patterns (Supabase service-role keys, private keys, live Stripe keys, etc).
 
-This Turborepo includes the following packages and apps:
+## E2E environment loading
 
-### Apps and Packages
+Playwright now auto-loads env vars from:
 
-- `docs`: a vanilla [vite](https://vitejs.dev) ts app
-- `web`: another vanilla [vite](https://vitejs.dev) ts app
-- `@repo/ui`: a stub component & utility library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: shared `eslint` configurations
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+1. `tests/tests/.env.test`
+2. `tests/tests/.env.test.local` (overrides values when present)
 
-Each package and app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+Use `.env.test.local` for machine-specific credentials that must not be committed.
