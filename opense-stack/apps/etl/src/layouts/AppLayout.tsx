@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Outlet, useLocation, Navigate, useNavigate, NavLink } from 'react-router-dom'
+import { Outlet, useLocation, Navigate, NavLink } from 'react-router-dom'
 import { LayoutDashboard, LayoutTemplate, Building2, Activity } from 'lucide-react'
 import {
   AppLayout as SharedAppLayout,
@@ -22,7 +22,6 @@ const mainNavItems = [
 
 export const AppLayout = () => {
   const { session, user, loading, isDemoUser, logout } = useAuth()
-  const navigate = useNavigate()
   const [signingOut, setSigningOut] = useState(false)
   const location = useLocation()
   const [pendingRedirect, setPendingRedirect] = useState(false)
@@ -43,18 +42,22 @@ export const AppLayout = () => {
   }, [userOrgs, currentOrg])
 
   const handleSignOut = async () => {
+    setSigningOut(true)
     try {
-      setSigningOut(true)
       await logout()
-      navigate('/', { replace: true })
-    } finally {
-      setSigningOut(false)
+    } catch (err) {
+      console.error('Sign out error:', err)
     }
+    // Full navigation avoids the React Router race where AppLayout's
+    // unauthenticated redirect (<Navigate to="/login">) fires before the
+    // router processes navigate('/'), causing an accounts ↔ dashboard loop.
+    window.location.replace('/')
   }
 
   // Delay redirect to allow session to restore from shared cookie (avoids flash loop with accounts login)
+  // Skip redirect entirely when signing out - handleSignOut will navigate to landing
   useEffect(() => {
-    if (session || isDemoUser || loading) {
+    if (signingOut || session || isDemoUser || loading) {
       if (redirectTimeout.current) {
         clearTimeout(redirectTimeout.current)
         redirectTimeout.current = null
@@ -74,9 +77,17 @@ export const AppLayout = () => {
         redirectTimeout.current = null
       }
     }
-  }, [session, isDemoUser, loading])
+  }, [signingOut, session, isDemoUser, loading])
 
   if (!session && !isDemoUser && !loading) {
+    // Don't redirect when signing out - let handleSignOut navigate to landing
+    if (signingOut) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-100">
+          <div className="animate-pulse text-slate-500">Signing out...</div>
+        </div>
+      )
+    }
     if (!pendingRedirect) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-100">

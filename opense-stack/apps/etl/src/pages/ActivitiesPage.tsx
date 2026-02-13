@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BarChart3, FileText } from 'lucide-react';
+import { BasePage } from '@repo/ui';
 import { useAuth } from '@repo/shared/auth/context';
 import { useExecutionLogs } from '../hooks/queries/useActivities';
 import { usePersonalUsageStats } from '../hooks/queries/useUsageStats';
@@ -18,7 +19,7 @@ export const ActivitiesPage = () => {
   const { data: usageStats = null, isLoading: statsLoading } = usePersonalUsageStats(!!user?.id);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <BasePage>
       <Tabs
         tabs={[
           { id: 'usage', label: 'Usage Analytics', icon: <BarChart3 className="w-4 h-4" /> },
@@ -41,6 +42,6 @@ export const ActivitiesPage = () => {
           emptyMessage="No personal activities recorded."
         />
       )}
-    </div>
+    </BasePage>
   );
 };
