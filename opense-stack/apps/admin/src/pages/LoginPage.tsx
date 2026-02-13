@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { signIn } from '@repo/shared/auth'
 import { useAuth } from '@repo/shared/auth/context'
+import { BasePage, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@repo/ui'
+import { getErrorMessage } from '../lib/errors'
 
 export const LoginPage = () => {
   const navigate = useNavigate()
@@ -11,7 +13,7 @@ export const LoginPage = () => {
   const [error, setError] = useState<string | null>(null)
 
   if (!loading && user) {
-    const nextPath = typeof location.state?.next === 'string' ? location.state.next : '/stoqr'
+    const nextPath = typeof location.state?.next === 'string' ? location.state.next : '/platform'
     return <Navigate to={nextPath} replace />
   }
 
@@ -26,58 +28,41 @@ export const LoginPage = () => {
 
     try {
       await signIn(email, password)
-      navigate('/stoqr', { replace: true })
-    } catch (signInError: any) {
-      setError(signInError.message ?? 'Sign in failed')
+      navigate('/platform', { replace: true })
+    } catch (signInError: unknown) {
+      setError(getErrorMessage(signInError, 'Sign in failed'))
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white border border-slate-200 rounded-lg shadow-sm p-6">
-        <h1 className="text-xl font-semibold text-slate-900">Admin Sign In</h1>
-        <p className="mt-1 text-sm text-slate-500">Sign in with your super-admin account.</p>
+    <BasePage containerClassName="min-h-screen flex items-center justify-center" containerStyle={{ maxWidth: 480 }}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Admin Sign In</CardTitle>
+          <CardDescription>Sign in with your super-admin account.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {error && <p className="text-sm text-[var(--color-destructive)]">{error}</p>}
 
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+            <div className="space-y-1">
+              <label htmlFor="email" className="text-sm font-medium">Email</label>
+              <Input id="email" name="email" type="email" required />
+            </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-            />
-          </div>
+            <div className="space-y-1">
+              <label htmlFor="password" className="text-sm font-medium">Password</label>
+              <Input id="password" name="password" type="password" required />
+            </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {submitting ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-      </div>
-    </main>
+            <Button type="submit" loading={submitting} className="w-full">
+              {submitting ? 'Signing in...' : 'Sign In'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </BasePage>
   )
 }

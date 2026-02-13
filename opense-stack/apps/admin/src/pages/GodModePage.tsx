@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ShieldAlert } from 'lucide-react'
 import { hasUsers, signUp } from '@repo/shared/auth'
 import { useAuth } from '@repo/shared/auth/context'
+import { BasePage, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input } from '@repo/ui'
+import { getErrorMessage } from '../lib/errors'
 
 export const GodModePage = () => {
   const navigate = useNavigate()
@@ -42,88 +44,53 @@ export const GodModePage = () => {
       await signUp(email, password)
       alert('System initialized. You are now the Super Admin. Please sign in.')
       navigate('/login')
-    } catch (registerError: any) {
-      setError(registerError.message || 'Failed to initialize system')
+    } catch (registerError: unknown) {
+      setError(getErrorMessage(registerError, 'Failed to initialize system'))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <ShieldAlert className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-        <h2 className="text-3xl font-extrabold text-white">System Initialization</h2>
-        <p className="mt-2 text-slate-400">
-          No users detected. The first account created will be granted{' '}
-          <span className="text-blue-400 font-bold">Super Admin (God Mode)</span> privileges.
+    <BasePage containerClassName="min-h-screen flex flex-col items-center justify-center gap-6" containerStyle={{ maxWidth: 560 }}>
+      <div className="text-center">
+        <ShieldAlert className="w-12 h-12 text-[var(--color-primary)] mx-auto mb-3" />
+        <h2 className="text-3xl font-bold">System Initialization</h2>
+        <p className="mt-2 text-[var(--color-muted-foreground)]">
+          No users detected. The first account created will be granted Super Admin access.
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10 border border-slate-700">
-          <form className="space-y-6" onSubmit={handleRegister}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
-                {error}
-              </div>
-            )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Create Initial Super Admin</CardTitle>
+          <CardDescription>Use this once to bootstrap administration access.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleRegister}>
+            {error && <p className="text-sm text-[var(--color-destructive)]">{error}</p>}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-                Super Admin Email
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+            <div className="space-y-1">
+              <label htmlFor="email" className="text-sm font-medium">Super Admin Email</label>
+              <Input id="email" name="email" type="email" required />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+            <div className="space-y-1">
+              <label htmlFor="password" className="text-sm font-medium">Password</label>
+              <Input id="password" name="password" type="password" required />
             </div>
 
-            <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-700">
-                Confirm Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="confirm-password"
-                  name="confirm-password"
-                  type="password"
-                  required
-                  className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+            <div className="space-y-1">
+              <label htmlFor="confirm-password" className="text-sm font-medium">Confirm Password</label>
+              <Input id="confirm-password" name="confirm-password" type="password" required />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50"
-            >
+            <Button type="submit" loading={loading} className="w-full">
               {loading ? 'Initializing...' : 'Initialize System'}
-            </button>
+            </Button>
           </form>
-        </div>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+    </BasePage>
   )
 }
