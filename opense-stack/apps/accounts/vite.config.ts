@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5990,
+    host: true,
     allowedHosts: true,
   },
   envDir: resolve(__dirname, '../..'),

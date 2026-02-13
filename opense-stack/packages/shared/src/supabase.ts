@@ -22,10 +22,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 function getAuthCookieDomain(hostname: string): string | undefined {
   if (authCookieDomainOverride) return authCookieDomainOverride
-  if (hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-    return undefined
+
+  // Derive from VITE_ACCOUNTS_URL so auth is shared across accounts + ETL + StoQR (same host, different ports)
+  const accountsUrl = import.meta.env.VITE_ACCOUNTS_URL as string | undefined
+  if (accountsUrl) {
+    try {
+      const host = new URL(accountsUrl).hostname
+      if (host === 'localhost') return 'localhost'
+      if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return undefined
+      const parts = host.split('.')
+      if (parts.length >= 2) return `.${parts.slice(-2).join('.')}`
+    } catch {}
   }
 
+  if (hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return undefined
   const parts = hostname.split('.')
   if (parts.length < 2) return undefined
   return `.${parts.slice(-2).join('.')}`
