@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { db } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
+import { EmptyState } from '../components/EmptyState'
 import type { Folder, Tag } from '../types'
 
 type CustomField = { key: string; type: 'text' | 'number' | 'boolean' | 'date' }

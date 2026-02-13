@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@repo/shared/auth/context';
@@ -6,7 +5,11 @@ import { WorkflowTable } from './WorkflowTable';
 import { useDeleteWorkflow, useWorkflows } from '../../hooks/queries/useWorkflows';
 import { OrgSimple } from '../../types/organisation';
 
-type DashboardContextType = { currentOrg: OrgSimple | null };
+type DashboardContextType = {
+    currentOrg: OrgSimple | null;
+    dashboardSearch?: string;
+    setDashboardSearch?: (value: string) => void;
+};
 
 type WorkflowListProps = {
     mode: 'personal' | 'org';
@@ -15,10 +18,11 @@ type WorkflowListProps = {
 export const WorkflowList = ({ mode }: WorkflowListProps) => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    // Using context from DashboardPage layout
-    const { currentOrg } = useOutletContext<DashboardContextType>() || { currentOrg: null };
-
-    const [search, setSearch] = useState('');
+    const { currentOrg, dashboardSearch = '', setDashboardSearch } = useOutletContext<DashboardContextType>() || {
+        currentOrg: null,
+        dashboardSearch: '',
+        setDashboardSearch: () => {},
+    };
 
     const {
         data: workflows = [],
@@ -49,8 +53,8 @@ export const WorkflowList = ({ mode }: WorkflowListProps) => {
                 workflows={workflows}
                 loading={isLoading}
                 error={errorMessage}
-                search={search}
-                onSearchChange={setSearch}
+                search={dashboardSearch}
+                onSearchChange={setDashboardSearch ?? (() => {})}
                 onEdit={(id) => navigate(`/editor/${id}`)}
                 onDelete={handleDelete}
             />
