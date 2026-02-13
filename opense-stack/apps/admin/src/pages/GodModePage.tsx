@@ -1,54 +1,53 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShieldAlert } from 'lucide-react';
-import { hasUsers, signUp } from '@repo/shared/auth';
-import { useAuth } from '@repo/shared/auth/context';
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ShieldAlert } from 'lucide-react'
+import { hasUsers, signUp } from '@repo/shared/auth'
+import { useAuth } from '@repo/shared/auth/context'
 
 export const GodModePage = () => {
-  const navigate = useNavigate();
-  const { isSuperAdmin, loading: authLoading } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate()
+  const { isSuperAdmin, loading: authLoading } = useAuth()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading) return
 
     const checkStatus = async () => {
-      const anyUsers = await hasUsers();
+      const anyUsers = await hasUsers()
       if (anyUsers && !isSuperAdmin) {
-        navigate('/login');
+        navigate('/login')
       }
-    };
-    checkStatus();
-  }, [authLoading, isSuperAdmin, navigate]);
+    }
+    checkStatus()
+  }, [authLoading, isSuperAdmin, navigate])
 
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setLoading(true)
+    setError(null)
 
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const confirmPassword = formData.get('confirm-password') as string;
+    const formData = new FormData(event.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirm-password') as string
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
+      setError('Passwords do not match')
+      setLoading(false)
+      return
     }
 
     try {
-      await signUp(email, password);
-
-      alert('System Initialized! You are now the Super Admin. Please sign in.');
-      navigate('/login');
-    } catch (err: any) {
-      setError(err.message || 'Failed to initialize system');
+      await signUp(email, password)
+      alert('System initialized. You are now the Super Admin. Please sign in.')
+      navigate('/login')
+    } catch (registerError: any) {
+      setError(registerError.message || 'Failed to initialize system')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -56,7 +55,8 @@ export const GodModePage = () => {
         <ShieldAlert className="w-16 h-16 text-blue-500 mx-auto mb-4" />
         <h2 className="text-3xl font-extrabold text-white">System Initialization</h2>
         <p className="mt-2 text-slate-400">
-          No users detected. The first account created will be granted <span className="text-blue-400 font-bold">Super Admin (God Mode)</span> privileges.
+          No users detected. The first account created will be granted{' '}
+          <span className="text-blue-400 font-bold">Super Admin (God Mode)</span> privileges.
         </p>
       </div>
 
@@ -125,5 +125,5 @@ export const GodModePage = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
