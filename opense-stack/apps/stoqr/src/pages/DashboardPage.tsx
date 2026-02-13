@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase, db } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
+import { StackLayout } from '@repo/ui'
 import { toNumber } from '../utils'
 import { RecentActivity } from '../components/Dashboard/RecentActivity'
 import { StatsCards } from '../components/Dashboard/StatsCards'
@@ -194,25 +195,23 @@ export const DashboardPage = () => {
         outOfStockCount={data.outOfStockCount}
       />
 
-      <div className="grid grid-2">
+      <StackLayout variant="grid-2">
         {/* Valuation Chart */}
         <ValuationChart chartData={data.chartData} />
 
-        {/* Stock Health & Top Movers */}
+        {/* Stock Health */}
         <StockHealth
           totalProducts={data.products.length}
           lowStockCount={data.lowStockCount}
           outOfStockCount={data.outOfStockCount}
         />
-      </div>
 
-      <div className="grid grid-2">
         {/* Top Selling Products */}
         <TopMovers topMovers={data.topMovers} />
 
         {/* Recent Activity */}
         <RecentActivity transactions={data.transactions} />
-      </div>
+      </StackLayout>
       </div>
       )}
     </BasePage>

@@ -1,15 +1,20 @@
-import { ColorPalette, Body, Container } from '../components/ui'
+import { ColorPalette, Shades, Body, Container } from '../components/ui'
 import { Section } from '../components/shared/PageSection'
 
 export function ColorPalettePage() {
   return (
-    <Container size="lg" className="py-8">
+    <Container size="lg" className="py-8 space-y-12">
       <Section title="Color Palette">
         <Body size="body4" muted>
-          Two primary colors with 2% lightness steps from dark to clear. Each has duplicate rows: 2
-          grey (lighter/desaturated) and 2 darker variants.
+          Two primary colors with 10-step lightness scale from brightest to darkest. Base color at step 5.
         </Body>
         <ColorPalette />
+      </Section>
+      <Section title="Shades">
+        <Body size="body4" muted>
+          Neutral greys: white-based (2–12%) and black-based (0–20%).
+        </Body>
+        <Shades />
       </Section>
     </Container>
   )
