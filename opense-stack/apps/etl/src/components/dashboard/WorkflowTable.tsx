@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
-import { FileSpreadsheet, Search, CalendarDays, Loader2 } from 'lucide-react';
+import { FileSpreadsheet, CalendarDays, Loader2 } from 'lucide-react';
 import { WorkflowTableProps } from './types';
-import { Input } from '@repo/ui';
 
 const formatDate = (value: string | null) => {
   if (!value) return '—';
@@ -26,20 +25,6 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Your workflows</h2>
-          <p className="text-sm text-slate-500">Quickly jump back into any workflow or create something new.</p>
-        </div>
-        <Input
-          placeholder="Search workflows..."
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          prefix={<Search className="w-4 h-4" />}
-          className="max-w-xs"
-        />
-      </div>
-
       {loading ? (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-white/60 p-6 text-sm text-slate-500">
           <Loader2 className="h-5 w-5 animate-spin text-slate-400" />

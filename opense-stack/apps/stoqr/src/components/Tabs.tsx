@@ -13,9 +13,7 @@ export const Tabs = ({ tabs }: { tabs: Tab[] }) => {
   return (
     <div className="stack">
       <TabsHeader tabs={tabs} activeTabId={activeTab} onTabChange={setActiveTab} />
-      <div style={{ paddingTop: 24 }}>
-        {tabs.find((t) => t.id === activeTab)?.content}
-      </div>
+      {tabs.find((t) => t.id === activeTab)?.content}
     </div>
   )
 }

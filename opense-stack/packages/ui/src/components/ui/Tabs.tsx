@@ -17,7 +17,7 @@ interface TabBarProps {
 }
 
 export function TabBar({ tabs, activeTab, onTabChange, className, itemClassName, activeItemClassName, inactiveItemClassName }: TabBarProps) {
-  const containerCls = className ?? 'flex border-b border-[var(--color-border)] mb-8 overflow-x-auto gap-4'
+  const containerCls = className ?? 'flex border-b border-[var(--color-border)] overflow-x-auto gap-4'
   const baseCls = itemClassName ?? 'pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap'
   const activeCls = activeItemClassName ?? 'border-[var(--color-primary)] text-[var(--color-primary)]'
   const inactiveCls = inactiveItemClassName ?? 'border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:border-[var(--color-border)]'
