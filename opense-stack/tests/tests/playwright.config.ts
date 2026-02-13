@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const withAccounts = process.env.E2E_WITH_ACCOUNTS === 'true';
+const withAccounts = process.env.E2E_WITH_ACCOUNTS !== 'false';
 
 const webServers = [
   {
