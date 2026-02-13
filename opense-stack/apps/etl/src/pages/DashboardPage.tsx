@@ -6,11 +6,15 @@ import { OrgSimple } from '../types/organisation';
 import { User, Building2 } from 'lucide-react';
 import { Tabs } from '../components/ui/Tabs';
 
-type DashboardContextType = { currentOrg: OrgSimple | null };
+type DashboardContextType = {
+  currentOrg: OrgSimple | null;
+  dashboardSearch?: string;
+  setDashboardSearch?: (value: string) => void;
+};
 
 export const DashboardPage = () => {
   const { user } = useAuth();
-  const { currentOrg } = useOutletContext<DashboardContextType>();
+  const { currentOrg, dashboardSearch, setDashboardSearch } = useOutletContext<DashboardContextType>();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -43,7 +47,7 @@ export const DashboardPage = () => {
         onTabChange={(id) => navigate(id)}
       />
 
-      <Outlet context={{ currentOrg }} />
+      <Outlet context={{ currentOrg, dashboardSearch, setDashboardSearch }} />
     </BasePage>
   );
 };
