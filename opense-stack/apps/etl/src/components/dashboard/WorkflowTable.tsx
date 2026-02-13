@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { FileSpreadsheet, CalendarDays, Loader2 } from 'lucide-react';
+import { StackLayout } from '@repo/ui';
 import { WorkflowTableProps } from './types';
 
 const formatDate = (value: string | null) => {
@@ -38,7 +39,7 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
           No workflows match that search. Try another keyword or create a new draft.
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <StackLayout variant="grid">
           {filtered.map((workflow) => {
             const ownerLabel =
               workflow.owner?.full_name || workflow.owner?.email || workflow.owner_id || 'Unknown';
@@ -119,7 +120,7 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
             </div>
           )
         })}
-        </div>
+        </StackLayout>
       )}
     </div>
   );
