@@ -149,7 +149,7 @@ button, input, select, textarea { font: inherit; }
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--gap-4);
 }
 
 /* EmptyState & utility */
