@@ -146,7 +146,7 @@ export const AppLayout = () => {
           value={dashboardSearch}
           onChange={(e) => setDashboardSearch(e.target.value)}
           prefix={<Search className="w-4 h-4" />}
-          className="max-w-xs"
+          className="max-w-xs rounded-[var(--radius-lg)]"
         />
       }
       profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
