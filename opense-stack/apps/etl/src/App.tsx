@@ -53,7 +53,7 @@ const DashboardIndexRedirect = () => {
   return <Navigate to={target} replace />;
 };
 
-export default function App() {
+function AppContent() {
   const { user } = useAuth();
 
   return (
@@ -66,7 +66,6 @@ export default function App() {
       <BrowserRouter>
         <ReactFlowProvider>
         <DemoProvider>
-          <AuthProvider demoMode superAdmin>
             <WorkflowProvider>
               <SystemCheck>
                 <Routes>
@@ -121,10 +120,17 @@ export default function App() {
                 </Routes>
               </SystemCheck>
             </WorkflowProvider>
-          </AuthProvider>
         </DemoProvider>
         </ReactFlowProvider>
       </BrowserRouter>
     </ThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider demoMode superAdmin>
+      <AppContent />
+    </AuthProvider>
   );
 }
