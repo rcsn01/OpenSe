@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5991,
+    host: true,
+    allowedHosts: true,
   },
   // Load .env from workspace root (opense-stack) so opense-stack/.env is used
   envDir: resolve(__dirname, '../..'),
