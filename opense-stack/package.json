@@ -12,7 +12,7 @@
     "dev:accounts": "turbo run dev --filter=@repo/accounts",
     "dev:admin": "turbo run dev --filter=@repo/admin",
     "dev:etl": "turbo run dev --filter=@repo/etl",
-    "dev:stoqr": "lsof -ti :5992 | xargs kill 2>/dev/null || true && turbo run dev --filter=@repo/stoqr",
+    "dev:stoqr": "kill-port 5992 || true && turbo run dev --filter=@repo/stoqr",
     "dev:ui-design": "turbo run dev --filter=@repo/ui-design",
     "lint": "turbo run lint",
     "test": "turbo run test",
@@ -28,6 +28,7 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "eslint": "^9.39.1",
+    "kill-port": "^2.0.1",
     "prettier": "^3.2.5",
     "supabase": "^2.22.0",
     "turbo": "^2.8.3"

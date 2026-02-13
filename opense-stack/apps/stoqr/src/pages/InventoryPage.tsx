@@ -135,8 +135,13 @@ export const InventoryListPage = () => {
   }
 
   const handleBulkDelete = async () => {
+    if (!companyId) return
     if (!confirm(`Are you sure you want to delete ${selectedRowIds.size} items?`)) return
-    const { error } = await db.from('products').delete().in('id', Array.from(selectedRowIds))
+    const { error } = await db
+      .from('products')
+      .delete()
+      .in('id', Array.from(selectedRowIds))
+      .eq('company_id', companyId)
     if (!error) {
       setSelectedRowIds(new Set())
       loadProducts()
@@ -191,6 +196,7 @@ export const InventoryListPage = () => {
             label: 'All Products',
             content: (
               <AllProductsTab
+                companyId={companyId}
                 stats={stats}
                 search={search}
                 setSearch={setSearch}
