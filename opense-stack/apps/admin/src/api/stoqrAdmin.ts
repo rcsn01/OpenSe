@@ -20,6 +20,18 @@ type CompanyMember = {
   email: string | null
 }
 
+type CompanyMemberCountRow = {
+  company_id: string
+}
+
+type CompanyMemberQueryRow = {
+  id: string
+  user_id: string
+  joined_at: string
+  roles: { name: string | null } | Array<{ name: string | null }> | null
+  profiles: { full_name: string | null; email: string | null } | Array<{ full_name: string | null; email: string | null }> | null
+}
+
 export const listCompanies = async () => {
   const { data, error } = await db
     .from('companies')
@@ -48,7 +60,8 @@ export const listCompanies = async () => {
 
   if (memberError) throw memberError
 
-  const counts = (members ?? []).reduce<Record<string, number>>((acc, row: any) => {
+  const memberRows = (members ?? []) as CompanyMemberCountRow[]
+  const counts = memberRows.reduce<Record<string, number>>((acc, row) => {
     const companyId = row.company_id as string
     acc[companyId] = (acc[companyId] ?? 0) + 1
     return acc
@@ -77,7 +90,9 @@ export const listCompanyMembers = async (companyId: string) => {
 
   if (error) throw error
 
-  return ((data ?? []) as any[]).map(
+  const rows = (data ?? []) as CompanyMemberQueryRow[]
+
+  return rows.map(
     (member): CompanyMember => ({
       id: member.id,
       user_id: member.user_id,
