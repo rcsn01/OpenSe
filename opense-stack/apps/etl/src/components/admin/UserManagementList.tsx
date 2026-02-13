@@ -82,6 +82,13 @@ export const UserManagementList = () => {
   const [editFullName, setEditFullName] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  const callUserAdminAction = async (body: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke('admin-user-management', { body });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  };
+
   useEffect(() => {
     if (queryError) {
       setError(queryError.message);
@@ -93,10 +100,10 @@ export const UserManagementList = () => {
 
     setActionLoading(true);
     try {
-      // Call the new admin RPC to clean up auth.users + profiles
-      const { error } = await supabase.rpc('delete_user_admin', { target_user_id: userId });
-
-      if (error) throw error;
+      await callUserAdminAction({
+        action: 'delete',
+        targetUserId: userId,
+      });
 
       queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       setSuccessMsg('User deleted successfully');
@@ -114,13 +121,12 @@ export const UserManagementList = () => {
     setError(null);
 
     try {
-      const { data: _newId, error } = await supabase.rpc('create_user_admin', {
+      await callUserAdminAction({
+        action: 'create',
         email: newUser.email,
         password: newUser.password,
-        full_name: newUser.fullName,
+        fullName: newUser.fullName,
       });
-
-      if (error) throw error;
 
       setSuccessMsg(`User ${newUser.email} created successfully.`);
       setIsAddModalOpen(false);
@@ -142,12 +148,11 @@ export const UserManagementList = () => {
     setError(null);
 
     try {
-      const { error } = await supabase.rpc('reset_password_admin', {
-        target_user_id: selectedUser.id,
-        new_password: resetPassword,
+      await callUserAdminAction({
+        action: 'reset-password',
+        targetUserId: selectedUser.id,
+        newPassword: resetPassword,
       });
-
-      if (error) throw error;
 
       setSuccessMsg(`Password for ${selectedUser.email} reset successfully.`);
       setIsResetModalOpen(false);
