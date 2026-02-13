@@ -1,4 +1,36 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+
+const workspaceRoot = process.cwd();
+
+const loadEnvFromFile = (filePath: string) => {
+  if (!existsSync(filePath)) return;
+
+  const content = readFileSync(filePath, 'utf8');
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+
+    const equalsIndex = line.indexOf('=');
+    if (equalsIndex <= 0) continue;
+
+    const key = line.slice(0, equalsIndex).trim();
+    if (!key || process.env[key] !== undefined) continue;
+
+    const rawValue = line.slice(equalsIndex + 1).trim();
+    const unquoted =
+      (rawValue.startsWith('"') && rawValue.endsWith('"')) ||
+      (rawValue.startsWith("'") && rawValue.endsWith("'"))
+        ? rawValue.slice(1, -1)
+        : rawValue;
+
+    process.env[key] = unquoted;
+  }
+};
+
+loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test'));
+loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test.local'));
 
 const withAccounts = process.env.E2E_WITH_ACCOUNTS !== 'false';
 
