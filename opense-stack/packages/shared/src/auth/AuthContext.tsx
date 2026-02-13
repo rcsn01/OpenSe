@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../supabase'
 import { DEMO_USER_ID, createDemoUser } from './demo'
+import { reportAuthError } from './errorReporting'
 
 export interface AuthProviderOptions {
   demoMode?: boolean
@@ -51,7 +52,7 @@ export const AuthProvider = ({
 
     const { data, error } = await supabase.rpc('get_super_admin_status')
     if (error) {
-      console.error('Failed to fetch super admin status:', error)
+      reportAuthError('Failed to fetch super admin status', error)
       setIsSuperAdmin(false)
       setSuperAdminChecked(true)
       return false
