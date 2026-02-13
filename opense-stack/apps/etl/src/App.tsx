@@ -66,10 +66,10 @@ export default function App() {
                   {/* Public Landing Page */}
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/god-mode" element={<GodModePage />} />
+                  <Route path="/login" element={<LoginPage />} />
 
                   {/* Auth Routes */}
                   <Route element={<AuthLayout />}>
-                    <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                   </Route>
 
