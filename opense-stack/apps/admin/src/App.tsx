@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage'
 import { StoqrAdminPage } from './pages/StoqrAdminPage'
 import { SuperAdminPage } from './pages/SuperAdminPage'
 import { PlatformOverviewPage } from './pages/PlatformOverviewPage'
+import { AdminShell } from './components/AdminShell'
 
 const ProtectedSuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation()
@@ -34,30 +35,17 @@ const AppRoutes = () => {
       <Route path="/god-mode" element={<GodModePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
-        path="/platform"
         element={
           <ProtectedSuperAdminRoute>
-            <PlatformOverviewPage />
+            <AdminShell />
           </ProtectedSuperAdminRoute>
         }
-      />
-      <Route
-        path="/etl-admin"
-        element={
-          <ProtectedSuperAdminRoute>
-            <SuperAdminPage />
-          </ProtectedSuperAdminRoute>
-        }
-      />
+      >
+        <Route path="/platform" element={<PlatformOverviewPage />} />
+        <Route path="/etl-admin" element={<SuperAdminPage />} />
+        <Route path="/stoqr" element={<StoqrAdminPage />} />
+      </Route>
       <Route path="/super-admin" element={<Navigate to="/etl-admin" replace />} />
-      <Route
-        path="/stoqr"
-        element={
-          <ProtectedSuperAdminRoute>
-            <StoqrAdminPage />
-          </ProtectedSuperAdminRoute>
-        }
-      />
       <Route
         path="/"
         element={

@@ -34,7 +34,7 @@ type OutletContextType = {
 };
 
 export const OrganisationPage = () => {
-    const { user, isSuperAdmin } = useAuth();
+    const { user } = useAuth();
     const { currentOrg: contextOrg } = useOutletContext<OrganisationPageContext>();
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -220,14 +220,6 @@ export const OrganisationPage = () => {
                         )}
                     </div>
                 </div>
-
-                {isSuperAdmin && (
-                    <div className="mt-12 text-center">
-                        <Link to="/admin" className="text-slate-400 hover:text-blue-600 hover:underline font-medium text-sm transition-colors">
-                            Access Super Admin Dashboard
-                        </Link>
-                    </div>
-                )}
             </div>
         );
     }
