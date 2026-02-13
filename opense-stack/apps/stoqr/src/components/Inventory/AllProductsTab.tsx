@@ -10,6 +10,7 @@ import { db } from '../../supabaseClient'
 import { toast } from 'sonner'
 
 const ProductListView = ({ 
+  companyId,
   products, 
   isLoading, 
   selectedRowIds, 
@@ -27,6 +28,7 @@ const ProductListView = ({
   handleBulkDelete,
   onRefresh
 }: {
+  companyId: string | null
   products: InventoryProduct[]
   isLoading: boolean
   selectedRowIds: Set<string>
@@ -50,17 +52,30 @@ const ProductListView = ({
   const [isSaving, setIsSaving] = useState(false)
 
   const startEdit = (product: InventoryProduct, field: 'quantity_on_hand' | 'selling_price') => {
+    if (isSaving) return
     setEditingCell({ id: product.id, field })
     setEditingValue(String(product[field] ?? ''))
   }
 
-  const commitEdit = async () => {
-    if (!editingCell) return
-    const value = toNumber(editingValue)
+  const commitEdit = async (
+    cellSnapshot: { id: string; field: 'quantity_on_hand' | 'selling_price' } | null = editingCell,
+    valueSnapshot: string = editingValue
+  ) => {
+    if (!cellSnapshot || isSaving) return
+    if (!companyId) {
+      toast.error('No company selected')
+      return
+    }
+
+    const value = toNumber(valueSnapshot)
     setIsSaving(true)
 
-    const updates = { [editingCell.field]: value }
-    const { error } = await db.from('products').update(updates).eq('id', editingCell.id)
+    const updates = { [cellSnapshot.field]: value }
+    const { error } = await db
+      .from('products')
+      .update(updates)
+      .eq('id', cellSnapshot.id)
+      .eq('company_id', companyId)
 
     if (error) {
       toast.error(`Update failed: ${error.message}`)
@@ -69,10 +84,14 @@ const ProductListView = ({
       onRefresh()
     }
     setIsSaving(false)
-    setEditingCell(null)
+    setEditingCell((current) =>
+      current && current.id === cellSnapshot.id && current.field === cellSnapshot.field ? null : current
+    )
+    setEditingValue('')
   }
 
   const cancelEdit = () => {
+    if (isSaving) return
     setEditingCell(null)
     setEditingValue('')
   }
@@ -144,6 +163,7 @@ const ProductListView = ({
                     <input 
                       type="checkbox" 
                       checked={products.length > 0 && selectedRowIds.size === products.length}
+                      disabled={isSaving}
                       onChange={toggleAll}
                     />
                   </th>
@@ -171,6 +191,7 @@ const ProductListView = ({
                         <input 
                           type="checkbox" 
                           checked={selectedRowIds.has(product.id)}
+                          disabled={isSaving}
                           onChange={() => toggleSelection(product.id)}
                         />
                       </td>
@@ -191,15 +212,25 @@ const ProductListView = ({
                             value={editingValue}
                             disabled={isSaving}
                             onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={commitEdit}
+                            onBlur={() => {
+                              void commitEdit()
+                            }}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitEdit()
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                void commitEdit()
+                              }
                               if (e.key === 'Escape') cancelEdit()
                             }}
                             style={{ width: 120, textAlign: 'right' }}
                           />
                         ) : (
-                          <span className="editable-cell" onClick={() => startEdit(product, 'selling_price')}>
+                          <span
+                            className="editable-cell"
+                            onClick={() => startEdit(product, 'selling_price')}
+                            aria-disabled={isSaving}
+                            style={{ cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}
+                          >
                             {formatCurrency(product.selling_price)}
                             <span className="edit-icon">✎</span>
                           </span>
@@ -215,15 +246,25 @@ const ProductListView = ({
                             value={editingValue}
                             disabled={isSaving}
                             onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={commitEdit}
+                            onBlur={() => {
+                              void commitEdit()
+                            }}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') commitEdit()
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                void commitEdit()
+                              }
                               if (e.key === 'Escape') cancelEdit()
                             }}
                             style={{ width: 100, textAlign: 'right' }}
                           />
                         ) : (
-                          <span className="editable-cell" onClick={() => startEdit(product, 'quantity_on_hand')}>
+                          <span
+                            className="editable-cell"
+                            onClick={() => startEdit(product, 'quantity_on_hand')}
+                            aria-disabled={isSaving}
+                            style={{ cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}
+                          >
                             {product.quantity_on_hand}
                             <span className="edit-icon">✎</span>
                           </span>
@@ -264,6 +305,7 @@ const ProductListView = ({
 }
 
 export const AllProductsTab = ({
+  companyId,
   stats,
   search,
   setSearch,
@@ -291,6 +333,7 @@ export const AllProductsTab = ({
   handleBulkDelete,
   onRefresh
 }: {
+  companyId: string | null
   stats: { totalItems: number; lowStockItems: number; totalValue: number }
   search: string
   setSearch: (value: string) => void
@@ -398,6 +441,7 @@ export const AllProductsTab = ({
         </div>
 
         <ProductListView 
+          companyId={companyId}
           products={products}
           isLoading={isLoading}
           selectedRowIds={selectedRowIds}
