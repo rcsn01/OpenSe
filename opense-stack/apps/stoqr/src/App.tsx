@@ -43,7 +43,12 @@ function App() {
 
   if (!user) {
     return (
-      <ThemeProvider>
+      <ThemeProvider
+        defaultTheme="light"
+        storageKey="opense-theme"
+        cookieKey="opense-theme"
+        respectStoredTheme={false}
+      >
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -55,7 +60,12 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
+    <ThemeProvider
+      defaultTheme="light"
+      storageKey="opense-theme"
+      cookieKey="opense-theme"
+      respectStoredTheme={true}
+    >
       <CompanyProvider userId={user.id}>
         <Toaster position="top-right" richColors />
         <Routes>
