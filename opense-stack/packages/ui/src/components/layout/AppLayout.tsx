@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
-import { TopBar } from './TopBar'
+import { SwitchAppTopBar } from './SwitchAppTopBar'
 
 /**
  * App layout with a fixed sidebar that never scrolls with the page.
@@ -32,7 +32,7 @@ export function AppLayout({
   const showTopBar = topBar !== null
   const resolvedTopBar =
     topBar === undefined ? (
-      <TopBar profileSrc={profileSrc} profileFallback={profileFallback} />
+      <SwitchAppTopBar profileSrc={profileSrc} profileFallback={profileFallback} />
     ) : (
       topBar
     )
