@@ -51,6 +51,11 @@
 
   /* Surfaces */
   --color-background: var(--shade-white0);
+  --color-white-0: var(--color-background);
+  --color-white-2: color-mix(in srgb, white 2%, var(--color-muted));
+  --color-white-4: color-mix(in srgb, white 4%, var(--color-muted));
+  --color-white-10: color-mix(in srgb, white 10%, var(--color-muted));
+  --color-white-12: color-mix(in srgb, white 12%, var(--color-muted));
   --color-foreground: #0f172a;
   --color-muted: var(--shade-white2);
   --color-muted-foreground: #64748b;
@@ -128,6 +133,7 @@
   --color-info-light: #082f49;
 
   --color-background: var(--shade-black0);
+  --color-white-0: var(--color-background);
   --color-foreground: #f8fafc;
   --color-muted: var(--shade-black4);
   --color-muted-foreground: #94a3b8;
@@ -169,6 +175,7 @@ button, input, select, textarea { font: inherit; }
 /* BasePage content wrapper - reduced padding for tighter layout */
 .base-page-content {
   padding: var(--gap-4);
+  background: var(--color-white-0);
 }
 
 /* Stack layout - flex column with gap (used by BasePage default container) */
