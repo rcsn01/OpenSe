@@ -31,6 +31,8 @@ export { StackLayout } from './layout/StackLayout'
 export { AppLayout, type AppLayoutProps } from './layout/AppLayout'
 export { BasePage, type BasePageProps } from './layout/BasePage'
 export { TopBar, type TopBarProps } from './layout/TopBar'
+export { SwitchAppTopBar, type SwitchAppTopBarProps } from './layout/SwitchAppTopBar'
+export { SwitchAppPopover, type SwitchAppPopoverProps } from './layout/SwitchAppPopover'
 
 // Empty state
 export { EmptyState, type EmptyStateProps } from './ui/EmptyState'
