@@ -11,9 +11,6 @@ export function ColorPalettePage() {
         <ColorPalette />
       </Section>
       <Section title="Shades">
-        <Body size="body4" muted>
-          Neutral greys: white-based (2–12%) and black-based (0–20%).
-        </Body>
         <Shades />
       </Section>
     </Container>

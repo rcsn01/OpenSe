@@ -33,7 +33,7 @@ export function TopBar({
   return (
     <header
       className={cn(
-        'flex h-14 shrink-0 items-center justify-between gap-4 bg-[var(--color-white-12)] px-4',
+        'flex h-14 shrink-0 items-center justify-between gap-4 bg-[var(--color-white-3)] px-4',
         className,
       )}
     >
