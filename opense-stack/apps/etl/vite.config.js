@@ -9,7 +9,7 @@ const currentDir = fileURLToPath(new URL('.', import.meta.url))
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5991,
+    port: 5992,
     host: true,
     allowedHosts: true,
   },

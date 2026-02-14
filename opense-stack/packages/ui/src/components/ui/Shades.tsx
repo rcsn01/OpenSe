@@ -21,30 +21,34 @@ function getContrastColor(hex: string): string {
   return luminance > 0.5 ? '#000000' : '#ffffff'
 }
 
-const WHITE_SHADES = [0, 4, 8, 12, 16, 20, 24, 28, 32] as const
-const BLACK_SHADES = [0, 2, 4, 8, 10, 12, 14, 16, 18] as const
+const WHITE_SHADES = [0, 5, 10, 15, 20, 25, 30, 35, 40] as const
+const BLACK_SHADES = [0, 3, 6, 9, 12, 15, 18, 21, 24] as const
 
 export function Shades({ className }: { className?: string }) {
   const [hoveredSwatch, setHoveredSwatch] = useState<string | null>(null)
 
   return (
     <div className={cn('space-y-6', className)}>
-      {/* Black row: 0%, 4%, 8%, 12%, 16%, 20%, 24%, 28%, 32% */}
+      {/* Black row: 5% color gap */}
       <div className="space-y-2">
         <span className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase tracking-wider">
-          Black: 0%, 4%, 8%, 12%, 16%, 20%, 24%, 28%, 32%
+          Black: {WHITE_SHADES.join('%, ')}%
         </span>
-        <div className="flex gap-0.5 pb-2">
-          {WHITE_SHADES.map((pct) => {
+        <div className="flex pb-2">
+          {WHITE_SHADES.map((pct, i) => {
             const hex = greyFromWhitePercent(pct)
             const swatchKey = `black-${pct}`
             const isHovered = hoveredSwatch === swatchKey
             const textColor = getContrastColor(hex)
+            const isFirst = i === 0
+            const isLast = i === WHITE_SHADES.length - 1
             return (
               <div
                 key={swatchKey}
                 className={cn(
-                  'relative w-12 h-14 flex-shrink-0 transition-all duration-150 cursor-pointer rounded-sm ring-1 ring-black/20',
+                  'relative w-12 h-14 flex-shrink-0 transition-all duration-150 cursor-pointer',
+                  isFirst && 'rounded-l-sm',
+                  isLast && 'rounded-r-sm',
                   isHovered && 'scale-y-110 z-10',
                 )}
                 style={{ backgroundColor: hex }}
@@ -66,22 +70,26 @@ export function Shades({ className }: { className?: string }) {
         </div>
       </div>
 
-      {/* White row: 0%, 2%, 4%, 8%, 10%, 12%, 14%, 16%, 18% */}
+      {/* White row: 3% color gap */}
       <div className="space-y-2">
         <span className="text-xs font-medium text-[var(--color-muted-foreground)] uppercase tracking-wider">
-          White: 0%, 2%, 4%, 8%, 10%, 12%, 14%, 16%, 18%
+          White: {BLACK_SHADES.join('%, ')}%
         </span>
-        <div className="flex gap-0.5 pb-2 p-3 rounded-md bg-[var(--color-border)]">
-          {BLACK_SHADES.map((pct) => {
+        <div className="flex pb-2 p-3 rounded-md bg-[var(--color-border)]">
+          {BLACK_SHADES.map((pct, i) => {
             const hex = greyFromBlackPercent(pct)
             const swatchKey = `white-${pct}`
             const isHovered = hoveredSwatch === swatchKey
             const textColor = getContrastColor(hex)
+            const isFirst = i === 0
+            const isLast = i === BLACK_SHADES.length - 1
             return (
               <div
                 key={swatchKey}
                 className={cn(
-                  'relative w-12 h-14 flex-shrink-0 transition-all duration-150 cursor-pointer rounded-sm ring-1 ring-black/20',
+                  'relative w-12 h-14 flex-shrink-0 transition-all duration-150 cursor-pointer',
+                  isFirst && 'rounded-l-sm',
+                  isLast && 'rounded-r-sm',
                   isHovered && 'scale-y-110 z-10',
                 )}
                 style={{ backgroundColor: hex }}
