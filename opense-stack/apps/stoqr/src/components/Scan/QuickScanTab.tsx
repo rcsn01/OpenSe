@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { StackLayout } from '@repo/ui'
 import { supabase, db } from '../../supabaseClient'
 import type { Product } from '../../types'
 import { EmptyState } from '../EmptyState'
@@ -93,7 +94,7 @@ export const QuickScanTab = ({ scanValue, companyId }: { scanValue: string; comp
   }
 
   return (
-    <div className="grid grid-2" style={{ gap: 24 }}>
+    <StackLayout variant="grid-2">
       <div className="card stack">
         <h3 className="section-title">Item details</h3>
         
@@ -205,7 +206,7 @@ export const QuickScanTab = ({ scanValue, companyId }: { scanValue: string; comp
           </div>
         )}
       </div>
-    </div>
+    </StackLayout>
   )
 }
 
@@ -226,7 +227,7 @@ export const ScannerModule = ({
   scannerRef: React.MutableRefObject<Html5Qrcode | null>
 }) => {
   return (
-    <div className="stack" style={{ gap: 16 }}>
+    <div className="stack">
       {/* Camera Viewport */}
       <div
         className="card"

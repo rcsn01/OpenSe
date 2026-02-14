@@ -16,9 +16,9 @@ export function StackLayout({ children, className, variant = 'stack' }: StackLay
       className={cn(
         'gap-[var(--gap-4)]',
         variant === 'stack' && 'flex flex-col',
-        variant === 'grid' && 'grid md:grid-cols-2',
-        variant === 'grid-2' && 'grid',
-        variant === 'stats' && 'grid',
+        variant === 'grid' && '[display:grid] md:grid-cols-2',
+        variant === 'grid-2' && '[display:grid]',
+        variant === 'stats' && '[display:grid]',
         className,
       )}
       style={

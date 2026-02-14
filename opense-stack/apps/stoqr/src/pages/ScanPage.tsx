@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
+import { StackLayout } from '@repo/ui'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
@@ -99,7 +100,7 @@ export const ScanPage = () => {
             id: 'quick', 
             label: 'Quick Scan', 
             content: (
-              <div className="grid grid-2" style={{ alignItems: 'start', gap: 24 }}>
+              <StackLayout variant="grid-2" className="items-start">
                 {/* Column 1: Scanner */}
                 <div style={{ position: 'sticky', top: 24 }}>
                   {ScannerModuleComponent}
@@ -109,49 +110,49 @@ export const ScanPage = () => {
                 <div className="stack">
                   <QuickScanTab scanValue={scanValue} companyId={companyId || ''} />
                 </div>
-              </div>
+              </StackLayout>
             )
           },
           { 
             id: 'pick', 
             label: 'Pick & Pack', 
             content: (
-              <div className="grid grid-2" style={{ alignItems: 'start', gap: 24 }}>
+              <StackLayout variant="grid-2" className="items-start">
                 <div style={{ position: 'sticky', top: 24 }}>
                   {ScannerModuleComponent}
                 </div>
                 <div className="stack">
                   <PickPackTab scanValue={scanValue} /> 
                 </div>
-              </div>
+              </StackLayout>
             )
           },
           { 
             id: 'cycle', 
             label: 'Cycle Count', 
             content: (
-              <div className="grid grid-2" style={{ alignItems: 'start', gap: 24 }}>
+              <StackLayout variant="grid-2" className="items-start">
                 <div style={{ position: 'sticky', top: 24 }}>
                   {ScannerModuleComponent}
                 </div>
                 <div className="stack">
                   <CycleCountTab scanValue={scanValue} />
                 </div>
-              </div>
+              </StackLayout>
             ) 
           },
           { 
             id: 'putaway', 
             label: 'Putaway', 
             content: (
-              <div className="grid grid-2" style={{ alignItems: 'start', gap: 24 }}>
+              <StackLayout variant="grid-2" className="items-start">
                 <div style={{ position: 'sticky', top: 24 }}>
                   {ScannerModuleComponent}
                 </div>
                 <div className="stack">
                   <PutawayTab scanValue={scanValue} />
                 </div>
-              </div>
+              </StackLayout>
             ) 
           },
         ]}

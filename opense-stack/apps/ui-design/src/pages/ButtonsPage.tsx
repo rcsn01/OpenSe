@@ -7,7 +7,7 @@ export function ButtonsPage() {
     <Container size="lg" className="py-8">
       <Section title="Buttons">
         <SubSection title="Variants">
-          <HStack gap={3} wrap>
+          <HStack wrap>
             <Button variant="primary">Primary</Button>
             <Button variant="secondary">Secondary</Button>
             <Button variant="destructive">Destructive</Button>
@@ -18,7 +18,7 @@ export function ButtonsPage() {
         </SubSection>
 
         <SubSection title="Sizes">
-          <HStack gap={3} wrap align="end">
+          <HStack wrap align="end">
             <Button size="xs">Extra Small</Button>
             <Button size="sm">Small</Button>
             <Button size="md">Medium</Button>
@@ -28,7 +28,7 @@ export function ButtonsPage() {
         </SubSection>
 
         <SubSection title="States">
-          <HStack gap={3} wrap>
+          <HStack wrap>
             <Button>Default</Button>
             <Button disabled>Disabled</Button>
             <Button loading>Loading</Button>
@@ -36,7 +36,7 @@ export function ButtonsPage() {
         </SubSection>
 
         <SubSection title="With Icons">
-          <HStack gap={3} wrap>
+          <HStack wrap>
             <Button size="icon" variant="outline">
               <Sun className="h-4 w-4" />
             </Button>

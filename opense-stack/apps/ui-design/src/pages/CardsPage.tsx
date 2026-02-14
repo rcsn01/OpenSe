@@ -17,7 +17,7 @@ export function CardsPage() {
   return (
     <Container size="lg" className="py-8">
       <Section title="Cards">
-        <Grid cols={3} gap={4}>
+        <Grid cols={3}>
           <Card>
             <CardHeader>
               <CardTitle>Default Card</CardTitle>

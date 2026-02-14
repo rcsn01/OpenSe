@@ -4,7 +4,7 @@ export function Section({ title, children }: { title: string; children: React.Re
   return (
     <section className="scroll-mt-4">
       <Heading level="h3" className="mb-4 pb-2 border-b border-[var(--color-border)]">{title}</Heading>
-      <VStack gap={6}>{children}</VStack>
+      <VStack>{children}</VStack>
     </section>
   )
 }
