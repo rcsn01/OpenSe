@@ -22,7 +22,7 @@ export function DataDisplayPage() {
     <Container size="lg" className="py-8">
       <Section title="Data Display">
         <SubSection title="Avatars">
-          <HStack gap={3} wrap align="center">
+          <HStack wrap align="center">
             <Avatar size="xs" fallback="XS" />
             <Avatar size="sm" fallback="SM" />
             <Avatar size="md" alt="John Doe" fallback="JD" />
@@ -96,7 +96,7 @@ export function DataDisplayPage() {
         </SubSection>
 
         <SubSection title="Tooltip">
-          <HStack gap={4}>
+          <HStack>
             <Tooltip content="Top tooltip" side="top">
               <Button variant="outline" size="sm">
                 Top

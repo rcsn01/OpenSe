@@ -365,7 +365,7 @@ export const AllProductsTab = ({
 
   return (
     <div className="stack">
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+      <div className="gap-[var(--gap-4)] [display:grid]" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
         <div className="card stat" style={{ borderLeft: stats.lowStockItems > 0 ? '4px solid var(--warning)' : undefined }}>
           <div className="flex-between">
             <h3 style={{ margin: 0 }}>Low Stock Alerts</h3>

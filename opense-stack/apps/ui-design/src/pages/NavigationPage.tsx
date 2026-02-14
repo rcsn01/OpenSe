@@ -52,7 +52,7 @@ export function NavigationPage() {
     <Container size="lg" className="py-8">
       <Section title="Navigation">
         <SubSection title="Breadcrumb">
-          <VStack gap={3}>
+          <VStack>
             <Breadcrumb
               items={[
                 { label: 'Home', href: '#' },

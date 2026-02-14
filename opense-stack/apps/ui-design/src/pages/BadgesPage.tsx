@@ -6,7 +6,7 @@ export function BadgesPage() {
     <Container size="lg" className="py-8">
       <Section title="Badges">
         <SubSection title="Variants">
-          <HStack gap={2} wrap>
+          <HStack wrap>
             <Badge>Default</Badge>
             <Badge variant="secondary">Secondary</Badge>
             <Badge variant="success">Success</Badge>
@@ -17,7 +17,7 @@ export function BadgesPage() {
           </HStack>
         </SubSection>
         <SubSection title="Sizes">
-          <HStack gap={2} wrap align="center">
+          <HStack wrap align="center">
             <Badge size="sm">Small</Badge>
             <Badge size="md">Medium</Badge>
             <Badge size="lg">Large</Badge>
