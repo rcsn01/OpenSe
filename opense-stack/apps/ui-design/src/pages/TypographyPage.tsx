@@ -6,7 +6,7 @@ export function TypographyPage() {
     <Container size="lg" className="py-8">
       <Section title="Typography">
         <SubSection title="Headings (h1–h6)">
-          <VStack gap={3}>
+          <VStack>
             <Heading level="h1">Heading 1 — The quick brown fox</Heading>
             <Heading level="h2">Heading 2 — The quick brown fox</Heading>
             <Heading level="h3">Heading 3 — The quick brown fox</Heading>
@@ -17,7 +17,7 @@ export function TypographyPage() {
         </SubSection>
 
         <SubSection title="Body Text (body1–body6)">
-          <VStack gap={2}>
+          <VStack>
             <Body size="body1">Body 1 — The quick brown fox jumps over the lazy dog. (xl)</Body>
             <Body size="body2">Body 2 — The quick brown fox jumps over the lazy dog. (lg)</Body>
             <Body size="body3">Body 3 — The quick brown fox jumps over the lazy dog. (base)</Body>
@@ -28,7 +28,7 @@ export function TypographyPage() {
         </SubSection>
 
         <SubSection title="Muted Text">
-          <VStack gap={2}>
+          <VStack>
             <Body size="body2" muted>
               This is muted body2 text for supplementary information.
             </Body>
@@ -39,14 +39,14 @@ export function TypographyPage() {
         </SubSection>
 
         <SubSection title="Labels">
-          <HStack gap={4}>
+          <HStack>
             <Label>Default Label</Label>
             <Label required>Required Label</Label>
           </HStack>
         </SubSection>
 
         <SubSection title="Code">
-          <HStack gap={4} wrap>
+          <HStack wrap>
             <Body size="body3">
               Inline code: <Code>const x = 42</Code>
             </Body>

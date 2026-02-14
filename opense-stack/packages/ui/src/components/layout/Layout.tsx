@@ -39,11 +39,11 @@ const justifyClasses: Record<string, string> = {
 
 interface StackProps {
   children: ReactNode; className?: string
-  gap?: 1 | 2 | 3 | 4 | 5 | 6; align?: 'start' | 'center' | 'end' | 'stretch'
+  align?: 'start' | 'center' | 'end' | 'stretch'
 }
 
-export function VStack({ children, className, gap = 4, align = 'stretch' }: StackProps) {
-  return <div className={cn('flex flex-col', gapClasses[gap], alignClasses[align], className)}>{children}</div>
+export function VStack({ children, className, align = 'stretch' }: StackProps) {
+  return <div className={cn('flex flex-col', gapClasses[4], alignClasses[align], className)}>{children}</div>
 }
 
 /* ── HStack ───────────────────────────────────────────── */
@@ -52,9 +52,9 @@ interface HStackProps extends StackProps {
   justify?: 'start' | 'center' | 'end' | 'between' | 'around'; wrap?: boolean
 }
 
-export function HStack({ children, className, gap = 4, align = 'center', justify = 'start', wrap = false }: HStackProps) {
+export function HStack({ children, className, align = 'center', justify = 'start', wrap = false }: HStackProps) {
   return (
-    <div className={cn('flex flex-row', gapClasses[gap], alignClasses[align], justifyClasses[justify ?? 'start'], wrap && 'flex-wrap', className)}>
+    <div className={cn('flex flex-row', gapClasses[4], alignClasses[align], justifyClasses[justify ?? 'start'], wrap && 'flex-wrap', className)}>
       {children}
     </div>
   )
@@ -62,13 +62,13 @@ export function HStack({ children, className, gap = 4, align = 'center', justify
 
 /* ── Grid ─────────────────────────────────────────────── */
 
-interface GridProps { children: ReactNode; className?: string; cols?: 1 | 2 | 3 | 4 | 5 | 6 | 12; gap?: 1 | 2 | 3 | 4 | 5 | 6 }
+interface GridProps { children: ReactNode; className?: string; cols?: 1 | 2 | 3 | 4 | 5 | 6 | 12 }
 
 const colClasses: Record<number, string> = {
   1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4',
   5: 'grid-cols-5', 6: 'grid-cols-6', 12: 'grid-cols-12',
 }
 
-export function Grid({ children, className, cols = 3, gap = 4 }: GridProps) {
-  return <div className={cn('grid', colClasses[cols], gapClasses[gap], className)}>{children}</div>
+export function Grid({ children, className, cols = 3 }: GridProps) {
+  return <div className={cn('grid', colClasses[cols], gapClasses[4], className)}>{children}</div>
 }
