@@ -12,7 +12,7 @@ export function DividersPage() {
           <Divider label="OR" />
         </SubSection>
         <SubSection title="Vertical Divider">
-          <HStack gap={4} className="h-12">
+          <HStack className="h-12">
             <Body size="body4">Left content</Body>
             <Divider orientation="vertical" />
             <Body size="body4">Right content</Body>

@@ -11,7 +11,7 @@ export const ReplenishmentTab = ({ products, isLoading }: { products: Product[];
   if (isLoading) return <div className="empty-state">Loading inventory...</div>
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: '1fr 320px', gap: 24 }}>
+    <div className="gap-[var(--gap-4)] [display:grid]" style={{ gridTemplateColumns: '1fr 320px' }}>
       <div className="card stack">
         <h3 className="section-title">Replenishment Recommendations</h3>
         {lowStock.length === 0 ? (
