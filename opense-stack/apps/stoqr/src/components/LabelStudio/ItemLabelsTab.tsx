@@ -58,7 +58,7 @@ export const ItemLabelsTab = () => {
   })
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: '320px 1fr', gap: 24 }}>
+    <div className="gap-[var(--gap-4)] [display:grid]" style={{ gridTemplateColumns: '320px 1fr' }}>
       <div className="card stack">
         <h3 className="section-title">Select items</h3>
         <input
