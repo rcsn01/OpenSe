@@ -9,7 +9,7 @@ import {
   SideNavGroupList,
   SideNavBrandSlot,
   SideNavUserProfile,
-  TopBar,
+  SwitchAppTopBar,
   Input,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
@@ -139,7 +139,7 @@ export const AppLayout = () => {
   )
 
   const topBar = isDashboard ? (
-    <TopBar
+    <SwitchAppTopBar
       left={
         <Input
           placeholder="Search workflows..."
