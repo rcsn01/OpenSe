@@ -120,7 +120,7 @@ export function SideNavBrandSlot({
   const { resolvedTheme, toggleTheme } = useTheme()
 
   return (
-    <div className="flex h-14 shrink-0 items-center px-4 border-b border-[var(--color-border)]">
+    <div className="flex h-14 shrink-0 items-center px-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-blue-500 to-indigo-500 text-white grid place-items-center font-extrabold text-base shrink-0 shadow-[0_4px_12px_rgba(59,130,246,0.3)] [&>svg]:w-5 [&>svg]:h-5">
@@ -183,7 +183,7 @@ export function SideNavUserProfile({
   signingOut,
 }: SideNavUserProfileProps) {
   return (
-    <div className="shrink-0 p-4 border-t border-[var(--color-border)]">
+    <div className="shrink-0 p-4">
       <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--color-background)]">
         <div className="w-9 h-9 rounded-full bg-[var(--color-muted)] text-[var(--color-muted-foreground)] grid place-items-center shrink-0">
           <User className="w-[18px] h-[18px]" />
