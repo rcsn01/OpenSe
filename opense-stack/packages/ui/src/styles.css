@@ -29,35 +29,36 @@
   --color-info: #0284c7;
   --color-info-light: #e0f2fe;
 
-  /* Shades (grey scale from white/black %) */
+  /* Shades (grey scale from white/black %) – 5% black gap, 3% white gap */
   --shade-black0: #000000;
-  --shade-black4: #0a0a0a;
-  --shade-black8: #141414;
-  --shade-black12: #1f1f1f;
-  --shade-black16: #292929;
+  --shade-black5: #0d0d0d;
+  --shade-black10: #1a1a1a;
+  --shade-black15: #262626;
   --shade-black20: #333333;
-  --shade-black24: #3d3d3d;
-  --shade-black28: #474747;
-  --shade-black32: #525252;
+  --shade-black25: #404040;
+  --shade-black30: #4d4d4d;
+  --shade-black35: #595959;
+  --shade-black40: #666666;
   --shade-white0: #ffffff;
-  --shade-white2: #fafafa;
-  --shade-white4: #f5f5f5;
-  --shade-white8: #ebebeb;
-  --shade-white10: #e6e6e6;
+  --shade-white3: #f7f7f7;
+  --shade-white6: #f0f0f0;
+  --shade-white9: #e8e8e8;
   --shade-white12: #e0e0e0;
-  --shade-white14: #dbdbdb;
-  --shade-white16: #d6d6d6;
+  --shade-white15: #d9d9d9;
   --shade-white18: #d1d1d1;
+  --shade-white21: #c9c9c9;
+  --shade-white24: #c2c2c2;
 
   /* Surfaces */
   --color-background: var(--shade-white0);
   --color-white-0: var(--color-background);
   --color-white-2: color-mix(in srgb, white 2%, var(--color-muted));
+  --color-white-3: color-mix(in srgb, white 3%, var(--color-muted));
   --color-white-4: color-mix(in srgb, white 4%, var(--color-muted));
   --color-white-10: color-mix(in srgb, white 10%, var(--color-muted));
   --color-white-12: color-mix(in srgb, white 12%, var(--color-muted));
   --color-foreground: #0f172a;
-  --color-muted: var(--shade-white2);
+  --color-muted: var(--shade-white3);
   --color-muted-foreground: #64748b;
   --color-border: #e2e8f0;
   --color-border-hover: #cbd5e1;
@@ -135,7 +136,7 @@
   --color-background: var(--shade-black0);
   --color-white-0: var(--color-background);
   --color-foreground: #f8fafc;
-  --color-muted: var(--shade-black4);
+  --color-muted: var(--shade-black5);
   --color-muted-foreground: #94a3b8;
   --color-border: #334155;
   --color-border-hover: #475569;
