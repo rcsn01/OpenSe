@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   // Remove allowHosts in production
   server: {
-    port: 5992,
+    port: 5993,
     host: true,
     allowedHosts: true,
   },
