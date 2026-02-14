@@ -6,7 +6,7 @@ export function SpacingPage() {
     <Container size="lg" className="py-8">
       <Section title="Spacing & Layout">
         <SubSection title="Gap Scale (gap-1 to gap-6)">
-          <VStack gap={4}>
+          <VStack>
             {([1, 2, 3, 4, 5, 6] as const).map((g) => (
               <div key={g} className="flex items-center gap-4">
                 <Body size="body4" className="w-16 shrink-0 font-mono">
@@ -26,7 +26,7 @@ export function SpacingPage() {
         </SubSection>
 
         <SubSection title="Container Sizes">
-          <VStack gap={3}>
+          <VStack>
             {(['sm', 'md', 'lg', 'xl', 'full'] as const).map((size) => (
               <div key={size}>
                 <Body size="body5" className="mb-1 font-mono">
@@ -46,12 +46,12 @@ export function SpacingPage() {
         </SubSection>
 
         <SubSection title="VStack & HStack">
-          <HStack gap={6} wrap>
+          <HStack wrap>
             <Card padding="md">
               <Body size="body5" muted className="mb-2">
-                VStack gap=3
+                VStack (gap=4)
               </Body>
-              <VStack gap={3}>
+              <VStack>
                 <div className="h-6 w-full rounded bg-[var(--color-primary-light)]" />
                 <div className="h-6 w-full rounded bg-[var(--color-primary-light)]" />
                 <div className="h-6 w-full rounded bg-[var(--color-primary-light)]" />
@@ -59,9 +59,9 @@ export function SpacingPage() {
             </Card>
             <Card padding="md">
               <Body size="body5" muted className="mb-2">
-                HStack gap=3
+                HStack (gap=4)
               </Body>
-              <HStack gap={3}>
+              <HStack>
                 <div className="h-6 w-16 rounded bg-[var(--color-primary-light)]" />
                 <div className="h-6 w-16 rounded bg-[var(--color-primary-light)]" />
                 <div className="h-6 w-16 rounded bg-[var(--color-primary-light)]" />
@@ -72,9 +72,9 @@ export function SpacingPage() {
 
         <SubSection title="Grid">
           <Body size="body4" muted className="mb-2">
-            Grid cols=4 gap=3
+            Grid cols=4 (gap=4)
           </Body>
-          <Grid cols={4} gap={3}>
+          <Grid cols={4}>
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}

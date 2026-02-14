@@ -22,16 +22,16 @@ export function FormsPage() {
     <Container size="lg" className="py-8">
       <Section title="Form Controls">
         <SubSection title="Input">
-          <Grid cols={2} gap={4}>
-            <VStack gap={1}>
+          <Grid cols={2}>
+            <VStack>
               <Label htmlFor="default-input">Default Input</Label>
               <Input id="default-input" placeholder="Enter text..." />
             </VStack>
-            <VStack gap={1}>
+            <VStack>
               <Label htmlFor="error-input">Input with Error</Label>
               <Input id="error-input" placeholder="Invalid value" error="This field is required" />
             </VStack>
-            <VStack gap={1}>
+            <VStack>
               <Label htmlFor="disabled-input">Disabled Input</Label>
               <Input id="disabled-input" placeholder="Cannot edit" disabled />
             </VStack>
@@ -39,12 +39,12 @@ export function FormsPage() {
         </SubSection>
 
         <SubSection title="Textarea">
-          <Grid cols={2} gap={4}>
-            <VStack gap={1}>
+          <Grid cols={2}>
+            <VStack>
               <Label htmlFor="textarea">Default Textarea</Label>
               <Textarea id="textarea" placeholder="Write something..." />
             </VStack>
-            <VStack gap={1}>
+            <VStack>
               <Label htmlFor="textarea-err">Textarea with Error</Label>
               <Textarea id="textarea-err" placeholder="Description" error="Min. 20 characters needed" />
             </VStack>
@@ -52,8 +52,8 @@ export function FormsPage() {
         </SubSection>
 
         <SubSection title="Select">
-          <Grid cols={2} gap={4}>
-            <VStack gap={1}>
+          <Grid cols={2}>
+            <VStack>
               <Label>Default Select</Label>
               <Select
                 placeholder="Choose an option"
@@ -64,7 +64,7 @@ export function FormsPage() {
                 ]}
               />
             </VStack>
-            <VStack gap={1}>
+            <VStack>
               <Label>Select with Error</Label>
               <Select
                 placeholder="Select..."
@@ -76,8 +76,8 @@ export function FormsPage() {
         </SubSection>
 
         <SubSection title="Checkbox, Radio, Toggle">
-          <HStack gap={6} wrap>
-            <VStack gap={2}>
+          <HStack wrap>
+            <VStack>
               <Body size="body5" muted>
                 Checkbox
               </Body>
@@ -85,7 +85,7 @@ export function FormsPage() {
               <Checkbox label="Subscribe to newsletter" defaultChecked />
               <Checkbox label="Disabled" disabled />
             </VStack>
-            <VStack gap={2}>
+            <VStack>
               <Body size="body5" muted>
                 Radio
               </Body>
@@ -93,7 +93,7 @@ export function FormsPage() {
               <Radio name="plan" label="Pro" />
               <Radio name="plan" label="Enterprise" disabled />
             </VStack>
-            <VStack gap={2}>
+            <VStack>
               <Body size="body5" muted>
                 Toggle Switch
               </Body>
