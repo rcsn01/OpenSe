@@ -34,7 +34,6 @@ export const AdminShell = () => {
 
   return (
     <AppLayout
-      topBar={null}
       sidebar={
         <>
           <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Admin" version="v1" />
