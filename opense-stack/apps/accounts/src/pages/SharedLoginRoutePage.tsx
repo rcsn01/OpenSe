@@ -10,12 +10,16 @@ export const SharedLoginRoutePage = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const hasRedirected = useRef(false)
+  const query = buildQueryString()
+  const querySuffix = query ? `?${query}` : ''
 
   useEffect(() => {
     if (!authLoading && user && !hasRedirected.current) {
       hasRedirected.current = true
       // Brief delay so auth state is fully settled before redirect (avoids flash loop with dashboard)
-      const id = setTimeout(redirectBackToApp, 150)
+      const id = setTimeout(() => {
+        redirectBackToApp()
+      }, 150)
       return () => clearTimeout(id)
     }
   }, [authLoading, user])
@@ -26,7 +30,10 @@ export const SharedLoginRoutePage = () => {
 
     try {
       await signIn(email, password)
-      redirectBackToApp()
+      const redirected = redirectBackToApp()
+      if (!redirected) {
+        setLoading(false)
+      }
     } catch (err: any) {
       setError(err?.message ?? 'Failed to sign in')
       setLoading(false)
@@ -38,8 +45,7 @@ export const SharedLoginRoutePage = () => {
     setError(null)
 
     try {
-      const query = buildQueryString()
-      await signInWithGoogle(`/login?${query}`)
+      await signInWithGoogle(`/login${querySuffix}`)
     } catch (err: any) {
       setError(err?.message ?? 'Failed to sign in with Google')
       setLoading(false)
@@ -59,7 +65,7 @@ export const SharedLoginRoutePage = () => {
       footer={
         <div className="text-center">
           <span className="text-slate-400">Need an account? </span>
-          <Link to={`/register?${buildQueryString()}`} className="font-medium text-blue-300 hover:text-blue-200">
+          <Link to={`/register${querySuffix}`} className="font-medium text-blue-300 hover:text-blue-200">
             Sign up
           </Link>
         </div>

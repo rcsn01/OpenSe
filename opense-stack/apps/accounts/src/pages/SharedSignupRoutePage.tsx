@@ -8,6 +8,8 @@ export const SharedSignupRoutePage = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const query = buildQueryString()
+  const querySuffix = query ? `?${query}` : ''
 
   const handleSignUp = async ({
     fullName,
@@ -51,7 +53,7 @@ export const SharedSignupRoutePage = () => {
       footer={
         <div className="text-center">
           <span className="text-slate-400">Already have an account? </span>
-          <Link to={`/login?${buildQueryString()}`} className="font-medium text-blue-300 hover:text-blue-200">
+          <Link to={`/login${querySuffix}`} className="font-medium text-blue-300 hover:text-blue-200">
             Sign in
           </Link>
         </div>
