@@ -150,6 +150,7 @@ export const AppLayout = () => {
         />
       }
       profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
+      onLogout={handleSignOut}
     />
   ) : undefined
 
@@ -162,6 +163,7 @@ export const AppLayout = () => {
       sidebar={sidebar}
       topBar={topBar}
       profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
+      onLogout={handleSignOut}
     >
       <Outlet context={outletContext} />
     </SharedAppLayout>

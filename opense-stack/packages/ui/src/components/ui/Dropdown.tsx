@@ -3,7 +3,12 @@ import { cn } from '../../lib/cn'
 
 /* ── Children-based Dropdown ──────────────────────────── */
 
-interface DropdownProps { trigger: ReactNode; children: ReactNode; align?: 'left' | 'right'; className?: string }
+interface DropdownProps {
+  trigger: ReactNode | ((open: boolean) => ReactNode)
+  children: ReactNode
+  align?: 'left' | 'right'
+  className?: string
+}
 
 export function Dropdown({ trigger, children, align = 'left', className }: DropdownProps) {
   const [open, setOpen] = useState(false)
@@ -17,7 +22,9 @@ export function Dropdown({ trigger, children, align = 'left', className }: Dropd
 
   return (
     <div ref={ref} className="relative inline-block">
-      <div onClick={() => setOpen((v) => !v)} className="cursor-pointer">{trigger}</div>
+      <div onClick={() => setOpen((v) => !v)} className="cursor-pointer">
+        {typeof trigger === 'function' ? trigger(open) : trigger}
+      </div>
       {open && (
         <div
           onClick={() => setOpen(false)}
