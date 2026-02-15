@@ -1,6 +1,6 @@
 import { supabase } from '@repo/shared/supabase'
 
-const db = supabase.schema('etl')
+const db = supabase
 
 export type OrgRow = {
   id: string
@@ -8,14 +8,12 @@ export type OrgRow = {
   created_at: string | null
   owner?: { email: string | null; full_name: string | null } | null
   member_count?: number | null
-  tier?: 'tier-1' | 'tier-2' | 'tier-3' | null
-  subscription_status?: string | null
 }
 
 export type UserOrgMembership = {
   org_id: string
   org_name: string
-  role: 'admin' | 'editor' | 'member'
+  role: 'owner' | 'admin' | 'editor' | 'member'
 }
 
 export type AdminUserRow = {
@@ -30,126 +28,120 @@ export type AdminUserRow = {
 export type MemberRow = {
   id: string
   user_id: string
-  role: 'admin' | 'editor' | 'member'
+  role: 'owner' | 'admin' | 'editor' | 'member'
   profiles?: {
     email: string | null
     full_name: string | null
   } | null
 }
 
-type AdminOrgQueryRow = {
+export type AdminAuditEventRow = {
+  id: string
+  org_id: string
+  org_name: string
+  actor_user_id: string | null
+  actor_email: string | null
+  actor_full_name: string | null
+  action: string
+  app_code: string | null
+  target_org_member_id: string | null
+  target_user_email: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
+type AdminOrgRpcRow = {
   id: string
   name: string
   created_at: string | null
-  tier: 'tier-1' | 'tier-2' | 'tier-3' | null
-  subscription_status: string | null
-  owner: { email: string | null; full_name: string | null } | Array<{ email: string | null; full_name: string | null }> | null
-  organisation_members: Array<{ count: number }> | null
+  owner_email: string | null
+  owner_full_name: string | null
+  member_count: number | null
 }
 
-type MembershipRow = {
-  user_id: string
-  role: 'admin' | 'editor' | 'member'
-  org_id: string
-  organisations: { name: string } | Array<{ name: string }> | null
-}
-
-type AdminProfileRow = {
+type AdminUserRpcRow = {
   id: string
   email: string | null
   full_name: string | null
-  created_at?: string
-  super_admin_members?: { user_id: string }[]
+  created_at: string | null
+  is_super_admin: boolean
+  memberships: Array<{
+    org_id: string
+    org_name: string
+    role: 'owner' | 'admin' | 'editor' | 'member'
+  }> | null
 }
 
-type OrgMemberQueryRow = {
+type OrgMemberRpcRow = {
   id: string
-  role: 'admin' | 'editor' | 'member'
   user_id: string
-  profiles: { email: string | null; full_name: string | null } | Array<{ email: string | null; full_name: string | null }> | null
+  role: 'owner' | 'admin' | 'editor' | 'member'
+  email: string | null
+  full_name: string | null
 }
 
 export const listAdminOrgs = async (): Promise<OrgRow[]> => {
-  const { data, error } = await db
-    .from('organisations')
-    .select('id, name, created_at, tier, subscription_status, owner:profiles!organisations_owner_id_fkey(email, full_name), organisation_members(count)')
-    .order('created_at', { ascending: false })
+  const { data, error } = await supabase.rpc('admin_list_organisations')
 
   if (error) throw error
 
-  const rows = (data || []) as AdminOrgQueryRow[]
+  const rows = (data || []) as AdminOrgRpcRow[]
 
   return rows.map((org) => ({
     id: org.id,
     name: org.name,
     created_at: org.created_at,
-    tier: org.tier ?? null,
-    subscription_status: org.subscription_status ?? null,
-    owner: Array.isArray(org.owner) ? org.owner[0] ?? null : org.owner ?? null,
-    member_count:
-      Array.isArray(org.organisation_members) && org.organisation_members[0]?.count != null
-        ? org.organisation_members[0].count
-        : null,
+    owner: {
+      email: org.owner_email,
+      full_name: org.owner_full_name,
+    },
+    member_count: org.member_count,
   })) as OrgRow[]
 }
 
 export const listAdminUsers = async (): Promise<AdminUserRow[]> => {
-  const { data: profilesData, error: profilesError } = await supabase
-    .from('profiles')
-    .select('*, super_admin_members(user_id)')
-    .order('email', { ascending: true })
+  const { data, error } = await supabase.rpc('admin_list_users')
+  if (error) throw error
 
-  if (profilesError) throw profilesError
+  const rows = (data || []) as AdminUserRpcRow[]
 
-  const { data: membershipsData, error: membershipsError } = await db
-    .from('organisation_members')
-    .select('user_id, role, org_id, organisations(name)')
-
-  if (membershipsError) throw membershipsError
-
-  const membershipsByUser = new Map<string, UserOrgMembership[]>()
-
-  const membershipRows = (membershipsData || []) as MembershipRow[]
-  for (const membership of membershipRows) {
-    const relation = Array.isArray(membership.organisations)
-      ? membership.organisations[0] ?? null
-      : membership.organisations
-    const orgName = relation?.name || 'Unknown'
-    const normalized: UserOrgMembership = {
-      org_id: membership.org_id,
-      org_name: orgName,
-      role: membership.role as 'admin' | 'editor' | 'member',
-    }
-
-    if (!membershipsByUser.has(membership.user_id)) {
-      membershipsByUser.set(membership.user_id, [])
-    }
-
-    membershipsByUser.get(membership.user_id)?.push(normalized)
-  }
-
-  const profileRows = (profilesData || []) as AdminProfileRow[]
-
-  return profileRows.map((profile) => ({
-    ...profile,
-    memberships: membershipsByUser.get(profile.id) || [],
-  })) as AdminUserRow[]
+  return rows.map((row) => ({
+    id: row.id,
+    email: row.email,
+    full_name: row.full_name,
+    created_at: row.created_at ?? undefined,
+    super_admin_members: row.is_super_admin ? [{ user_id: row.id }] : [],
+    memberships: row.memberships ?? [],
+  }))
 }
 
 export const listOrganisationMembers = async (orgId: string): Promise<MemberRow[]> => {
-  const { data, error } = await db
-    .from('organisation_members')
-    .select('id, role, user_id, profiles:profiles!organisation_members_user_id_fkey(email, full_name)')
-    .eq('org_id', orgId)
+  const { data, error } = await supabase.rpc('admin_list_organisation_members', { p_org_id: orgId })
 
   if (error) throw error
 
-  const rows = (data || []) as OrgMemberQueryRow[]
+  const rows = (data || []) as OrgMemberRpcRow[]
 
   return rows.map((member) => ({
-    ...member,
-    profiles: Array.isArray(member.profiles) ? member.profiles[0] ?? null : member.profiles ?? null,
+    id: member.id,
+    role: member.role,
+    user_id: member.user_id,
+    profiles: {
+      email: member.email,
+      full_name: member.full_name,
+    },
   })) as MemberRow[]
+}
+
+export const listAdminAuditEvents = async (orgId: string | null, limit = 50): Promise<AdminAuditEventRow[]> => {
+  const { data, error } = await supabase.rpc('admin_list_audit_events', {
+    p_org_id: orgId,
+    p_limit: limit,
+  })
+
+  if (error) throw error
+
+  return (data ?? []) as AdminAuditEventRow[]
 }
 
 const findProfileByEmail = async (email: string) => {

@@ -16,10 +16,10 @@ export class ETLAdminPage {
   }
 
   async goto() {
-    await this.page.goto('/etl-admin');
+    await this.page.goto('/organisations');
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(etl-admin|login)/);
+    await expect(this.page).toHaveURL(/\/(organisations|login)/);
   }
 }
