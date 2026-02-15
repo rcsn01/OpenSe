@@ -1,0 +1,435 @@
+-- ============================================================
+-- Baseline: RLS Policies (Public + ETL + StoQR + Storage)
+-- ============================================================
+
+DROP POLICY IF EXISTS profiles_select_authenticated ON public.profiles;
+DROP POLICY IF EXISTS profiles_update_self ON public.profiles;
+DROP POLICY IF EXISTS super_admin_members_select ON public.super_admin_members;
+DROP POLICY IF EXISTS super_admin_members_insert ON public.super_admin_members;
+DROP POLICY IF EXISTS super_admin_members_update ON public.super_admin_members;
+DROP POLICY IF EXISTS super_admin_members_delete ON public.super_admin_members;
+
+CREATE POLICY profiles_select_authenticated ON public.profiles
+  FOR SELECT USING ((SELECT auth.role()) = 'authenticated');
+
+CREATE POLICY profiles_update_self ON public.profiles
+  FOR UPDATE USING ((SELECT auth.uid()) = id);
+
+CREATE POLICY super_admin_members_select ON public.super_admin_members
+  FOR SELECT USING (
+    user_id = (SELECT auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY super_admin_members_insert ON public.super_admin_members
+  FOR INSERT WITH CHECK (public.is_app_super_admin());
+
+CREATE POLICY super_admin_members_update ON public.super_admin_members
+  FOR UPDATE USING (public.is_app_super_admin());
+
+CREATE POLICY super_admin_members_delete ON public.super_admin_members
+  FOR DELETE USING (public.is_app_super_admin());
+
+DROP POLICY IF EXISTS organisations_select ON public.organisations;
+DROP POLICY IF EXISTS organisations_insert ON public.organisations;
+DROP POLICY IF EXISTS organisations_update ON public.organisations;
+DROP POLICY IF EXISTS organisations_delete ON public.organisations;
+
+CREATE POLICY organisations_select ON public.organisations
+  FOR SELECT USING (
+    owner_id = auth.uid()
+    OR public.is_org_member(id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY organisations_insert ON public.organisations
+  FOR INSERT WITH CHECK (
+    owner_id = auth.uid()
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY organisations_update ON public.organisations
+  FOR UPDATE USING (
+    owner_id = auth.uid()
+    OR public.is_org_admin(id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY organisations_delete ON public.organisations
+  FOR DELETE USING (
+    owner_id = auth.uid()
+    OR public.is_app_super_admin()
+  );
+
+DROP POLICY IF EXISTS organisation_members_select ON public.organisation_members;
+DROP POLICY IF EXISTS organisation_members_insert ON public.organisation_members;
+DROP POLICY IF EXISTS organisation_members_update ON public.organisation_members;
+DROP POLICY IF EXISTS organisation_members_delete ON public.organisation_members;
+
+CREATE POLICY organisation_members_select ON public.organisation_members
+  FOR SELECT USING (
+    user_id = auth.uid()
+    OR public.is_org_member(org_id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY organisation_members_insert ON public.organisation_members
+  FOR INSERT WITH CHECK (
+    public.is_org_admin(org_id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY organisation_members_update ON public.organisation_members
+  FOR UPDATE USING (
+    public.is_org_admin(org_id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY organisation_members_delete ON public.organisation_members
+  FOR DELETE USING (
+    (public.is_org_admin(org_id, auth.uid()) OR public.is_app_super_admin())
+    AND NOT (role = 'owner' AND user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = organisation_members.org_id))
+  );
+
+DROP POLICY IF EXISTS apps_select ON public.apps;
+DROP POLICY IF EXISTS app_seats_select ON public.organisation_app_seats;
+DROP POLICY IF EXISTS app_seats_manage ON public.organisation_app_seats;
+DROP POLICY IF EXISTS member_app_seats_select ON public.organisation_member_app_seats;
+DROP POLICY IF EXISTS member_app_seats_manage ON public.organisation_member_app_seats;
+
+CREATE POLICY apps_select ON public.apps
+  FOR SELECT USING ((SELECT auth.role()) = 'authenticated');
+
+CREATE POLICY app_seats_select ON public.organisation_app_seats
+  FOR SELECT USING (
+    public.is_org_member(org_id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY app_seats_manage ON public.organisation_app_seats
+  FOR ALL USING (
+    public.is_org_admin(org_id, auth.uid())
+    OR public.is_app_super_admin()
+  )
+  WITH CHECK (
+    public.is_org_admin(org_id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY member_app_seats_select ON public.organisation_member_app_seats
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM public.organisation_members om
+      WHERE om.id = organisation_member_app_seats.org_member_id
+        AND (om.user_id = auth.uid() OR public.is_org_member(om.org_id, auth.uid()) OR public.is_app_super_admin())
+    )
+  );
+
+CREATE POLICY member_app_seats_manage ON public.organisation_member_app_seats
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM public.organisation_members om
+      WHERE om.id = organisation_member_app_seats.org_member_id
+        AND (public.is_org_admin(om.org_id, auth.uid()) OR public.is_app_super_admin())
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM public.organisation_members om
+      WHERE om.id = organisation_member_app_seats.org_member_id
+        AND (public.is_org_admin(om.org_id, auth.uid()) OR public.is_app_super_admin())
+    )
+  );
+
+DROP POLICY IF EXISTS invite_select_own ON etl.organisation_invites;
+DROP POLICY IF EXISTS invite_select_admin ON etl.organisation_invites;
+DROP POLICY IF EXISTS invite_insert_admin ON etl.organisation_invites;
+DROP POLICY IF EXISTS invite_delete_admin_or_user ON etl.organisation_invites;
+DROP POLICY IF EXISTS workflows_select_unified ON etl.workflows;
+DROP POLICY IF EXISTS workflows_insert_owner_only ON etl.workflows;
+DROP POLICY IF EXISTS workflows_update_owner_or_member ON etl.workflows;
+DROP POLICY IF EXISTS workflows_delete_owner_or_member ON etl.workflows;
+DROP POLICY IF EXISTS workflow_executions_select_unified ON etl.workflow_executions;
+DROP POLICY IF EXISTS workflow_executions_insert_self ON etl.workflow_executions;
+DROP POLICY IF EXISTS workflow_executions_super_admin_select ON etl.workflow_executions;
+DROP POLICY IF EXISTS versions_select ON etl.workflow_versions;
+DROP POLICY IF EXISTS versions_insert ON etl.workflow_versions;
+DROP POLICY IF EXISTS notifications_select ON etl.notification_settings;
+DROP POLICY IF EXISTS notifications_insert ON etl.notification_settings;
+DROP POLICY IF EXISTS notifications_update ON etl.notification_settings;
+DROP POLICY IF EXISTS notifications_delete ON etl.notification_settings;
+
+CREATE POLICY invite_select_own ON etl.organisation_invites
+  FOR SELECT USING (email = (SELECT auth.jwt() ->> 'email'));
+
+CREATE POLICY invite_select_admin ON etl.organisation_invites
+  FOR SELECT USING (
+    public.is_org_admin(org_id, (SELECT auth.uid()))
+    OR public.is_org_owner(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY invite_insert_admin ON etl.organisation_invites
+  FOR INSERT WITH CHECK (
+    public.is_org_admin(org_id, (SELECT auth.uid()))
+    OR public.is_org_owner(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY invite_delete_admin_or_user ON etl.organisation_invites
+  FOR DELETE USING (
+    public.is_org_admin(org_id, (SELECT auth.uid()))
+    OR public.is_org_owner(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+    OR email = (SELECT auth.jwt() ->> 'email')
+  );
+
+CREATE POLICY workflows_select_unified ON etl.workflows
+  FOR SELECT USING (
+    (org_id IS NULL AND owner_id = (SELECT auth.uid()))
+    OR public.is_org_member(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY workflows_insert_owner_only ON etl.workflows
+  FOR INSERT WITH CHECK ((SELECT auth.uid()) = owner_id);
+
+CREATE POLICY workflows_update_owner_or_member ON etl.workflows
+  FOR UPDATE USING (
+    (SELECT auth.uid()) = owner_id
+    OR public.is_org_member(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY workflows_delete_owner_or_member ON etl.workflows
+  FOR DELETE USING (
+    (SELECT auth.uid()) = owner_id
+    OR public.is_org_member(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY workflow_executions_select_unified ON etl.workflow_executions
+  FOR SELECT USING (
+    (SELECT auth.uid()) = user_id
+    OR public.is_org_member(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY workflow_executions_insert_self ON etl.workflow_executions
+  FOR INSERT WITH CHECK ((SELECT auth.uid()) = user_id);
+
+CREATE POLICY workflow_executions_super_admin_select ON etl.workflow_executions
+  FOR SELECT USING (public.is_app_super_admin());
+
+CREATE POLICY versions_select ON etl.workflow_versions FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM etl.workflows w
+      WHERE w.id = workflow_versions.workflow_id
+        AND (
+          w.owner_id = auth.uid()
+          OR public.is_org_member(w.org_id, auth.uid())
+          OR public.is_app_super_admin()
+        )
+    )
+  );
+
+CREATE POLICY versions_insert ON etl.workflow_versions FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM etl.workflows w
+      WHERE w.id = workflow_versions.workflow_id
+        AND (
+          w.owner_id = auth.uid()
+          OR public.is_org_member(w.org_id, auth.uid())
+        )
+    )
+  );
+
+CREATE POLICY notifications_select ON etl.notification_settings FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM etl.workflows w
+      WHERE w.id = notification_settings.workflow_id
+        AND (
+          w.owner_id = auth.uid()
+          OR public.is_org_member(w.org_id, auth.uid())
+          OR public.is_app_super_admin()
+        )
+    )
+  );
+
+CREATE POLICY notifications_insert ON etl.notification_settings FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM etl.workflows w
+      WHERE w.id = notification_settings.workflow_id
+        AND (
+          w.owner_id = auth.uid()
+          OR public.is_org_member(w.org_id, auth.uid())
+        )
+    )
+  );
+
+CREATE POLICY notifications_update ON etl.notification_settings FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM etl.workflows w
+      WHERE w.id = notification_settings.workflow_id
+        AND (
+          w.owner_id = auth.uid()
+          OR public.is_org_member(w.org_id, auth.uid())
+        )
+    )
+  );
+
+CREATE POLICY notifications_delete ON etl.notification_settings FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM etl.workflows w
+      WHERE w.id = notification_settings.workflow_id
+        AND (
+          w.owner_id = auth.uid()
+          OR public.is_org_member(w.org_id, auth.uid())
+        )
+    )
+  );
+
+DROP POLICY IF EXISTS "Public read app permissions" ON stoqr.app_permissions;
+DROP POLICY IF EXISTS "Members can view company roles" ON stoqr.roles;
+DROP POLICY IF EXISTS "Admins can manage roles" ON stoqr.roles;
+DROP POLICY IF EXISTS "Members can view role permissions" ON stoqr.role_permissions;
+DROP POLICY IF EXISTS "Admins can manage role permissions" ON stoqr.role_permissions;
+DROP POLICY IF EXISTS "Members can view products" ON stoqr.products;
+DROP POLICY IF EXISTS "Staff can manage products" ON stoqr.products;
+DROP POLICY IF EXISTS "Members can view transactions" ON stoqr.inventory_transactions;
+DROP POLICY IF EXISTS "Staff can create transactions" ON stoqr.inventory_transactions;
+DROP POLICY IF EXISTS "Members can view folders" ON stoqr.folders;
+DROP POLICY IF EXISTS "Staff can manage folders" ON stoqr.folders;
+DROP POLICY IF EXISTS "Members can view tags" ON stoqr.tags;
+DROP POLICY IF EXISTS "Staff can manage tags" ON stoqr.tags;
+DROP POLICY IF EXISTS "Users can view their own memberships" ON stoqr.company_members;
+DROP POLICY IF EXISTS "Managers can view all members" ON stoqr.company_members;
+DROP POLICY IF EXISTS "Managers can view and create invitations" ON stoqr.company_invitations;
+DROP POLICY IF EXISTS "Members can view report schedules" ON stoqr.report_schedules;
+DROP POLICY IF EXISTS "Admins can manage report schedules" ON stoqr.report_schedules;
+DROP POLICY IF EXISTS "Staff can manage suppliers" ON stoqr.suppliers;
+DROP POLICY IF EXISTS "Staff can manage POs" ON stoqr.purchase_orders;
+DROP POLICY IF EXISTS "Staff can manage PO items" ON stoqr.purchase_order_items;
+DROP POLICY IF EXISTS "Staff can view receiving logs" ON stoqr.receiving_logs;
+DROP POLICY IF EXISTS "Give users access to their company folder" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view images from their company" ON storage.objects;
+
+CREATE POLICY "Public read app permissions" ON stoqr.app_permissions
+  FOR SELECT USING (true);
+
+CREATE POLICY "Members can view company roles" ON stoqr.roles
+  FOR SELECT USING (
+    public.is_org_member(roles.company_id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY "Admins can manage roles" ON stoqr.roles
+  FOR ALL USING (has_permission(company_id, 'roles.manage'));
+
+CREATE POLICY "Members can view role permissions" ON stoqr.role_permissions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM stoqr.roles r
+      WHERE r.id = role_permissions.role_id
+        AND (public.is_org_member(r.company_id, auth.uid()) OR public.is_app_super_admin())
+    )
+  );
+
+CREATE POLICY "Admins can manage role permissions" ON stoqr.role_permissions
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM stoqr.roles r
+      WHERE r.id = role_permissions.role_id
+        AND has_permission(r.company_id, 'roles.manage')
+    )
+  );
+
+CREATE POLICY "Members can view products" ON stoqr.products
+  FOR SELECT USING (
+    deleted_at IS NULL
+    AND has_permission(company_id, 'products.view')
+  );
+
+CREATE POLICY "Staff can manage products" ON stoqr.products
+  FOR ALL USING (has_permission(company_id, 'products.manage'));
+
+CREATE POLICY "Members can view transactions" ON stoqr.inventory_transactions
+  FOR SELECT USING (has_permission(company_id, 'transactions.view'));
+
+CREATE POLICY "Staff can create transactions" ON stoqr.inventory_transactions
+  FOR INSERT WITH CHECK (has_permission(company_id, 'transactions.create'));
+
+CREATE POLICY "Members can view folders" ON stoqr.folders
+  FOR SELECT USING (has_permission(company_id, 'products.view'));
+
+CREATE POLICY "Staff can manage folders" ON stoqr.folders
+  FOR ALL USING (has_permission(company_id, 'products.manage'));
+
+CREATE POLICY "Members can view tags" ON stoqr.tags
+  FOR SELECT USING (has_permission(company_id, 'products.view'));
+
+CREATE POLICY "Staff can manage tags" ON stoqr.tags
+  FOR ALL USING (has_permission(company_id, 'products.manage'));
+
+CREATE POLICY "Users can view their own memberships" ON stoqr.company_members
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Managers can view all members" ON stoqr.company_members
+  FOR SELECT USING (has_permission(company_id, 'members.view'));
+
+CREATE POLICY "Managers can view and create invitations" ON stoqr.company_invitations
+  FOR ALL USING (has_permission(company_id, 'members.manage'));
+
+CREATE POLICY "Members can view report schedules" ON stoqr.report_schedules
+  FOR SELECT USING (has_permission(company_id, 'transactions.view'));
+
+CREATE POLICY "Admins can manage report schedules" ON stoqr.report_schedules
+  FOR ALL USING (has_permission(company_id, 'company.manage'))
+  WITH CHECK (has_permission(company_id, 'company.manage'));
+
+CREATE POLICY "Staff can manage suppliers" ON stoqr.suppliers
+  FOR ALL USING (has_permission(company_id, 'products.manage'));
+
+CREATE POLICY "Staff can manage POs" ON stoqr.purchase_orders
+  FOR ALL USING (has_permission(company_id, 'products.manage'));
+
+CREATE POLICY "Staff can manage PO items" ON stoqr.purchase_order_items
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM stoqr.purchase_orders
+      WHERE id = purchase_order_items.po_id
+        AND has_permission(company_id, 'products.manage')
+    )
+  );
+
+CREATE POLICY "Staff can view receiving logs" ON stoqr.receiving_logs
+  FOR SELECT USING (has_permission(company_id, 'transactions.view'));
+
+CREATE POLICY "Give users access to their company folder" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'product-images'
+    AND auth.role() = 'authenticated'
+    AND (storage.foldername(name))[1] IN (
+      SELECT company_id::text FROM stoqr.company_members
+      WHERE user_id = auth.uid()
+        AND has_permission(company_id, 'products.manage')
+    )
+  );
+
+CREATE POLICY "Users can view images from their company" ON storage.objects
+  FOR SELECT USING (
+    bucket_id = 'product-images'
+    AND (storage.foldername(name))[1] IN (
+      SELECT company_id::text FROM stoqr.company_members
+      WHERE user_id = auth.uid()
+    )
+  );
