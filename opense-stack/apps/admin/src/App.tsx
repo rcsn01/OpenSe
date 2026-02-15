@@ -42,10 +42,11 @@ const AppRoutes = () => {
         }
       >
         <Route path="/platform" element={<PlatformOverviewPage />} />
-        <Route path="/etl-admin" element={<SuperAdminPage />} />
+        <Route path="/organisations" element={<SuperAdminPage />} />
         <Route path="/stoqr" element={<StoqrAdminPage />} />
       </Route>
-      <Route path="/super-admin" element={<Navigate to="/etl-admin" replace />} />
+      <Route path="/etl-admin" element={<Navigate to="/organisations" replace />} />
+      <Route path="/super-admin" element={<Navigate to="/organisations" replace />} />
       <Route
         path="/"
         element={
