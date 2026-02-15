@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { SharedLoginRoutePage } from './pages/SharedLoginRoutePage'
 import { SharedSignupRoutePage } from './pages/SharedSignupRoutePage'
 import { AccountShell } from './components/AccountShell'
+import { AccountSettingsPage } from './pages/AccountSettingsPage'
 import { OrganisationSettingsPage } from './pages/OrganisationSettingsPage'
 import { BillingPage } from './pages/BillingPage'
 import { SeatManagementPage } from './pages/SeatManagementPage'
@@ -36,7 +37,7 @@ function App() {
           path="/"
           element={
             <ProtectedAccountRoute>
-              <Navigate to="/account/billing" replace />
+              <Navigate to="/settings" replace />
             </ProtectedAccountRoute>
           }
         />
@@ -51,10 +52,16 @@ function App() {
             </ProtectedAccountRoute>
           }
         >
-          <Route path="/account" element={<Navigate to="/account/billing" replace />} />
-          <Route path="/account/settings" element={<OrganisationSettingsPage />} />
-          <Route path="/account/billing" element={<BillingPage />} />
-          <Route path="/account/seats" element={<SeatManagementPage />} />
+          <Route path="/settings" element={<AccountSettingsPage />} />
+          <Route path="/organisation" element={<OrganisationSettingsPage />} />
+          <Route path="/billing" element={<BillingPage />} />
+          <Route path="/seats" element={<SeatManagementPage />} />
+
+          <Route path="/account" element={<Navigate to="/settings" replace />} />
+          <Route path="/account/settings" element={<Navigate to="/settings" replace />} />
+          <Route path="/account/organisation" element={<Navigate to="/organisation" replace />} />
+          <Route path="/account/billing" element={<Navigate to="/billing" replace />} />
+          <Route path="/account/seats" element={<Navigate to="/seats" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
