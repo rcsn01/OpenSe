@@ -13,6 +13,7 @@ import {
   Input,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
+import { buildAccountsSettingsUrl } from '@repo/shared/utils'
 import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations'
 
 const mainNavItems = [
@@ -27,6 +28,8 @@ export const AppLayout = () => {
   const [signingOut, setSigningOut] = useState(false)
   const location = useLocation()
   const [pendingRedirect, setPendingRedirect] = useState(false)
+  const accountsUrl =
+    (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
   const redirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null)
@@ -150,6 +153,9 @@ export const AppLayout = () => {
         />
       }
       profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
+      onSettingsClick={() => {
+        window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
+      }}
       onLogout={handleSignOut}
     />
   ) : undefined
@@ -163,6 +169,9 @@ export const AppLayout = () => {
       sidebar={sidebar}
       topBar={topBar}
       profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
+      onSettingsClick={() => {
+        window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
+      }}
       onLogout={handleSignOut}
     >
       <Outlet context={outletContext} />

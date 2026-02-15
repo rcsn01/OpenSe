@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AppLayout,
   SideNav,
@@ -9,17 +9,19 @@ import {
   SideNavItem,
   SideNavUserProfile,
 } from '@repo/ui'
-import { Building2, CreditCard, ShieldCheck, Users } from 'lucide-react'
+import { Building2, CreditCard, Settings, ShieldCheck, Users } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
 
 const navItems = [
-  { to: '/account/settings', label: 'Organisation', icon: Building2 },
-  { to: '/account/billing', label: 'Billing & Limits', icon: CreditCard },
-  { to: '/account/seats', label: 'Seat Assignments', icon: Users },
+  { to: '/settings', label: 'Account Settings', icon: Settings },
+  { to: '/organisation', label: 'Organisation', icon: Building2 },
+  { to: '/billing', label: 'Billing & Limits', icon: CreditCard },
+  { to: '/seats', label: 'Seat Assignments', icon: Users },
 ]
 
 export const AccountShell = () => {
   const location = useLocation()
+  const navigate = useNavigate()
   const { logout, user } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
 
@@ -34,6 +36,7 @@ export const AccountShell = () => {
 
   return (
     <AppLayout
+      onSettingsClick={() => navigate('/settings')}
       sidebar={
         <>
           <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Accounts" version="v1" />
