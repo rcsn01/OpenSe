@@ -10,6 +10,20 @@ const isSafeHttpUrl = (value: string) => {
 const accountsUrl = (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? ''
 const defaultReturnTo = (import.meta.env.VITE_ETL_PUBLIC_URL as string | undefined) ?? ''
 
+const getAccountsOrigins = () => {
+  const origins = new Set<string>([window.location.origin])
+
+  if (accountsUrl) {
+    try {
+      origins.add(new URL(accountsUrl).origin)
+    } catch {}
+  }
+
+  return origins
+}
+
+const isAccountsOrigin = (origin: string) => getAccountsOrigins().has(origin)
+
 export const getAppNameFromQuery = () => {
   const params = new URLSearchParams(window.location.search)
   return params.get('app') ?? 'OpenSe'
@@ -23,8 +37,7 @@ export const getReturnToFromQuery = () => {
     // Don't redirect back to accounts app - that causes a login loop
     try {
       const returnOrigin = new URL(returnTo).origin
-      const accountsOrigin = accountsUrl ? new URL(accountsUrl).origin : window.location.origin
-      if (returnOrigin === accountsOrigin) {
+      if (isAccountsOrigin(returnOrigin)) {
         return getDefaultReturnTo()
       }
     } catch {}
@@ -35,10 +48,16 @@ export const getReturnToFromQuery = () => {
 }
 
 function getDefaultReturnTo(): string {
-  if (defaultReturnTo) {
-    return `${defaultReturnTo.replace(/\/$/, '')}/dashboard`
+  if (defaultReturnTo && isSafeHttpUrl(defaultReturnTo)) {
+    try {
+      const defaultOrigin = new URL(defaultReturnTo).origin
+      if (!isAccountsOrigin(defaultOrigin)) {
+        return `${defaultReturnTo.replace(/\/$/, '')}/dashboard`
+      }
+    } catch {}
   }
-  return `${window.location.origin}/`
+
+  return ''
 }
 
 export const buildQueryString = () => {
@@ -47,7 +66,9 @@ export const buildQueryString = () => {
   const returnTo = getReturnToFromQuery()
 
   const next = new URLSearchParams()
-  next.set('returnTo', returnTo)
+  if (returnTo) {
+    next.set('returnTo', returnTo)
+  }
   if (app) {
     next.set('app', app)
   }
@@ -56,5 +77,11 @@ export const buildQueryString = () => {
 }
 
 export const redirectBackToApp = () => {
-  window.location.replace(getReturnToFromQuery())
+  const returnTo = getReturnToFromQuery()
+  if (!returnTo) {
+    return false
+  }
+
+  window.location.replace(returnTo)
+  return true
 }
