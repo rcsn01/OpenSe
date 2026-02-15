@@ -52,4 +52,4 @@ export const cn = (...classes: (string | undefined | null | false)[]): string =>
   return classes.filter(Boolean).join(' ')
 }
 
-export { buildAccountsAuthUrl, type AuthMode } from './authRedirect'
+export { buildAccountsAuthUrl, buildAccountsSettingsUrl, type AuthMode } from './authRedirect'

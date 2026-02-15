@@ -26,7 +26,7 @@ export const loginToAccounts = async (page: Page, user: AccountsUser = ACCOUNTS_
     await submit.click();
   }
 
-  await page.waitForURL(/\/(account\/billing|login)/);
+  await page.waitForURL(/\/(billing|login)/);
 };
 
 export interface AccountsAuthFixtures {
@@ -36,7 +36,7 @@ export interface AccountsAuthFixtures {
 export const test = base.extend<AccountsAuthFixtures>({
   authenticatedAccountsPage: async ({ page }, use) => {
     await loginToAccounts(page);
-    await page.goto('/account/billing');
+    await page.goto('/billing');
     await use(page);
   },
 });

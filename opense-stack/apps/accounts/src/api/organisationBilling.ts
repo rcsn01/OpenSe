@@ -102,8 +102,8 @@ export const updateSeatLimit = async (appCode: AppCode, seatLimit: number): Prom
 export const createCheckoutForSeatLimit = async (appCode: AppCode, seatLimit: number): Promise<string> => {
   const organisation = await getCurrentOrgContext()
 
-  const successUrl = `${window.location.origin}/account/billing?success=true`
-  const cancelUrl = `${window.location.origin}/account/billing?canceled=true`
+  const successUrl = `${window.location.origin}/billing?success=true`
+  const cancelUrl = `${window.location.origin}/billing?canceled=true`
 
   const { data, error } = await supabase.functions.invoke('create-checkout', {
     body: {
