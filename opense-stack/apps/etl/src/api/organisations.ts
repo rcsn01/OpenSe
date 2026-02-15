@@ -18,7 +18,7 @@ const parseResponseBody = async (response: Response): Promise<any> => {
 }
 
 export const updateOrganisationName = async (orgId: string, name: string) => {
-  const { error } = await db.from('organisations').update({ name }).eq('id', orgId)
+  const { error } = await supabase.from('organisations').update({ name }).eq('id', orgId)
   if (error) throw error
 }
 
@@ -34,7 +34,7 @@ export const findProfileByEmail = async (email: string): Promise<{ id: string; e
 }
 
 export const userHasAnyMembership = async (userId: string) => {
-  const { data, error } = await db.from('organisation_members').select('id').eq('user_id', userId).limit(1)
+  const { data, error } = await supabase.from('organisation_members').select('id').eq('user_id', userId).limit(1)
   if (error) throw error
   return (data?.length ?? 0) > 0
 }
@@ -44,17 +44,17 @@ export const addOrganisationMember = async (
   userId: string,
   role: 'admin' | 'editor' | 'member'
 ) => {
-  const { error } = await db.from('organisation_members').insert({ org_id: orgId, user_id: userId, role })
+  const { error } = await supabase.from('organisation_members').insert({ org_id: orgId, user_id: userId, role })
   if (error) throw error
 }
 
 export const removeOrganisationMember = async (memberId: string) => {
-  const { error } = await db.from('organisation_members').delete().eq('id', memberId)
+  const { error } = await supabase.from('organisation_members').delete().eq('id', memberId)
   if (error) throw error
 }
 
 export const listUserOrganisations = async (userId: string) => {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('organisation_members')
     .select('organisations(id, name, owner_id, created_at, tier)')
     .eq('user_id', userId)
@@ -69,7 +69,7 @@ export const listUserOrganisations = async (userId: string) => {
 }
 
 export const listOrganisationMembers = async (orgId: string) => {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('organisation_members')
     .select('id, role, user_id, profiles:profiles!organisation_members_user_id_fkey(email, full_name)')
     .eq('org_id', orgId)
@@ -133,7 +133,7 @@ export const getPendingInvites = async (): Promise<OrgInvite[]> => {
 }
 
 export const acceptInvite = async (inviteId: string) => {
-  const { error } = await db.rpc('accept_invite', { invite_id: inviteId })
+  const { error } = await supabase.rpc('accept_invite', { invite_id: inviteId })
   if (error) throw error
   return true
 }

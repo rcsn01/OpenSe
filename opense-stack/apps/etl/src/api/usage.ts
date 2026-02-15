@@ -30,7 +30,7 @@ export type ActiveUser = {
 export const getOrgUsageStats = async (orgId: string): Promise<UsageSummary> => {
   try {
     // Try the RPC first
-    const { data, error } = await db.rpc('get_org_member_usage_stats', {
+    const { data, error } = await supabase.rpc('get_org_member_usage_stats', {
       target_org_id: orgId,
     })
 
@@ -123,7 +123,7 @@ const getOrgUsageStatsDirect = async (orgId: string): Promise<UsageSummary> => {
  */
 export const getPersonalUsageStats = async (): Promise<UsageSummary> => {
   try {
-    const { data, error } = await db.rpc('get_personal_usage_stats')
+    const { data, error } = await supabase.rpc('get_personal_usage_stats')
 
     if (error) throw error
 
@@ -169,8 +169,8 @@ const getPersonalUsageStatsDirect = async (): Promise<UsageSummary> => {
 
   const { data, error } = await db
     .from('workflow_executions')
-    .select('id, status, started_at, workflow_id, workflows!inner(org_id, user_id)')
-    .eq('workflows.user_id', user.id)
+    .select('id, status, started_at, workflow_id, workflows!inner(org_id, owner_id)')
+    .eq('workflows.owner_id', user.id)
     .is('workflows.org_id', null)
     .gte('started_at', thirtyDaysAgo.toISOString())
     .order('started_at', { ascending: true })
@@ -216,7 +216,7 @@ const getPersonalUsageStatsDirect = async (): Promise<UsageSummary> => {
  */
 export const getOrgActiveUsers = async (orgId: string): Promise<ActiveUser[]> => {
   try {
-    const { data, error } = await db.rpc('get_org_active_users', {
+    const { data, error } = await supabase.rpc('get_org_active_users', {
       target_org_id: orgId,
     })
     if (error) throw error
