@@ -1,8 +1,8 @@
 /**
  * Supabase clients for the ETL app.
  *
- * - `supabase`  — public schema (auth, profiles, RPCs)
- * - `db`        — etl schema (organisations, workflows, etc.)
+ * - `supabase`  — public schema (auth, profiles, organisations, shared RPCs)
+ * - `db`        — etl schema (etl tables like workflows, executions, invites)
  */
 import { supabase } from '@repo/shared/supabase'
 
