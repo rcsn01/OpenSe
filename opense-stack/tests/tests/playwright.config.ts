@@ -33,25 +33,29 @@ loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test'));
 loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test.local'));
 
 const withAccounts = process.env.E2E_WITH_ACCOUNTS !== 'false';
+const reuseExistingServer = process.env.E2E_REUSE_SERVER === 'true';
 
 const webServers = [
   {
     command: 'pnpm dev:admin',
     url: process.env.BASE_URL_ADMIN || 'http://localhost:5993',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer,
     timeout: 120000,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
   },
   {
     command: 'pnpm dev:etl',
     url: process.env.BASE_URL_ETL || 'http://localhost:5991',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer,
     timeout: 120000,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
   },
   {
     command: 'pnpm dev:stoqr',
     url: process.env.BASE_URL_STOQR || 'http://localhost:5992',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer,
     timeout: 120000,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
   },
 ];
 
@@ -59,8 +63,9 @@ if (withAccounts) {
   webServers.push({
     command: 'pnpm dev:accounts',
     url: process.env.BASE_URL_ACCOUNTS || 'http://localhost:5990',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer,
     timeout: 120000,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
   });
 }
 
@@ -103,6 +108,18 @@ export default defineConfig({
         baseURL: process.env.BASE_URL_STOQR || 'http://localhost:5992',
       },
     },
+    ...(withAccounts
+      ? [
+          {
+            name: 'accounts-chromium',
+            testMatch: 'apps/accounts/**/*.spec.ts',
+            use: {
+              ...devices['Desktop Chrome'],
+              baseURL: process.env.BASE_URL_ACCOUNTS || 'http://localhost:5990',
+            },
+          },
+        ]
+      : []),
   ],
   webServer: webServers,
 });
