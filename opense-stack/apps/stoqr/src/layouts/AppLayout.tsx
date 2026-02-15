@@ -98,7 +98,11 @@ export const AppLayout = () => {
   )
 
   return (
-    <SharedAppLayout sidebar={sidebar} profileFallback={userName?.[0] || 'U'}>
+    <SharedAppLayout
+      sidebar={sidebar}
+      profileFallback={userName?.[0] || 'U'}
+      onLogout={handleSignOut}
+    >
       <Outlet />
     </SharedAppLayout>
   )
