@@ -17,6 +17,10 @@ export interface AppLayoutProps {
   profileSrc?: string
   /** Profile fallback for default TopBar avatar */
   profileFallback?: string
+  /** Optional callback for profile menu Settings item */
+  onSettingsClick?: () => void
+  /** Optional callback for profile menu Log out item */
+  onLogout?: () => void
   /** Optional class for the root container */
   className?: string
 }
@@ -27,12 +31,19 @@ export function AppLayout({
   topBar,
   profileSrc,
   profileFallback,
+  onSettingsClick,
+  onLogout,
   className,
 }: AppLayoutProps) {
   const showTopBar = topBar !== null
   const resolvedTopBar =
     topBar === undefined ? (
-      <SwitchAppTopBar profileSrc={profileSrc} profileFallback={profileFallback} />
+      <SwitchAppTopBar
+        profileSrc={profileSrc}
+        profileFallback={profileFallback}
+        onSettingsClick={onSettingsClick}
+        onLogout={onLogout}
+      />
     ) : (
       topBar
     )
