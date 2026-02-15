@@ -25,3 +25,12 @@ export const buildAccountsAuthUrl = ({
 
   return `${normalizedAccountsUrl}/${mode === 'signup' ? 'register' : 'login'}?${params.toString()}`
 }
+
+interface BuildAccountsSettingsUrlOptions {
+  accountsUrl: string
+}
+
+export const buildAccountsSettingsUrl = ({ accountsUrl }: BuildAccountsSettingsUrlOptions): string => {
+  const normalizedAccountsUrl = accountsUrl.replace(/\/$/, '')
+  return `${normalizedAccountsUrl}/settings`
+}
