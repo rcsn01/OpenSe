@@ -18,7 +18,7 @@ test.describe('Admin Platform Overview', () => {
 
     if (await platformPage.manageEtlButton.isVisible().catch(() => false)) {
       await platformPage.manageEtlButton.click();
-      await expect(authenticatedAdminPage).toHaveURL(/\/(etl-admin|login)/);
+      await expect(authenticatedAdminPage).toHaveURL(/\/(organisations|login)/);
       await authenticatedAdminPage.goto('/platform');
     }
 

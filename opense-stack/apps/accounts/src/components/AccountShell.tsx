@@ -9,16 +9,16 @@ import {
   SideNavItem,
   SideNavUserProfile,
 } from '@repo/ui'
-import { Boxes, Building2, LayoutDashboard, ShieldCheck } from 'lucide-react'
+import { Building2, CreditCard, ShieldCheck, Users } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
 
 const navItems = [
-  { to: '/platform', label: 'Platform', icon: LayoutDashboard },
-  { to: '/organisations', label: 'Organisations', icon: Building2 },
-  { to: '/stoqr', label: 'StoQR Oversight', icon: Boxes },
+  { to: '/account/settings', label: 'Organisation', icon: Building2 },
+  { to: '/account/billing', label: 'Billing & Limits', icon: CreditCard },
+  { to: '/account/seats', label: 'Seat Assignments', icon: Users },
 ]
 
-export const AdminShell = () => {
+export const AccountShell = () => {
   const location = useLocation()
   const { logout, user } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
@@ -36,7 +36,7 @@ export const AdminShell = () => {
     <AppLayout
       sidebar={
         <>
-          <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Admin" version="v1" />
+          <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Accounts" version="v1" />
           <SideNav>
             <SideNavGroupList>
               <SideNavGroup category="main">
@@ -61,7 +61,7 @@ export const AdminShell = () => {
             </SideNavGroupList>
           </SideNav>
           <SideNavUserProfile
-            userName={user?.user_metadata?.full_name ?? user?.email ?? 'Super Admin'}
+            userName={user?.user_metadata?.full_name ?? user?.email ?? 'User'}
             userEmail={user?.email}
             onLogout={() => {
               void handleLogout()
