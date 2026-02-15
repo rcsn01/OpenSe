@@ -2,8 +2,8 @@ import { test, expect } from '../../fixtures/accountsAuth';
 
 test.describe('Accounts Billing and Seats', () => {
   test('owner limit updates and activity feed are visible', async ({ authenticatedAccountsPage }) => {
-    await authenticatedAccountsPage.goto('/account/billing');
-    await expect(authenticatedAccountsPage).toHaveURL(/\/(account\/billing|login)/);
+    await authenticatedAccountsPage.goto('/billing');
+    await expect(authenticatedAccountsPage).toHaveURL(/\/(billing|login)/);
 
     const heading = authenticatedAccountsPage.getByRole('heading', { name: /billing & limits/i }).first();
     if (!(await heading.isVisible().catch(() => false))) return;
@@ -27,7 +27,7 @@ test.describe('Accounts Billing and Seats', () => {
   });
 
   test('seat assignment action is available and over-limit path surfaces feedback', async ({ authenticatedAccountsPage }) => {
-    await authenticatedAccountsPage.goto('/account/billing');
+    await authenticatedAccountsPage.goto('/billing');
 
     const seatInput = authenticatedAccountsPage.locator('#seat-limit-etl').first();
     if (await seatInput.isVisible().catch(() => false)) {
@@ -35,8 +35,8 @@ test.describe('Accounts Billing and Seats', () => {
       await authenticatedAccountsPage.getByRole('button', { name: /update limit/i }).first().click();
     }
 
-    await authenticatedAccountsPage.goto('/account/seats');
-    await expect(authenticatedAccountsPage).toHaveURL(/\/(account\/seats|login)/);
+    await authenticatedAccountsPage.goto('/seats');
+    await expect(authenticatedAccountsPage).toHaveURL(/\/(seats|login)/);
 
     const row = authenticatedAccountsPage.getByRole('row').nth(1);
     if (!(await row.isVisible().catch(() => false))) return;
