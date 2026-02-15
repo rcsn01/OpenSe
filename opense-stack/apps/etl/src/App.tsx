@@ -21,7 +21,6 @@ import { ActivitiesPage } from './pages/ActivitiesPage';
 import { LandingPage } from './pages/LandingPage';
 import { WorkflowList } from './components/dashboard/WorkflowList';
 import { TeamTab } from './components/organisation/TeamTab';
-import { PaymentSettings } from './components/organisation/PaymentSettings';
 import { OrgUsageAnalytics } from './components/organisation/UsageAnalytics';
 import { OrgLogsTab } from './components/organisation/OrgLogsTab';
 
@@ -69,7 +68,6 @@ function AppContent() {
                     <Route path="/organisation" element={<OrganisationPage />}>
                       <Route index element={<Navigate to="team" replace />} />
                       <Route path="team" element={<TeamTab />} />
-                      <Route path="billing" element={<PaymentSettings />} />
                       <Route path="usage" element={<OrgUsageAnalytics />} />
                       <Route path="logs" element={<OrgLogsTab />} />
                     </Route>

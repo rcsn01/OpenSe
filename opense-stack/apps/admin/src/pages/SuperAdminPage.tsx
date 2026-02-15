@@ -19,6 +19,7 @@ import {
 } from '@repo/ui'
 import { Building2, ShieldCheck, Users } from 'lucide-react'
 import {
+  type AdminAuditEventRow,
   changeOrganisationOwner,
   createAdminUser,
   createOrganisationWithOwner,
@@ -26,6 +27,7 @@ import {
   deleteOrganisation,
   deleteOrganisationMember,
   inviteMemberToOrganisation,
+  listAdminAuditEvents,
   listAdminOrgs,
   listAdminUsers,
   listOrganisationMembers,
@@ -47,6 +49,12 @@ const tabs = [
   { id: 'users', label: 'Users', icon: <Users className="h-4 w-4" /> },
 ]
 
+const actionLabelMap: Record<string, string> = {
+  seat_limit_updated: 'Seat limit updated',
+  seat_assigned: 'Seat assigned',
+  seat_unassigned: 'Seat unassigned',
+}
+
 export const SuperAdminPage = () => {
   const [activeTab, setActiveTab] = useState('orgs')
   const [loading, setLoading] = useState(true)
@@ -59,6 +67,8 @@ export const SuperAdminPage = () => {
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
   const [orgMembers, setOrgMembers] = useState<MemberRow[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
+  const [auditEvents, setAuditEvents] = useState<AdminAuditEventRow[]>([])
+  const [auditLoading, setAuditLoading] = useState(false)
 
   const [orgName, setOrgName] = useState('')
   const [ownerEmail, setOwnerEmail] = useState('')
@@ -112,6 +122,19 @@ export const SuperAdminPage = () => {
     }
   }
 
+  const loadAuditEvents = async (orgId: string) => {
+    setAuditLoading(true)
+    try {
+      const events = await listAdminAuditEvents(orgId, 20)
+      setAuditEvents(events)
+    } catch (loadError: unknown) {
+      setError(getErrorMessage(loadError, 'Failed to load audit activity'))
+      setAuditEvents([])
+    } finally {
+      setAuditLoading(false)
+    }
+  }
+
   useEffect(() => {
     void loadAll()
   }, [])
@@ -119,10 +142,12 @@ export const SuperAdminPage = () => {
   useEffect(() => {
     if (!selectedOrgId) {
       setOrgMembers([])
+      setAuditEvents([])
       return
     }
 
     void loadMembers(selectedOrgId)
+    void loadAuditEvents(selectedOrgId)
   }, [selectedOrgId])
 
   const notify = (text: string) => {
@@ -446,6 +471,36 @@ export const SuperAdminPage = () => {
                           </TableBody>
                         </Table>
                       )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Activity</CardTitle>
+                  <CardDescription>{selectedOrg ? `Latest events for ${selectedOrg.name}` : 'Select an organisation'}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!selectedOrg ? (
+                    <p className="text-sm text-[var(--color-muted-foreground)]">Select an organisation first.</p>
+                  ) : auditLoading ? (
+                    <p className="text-sm text-[var(--color-muted-foreground)]">Loading activity...</p>
+                  ) : auditEvents.length === 0 ? (
+                    <p className="text-sm text-[var(--color-muted-foreground)]">No recent activity.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {auditEvents.map((event) => (
+                        <div key={event.id} className="rounded-md border border-[var(--color-border)] p-2">
+                          <p className="text-sm font-medium">
+                            {actionLabelMap[event.action] ?? event.action}
+                            {event.app_code ? ` (${event.app_code.toUpperCase()})` : ''}
+                          </p>
+                          <p className="text-xs text-[var(--color-muted-foreground)]">
+                            {event.actor_email ?? 'Unknown actor'} • {new Date(event.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>

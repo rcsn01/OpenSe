@@ -27,6 +27,9 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     from: () => fromChain,
   },
+  db: {
+    from: () => fromChain,
+  },
 }))
 
 // Must import after mock

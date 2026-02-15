@@ -8,7 +8,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
   Table,
   TableBody,
   TableCell,
@@ -16,14 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from '@repo/ui'
-import { listCompanies, listCompanyMembers, removeMember, updateCompany, inviteMember } from '../api/stoqrAdmin'
+import { listCompanies, listCompanyMembers } from '../api/stoqrAdmin'
 import { getErrorMessage } from '../lib/errors'
 
 type CompanySummary = {
   id: string
   name: string
-  description: string | null
-  subscription_tier: string | null
   created_at: string
   member_count: number
 }
@@ -43,8 +40,6 @@ export const StoqrAdminPage = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
   const [members, setMembers] = useState<CompanyMember[]>([])
   const [loading, setLoading] = useState(true)
-  const [savingId, setSavingId] = useState<string | null>(null)
-  const [inviteEmail, setInviteEmail] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId) ?? null
@@ -89,59 +84,13 @@ export const StoqrAdminPage = () => {
     void loadMembers(selectedCompanyId)
   }, [selectedCompanyId])
 
-  const handleRename = async (companyId: string, name: string) => {
-    const trimmed = name.trim()
-    if (!trimmed) return
-    setSavingId(companyId)
-    setMessage(null)
-    try {
-      await updateCompany(companyId, { name: trimmed })
-      await loadCompanies()
-    } catch (error: unknown) {
-      setMessage(getErrorMessage(error, 'Failed to update company name'))
-    } finally {
-      setSavingId(null)
-    }
-  }
-
-  const handleRemoveMember = async (memberId: string) => {
-    if (!selectedCompanyId) return
-    setSavingId(memberId)
-    setMessage(null)
-    try {
-      await removeMember(memberId)
-      await Promise.all([loadMembers(selectedCompanyId), loadCompanies()])
-    } catch (error: unknown) {
-      setMessage(getErrorMessage(error, 'Failed to remove member'))
-    } finally {
-      setSavingId(null)
-    }
-  }
-
-  const handleInvite = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!selectedCompanyId) return
-
-    setSavingId('invite')
-    setMessage(null)
-    try {
-      await inviteMember(selectedCompanyId, inviteEmail)
-      setInviteEmail('')
-      setMessage('Invitation sent.')
-    } catch (error: unknown) {
-      setMessage(getErrorMessage(error, 'Failed to invite member'))
-    } finally {
-      setSavingId(null)
-    }
-  }
-
   return (
     <BasePage isLoading={loading} loadingMessage="Loading StoQR admin...">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">StoQR Admin</h1>
-            <p className="text-sm text-[var(--color-muted-foreground)]">Manage StoQR companies and memberships.</p>
+            <p className="text-sm text-[var(--color-muted-foreground)]">Read-only StoQR organisation oversight.</p>
           </div>
           <Button variant="outline" onClick={() => void logout()}>Sign Out</Button>
         </div>
@@ -172,7 +121,7 @@ export const StoqrAdminPage = () => {
                     >
                       <p className="font-medium">{company.name}</p>
                       <p className="text-xs text-[var(--color-muted-foreground)]">
-                        Tier: {company.subscription_tier ?? 'free'} • Members: {company.member_count}
+                        Members: {company.member_count}
                       </p>
                     </button>
                   ))}
@@ -191,33 +140,9 @@ export const StoqrAdminPage = () => {
                 <p className="text-sm text-[var(--color-muted-foreground)]">Select a company to manage.</p>
               ) : (
                 <div className="flex flex-col gap-4">
-                  <form
-                    onSubmit={(event) => {
-                      event.preventDefault()
-                      const formData = new FormData(event.currentTarget)
-                      const nextName = String(formData.get('company-name') ?? '')
-                      void handleRename(selectedCompany.id, nextName)
-                    }}
-                    className="flex gap-2"
-                  >
-                    <Input id="company-name" name="company-name" defaultValue={selectedCompany.name} />
-                    <Button type="submit" loading={savingId === selectedCompany.id}>Save</Button>
-                  </form>
-
-                  <form onSubmit={handleInvite} className="flex gap-2">
-                    <Input
-                      id="invite-email"
-                      name="invite-email"
-                      type="email"
-                      value={inviteEmail}
-                      onChange={(event) => setInviteEmail(event.target.value)}
-                      placeholder="member@company.com"
-                      required
-                    />
-                    <Button type="submit" variant="outline" loading={savingId === 'invite'}>
-                      Invite
-                    </Button>
-                  </form>
+                  <p className="text-sm text-[var(--color-muted-foreground)]">
+                    Membership and seat assignment actions have moved to the Accounts app.
+                  </p>
 
                   {members.length === 0 ? (
                     <p className="text-sm text-[var(--color-muted-foreground)]">No members found.</p>
@@ -228,7 +153,6 @@ export const StoqrAdminPage = () => {
                           <TableHead>Name</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Role</TableHead>
-                          <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -237,16 +161,6 @@ export const StoqrAdminPage = () => {
                             <TableCell>{member.full_name || member.user_id}</TableCell>
                             <TableCell>{member.email ?? 'No email'}</TableCell>
                             <TableCell>{member.role_name ?? 'No role'}</TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                loading={savingId === member.id}
-                                onClick={() => void handleRemoveMember(member.id)}
-                              >
-                                Remove
-                              </Button>
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

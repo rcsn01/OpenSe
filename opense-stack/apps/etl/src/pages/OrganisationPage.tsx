@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext, useSearchParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Loader2, Users, CreditCard, Loader, XCircle, Activity, FileText } from 'lucide-react';
+import { useOutletContext, useSearchParams, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Loader2, Users, Loader, XCircle, Activity, FileText } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@repo/shared/auth/context';
 import { Member } from '../components/settings/types';
@@ -243,9 +243,6 @@ export const OrganisationPage = () => {
                         { id: 'team', label: 'Team Management', icon: <Users className="w-4 h-4" /> },
                         { id: 'usage', label: 'Usage', icon: <Activity className="w-4 h-4" /> },
                         { id: 'logs', label: 'Logs', icon: <FileText className="w-4 h-4" /> },
-                        ...(membershipRole === 'owner'
-                            ? [{ id: 'billing', label: 'Billing & Settings', icon: <CreditCard className="w-4 h-4" /> }]
-                            : []),
                     ]}
                     activeTab={location.pathname.split('/').pop() || 'team'}
                     onTabChange={(id) => navigate(id)}
