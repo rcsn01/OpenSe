@@ -1,0 +1,15 @@
+{
+	"nodes":[
+		{"id":"a245b9c0ae94791f","type":"link","url":"https://www.figma.com/resource-library/minimalist-fonts/","x":-380,"y":-960,"width":620,"height":560},
+		{"id":"870f081f5b1bb2e9","x":-380,"y":-320,"width":400,"height":218,"type":"file","file":"attachments/Pasted image 20260209014937.png"},
+		{"id":"a3779fb01d2c6d20","x":87,"y":-320,"width":400,"height":218,"type":"file","file":"attachments/Pasted image 20260209015037.png"},
+		{"id":"4b1acc0acd85c1a2","x":-380,"y":-40,"width":400,"height":218,"type":"file","file":"attachments/Pasted image 20260209015219.png"},
+		{"id":"a4a98868b723f278","x":87,"y":-40,"width":400,"height":218,"type":"file","file":"attachments/Pasted image 20260209015311.png"},
+		{"id":"d7373abc1dafb7fb","x":-380,"y":240,"width":400,"height":218,"type":"file","file":"attachments/Pasted image 20260209015456.png"},
+		{"id":"332b618d9ef361c2","x":87,"y":240,"width":400,"height":218,"type":"file","file":"attachments/Pasted image 20260209015609.png"},
+		{"id":"98c3eb6947135d74","x":560,"y":-320,"width":400,"height":218,"type":"file","file":"attachments/Pasted image 20260209015823.png"},
+		{"id":"3e7f9c466727140b","x":321,"y":-960,"width":466,"height":560,"type":"file","file":"attachments/Pasted image 20260208235429.png"},
+		{"id":"1901ee01652a3ea8","x":860,"y":-960,"width":1462,"height":560,"type":"file","file":"attachments/Pasted image 20260214232131.png"}
+	],
+	"edges":[]
+}
