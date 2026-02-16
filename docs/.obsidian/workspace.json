@@ -14,7 +14,7 @@
               "type": "markdown",
               "state": {
                 "file": "00 Project Description.md",
-                "mode": "source",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
@@ -183,8 +183,9 @@
       "bases:Create new base": false
     }
   },
-  "active": "3947ec657a72ac66",
+  "active": "6b91f8867022c929",
   "lastOpenFiles": [
+    "Process.drawio",
     "Mood Board.canvas",
     "03 Testing.md",
     "01 Development Setup.md",
