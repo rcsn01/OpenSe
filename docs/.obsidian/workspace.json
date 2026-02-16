@@ -11,17 +11,14 @@
             "id": "6b91f8867022c929",
             "type": "leaf",
             "state": {
-              "type": "canvas",
+              "type": "markdown",
               "state": {
-                "file": "Mood Board.canvas",
-                "viewState": {
-                  "x": 919.4372191979053,
-                  "y": -239.81986472805897,
-                  "zoom": -0.7616934285968492
-                }
+                "file": "00 Project Description.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-layout-dashboard",
-              "title": "Mood Board"
+              "icon": "lucide-file",
+              "title": "00 Project Description"
             }
           }
         ]
@@ -97,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "attachments/Pasted image 20260214232131.png",
+                "file": "00 Project Description.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -107,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Pasted image 20260214232131"
+              "title": "Backlinks for 00 Project Description"
             }
           },
           {
@@ -116,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "attachments/Pasted image 20260214232131.png",
+                "file": "00 Project Description.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from Pasted image 20260214232131"
+              "title": "Outgoing links from 00 Project Description"
             }
           },
           {
@@ -159,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "attachments/Pasted image 20260214232131.png",
+                "file": "00 Project Description.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Pasted image 20260214232131"
+              "title": "Outline of 00 Project Description"
             }
           }
         ]
@@ -186,9 +183,13 @@
       "bases:Create new base": false
     }
   },
-  "active": "6b91f8867022c929",
+  "active": "3947ec657a72ac66",
   "lastOpenFiles": [
-    "Open-SE.md",
+    "Mood Board.canvas",
+    "03 Testing.md",
+    "01 Development Setup.md",
+    "02 Project Structure.md",
+    "00 Project Description.md",
     "attachments/Pasted image 20260208235429.png",
     "attachments/Pasted image 20260209014937.png",
     "attachments/Pasted image 20260209015037.png",
@@ -197,10 +198,6 @@
     "attachments/Pasted image 20260209015456.png",
     "attachments/Pasted image 20260209015609.png",
     "attachments/Pasted image 20260209015823.png",
-    "attachments/Pasted image 20260214232131.png",
-    "Mood Board.canvas",
-    "01 Development Setup.md",
-    "03 Testing.md",
-    "02 Project Structure.md"
+    "attachments/Pasted image 20260214232131.png"
   ]
 }
