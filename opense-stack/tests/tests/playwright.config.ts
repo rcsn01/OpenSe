@@ -38,21 +38,28 @@ const reuseExistingServer = process.env.E2E_REUSE_SERVER === 'true';
 const webServers = [
   {
     command: 'pnpm dev:admin',
-    url: process.env.BASE_URL_ADMIN || 'http://localhost:5993',
+    url: process.env.BASE_URL_ADMIN || 'http://localhost:5990',
     reuseExistingServer,
     timeout: 120000,
     gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
   },
   {
     command: 'pnpm dev:etl',
-    url: process.env.BASE_URL_ETL || 'http://localhost:5991',
+    url: process.env.BASE_URL_ETL || 'http://localhost:5992',
     reuseExistingServer,
     timeout: 120000,
     gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
   },
   {
     command: 'pnpm dev:stoqr',
-    url: process.env.BASE_URL_STOQR || 'http://localhost:5992',
+    url: process.env.BASE_URL_STOQR || 'http://localhost:5993',
+    reuseExistingServer,
+    timeout: 120000,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
+  },
+  {
+    command: 'pnpm dev:ui-design',
+    url: process.env.BASE_URL_UI_DESIGN || 'http://localhost:5999',
     reuseExistingServer,
     timeout: 120000,
     gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
@@ -62,7 +69,7 @@ const webServers = [
 if (withAccounts) {
   webServers.push({
     command: 'pnpm dev:accounts',
-    url: process.env.BASE_URL_ACCOUNTS || 'http://localhost:5990',
+    url: process.env.BASE_URL_ACCOUNTS || 'http://localhost:5991',
     reuseExistingServer,
     timeout: 120000,
     gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
@@ -89,7 +96,7 @@ export default defineConfig({
       testMatch: 'apps/admin/**/*.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
-        baseURL: process.env.BASE_URL_ADMIN || 'http://localhost:5993',
+        baseURL: process.env.BASE_URL_ADMIN || 'http://localhost:5990',
       },
     },
     {
@@ -97,7 +104,7 @@ export default defineConfig({
       testMatch: 'apps/etl/**/*.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
-        baseURL: process.env.BASE_URL_ETL || 'http://localhost:5991',
+        baseURL: process.env.BASE_URL_ETL || 'http://localhost:5992',
       },
     },
     {
@@ -105,7 +112,15 @@ export default defineConfig({
       testMatch: 'apps/stoqr/**/*.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
-        baseURL: process.env.BASE_URL_STOQR || 'http://localhost:5992',
+        baseURL: process.env.BASE_URL_STOQR || 'http://localhost:5993',
+      },
+    },
+    {
+      name: 'ui-design-chromium',
+      testMatch: 'apps/ui-design/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.BASE_URL_UI_DESIGN || 'http://localhost:5999',
       },
     },
     ...(withAccounts
@@ -115,7 +130,7 @@ export default defineConfig({
             testMatch: 'apps/accounts/**/*.spec.ts',
             use: {
               ...devices['Desktop Chrome'],
-              baseURL: process.env.BASE_URL_ACCOUNTS || 'http://localhost:5990',
+              baseURL: process.env.BASE_URL_ACCOUNTS || 'http://localhost:5991',
             },
           },
         ]
