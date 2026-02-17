@@ -5,6 +5,7 @@ import { AuthProvider, useAuth, type AuthContextType } from '../AuthContext'
 import { DEMO_USER_ID } from '../demo'
 
 const mockGetSession = vi.fn()
+const mockGetUser = vi.fn()
 const mockOnAuthStateChange = vi.fn()
 const mockSignOut = vi.fn()
 const mockRpc = vi.fn()
@@ -14,8 +15,9 @@ vi.mock('../../supabase', () => ({
   supabase: {
     auth: {
       getSession: () => mockGetSession(),
+      getUser: () => mockGetUser(),
       onAuthStateChange: (...args: unknown[]) => mockOnAuthStateChange(...args),
-      signOut: () => mockSignOut(),
+      signOut: (...args: unknown[]) => mockSignOut(...args),
     },
     rpc: (...args: unknown[]) => mockRpc(...args),
   },
@@ -34,6 +36,7 @@ describe('AuthProvider', () => {
     vi.clearAllMocks()
     mockUnsubscribe.mockReset()
     mockGetSession.mockResolvedValue({ data: { session: null } })
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null })
     mockSignOut.mockResolvedValue({ error: null })
     mockRpc.mockResolvedValue({ data: true, error: null })
     mockOnAuthStateChange.mockImplementation((callback: (_event: string, session: Session | null) => void) => {
@@ -83,6 +86,15 @@ describe('AuthProvider', () => {
         },
       },
     })
+    mockGetUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+        },
+      },
+      error: null,
+    })
 
     render(
       <AuthProvider superAdmin>
@@ -95,5 +107,30 @@ describe('AuthProvider', () => {
       expect(latestAuth?.superAdminChecked).toBe(true)
       expect(latestAuth?.isSuperAdmin).toBe(true)
     })
+  })
+
+  it('clears stale cached sessions that fail server validation on initialization', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'stale-user', email: 'stale@example.com' },
+        },
+      },
+    })
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'User not found' },
+    })
+
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    )
+
+    await waitFor(() => expect(latestAuth?.loading).toBe(false))
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' })
+    expect(latestAuth?.session).toBeNull()
+    expect(latestAuth?.user).toBeNull()
   })
 })
