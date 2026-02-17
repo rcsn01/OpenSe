@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import { validatePassword } from './validation'
+export { AuthRedirectPage } from './AuthRedirectPage'
 
 export interface SignUpOptions {
   fullName?: string
