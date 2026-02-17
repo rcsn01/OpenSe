@@ -43,7 +43,7 @@ export const getPendingOrganisationInvites = async (): Promise<PendingOrganisati
   const { data, error } = await supabase
     .schema('etl')
     .from('organisation_invites')
-    .select('id, org_id, role, created_at, organisations(name), inviter:profiles!organisation_invites_invited_by_fkey(full_name, email)')
+    .select('id, org_id, role, created_at, organisations:organisations!organisation_invites_org_id_fkey(name), inviter:profiles!organisation_invites_invited_by_fkey(full_name, email)')
     .eq('email', email)
     .order('created_at', { ascending: true })
 

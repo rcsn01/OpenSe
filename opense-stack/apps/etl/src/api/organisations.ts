@@ -62,7 +62,7 @@ export const removeOrganisationMember = async (memberId: string) => {
 export const listUserOrganisations = async (userId: string) => {
   const { data, error } = await supabase
     .from('organisation_members')
-    .select('organisations(id, name, owner_id, created_at, tier)')
+    .select('organisations:organisations!organisation_members_org_id_fkey(id, name, owner_id, created_at)')
     .eq('user_id', userId)
 
   if (error) throw error
