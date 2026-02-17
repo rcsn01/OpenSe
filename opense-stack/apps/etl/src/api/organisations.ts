@@ -1,5 +1,11 @@
 import { supabase, db } from '../lib/supabase'
 import { OrgSimple, OrgInvite } from '../types/organisation'
+import {
+  getPendingOrganisationInvites,
+  acceptOrganisationInvite,
+  declineOrganisationInvite,
+  inviteOrganisationMember,
+} from '@repo/shared/organisation-invites'
 
 const parseResponseBody = async (response: Response): Promise<any> => {
   const contentType = response.headers.get('content-type') ?? ''
@@ -102,57 +108,21 @@ export const createOrganisation = async (name: string, tier: 'tier-1' | 'tier-2'
 }
 
 export const getPendingInvites = async (): Promise<OrgInvite[]> => {
-  const { data: session } = await supabase.auth.getSession()
-  const userEmail = session.session?.user?.email
-
-  if (!userEmail) return []
-
-  const { data, error } = await db
-    .from('organisation_invites')
-    .select(
-      `
-        id,
-        role,
-        created_at,
-        organisations (id, name),
-        inviter:profiles!organisation_invites_invited_by_fkey (full_name)
-      `
-    )
-    .eq('email', userEmail)
-
-  if (error) throw error
-
-  return (data ?? []).map((i: any) => ({
-    id: i.id,
-    org_id: i.organisations?.id,
-    org_name: i.organisations?.name ?? 'Unknown',
-    role: i.role,
-    created_at: i.created_at,
-    inviter_name: i.inviter?.full_name || 'Unknown',
-  }))
+  return getPendingOrganisationInvites()
 }
 
 export const acceptInvite = async (inviteId: string) => {
-  const { error } = await supabase.rpc('accept_invite', { invite_id: inviteId })
-  if (error) throw error
+  await acceptOrganisationInvite(inviteId)
   return true
 }
 
 export const rejectInvite = async (inviteId: string) => {
-  const { error } = await db.from('organisation_invites').delete().eq('id', inviteId)
-  if (error) throw error
+  await declineOrganisationInvite(inviteId)
   return true
 }
 
 export const inviteMember = async (orgId: string, email: string, role: 'admin' | 'editor' | 'member') => {
-  const { data: user } = await supabase.auth.getUser()
-  const { error } = await db.from('organisation_invites').insert({
-    org_id: orgId,
-    email,
-    role,
-    invited_by: user.user?.id,
-  })
-  if (error) throw error
+  await inviteOrganisationMember(orgId, email, role)
 }
 
 export const updateOrganisationTier = async (
