@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     "./supabase": "./src/supabase.ts",
+    "./organisationInvites": "./src/organisationInvites.ts",
+    "./organisation-invites": "./src/organisation-invites.ts",
     "./auth": "./src/auth/index.ts",
     "./auth/context": "./src/auth/AuthContext.tsx",
     "./auth/validation": "./src/auth/validation.ts",

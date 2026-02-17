@@ -1,6 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { supabase, db } from '../supabaseClient'
+import type { ReactNode } from 'react'
+import { supabase } from '../supabaseClient'
 import type { CompanyOption } from '../types'
+
+type MembershipRow = {
+  org_id: string
+  organisations: { id: string; name: string } | { id: string; name: string }[] | null
+}
+
+const normalizeSingle = <T,>(value: T | T[] | null | undefined): T | null => {
+  if (!value) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
+}
 
 type CompanyContextValue = {
   companyId: string | null
@@ -19,7 +30,7 @@ export const CompanyProvider = ({
   children,
   userId,
 }: {
-  children: React.ReactNode
+  children: ReactNode
   userId: string
 }) => {
   const [companies, setCompanies] = useState<CompanyOption[]>([])
@@ -28,9 +39,9 @@ export const CompanyProvider = ({
 
   const refreshCompanies = useCallback(async () => {
     setIsLoading(true)
-    const { data, error } = await db
-      .from('company_members')
-      .select('company_id, companies (id, name)')
+    const { data, error } = await supabase
+      .from('organisation_members')
+      .select('org_id, organisations(id, name)')
       .eq('user_id', userId)
 
     if (error) {
@@ -40,11 +51,14 @@ export const CompanyProvider = ({
       return
     }
 
-    const options = (data ?? [])
-      .map((item: any) => ({
-        id: item.companies?.id ?? item.company_id,
-        name: item.companies?.name ?? 'Unknown',
-      }))
+    const options = ((data ?? []) as MembershipRow[])
+      .map((item) => {
+        const organisation = normalizeSingle(item.organisations)
+        return {
+          id: organisation?.id ?? item.org_id,
+          name: organisation?.name ?? 'Unknown',
+        }
+      })
       .filter((item) => item.id)
 
     setCompanies(options)
