@@ -90,22 +90,7 @@ export const listOrganisationMembers = async (orgId: string) => {
   )
 }
 
-export const createOrganisation = async (name: string, tier: 'tier-1' | 'tier-2' | 'tier-3') => {
-  const { data, error } = await supabase.functions.invoke('create-checkout', {
-    body: {
-      orgName: name,
-      tier,
-      successUrl: `${window.location.origin}/organisation?success=true`,
-      cancelUrl: `${window.location.origin}/organisation?canceled=true`,
-    },
-  })
 
-  if (error) throw error
-  if (!data?.url) throw new Error('Checkout URL not returned')
-
-  window.location.href = data.url
-  return data
-}
 
 export const getPendingInvites = async (): Promise<OrgInvite[]> => {
   return getPendingOrganisationInvites()
@@ -197,58 +182,4 @@ export const updateOrganisationTier = async (
   return updateResult.data
 }
 
-/**
- * Poll for organisation to appear after Stripe checkout.
- * The webhook creates the org asynchronously, so we poll until it appears.
- * 
- * @param userId - The user ID to check organisations for
- * @param options - Polling options
- * @returns The first organisation found, or null if timeout
- */
-export const pollForOrganisation = async (
-  userId: string,
-  options: {
-    maxAttempts?: number
-    intervalMs?: number
-    onAttempt?: (attempt: number, maxAttempts: number) => void
-  } = {}
-): Promise<OrgSimple | null> => {
-  const {
-    maxAttempts = 15,
-    intervalMs = 2000,
-    onAttempt
-  } = options
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    onAttempt?.(attempt, maxAttempts)
-
-    try {
-      const orgs = await listUserOrganisations(userId)
-      if (orgs.length > 0) {
-        console.log(`[pollForOrganisation] Found org after ${attempt} attempts`)
-        return orgs[0]
-      }
-    } catch (error) {
-      console.warn(`[pollForOrganisation] Attempt ${attempt} failed:`, error)
-    }
-
-    // Don't wait after the last attempt
-    if (attempt < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, intervalMs))
-    }
-  }
-
-  console.warn(`[pollForOrganisation] Timed out after ${maxAttempts} attempts`)
-  return null
-}
-
-/**
- * REMOVED: checkCheckoutSession stub (Audit S1 - OWASP A01: Broken Access Control).
- *
- * The previous implementation returned status: 'complete' for ANY session ID
- * without server-side verification, allowing trivial payment bypass.
- *
- * Checkout verification is now handled server-side by the stripe-webhook
- * edge function, which creates the organisation only after Stripe confirms
- * payment. The client uses pollForOrganisation() to wait for the result.
- */

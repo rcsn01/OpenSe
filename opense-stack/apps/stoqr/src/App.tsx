@@ -6,7 +6,6 @@ import { AppLayout } from './layouts/AppLayout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
 import { buildAccountsAuthUrl } from './lib/authRedirect'
 import { LandingPage } from './pages/LandingPage'
-import { CompanySetupPage } from './pages/CompanySetupPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { InventoryListPage } from './pages/InventoryPage'
 import { CreateProductPage } from './pages/product/CreateProductPage'
@@ -22,14 +21,10 @@ import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { Toaster } from 'sonner'
 
 const CompanyGate = () => {
-  const { companies, isLoading } = useCompany()
+  const { isLoading } = useCompany()
 
   if (isLoading) {
     return <div className="empty-state">Loading workspace...</div>
-  }
-
-  if (companies.length === 0) {
-    return <CompanySetupPage />
   }
 
   return <Outlet />
