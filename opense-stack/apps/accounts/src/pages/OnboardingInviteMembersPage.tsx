@@ -7,6 +7,7 @@ import {
   inviteOrganisationMembers,
   type OnboardingStatus,
 } from '../api/onboarding'
+import { buildPathWithQuery, redirectBackToApp } from '../lib/redirect'
 
 const parseEmailList = (value: string): string[] => {
   return value
@@ -35,17 +36,20 @@ export const OnboardingInviteMembersPage = () => {
       setStatus(nextStatus)
 
       if (!nextStatus.needsOnboarding) {
-        navigate('/settings', { replace: true })
+        const redirected = redirectBackToApp()
+        if (!redirected) {
+          navigate('/settings', { replace: true })
+        }
         return
       }
 
       if (nextStatus.step === 'invites') {
-        navigate('/onboarding/invitations', { replace: true })
+        navigate(buildPathWithQuery('/onboarding/invitations'), { replace: true })
         return
       }
 
       if (nextStatus.step === 'create') {
-        navigate('/onboarding/create-organisation', { replace: true })
+        navigate(buildPathWithQuery('/onboarding/create-organisation'), { replace: true })
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load onboarding status.'
@@ -91,7 +95,10 @@ export const OnboardingInviteMembersPage = () => {
       setFinishing(true)
       setError(null)
       await completeOrganisationOnboarding()
-      navigate('/settings', { replace: true })
+      const redirected = redirectBackToApp()
+      if (!redirected) {
+        navigate('/settings', { replace: true })
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to complete onboarding.'
       setError(message)
