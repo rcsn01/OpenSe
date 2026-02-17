@@ -8,15 +8,23 @@ const isSafeHttpUrl = (value: string) => {
 }
 
 const accountsUrl = (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? ''
-const defaultReturnTo = (import.meta.env.VITE_ETL_PUBLIC_URL as string | undefined) ?? ''
+
+const getOriginIfSafe = (value: string): string | null => {
+  if (!isSafeHttpUrl(value)) {
+    return null
+  }
+
+  return new URL(value).origin
+}
 
 const getAccountsOrigins = () => {
   const origins = new Set<string>([window.location.origin])
 
   if (accountsUrl) {
-    try {
-      origins.add(new URL(accountsUrl).origin)
-    } catch {}
+    const accountsOrigin = getOriginIfSafe(accountsUrl)
+    if (accountsOrigin) {
+      origins.add(accountsOrigin)
+    }
   }
 
   return origins
@@ -35,26 +43,11 @@ export const getReturnToFromQuery = () => {
 
   if (returnTo && isSafeHttpUrl(returnTo)) {
     // Don't redirect back to accounts app - that causes a login loop
-    try {
-      const returnOrigin = new URL(returnTo).origin
-      if (isAccountsOrigin(returnOrigin)) {
-        return getDefaultReturnTo()
-      }
-    } catch {}
+    const returnOrigin = getOriginIfSafe(returnTo)
+    if (returnOrigin && isAccountsOrigin(returnOrigin)) {
+      return ''
+    }
     return returnTo
-  }
-
-  return getDefaultReturnTo()
-}
-
-function getDefaultReturnTo(): string {
-  if (defaultReturnTo && isSafeHttpUrl(defaultReturnTo)) {
-    try {
-      const defaultOrigin = new URL(defaultReturnTo).origin
-      if (!isAccountsOrigin(defaultOrigin)) {
-        return `${defaultReturnTo.replace(/\/$/, '')}/dashboard`
-      }
-    } catch {}
   }
 
   return ''
@@ -74,6 +67,15 @@ export const buildQueryString = () => {
   }
 
   return next.toString()
+}
+
+export const buildPathWithQuery = (path: string) => {
+  const query = buildQueryString()
+  if (!query) {
+    return path
+  }
+
+  return `${path}?${query}`
 }
 
 export const redirectBackToApp = () => {

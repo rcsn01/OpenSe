@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, Input, Select } from '@repo/ui'
 import { createOrganisationForOnboarding, type AppCode } from '../api/onboarding'
+import { buildPathWithQuery } from '../lib/redirect'
 
 const appOptions: { code: AppCode; name: string }[] = [
   { code: 'etl', name: 'ETL' },
@@ -59,7 +60,7 @@ export const OnboardingCreateOrganisationPage = () => {
         name: orgName,
         selectedApps,
       })
-      navigate('/onboarding/invite-members', { replace: true })
+      navigate(buildPathWithQuery('/onboarding/invite-members'), { replace: true })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create organisation.'
       setError(message)

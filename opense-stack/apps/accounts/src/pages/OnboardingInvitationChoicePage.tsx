@@ -8,6 +8,7 @@ import {
   type OnboardingStatus,
   type PendingInvite,
 } from '../api/onboarding'
+import { buildPathWithQuery, redirectBackToApp } from '../lib/redirect'
 
 export const OnboardingInvitationChoicePage = () => {
   const navigate = useNavigate()
@@ -23,17 +24,20 @@ export const OnboardingInvitationChoicePage = () => {
       const status: OnboardingStatus = await getOnboardingStatus()
 
       if (!status.needsOnboarding) {
-        navigate('/settings', { replace: true })
+        const redirected = redirectBackToApp()
+        if (!redirected) {
+          navigate('/settings', { replace: true })
+        }
         return
       }
 
       if (status.step === 'create') {
-        navigate('/onboarding/create-organisation', { replace: true })
+        navigate(buildPathWithQuery('/onboarding/create-organisation'), { replace: true })
         return
       }
 
       if (status.step === 'invite-members') {
-        navigate('/onboarding/invite-members', { replace: true })
+        navigate(buildPathWithQuery('/onboarding/invite-members'), { replace: true })
         return
       }
 
@@ -55,7 +59,7 @@ export const OnboardingInvitationChoicePage = () => {
       setActionLoading(inviteId)
       setError(null)
       await acceptOrganisationInvite(inviteId)
-      navigate('/onboarding/invite-members', { replace: true })
+      navigate(buildPathWithQuery('/onboarding/invite-members'), { replace: true })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to accept invitation.'
       setError(message)
@@ -73,7 +77,7 @@ export const OnboardingInvitationChoicePage = () => {
       setInvites(remaining)
 
       if (remaining.length === 0) {
-        navigate('/onboarding/create-organisation', { replace: true })
+        navigate(buildPathWithQuery('/onboarding/create-organisation'), { replace: true })
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to decline invitation.'
@@ -92,7 +96,7 @@ export const OnboardingInvitationChoicePage = () => {
         await declineOrganisationInvite(invite.id)
       }
 
-      navigate('/onboarding/create-organisation', { replace: true })
+      navigate(buildPathWithQuery('/onboarding/create-organisation'), { replace: true })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to decline invitations.'
       setError(message)
@@ -125,7 +129,7 @@ export const OnboardingInvitationChoicePage = () => {
               <p className="text-sm text-slate-600">No pending invitations were found.</p>
               <Button
                 onClick={() => {
-                  navigate('/onboarding/create-organisation', { replace: true })
+                  navigate(buildPathWithQuery('/onboarding/create-organisation'), { replace: true })
                 }}
               >
                 Continue to organisation creation
