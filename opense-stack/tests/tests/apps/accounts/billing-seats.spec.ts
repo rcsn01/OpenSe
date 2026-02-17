@@ -1,6 +1,8 @@
 import { test, expect } from '../../fixtures/accountsAuth';
 
 test.describe('Accounts Billing and Seats', () => {
+  test.skip(process.env.E2E_ACCOUNTS_DEEP !== 'true', 'Set E2E_ACCOUNTS_DEEP=true to run mutation-heavy accounts tests');
+
   test('owner limit updates and activity feed are visible', async ({ authenticatedAccountsPage }) => {
     await authenticatedAccountsPage.goto('/billing');
     await expect(authenticatedAccountsPage).toHaveURL(/\/(billing|login)/);
