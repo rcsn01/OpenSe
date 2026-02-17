@@ -1,16 +1,17 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@repo/ui';
+import { AuthRedirectPage } from '@repo/shared/auth';
 import { AuthProvider, useAuth } from '@repo/shared/auth/context';
 import { DemoProvider } from './context/DemoContext';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { ReactFlowProvider } from 'reactflow';
+import { buildAccountsAuthUrl } from './lib/authRedirect';
 
 // Layouts
 import { AppLayout } from './layouts/AppLayout';
 import { AuthLayout } from './layouts/AuthLayout';
 
 // Pages (eagerly loaded)
-import { AuthRedirectPage } from './pages/auth/AuthRedirectPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { WorkflowEditorPage } from './pages/WorkflowEditorPage';
 import { OrganisationPage } from './pages/OrganisationPage';
@@ -48,11 +49,11 @@ function AppContent() {
                 <Routes>
                   {/* Public Landing Page */}
                   <Route path="/" element={<LandingPage />} />
-                  <Route path="/login" element={<AuthRedirectPage mode="signin" />} />
+                  <Route path="/login" element={<AuthRedirectPage mode="signin" buildAuthUrl={buildAccountsAuthUrl} />} />
 
                   {/* Auth Routes */}
                   <Route element={<AuthLayout />}>
-                    <Route path="/register" element={<AuthRedirectPage mode="signup" />} />
+                    <Route path="/register" element={<AuthRedirectPage mode="signup" buildAuthUrl={buildAccountsAuthUrl} />} />
                   </Route>
 
                   {/* Protected Routes */}
