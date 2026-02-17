@@ -96,6 +96,13 @@ export const AuthProvider = ({
     if (error) throw error
   }, [demoMode, isDemoUser, logoutDemo])
 
+  const clearInvalidLocalSession = useCallback(async () => {
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
+    if (error) {
+      reportAuthError('Failed to clear invalid local auth session', error)
+    }
+  }, [])
+
   useEffect(() => {
     let isMounted = true
 
@@ -105,11 +112,28 @@ export const AuthProvider = ({
       if (!isMounted) return
 
       if (data.session) {
+        const { data: userData, error: userError } = await supabase.auth.getUser()
+        if (!isMounted) return
+
+        if (userError || !userData.user || userData.user.id !== data.session.user.id) {
+          await clearInvalidLocalSession()
+          if (!isMounted) return
+
+          setSession(null)
+          setUser(null)
+          setIsSuperAdmin(false)
+          if (superAdmin) {
+            setSuperAdminChecked(true)
+          }
+          setLoading(false)
+          return
+        }
+
         setIsDemoUser(false)
         setSession(data.session)
-        setUser(data.session.user)
+        setUser(userData.user)
         if (superAdmin) {
-          void loadSuperAdmin(data.session.user.id)
+          void loadSuperAdmin(userData.user.id)
         }
       } else if (demoMode && isDemoUser) {
       } else {
@@ -151,7 +175,7 @@ export const AuthProvider = ({
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [demoMode, isDemoUser, loadSuperAdmin, superAdmin])
+  }, [clearInvalidLocalSession, demoMode, isDemoUser, loadSuperAdmin, superAdmin])
 
   const value = useMemo<AuthContextType>(() => ({
     session,
