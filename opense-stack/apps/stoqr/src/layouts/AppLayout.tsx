@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@repo/shared/auth/context'
 import { buildAccountsSettingsUrl } from '@repo/shared/utils'
-import { getAccountsUrl } from '../lib/authRedirect'
 import {
   LayoutDashboard,
   Package,
@@ -46,7 +45,8 @@ export const AppLayout = () => {
   const [userName, setUserName] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
   const [signingOut, setSigningOut] = useState(false)
-  const accountsUrl = getAccountsUrl()
+  const accountsUrl =
+    (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
 
   useEffect(() => {
     setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
