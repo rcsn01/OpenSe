@@ -21,6 +21,19 @@ import type { Folder } from '../../types'
 
 type CustomFieldDefinition = { key: string; type: 'text' | 'number' | 'boolean' | 'date' }
 
+const getSettingsStorageKey = (companyId: string) => `stoqr:company-settings:${companyId}`
+
+const readCustomFieldDefs = (companyId: string): CustomFieldDefinition[] => {
+  try {
+    const raw = localStorage.getItem(getSettingsStorageKey(companyId))
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as { custom_fields?: CustomFieldDefinition[] }
+    return parsed.custom_fields ?? []
+  } catch {
+    return []
+  }
+}
+
 export const CreateProductPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
@@ -71,24 +84,18 @@ export const CreateProductPage = () => {
       // Fetch Folders
       const { data: folderData } = await db
         .from('folders')
-        .select('id, name')
+        .select('id, name, parent_id')
         .eq('company_id', companyId)
         .order('name')
       
       if (folderData) setFolders(folderData)
 
       // Fetch Custom Field Definitions
-      const { data: companyData } = await db
-        .from('companies')
-        .select('settings')
-        .eq('id', companyId)
-        .single()
-      
-      const settings = companyData?.settings as { custom_fields?: CustomFieldDefinition[] }
-      if (settings?.custom_fields) {
-        setCustomFieldDefs(settings.custom_fields)
+      const customFieldDefinitions = readCustomFieldDefs(companyId)
+      if (customFieldDefinitions.length > 0) {
+        setCustomFieldDefs(customFieldDefinitions)
         const initial: Record<string, any> = {}
-        settings.custom_fields.forEach(def => {
+        customFieldDefinitions.forEach(def => {
             if (def.type === 'boolean') initial[def.key] = false
             else initial[def.key] = ''
         })

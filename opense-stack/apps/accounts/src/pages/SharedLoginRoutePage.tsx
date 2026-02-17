@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { signIn, signInWithGoogle } from '@repo/shared/auth'
 import { useAuth } from '@repo/shared/auth/context'
 import { SharedLoginPage } from '../components/auth/SharedLoginPage'
 import { buildQueryString, getAppNameFromQuery, redirectBackToApp } from '../lib/redirect'
 
 export const SharedLoginRoutePage = () => {
+  const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -18,11 +19,14 @@ export const SharedLoginRoutePage = () => {
       hasRedirected.current = true
       // Brief delay so auth state is fully settled before redirect (avoids flash loop with dashboard)
       const id = setTimeout(() => {
-        redirectBackToApp()
+        const redirected = redirectBackToApp()
+        if (!redirected) {
+          navigate('/', { replace: true })
+        }
       }, 150)
       return () => clearTimeout(id)
     }
-  }, [authLoading, user])
+  }, [authLoading, navigate, user])
 
   const handleLogin = async ({ email, password }: { email: string; password: string }) => {
     setLoading(true)
@@ -32,7 +36,7 @@ export const SharedLoginRoutePage = () => {
       await signIn(email, password)
       const redirected = redirectBackToApp()
       if (!redirected) {
-        setLoading(false)
+        navigate('/', { replace: true })
       }
     } catch (err: any) {
       setError(err?.message ?? 'Failed to sign in')
