@@ -1,32 +1,69 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signIn, signInWithGoogle } from '@repo/shared/auth'
 import { useAuth } from '@repo/shared/auth/context'
+import { getOnboardingStatus, type OnboardingStatus } from '../api/onboarding'
 import { SharedLoginPage } from '../components/auth/SharedLoginPage'
-import { buildQueryString, getAppNameFromQuery, redirectBackToApp } from '../lib/redirect'
+import { buildPathWithQuery, buildQueryString, getAppNameFromQuery, redirectBackToApp } from '../lib/redirect'
+
+const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
+  if (status.step === 'invites') return '/onboarding/invitations'
+  if (status.step === 'create') return '/onboarding/create-organisation'
+  if (status.step === 'invite-members') return '/onboarding/invite-members'
+  return '/settings'
+}
 
 export const SharedLoginRoutePage = () => {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const hasRedirected = useRef(false)
+  const redirectedUserId = useRef<string | null>(null)
   const query = buildQueryString()
   const querySuffix = query ? `?${query}` : ''
 
-  useEffect(() => {
-    if (!authLoading && user && !hasRedirected.current) {
-      hasRedirected.current = true
-      // Brief delay so auth state is fully settled before redirect (avoids flash loop with dashboard)
-      const id = setTimeout(() => {
-        const redirected = redirectBackToApp()
-        if (!redirected) {
-          navigate('/', { replace: true })
-        }
-      }, 150)
-      return () => clearTimeout(id)
+  const handleAuthenticatedRedirect = useCallback(async () => {
+    try {
+      const onboardingStatus = await getOnboardingStatus()
+
+      if (onboardingStatus.needsOnboarding) {
+        navigate(buildPathWithQuery(getOnboardingRouteFromStatus(onboardingStatus)), { replace: true })
+        return
+      }
+    } catch {
+      navigate(buildPathWithQuery('/onboarding/create-organisation'), { replace: true })
+      return
     }
-  }, [authLoading, navigate, user])
+
+    const redirected = redirectBackToApp()
+    if (!redirected) {
+      navigate('/settings', { replace: true })
+    }
+  }, [navigate])
+
+  useEffect(() => {
+    if (authLoading) {
+      return
+    }
+
+    if (!user) {
+      redirectedUserId.current = null
+      return
+    }
+
+    if (redirectedUserId.current === user.id) {
+      return
+    }
+
+    redirectedUserId.current = user.id
+
+    // Brief delay so auth state is fully settled before redirect (avoids flash loop with dashboard)
+    const id = setTimeout(() => {
+      void handleAuthenticatedRedirect()
+    }, 150)
+
+    return () => clearTimeout(id)
+  }, [authLoading, handleAuthenticatedRedirect, user])
 
   const handleLogin = async ({ email, password }: { email: string; password: string }) => {
     setLoading(true)
@@ -34,12 +71,9 @@ export const SharedLoginRoutePage = () => {
 
     try {
       await signIn(email, password)
-      const redirected = redirectBackToApp()
-      if (!redirected) {
-        navigate('/', { replace: true })
-      }
     } catch (err: any) {
       setError(err?.message ?? 'Failed to sign in')
+    } finally {
       setLoading(false)
     }
   }

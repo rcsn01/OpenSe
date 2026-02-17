@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
+import { buildPathWithQuery } from '../lib/redirect'
 
 export const OnboardingStartPage = () => {
-  return <Navigate to="/onboarding/invitations" replace />
+  return <Navigate to={buildPathWithQuery('/onboarding/invitations')} replace />
 }
