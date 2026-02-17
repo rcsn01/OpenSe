@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
-import { ChevronRight, Home } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 export interface BreadcrumbItem { label: string; href?: string; icon?: ReactNode }
 
