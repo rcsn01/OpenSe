@@ -1,4 +1,4 @@
-import { supabase, db } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { OrgSimple, OrgInvite } from '../types/organisation'
 import {
   getPendingOrganisationInvites,
