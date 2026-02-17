@@ -41,7 +41,7 @@ export function SwitchAppPopover({ open, triggerEl, onClose }: SwitchAppPopoverP
   const [position, setPosition] = useState({ top: 0, left: 0 })
 
   const apps = useMemo(() => {
-    const env = import.meta.env as Record<string, string | undefined>
+    const env = import.meta.env as unknown as Record<string, string | undefined>
     const etlUrl = env.VITE_ETL_URL || DEFAULT_APP_URLS.etl
     const stoqrUrl = env.VITE_STOQR_URL || DEFAULT_APP_URLS.stoqr
     const uiDesignUrl = env.VITE_UI_DESIGN_URL || DEFAULT_APP_URLS['ui-design']
