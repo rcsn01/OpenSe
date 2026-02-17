@@ -25,12 +25,13 @@ const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
 const ProtectedAccountRoute = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation()
   const { user, loading } = useAuth()
+  const userId = user?.id ?? null
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null)
   const [onboardingLoading, setOnboardingLoading] = useState(true)
 
   useEffect(() => {
     const loadOnboardingStatus = async () => {
-      if (!user) {
+      if (!userId) {
         setOnboardingStatus(null)
         setOnboardingLoading(false)
         return
@@ -55,14 +56,14 @@ const ProtectedAccountRoute = ({ children }: { children: React.ReactNode }) => {
     }
 
     void loadOnboardingStatus()
-  }, [location.pathname, user?.id])
+  }, [location.pathname, userId])
 
   if (loading || onboardingLoading) {
     return <div className="min-h-screen grid place-items-center text-sm text-slate-500">Loading session...</div>
   }
 
   if (!user) {
-    return <Navigate to="/login" state={{ next: location.pathname }} replace />
+    return <Navigate to="/login" state={{ next: `${location.pathname}${location.search}${location.hash}` }} replace />
   }
 
   const isOnboardingRoute = location.pathname.startsWith('/onboarding')
