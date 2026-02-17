@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { supabase, db } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 
@@ -13,7 +14,7 @@ export const CompanySetupPage = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [pendingInvites, setPendingInvites] = useState<
-    { id: string; company_id: string; role_id: string; email: string; token: string; companies?: { id: string; name: string } }[]
+    { id: string; company_id: string; role_id: string; email: string; token: string; organisations?: { id: string; name: string } }[]
   >([])
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export const CompanySetupPage = () => {
     if (!userEmail) return
     const { data, error } = await db
       .from('company_invitations')
-      .select('id, company_id, role_id, email, token, companies (id, name)')
+      .select('id, company_id, role_id, email, token, organisations:organisations!company_invitations_company_id_fkey(id, name)')
       .eq('email', userEmail)
       .is('accepted_at', null)
 
@@ -54,19 +55,35 @@ export const CompanySetupPage = () => {
     }
   }, [])
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setIsLoading(true)
     setMessage(null)
 
-    const { error } = await db.from('companies').insert({ name, description })
-    if (error) {
-      setMessage(error.message)
-    } else {
-      setName('')
-      setDescription('')
-      await refreshCompanies()
+    if (!userId) {
+      setMessage('You must be signed in to create an organization.')
+      setIsLoading(false)
+      return
     }
+
+    const { data: organisation, error } = await supabase
+      .from('organisations')
+      .insert({
+        name,
+        owner_id: userId,
+      })
+      .select('id')
+      .single()
+
+    if (error || !organisation?.id) {
+      setMessage(error?.message ?? 'Failed to create organization.')
+      setIsLoading(false)
+      return
+    }
+
+    setName('')
+    setDescription('')
+    await refreshCompanies()
 
     setIsLoading(false)
   }
@@ -122,7 +139,7 @@ export const CompanySetupPage = () => {
               <div key={invite.id} className="card" style={{ boxShadow: 'none' }}>
                 <div className="flex-between">
                   <div>
-                    <div style={{ fontWeight: 600 }}>{invite.companies?.name ?? invite.company_id}</div>
+                    <div style={{ fontWeight: 600 }}>{invite.organisations?.name ?? invite.company_id}</div>
                     <div className="small muted">Invited as {invite.email}</div>
                   </div>
                   <button className="button secondary" type="button" onClick={() => acceptInvite(invite.token)}>

@@ -1,9 +1,9 @@
-import { type InputHTMLAttributes, type TextareaHTMLAttributes, forwardRef, type ReactNode } from 'react'
+import { type InputHTMLAttributes, type TextareaHTMLAttributes, type SelectHTMLAttributes, forwardRef, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 /* ── Input ────────────────────────────────────────────── */
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'prefix'> {
   error?: string
   /** Icon or element rendered inside the input on the left (ETL compat) */
   prefix?: ReactNode
@@ -96,7 +96,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               : 'border-[var(--color-border)] hover:border-[var(--color-border-hover)]',
             className,
           )}
-          {...(props as React.SelectHTMLAttributes<HTMLSelectElement>)}
+          {...(props as SelectHTMLAttributes<HTMLSelectElement>)}
         >
           {placeholder && (
             <option value="" disabled>{placeholder}</option>

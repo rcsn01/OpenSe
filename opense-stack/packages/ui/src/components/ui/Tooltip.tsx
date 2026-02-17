@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef, useEffect } from 'react'
+import { type ReactNode, useState } from 'react'
 import { cn } from '../../lib/cn'
 
 type Side = 'top' | 'bottom' | 'left' | 'right'

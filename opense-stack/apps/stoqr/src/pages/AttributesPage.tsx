@@ -11,6 +11,23 @@ type CompanySettings = {
   custom_fields?: CustomField[]
 }
 
+const getSettingsStorageKey = (companyId: string) => `stoqr:company-settings:${companyId}`
+
+const readCompanySettings = (companyId: string): CompanySettings => {
+  try {
+    const raw = localStorage.getItem(getSettingsStorageKey(companyId))
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as CompanySettings
+    return parsed ?? {}
+  } catch {
+    return {}
+  }
+}
+
+const writeCompanySettings = (companyId: string, settings: CompanySettings) => {
+  localStorage.setItem(getSettingsStorageKey(companyId), JSON.stringify(settings))
+}
+
 export const AttributesPage = () => {
   const { companyId } = useCompany()
   const [folders, setFolders] = useState<Folder[]>([])
@@ -29,13 +46,12 @@ export const AttributesPage = () => {
     if (!companyId) return
     setIsLoading(true)
 
-    const [{ data: companyData }, { data: folderData }, { data: tagData }] = await Promise.all([
-      db.from('companies').select('settings').eq('id', companyId).single(),
+    const [{ data: folderData }, { data: tagData }] = await Promise.all([
       db.from('folders').select('id, name, parent_id').eq('company_id', companyId),
       db.from('tags').select('id, name, color').eq('company_id', companyId),
     ])
 
-    setSettings((companyData?.settings as CompanySettings) ?? {})
+    setSettings(readCompanySettings(companyId))
     setFolders((folderData as Folder[]) ?? [])
     setTags((tagData as Tag[]) ?? [])
     setIsLoading(false)
@@ -49,10 +65,7 @@ export const AttributesPage = () => {
 
   const handleSaveFields = async () => {
     if (!companyId) return
-    await db
-      .from('companies')
-      .update({ settings: { ...settings, custom_fields: customFields } })
-      .eq('id', companyId)
+    writeCompanySettings(companyId, { ...settings, custom_fields: customFields })
     setMessage('Custom fields updated.')
   }
 
