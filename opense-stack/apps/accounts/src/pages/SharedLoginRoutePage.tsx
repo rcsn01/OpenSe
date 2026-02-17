@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { signIn, signInWithGoogle } from '@repo/shared/auth'
 import { useAuth } from '@repo/shared/auth/context'
 import { getOnboardingStatus, type OnboardingStatus } from '../api/onboarding'
@@ -14,15 +14,27 @@ const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
 }
 
 export const SharedLoginRoutePage = () => {
+  const location = useLocation()
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const redirectedUserId = useRef<string | null>(null)
+  const isRedirecting = useRef(false)
   const query = buildQueryString()
   const querySuffix = query ? `?${query}` : ''
 
-  const handleAuthenticatedRedirect = useCallback(async () => {
+  const getInternalNextPath = useCallback((): string | null => {
+    const next = (location.state as { next?: unknown } | null)?.next
+    if (typeof next !== 'string') return null
+    if (!next.startsWith('/') || next.startsWith('//')) return null
+    if (next.startsWith('/login') || next.startsWith('/signin') || next.startsWith('/register') || next.startsWith('/signup')) return null
+    return next
+  }, [location.state])
+
+  const performRedirect = useCallback(async () => {
+    if (isRedirecting.current) return
+    isRedirecting.current = true
+
     try {
       const onboardingStatus = await getOnboardingStatus()
 
@@ -35,35 +47,37 @@ export const SharedLoginRoutePage = () => {
       return
     }
 
-    const redirected = redirectBackToApp()
-    if (!redirected) {
-      navigate('/settings', { replace: true })
-    }
-  }, [navigate])
+    if (redirectBackToApp()) return
 
+    const nextPath = getInternalNextPath()
+    if (nextPath) {
+      navigate(nextPath, { replace: true })
+      return
+    }
+
+    navigate('/settings', { replace: true })
+  }, [getInternalNextPath, navigate])
+
+  // Primary: redirect immediately when user becomes available (from any source)
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading || !user) {
+      isRedirecting.current = false
       return
     }
+    void performRedirect()
+  }, [authLoading, user, performRedirect])
 
-    if (!user) {
-      redirectedUserId.current = null
-      return
-    }
-
-    if (redirectedUserId.current === user.id) {
-      return
-    }
-
-    redirectedUserId.current = user.id
-
-    // Brief delay so auth state is fully settled before redirect (avoids flash loop with dashboard)
+  // Fallback: hard redirect if still on login page after auth settles
+  useEffect(() => {
+    if (authLoading || !user) return
     const id = setTimeout(() => {
-      void handleAuthenticatedRedirect()
-    }, 150)
-
+      const path = window.location.pathname
+      if (path === '/login' || path === '/signin') {
+        window.location.replace('/settings')
+      }
+    }, 3000)
     return () => clearTimeout(id)
-  }, [authLoading, handleAuthenticatedRedirect, user])
+  }, [authLoading, user])
 
   const handleLogin = async ({ email, password }: { email: string; password: string }) => {
     setLoading(true)
@@ -71,8 +85,12 @@ export const SharedLoginRoutePage = () => {
 
     try {
       await signIn(email, password)
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to sign in')
+      // Backup: trigger redirect immediately after successful sign-in
+      // in case auth state propagation through context is delayed
+      void performRedirect()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to sign in'
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -84,8 +102,9 @@ export const SharedLoginRoutePage = () => {
 
     try {
       await signInWithGoogle(`/login${querySuffix}`)
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to sign in with Google')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to sign in with Google'
+      setError(message)
       setLoading(false)
     }
   }
