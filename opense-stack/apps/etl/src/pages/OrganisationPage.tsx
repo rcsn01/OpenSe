@@ -35,7 +35,6 @@ export const OrganisationPage = () => {
     const queryClient = useQueryClient();
     const location = useLocation();
     const navigate = useNavigate();
-    const accountsUrl = ((import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com').replace(/\/$/, '');
 
     const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganisations(user?.id);
     const organisation = contextOrg ?? userOrgs[0] ?? null;
@@ -90,33 +89,6 @@ export const OrganisationPage = () => {
             <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-slate-400">
                 <Loader2 className="w-10 h-10 animate-spin mb-4 text-blue-600" />
                 <p>Loading organisation details...</p>
-            </div>
-        );
-    }
-
-    // --- Render No Organisation View ---
-    if (!organisation) {
-        return (
-            <div className="p-8 max-w-4xl mx-auto min-h-screen">
-                <div className="mb-10 text-center">
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Welcome to OpenETL</h1>
-                    <p className="text-slate-500 mt-2 text-lg">Organisation onboarding is managed in OpenSe Accounts.</p>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-2xl shadow-lg p-8 text-center space-y-4">
-                    <p className="text-slate-600">
-                        Complete invitation handling or create your organisation in Accounts, then return to ETL.
-                    </p>
-                    <div className="flex justify-center">
-                        <Button
-                            onClick={() => {
-                                window.location.assign(`${accountsUrl}/onboarding`);
-                            }}
-                        >
-                            Continue in Accounts
-                        </Button>
-                    </div>
-                </div>
             </div>
         );
     }
