@@ -1,21 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@repo/shared/auth/context';
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
-  ReactFlowInstance,
-  addEdge,
-  Connection,
   Edge,
   Node,
-  useEdgesState,
-  useNodesState,
-  useOnSelectionChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { NODE_REGISTRY, nodeTypes } from '../components/nodes/registry';
+import { nodeTypes } from '../components/nodes/registry';
 import { WorkflowNodeData } from '../components/nodes/types';
 import { runExecution } from '../lib/execution/ExecutionEngine';
 import { useSaveWorkflow, useUpdateWorkflowName, useWorkflow } from '../hooks/queries/useWorkflows';
@@ -29,15 +23,13 @@ import { NotificationSettingsPanel } from '../components/editor/NotificationSett
 import { Info } from 'lucide-react';
 
 // Hooks
-import { useUndoRedo } from '../hooks/useUndoRedo';
+import { useWorkflowEditor } from '../hooks/useWorkflowEditor';
+import { useWorkflowImportExport } from '../hooks/useWorkflowImportExport';
 import { useCreateWorkflowVersion } from '../hooks/queries/useVersions';
 import { WorkflowVersion } from '../api/versions';
 
 // Notifications
 import { fireNotifications } from '../lib/notifications';
-
-// Validation (Audit S5: sanitize imported workflows)
-import { validateWorkflowImport, sanitizeText } from '../lib/validation';
 
 export const WorkflowEditorPage = () => {
   const { id } = useParams();
@@ -50,52 +42,60 @@ export const WorkflowEditorPage = () => {
   const { user } = useAuth();
   const [workflowName, setWorkflowName] = useState('New Workflow');
   const [workflowId, setWorkflowId] = useState<string | null>(initialWorkflowId);
-  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [runMessage, setRunMessage] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
-  const importInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Selection State
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // Version History & Notifications panel state
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Force re-render for undo/redo button state
-  const [, forceRender] = useState(0);
-
   const { data: workflowData, error: workflowError } = useWorkflow(workflowId);
   const saveMutation = useSaveWorkflow();
   const nameMutation = useUpdateWorkflowName();
   const createVersionMutation = useCreateWorkflowVersion();
+  const {
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    setRfInstance,
+    selectedNode,
+    setSelectedNodeId,
+    defaultEdgeOptions,
+    withSetters,
+    sanitizeNodes,
+    takeSnapshot,
+    resetHistory,
+    canUndo,
+    canRedo,
+    handleUndo,
+    handleRedo,
+    handleNodesChange,
+    handleEdgesChange,
+    onConnect,
+    onDragStart,
+    onDrop,
+    onDragOver,
+    updateNodeData,
+  } = useWorkflowEditor({ setRunMessage });
 
-  // ── Undo/Redo ──
-  const { takeSnapshot, undo, redo, resetHistory, canUndo, canRedo } = useUndoRedo();
-
-  // Aesthetics: Define global style for connection lines
-  const defaultEdgeOptions = useMemo(() => ({
-    type: 'smoothstep',
-    animated: true,
-    style: {
-      strokeWidth: 3,
-      stroke: '#64748b' // Slate-500 for high visibility
-    },
-  }), []);
-
-  const withSetters = useCallback((list: Node<WorkflowNodeData>[]) => (
-    list.map((node) => ({
-      ...node,
-      data: {
-        ...node.data,
-        setData: node.data?.setData || ((updater: any) => setNodes((nds) => nds.map((n) => (
-          n.id === node.id ? { ...n, data: typeof updater === 'function' ? updater(n.data) : updater } : n
-        )))),
-      },
-    }))
-  ), [setNodes]);
+  const {
+    importInputRef,
+    handleExport,
+    handleImportClick,
+    handleImportFile,
+  } = useWorkflowImportExport({
+    workflowName,
+    setWorkflowName,
+    edges,
+    nodes,
+    sanitizeNodes,
+    withSetters,
+    setNodes,
+    setEdges,
+    setRunMessage,
+    takeSnapshot,
+  });
 
   useEffect(() => {
     if (!workflowData) return;
@@ -131,155 +131,6 @@ export const WorkflowEditorPage = () => {
     setRunMessage('Gallery workflows are read-only. Clone from Workflow Gallery to edit.');
     navigate('/gallery', { replace: true });
   }, [navigate, workflowData?.is_template]);
-
-  // Hook to track selection
-  useOnSelectionChange({
-    onChange: ({ nodes }) => {
-      setSelectedNodeId(nodes.length > 0 ? nodes[0].id : null);
-    },
-  });
-
-  // ── Keyboard shortcuts for Undo/Redo ──
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isMod = e.metaKey || e.ctrlKey;
-      if (!isMod) return;
-
-      // Ignore when typing in inputs/textareas
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-
-      if (e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-      } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
-        e.preventDefault();
-        handleRedo();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  });
-
-  const handleUndo = useCallback(() => {
-    const prev = undo(nodes, edges);
-    if (prev) {
-      setNodes(withSetters(prev.nodes));
-      setEdges(prev.edges);
-      forceRender((v) => v + 1);
-    }
-  }, [undo, nodes, edges, setNodes, setEdges, withSetters]);
-
-  const handleRedo = useCallback(() => {
-    const next = redo(nodes, edges);
-    if (next) {
-      setNodes(withSetters(next.nodes));
-      setEdges(next.edges);
-      forceRender((v) => v + 1);
-    }
-  }, [redo, nodes, edges, setNodes, setEdges, withSetters]);
-
-  // Wrap onNodesChange to take snapshots
-  const handleNodesChange = useCallback((changes: any) => {
-    // Snapshot before structural changes (add, remove, position after drag)
-    const hasStructuralChange = changes.some(
-      (c: any) => c.type === 'remove' || c.type === 'add' ||
-                   (c.type === 'position' && c.dragging === false)
-    );
-    if (hasStructuralChange) {
-      takeSnapshot(nodes, edges);
-      forceRender((v) => v + 1);
-    }
-    onNodesChange(changes);
-  }, [onNodesChange, takeSnapshot, nodes, edges]);
-
-  // Wrap onEdgesChange to take snapshots
-  const handleEdgesChange = useCallback((changes: any) => {
-    const hasStructuralChange = changes.some(
-      (c: any) => c.type === 'remove' || c.type === 'add'
-    );
-    if (hasStructuralChange) {
-      takeSnapshot(nodes, edges);
-      forceRender((v) => v + 1);
-    }
-    onEdgesChange(changes);
-  }, [onEdgesChange, takeSnapshot, nodes, edges]);
-
-  const onConnect = useCallback((connection: Edge | Connection) => {
-    takeSnapshot(nodes, edges);
-    setEdges((eds) => addEdge(connection, eds));
-    forceRender((v) => v + 1);
-  }, [setEdges, takeSnapshot, nodes, edges]);
-
-  const onDragStart = (event: React.DragEvent, nodeType: string) => {
-    event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
-  };
-
-  const onDrop = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    const type = event.dataTransfer.getData('application/reactflow');
-    if (!type) return;
-
-    const config = NODE_REGISTRY[type as keyof typeof NODE_REGISTRY];
-    if (!config) {
-      setRunMessage('Unknown node type');
-      return;
-    }
-
-    // Snapshot before adding node
-    takeSnapshot(nodes, edges);
-
-    const position = rfInstance?.project({ x: event.clientX - 288, y: event.clientY - 64 }) || { x: 100, y: 100 };
-    const id = `${type}-${Date.now()}`;
-
-    const baseData = { ...config.initialData } as WorkflowNodeData;
-    const dataWithSetter = { ...baseData, setData: (updater: any) => setNodes((nds) => nds.map((n) => n.id === id ? { ...n, data: typeof updater === 'function' ? updater(n.data) : updater } : n)) };
-
-    const newNode = { id, type: config.type as any, position, data: dataWithSetter };
-    setNodes((nds) => nds.concat(newNode));
-    setSelectedNodeId(id);
-    forceRender((v) => v + 1);
-  }, [rfInstance, setNodes, takeSnapshot, nodes, edges]);
-
-  const onDragOver = (event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  };
-
-  const updateNodeData = (nodeId: string, newData: any) => {
-    setNodes((nds) => nds.map((node) => {
-      if (node.id === nodeId) {
-        return { ...node, data: newData };
-      }
-      return node;
-    }));
-  };
-
-  const selectedNode = useMemo(() => nodes.find(n => n.id === selectedNodeId) || null, [nodes, selectedNodeId]);
-
-  const sanitizeNodes = useCallback(() => nodes.map((node) => {
-    const { data, ...rest } = node;
-    const cleanedData = data && typeof data === 'object'
-      ? JSON.parse(JSON.stringify(data, (_key, val) => (typeof val === 'function' ? undefined : val)))
-      : data;
-    if (cleanedData && typeof cleanedData === 'object' && 'setData' in (cleanedData as Record<string, unknown>)) {
-      delete (cleanedData as Record<string, unknown>).setData;
-    }
-    if (cleanedData && 'previewRows' in (cleanedData as Record<string, unknown>)) {
-      delete (cleanedData as Record<string, unknown>).previewRows;
-    }
-    if (node.type === 'file' && cleanedData) {
-      delete (cleanedData as Record<string, unknown>).rows;
-      delete (cleanedData as Record<string, unknown>).datasetId;
-      delete (cleanedData as Record<string, unknown>).count;
-      delete (cleanedData as Record<string, unknown>).chunkCount;
-      delete (cleanedData as Record<string, unknown>).fileName;
-      delete (cleanedData as Record<string, unknown>).schema;
-    }
-    return { ...rest, data: cleanedData };
-  }), [nodes]);
 
   const runAndApplyExecution = async () => {
     if (!user) {
@@ -437,61 +288,6 @@ export const WorkflowEditorPage = () => {
     setShowVersionHistory(false);
     setRunMessage(`Restored version ${version.version_number}. Save to persist.`);
   }, [nodes, edges, takeSnapshot, withSetters, setNodes, setEdges]);
-
-  const handleExport = useCallback(() => {
-    const sanitizedNodes = sanitizeNodes();
-    const payload = {
-      name: workflowName?.trim() || 'workflow',
-      graph_data: { nodes: sanitizedNodes, edges },
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${(workflowName || 'workflow').replace(/\s+/g, '_')}.json`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setRunMessage('Workflow exported');
-  }, [edges, sanitizeNodes, workflowName]);
-
-  const handleImportClick = useCallback(() => {
-    importInputRef.current?.click();
-  }, []);
-
-  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const raw = reader.result as string;
-        const parsed = JSON.parse(raw);
-
-        const validation = validateWorkflowImport(parsed);
-        if (!validation.valid) {
-          setRunMessage(`Import failed: ${validation.error}`);
-          return;
-        }
-
-        takeSnapshot(nodes, edges); // Allow undo of import
-
-        const graph = (parsed.graph_data || parsed) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] };
-        const incomingNodes = withSetters((graph.nodes || []) as Node<WorkflowNodeData>[]);
-        const incomingEdges = (graph.edges || []) as Edge[];
-        setNodes(incomingNodes);
-        setEdges(incomingEdges);
-        if (parsed.name) setWorkflowName(sanitizeText(parsed.name, 100));
-        setRunMessage('Workflow imported');
-      } catch (err: any) {
-        setRunMessage(err?.message || 'Failed to import workflow');
-      } finally {
-        e.target.value = '';
-      }
-    };
-    reader.readAsText(file);
-  }, [setEdges, setNodes, withSetters, takeSnapshot, nodes, edges]);
 
   return (
     <div className="flex flex-col h-screen bg-white overflow-hidden">

@@ -1,69 +1,31 @@
-import { useEffect, useState } from 'react'
-import { db } from '../../supabaseClient'
+import { useState } from 'react'
 import { EmptyState } from '../EmptyState'
 import { formatDateTime } from '../../utils'
-
-type Supplier = {
-  id: string
-  name: string
-  contact_name: string | null
-  email: string | null
-  phone: string | null
-}
-
-type PurchaseOrder = {
-  id: string
-  po_number: number
-  supplier_id: string | null
-  status: 'draft' | 'sent' | 'partial' | 'closed' | 'cancelled'
-  expected_date: string | null
-  created_at: string
-  suppliers?: { name: string }
-  total_amount?: number
-}
+import {
+  useCreatePurchaseOrder,
+  useProcurementPurchaseOrders,
+  useProcurementSuppliers,
+} from '../../hooks/queries/useProcurementTabs'
 
 export const PurchaseOrdersTab = ({ companyId }: { companyId: string }) => {
-  const [pos, setPos] = useState<PurchaseOrder[]>([])
-  const [loading, setLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const { data: pos = [], isLoading: loading } = useProcurementPurchaseOrders(companyId)
+  const { data: suppliers = [] } = useProcurementSuppliers(companyId)
+  const createPurchaseOrderMutation = useCreatePurchaseOrder(companyId)
 
   const [newPoSupplier, setNewPoSupplier] = useState('')
   const [newPoDate, setNewPoDate] = useState('')
 
-  const loadPOs = async () => {
-    setLoading(true)
-    const { data } = await supabase
-      .from('purchase_orders')
-      .select('*, suppliers(name)')
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false })
-
-    setPos((data as any[]) ?? [])
-    setLoading(false)
-  }
-
-  const loadSuppliers = async () => {
-    const { data } = await db.from('suppliers').select('*').eq('company_id', companyId)
-    setSuppliers((data as Supplier[]) ?? [])
-  }
-
-  useEffect(() => {
-    loadPOs()
-    loadSuppliers()
-  }, [companyId])
-
   const handleCreatePO = async () => {
     if (!newPoSupplier) return
-    const { error } = await db.from('purchase_orders').insert({
-      company_id: companyId,
-      supplier_id: newPoSupplier,
-      expected_date: newPoDate || null,
-      status: 'draft',
-    })
-    if (!error) {
+    try {
+      await createPurchaseOrderMutation.mutateAsync({
+        supplierId: newPoSupplier,
+        expectedDate: newPoDate,
+      })
       setIsCreating(false)
-      loadPOs()
+    } catch {
+      // keep current UX silent on error
     }
   }
 

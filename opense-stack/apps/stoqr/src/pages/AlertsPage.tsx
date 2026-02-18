@@ -1,39 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
-import { supabase, db } from '../supabaseClient'
+import { useMemo } from 'react'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
-import type { Product } from '../types'
 import { ExpiryList } from '../components/Alerts/ExpiryList'
 import { LowStockList } from '../components/Alerts/LowStockList'
+import { useAlertProducts } from '../hooks/queries/useAlerts'
 
 const DAYS_NOTICE = 30
 
 export const AlertsPage = () => {
   const { companyId } = useCompany()
-  const [products, setProducts] = useState<Product[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  const loadProducts = async () => {
-    if (!companyId) return
-    setIsLoading(true)
-
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, sku, quantity_on_hand, reorder_point, expiry_date')
-      .eq('company_id', companyId)
-
-    if (error) {
-      console.error(error)
-      setProducts([])
-    } else {
-      setProducts((data as Product[]) ?? [])
-    }
-    setIsLoading(false)
-  }
-
-  useEffect(() => {
-    loadProducts()
-  }, [companyId])
+  const { data: products = [], isLoading } = useAlertProducts(companyId)
 
   const lowStock = useMemo(() => {
     return products.filter((product) => product.quantity_on_hand <= product.reorder_point)

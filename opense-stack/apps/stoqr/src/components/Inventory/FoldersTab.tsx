@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { db } from '../../supabaseClient'
 import type { Folder } from '../../types'
-import { formatCurrency, toNumber } from '../../utils'
-import type { InventoryProduct } from './types'
+import { formatCurrency } from '../../utils'
+import { useCreateInventoryFolder, useFolderProducts } from '../../hooks/queries/useInventory'
 import { 
   Folder as FolderIcon, 
   FolderOpen, 
@@ -97,14 +96,15 @@ const TreeItem = ({
 
 export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: string; allFolders: Folder[]; onRefresh: () => void }) => {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
-  const [products, setProducts] = useState<InventoryProduct[]>([])
-  const [isLoading, setIsLoading] = useState(false)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [view, setView] = useState<'list' | 'grid'>('list')
 
   // Actions
   const [isCreating, setIsCreating] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+
+  const { data: products = [], isLoading } = useFolderProducts(companyId, currentFolderId)
+  const createFolderMutation = useCreateInventoryFolder(companyId)
 
   // Build the tree
   const tree = useMemo(() => buildTree(allFolders, null), [allFolders])
@@ -133,41 +133,22 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
     setExpandedIds(next)
   }
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true)
-      let query = db
-        .from('products')
-        .select('id, name, sku, quantity_on_hand, selling_price, category')
-        .eq('company_id', companyId)
-
-      if (currentFolderId) {
-        query = query.eq('folder_id', currentFolderId)
-      } else {
-        query = query.is('folder_id', null)
-      }
-
-      const { data } = await query
-      setProducts((data as any) || [])
-      setIsLoading(false)
-    }
-    fetchProducts()
-  }, [currentFolderId, companyId])
-
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return
-    const { error } = await db.from('folders').insert({
-      company_id: companyId,
-      name: newFolderName,
-      parent_id: currentFolderId
-    })
-    if (!error) {
+    try {
+      await createFolderMutation.mutateAsync({
+        name: newFolderName,
+        parentId: currentFolderId,
+      })
       toast.success("Folder created")
       setNewFolderName('')
       setIsCreating(false)
       onRefresh()
       // If we are in a folder, ensure it is expanded so we see the new child
       if (currentFolderId) setExpandedIds(prev => new Set(prev).add(currentFolderId))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create folder'
+      toast.error(message)
     }
   }
 
