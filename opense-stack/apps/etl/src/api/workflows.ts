@@ -53,7 +53,7 @@ export const listWorkflows = async ({ userId, orgId, mode }: ListWorkflowsParams
 export const getWorkflow = async (id: string) => {
   const { data, error } = await db
     .from('workflows')
-    .select('id, name, graph_data, owner_id, org_id')
+    .select('id, name, graph_data, owner_id, org_id, is_template')
     .eq('id', id)
     .single()
 
@@ -77,6 +77,18 @@ export const saveWorkflow = async (payload: SaveWorkflowParams) => {
   const safeName = sanitizeText(payload.name, 100);
 
   if (payload.id) {
+    const { data: existingWorkflow, error: existingWorkflowError } = await db
+      .from('workflows')
+      .select('id, is_template')
+      .eq('id', payload.id)
+      .single()
+
+    if (existingWorkflowError) throw existingWorkflowError
+
+    if (existingWorkflow?.is_template) {
+      throw new Error('Gallery workflows are read-only. Clone a workflow before editing.')
+    }
+
     const { data, error } = await db
       .from('workflows')
       .update({
@@ -131,12 +143,36 @@ export const cloneWorkflowFromTemplate = async ({ template, ownerId, orgId }: Cl
 }
 
 export const updateWorkflowName = async ({ id, name }: { id: string; name: string }) => {
+  const { data: existingWorkflow, error: existingWorkflowError } = await db
+    .from('workflows')
+    .select('id, is_template')
+    .eq('id', id)
+    .single()
+
+  if (existingWorkflowError) throw existingWorkflowError
+
+  if (existingWorkflow?.is_template) {
+    throw new Error('Gallery workflows are read-only. Clone a workflow before editing.')
+  }
+
   const { error } = await db.from('workflows').update({ name }).eq('id', id)
   if (error) throw error
   return { id, name }
 }
 
 export const deleteWorkflow = async (workflowId: string) => {
+  const { data: existingWorkflow, error: existingWorkflowError } = await db
+    .from('workflows')
+    .select('id, is_template')
+    .eq('id', workflowId)
+    .single()
+
+  if (existingWorkflowError) throw existingWorkflowError
+
+  if (existingWorkflow?.is_template) {
+    throw new Error('Gallery workflows are read-only. Clone a workflow before editing.')
+  }
+
   const { error } = await db.from('workflows').delete().eq('id', workflowId)
   if (error) throw error
 }

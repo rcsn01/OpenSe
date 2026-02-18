@@ -18,7 +18,7 @@ import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisatio
 
 const mainNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-  { href: '/gallery', label: 'Gallery', icon: <LayoutTemplate className="w-5 h-5" /> },
+  { href: '/gallery', label: 'Workflow Gallery', icon: <LayoutTemplate className="w-5 h-5" /> },
   { href: '/organisation', label: 'Organisation', icon: <Building2 className="w-5 h-5" /> },
   { href: '/activity', label: 'Activity', icon: <Activity className="w-5 h-5" /> },
 ]
