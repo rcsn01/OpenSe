@@ -7,8 +7,8 @@ export class ETLGalleryPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: /gallery|template/i }).first();
-    this.cloneButton = page.getByRole('button', { name: /clone|use template/i }).first();
+    this.heading = page.getByRole('heading', { name: /workflow gallery|gallery|workflow/i }).first();
+    this.cloneButton = page.getByRole('button', { name: /clone/i }).first();
   }
 
   async goto() {

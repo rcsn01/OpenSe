@@ -17,9 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from '@repo/ui'
-import { Building2, ShieldCheck, Users } from 'lucide-react'
+import { Building2, LayoutTemplate, ShieldCheck, Users } from 'lucide-react'
 import {
+  addWorkflowToGallery,
   type AdminAuditEventRow,
+  type AdminWorkflowRow,
   changeOrganisationOwner,
   createAdminUser,
   createOrganisationWithOwner,
@@ -27,10 +29,13 @@ import {
   deleteOrganisation,
   deleteOrganisationMember,
   inviteMemberToOrganisation,
+  listAllWorkflowsForAdmin,
   listAdminAuditEvents,
   listAdminOrgs,
   listAdminUsers,
+  listGalleryTemplates,
   listOrganisationMembers,
+  removeWorkflowFromGallery,
   renameOrganisation,
   resetAdminUserPassword,
   updateUserProfile,
@@ -47,6 +52,7 @@ const roleOptions = [
 const tabs = [
   { id: 'orgs', label: 'Organisations', icon: <Building2 className="h-4 w-4" /> },
   { id: 'users', label: 'Users', icon: <Users className="h-4 w-4" /> },
+  { id: 'etl-config', label: 'ETL config', icon: <LayoutTemplate className="h-4 w-4" /> },
 ]
 
 const actionLabelMap: Record<string, string> = {
@@ -63,6 +69,11 @@ export const SuperAdminPage = () => {
 
   const [orgs, setOrgs] = useState<OrgRow[]>([])
   const [users, setUsers] = useState<AdminUserRow[]>([])
+  const [galleryWorkflows, setGalleryWorkflows] = useState<AdminWorkflowRow[]>([])
+  const [allWorkflows, setAllWorkflows] = useState<AdminWorkflowRow[]>([])
+  const [etlConfigLoading, setEtlConfigLoading] = useState(false)
+  const [selectedWorkflowToAdd, setSelectedWorkflowToAdd] = useState('')
+  const [workflowSearch, setWorkflowSearch] = useState('')
 
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
   const [orgMembers, setOrgMembers] = useState<MemberRow[]>([])
@@ -135,6 +146,28 @@ export const SuperAdminPage = () => {
     }
   }
 
+  const loadEtlConfig = async () => {
+    setEtlConfigLoading(true)
+    setError(null)
+    try {
+      const [templates, workflows] = await Promise.all([listGalleryTemplates(), listAllWorkflowsForAdmin()])
+      setGalleryWorkflows(templates)
+      setAllWorkflows(workflows)
+      setSelectedWorkflowToAdd((current) => {
+        if (current && workflows.some((workflow) => workflow.id === current && !workflow.is_template)) {
+          return current
+        }
+        return workflows.find((workflow) => !workflow.is_template)?.id ?? ''
+      })
+    } catch (loadError: unknown) {
+      setError(getErrorMessage(loadError, 'Failed to load ETL config'))
+      setGalleryWorkflows([])
+      setAllWorkflows([])
+    } finally {
+      setEtlConfigLoading(false)
+    }
+  }
+
   useEffect(() => {
     void loadAll()
   }, [])
@@ -149,6 +182,11 @@ export const SuperAdminPage = () => {
     void loadMembers(selectedOrgId)
     void loadAuditEvents(selectedOrgId)
   }, [selectedOrgId])
+
+  useEffect(() => {
+    if (activeTab !== 'etl-config') return
+    void loadEtlConfig()
+  }, [activeTab])
 
   const notify = (text: string) => {
     setMessage(text)
@@ -294,12 +332,53 @@ export const SuperAdminPage = () => {
     }
   }
 
+  const onAddWorkflow = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selectedWorkflowToAdd) return
+
+    setError(null)
+    try {
+      await addWorkflowToGallery(selectedWorkflowToAdd)
+      await loadEtlConfig()
+      notify('Workflow added to gallery')
+    } catch (actionError: unknown) {
+      setError(getErrorMessage(actionError, 'Failed to add workflow to gallery'))
+    }
+  }
+
+  const onRemoveWorkflow = async (workflowId: string) => {
+    setError(null)
+    try {
+      await removeWorkflowFromGallery(workflowId)
+      await loadEtlConfig()
+      notify('Workflow removed from gallery')
+    } catch (actionError: unknown) {
+      setError(getErrorMessage(actionError, 'Failed to remove workflow from gallery'))
+    }
+  }
+
+  const nonTemplateWorkflows = useMemo(
+    () => allWorkflows.filter((workflow) => !workflow.is_template),
+    [allWorkflows],
+  )
+
+  const workflowOptions = useMemo(
+    () =>
+      nonTemplateWorkflows
+        .filter((workflow) =>
+          workflow.name.toLowerCase().includes(workflowSearch.toLowerCase()),
+        )
+        .slice(0, 200)
+        .map((workflow) => ({ value: workflow.id, label: workflow.name })),
+    [nonTemplateWorkflows, workflowSearch],
+  )
+
   return (
     <BasePage isLoading={loading} loadingMessage="Loading ETL admin...">
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl font-semibold">ETL Super Admin</h1>
-          <p className="text-sm text-[var(--color-muted-foreground)]">Manage ETL organisations, members, and users.</p>
+          <p className="text-sm text-[var(--color-muted-foreground)]">Manage ETL organisations, users, and workflow gallery config.</p>
         </div>
 
         {error && (
@@ -318,7 +397,7 @@ export const SuperAdminPage = () => {
           </Card>
         )}
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardContent>
               <p className="text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">Organisations</p>
@@ -335,6 +414,12 @@ export const SuperAdminPage = () => {
             <CardContent>
               <p className="text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">Super Admins</p>
               <p className="text-2xl font-semibold mt-1 flex items-center gap-2"><ShieldCheck className="h-5 w-5" />{adminCount}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent>
+              <p className="text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">Gallery Workflows</p>
+              <p className="text-2xl font-semibold mt-1">{galleryWorkflows.length}</p>
             </CardContent>
           </Card>
         </div>
@@ -507,7 +592,7 @@ export const SuperAdminPage = () => {
               </Card>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'users' ? (
           <div className="grid gap-4 xl:grid-cols-[1fr_1.3fr]">
             <Card>
               <CardHeader>
@@ -588,6 +673,75 @@ export const SuperAdminPage = () => {
                     ))}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-[1fr_1.4fr]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Add workflow</CardTitle>
+                <CardDescription>Promote an existing workflow into the ETL workflow gallery.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form className="flex flex-col gap-3" onSubmit={onAddWorkflow}>
+                  <Input
+                    value={workflowSearch}
+                    onChange={(event) => setWorkflowSearch(event.target.value)}
+                    placeholder="Search workflows to add"
+                  />
+                  <Select
+                    value={selectedWorkflowToAdd}
+                    options={workflowOptions}
+                    onChange={(event) => setSelectedWorkflowToAdd(event.target.value)}
+                  />
+                  <Button type="submit" disabled={!selectedWorkflowToAdd || etlConfigLoading}>Add workflow</Button>
+                </form>
+
+                {nonTemplateWorkflows.length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted-foreground)] mt-3">No promotable workflows available.</p>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Gallery workflows</CardTitle>
+                <CardDescription>Workflows visible in ETL Workflow Gallery.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {etlConfigLoading ? (
+                  <p className="text-sm text-[var(--color-muted-foreground)]">Loading ETL config...</p>
+                ) : galleryWorkflows.length === 0 ? (
+                  <p className="text-sm text-[var(--color-muted-foreground)]">No workflows in gallery.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Nodes</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {galleryWorkflows.map((workflow) => (
+                        <TableRow key={workflow.id}>
+                          <TableCell>{workflow.name}</TableCell>
+                          <TableCell>{workflow.description || '—'}</TableCell>
+                          <TableCell>{workflow.node_count}</TableCell>
+                          <TableCell>{workflow.created_at ? new Date(workflow.created_at).toLocaleDateString() : '—'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button size="sm" variant="outline" onClick={() => onRemoveWorkflow(workflow.id)}>
+                              Remove
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </div>

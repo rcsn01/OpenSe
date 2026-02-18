@@ -125,6 +125,13 @@ export const WorkflowEditorPage = () => {
     if (workflowError) setRunMessage('Failed to load workflow');
   }, [workflowError]);
 
+  useEffect(() => {
+    if (!workflowData?.is_template) return;
+
+    setRunMessage('Gallery workflows are read-only. Clone from Workflow Gallery to edit.');
+    navigate('/gallery', { replace: true });
+  }, [navigate, workflowData?.is_template]);
+
   // Hook to track selection
   useOnSelectionChange({
     onChange: ({ nodes }) => {

@@ -23,6 +23,7 @@ type WorkflowDetail = {
   graph_data: any
   owner_id: string
   org_id: string | null
+  is_template: boolean
 }
 
 export const useWorkflows = ({ userId, orgId, mode }: UseWorkflowsParams) => {
