@@ -1,17 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { supabase } from '../supabaseClient'
+import { fetchUserCompanies } from '../api/company'
 import type { CompanyOption } from '../types'
-
-type MembershipRow = {
-  org_id: string
-  organisations: { id: string; name: string } | { id: string; name: string }[] | null
-}
-
-const normalizeSingle = <T,>(value: T | T[] | null | undefined): T | null => {
-  if (!value) return null
-  return Array.isArray(value) ? (value[0] ?? null) : value
-}
 
 type CompanyContextValue = {
   companyId: string | null
@@ -39,35 +29,21 @@ export const CompanyProvider = ({
 
   const refreshCompanies = useCallback(async () => {
     setIsLoading(true)
-    const { data, error } = await supabase
-      .from('organisation_members')
-      .select('org_id, organisations(id, name)')
-      .eq('user_id', userId)
+    try {
+      const options = await fetchUserCompanies(userId)
 
-    if (error) {
+      setCompanies(options)
+
+      const stored = localStorage.getItem(STORAGE_KEY)
+      const fallback = options[0]?.id ?? null
+      const next = stored && options.some((option) => option.id === stored) ? stored : fallback
+      setCompanyIdState(next)
+    } catch (error) {
       console.error(error)
       setCompanies([])
+    } finally {
       setIsLoading(false)
-      return
     }
-
-    const options = ((data ?? []) as MembershipRow[])
-      .map((item) => {
-        const organisation = normalizeSingle(item.organisations)
-        return {
-          id: organisation?.id ?? item.org_id,
-          name: organisation?.name ?? 'Unknown',
-        }
-      })
-      .filter((item) => item.id)
-
-    setCompanies(options)
-
-    const stored = localStorage.getItem(STORAGE_KEY)
-    const fallback = options[0]?.id ?? null
-    const next = stored && options.some((option) => option.id === stored) ? stored : fallback
-    setCompanyIdState(next)
-    setIsLoading(false)
   }, [userId])
 
   useEffect(() => {

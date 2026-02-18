@@ -1,95 +1,50 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { StackLayout } from '@repo/ui'
-import { supabase, db } from '../../supabaseClient'
-import type { Product } from '../../types'
 import { EmptyState } from '../EmptyState'
 import { SearchX, PackagePlus, Camera, StopCircle, ScanBarcode, Keyboard, X } from 'lucide-react'
-import { toast } from 'sonner'
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
+import {
+  useQuickScanLookup,
+  useQuickScanTransaction,
+  useQuickScanUser,
+} from '../../hooks/queries/useQuickScan'
 
 export const QuickScanTab = ({ scanValue, companyId }: { scanValue: string; companyId: string }) => {
   const navigate = useNavigate()
-  const [product, setProduct] = useState<Product | null>(null)
-  const [notFoundSku, setNotFoundSku] = useState<string | null>(null)
-  const [lastHandledBy, setLastHandledBy] = useState<string>('—')
   const [quantity, setQuantity] = useState(1)
   const [checkInType, setCheckInType] = useState<'purchase' | 'return'>('purchase')
   const [checkOutType, setCheckOutType] = useState<'sale' | 'loss'>('sale')
   const [message, setMessage] = useState<string | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
+  const { data: userId } = useQuickScanUser()
+  const lookupQuery = useQuickScanLookup(companyId, scanValue)
+  const transactionMutation = useQuickScanTransaction()
+
+  const product = lookupQuery.data?.product ?? null
+  const notFoundSku = lookupQuery.data?.notFoundSku ?? null
+  const lastHandledBy = lookupQuery.data?.lastHandledBy ?? '—'
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
-  }, [])
-
-  const lookupProduct = useCallback(
-    async (value: string) => {
-      if (!companyId || !value) return
-      
-      const cleanValue = value.trim()
-      setNotFoundSku(null) 
-
-      // FIX: Added quotes around ${cleanValue} to support SKUs with spaces (e.g., "ITEM A")
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, sku, quantity_on_hand, reorder_point, description')
-        .eq('company_id', companyId)
-        .or(`sku.eq."${cleanValue}",id.eq."${cleanValue}"`)
-        .maybeSingle()
-
-      if (error || !data) {
-        setProduct(null)
-        setNotFoundSku(cleanValue)
-        return
-      }
-
-      setProduct((data as Product) ?? null)
-
-      if (data?.id) {
-        const { data: transactionData } = await supabase
-          .from('inventory_transactions')
-          .select('created_at, profiles (full_name, username)')
-          .eq('company_id', companyId)
-          .eq('product_id', data.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-
-        const profile = Array.isArray(transactionData?.[0]?.profiles)
-          ? transactionData?.[0]?.profiles?.[0]
-          : transactionData?.[0]?.profiles
-        setLastHandledBy(profile?.full_name ?? profile?.username ?? 'Unknown')
-      }
-    },
-    [companyId],
-  )
-
-  useEffect(() => {
-    if (scanValue) {
-      lookupProduct(scanValue)
-    } else {
-      setProduct(null)
-      setNotFoundSku(null)
+    if (!scanValue) {
       setMessage(null)
     }
-  }, [scanValue, lookupProduct])
+  }, [scanValue])
 
   const submitTransaction = async (transactionType: 'purchase' | 'return' | 'sale' | 'loss') => {
     if (!companyId || !product || !userId) return
     setMessage(null)
 
-    const { error } = await db.from('inventory_transactions').insert({
-      company_id: companyId,
-      product_id: product.id,
-      performed_by: userId,
-      transaction_type: transactionType,
-      quantity_change: quantity,
-      notes: 'Scanner quick action',
-    })
-
-    setMessage(error ? error.message : 'Transaction recorded.')
-    if (!error) {
-      lookupProduct(product.sku)
+    try {
+      await transactionMutation.mutateAsync({
+        companyId,
+        productId: product.id,
+        userId,
+        transactionType,
+        quantity,
+      })
+      setMessage('Transaction recorded.')
+      await lookupQuery.refetch()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Transaction failed.')
     }
   }
 
@@ -217,14 +172,12 @@ export const ScannerModule = ({
   isScanning,
   startCamera,
   stopCamera,
-  scannerRef,
 }: {
   scanValue: string
   setScanValue: (value: string) => void
   isScanning: boolean
   startCamera: () => Promise<void>
   stopCamera: () => Promise<void>
-  scannerRef: React.MutableRefObject<Html5Qrcode | null>
 }) => {
   return (
     <div className="stack">

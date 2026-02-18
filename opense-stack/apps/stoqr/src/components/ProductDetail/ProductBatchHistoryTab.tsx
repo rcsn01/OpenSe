@@ -1,35 +1,9 @@
-import { useEffect, useState } from 'react'
-import { supabase, db } from '../../supabaseClient'
 import { EmptyState } from '../EmptyState'
 import { formatDateTime } from '../../utils'
+import { useProductBatchHistory } from '../../hooks/queries/useProductDetailTabs'
 
 export const ProductBatchHistoryTab = ({ productId, companyId }: { productId: string; companyId: string }) => {
-  const [batches, setBatches] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const loadBatches = async () => {
-      setIsLoading(true)
-      const { data, error } = await supabase
-        .from('inventory_transactions')
-        .select(`
-          created_at, quantity_change, notes,
-          profiles (full_name)
-        `)
-        .eq('company_id', companyId)
-        .eq('product_id', productId)
-        .eq('transaction_type', 'sale')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error(error)
-      } else {
-        setBatches((data as any[]) ?? [])
-      }
-      setIsLoading(false)
-    }
-    loadBatches()
-  }, [productId, companyId])
+  const { data: batches = [], isLoading } = useProductBatchHistory(companyId, productId)
 
   return (
     <div className="stack">

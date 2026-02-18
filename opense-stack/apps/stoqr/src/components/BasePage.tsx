@@ -1,4 +1,3 @@
-import type { ReactNode, CSSProperties } from 'react'
 import { BasePage as SharedBasePage, type BasePageProps } from '@repo/ui'
 
 export interface StoqrBasePageProps extends Omit<BasePageProps, 'emptyState'> {

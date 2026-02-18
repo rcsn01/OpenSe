@@ -1,32 +1,9 @@
-import { useEffect, useState } from 'react'
-import { supabase, db } from '../../supabaseClient'
 import { EmptyState } from '../EmptyState'
 import { formatDateTime } from '../../utils'
+import { useProcurementReceivingLogs } from '../../hooks/queries/useProcurementTabs'
 
 export const ReceivingLogTab = ({ companyId }: { companyId: string }) => {
-  const [logs, setLogs] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const loadLogs = async () => {
-      setLoading(true)
-      const { data } = await supabase
-        .from('receiving_logs')
-        .select(`
-          quantity_received, received_at, 
-          products(name, sku), 
-          purchase_orders(po_number), 
-          profiles(full_name, username)
-        `)
-        .eq('company_id', companyId)
-        .order('received_at', { ascending: false })
-        .limit(20)
-
-      setLogs(data ?? [])
-      setLoading(false)
-    }
-    loadLogs()
-  }, [companyId])
+  const { data: logs = [], isLoading: loading } = useProcurementReceivingLogs(companyId)
 
   return (
     <div className="card stack">
