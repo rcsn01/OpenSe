@@ -1,29 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { db } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import type { Folder, Tag } from '../types'
 import { Tabs } from '../components/Tabs'
-import { parseCsv, toNumber } from '../utils'
+import { parseCsv } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
 import { BundlesTab } from '../components/Inventory/BundlesTab'
 import { FoldersTab } from '../components/Inventory/FoldersTab'
 import { TransferTab } from '../components/Inventory/TransferTab'
 import { VariantsTab } from '../components/Inventory/VariantsTab'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
+import {
+  useDeleteInventoryProducts,
+  useImportInventoryProducts,
+  useInventoryFilters,
+  useInventoryProducts,
+  useInventoryRefresh,
+  useInventoryStats,
+} from '../hooks/queries/useInventory'
 
 export const InventoryListPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate() // Hook
   const [searchParams] = useSearchParams()
 
-  const [products, setProducts] = useState<InventoryProduct[]>([])
-  const [folders, setFolders] = useState<Folder[]>([])
-  const [tags, setTags] = useState<Tag[]>([])
-  const [stats, setStats] = useState({ totalItems: 0, lowStockItems: 0, totalValue: 0 })
-
-  const [isLoading, setIsLoading] = useState(true)
   // Removed isCreateOpen state
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [importRows, setImportRows] = useState<Record<string, string>[]>([])
@@ -35,78 +36,36 @@ export const InventoryListPage = () => {
 
   const [page, setPage] = useState(1)
   const [pageSize] = useState(10)
-  const [totalCount, setTotalCount] = useState(0)
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortDir, setSortDir] = useState<SortDirection>('asc')
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set())
 
-  const loadFilters = async () => {
-    if (!companyId) return
-    const [{ data: folderData }, { data: tagData }] = await Promise.all([
-      db.from('folders').select('id, name, parent_id').eq('company_id', companyId),
-      db.from('tags').select('id, name, color').eq('company_id', companyId),
-    ])
-    setFolders((folderData as Folder[]) ?? [])
-    setTags((tagData as Tag[]) ?? [])
-  }
+  const productsQuery = useInventoryProducts({
+    companyId,
+    search,
+    stockFilter,
+    page,
+    pageSize,
+    sortField,
+    sortDir,
+  })
 
-  const loadStats = async () => {
-    if (!companyId) return
-    const { data } = await db
-      .from('products')
-      .select('quantity_on_hand, cost_price, reorder_point')
-      .eq('company_id', companyId)
+  const filtersQuery = useInventoryFilters(companyId)
+  const statsQuery = useInventoryStats(companyId)
+  const deleteProductsMutation = useDeleteInventoryProducts(companyId)
+  const importProductsMutation = useImportInventoryProducts(companyId)
+  const refreshInventory = useInventoryRefresh()
 
-    if (data) {
-      const all = data as any[]
-      const value = all.reduce((sum, p) => sum + (toNumber(p.quantity_on_hand) * toNumber(p.cost_price)), 0)
-      const low = all.filter((p) => p.quantity_on_hand <= p.reorder_point).length
-      setStats({ totalItems: all.length, lowStockItems: low, totalValue: value })
-    }
-  }
-
-  const loadProducts = async () => {
-    if (!companyId) return
-    setIsLoading(true)
-
-    let query = db
-      .from('products')
-      .select('id, name, sku, quantity_on_hand, reorder_point, folder_id, cost_price, selling_price, category', { count: 'exact' })
-      .eq('company_id', companyId)
-
-    if (search.trim()) {
-      query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`)
-    }
-    if (stockFilter === 'out') query = query.eq('quantity_on_hand', 0)
-
-    query = query.order(sortField, { ascending: sortDir === 'asc' })
-
-    const from = (page - 1) * pageSize
-    const to = from + pageSize - 1
-    query = query.range(from, to)
-
-    const { data, count, error } = await query
-
-    if (error) {
-      console.error(error)
-      setProducts([])
-      setTotalCount(0)
-    } else {
-      let filteredData = (data as InventoryProduct[]) ?? []
-      if (stockFilter === 'low') {
-        filteredData = filteredData.filter((p) => p.quantity_on_hand <= p.reorder_point)
-      }
-      setProducts(filteredData)
-      setTotalCount(count ?? 0)
-    }
-    setIsLoading(false)
-  }
-
-  useEffect(() => {
-    loadFilters()
-    loadStats()
-  }, [companyId])
+  const products = productsQuery.data?.products ?? ([] as InventoryProduct[])
+  const totalCount = productsQuery.data?.totalCount ?? 0
+  const folders = filtersQuery.data?.folders ?? ([] as Folder[])
+  const tags = filtersQuery.data?.tags ?? ([] as Tag[])
+  const stats = statsQuery.data ?? { totalItems: 0, lowStockItems: 0, totalValue: 0 }
+  const isLoading = useMemo(
+    () => productsQuery.isLoading || filtersQuery.isLoading || statsQuery.isLoading,
+    [productsQuery.isLoading, filtersQuery.isLoading, statsQuery.isLoading],
+  )
 
   useEffect(() => {
     const stockParam = searchParams.get('stock')
@@ -114,10 +73,6 @@ export const InventoryListPage = () => {
       setStockFilter(stockParam)
     }
   }, [searchParams])
-
-  useEffect(() => {
-    loadProducts()
-  }, [companyId, search, stockFilter, page, sortField, sortDir])
 
   const toggleSelection = (id: string) => {
     const next = new Set(selectedRowIds)
@@ -137,15 +92,12 @@ export const InventoryListPage = () => {
   const handleBulkDelete = async () => {
     if (!companyId) return
     if (!confirm(`Are you sure you want to delete ${selectedRowIds.size} items?`)) return
-    const { error } = await db
-      .from('products')
-      .delete()
-      .in('id', Array.from(selectedRowIds))
-      .eq('company_id', companyId)
-    if (!error) {
+    try {
+      await deleteProductsMutation.mutateAsync(Array.from(selectedRowIds))
       setSelectedRowIds(new Set())
-      loadProducts()
-      loadStats()
+      refreshInventory()
+    } catch (error) {
+      console.error(error)
     }
   }
 
@@ -158,27 +110,18 @@ export const InventoryListPage = () => {
 
   const handleImport = async () => {
     if (!companyId || importRows.length === 0) return
-    const prepared = importRows
-      .map((row) => ({
-        company_id: companyId,
-        name: row.name || row.Name,
-        sku: row.sku || row.SKU,
-        quantity_on_hand: toNumber(row.quantity_on_hand || row.qty || row.quantity),
-        reorder_point: toNumber(row.reorder_point, 10),
-        cost_price: toNumber(row.cost_price, 0),
-        selling_price: toNumber(row.selling_price, 0),
-      }))
-      .filter((p) => p.name && p.sku)
-
-    const { error } = await db.from('products').insert(prepared)
-    if (error) {
-      setImportMessage(error.message)
-    } else {
-      setImportMessage(`Imported ${prepared.length} products.`)
+    try {
+      const importedCount = await importProductsMutation.mutateAsync(importRows)
+      if (importedCount === 0) {
+        setImportMessage('No valid rows found in CSV.')
+        return
+      }
+      setImportMessage(`Imported ${importedCount} products.`)
       setImportRows([])
       setIsImportOpen(false)
-      loadProducts()
-      loadStats()
+      refreshInventory()
+    } catch (error) {
+      setImportMessage(error instanceof Error ? error.message : 'Import failed.')
     }
   }
 
@@ -223,8 +166,7 @@ export const InventoryListPage = () => {
                 folders={folders}
                 handleBulkDelete={handleBulkDelete}
                 onRefresh={() => {
-                  loadProducts()
-                  loadStats()
+                  refreshInventory()
                 }}
               />
             ),
@@ -232,7 +174,7 @@ export const InventoryListPage = () => {
           {
             id: 'folders',
             label: 'Folders',
-            content: <FoldersTab companyId={companyId!} allFolders={folders} onRefresh={loadFilters} />,
+            content: <FoldersTab companyId={companyId!} allFolders={folders} onRefresh={refreshInventory} />,
           },
           {
             id: 'matrix',

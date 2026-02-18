@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { db } from '../../supabaseClient'
 import { EmptyState } from '../EmptyState'
 import { formatCurrency } from '../../utils'
+import { useCreateReportSchedule, useDeleteReportSchedule } from '../../hooks/queries/useReports'
 
 const DAYS = 30
 
@@ -25,29 +25,28 @@ export const ValuationTab = ({
     recipients: '',
   })
   const [message, setMessage] = useState<string | null>(null)
+  const createScheduleMutation = useCreateReportSchedule(companyId)
+  const deleteScheduleMutation = useDeleteReportSchedule(companyId)
 
   const handleCreateSchedule = async () => {
     setMessage(null)
-    const { error } = await db.from('report_schedules').insert({
-      company_id: companyId,
-      report_type: newSchedule.report_type,
-      cadence: newSchedule.cadence,
-      day_of_week: newSchedule.cadence === 'weekly' ? newSchedule.day_of_week : null,
-      day_of_month: newSchedule.cadence === 'monthly' ? newSchedule.day_of_month : null,
-      time_of_day: newSchedule.time_of_day,
-      recipients: newSchedule.recipients.split(',').map((e) => e.trim()).filter(Boolean),
-    })
-
-    setMessage(error ? error.message : 'Schedule saved.')
-    if (!error) {
+    try {
+      await createScheduleMutation.mutateAsync(newSchedule)
+      setMessage('Schedule saved.')
       setNewSchedule((prev) => ({ ...prev, recipients: '' }))
       onScheduleChange()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Failed to save schedule')
     }
   }
 
   const handleDeleteSchedule = async (id: string) => {
-    await db.from('report_schedules').delete().eq('id', id)
-    onScheduleChange()
+    try {
+      await deleteScheduleMutation.mutateAsync(id)
+      onScheduleChange()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Failed to remove schedule')
+    }
   }
 
   const maxValue = Math.max(...series.map((point) => point.value), 1)
