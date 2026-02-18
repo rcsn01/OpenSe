@@ -121,8 +121,11 @@ export const SharedLoginRoutePage = () => {
       googleLabel="Continue with Google"
       footer={
         <div className="text-center">
-          <span className="text-slate-400">Need an account? </span>
-          <Link to={`/register${querySuffix}`} className="font-medium text-blue-300 hover:text-blue-200">
+          <span className="text-[var(--color-muted-foreground)]">Need an account? </span>
+          <Link
+            to={`/register${querySuffix}`}
+            className="font-medium text-[var(--color-primary)] transition hover:text-[var(--color-primary-hover)]"
+          >
             Sign up
           </Link>
         </div>
