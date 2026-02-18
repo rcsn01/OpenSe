@@ -50,6 +50,17 @@ export type AdminAuditEventRow = {
   created_at: string
 }
 
+export type AdminWorkflowRow = {
+  id: string
+  name: string
+  description: string | null
+  created_at: string | null
+  owner_id: string
+  org_id: string | null
+  is_template: boolean
+  node_count: number
+}
+
 type AdminOrgRpcRow = {
   id: string
   name: string
@@ -79,6 +90,23 @@ type OrgMemberRpcRow = {
   email: string | null
   full_name: string | null
 }
+
+type AdminWorkflowRpcRow = {
+  id: string
+  name: string
+  description: string | null
+  created_at: string | null
+  owner_id: string
+  org_id: string | null
+  is_template: boolean
+  node_count: number | null
+}
+
+const normalizeAdminWorkflows = (rows: AdminWorkflowRpcRow[]): AdminWorkflowRow[] =>
+  rows.map((row) => ({
+    ...row,
+    node_count: row.node_count ?? 0,
+  }))
 
 export const listAdminOrgs = async (): Promise<OrgRow[]> => {
   const { data, error } = await supabase.rpc('admin_list_organisations')
@@ -142,6 +170,40 @@ export const listAdminAuditEvents = async (orgId: string | null, limit = 50): Pr
   if (error) throw error
 
   return (data ?? []) as AdminAuditEventRow[]
+}
+
+export const listGalleryTemplates = async (): Promise<AdminWorkflowRow[]> => {
+  const { data, error } = await supabase.rpc('admin_list_etl_workflows', { p_only_templates: true })
+  if (error) throw error
+
+  const rows = (data ?? []) as AdminWorkflowRpcRow[]
+  return normalizeAdminWorkflows(rows)
+}
+
+export const listAllWorkflowsForAdmin = async (): Promise<AdminWorkflowRow[]> => {
+  const { data, error } = await supabase.rpc('admin_list_etl_workflows', { p_only_templates: false })
+  if (error) throw error
+
+  const rows = (data ?? []) as AdminWorkflowRpcRow[]
+  return normalizeAdminWorkflows(rows)
+}
+
+export const addWorkflowToGallery = async (workflowId: string) => {
+  const { data, error } = await supabase.rpc('admin_set_etl_workflow_template_status', {
+    p_workflow_id: workflowId,
+    p_is_template: true,
+  })
+  if (error) throw error
+  return data
+}
+
+export const removeWorkflowFromGallery = async (workflowId: string) => {
+  const { data, error } = await supabase.rpc('admin_set_etl_workflow_template_status', {
+    p_workflow_id: workflowId,
+    p_is_template: false,
+  })
+  if (error) throw error
+  return data
 }
 
 const findProfileByEmail = async (email: string) => {

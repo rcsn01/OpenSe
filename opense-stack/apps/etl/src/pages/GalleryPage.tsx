@@ -8,8 +8,12 @@ import { cloneWorkflowFromTemplate } from '../api/workflows';
 
 const getNodeCount = (graphData: any) => {
   if (!graphData) return 0;
-  const data = typeof graphData === 'string' ? JSON.parse(graphData) : graphData;
-  return data?.nodes?.length || 0;
+  try {
+    const data = typeof graphData === 'string' ? JSON.parse(graphData) : graphData;
+    return data?.nodes?.length || 0;
+  } catch {
+    return 0;
+  }
 };
 
 type AppContextType = {
@@ -19,7 +23,7 @@ type AppContextType = {
 export const GalleryPage = () => {
   const { data: templates = [], isLoading: loading, error: queryError } = useGallery();
   const error = queryError instanceof Error ? queryError.message : null;
-  const { user } = useAuth();
+  const { user, isDemoUser } = useAuth();
   const navigate = useNavigate();
   const { currentOrg } = useOutletContext<AppContextType>() || {};
   const [search, setSearch] = useState('');
@@ -60,14 +64,14 @@ export const GalleryPage = () => {
             Workflow Gallery
           </h1>
           <p className="text-slate-500 mt-1">
-            Browse templates and community workflows. Clone them to{' '}
+            Browse admin-configured workflows and clone them to{' '}
             {currentOrg ? <strong>{currentOrg.name}</strong> : 'your personal workspace'}.
           </p>
         </div>
         <div className="w-full md:w-72">
           <Input
             prefix={<Search className="w-4 h-4" />}
-            placeholder="Search templates..."
+            placeholder="Search workflows..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -81,10 +85,17 @@ export const GalleryPage = () => {
         </div>
       )}
 
+      {isDemoUser && (
+        <div className="p-4 bg-amber-50 text-amber-800 rounded-md border border-amber-200 mb-6 flex items-center gap-2">
+          <AlertCircle className="w-5 h-5" />
+          Demo mode is enabled. Workflow Gallery shows demo workflows, not admin-configured workflows.
+        </div>
+      )}
+
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 text-slate-400">
           <Loader2 className="w-10 h-10 animate-spin mb-4" />
-          <p>Loading templates...</p>
+          <p>Loading workflows...</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -106,7 +117,7 @@ export const GalleryPage = () => {
                   {template.name}
                 </h3>
                 <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">
-                  {template.description || 'No description provided for this template.'}
+                  {template.description || 'No description provided for this workflow.'}
                 </p>
               </div>
 
@@ -135,7 +146,7 @@ export const GalleryPage = () => {
           {filteredTemplates.length === 0 && (
             <div className="col-span-full text-center py-16 bg-slate-50 rounded-xl border border-dashed border-slate-300">
               <LayoutTemplate className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No templates found matching "{search}"</p>
+              <p className="text-slate-500 font-medium">No workflows found matching "{search}"</p>
               <p className="text-slate-400 text-sm">Try adjusting your search terms.</p>
             </div>
           )}
