@@ -5,7 +5,7 @@ test.describe('Stoqr Products', () => {
   test('inventory list loads', async ({ authenticatedPage }) => {
     const inventory = new InventoryPage(authenticatedPage);
     await inventory.goto();
-    await expect(authenticatedPage).toHaveURL(/(localhost:5990\/login\?|\/(inventory|auth)?$)/);
+    await expect(authenticatedPage).toHaveURL(/(localhost:5991\/login\?|\/(inventory|auth)?$)/);
   });
 
   test('create product flow opens and can submit when form exists', async ({ authenticatedPage }) => {

@@ -19,4 +19,20 @@ describe('validatePassword', () => {
     expect(result.valid).toBe(false)
     expect(result.errors).toContain('Password must contain at least one special character.')
   })
+
+  it('rejects whitespace-only password', () => {
+    const result = validatePassword('        ')
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain('Password must contain at least one lowercase letter.')
+    expect(result.errors).toContain('Password must contain at least one uppercase letter.')
+    expect(result.errors).toContain('Password must contain at least one digit.')
+  })
+
+  it('rejects password containing only spaces even when length is valid', () => {
+    const result = validatePassword('            ')
+    expect(result.valid).toBe(false)
+    expect(result.errors).toContain('Password must contain at least one lowercase letter.')
+    expect(result.errors).toContain('Password must contain at least one uppercase letter.')
+    expect(result.errors).toContain('Password must contain at least one digit.')
+  })
 })

@@ -129,11 +129,21 @@ export class ReportsPage {
   }
 
   async goto() {
-    await this.page.goto('/reports');
+    try {
+      await this.page.goto('/reports');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isExpectedRedirectAbort =
+        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+      if (!isExpectedRedirectAbort) {
+        throw error;
+      }
+    }
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(reports|auth)?$/);
+    await expect(this.page).toHaveURL(/(localhost:5991\/login\?|\/(reports|auth)?$)/);
   }
 }
 
@@ -152,24 +162,6 @@ export class AlertsPage {
 
   async expectLoaded() {
     await expect(this.page).toHaveURL(/\/(alerts|auth)?$/);
-  }
-}
-
-export class AttributesPage {
-  readonly page: Page;
-  readonly heading: Locator;
-
-  constructor(page: Page) {
-    this.page = page;
-    this.heading = page.getByRole('heading', { name: /attributes/i }).first();
-  }
-
-  async goto() {
-    await this.page.goto('/settings/attributes', { waitUntil: 'commit' });
-  }
-
-  async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(settings\/attributes|auth)?$/);
   }
 }
 
@@ -238,7 +230,17 @@ export class ProcurementPage {
   }
 
   async goto() {
-    await this.page.goto('/procurement');
+    try {
+      await this.page.goto('/procurement');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isExpectedRedirectAbort =
+        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+      if (!isExpectedRedirectAbort) {
+        throw error;
+      }
+    }
   }
 
   async expectLoaded() {

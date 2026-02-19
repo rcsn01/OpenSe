@@ -1,4 +1,4 @@
-import { db, supabase } from '../supabaseClient'
+import { db } from '../supabaseClient'
 import type { Product } from '../types'
 
 export type Supplier = {
@@ -29,7 +29,7 @@ export type ReceivingLog = {
 }
 
 export const fetchProcurementProducts = async (companyId: string): Promise<Product[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('products')
     .select('id, name, sku, quantity_on_hand, reorder_point')
     .eq('company_id', companyId)
@@ -104,7 +104,7 @@ const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
 }
 
 export const fetchReceivingLogs = async (companyId: string): Promise<ReceivingLog[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('receiving_logs')
     .select(`
       quantity_received, received_at,

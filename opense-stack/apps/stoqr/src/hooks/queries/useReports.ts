@@ -13,6 +13,8 @@ export const useReportsData = (companyId: string | null) =>
     queryKey: reportsKey(companyId),
     queryFn: () => fetchReportsData(companyId as string),
     enabled: !!companyId,
+    retry: false,
+    staleTime: 60_000,
   })
 
 export const useReportsRefresh = (companyId: string | null) => {
