@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { getProductImagePublicUrl } from './api/storage'
 
 export const formatCurrency = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -18,12 +18,7 @@ export const formatDateTime = (value: string | null | undefined) => {
 }
 
 export const getPublicImageUrl = (pathOrUrl: string) => {
-  if (!pathOrUrl) return ''
-  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
-    return pathOrUrl
-  }
-  const { data } = supabase.storage.from('product-images').getPublicUrl(pathOrUrl)
-  return data.publicUrl
+  return getProductImagePublicUrl(pathOrUrl)
 }
 
 export const parseCsv = (content: string) => {
