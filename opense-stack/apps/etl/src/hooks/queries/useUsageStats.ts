@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { getOrgUsageStats, getOrgActiveUsers, getPersonalUsageStats } from '../../api/usage'
+import { usageKeys } from './queryKeys'
 
 /**
  * Fetches usage summary for an organisation (last 30 days).
  */
 export const useOrgUsageStats = (orgId: string | null | undefined) => {
   return useQuery({
-    queryKey: ['orgUsageStats', orgId],
+    queryKey: usageKeys.orgStats(orgId),
     queryFn: () => (orgId ? getOrgUsageStats(orgId) : null),
     enabled: !!orgId,
     staleTime: 1000 * 60 * 2, // 2 minutes
@@ -19,7 +20,7 @@ export const useOrgUsageStats = (orgId: string | null | undefined) => {
  */
 export const useOrgActiveUsers = (orgId: string | null | undefined) => {
   return useQuery({
-    queryKey: ['orgActiveUsers', orgId],
+    queryKey: usageKeys.orgActiveUsers(orgId),
     queryFn: () => (orgId ? getOrgActiveUsers(orgId) : []),
     enabled: !!orgId,
     staleTime: 1000 * 60 * 2,
@@ -32,7 +33,7 @@ export const useOrgActiveUsers = (orgId: string | null | undefined) => {
  */
 export const usePersonalUsageStats = (enabled = true) => {
   return useQuery({
-    queryKey: ['personalUsageStats'],
+    queryKey: usageKeys.personalStats(),
     queryFn: getPersonalUsageStats,
     enabled,
     staleTime: 1000 * 60 * 2,

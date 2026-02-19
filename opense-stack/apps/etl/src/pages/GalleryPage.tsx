@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Search, Copy, LayoutTemplate, Loader2, GitFork, AlertCircle } from 'lucide-react';
 import { useAuth } from '@repo/shared/auth/context';
-import { useGallery, GalleryWorkflow } from '../hooks/useGallery';
+import { useGalleryTemplates } from '../hooks/gallery/useGalleryTemplates';
 import { Input, Button, BasePage } from '@repo/ui';
 import { cloneWorkflowFromTemplate } from '../api/workflows';
+import type { GalleryWorkflow } from '../api/gallery';
 
 const getNodeCount = (graphData: any) => {
   if (!graphData) return 0;
@@ -21,7 +22,7 @@ type AppContextType = {
 };
 
 export const GalleryPage = () => {
-  const { data: templates = [], isLoading: loading, error: queryError } = useGallery();
+  const { data: templates = [], isLoading: loading, error: queryError } = useGalleryTemplates();
   const error = queryError instanceof Error ? queryError.message : null;
   const { user, isDemoUser } = useAuth();
   const navigate = useNavigate();

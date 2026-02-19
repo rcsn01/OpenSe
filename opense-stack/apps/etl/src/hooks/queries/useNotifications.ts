@@ -4,13 +4,14 @@ import {
   upsertNotificationSetting,
   deleteNotificationSetting,
 } from '../../api/notifications'
+import { notificationKeys } from './queryKeys'
 
 /**
  * Fetches notification settings for a workflow.
  */
 export const useNotificationSettings = (workflowId: string | null) => {
   return useQuery({
-    queryKey: ['notificationSettings', workflowId],
+    queryKey: notificationKeys.settings(workflowId),
     queryFn: () => (workflowId ? listNotificationSettings(workflowId) : []),
     enabled: !!workflowId,
     staleTime: 1000 * 60,
@@ -26,7 +27,7 @@ export const useUpsertNotificationSetting = () => {
   return useMutation({
     mutationFn: upsertNotificationSetting,
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['notificationSettings', variables.workflowId] })
+      queryClient.invalidateQueries({ queryKey: notificationKeys.settings(variables.workflowId) })
     },
   })
 }
@@ -40,7 +41,7 @@ export const useDeleteNotificationSetting = (workflowId: string | null) => {
   return useMutation({
     mutationFn: deleteNotificationSetting,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notificationSettings', workflowId] })
+      queryClient.invalidateQueries({ queryKey: notificationKeys.settings(workflowId) })
     },
   })
 }

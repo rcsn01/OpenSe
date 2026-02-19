@@ -4,6 +4,7 @@ import { OrgSimple } from '../../types/organisation'
 import { useAuth } from '@repo/shared/auth/context'
 import { mockOrganisation, mockOrgMembers, DEMO_ORG_ID } from '../../lib/demoData'
 import type { Member } from '../../components/settings/types'
+import { organisationKeys } from './queryKeys'
 
 export type { OrgSimple }
 
@@ -11,7 +12,7 @@ export const useUserOrganisations = (userId: string | undefined) => {
   const { isDemoUser } = useAuth()
 
   return useQuery<OrgSimple[]>({
-    queryKey: ['userOrganisations', userId, isDemoUser],
+    queryKey: organisationKeys.userOrganisations(userId, isDemoUser),
     queryFn: () => {
       if (isDemoUser) {
         // Return mock organisation for demo user
@@ -28,7 +29,7 @@ export const useOrganisationMembers = (orgId: string | undefined) => {
   const { isDemoUser } = useAuth()
 
   return useQuery<Member[]>({
-    queryKey: ['organisationMembers', orgId, isDemoUser],
+    queryKey: organisationKeys.members(orgId, isDemoUser),
     queryFn: () => {
       if (isDemoUser && orgId === DEMO_ORG_ID) {
         return mockOrgMembers.map((m) => ({
