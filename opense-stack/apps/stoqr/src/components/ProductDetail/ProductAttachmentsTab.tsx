@@ -1,73 +1,36 @@
-import { useEffect, useState } from 'react'
-import { supabase, db } from '../../supabaseClient'
+import { useState } from 'react'
 import { EmptyState } from '../EmptyState'
-
-type Attachment = {
-  name: string
-  id: string
-  created_at: string
-  mimetype: string
-  size: number
-}
+import {
+  getProductAttachmentPublicUrl,
+  type ProductAttachment,
+} from '../../api/productDetail'
+import {
+  useProductAttachments,
+  useUploadProductAttachment,
+} from '../../hooks/queries/useProductDetailTabs'
 
 export const ProductAttachmentsTab = ({ productId, companyId }: { productId: string; companyId: string }) => {
-  const [files, setFiles] = useState<Attachment[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-
-  const STORAGE_PATH = `${companyId}/${productId}`
-
-  const loadFiles = async () => {
-    setIsLoading(true)
-    const { data, error } = await supabase.storage
-      .from('product-images')
-      .list(STORAGE_PATH)
-
-    if (error) {
-      console.error('Error listing files', error)
-      setFiles([])
-    } else {
-      const fileList = data.map((f) => ({
-        name: f.name,
-        id: f.id,
-        created_at: f.created_at,
-        mimetype: f.metadata?.mimetype ?? 'application/octet-stream',
-        size: f.metadata?.size ?? 0,
-      }))
-      setFiles(fileList)
-    }
-    setIsLoading(false)
-  }
-
-  useEffect(() => {
-    loadFiles()
-  }, [productId, companyId])
+  const { data: files = [], isLoading } = useProductAttachments(companyId, productId)
+  const uploadMutation = useUploadProductAttachment(companyId, productId)
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setUploading(true)
-    const { error } = await supabase.storage
-      .from('product-images')
-      .upload(`${STORAGE_PATH}/${file.name}`, file, {
-        upsert: true,
-      })
-
-    setUploading(false)
-    if (error) {
-      alert(`Upload failed: ${error.message}`)
-    } else {
-      loadFiles()
+    try {
+      await uploadMutation.mutateAsync(file)
+    } catch (error) {
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setUploading(false)
     }
   }
 
   const handleDownload = async (filename: string) => {
-    const { data } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(`${STORAGE_PATH}/${filename}`)
-
-    if (data) window.open(data.publicUrl, '_blank')
+    const publicUrl = getProductAttachmentPublicUrl(companyId, productId, filename)
+    if (publicUrl) window.open(publicUrl, '_blank')
   }
 
   return (
@@ -90,7 +53,7 @@ export const ProductAttachmentsTab = ({ productId, companyId }: { productId: str
           <EmptyState title="No attachments" description="Upload PDFs or documents for this product." />
         ) : (
           <div className="list">
-            {files.map((f) => (
+            {files.map((f: ProductAttachment) => (
               <div key={f.id} className="card" style={{ boxShadow: 'none', background: '#f8fafc', padding: 12 }}>
                 <div className="flex-between">
                   <div className="row">

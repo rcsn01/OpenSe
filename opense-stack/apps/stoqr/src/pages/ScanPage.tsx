@@ -88,7 +88,6 @@ export const ScanPage = () => {
       isScanning={isScanning}
       startCamera={startCamera}
       stopCamera={stopCamera}
-      scannerRef={scannerRef}
     />
   )
 

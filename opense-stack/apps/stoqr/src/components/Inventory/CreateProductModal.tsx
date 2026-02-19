@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { db } from '../../supabaseClient'
 import { toNumber } from '../../utils'
+import { useCreateInventoryQuickProduct } from '../../hooks/queries/useInventory'
 
 export const CreateProductModal = ({ 
   isOpen, 
@@ -20,24 +20,19 @@ export const CreateProductModal = ({
     cost_price: 0,
     selling_price: 0
   })
-  const [loading, setLoading] = useState(false)
+  const createQuickProductMutation = useCreateInventoryQuickProduct(companyId)
 
   if (!isOpen) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    const { error } = await db.from('products').insert({
-      company_id: companyId,
-      ...formData
-    })
-    setLoading(false)
-    if (!error) {
+    try {
+      await createQuickProductMutation.mutateAsync(formData)
       onSuccess()
       onClose()
       setFormData({ name: '', sku: '', quantity_on_hand: 0, cost_price: 0, selling_price: 0 })
-    } else {
-      alert(error.message)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to create product')
     }
   }
 
@@ -72,7 +67,9 @@ export const CreateProductModal = ({
           </div>
           <div className="row" style={{ justifyContent: 'flex-end' }}>
             <button type="button" className="button ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="button" disabled={loading}>{loading ? 'Saving...' : 'Create'}</button>
+            <button type="submit" className="button" disabled={createQuickProductMutation.isPending}>
+              {createQuickProductMutation.isPending ? 'Saving...' : 'Create'}
+            </button>
           </div>
         </form>
       </div>

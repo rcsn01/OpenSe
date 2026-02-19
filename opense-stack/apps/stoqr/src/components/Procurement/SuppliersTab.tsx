@@ -1,39 +1,19 @@
-import { useEffect, useState } from 'react'
-import { db } from '../../supabaseClient'
+import { useState } from 'react'
 import { EmptyState } from '../EmptyState'
-
-type Supplier = {
-  id: string
-  name: string
-  contact_name: string | null
-  email: string | null
-  phone: string | null
-}
+import {
+  useCreateProcurementSupplier,
+  useProcurementSuppliers,
+} from '../../hooks/queries/useProcurementTabs'
 
 export const SuppliersTab = ({ companyId }: { companyId: string }) => {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: suppliers = [], isLoading: loading } = useProcurementSuppliers(companyId)
+  const createSupplierMutation = useCreateProcurementSupplier(companyId)
   const [formData, setFormData] = useState({ name: '', contact_name: '', email: '', phone: '' })
-
-  const load = async () => {
-    setLoading(true)
-    const { data } = await db.from('suppliers').select('*').eq('company_id', companyId).order('name')
-    setSuppliers((data as Supplier[]) ?? [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [companyId])
 
   const handleSave = async () => {
     if (!formData.name) return
-    await db.from('suppliers').insert({
-      company_id: companyId,
-      ...formData,
-    })
+    await createSupplierMutation.mutateAsync(formData)
     setFormData({ name: '', contact_name: '', email: '', phone: '' })
-    load()
   }
 
   return (

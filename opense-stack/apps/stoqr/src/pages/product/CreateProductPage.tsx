@@ -14,10 +14,8 @@ import {
   Save
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase, db } from '../../supabaseClient'
 import { useCompany } from '../../contexts/CompanyContext'
-import { toNumber } from '../../utils'
-import type { Folder } from '../../types'
+import { useCreateProduct, useProductFolders } from '../../hooks/queries/useProducts'
 
 type CustomFieldDefinition = { key: string; type: 'text' | 'number' | 'boolean' | 'date' }
 
@@ -37,10 +35,10 @@ const readCustomFieldDefs = (companyId: string): CustomFieldDefinition[] => {
 export const CreateProductPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
-  const [isLoading, setIsLoading] = useState(false)
+  const createProductMutation = useCreateProduct(companyId)
+  const { data: folders = [] } = useProductFolders(companyId)
   
   // Data sources
-  const [folders, setFolders] = useState<Folder[]>([])
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([])
 
   // Form State
@@ -80,29 +78,16 @@ export const CreateProductPage = () => {
 
   useEffect(() => {
     if (!companyId) return
-    const loadData = async () => {
-      // Fetch Folders
-      const { data: folderData } = await db
-        .from('folders')
-        .select('id, name, parent_id')
-        .eq('company_id', companyId)
-        .order('name')
-      
-      if (folderData) setFolders(folderData)
-
-      // Fetch Custom Field Definitions
-      const customFieldDefinitions = readCustomFieldDefs(companyId)
-      if (customFieldDefinitions.length > 0) {
-        setCustomFieldDefs(customFieldDefinitions)
-        const initial: Record<string, any> = {}
-        customFieldDefinitions.forEach(def => {
-            if (def.type === 'boolean') initial[def.key] = false
-            else initial[def.key] = ''
-        })
-        setCustomFields(initial)
-      }
+    const customFieldDefinitions = readCustomFieldDefs(companyId)
+    if (customFieldDefinitions.length > 0) {
+      setCustomFieldDefs(customFieldDefinitions)
+      const initial: Record<string, any> = {}
+      customFieldDefinitions.forEach(def => {
+          if (def.type === 'boolean') initial[def.key] = false
+          else initial[def.key] = ''
+      })
+      setCustomFields(initial)
     }
-    loadData()
   }, [companyId])
 
   const generateSku = () => {
@@ -151,65 +136,30 @@ export const CreateProductPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!companyId) return
-    setIsLoading(true)
 
     try {
-        const { data: product, error: insertError } = await db
-            .from('products')
-            .insert({
-                company_id: companyId,
-                name,
-                sku,
-                description: description || null,
-                category: category || null,
-                quantity_on_hand: toNumber(quantity),
-                reorder_point: toNumber(reorderPoint),
-                cost_price: toNumber(costPrice),
-                selling_price: toNumber(sellingPrice),
-                folder_id: folderId === '' ? null : folderId,
-                expiry_date: expiryDate || null,
-                custom_fields: customFields
-            })
-            .select()
-            .single()
-
-        if (insertError) throw insertError
-        if (!product) throw new Error('Product creation failed')
-
-        // Upload Images
-        const uploadedUrls: string[] = []
-        if (images.length > 0) {
-            const uploadPromises = images.map(async (file) => {
-                const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-                const path = `${companyId}/${product.id}/${Date.now()}_${cleanName}`
-                const { error: uploadError } = await supabase.storage
-                    .from('product-images')
-                    .upload(path, file)
-                
-                if (uploadError) throw uploadError
-                return path
-            })
-
-            const results = await Promise.allSettled(uploadPromises)
-            results.forEach(res => {
-                if (res.status === 'fulfilled') uploadedUrls.push(res.value)
-            })
-
-            if (uploadedUrls.length > 0) {
-                await db
-                    .from('products')
-                    .update({ image_urls: uploadedUrls })
-                    .eq('id', product.id)
-            }
-        }
+      const result = await createProductMutation.mutateAsync({
+        payload: {
+        name,
+        sku,
+        description,
+        category,
+        quantity,
+        reorderPoint,
+        costPrice,
+        sellingPrice,
+        folderId,
+        expiryDate,
+        customFields,
+        },
+        images,
+      })
 
         toast.success('Product created successfully')
-        navigate(`/inventory/${product.id}`)
+      navigate(`/inventory/${result.id}`)
 
     } catch (error: any) {
         toast.error(error.message || 'Failed to create product')
-    } finally {
-        setIsLoading(false)
     }
   }
 
@@ -229,9 +179,9 @@ export const CreateProductPage = () => {
         </div>
         <div className="row">
           <button type="button" className="button ghost" onClick={() => navigate('/inventory')}>Discard</button>
-          <button type="submit" className="button" form="create-product-form" disabled={isLoading}>
+          <button type="submit" className="button" form="create-product-form" disabled={createProductMutation.isPending}>
             <Save size={16} />
-            {isLoading ? 'Creating...' : 'Save Product'}
+            {createProductMutation.isPending ? 'Creating...' : 'Save Product'}
           </button>
         </div>
       </div>
