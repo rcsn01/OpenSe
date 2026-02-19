@@ -14,6 +14,7 @@ export const listWorkflows = async ({ userId, orgId, mode }: ListWorkflowsParams
   let query = db
     .from('workflows')
     .select('id, name, created_at, owner_id, org_id')
+    .not('is_template', 'is', true)
     .order('created_at', { ascending: false })
 
   if (mode === 'org') {

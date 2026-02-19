@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { supabase, db } from '../../supabaseClient'
 import { useCompany } from '../../contexts/CompanyContext'
-import type { InventoryTransaction, Product } from '../../types'
 import { EmptyState } from '../../components/EmptyState'
 import { Tabs } from '../../components/Tabs'
 import { getPublicImageUrl, formatCurrency } from '../../utils'
@@ -22,56 +20,16 @@ import {
 } from 'lucide-react'
 import { Badge } from '../../components/Badge'
 import { toast } from 'sonner'
+import { useProductDetail } from '../../hooks/queries/useProducts'
 
 export const ProductDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { companyId } = useCompany()
-  
-  const [product, setProduct] = useState<Product | null>(null)
-  const [transactions, setTransactions] = useState<InventoryTransaction[]>([])
-  const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const load = async () => {
-      if (!companyId || !id) return
-      setIsLoading(true)
-
-      // Fetch Product
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('company_id', companyId)
-        .eq('id', id)
-        .single()
-
-      if (productError) {
-        console.error(productError)
-        setProduct(null)
-      } else {
-        setProduct(productData as Product)
-      }
-
-      // Fetch Transactions
-      const { data: transactionData } = await supabase
-        .from('inventory_transactions')
-        .select(
-          'id, transaction_type, quantity_change, stock_after, created_at, notes, profiles (id, full_name, username)'
-        )
-        .eq('company_id', companyId)
-        .eq('product_id', id)
-        .order('created_at', { ascending: false })
-
-      const normalized = ((transactionData as any[]) ?? []).map((item) => ({
-        ...item,
-        profiles: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles,
-      }))
-      setTransactions(normalized as InventoryTransaction[])
-      setIsLoading(false)
-    }
-
-    load()
-  }, [companyId, id])
+  const { data, isLoading } = useProductDetail(companyId, id ?? null)
+  const product = data?.product ?? null
+  const transactions = data?.transactions ?? []
 
   const images = useMemo(() => {
     if (!product?.image_urls?.length) return []

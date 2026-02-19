@@ -1,45 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
-import { supabase, db } from '../../supabaseClient'
+import { useMemo, useState } from 'react'
 import { useCompany } from '../../contexts/CompanyContext'
-import type { Product } from '../../types'
 import { EmptyState } from '../EmptyState'
 import { toast } from 'sonner'
+import { useLabelProducts } from '../../hooks/queries/useLabelStudio'
 
 export const ItemLabelsTab = () => {
   const { companyId } = useCompany()
-  const [products, setProducts] = useState<Product[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'single' | 'sheet'>('single')
 
-  const loadProducts = async () => {
-    if (!companyId) return
-    setIsLoading(true)
-    let query = supabase
-      .from('products')
-      .select('id, name, sku')
-      .eq('company_id', companyId)
-      .order('name')
-
-    if (search.trim()) {
-      query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`)
-    }
-
-    const { data, error } = await query
-    if (error) {
-      console.error(error)
-      setProducts([])
-    } else {
-      setProducts((data as Product[]) ?? [])
-    }
-    setIsLoading(false)
-  }
-
-  useEffect(() => {
-    loadProducts()
-  }, [companyId, search])
+  const { data: products = [], isLoading } = useLabelProducts(companyId, search)
 
   const selectedProducts = useMemo(() => {
     return products.filter((product) => selectedIds.includes(product.id))

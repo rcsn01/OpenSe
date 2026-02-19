@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { db } from '../supabaseClient'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { EmptyState } from '../components/EmptyState'
 import type { Folder, Tag } from '../types'
+import {
+  useAttributeFolders,
+  useAttributeTags,
+  useCreateAttributeFolder,
+  useCreateAttributeTag,
+  useDeleteAttributeTag,
+  useUpdateAttributeFolder,
+  useUpdateAttributeTag,
+} from '../hooks/queries/useAttributes'
 
 type CustomField = { key: string; type: 'text' | 'number' | 'boolean' | 'date' }
 
@@ -30,8 +38,14 @@ const writeCompanySettings = (companyId: string, settings: CompanySettings) => {
 
 export const AttributesPage = () => {
   const { companyId } = useCompany()
-  const [folders, setFolders] = useState<Folder[]>([])
-  const [tags, setTags] = useState<Tag[]>([])
+  const { data: folders = [], isLoading: foldersLoading } = useAttributeFolders(companyId)
+  const { data: tags = [], isLoading: tagsLoading } = useAttributeTags(companyId)
+  const createFolderMutation = useCreateAttributeFolder(companyId)
+  const updateFolderMutation = useUpdateAttributeFolder()
+  const createTagMutation = useCreateAttributeTag(companyId)
+  const updateTagMutation = useUpdateAttributeTag()
+  const deleteTagMutation = useDeleteAttributeTag()
+
   const [settings, setSettings] = useState<CompanySettings>({})
   const [newFieldKey, setNewFieldKey] = useState('')
   const [newFieldType, setNewFieldType] = useState<CustomField['type']>('text')
@@ -39,26 +53,12 @@ export const AttributesPage = () => {
   const [newFolderParent, setNewFolderParent] = useState<string | null>(null)
   const [newTagName, setNewTagName] = useState('')
   const [newTagColor, setNewTagColor] = useState('#64748b')
-  const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState<string | null>(null)
-
-  const loadData = async () => {
-    if (!companyId) return
-    setIsLoading(true)
-
-    const [{ data: folderData }, { data: tagData }] = await Promise.all([
-      db.from('folders').select('id, name, parent_id').eq('company_id', companyId),
-      db.from('tags').select('id, name, color').eq('company_id', companyId),
-    ])
-
-    setSettings(readCompanySettings(companyId))
-    setFolders((folderData as Folder[]) ?? [])
-    setTags((tagData as Tag[]) ?? [])
-    setIsLoading(false)
-  }
+  const isLoading = foldersLoading || tagsLoading
 
   useEffect(() => {
-    loadData()
+    if (!companyId) return
+    setSettings(readCompanySettings(companyId))
   }, [companyId])
 
   const customFields = settings.custom_fields ?? []
@@ -78,36 +78,27 @@ export const AttributesPage = () => {
 
   const handleCreateFolder = async () => {
     if (!companyId || !newFolderName.trim()) return
-    await db.from('folders').insert({
-      company_id: companyId,
-      name: newFolderName.trim(),
-      parent_id: newFolderParent,
-    })
+    await createFolderMutation.mutateAsync({ name: newFolderName.trim(), parent_id: newFolderParent })
     setNewFolderName('')
-    loadData()
   }
 
   const handleFolderUpdate = async (folderId: string, updates: Partial<Folder>) => {
-    await db.from('folders').update(updates).eq('id', folderId)
-    loadData()
+    await updateFolderMutation.mutateAsync({ folderId, updates })
   }
 
   const handleCreateTag = async () => {
     if (!companyId || !newTagName.trim()) return
-    await db.from('tags').insert({ company_id: companyId, name: newTagName.trim(), color: newTagColor })
+    await createTagMutation.mutateAsync({ name: newTagName.trim(), color: newTagColor })
     setNewTagName('')
     setNewTagColor('#64748b')
-    loadData()
   }
 
   const handleTagUpdate = async (tagId: string, updates: Partial<Tag>) => {
-    await db.from('tags').update(updates).eq('id', tagId)
-    loadData()
+    await updateTagMutation.mutateAsync({ tagId, updates })
   }
 
   const handleTagDelete = async (tagId: string) => {
-    await db.from('tags').delete().eq('id', tagId)
-    loadData()
+    await deleteTagMutation.mutateAsync(tagId)
   }
 
   const folderOptions = useMemo(() => [{ id: '', name: 'No parent', parent_id: null }, ...folders], [folders])

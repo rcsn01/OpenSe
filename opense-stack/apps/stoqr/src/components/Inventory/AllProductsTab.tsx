@@ -6,8 +6,8 @@ import { Pagination } from '../Pagination'
 import { Badge } from '../Badge'
 import { formatCurrency, toNumber } from '../../utils'
 import type { InventoryProduct, SortDirection, SortField } from './types'
-import { db } from '../../supabaseClient'
 import { toast } from 'sonner'
+import { useUpdateInventoryProductField } from '../../hooks/queries/useInventory'
 
 const ProductListView = ({ 
   companyId,
@@ -46,6 +46,7 @@ const ProductListView = ({
   handleBulkDelete: () => void
   onRefresh: () => void
 }) => {
+  const updateProductFieldMutation = useUpdateInventoryProductField(companyId)
   const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name ?? '—'
   const [editingCell, setEditingCell] = useState<{ id: string; field: 'quantity_on_hand' | 'selling_price' } | null>(null)
   const [editingValue, setEditingValue] = useState('')
@@ -70,18 +71,16 @@ const ProductListView = ({
     const value = toNumber(valueSnapshot)
     setIsSaving(true)
 
-    const updates = { [cellSnapshot.field]: value }
-    const { error } = await db
-      .from('products')
-      .update(updates)
-      .eq('id', cellSnapshot.id)
-      .eq('company_id', companyId)
-
-    if (error) {
-      toast.error(`Update failed: ${error.message}`)
-    } else {
+    try {
+      await updateProductFieldMutation.mutateAsync({
+        productId: cellSnapshot.id,
+        field: cellSnapshot.field,
+        value,
+      })
       toast.success('Inventory updated')
       onRefresh()
+    } catch (error) {
+      toast.error(`Update failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
     setIsSaving(false)
     setEditingCell((current) =>
