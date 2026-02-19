@@ -39,9 +39,47 @@ export const toNumber = (
 export const parseCsv = (
   content: string
 ): { headers: string[]; rows: string[][] } => {
-  const lines = content.trim().split('\n')
-  const headers = lines[0]?.split(',').map((h) => h.trim()) ?? []
-  const rows = lines.slice(1).map((line) => line.split(',').map((c) => c.trim()))
+  const normalizedContent = content.trim()
+  if (!normalizedContent) {
+    return { headers: [], rows: [] }
+  }
+
+  const parseLine = (line: string): string[] => {
+    const result: string[] = []
+    let current = ''
+    let inQuotes = false
+
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index]
+
+      if (char === '"') {
+        const nextChar = line[index + 1]
+        if (inQuotes && nextChar === '"') {
+          current += '"'
+          index += 1
+        } else {
+          inQuotes = !inQuotes
+        }
+        continue
+      }
+
+      if (char === ',' && !inQuotes) {
+        result.push(current.trim())
+        current = ''
+        continue
+      }
+
+      current += char
+    }
+
+    result.push(current.trim())
+    return result
+  }
+
+  const lines = normalizedContent.split(/\r?\n/)
+  const headers = parseLine(lines[0] ?? '')
+  const rows = lines.slice(1).map((line) => parseLine(line))
+
   return { headers, rows }
 }
 

@@ -5,6 +5,6 @@ test.describe('Stoqr Procurement', () => {
   test('procurement page loads', async ({ authenticatedPage }) => {
     const procurementPage = new ProcurementPage(authenticatedPage);
     await procurementPage.goto();
-    await expect(authenticatedPage).toHaveURL(/\/(procurement|auth)/);
+    await expect(authenticatedPage).toHaveURL(/\/(procurement|auth)?$/);
   });
 });

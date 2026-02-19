@@ -11,7 +11,6 @@ import {
   Truck,
   Bell,
   Settings,
-  Database,
 } from 'lucide-react'
 import {
   AppLayout as SharedAppLayout,
@@ -35,7 +34,6 @@ const mainNavItems = [
 const configNavItems = [
   { href: '/alerts', label: 'Alerts', icon: <Bell className="w-5 h-5" /> },
   { href: '/settings/team', label: 'Team Settings', icon: <Settings className="w-5 h-5" /> },
-  { href: '/settings/attributes', label: 'Attributes', icon: <Database className="w-5 h-5" /> },
 ]
 
 export const AppLayout = () => {
