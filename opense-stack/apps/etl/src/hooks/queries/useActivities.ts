@@ -3,12 +3,13 @@ import { listExecutionLogs } from '../../api/activities'
 import { useAuth } from '@repo/shared/auth/context'
 import { mockExecutionLogs } from '../../lib/demoData'
 import type { ExecutionLog } from '../../components/shared/ActivityLogTable'
+import { activityKeys } from './queryKeys'
 
 export const useExecutionLogs = (userId: string | undefined, orgId: string | null | undefined) => {
   const { isDemoUser } = useAuth()
 
   return useQuery<ExecutionLog[]>({
-    queryKey: ['executionLogs', userId, orgId, isDemoUser],
+    queryKey: activityKeys.executionLogs(userId, orgId, isDemoUser),
     queryFn: () => {
       if (isDemoUser) {
         // Return mock execution logs for demo user

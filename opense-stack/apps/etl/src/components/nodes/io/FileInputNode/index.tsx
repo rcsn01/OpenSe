@@ -4,7 +4,7 @@ import { FileInput, UploadCloud } from 'lucide-react';
 import clsx from 'clsx';
 import { BaseNode } from '../../_base/BaseNode';
 import { FileNodeData } from '../../types';
-import { useWorker } from '../../../../hooks/useWorker';
+import { useWorker } from '../../../../hooks/execution/useWorker';
 
 export const FileInputNode = ({ data, selected }: NodeProps<FileNodeData>) => {
   const { runWorkerTask } = useWorker();
