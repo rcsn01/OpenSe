@@ -12,4 +12,9 @@ export default defineConfig({
   },
   // Load .env from workspace root (opense-stack)
   envDir: resolve(__dirname, '../..'),
+  test: {
+    globals: true,
+    environment: 'node',
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+  },
 })

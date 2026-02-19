@@ -10,4 +10,9 @@ export default defineConfig({
     allowedHosts: true,
   },
   envDir: resolve(__dirname, '../..'),
+  test: {
+    globals: true,
+    environment: 'node',
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+  },
 })

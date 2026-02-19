@@ -13,7 +13,6 @@ import { ScanPage } from './pages/ScanPage'
 import { LabelStudioPage } from './pages/LabelStudioPage'
 import { ProductDetailPage } from './pages/product/ProductDetailPage'
 import { TeamSettingsPage } from './pages/TeamSettingsPage'
-import { AttributesPage } from './pages/AttributesPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ProcurementPage } from './pages/ProcurementPage'
 import { AlertsPage } from './pages/AlertsPage'
@@ -76,7 +75,6 @@ function App() {
               <Route path="/scan" element={<ScanPage />} />
               <Route path="/tools/labels" element={<LabelStudioPage />} />
               <Route path="/settings/team" element={<TeamSettingsPage />} />
-              <Route path="/settings/attributes" element={<AttributesPage />} />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/procurement" element={<ProcurementPage />} />
               <Route path="/alerts" element={<AlertsPage />} />
