@@ -55,7 +55,7 @@ Status legend:
 | `/inventory`, `/inventory/new`, `/inventory/:id` | covered-existing | `apps/stoqr/inventory.spec.ts`, `apps/stoqr/products.spec.ts` |
 | `/scan` | covered-existing | `apps/stoqr/scan.spec.ts` |
 | `/tools/labels` | covered-new | `apps/stoqr/route-coverage.spec.ts` |
-| `/settings/team`, `/settings/attributes` | covered-existing | `apps/stoqr/settings.spec.ts` |
+| `/settings/team` | covered-existing | `apps/stoqr/settings.spec.ts` |
 | `/reports` | covered-existing | `apps/stoqr/reports.spec.ts` |
 | `/procurement` | covered-existing | `apps/stoqr/procurement.spec.ts` |
 | `/alerts` | covered-existing | `apps/stoqr/alerts.spec.ts` |

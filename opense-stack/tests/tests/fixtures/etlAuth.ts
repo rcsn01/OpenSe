@@ -13,8 +13,22 @@ export const ETL_USER: EtlUser = {
 
 export const hasEtlCredentials = () => Boolean(ETL_USER.email && ETL_USER.password);
 
+const safeGoto = async (page: Page, url: string) => {
+  try {
+    await page.goto(url);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isExpectedRedirectAbort =
+      message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+    if (!isExpectedRedirectAbort) {
+      throw error;
+    }
+  }
+};
+
 export const loginToEtl = async (page: Page, user: EtlUser = ETL_USER) => {
-  await page.goto('/login');
+  await safeGoto(page, '/login');
 
   const emailInput = page.locator('input#email, input[name="email"]').first();
   const passwordInput = page.locator('input#password, input[name="password"]').first();
@@ -36,7 +50,7 @@ export interface EtlAuthFixtures {
 export const test = base.extend<EtlAuthFixtures>({
   authenticatedEtlPage: async ({ page }, use) => {
     await loginToEtl(page);
-    await page.goto('/dashboard');
+    await safeGoto(page, '/dashboard');
     await use(page);
   },
 });
