@@ -12,7 +12,6 @@ import 'reactflow/dist/style.css';
 import { nodeTypes } from '../components/nodes/registry';
 import { WorkflowNodeData } from '../components/nodes/types';
 import { runExecution } from '../lib/execution/ExecutionEngine';
-import { useSaveWorkflow, useUpdateWorkflowName, useWorkflow } from '../hooks/queries/useWorkflows';
 
 // Components
 import { EditorHeader } from '../components/editor/EditorHeader';
@@ -23,9 +22,9 @@ import { NotificationSettingsPanel } from '../components/editor/NotificationSett
 import { Info } from 'lucide-react';
 
 // Hooks
-import { useWorkflowEditor } from '../hooks/useWorkflowEditor';
-import { useWorkflowImportExport } from '../hooks/useWorkflowImportExport';
-import { useCreateWorkflowVersion } from '../hooks/queries/useVersions';
+import { useWorkflowData } from '../hooks/workflow/useWorkflowData';
+import { useWorkflowEditor } from '../hooks/workflow/useWorkflowEditor';
+import { useWorkflowImportExport } from '../hooks/workflow/useWorkflowImportExport';
 import { WorkflowVersion } from '../api/versions';
 
 // Notifications
@@ -49,10 +48,7 @@ export const WorkflowEditorPage = () => {
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const { data: workflowData, error: workflowError } = useWorkflow(workflowId);
-  const saveMutation = useSaveWorkflow();
-  const nameMutation = useUpdateWorkflowName();
-  const createVersionMutation = useCreateWorkflowVersion();
+  const { workflowData, workflowError, saveMutation, nameMutation, createVersionMutation } = useWorkflowData(workflowId);
   const {
     nodes,
     edges,

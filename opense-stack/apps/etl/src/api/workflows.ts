@@ -1,4 +1,4 @@
-import { db, supabase } from '../lib/supabase'
+import { db } from '../lib/supabase'
 import { WorkflowRow } from '../components/dashboard/types'
 import { sanitizeText } from '../lib/validation'
 
@@ -13,7 +13,7 @@ type ListWorkflowsParams = {
 export const listWorkflows = async ({ userId, orgId, mode }: ListWorkflowsParams) => {
   let query = db
     .from('workflows')
-    .select('id, name, created_at, owner_id, org_id')
+    .select('id, name, created_at, owner_id, org_id, owner:profiles!workflows_owner_id_fkey(full_name, email)')
     .not('is_template', 'is', true)
     .order('created_at', { ascending: false })
 
@@ -28,26 +28,13 @@ export const listWorkflows = async ({ userId, orgId, mode }: ListWorkflowsParams
 
   if (error) throw error
 
-  // Fetch owner details from public.profiles for each unique owner_id
-  const ownerIds = [...new Set((data ?? []).map((r: any) => r.owner_id).filter(Boolean))]
-  const ownerMap = new Map<string, { full_name: string | null; email?: string | null }>()
-  if (ownerIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, email')
-      .in('id', ownerIds)
-    for (const p of profiles ?? []) {
-      ownerMap.set(p.id, { full_name: p.full_name, email: p.email })
-    }
-  }
-
   return (data ?? []).map((row: any) => ({
     id: row.id,
     name: row.name,
     created_at: row.created_at,
     owner_id: row.owner_id,
     org_id: row.org_id,
-    owner: ownerMap.get(row.owner_id) ?? null,
+    owner: Array.isArray(row.owner) ? row.owner[0] ?? null : row.owner ?? null,
   })) as WorkflowRow[]
 }
 
