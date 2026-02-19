@@ -1,4 +1,4 @@
-import { test as baseTest, expect as baseExpect } from '@playwright/test';
+import { test as baseTest, expect as baseExpect, type Page } from '@playwright/test';
 import { test as authTest, expect as authExpect } from '../../fixtures/etlAuth';
 
 const authenticatedRoutes = [
@@ -11,15 +11,29 @@ const authenticatedRoutes = [
   '/settings/profile',
 ];
 
+const safeGoto = async (page: Page, url: string) => {
+  try {
+    await page.goto(url);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isExpectedRedirectAbort =
+      message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+    if (!isExpectedRedirectAbort) {
+      throw error;
+    }
+  }
+};
+
 baseTest.describe('ETL Public Route Coverage', () => {
   baseTest('landing and auth routes resolve', async ({ page }) => {
-    await page.goto('/');
+    await safeGoto(page, '/');
     await baseExpect(page).toHaveURL(/\/$/);
 
-    await page.goto('/login');
+    await safeGoto(page, '/login');
     await baseExpect(page).toHaveURL(/\/(login|dashboard)/);
 
-    await page.goto('/register');
+    await safeGoto(page, '/register');
     await baseExpect(page).toHaveURL(/\/(register|dashboard|login)/);
   });
 });
@@ -27,18 +41,18 @@ baseTest.describe('ETL Public Route Coverage', () => {
 authTest.describe('ETL Protected Route Coverage', () => {
   for (const route of authenticatedRoutes) {
     authTest(`route ${route} resolves`, async ({ authenticatedEtlPage }) => {
-      await authenticatedEtlPage.goto(route);
+      await safeGoto(authenticatedEtlPage, route);
       await authExpect(authenticatedEtlPage).toHaveURL(new RegExp(`^.+${route}$|\\/login$`));
     });
   }
 
   authTest('dashboard index redirects to a dashboard tab', async ({ authenticatedEtlPage }) => {
-    await authenticatedEtlPage.goto('/dashboard');
+    await safeGoto(authenticatedEtlPage, '/dashboard');
     await authExpect(authenticatedEtlPage).toHaveURL(/\/dashboard\/(personal|org)|\/login(\?|$)/);
   });
 
   authTest('wildcard route redirects to dashboard flow', async ({ authenticatedEtlPage }) => {
-    await authenticatedEtlPage.goto('/non-existent-path');
+    await safeGoto(authenticatedEtlPage, '/non-existent-path');
     await authExpect(authenticatedEtlPage).toHaveURL(/\/(dashboard|login)/);
   });
 });

@@ -192,6 +192,14 @@ describe('sanitizeText', () => {
       const long = 'b'.repeat(500)
       expect(sanitizeText(long).length).toBe(255)
     })
+
+    it('preserves Unicode and emoji characters while sanitizing', () => {
+      expect(sanitizeText('  Café 🚀 数据  ')).toBe('Café 🚀 数据')
+    })
+
+    it('preserves emoji-only content', () => {
+      expect(sanitizeText('😀🔥✨')).toBe('😀🔥✨')
+    })
   })
 })
 
