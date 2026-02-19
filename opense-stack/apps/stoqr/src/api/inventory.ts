@@ -1,4 +1,4 @@
-import { db } from '../supabaseClient'
+import { db, supabase } from '../supabaseClient'
 import type { Folder, Tag } from '../types'
 import { toNumber } from '../utils'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
@@ -48,22 +48,20 @@ export const fetchInventoryFilters = async (companyId: string): Promise<{ folder
 }
 
 export const fetchInventoryStats = async (companyId: string): Promise<InventoryStats> => {
-  const { data, error } = await db
-    .from('products')
-    .select('quantity_on_hand, cost_price, reorder_point')
-    .eq('company_id', companyId)
+  const { data, error } = await supabase
+    .rpc('get_inventory_stats', { target_company_id: companyId })
+    .single<{
+      total_items: number | string | null
+      low_stock_items: number | string | null
+      total_value: number | string | null
+    }>()
 
   if (error) throw error
 
-  const allProducts = (data as Array<{ quantity_on_hand: number | null; cost_price: number | null; reorder_point: number | null }> | null) ?? []
-
   return {
-    totalItems: allProducts.length,
-    lowStockItems: allProducts.filter((product) => toNumber(product.quantity_on_hand) <= toNumber(product.reorder_point)).length,
-    totalValue: allProducts.reduce(
-      (sum, product) => sum + toNumber(product.quantity_on_hand) * toNumber(product.cost_price),
-      0,
-    ),
+    totalItems: toNumber(data?.total_items, 0),
+    lowStockItems: toNumber(data?.low_stock_items, 0),
+    totalValue: toNumber(data?.total_value, 0),
   }
 }
 
