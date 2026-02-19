@@ -116,5 +116,20 @@ describe('toCsv', () => {
       // Header should be quoted since it contains a comma
       expect(csv).toContain('"first,name"')
     })
+
+    it('exports large datasets without truncation', () => {
+      const rows = Array.from({ length: 10000 }, (_, index) => ({
+        id: index + 1,
+        value: `row-${index + 1}`,
+      }))
+
+      const csv = toCsv(rows)
+      const lines = csv.split('\n')
+
+      expect(lines.length).toBe(10001)
+      expect(lines[0]).toBe('id,value')
+      expect(lines[1]).toBe('1,row-1')
+      expect(lines[lines.length - 1]).toBe('10000,row-10000')
+    })
   })
 })
