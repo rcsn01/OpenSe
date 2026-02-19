@@ -4,13 +4,14 @@ import {
   getWorkflowVersion,
   createWorkflowVersion,
 } from '../../api/versions'
+import { versionKeys } from './queryKeys'
 
 /**
  * Fetches all versions for a given workflow.
  */
 export const useWorkflowVersions = (workflowId: string | null) => {
   return useQuery({
-    queryKey: ['workflowVersions', workflowId],
+    queryKey: versionKeys.list(workflowId),
     queryFn: () => (workflowId ? listWorkflowVersions(workflowId) : []),
     enabled: !!workflowId,
     staleTime: 1000 * 30,
@@ -22,7 +23,7 @@ export const useWorkflowVersions = (workflowId: string | null) => {
  */
 export const useWorkflowVersion = (versionId: string | null) => {
   return useQuery({
-    queryKey: ['workflowVersion', versionId],
+    queryKey: versionKeys.detail(versionId),
     queryFn: () => (versionId ? getWorkflowVersion(versionId) : null),
     enabled: !!versionId,
   })
@@ -37,7 +38,7 @@ export const useCreateWorkflowVersion = () => {
   return useMutation({
     mutationFn: createWorkflowVersion,
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['workflowVersions', variables.workflowId] })
+      queryClient.invalidateQueries({ queryKey: versionKeys.list(variables.workflowId) })
     },
   })
 }

@@ -135,8 +135,6 @@ describe('saveWorkflow', () => {
 
 describe('deleteWorkflow', () => {
   it('calls delete on the workflow', async () => {
-    fromChain.eq.mockResolvedValue({ error: null })
-
     await deleteWorkflow('wf-1')
     expect(fromChain.delete).toHaveBeenCalled()
   })

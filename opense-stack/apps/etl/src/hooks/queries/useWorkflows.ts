@@ -10,6 +10,7 @@ import { useAuth } from '@repo/shared/auth/context'
 import { useDemoContext } from '../../context/DemoContext'
 import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME } from '../../lib/demoData'
 import type { WorkflowRow } from '../../components/dashboard/types'
+import { workflowKeys } from './queryKeys'
 
 type UseWorkflowsParams = {
   userId: string | undefined
@@ -31,7 +32,7 @@ export const useWorkflows = ({ userId, orgId, mode }: UseWorkflowsParams) => {
   const { listDemoWorkflows } = useDemoContext()
 
   return useQuery<WorkflowRow[]>({
-    queryKey: ['workflows', userId, orgId, mode, isDemoUser],
+    queryKey: workflowKeys.list(userId, orgId, mode, isDemoUser),
     queryFn: () => {
       if (isDemoUser) {
         return listDemoWorkflows(mode)
@@ -48,7 +49,7 @@ export const useWorkflow = (id: string | null) => {
   const { getDemoWorkflow } = useDemoContext()
 
   return useQuery<WorkflowDetail | null>({
-    queryKey: ['workflow', id, isDemoUser],
+    queryKey: workflowKeys.detail(id, isDemoUser),
     queryFn: () => {
       if (isDemoUser && id) {
         return getDemoWorkflow(id)
@@ -90,8 +91,8 @@ export const useSaveWorkflow = () => {
       return saveWorkflow(payload)
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['workflows'] })
-      queryClient.invalidateQueries({ queryKey: ['workflow', data.id] })
+      queryClient.invalidateQueries({ queryKey: workflowKeys.all })
+      queryClient.invalidateQueries({ queryKey: workflowKeys.detailBase(data.id) })
     },
   })
 }
@@ -114,8 +115,8 @@ export const useUpdateWorkflowName = () => {
       return updateWorkflowName({ id, name })
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['workflows'] })
-      queryClient.setQueryData(['workflow', data.id], (old: any) => (old ? { ...old, name: data.name } : old))
+      queryClient.invalidateQueries({ queryKey: workflowKeys.all })
+      queryClient.setQueryData(workflowKeys.detailBase(data.id), (old: any) => (old ? { ...old, name: data.name } : old))
     },
   })
 }
@@ -134,7 +135,7 @@ export const useDeleteWorkflow = () => {
       await deleteWorkflow(workflowId)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workflows'] })
+      queryClient.invalidateQueries({ queryKey: workflowKeys.all })
     },
   })
 }
