@@ -1,4 +1,4 @@
-import { db } from '../lib/supabase'
+import { db, supabase } from '../lib/supabase'
 import { WorkflowRow } from '../components/dashboard/types'
 import { sanitizeText } from '../lib/validation'
 
@@ -11,22 +11,40 @@ type ListWorkflowsParams = {
 }
 
 export const listWorkflows = async ({ userId, orgId, mode }: ListWorkflowsParams) => {
-  let query = db
-    .from('workflows')
-    .select('id, name, created_at, owner_id, org_id, owner:profiles!workflows_owner_id_fkey(full_name, email)')
-    .not('is_template', 'is', true)
-    .order('created_at', { ascending: false })
-
-  if (mode === 'org') {
-    if (!orgId) return []
-    query = query.eq('org_id', orgId)
-  } else {
-    query = query.eq('owner_id', userId).is('org_id', null)
+  const applyFilters = <T extends { eq: (...args: any[]) => T; is: (...args: any[]) => T }>(query: T): T | null => {
+    if (mode === 'org') {
+      if (!orgId) return null
+      return query.eq('org_id', orgId)
+    }
+    return query.eq('owner_id', userId).is('org_id', null)
   }
 
-  const { data, error } = await query
+  const query = applyFilters(
+    db
+      .from('workflows')
+      .select('id, name, created_at, owner_id, org_id')
+      .not('is_template', 'is', true)
+      .order('created_at', { ascending: false })
+  )
 
+  if (!query) return []
+
+  const { data, error } = await query
   if (error) throw error
+
+  const ownerIds = Array.from(new Set((data ?? []).map((row: any) => row.owner_id).filter(Boolean)))
+  let ownerLookup = new Map<string, { full_name: string | null; email: string | null }>()
+
+  if (ownerIds.length > 0) {
+    const { data: owners } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', ownerIds)
+
+    ownerLookup = new Map(
+      (owners ?? []).map((owner: any) => [owner.id, { full_name: owner.full_name ?? null, email: owner.email ?? null }])
+    )
+  }
 
   return (data ?? []).map((row: any) => ({
     id: row.id,
@@ -34,7 +52,7 @@ export const listWorkflows = async ({ userId, orgId, mode }: ListWorkflowsParams
     created_at: row.created_at,
     owner_id: row.owner_id,
     org_id: row.org_id,
-    owner: Array.isArray(row.owner) ? row.owner[0] ?? null : row.owner ?? null,
+    owner: ownerLookup.get(row.owner_id) ?? null,
   })) as WorkflowRow[]
 }
 
