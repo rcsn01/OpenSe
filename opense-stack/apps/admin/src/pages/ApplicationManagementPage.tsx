@@ -224,15 +224,7 @@ export const ApplicationManagementPage = () => {
 
   return (
     <BasePage>
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Application Management</h1>
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            Manage global ETL and StoQR defaults, feature rollout strategy, and release communications.
-          </p>
-        </div>
-
-        {error ? (
+      {error ? (
           <Card className="border-[var(--color-destructive)]/30">
             <CardContent>
               <p className="text-sm text-[var(--color-destructive)]">{error}</p>
@@ -379,7 +371,6 @@ export const ApplicationManagementPage = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
     </BasePage>
   )
 }

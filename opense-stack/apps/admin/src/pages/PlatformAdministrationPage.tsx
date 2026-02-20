@@ -104,15 +104,7 @@ export const PlatformAdministrationPage = () => {
 
   return (
     <BasePage isLoading={loading} loadingMessage="Loading platform administration...">
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Platform Administration</h1>
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            Manage admin access, RBAC scaffolding, and immutable audit visibility for the suite.
-          </p>
-        </div>
-
-        {error ? (
+      {error ? (
           <Card className="border-[var(--color-destructive)]/30">
             <CardContent>
               <p className="text-sm text-[var(--color-destructive)]">{error}</p>
@@ -243,7 +235,6 @@ export const PlatformAdministrationPage = () => {
             </CardContent>
           </Card>
         ) : null}
-      </div>
     </BasePage>
   )
 }
