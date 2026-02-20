@@ -40,7 +40,7 @@ export function TopBar({
   return (
     <header
       className={cn(
-        'flex h-14 shrink-0 items-center justify-between gap-4 bg-[var(--color-white-3)] px-4',
+        'app-top-bar flex h-14 shrink-0 items-center justify-between gap-4 px-4',
         className,
       )}
     >
@@ -76,7 +76,7 @@ export function TopBar({
             >
               <DropdownItem onClick={onSettingsClick}>Settings</DropdownItem>
               <DropdownSeparator />
-              <DropdownItem onClick={onLogout}>Log out</DropdownItem>
+              <DropdownItem onClick={onLogout} destructive>Log out</DropdownItem>
             </Dropdown>
           </>
         )}

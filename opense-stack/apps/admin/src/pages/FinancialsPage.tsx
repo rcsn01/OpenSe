@@ -178,15 +178,7 @@ export const FinancialsPage = () => {
 
   return (
     <BasePage>
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Financials & Global Billing</h1>
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            Manage global pricing, promotional logic, and revenue performance across ETL and StoQR.
-          </p>
-        </div>
-
-        {error ? (
+      {error ? (
           <Card className="border-[var(--color-destructive)]/30">
             <CardContent>
               <p className="text-sm text-[var(--color-destructive)]">{error}</p>
@@ -350,7 +342,6 @@ export const FinancialsPage = () => {
             ))}
           </div>
         ) : null}
-      </div>
     </BasePage>
   )
 }

@@ -103,15 +103,7 @@ export const OrganizationsListPage = () => {
 
   return (
     <BasePage isLoading={loading} loadingMessage="Loading organizations...">
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Organizations List</h1>
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            Search and filter organizations across ETL and StoQR, then open a specific organization profile.
-          </p>
-        </div>
-
-        {error ? (
+      {error ? (
           <Card className="border-[var(--color-destructive)]/30">
             <CardContent>
               <p className="text-sm text-[var(--color-destructive)]">{error}</p>
@@ -164,7 +156,6 @@ export const OrganizationsListPage = () => {
             {filteredRows.length === 0 ? <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">No organizations found.</p> : null}
           </CardContent>
         </Card>
-      </div>
     </BasePage>
   )
 }
