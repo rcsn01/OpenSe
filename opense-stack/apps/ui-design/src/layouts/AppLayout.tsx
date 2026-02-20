@@ -6,7 +6,6 @@ import {
   SideNavGroup,
   SideNavGroupList,
   SideNavBrandSlot,
-  SideNavUserProfile,
   ThemeProvider,
   ToastProvider,
   useToast,
@@ -55,6 +54,9 @@ const testPagesItems = [
 function AppLayoutContent() {
   const { toast } = useToast()
   const location = useLocation()
+
+  const handleLogout = () =>
+    toast({ title: 'Log out', description: 'Demo: no auth in UI Design Kit', variant: 'default' })
 
   const sidebar = (
     <>
@@ -147,18 +149,11 @@ function AppLayoutContent() {
           </SideNavGroup>
         </SideNavGroupList>
       </SideNav>
-      <SideNavUserProfile
-        userName="User"
-        userEmail="user@example.com"
-        onLogout={() =>
-          toast({ title: 'Log out', description: 'Demo: no auth in UI Design Kit', variant: 'default' })
-        }
-      />
     </>
   )
 
   return (
-    <SharedAppLayout sidebar={sidebar} profileFallback="U">
+    <SharedAppLayout sidebar={sidebar} profileFallback="U" onLogout={handleLogout}>
       <Outlet />
     </SharedAppLayout>
   )
