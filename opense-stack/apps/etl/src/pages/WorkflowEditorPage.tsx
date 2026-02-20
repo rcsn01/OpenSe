@@ -225,9 +225,11 @@ export const WorkflowEditorPage = () => {
 
     const graphData = { nodes: sanitizedNodes, edges };
 
-    // Personal tab uses /editor/new (no orgId); org tab uses /editor/new?orgId=xxx
-    // Only set org_id when URL explicitly has orgId — otherwise workflow stays personal
-    const orgIdForSave = orgIdParam?.trim() ? orgIdParam.trim() : null;
+    // Preserve existing org ownership when editing /editor/:id routes without orgId query param.
+    // For new workflows, personal remains null unless orgId is explicitly provided.
+    const orgIdForSave = orgIdParam?.trim()
+      ? orgIdParam.trim()
+      : (workflowData?.org_id ?? null);
 
     saveMutation.mutate(
       {
