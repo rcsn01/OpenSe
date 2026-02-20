@@ -6,6 +6,7 @@ export type OrgRow = {
   id: string
   name: string
   created_at: string | null
+  status: 'active' | 'suspended'
   owner?: { email: string | null; full_name: string | null } | null
   member_count?: number | null
 }
@@ -65,6 +66,7 @@ type AdminOrgRpcRow = {
   id: string
   name: string
   created_at: string | null
+  status: 'active' | 'suspended'
   owner_email: string | null
   owner_full_name: string | null
   member_count: number | null
@@ -119,6 +121,7 @@ export const listAdminOrgs = async (): Promise<OrgRow[]> => {
     id: org.id,
     name: org.name,
     created_at: org.created_at,
+    status: org.status,
     owner: {
       email: org.owner_email,
       full_name: org.owner_full_name,

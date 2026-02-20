@@ -33,7 +33,7 @@ test.describe('Stoqr Route Coverage', () => {
   });
 
   test('wildcard route redirects to dashboard flow', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/does-not-exist');
+    await safeGoto(authenticatedPage, '/does-not-exist');
     await expect(authenticatedPage).toHaveURL(/\/(dashboard|auth|login|$)/);
   });
 });
