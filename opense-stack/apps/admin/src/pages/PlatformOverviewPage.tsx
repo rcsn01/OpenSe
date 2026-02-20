@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { BasePage, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
+import { BasePage, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui'
 import { Activity, Building2, Boxes, ShieldCheck, Users } from 'lucide-react'
 import { listAdminAuditEvents, listAdminOrgs, listAdminUsers } from '../api/etlAdmin'
 import { listCompanies } from '../api/stoqrAdmin'
@@ -40,7 +39,6 @@ type HealthState = {
 }
 
 export const PlatformOverviewPage = () => {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [overview, setOverview] = useState<OverviewState>(emptyState)
@@ -126,15 +124,7 @@ export const PlatformOverviewPage = () => {
 
   return (
     <BasePage isLoading={loading} loadingMessage="Loading platform overview...">
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold text-[var(--color-foreground)]">Global Overview</h1>
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            Birds-eye suite health and business posture for ETL and StoQR.
-          </p>
-        </div>
-
-        {error && (
+      {error && (
           <Card className="border-[var(--color-destructive)]/30">
             <CardContent>
               <p className="text-sm text-[var(--color-destructive)]">{error}</p>
@@ -180,19 +170,6 @@ export const PlatformOverviewPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Management Areas</CardTitle>
-            <CardDescription>Open each suite section for focused global administration.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            <Button onClick={() => navigate('/organisations')}>Organizations List</Button>
-            <Button variant="outline" onClick={() => navigate('/applications')}>Application Management</Button>
-            <Button variant="outline" onClick={() => navigate('/financials')}>Financials & Billing</Button>
-            <Button variant="outline" onClick={() => navigate('/platform-admin')}>Platform Administration</Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle>Activity Feed</CardTitle>
             <CardDescription>Recent high-level actions across the suite.</CardDescription>
           </CardHeader>
@@ -209,7 +186,6 @@ export const PlatformOverviewPage = () => {
             )}
           </CardContent>
         </Card>
-      </div>
     </BasePage>
   )
 }

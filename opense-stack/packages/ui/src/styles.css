@@ -204,6 +204,14 @@ button, input, select, textarea { font: inherit; }
   color: var(--color-muted-foreground);
 }
 
+/* SideNavBrandSlot, TopBar, SideNav – 3% white background */
+.side-nav-brand-slot,
+.app-top-bar,
+.side-nav,
+.app-sidebar {
+  background: var(--color-white-3);
+}
+
 /* AppSidebar main content - reserve left space for fixed sidebar on desktop (1024px+) */
 @media (min-width: 1024px) {
   .app-sidebar-main {

@@ -57,7 +57,7 @@ export function AppLayout({
     >
       {/* Fixed sidebar - never scrolls with the screen */}
       <aside
-        className="fixed inset-y-0 left-0 z-50 flex h-screen w-60 shrink-0 flex-col bg-[var(--color-white-3)]"
+        className="app-sidebar fixed inset-y-0 left-0 z-50 flex h-screen w-60 shrink-0 flex-col"
         aria-label="Sidebar navigation"
       >
         {sidebar}
