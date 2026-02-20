@@ -56,7 +56,7 @@ const ProtectedAccountRoute = ({ children }: { children: React.ReactNode }) => {
     }
 
     void loadOnboardingStatus()
-  }, [location.pathname, userId])
+  }, [userId])
 
   if (loading || onboardingLoading) {
     return <div className="min-h-screen grid place-items-center text-sm text-slate-500">Loading session...</div>
