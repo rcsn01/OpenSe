@@ -8,9 +8,9 @@ export class PlatformOverviewPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: /platform overview/i });
-    this.manageEtlButton = page.getByRole('button', { name: /manage etl/i });
-    this.manageStoqrButton = page.getByRole('button', { name: /manage stoqr/i });
+    this.heading = page.getByRole('heading', { name: /global overview|platform overview/i });
+    this.manageEtlButton = page.getByRole('button', { name: /etl organisations|manage etl/i });
+    this.manageStoqrButton = page.getByRole('button', { name: /stoqr organisations|manage stoqr/i });
   }
 
   async goto() {
@@ -19,6 +19,6 @@ export class PlatformOverviewPage {
 
   async expectLoaded() {
     await expect(this.heading).toBeVisible();
-    await expect(this.page.getByText(/ETL Organisations|ETL Users|Super Admins|StoQR Companies/i).first()).toBeVisible();
+    await expect(this.page.getByText(/active organisations|seats utilized|mrr|recent sign-ups/i).first()).toBeVisible();
   }
 }
