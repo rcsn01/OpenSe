@@ -14,7 +14,17 @@ export class ETLDashboardPage {
   }
 
   async goto() {
-    await this.page.goto('/dashboard');
+    try {
+      await this.page.goto('/dashboard');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isExpectedRedirectAbort =
+        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+      if (!isExpectedRedirectAbort) {
+        throw error;
+      }
+    }
   }
 
   async expectLoaded() {
