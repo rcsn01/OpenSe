@@ -19,7 +19,9 @@ test.describe('Stoqr Inventory', () => {
   });
 
   test('view product detail and delete action if supported', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/inventory');
+    const inventory = new InventoryPage(authenticatedPage);
+    await inventory.goto();
+    await expect(authenticatedPage).toHaveURL(/(localhost:5991\/login\?|\/(inventory|auth))/);
     const firstProduct = authenticatedPage.locator('tbody tr a[href*="/inventory/"]').first();
 
     if (await firstProduct.isVisible().catch(() => false)) {

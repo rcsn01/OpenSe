@@ -9,14 +9,16 @@ import {
   SideNavItem,
   SideNavUserProfile,
 } from '@repo/ui'
-import { Boxes, Building2, LayoutDashboard, ShieldCheck } from 'lucide-react'
+import { Building2, LayoutDashboard, ShieldCheck, Settings2, Wallet, UserCog } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
 import { buildAccountsSettingsUrl } from '@repo/shared/utils'
 
 const navItems = [
-  { to: '/platform', label: 'Platform', icon: LayoutDashboard },
-  { to: '/organisations', label: 'Organisations', icon: Building2 },
-  { to: '/stoqr', label: 'StoQR Oversight', icon: Boxes },
+  { to: '/platform', label: 'Global Overview', icon: LayoutDashboard },
+  { to: '/organisations', label: 'Organizations List', icon: Building2 },
+  { to: '/applications', label: 'Application Mgmt', icon: Settings2 },
+  { to: '/financials', label: 'Financials', icon: Wallet },
+  { to: '/platform-admin', label: 'Platform Admin', icon: UserCog },
 ]
 
 export const AdminShell = () => {
