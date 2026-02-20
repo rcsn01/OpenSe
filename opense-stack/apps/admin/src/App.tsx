@@ -3,9 +3,12 @@ import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { ThemeProvider } from '@repo/ui'
 import { GodModePage } from './pages/GodModePage'
 import { LoginPage } from './pages/LoginPage'
-import { StoqrAdminPage } from './pages/StoqrAdminPage'
-import { SuperAdminPage } from './pages/SuperAdminPage'
 import { PlatformOverviewPage } from './pages/PlatformOverviewPage'
+import { ApplicationManagementPage } from './pages/ApplicationManagementPage'
+import { FinancialsPage } from './pages/FinancialsPage'
+import { PlatformAdministrationPage } from './pages/PlatformAdministrationPage'
+import { OrganizationsListPage } from './pages/OrganizationsListPage'
+import { OrganizationProfilePage } from './pages/OrganizationProfilePage'
 import { AdminShell } from './components/AdminShell'
 
 const ProtectedSuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -42,8 +45,11 @@ const AppRoutes = () => {
         }
       >
         <Route path="/platform" element={<PlatformOverviewPage />} />
-        <Route path="/organisations" element={<SuperAdminPage />} />
-        <Route path="/stoqr" element={<StoqrAdminPage />} />
+        <Route path="/organisations" element={<OrganizationsListPage />} />
+        <Route path="/organisations/:orgId" element={<OrganizationProfilePage />} />
+        <Route path="/applications" element={<ApplicationManagementPage />} />
+        <Route path="/financials" element={<FinancialsPage />} />
+        <Route path="/platform-admin" element={<PlatformAdministrationPage />} />
       </Route>
       <Route path="/etl-admin" element={<Navigate to="/organisations" replace />} />
       <Route path="/super-admin" element={<Navigate to="/organisations" replace />} />
