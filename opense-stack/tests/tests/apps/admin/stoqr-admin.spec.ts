@@ -1,29 +1,29 @@
 import { test, expect } from '../../fixtures/adminAuth';
-import { StoqrAdminPage } from '../../pages/admin/StoqrAdminPage';
 
-test.describe('Admin StoQR Management', () => {
-  test('company list and members view load', async ({ authenticatedAdminPage }) => {
-    const stoqrAdmin = new StoqrAdminPage(authenticatedAdminPage);
-    await stoqrAdmin.goto();
-    await stoqrAdmin.expectLoaded();
+test.describe('Admin Organization Profile', () => {
+  test('users tab is reachable from organization profile', async ({ authenticatedAdminPage }) => {
+    await authenticatedAdminPage.goto('/organisations');
+    const firstOrg = authenticatedAdminPage.locator('tbody tr').first();
+    test.skip(!(await firstOrg.isVisible().catch(() => false)), 'No organization rows available for profile navigation');
 
-    if (await stoqrAdmin.companiesHeading.isVisible().catch(() => false)) {
-      await expect(stoqrAdmin.companiesHeading).toBeVisible();
-      await expect(stoqrAdmin.selectedCompanyHeading).toBeVisible();
-    }
+    await firstOrg.click();
+    await expect(authenticatedAdminPage).toHaveURL(/\/organisations\/[^/]+/);
+
+    const usersTab = authenticatedAdminPage.getByRole('button', { name: /users/i }).first();
+    await usersTab.click();
+    await expect(authenticatedAdminPage.getByRole('heading', { name: /users/i })).toBeVisible();
   });
 
-  test('rename/invite controls are visible when allowed', async ({ authenticatedAdminPage }) => {
-    const stoqrAdmin = new StoqrAdminPage(authenticatedAdminPage);
-    await stoqrAdmin.goto();
+  test('billing and invoices tab is reachable from organization profile', async ({ authenticatedAdminPage }) => {
+    await authenticatedAdminPage.goto('/organisations');
+    const firstOrg = authenticatedAdminPage.locator('tbody tr').first();
+    test.skip(!(await firstOrg.isVisible().catch(() => false)), 'No organization rows available for profile navigation');
 
-    const companyInput = authenticatedAdminPage.locator('input#company-name, input[name="company-name"]').first();
-    if (await companyInput.isVisible().catch(() => false)) {
-      await expect(companyInput).toBeVisible();
-    }
+    await firstOrg.click();
+    await expect(authenticatedAdminPage).toHaveURL(/\/organisations\/[^/]+/);
 
-    if (await stoqrAdmin.inviteButton.isVisible().catch(() => false)) {
-      await expect(stoqrAdmin.inviteButton).toBeVisible();
-    }
+    const billingTab = authenticatedAdminPage.getByRole('button', { name: /billing\s*&\s*invoices/i }).first();
+    await billingTab.click();
+    await expect(authenticatedAdminPage.getByRole('heading', { name: /billing\s*&\s*invoices/i })).toBeVisible();
   });
 });

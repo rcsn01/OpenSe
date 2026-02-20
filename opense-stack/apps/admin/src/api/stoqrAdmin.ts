@@ -41,9 +41,11 @@ export const listCompanies = async (): Promise<CompanySummary[]> => {
 }
 
 export const updateCompany = async (
-  _companyId: string,
-  _updates: { name?: string; description?: string; subscription_tier?: string },
-) => {}
+  companyId: string,
+  updates: { name?: string; description?: string; subscription_tier?: string },
+) => {
+  throw new Error(`Company updates are not available in Admin yet. (${companyId}:${JSON.stringify(updates)})`)
+}
 
 export const listCompanyMembers = async (companyId: string) => {
   const { data, error } = await supabase.rpc('admin_list_stoqr_company_members', {

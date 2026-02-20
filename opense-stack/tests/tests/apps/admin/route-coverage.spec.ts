@@ -39,4 +39,15 @@ authTest.describe('Admin Protected Route Coverage', () => {
     await authenticatedAdminPage.goto('/non-existent-path');
     await authExpect(authenticatedAdminPage).toHaveURL(/\/(platform|login)/);
   });
+
+  authTest('new admin section routes resolve', async ({ authenticatedAdminPage }) => {
+    await authenticatedAdminPage.goto('/applications');
+    await authExpect(authenticatedAdminPage).toHaveURL(/\/(applications|login)/);
+
+    await authenticatedAdminPage.goto('/financials');
+    await authExpect(authenticatedAdminPage).toHaveURL(/\/(financials|login)/);
+
+    await authenticatedAdminPage.goto('/platform-admin');
+    await authExpect(authenticatedAdminPage).toHaveURL(/\/(platform-admin|login)/);
+  });
 });
