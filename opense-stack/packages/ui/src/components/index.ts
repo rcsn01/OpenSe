@@ -1,5 +1,5 @@
 // Components – UI
-export { Heading, Body, Label, Code } from './ui/Typography'
+export { Heading, Body, Label, SubLabel, Code } from './ui/Typography'
 export { Button, type ButtonProps } from './ui/Button'
 export { Input, Textarea, Select, type InputProps } from './ui/Input'
 export { Checkbox, Radio, Toggle } from './ui/Checkbox'
