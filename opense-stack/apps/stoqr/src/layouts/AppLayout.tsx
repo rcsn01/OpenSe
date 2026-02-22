@@ -19,7 +19,6 @@ import {
   SideNavGroup,
   SideNavGroupList,
   SideNavBrandSlot,
-  SideNavUserProfile,
 } from '@repo/ui'
 
 const mainNavItems = [
@@ -41,24 +40,16 @@ export const AppLayout = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const [userName, setUserName] = useState<string>('')
-  const [userEmail, setUserEmail] = useState<string>('')
-  const [signingOut, setSigningOut] = useState(false)
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
 
   useEffect(() => {
     setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
-    setUserEmail(user?.email || '')
   }, [user])
 
   const handleSignOut = async () => {
-    try {
-      setSigningOut(true)
-      await logout()
-      navigate('/')
-    } finally {
-      setSigningOut(false)
-    }
+    await logout()
+    navigate('/')
   }
 
   const renderNavItem = (item: (typeof mainNavItems)[0]) => {
@@ -89,12 +80,6 @@ export const AppLayout = () => {
           <SideNavGroup category="configuration">{configNavItems.map(renderNavItem)}</SideNavGroup>
         </SideNavGroupList>
       </SideNav>
-      <SideNavUserProfile
-        userName={userName}
-        userEmail={userEmail}
-        onLogout={handleSignOut}
-        signingOut={signingOut}
-      />
     </>
   )
 

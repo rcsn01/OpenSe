@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   AppLayout,
@@ -7,10 +6,8 @@ import {
   SideNavGroup,
   SideNavGroupList,
   SideNavItem,
-  SideNavUserProfile,
 } from '@repo/ui'
 import { Building2, LayoutDashboard, ShieldCheck, Settings2, Wallet, UserCog } from 'lucide-react'
-import { useAuth } from '@repo/shared/auth/context'
 import { buildAccountsSettingsUrl } from '@repo/shared/utils'
 
 const navItems = [
@@ -23,19 +20,8 @@ const navItems = [
 
 export const AdminShell = () => {
   const location = useLocation()
-  const { logout, user } = useAuth()
-  const [signingOut, setSigningOut] = useState(false)
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
-
-  const handleLogout = async () => {
-    setSigningOut(true)
-    try {
-      await logout()
-    } finally {
-      setSigningOut(false)
-    }
-  }
 
   return (
     <AppLayout
@@ -68,14 +54,6 @@ export const AdminShell = () => {
               </SideNavGroup>
             </SideNavGroupList>
           </SideNav>
-          <SideNavUserProfile
-            userName={user?.user_metadata?.full_name ?? user?.email ?? 'Super Admin'}
-            userEmail={user?.email}
-            onLogout={() => {
-              void handleLogout()
-            }}
-            signingOut={signingOut}
-          />
         </>
       }
     >

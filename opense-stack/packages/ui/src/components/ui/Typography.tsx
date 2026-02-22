@@ -4,7 +4,9 @@ import { cn } from '../../lib/cn'
 
 /* ── Heading ──────────────────────────────────────────── */
 
-const headingVariants = cva('font-bold tracking-tight text-[var(--color-foreground)]', {
+const HEADING_COLOR = { color: 'var(--shade-black-3)' }
+
+const headingVariants = cva('tracking-tight', {
   variants: {
     level: {
       h1: 'text-4xl leading-tight md:text-5xl',
@@ -28,12 +30,18 @@ interface HeadingProps extends VariantProps<typeof headingVariants> {
 
 export function Heading({ level = 'h1', children, className }: HeadingProps) {
   const Tag = level
-  return <Tag className={cn(headingVariants({ level }), className)}>{children}</Tag>
+  return (
+    <Tag style={HEADING_COLOR} className={cn(headingVariants({ level }), className)}>
+      {children}
+    </Tag>
+  )
 }
 
 /* ── Body text ────────────────────────────────────────── */
 
-const bodyVariants = cva('text-[var(--color-foreground)]', {
+const BODY_COLOR = { color: 'var(--shade-black-7)' }
+
+const bodyVariants = cva('', {
   variants: {
     size: {
       body1: 'text-xl leading-relaxed',
@@ -43,7 +51,7 @@ const bodyVariants = cva('text-[var(--color-foreground)]', {
       body5: 'text-xs leading-normal',
       body6: 'text-[0.625rem] leading-normal',
     },
-    muted: { true: 'text-[var(--color-muted-foreground)]', false: '' },
+    muted: { true: '', false: '' },
   },
   defaultVariants: { size: 'body3', muted: false },
 })
@@ -59,7 +67,12 @@ interface BodyProps extends VariantProps<typeof bodyVariants> {
 }
 
 export function Body({ size = 'body3', muted = false, children, className, as: Tag = 'p' }: BodyProps) {
-  return <Tag className={cn(bodyVariants({ size, muted }), className)}>{children}</Tag>
+  const colorStyle = muted ? { color: 'var(--color-muted-foreground)' } : BODY_COLOR
+  return (
+    <Tag style={colorStyle} className={cn(bodyVariants({ size, muted }), className)}>
+      {children}
+    </Tag>
+  )
 }
 
 /* ── Label ────────────────────────────────────────────── */
@@ -73,7 +86,7 @@ interface LabelProps {
 
 export function Label({ children, htmlFor, className, required }: LabelProps) {
   return (
-    <label htmlFor={htmlFor} className={cn('text-sm font-medium text-[var(--color-foreground)]', className)}>
+    <label htmlFor={htmlFor} className={cn('text-sm text-[var(--color-foreground)]', className)}>
       {children}
       {required && <span className="ml-0.5 text-[var(--color-destructive)]">*</span>}
     </label>
