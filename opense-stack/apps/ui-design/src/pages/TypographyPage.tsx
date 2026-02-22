@@ -1,4 +1,4 @@
-import { Heading, Body, Label, Code, Container, VStack, HStack } from '../components/ui'
+import { Heading, Body, Label, SubLabel, Code, Container, VStack, HStack } from '../components/ui'
 import { Section, SubSection } from '../components/shared/PageSection'
 
 export function TypographyPage() {
@@ -39,10 +39,16 @@ export function TypographyPage() {
         </SubSection>
 
         <SubSection title="Labels">
-          <HStack>
-            <Label>Default Label</Label>
-            <Label required>Required Label</Label>
-          </HStack>
+          <VStack>
+            <HStack>
+              <Label>Default Label</Label>
+              <Label required>Required Label</Label>
+            </HStack>
+            <VStack className="gap-0">
+              <Label>Email</Label>
+              <SubLabel>We'll never share your email with anyone.</SubLabel>
+            </VStack>
+          </VStack>
         </SubSection>
 
         <SubSection title="Code">

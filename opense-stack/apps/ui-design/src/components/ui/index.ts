@@ -1,7 +1,7 @@
 // Re-export all components from the shared @repo/ui package
 export {
   // Typography
-  Heading, Body, Label, Code,
+  Heading, Body, Label, SubLabel, Code,
   // Buttons
   Button,
   // Form Controls
