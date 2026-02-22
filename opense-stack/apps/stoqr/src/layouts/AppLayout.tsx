@@ -40,6 +40,7 @@ export const AppLayout = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const [userName, setUserName] = useState<string>('')
+  const [search, setSearch] = useState('')
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
 
@@ -91,6 +92,9 @@ export const AppLayout = () => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
       }}
       onLogout={handleSignOut}
+      searchPlaceholder="Search items..."
+      searchValue={search}
+      onSearchChange={setSearch}
     >
       <Outlet />
     </SharedAppLayout>
