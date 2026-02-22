@@ -7,8 +7,9 @@ import {
   SideNavGroupList,
   SideNavItem,
 } from '@repo/ui'
-import { Building2, LayoutDashboard, ShieldCheck, Settings2, Wallet, UserCog } from 'lucide-react'
+import { useAuth } from '@repo/shared/auth/context'
 import { buildAccountsSettingsUrl } from '@repo/shared/utils'
+import { Building2, LayoutDashboard, ShieldCheck, Settings2, Wallet, UserCog } from 'lucide-react'
 
 const navItems = [
   { to: '/platform', label: 'Global Overview', icon: LayoutDashboard },
@@ -20,6 +21,7 @@ const navItems = [
 
 export const AdminShell = () => {
   const location = useLocation()
+  const { logout } = useAuth()
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
 
@@ -28,6 +30,7 @@ export const AdminShell = () => {
       onSettingsClick={() => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
       }}
+      onLogout={() => void logout()}
       sidebar={
         <>
           <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Admin" version="v1" />
