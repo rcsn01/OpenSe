@@ -2,7 +2,7 @@ import { type ReactNode } from 'react'
 import { User, LogOut, Sun, Moon } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useTheme } from './ThemeProvider'
-import { Body } from './Typography'
+import { Label, SubLabel } from './Typography'
 
 /* ── SideNavItem: styling only – apps provide icon & text via children ── */
 
@@ -24,16 +24,8 @@ const sideNavItemActive =
 const sideNavItemInactive =
   'text-[var(--color-foreground)] hover:bg-[var(--color-background)]'
 
-const sideNavItemHeading =
-  'flex items-center gap-2 w-full m-0 p-0'
-const sideNavItemHeadingStyle = {
-  fontSize: 'inherit',
-  fontWeight: 'inherit',
-  fontFamily: 'inherit',
-  lineHeight: 'inherit',
-  color: 'inherit',
-  letterSpacing: 'inherit',
-}
+const sideNavItemLabelClass =
+  'flex items-center gap-2 w-full m-0 p-0 font-inherit text-inherit'
 
 export function SideNavItem({ children, active, onClick, renderLink }: SideNavItemProps) {
   const className = cn(
@@ -42,9 +34,9 @@ export function SideNavItem({ children, active, onClick, renderLink }: SideNavIt
   )
 
   const wrappedChildren = (
-    <h6 className={sideNavItemHeading} style={sideNavItemHeadingStyle}>
+    <Label className={sideNavItemLabelClass}>
       {children}
-    </h6>
+    </Label>
   )
 
   if (renderLink) {
@@ -104,9 +96,9 @@ export function SideNavGroup({ category, title, children }: SideNavGroupProps) {
   return (
     <div className="flex flex-col gap-0.5">
       {label && (
-        <Body size="body5" as="div" className="px-2 uppercase tracking-wider" muted>
+        <SubLabel as="div" className="px-2 uppercase tracking-wider">
           {label}
-        </Body>
+        </SubLabel>
       )}
       <div className="flex flex-col gap-0.5">{children}</div>
     </div>

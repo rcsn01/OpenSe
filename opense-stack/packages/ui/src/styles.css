@@ -205,8 +205,8 @@ button, input, select, textarea { font: inherit; }
   background: var(--shade-white-1);
 }
 
-/* SideNav h6: inherit typography from parent (link/button), do not override */
-.side-nav h6 {
+/* SideNav label: inherit typography from parent (link/button), do not override */
+.side-nav label {
   font-size: inherit !important;
   font-weight: inherit !important;
   font-family: inherit !important;
