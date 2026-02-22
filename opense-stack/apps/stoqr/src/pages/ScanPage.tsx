@@ -99,17 +99,14 @@ export const ScanPage = () => {
             id: 'quick', 
             label: 'Quick Scan', 
             content: (
-              <StackLayout variant="grid-2" className="items-start">
-                {/* Column 1: Scanner */}
-                <div style={{ position: 'sticky', top: 24 }}>
-                  {ScannerModuleComponent}
-                </div>
-                
-                {/* Column 2: Results & Actions */}
-                <div className="stack">
-                  <QuickScanTab scanValue={scanValue} companyId={companyId || ''} />
-                </div>
-              </StackLayout>
+              <QuickScanTab
+                scanValue={scanValue}
+                setScanValue={setScanValue}
+                companyId={companyId || ''}
+                isScanning={isScanning}
+                startCamera={startCamera}
+                stopCamera={stopCamera}
+              />
             )
           },
           { 

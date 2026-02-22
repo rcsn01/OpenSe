@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
-import { StackLayout } from '@repo/ui'
+import { Label, StackLayout } from '@repo/ui'
 import { RecentActivity } from '../components/dashboard/RecentActivity'
 import { StatsCards } from '../components/dashboard/StatsCards'
 import { StockHealth } from '../components/dashboard/StockHealth'
@@ -33,7 +33,7 @@ export const DashboardPage = () => {
       <div className="stack">
       {/* Quick Actions */}
       <div className="flex-between">
-        <h2 className="section-title" style={{ margin: 0 }}>Overview</h2>
+        <Label className="section-title" style={{ margin: 0 }}>Overview</Label>
         <div className="row">
           <Link to="/inventory" className="button secondary small">Add Product</Link>
           <Link to="/scan" className="button small">Scan Item</Link>

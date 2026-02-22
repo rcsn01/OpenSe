@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AppLayout,
@@ -20,11 +21,15 @@ export const AccountShell = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const [search, setSearch] = useState('')
 
   return (
     <AppLayout
       onSettingsClick={() => navigate('/settings')}
       onLogout={() => void logout()}
+      searchPlaceholder="Search items..."
+      searchValue={search}
+      onSearchChange={setSearch}
       sidebar={
         <>
           <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Accounts" version="v1" />
