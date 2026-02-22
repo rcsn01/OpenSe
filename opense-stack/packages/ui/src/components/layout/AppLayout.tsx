@@ -21,6 +21,12 @@ export interface AppLayoutProps {
   onSettingsClick?: () => void
   /** Optional callback for profile menu Log out item */
   onLogout?: () => void
+  /** Search placeholder (enables search bar when provided with searchValue and onSearchChange) */
+  searchPlaceholder?: string
+  /** Search input value */
+  searchValue?: string
+  /** Search input change handler */
+  onSearchChange?: (value: string) => void
   /** Optional class for the root container */
   className?: string
 }
@@ -33,6 +39,9 @@ export function AppLayout({
   profileFallback,
   onSettingsClick,
   onLogout,
+  searchPlaceholder,
+  searchValue,
+  onSearchChange,
   className,
 }: AppLayoutProps) {
   const showTopBar = topBar !== null
@@ -43,6 +52,9 @@ export function AppLayout({
         profileFallback={profileFallback}
         onSettingsClick={onSettingsClick}
         onLogout={onLogout}
+        searchPlaceholder={searchPlaceholder}
+        searchValue={searchValue}
+        onSearchChange={onSearchChange}
       />
     ) : (
       topBar

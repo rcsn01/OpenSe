@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import {
   AppLayout as SharedAppLayout,
@@ -54,6 +55,7 @@ const testPagesItems = [
 function AppLayoutContent() {
   const { toast } = useToast()
   const location = useLocation()
+  const [search, setSearch] = useState('')
 
   const handleLogout = () =>
     toast({ title: 'Log out', description: 'Demo: no auth in UI Design Kit', variant: 'default' })
@@ -153,7 +155,14 @@ function AppLayoutContent() {
   )
 
   return (
-    <SharedAppLayout sidebar={sidebar} profileFallback="U" onLogout={handleLogout}>
+    <SharedAppLayout
+      sidebar={sidebar}
+      profileFallback="U"
+      onLogout={handleLogout}
+      searchPlaceholder="Search items..."
+      searchValue={search}
+      onSearchChange={setSearch}
+    >
       <Outlet />
     </SharedAppLayout>
   )

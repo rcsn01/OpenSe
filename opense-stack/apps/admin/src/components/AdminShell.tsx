@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   AppLayout,
@@ -22,6 +23,7 @@ const navItems = [
 export const AdminShell = () => {
   const location = useLocation()
   const { logout } = useAuth()
+  const [search, setSearch] = useState('')
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
 
@@ -31,6 +33,9 @@ export const AdminShell = () => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
       }}
       onLogout={() => void logout()}
+      searchPlaceholder="Search items..."
+      searchValue={search}
+      onSearchChange={setSearch}
       sidebar={
         <>
           <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Admin" version="v1" />
