@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from 'react'
 import { cn } from '../../lib/cn'
 import { ChevronDown } from 'lucide-react'
+import { Label } from './Typography'
 
 /* ── TabBar: props-based tab navigation ───────────────── */
 
@@ -27,7 +28,7 @@ export function TabBar({ tabs, activeTab, onTabChange, className, itemClassName,
       {tabs.map((t) => (
         <button key={t.id} onClick={() => onTabChange(t.id)} className={cn(baseCls, t.id === activeTab ? activeCls : inactiveCls)}>
           {t.icon}
-          <span>{t.label}</span>
+          <Label className="font-inherit text-inherit">{t.label}</Label>
           {typeof t.count === 'number' && (
             <span className="ml-1 inline-flex items-center rounded-full bg-[var(--color-muted)] px-2 py-0.5 text-xs font-medium">
               {t.count}

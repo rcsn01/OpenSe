@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { CalendarDays, FileSpreadsheet, Loader2, Trash2 } from 'lucide-react';
+import { Label, SubLabel } from '@repo/ui';
 import { WorkflowTableProps } from './types';
 
 const formatDate = (value: string | null) => {
@@ -86,8 +87,8 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
                   >
                     <td className="px-5 py-3 align-middle sm:px-6">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900" title={workflow.name}>{workflowName}</p>
-                        <p className="truncate text-xs text-slate-500" title={workflow.id}>{workflowId}</p>
+                        <Label className="block truncate" title={workflow.name}>{workflowName}</Label>
+                        <SubLabel as="div" className="block truncate" title={workflow.id}>{workflowId}</SubLabel>
                       </div>
                     </td>
 
