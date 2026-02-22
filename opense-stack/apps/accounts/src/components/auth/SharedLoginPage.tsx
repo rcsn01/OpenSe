@@ -60,7 +60,7 @@ export const SharedLoginPage = ({
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
         <div className="w-full overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-xl)]">
           <div className="grid md:grid-cols-2">
-            <section className="hidden min-h-[620px] flex-col justify-between border-r border-[var(--color-border)] bg-[var(--color-white-3)] p-10 md:flex">
+            <section className="hidden min-h-[620px] flex-col justify-between border-r border-[var(--color-border)] bg-[var(--shade-white-2)] p-10 md:flex">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-muted-foreground)]">{appName}</p>
               </div>
@@ -131,7 +131,7 @@ export const SharedLoginPage = ({
                       type="button"
                       onClick={onGoogleSignIn}
                       disabled={loading}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2.5 text-sm font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-white-3)] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2.5 text-sm font-medium text-[var(--color-foreground)] transition hover:bg-[var(--shade-white-2)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <GoogleIcon />
                       {googleLabel}

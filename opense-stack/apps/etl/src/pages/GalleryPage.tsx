@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { Search, Copy, LayoutTemplate, Loader2, GitFork, AlertCircle } from 'lucide-react';
+import { Copy, LayoutTemplate, Loader2, GitFork, AlertCircle } from 'lucide-react';
 import { useAuth } from '@repo/shared/auth/context';
 import { useGalleryTemplates } from '../hooks/gallery/useGalleryTemplates';
-import { Input, Button, BasePage } from '@repo/ui';
+import { Button, BasePage } from '@repo/ui';
 import { cloneWorkflowFromTemplate } from '../api/workflows';
 import type { GalleryWorkflow } from '../api/gallery';
 
@@ -19,6 +19,8 @@ const getNodeCount = (graphData: any) => {
 
 type AppContextType = {
   currentOrg: { id: string; name: string } | null;
+  gallerySearch?: string;
+  setGallerySearch?: (value: string) => void;
 };
 
 export const GalleryPage = () => {
@@ -26,14 +28,13 @@ export const GalleryPage = () => {
   const error = queryError instanceof Error ? queryError.message : null;
   const { user, isDemoUser } = useAuth();
   const navigate = useNavigate();
-  const { currentOrg } = useOutletContext<AppContextType>() || {};
-  const [search, setSearch] = useState('');
+  const { currentOrg, gallerySearch = '', setGallerySearch } = useOutletContext<AppContextType>() || {};
   const [cloningId, setCloningId] = useState<string | null>(null);
 
   const filteredTemplates = templates.filter(
     (t) =>
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      (t.description || '').toLowerCase().includes(search.toLowerCase())
+      t.name.toLowerCase().includes(gallerySearch.toLowerCase()) ||
+      (t.description || '').toLowerCase().includes(gallerySearch.toLowerCase())
   );
 
   const handleClone = async (template: GalleryWorkflow) => {
@@ -58,27 +59,6 @@ export const GalleryPage = () => {
 
   return (
     <BasePage>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <LayoutTemplate className="w-6 h-6 text-blue-600" />
-            Workflow Gallery
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Browse admin-configured workflows and clone them to{' '}
-            {currentOrg ? <strong>{currentOrg.name}</strong> : 'your personal workspace'}.
-          </p>
-        </div>
-        <div className="w-full md:w-72">
-          <Input
-            prefix={<Search className="w-4 h-4" />}
-            placeholder="Search workflows..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
-
       {error && (
         <div className="p-4 bg-red-50 text-red-700 rounded-md border border-red-200 mb-6 flex items-center gap-2">
           <AlertCircle className="w-5 h-5" />
@@ -147,7 +127,7 @@ export const GalleryPage = () => {
           {filteredTemplates.length === 0 && (
             <div className="col-span-full text-center py-16 bg-slate-50 rounded-xl border border-dashed border-slate-300">
               <LayoutTemplate className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No workflows found matching "{search}"</p>
+              <p className="text-slate-500 font-medium">No workflows found matching "{gallerySearch}"</p>
               <p className="text-slate-400 text-sm">Try adjusting your search terms.</p>
             </div>
           )}
