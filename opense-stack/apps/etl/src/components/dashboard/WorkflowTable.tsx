@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { CalendarDays, FileSpreadsheet, Loader2, Search, Trash2 } from 'lucide-react';
+import { CalendarDays, FileSpreadsheet, Loader2, Trash2 } from 'lucide-react';
 import { WorkflowTableProps } from './types';
 
 const formatDate = (value: string | null) => {
@@ -32,21 +32,6 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <header className="border-b border-slate-200 px-5 py-4 sm:px-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <label className="relative block min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              value={search}
-              onChange={(event) => onSearchChange(event.target.value)}
-              type="text"
-              placeholder="Search workflows..."
-              className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
-        </div>
-      </header>
-
       {loading ? (
         <div className="flex items-center justify-center gap-2 px-6 py-12 text-sm text-slate-500">
           <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
