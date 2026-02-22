@@ -29,36 +29,30 @@
   --color-info: #0284c7;
   --color-info-light: #e0f2fe;
 
-  /* Shades (grey scale from white/black %) – 5% black gap, 3% white gap */
-  --shade-black0: #000000;
-  --shade-black5: #0d0d0d;
-  --shade-black10: #1a1a1a;
-  --shade-black15: #262626;
-  --shade-black20: #333333;
-  --shade-black25: #404040;
-  --shade-black30: #4d4d4d;
-  --shade-black35: #595959;
-  --shade-black40: #666666;
-  --shade-white0: #ffffff;
-  --shade-white3: #f7f7f7;
-  --shade-white6: #f0f0f0;
-  --shade-white9: #e8e8e8;
-  --shade-white12: #e0e0e0;
-  --shade-white15: #d9d9d9;
-  --shade-white18: #d1d1d1;
-  --shade-white21: #c9c9c9;
-  --shade-white24: #c2c2c2;
+  /* Shades (grey scale from white/black %) – 5% black gap, 2% white gap */
+  --shade-black-1: #000000; /* 0% */
+  --shade-black-2: #0d0d0d; /* 5% */
+  --shade-black-3: #1a1a1a; /* 10% */
+  --shade-black-4: #262626; /* 15% */
+  --shade-black-5: #333333; /* 20% */
+  --shade-black-6: #404040; /* 25% */
+  --shade-black-7: #4d4d4d; /* 30% */
+  --shade-black-8: #595959; /* 35% */
+  --shade-black-9: #666666; /* 40% */
+  --shade-white-1: #ffffff; /* 0% */
+  --shade-white-2: #fafafa; /* 2% */
+  --shade-white-3: #f5f5f5; /* 4% */
+  --shade-white-4: #f0f0f0; /* 6% */
+  --shade-white-5: #ebebeb; /* 8% */
+  --shade-white-6: #e6e6e6; /* 10% */
+  --shade-white-7: #e0e0e0; /* 12% */
+  --shade-white-8: #dbdbdb; /* 14% */
+  --shade-white-9: #d6d6d6; /* 16% */
 
   /* Surfaces */
-  --color-background: var(--shade-white0);
-  --color-white-0: var(--color-background);
-  --color-white-2: color-mix(in srgb, white 2%, var(--color-muted));
-  --color-white-3: color-mix(in srgb, white 3%, var(--color-muted));
-  --color-white-4: color-mix(in srgb, white 4%, var(--color-muted));
-  --color-white-10: color-mix(in srgb, white 10%, var(--color-muted));
-  --color-white-12: color-mix(in srgb, white 12%, var(--color-muted));
+  --color-background: var(--shade-white-1);
   --color-foreground: #0f172a;
-  --color-muted: var(--shade-white3);
+  --color-muted: var(--shade-white-2);
   --color-muted-foreground: #64748b;
   --color-border: #e2e8f0;
   --color-border-hover: #cbd5e1;
@@ -133,10 +127,9 @@
   --color-info: #38bdf8;
   --color-info-light: #082f49;
 
-  --color-background: var(--shade-black0);
-  --color-white-0: var(--color-background);
+  --color-background: var(--shade-black-1);
   --color-foreground: #f8fafc;
-  --color-muted: var(--shade-black5);
+  --color-muted: var(--shade-black-2);
   --color-muted-foreground: #94a3b8;
   --color-border: #334155;
   --color-border-hover: #475569;
@@ -176,7 +169,7 @@ button, input, select, textarea { font: inherit; }
 /* BasePage content wrapper - reduced padding for tighter layout */
 .base-page-content {
   padding: var(--gap-4);
-  background: var(--color-white-0);
+  background: var(--color-background);
 }
 
 /* Stack layout - flex column with gap (used by BasePage default container) */
@@ -204,12 +197,37 @@ button, input, select, textarea { font: inherit; }
   color: var(--color-muted-foreground);
 }
 
-/* SideNavBrandSlot, TopBar, SideNav – 3% white background */
+/* SideNavBrandSlot, TopBar, SideNav – use shade scale */
 .side-nav-brand-slot,
 .app-top-bar,
 .side-nav,
 .app-sidebar {
-  background: var(--color-white-3);
+  background: var(--shade-white-1);
+}
+
+/* SideNav h6: inherit typography from parent (link/button), do not override */
+.side-nav h6 {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  font-family: inherit !important;
+  line-height: inherit !important;
+  color: inherit !important;
+  letter-spacing: inherit !important;
+}
+.app-sidebar::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  right: 0;
+  width: 1px;
+  background: var(--shade-white-9);
+}
+.dark .side-nav-brand-slot,
+.dark .app-top-bar,
+.dark .side-nav,
+.dark .app-sidebar {
+  background: var(--shade-black-2);
 }
 
 /* AppSidebar main content - reserve left space for fixed sidebar on desktop (1024px+) */

@@ -8,7 +8,6 @@ import {
   SideNavGroup,
   SideNavGroupList,
   SideNavBrandSlot,
-  SideNavUserProfile,
   SwitchAppTopBar,
   Input,
 } from '@repo/ui'
@@ -34,8 +33,10 @@ export const AppLayout = () => {
 
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null)
   const [dashboardSearch, setDashboardSearch] = useState('')
+  const [gallerySearch, setGallerySearch] = useState('')
   const { data: userOrgs = [] } = useUserOrganisations(user?.id)
   const isDashboard = location.pathname.startsWith('/dashboard')
+  const isGallery = location.pathname.startsWith('/gallery')
 
   useEffect(() => {
     if (userOrgs.length > 0 && !currentOrg) {
@@ -132,26 +133,31 @@ export const AppLayout = () => {
           </SideNavGroup>
         </SideNavGroupList>
       </SideNav>
-      <SideNavUserProfile
-        userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
-        userEmail={user?.email || 'user@example.com'}
-        onLogout={handleSignOut}
-        signingOut={signingOut}
-      />
     </>
   )
 
-  const topBar = isDashboard ? (
+  const topBarSearch =
+    isDashboard ? (
+      <Input
+        placeholder="Search workflows..."
+        value={dashboardSearch}
+        onChange={(e) => setDashboardSearch(e.target.value)}
+        prefix={<Search className="w-4 h-4" />}
+        className="max-w-xs rounded-[var(--radius-lg)]"
+      />
+    ) : isGallery ? (
+      <Input
+        placeholder="Search workflows..."
+        value={gallerySearch}
+        onChange={(e) => setGallerySearch(e.target.value)}
+        prefix={<Search className="w-4 h-4" />}
+        className="max-w-xs rounded-[var(--radius-lg)]"
+      />
+    ) : null
+
+  const topBar = topBarSearch ? (
     <SwitchAppTopBar
-      left={
-        <Input
-          placeholder="Search workflows..."
-          value={dashboardSearch}
-          onChange={(e) => setDashboardSearch(e.target.value)}
-          prefix={<Search className="w-4 h-4" />}
-          className="max-w-xs rounded-[var(--radius-lg)]"
-        />
-      }
+      left={topBarSearch}
       profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
       onSettingsClick={() => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
@@ -162,7 +168,9 @@ export const AppLayout = () => {
 
   const outletContext = isDashboard
     ? { currentOrg, dashboardSearch, setDashboardSearch }
-    : { currentOrg }
+    : isGallery
+      ? { currentOrg, gallerySearch, setGallerySearch }
+      : { currentOrg }
 
   return (
     <SharedAppLayout
