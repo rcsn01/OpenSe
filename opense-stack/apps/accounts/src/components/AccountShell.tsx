@@ -7,6 +7,7 @@ import {
   SideNavGroupList,
   SideNavItem,
 } from '@repo/ui'
+import { useAuth } from '@repo/shared/auth/context'
 import { Building2, CreditCard, Settings, ShieldCheck, Users } from 'lucide-react'
 const navItems = [
   { to: '/settings', label: 'Account Settings', icon: Settings },
@@ -18,10 +19,12 @@ const navItems = [
 export const AccountShell = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   return (
     <AppLayout
       onSettingsClick={() => navigate('/settings')}
+      onLogout={() => void logout()}
       sidebar={
         <>
           <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Accounts" version="v1" />
