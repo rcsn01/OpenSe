@@ -82,14 +82,35 @@ interface LabelProps {
   htmlFor?: string
   className?: string
   required?: boolean
+  title?: string
 }
 
-export function Label({ children, htmlFor, className, required }: LabelProps) {
+export function Label({ children, htmlFor, className, required, title }: LabelProps) {
   return (
-    <label htmlFor={htmlFor} className={cn('text-sm text-[var(--color-foreground)]', className)}>
+    <label htmlFor={htmlFor} title={title} className={cn('text-sm text-[var(--color-foreground)]', className)}>
       {children}
       {required && <span className="ml-0.5 text-[var(--color-destructive)]">*</span>}
     </label>
+  )
+}
+
+/* ── SubLabel ──────────────────────────────────────────── */
+
+interface SubLabelProps {
+  children: ReactNode
+  className?: string
+  as?: 'span' | 'div' | 'p'
+  title?: string
+}
+
+export function SubLabel({ children, className, as: Tag = 'span', title }: SubLabelProps) {
+  return (
+    <Tag
+      title={title}
+      className={cn('text-xs text-[var(--color-muted-foreground)] leading-normal', className)}
+    >
+      {children}
+    </Tag>
   )
 }
 
