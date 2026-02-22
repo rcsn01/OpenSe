@@ -26,12 +26,14 @@ interface HeadingProps extends VariantProps<typeof headingVariants> {
   level?: HeadingLevel
   children: ReactNode
   className?: string
+  style?: React.CSSProperties
 }
 
-export function Heading({ level = 'h1', children, className }: HeadingProps) {
+export function Heading({ level = 'h1', children, className, style }: HeadingProps) {
   const Tag = level
+  const mergedStyle = { ...HEADING_COLOR, ...style }
   return (
-    <Tag style={HEADING_COLOR} className={cn(headingVariants({ level }), className)}>
+    <Tag style={mergedStyle} className={cn(headingVariants({ level }), className)}>
       {children}
     </Tag>
   )
