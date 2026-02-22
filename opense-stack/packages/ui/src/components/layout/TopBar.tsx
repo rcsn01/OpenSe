@@ -1,11 +1,18 @@
 import { type ReactNode } from 'react'
-import { Menu } from 'lucide-react'
+import { Menu, Search } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ProfileDropdown } from '../ui/ProfileDropdown'
+import { Input } from '../ui/Input'
 
 export interface TopBarProps {
-  /** Optional left slot (empty by default) */
+  /** Optional left slot (empty by default). Ignored when search props are provided. */
   left?: ReactNode
+  /** Search placeholder (enables search bar when provided with searchValue and onSearchChange) */
+  searchPlaceholder?: string
+  /** Search input value */
+  searchValue?: string
+  /** Search input change handler */
+  onSearchChange?: (value: string) => void
   /** Optional right slot (default: menu button + profile avatar) */
   right?: ReactNode
   /** Callback when menu button is clicked (only used when right is not provided) */
@@ -35,7 +42,21 @@ export function TopBar({
   className,
   onSettingsClick,
   onLogout,
+  searchPlaceholder,
+  searchValue,
+  onSearchChange,
 }: TopBarProps) {
+  const hasSearch = searchPlaceholder != null && searchValue != null && onSearchChange != null
+  const leftContent = hasSearch ? (
+    <Input
+      placeholder={searchPlaceholder}
+      value={searchValue}
+      onChange={(e) => onSearchChange(e.target.value)}
+      prefix={<Search className="w-4 h-4" />}
+      className="max-w-xs rounded-[var(--radius-lg)]"
+    />
+  ) : left
+
   return (
     <header
       className={cn(
@@ -43,7 +64,7 @@ export function TopBar({
         className,
       )}
     >
-      <div className="flex items-center shrink-0">{left}</div>
+      <div className="flex items-center shrink-0">{leftContent}</div>
 
       {/* Empty center */}
       <div className="flex-1 min-w-0" />
