@@ -1,8 +1,7 @@
 import { type ReactNode } from 'react'
 import { Menu } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { Avatar } from '../ui/Avatar'
-import { Dropdown, DropdownItem, DropdownSeparator } from '../ui/Dropdown'
+import { ProfileDropdown } from '../ui/ProfileDropdown'
 
 export interface TopBarProps {
   /** Optional left slot (empty by default) */
@@ -60,24 +59,12 @@ export function TopBar({
             >
               <Menu className="h-4 w-4" />
             </button>
-            <Dropdown
-              align="right"
-              trigger={(open) => (
-                <button
-                  type="button"
-                  aria-label="Open profile menu"
-                  aria-haspopup="menu"
-                  aria-expanded={open}
-                  className="rounded-[var(--radius-md)] p-0.5 hover:bg-[var(--color-muted)] transition-colors"
-                >
-                  <Avatar src={profileSrc} fallback={profileFallback} size="sm" />
-                </button>
-              )}
-            >
-              <DropdownItem onClick={onSettingsClick}>Settings</DropdownItem>
-              <DropdownSeparator />
-              <DropdownItem onClick={onLogout} destructive>Log out</DropdownItem>
-            </Dropdown>
+            <ProfileDropdown
+              profileSrc={profileSrc}
+              profileFallback={profileFallback}
+              onSettingsClick={onSettingsClick}
+              onLogout={onLogout}
+            />
           </>
         )}
       </div>
