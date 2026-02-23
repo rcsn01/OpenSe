@@ -1,11 +1,11 @@
-import { supabase } from '../supabaseClient'
+import { db } from '../supabaseClient'
 import type { Product } from '../types'
 
 export const fetchLabelProducts = async (
   companyId: string,
   search: string,
 ): Promise<Array<Pick<Product, 'id' | 'name' | 'sku'>>> => {
-  let query = supabase
+  let query = db
     .from('products')
     .select('id, name, sku')
     .eq('company_id', companyId)
