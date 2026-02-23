@@ -1,8 +1,8 @@
-import { supabase } from '../supabaseClient'
+import { db } from '../supabaseClient'
 import type { Product } from '../types'
 
 export const fetchAlertProducts = async (companyId: string): Promise<Product[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('products')
     .select('id, name, sku, quantity_on_hand, reorder_point, expiry_date')
     .eq('company_id', companyId)

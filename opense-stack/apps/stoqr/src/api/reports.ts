@@ -1,4 +1,4 @@
-import { db } from '../supabaseClient'
+import { db, supabase } from '../supabaseClient'
 
 type ReportProduct = {
   id: string
@@ -16,8 +16,9 @@ type ReportTransaction = {
   quantity_change: number
   created_at: string
   notes: string | null
+  performed_by: string | null
   products: { id: string; name: string; sku: string; cost_price: number | null; selling_price: number | null; category: string | null } | { id: string; name: string; sku: string; cost_price: number | null; selling_price: number | null; category: string | null }[] | null
-  profiles: { full_name: string | null; username: string | null } | { full_name: string | null; username: string | null }[] | null
+  profiles: { id: string; full_name: string | null; username: string | null } | null
 }
 
 const DAYS = 30
@@ -68,9 +69,8 @@ export const fetchReportsData = async (companyId: string) => {
     db
       .from('inventory_transactions')
       .select(`
-        id, transaction_type, quantity_change, created_at, notes,
-        products (id, name, sku, cost_price, selling_price, category),
-        profiles (full_name, username)
+        id, transaction_type, quantity_change, created_at, notes, performed_by,
+        products (id, name, sku, cost_price, selling_price, category)
       `)
       .eq('company_id', companyId)
       .gte('created_at', new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000).toISOString())
@@ -83,10 +83,30 @@ export const fetchReportsData = async (companyId: string) => {
   if (schedulesError) throw schedulesError
 
   const products = (productsData as ReportProduct[] | null) ?? []
-  const transactions = ((transactionsData as ReportTransaction[] | null) ?? []).map((transaction) => ({
+  const transactionRows = (transactionsData as ReportTransaction[] | null) ?? []
+  const performerIds = Array.from(
+    new Set(transactionRows.map((transaction) => transaction.performed_by).filter(Boolean) as string[]),
+  )
+
+  let profilesById = new Map<string, { id: string; full_name: string | null; username: string | null }>()
+  if (performerIds.length) {
+    const { data: profileRows, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, username')
+      .in('id', performerIds)
+
+    if (profilesError) throw profilesError
+
+    profilesById = new Map(
+      (((profileRows as Array<{ id: string; full_name: string | null; username: string | null }>) ?? [])
+        .map((profile) => [profile.id, profile])),
+    )
+  }
+
+  const transactions = transactionRows.map((transaction) => ({
     ...transaction,
     products: normalizeSingle(transaction.products),
-    profiles: normalizeSingle(transaction.profiles),
+    profiles: transaction.performed_by ? (profilesById.get(transaction.performed_by) ?? null) : null,
   }))
 
   const currentValue = products.reduce(
