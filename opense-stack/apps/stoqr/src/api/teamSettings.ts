@@ -1,4 +1,4 @@
-import { db } from '../supabaseClient'
+import { db, supabase } from '../supabaseClient'
 
 export type Member = {
   id: string
@@ -20,16 +20,11 @@ export type Permission = {
   description: string
 }
 
-const normalizeSingle = <T>(value: T | T[] | null | undefined): T | undefined => {
-  if (!value) return undefined
-  return Array.isArray(value) ? value[0] : value
-}
-
 export const fetchTeamSettingsData = async (companyId: string) => {
   const [{ data: memberData, error: memberError }, { data: roleData, error: roleError }, { data: permissionData, error: permissionError }] = await Promise.all([
     db
       .from('company_members')
-      .select('id, user_id, role_id, joined_at, profiles (id, full_name, username, avatar_url), roles (id, name)')
+      .select('id, user_id, role_id, joined_at')
       .eq('company_id', companyId),
     db.from('roles').select('id, name, description').eq('company_id', companyId),
     db.from('app_permissions').select('code, description'),
@@ -40,10 +35,29 @@ export const fetchTeamSettingsData = async (companyId: string) => {
   if (permissionError) throw permissionError
 
   const rolesList = (roleData as Role[] | null) ?? []
-  const members = ((memberData as any[] | null) ?? []).map((member) => ({
+  const membersBase = (memberData as Array<Pick<Member, 'id' | 'user_id' | 'role_id' | 'joined_at'>> | null) ?? []
+
+  const uniqueUserIds = Array.from(new Set(membersBase.map((member) => member.user_id)))
+  let profilesById = new Map<string, NonNullable<Member['profiles']>>()
+
+  if (uniqueUserIds.length) {
+    const { data: profileRows, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name, username, avatar_url')
+      .in('id', uniqueUserIds)
+
+    if (profileError) throw profileError
+
+    profilesById = new Map(
+      ((profileRows as NonNullable<Member['profiles']>[] | null) ?? []).map((profile) => [profile.id, profile]),
+    )
+  }
+
+  const rolesById = new Map(rolesList.map((role) => [role.id, role]))
+  const members = membersBase.map((member) => ({
     ...member,
-    profiles: normalizeSingle(member.profiles),
-    roles: normalizeSingle(member.roles),
+    profiles: profilesById.get(member.user_id),
+    roles: member.role_id ? rolesById.get(member.role_id) : undefined,
   })) as Member[]
 
   let rolePermissions: Record<string, string[]> = {}

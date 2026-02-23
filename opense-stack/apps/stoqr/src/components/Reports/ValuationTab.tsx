@@ -52,6 +52,11 @@ export const ValuationTab = ({
   const maxValue = Math.max(...series.map((point) => point.value), 1)
   const chartPath = useMemo(() => {
     if (series.length === 0) return ''
+    if (series.length === 1) {
+      const y = 100 - (series[0].value / maxValue) * 100
+      return `M 0,${y} L 100,${y}`
+    }
+
     return series
       .map((point, index) => {
         const x = (index / (series.length - 1)) * 100
@@ -77,7 +82,7 @@ export const ValuationTab = ({
           <div style={{ width: '100%', height: 240, marginTop: 16 }}>
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
               <path d={chartPath} fill="none" stroke="#2563eb" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-              <path d={`M 0,100 L ${chartPath} L 100,100 Z`} fill="#2563eb" fillOpacity="0.05" stroke="none" />
+              <path d={`${chartPath} L 100,100 L 0,100 Z`} fill="#2563eb" fillOpacity="0.05" stroke="none" />
             </svg>
           </div>
         )}
