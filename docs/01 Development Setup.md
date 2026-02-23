@@ -13,33 +13,34 @@ pnpm install
 ```bash
 cp .env.example .env
 ```
-# 3. Start Supabase Local
-```bash
-pnpm db:start
+
+# 3. Local Supabase Backend Dev
+Location: Open-ETL/ (Root)
+Commands:
+
+```Zsh
+npx supabase start (Start DB)
+npx supabase stop (Stop DB)
+npx supabase status (Check keys)
 ```
-This starts:
-- API: http://127.0.0.1:54321
-- DB: localhost:54322
-- Studio: http://127.0.0.1:54323
-- Inbucket (emails): http://127.0.0.1:54324
-# 4. Get Local Supabase Credentials
-After starting, run:
-```bash
-supabase status
+# 3.1 Apply Migrations
 ```
-This outputs the anon and service_role keys you'll need.
-# 5. Update .env
-Edit .env with the values from supabase status:
+npx supabase migration up
 ```
-VITE_SUPABASE_URL=http://127.0.0.1:54321
-VITE_SUPABASE_ANON_KEY=<your-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+# 3.2 Reset Migrations
 ```
-# 5. Run Migrations (if needed)
-```bash
-pnpm db:migrate
+npx supabase db reset --linked
+npx supabase db reset
 ```
-# 5. Start Development
+# 3.3 Running seeding
+```
+npx ts-node scripts/seed.ts
+```
+# 3.4 Push to Supabase server
+```
+npx supabase db push
+```
+# 4. Start Development
 ```bash
 pnpm dev
 ```
@@ -50,7 +51,7 @@ pnpm dev:admin      # Admin app
 pnpm dev:etl        # ETL app
 pnpm dev:stoqr      # StoQR app
 ```
-# 6. Ports
+# 5. Ports
 | App             | Port  | URL                    |
 | --------------- | ----- | ---------------------- |
 | Accounts        | 5990  | http://localhost:5990  |
