@@ -9,7 +9,13 @@ type ProductTransactionRow = {
   stock_after: number | null
   created_at: string
   notes: string | null
-  profiles: { id: string; full_name: string | null; username: string | null } | { id: string; full_name: string | null; username: string | null }[] | null
+  performed_by: string | null
+}
+
+type ProfileLookup = {
+  id: string
+  full_name: string | null
+  username: string | null
 }
 
 export type CreateProductPayload = {
@@ -101,31 +107,16 @@ export const createProduct = async (
   return { id: insertedProduct.id }
 }
 
-const normalizeTransactionProfile = (
-  profiles: ProductTransactionRow['profiles'],
-): InventoryTransaction['profiles'] => {
-  if (!profiles) return undefined
-  return Array.isArray(profiles) ? profiles[0] : profiles
-}
-
 export const fetchProductDetail = async (
   companyId: string,
   productId: string,
 ): Promise<{ product: Product | null; transactions: InventoryTransaction[] }> => {
-  const [{ data: productData, error: productError }, { data: transactionsData, error: transactionsError }] = await Promise.all([
-    supabase
-      .from('products')
-      .select('*')
-      .eq('company_id', companyId)
-      .eq('id', productId)
-      .single(),
-    supabase
-      .from('inventory_transactions')
-      .select('id, transaction_type, quantity_change, stock_after, created_at, notes, profiles (id, full_name, username)')
-      .eq('company_id', companyId)
-      .eq('product_id', productId)
-      .order('created_at', { ascending: false }),
-  ])
+  const { data: productData, error: productError } = await db
+    .from('products')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('id', productId)
+    .single()
 
   if (productError) {
     if ((productError as { code?: string }).code === 'PGRST116') {
@@ -134,11 +125,49 @@ export const fetchProductDetail = async (
     throw productError
   }
 
-  if (transactionsError) throw transactionsError
+  const { data: transactionsData, error: transactionsError } = await db
+    .from('inventory_transactions')
+    .select('id, transaction_type, quantity_change, stock_after, created_at, notes, performed_by')
+    .eq('company_id', companyId)
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false })
 
-  const normalizedTransactions = ((transactionsData as ProductTransactionRow[] | null) ?? []).map((transaction) => ({
-    ...transaction,
-    profiles: normalizeTransactionProfile(transaction.profiles),
+  if (transactionsError) {
+    console.warn('Product detail transactions query failed', transactionsError)
+    return {
+      product: (productData as Product | null) ?? null,
+      transactions: [],
+    }
+  }
+
+  const transactionRows = ((transactionsData as ProductTransactionRow[] | null) ?? [])
+  const profileIds = Array.from(
+    new Set(transactionRows.map((transaction) => transaction.performed_by).filter((value): value is string => !!value)),
+  )
+
+  const { data: profileRows, error: profilesError } = profileIds.length
+    ? await supabase
+        .from('profiles')
+        .select('id, full_name, username')
+        .in('id', profileIds)
+    : { data: [] as ProfileLookup[], error: null }
+
+  if (profilesError) {
+    console.warn('Product detail profile enrichment failed', profilesError)
+  }
+
+  const profilesById = new Map(
+    ((profileRows ?? []) as ProfileLookup[]).map((profile) => [profile.id, profile]),
+  )
+
+  const normalizedTransactions = transactionRows.map((transaction) => ({
+    id: transaction.id,
+    transaction_type: transaction.transaction_type,
+    quantity_change: transaction.quantity_change,
+    stock_after: transaction.stock_after,
+    notes: transaction.notes,
+    created_at: transaction.created_at,
+    profiles: transaction.performed_by ? profilesById.get(transaction.performed_by) ?? undefined : undefined,
   })) as InventoryTransaction[]
 
   return {
