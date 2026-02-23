@@ -34,6 +34,7 @@ test.describe('Stoqr Products', () => {
       await firstProduct.click();
       const detail = new ProductDetailPage(authenticatedPage);
       await detail.expectLoaded();
+      await expect(authenticatedPage.getByText('Product not found')).toHaveCount(0);
       if (await detail.editButton.isVisible().catch(() => false)) {
         await expect(detail.editButton).toBeVisible();
       }
