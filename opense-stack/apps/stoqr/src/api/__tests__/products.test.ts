@@ -127,7 +127,7 @@ describe('products api', () => {
     expect(eq).toHaveBeenCalledWith('id', 'prod-2')
   })
 
-  it('returns null product on not-found and normalizes transaction profiles', async () => {
+  it('returns null product on not-found and enriches transaction profiles', async () => {
     const productSingle = vi
       .fn()
       .mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } })
@@ -148,13 +148,13 @@ describe('products api', () => {
           stock_after: 4,
           created_at: '2026-02-19T12:00:00.000Z',
           notes: null,
-          profiles: [{ id: 'u-1', full_name: 'Alice', username: 'alice' }],
+          performed_by: 'u-1',
         },
       ],
       error: null,
     })
 
-    mockSupabaseFrom.mockImplementation((table: string) => {
+    mockDbFrom.mockImplementation((table: string) => {
       if (table === 'products') {
         return {
           select: vi.fn(() => ({
@@ -173,6 +173,21 @@ describe('products api', () => {
                 order: transactionOrder,
               })),
             })),
+          })),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-1', full_name: 'Alice', username: 'alice' }],
+              error: null,
+            }),
           })),
         }
       }
@@ -192,7 +207,7 @@ describe('products api', () => {
     })
   })
 
-  it('throws when transactions query fails', async () => {
+  it('returns product with empty transactions when transactions query fails', async () => {
     const productSingle = vi.fn().mockResolvedValue({
       data: { id: 'prod-4', name: 'Widget' },
       error: null,
@@ -203,7 +218,7 @@ describe('products api', () => {
       error: { message: 'transactions failed' },
     })
 
-    mockSupabaseFrom.mockImplementation((table: string) => {
+    mockDbFrom.mockImplementation((table: string) => {
       if (table === 'products') {
         return {
           select: vi.fn(() => ({
@@ -229,8 +244,10 @@ describe('products api', () => {
       throw new Error(`Unexpected table: ${table}`)
     })
 
-    await expect(fetchProductDetail('company-1', 'prod-4')).rejects.toMatchObject({
-      message: 'transactions failed',
+    const result = await fetchProductDetail('company-1', 'prod-4')
+    expect(result).toEqual({
+      product: { id: 'prod-4', name: 'Widget' },
+      transactions: [],
     })
   })
 })
