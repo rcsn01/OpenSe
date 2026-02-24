@@ -18,9 +18,6 @@ export const AlertsPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to view alerts."
     >
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Alerts</h1>
-      </div>
       <Tabs
         tabs={[
           { id: 'notifications', label: 'Notifications', content: <NotificationsTab products={products} /> },

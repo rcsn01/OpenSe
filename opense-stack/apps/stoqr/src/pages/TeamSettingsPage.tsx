@@ -82,9 +82,6 @@ export const TeamSettingsPage = () => {
       emptyStateDescription="Choose a company to manage your team."
       loadingMessage="Loading team settings..."
     >
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Team Settings</h1>
-      </div>
       <Tabs
         tabs={[
           {
