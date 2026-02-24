@@ -78,15 +78,6 @@ const buildSeries = (currentValue: number, deltasByDay: Record<string, number>) 
   return series
 }
 
-export type CreateReportSchedulePayload = {
-  report_type: string
-  cadence: string
-  day_of_week: number
-  day_of_month: number
-  time_of_day: string
-  recipients: string
-}
-
 export const fetchReportsData = async (companyId: string) => {
   const startIso = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000).toISOString()
   const endIso = new Date().toISOString()
@@ -167,31 +158,4 @@ export const fetchReportsData = async (companyId: string) => {
     schedules: schedulesData ?? [],
     series: buildSeries(currentValue, deltasByDay),
   }
-}
-
-export const createReportSchedule = async (
-  companyId: string,
-  payload: CreateReportSchedulePayload,
-) => {
-  const { error } = await db.from('report_schedules').insert({
-    company_id: companyId,
-    report_type: payload.report_type,
-    cadence: payload.cadence,
-    day_of_week: payload.cadence === 'weekly' ? payload.day_of_week : null,
-    day_of_month: payload.cadence === 'monthly' ? payload.day_of_month : null,
-    time_of_day: payload.time_of_day,
-    recipients: payload.recipients.split(',').map((email) => email.trim()).filter(Boolean),
-  })
-
-  if (error) throw error
-}
-
-export const deleteReportSchedule = async (companyId: string, scheduleId: string) => {
-  const { error } = await db
-    .from('report_schedules')
-    .delete()
-    .eq('id', scheduleId)
-    .eq('company_id', companyId)
-
-  if (error) throw error
 }
