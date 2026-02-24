@@ -16,18 +16,29 @@ type Role = {
   description: string | null
 }
 
+type Invitation = {
+  id: string
+  email: string
+  role_id: string | null
+  accepted_at: string | null
+  created_at: string
+  roles?: { id: string; name: string } | null
+}
+
 export const MembersTab = ({
   members,
   roles,
   onRoleChange,
   onInvite,
   inviteMessage,
+  invitations,
 }: {
   members: Member[]
   roles: Role[]
   onRoleChange: (memberId: string, roleId: string) => void
   onInvite: (email: string, roleId: string) => void
   inviteMessage: string | null
+  invitations: Invitation[]
 }) => {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<string>(roles[0]?.id ?? '')
@@ -44,7 +55,7 @@ export const MembersTab = ({
   }
 
   return (
-    <div className="grid grid-2">
+    <div className="stack">
       <div className="card">
         <h3 className="section-title">Team members</h3>
         {members.length === 0 ? (
@@ -89,36 +100,60 @@ export const MembersTab = ({
           </div>
         )}
       </div>
-      <div className="card stack" style={{ height: 'fit-content' }}>
-        <h3 className="section-title">Invite members</h3>
-        <label className="stack">
-          Email
-          <input
-            className="input"
-            type="email"
-            value={inviteEmail}
-            onChange={(event) => setInviteEmail(event.target.value)}
-            placeholder="colleague@example.com"
-          />
-        </label>
-        <label className="stack">
-          Role
-          <select
-            className="select"
-            value={inviteRole}
-            onChange={(event) => setInviteRole(event.target.value)}
-          >
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="button" type="button" onClick={handleInviteSubmit} disabled={!inviteEmail}>
-          Send invite
-        </button>
-        {inviteMessage && <p className="muted">{inviteMessage}</p>}
+      <div className="grid grid-2">
+        <div className="card stack" style={{ height: 'fit-content' }}>
+          <h3 className="section-title">Invite members</h3>
+          <label className="stack">
+            Email
+            <input
+              className="input"
+              type="email"
+              value={inviteEmail}
+              onChange={(event) => setInviteEmail(event.target.value)}
+              placeholder="colleague@example.com"
+            />
+          </label>
+          <label className="stack">
+            Role
+            <select
+              className="select"
+              value={inviteRole}
+              onChange={(event) => setInviteRole(event.target.value)}
+            >
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="button" type="button" onClick={handleInviteSubmit} disabled={!inviteEmail}>
+            Send invite
+          </button>
+          {inviteMessage && <p className="muted">{inviteMessage}</p>}
+        </div>
+
+        <div className="card stack">
+          <h3 className="section-title">Pending Invitations</h3>
+          {invitations.filter((invite) => !invite.accepted_at).length === 0 ? (
+            <EmptyState title="No pending invites" description="Invitations will appear here until accepted." />
+          ) : (
+            <div className="list">
+              {invitations
+                .filter((invite) => !invite.accepted_at)
+                .slice(0, 20)
+                .map((invite) => (
+                  <div key={invite.id} className="flex-between">
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{invite.email}</div>
+                      <div className="small muted">{invite.roles?.name ?? 'Role pending'} · {new Date(invite.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <span className="pill">Pending</span>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

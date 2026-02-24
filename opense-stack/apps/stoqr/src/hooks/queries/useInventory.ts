@@ -1,14 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  bulkUpdateInventoryProducts,
+  createInventoryCategory,
   createFolderInInventory,
-  createInventoryQuickProduct,
+  createInventoryLocation,
+  fetchInventoryReferenceData,
   fetchFolderProducts,
   deleteInventoryProducts,
   fetchInventoryFilters,
   fetchInventoryProducts,
   fetchInventoryStats,
   importInventoryProducts,
-  type QuickCreateProductPayload,
+  upsertProductBarcode,
   updateInventoryProductField,
   type FetchInventoryProductsParams,
   type ImportInventoryRow,
@@ -18,6 +21,7 @@ const inventoryKeys = {
   root: ['stoqr', 'inventory'] as const,
   filters: (companyId: string | null) => ['stoqr', 'inventory', 'filters', companyId] as const,
   stats: (companyId: string | null) => ['stoqr', 'inventory', 'stats', companyId] as const,
+  reference: (companyId: string | null) => ['stoqr', 'inventory', 'reference', companyId] as const,
   folderProducts: (companyId: string | null, folderId: string | null) =>
     ['stoqr', 'inventory', 'folder-products', companyId, folderId] as const,
   products: (params: FetchInventoryProductsParams & { companyId: string | null }) =>
@@ -35,6 +39,13 @@ export const useInventoryStats = (companyId: string | null) =>
   useQuery({
     queryKey: inventoryKeys.stats(companyId),
     queryFn: () => fetchInventoryStats(companyId as string),
+    enabled: !!companyId,
+  })
+
+export const useInventoryReferenceData = (companyId: string | null) =>
+  useQuery({
+    queryKey: inventoryKeys.reference(companyId),
+    queryFn: () => fetchInventoryReferenceData(companyId as string),
     enabled: !!companyId,
   })
 
@@ -96,20 +107,6 @@ export const useCreateInventoryFolder = (companyId: string | null) => {
   })
 }
 
-export const useCreateInventoryQuickProduct = (companyId: string | null) => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (payload: QuickCreateProductPayload) => {
-      if (!companyId) throw new Error('No company selected')
-      await createInventoryQuickProduct(companyId, payload)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
-    },
-  })
-}
-
 export const useUpdateInventoryProductField = (companyId: string | null) => {
   const queryClient = useQueryClient()
 
@@ -117,6 +114,67 @@ export const useUpdateInventoryProductField = (companyId: string | null) => {
     mutationFn: async (payload: { productId: string; field: 'quantity_on_hand' | 'selling_price'; value: number }) => {
       if (!companyId) throw new Error('No company selected')
       await updateInventoryProductField(companyId, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
+    },
+  })
+}
+
+export const useCreateInventoryCategory = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { name: string; description: string }) => {
+      if (!companyId) throw new Error('No company selected')
+      await createInventoryCategory(companyId, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
+    },
+  })
+}
+
+export const useCreateInventoryLocation = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { name: string; code: string; description: string }) => {
+      if (!companyId) throw new Error('No company selected')
+      await createInventoryLocation(companyId, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
+    },
+  })
+}
+
+export const useUpsertInventoryBarcode = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: {
+      productId: string
+      barcode: string
+      barcodeType: 'barcode' | 'qr'
+      isPrimary: boolean
+    }) => {
+      if (!companyId) throw new Error('No company selected')
+      await upsertProductBarcode(companyId, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
+    },
+  })
+}
+
+export const useBulkUpdateInventoryProducts = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { productIds: string[]; quantityDelta?: number; priceMultiplier?: number }) => {
+      if (!companyId) throw new Error('No company selected')
+      return bulkUpdateInventoryProducts(companyId, payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
