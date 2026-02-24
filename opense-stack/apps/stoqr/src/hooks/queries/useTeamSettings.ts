@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createRoleWithPermissions,
+  fetchTeamActivityEvents,
   fetchTeamSettingsData,
+  fetchTwoFactorStatus,
   inviteCompanyMember,
   saveRoleWithPermissions,
   type Role,
@@ -9,6 +11,8 @@ import {
 } from '../../api/teamSettings'
 
 const teamSettingsKey = (companyId: string | null) => ['stoqr', 'team-settings', companyId] as const
+const teamActivityKey = (companyId: string | null) => ['stoqr', 'team-settings', 'activity', companyId] as const
+const teamMfaKey = ['stoqr', 'team-settings', 'mfa'] as const
 
 export const useTeamSettingsData = (companyId: string | null) =>
   useQuery({
@@ -60,3 +64,19 @@ export const useCreateRoleWithPermissions = (companyId: string | null) => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: teamSettingsKey(companyId) }),
   })
 }
+
+export const useTeamActivityEvents = (companyId: string | null) =>
+  useQuery({
+    queryKey: teamActivityKey(companyId),
+    queryFn: () => fetchTeamActivityEvents(companyId as string),
+    enabled: !!companyId,
+    staleTime: 30_000,
+  })
+
+export const useTwoFactorStatus = () =>
+  useQuery({
+    queryKey: teamMfaKey,
+    queryFn: fetchTwoFactorStatus,
+    staleTime: 30_000,
+    retry: false,
+  })
