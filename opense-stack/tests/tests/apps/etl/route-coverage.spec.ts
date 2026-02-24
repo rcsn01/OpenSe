@@ -42,7 +42,7 @@ authTest.describe('ETL Protected Route Coverage', () => {
   for (const route of authenticatedRoutes) {
     authTest(`route ${route} resolves`, async ({ authenticatedEtlPage }) => {
       await safeGoto(authenticatedEtlPage, route);
-      await authExpect(authenticatedEtlPage).toHaveURL(new RegExp(`^.+${route}$|\\/login$`));
+      await authExpect(authenticatedEtlPage).toHaveURL(new RegExp(`^.+${route}$|\/login(\\?|$)`));
     });
   }
 

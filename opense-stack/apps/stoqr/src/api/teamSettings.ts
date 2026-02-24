@@ -20,19 +20,65 @@ export type Permission = {
   description: string
 }
 
+export type CompanyInvitation = {
+  id: string
+  email: string
+  role_id: string | null
+  accepted_at: string | null
+  created_at: string
+  roles?: { id: string; name: string } | null
+}
+
+export type TeamActivityEvent = {
+  id: string
+  actor_user_id: string | null
+  event_type: string
+  message: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+  profiles?: { id: string; full_name: string | null; username: string | null } | null
+}
+
+type CompanyInvitationRow = {
+  id: string
+  email: string
+  role_id: string | null
+  accepted_at: string | null
+  created_at: string
+  roles?: { id: string; name: string } | { id: string; name: string }[] | null
+}
+
+export type TwoFactorStatus = {
+  currentLevel: string | null
+  nextLevel: string | null
+  hasVerifiedFactor: boolean
+  factors: Array<{ id: string; status: string; factor_type: string; friendly_name?: string | null }>
+}
+
 export const fetchTeamSettingsData = async (companyId: string) => {
-  const [{ data: memberData, error: memberError }, { data: roleData, error: roleError }, { data: permissionData, error: permissionError }] = await Promise.all([
+  const [
+    { data: memberData, error: memberError },
+    { data: roleData, error: roleError },
+    { data: permissionData, error: permissionError },
+    { data: invitationData, error: invitationError },
+  ] = await Promise.all([
     db
       .from('company_members')
       .select('id, user_id, role_id, joined_at')
       .eq('company_id', companyId),
     db.from('roles').select('id, name, description').eq('company_id', companyId),
     db.from('app_permissions').select('code, description'),
+    db
+      .from('company_invitations')
+      .select('id, email, role_id, accepted_at, created_at, roles(id, name)')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false }),
   ])
 
   if (memberError) throw memberError
   if (roleError) throw roleError
   if (permissionError) throw permissionError
+  if (invitationError) throw invitationError
 
   const rolesList = (roleData as Role[] | null) ?? []
   const membersBase = (memberData as Array<Pick<Member, 'id' | 'user_id' | 'role_id' | 'joined_at'>> | null) ?? []
@@ -79,6 +125,10 @@ export const fetchTeamSettingsData = async (companyId: string) => {
 
   return {
     members,
+    invitations: ((invitationData as CompanyInvitationRow[] | null) ?? []).map((invitation) => ({
+      ...invitation,
+      roles: Array.isArray(invitation.roles) ? (invitation.roles[0] ?? null) : (invitation.roles ?? null),
+    })),
     roles: rolesList,
     permissions: (permissionData as Permission[] | null) ?? [],
     rolePermissions,
@@ -152,5 +202,60 @@ export const createRoleWithPermissions = async (
     )
 
     if (permissionError) throw permissionError
+  }
+}
+
+export const fetchTeamActivityEvents = async (companyId: string): Promise<TeamActivityEvent[]> => {
+  const { data, error } = await db
+    .from('activity_events')
+    .select('id, actor_user_id, event_type, message, metadata, created_at')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  if (error) throw error
+
+  const events = (data as TeamActivityEvent[] | null) ?? []
+  const actorIds = Array.from(new Set(events.map((event) => event.actor_user_id).filter(Boolean))) as string[]
+
+  if (actorIds.length === 0) return events
+
+  const { data: profileRows, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, full_name, username')
+    .in('id', actorIds)
+
+  if (profileError) throw profileError
+
+  const profileMap = new Map(
+    (((profileRows as Array<{ id: string; full_name: string | null; username: string | null }> | null) ?? [])).map((profile) => [profile.id, profile]),
+  )
+
+  return events.map((event) => ({
+    ...event,
+    profiles: event.actor_user_id ? (profileMap.get(event.actor_user_id) ?? null) : null,
+  }))
+}
+
+export const fetchTwoFactorStatus = async (): Promise<TwoFactorStatus> => {
+  const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+  if (aalError) throw aalError
+
+  const { data: factorData, error: factorError } = await supabase.auth.mfa.listFactors()
+  if (factorError) throw factorError
+
+  const allFactors = [...(factorData.totp ?? []), ...(factorData.phone ?? [])]
+  const hasVerifiedFactor = allFactors.some((factor) => factor.status === 'verified')
+
+  return {
+    currentLevel: aalData.currentLevel,
+    nextLevel: aalData.nextLevel,
+    hasVerifiedFactor,
+    factors: allFactors.map((factor) => ({
+      id: factor.id,
+      status: factor.status,
+      factor_type: factor.factor_type,
+      friendly_name: factor.friendly_name,
+    })),
   }
 }
