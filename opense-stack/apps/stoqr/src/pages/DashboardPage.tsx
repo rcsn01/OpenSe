@@ -33,7 +33,7 @@ export const DashboardPage = () => {
       <div className="stack">
       {/* Quick Actions */}
       <div className="flex-between">
-        <Label className="section-title" style={{ margin: 0 }}>Overview</Label>
+        <Label className="section-title">Overview</Label>
         <div className="row">
           <Link to="/inventory" className="button secondary small">Add Product</Link>
           <Link to="/scan" className="button small">Scan Item</Link>
