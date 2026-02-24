@@ -6,10 +6,10 @@ import type { Folder, Tag } from '../types'
 import { Tabs } from '../components/Tabs'
 import { parseCsv } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
-import { BundlesTab } from '../components/Inventory/BundlesTab'
+import { BulkActionsTab } from '../components/Inventory/BulkActionsTab'
+import { CategoriesLocationsTab } from '../components/Inventory/CategoriesLocationsTab'
+import { BarcodeSkuTab } from '../components/Inventory/BarcodeSkuTab'
 import { FoldersTab } from '../components/Inventory/FoldersTab'
-import { TransferTab } from '../components/Inventory/TransferTab'
-import { VariantsTab } from '../components/Inventory/VariantsTab'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
 import {
   useDeleteInventoryProducts,
@@ -177,19 +177,19 @@ export const InventoryListPage = () => {
             content: <FoldersTab companyId={companyId!} allFolders={folders} onRefresh={refreshInventory} />,
           },
           {
-            id: 'matrix',
-            label: 'Variants & Matrices',
-            content: <VariantsTab products={products} />,
+            id: 'bulk-actions',
+            label: 'Bulk Actions',
+            content: <BulkActionsTab companyId={companyId} products={products} onImportOpen={() => setIsImportOpen(true)} onRefresh={refreshInventory} />,
           },
           {
-            id: 'transfer',
-            label: 'Stock Transfers',
-            content: <TransferTab products={products} />,
+            id: 'categories-locations',
+            label: 'Categories & Locations',
+            content: <CategoriesLocationsTab companyId={companyId} />,
           },
           {
-            id: 'bundles',
-            label: 'Kitting & Bundles',
-            content: <BundlesTab products={products} />,
+            id: 'barcode-sku',
+            label: 'Barcode/SKU',
+            content: <BarcodeSkuTab companyId={companyId} products={products} />,
           },
         ]}
       />
