@@ -1,53 +1,78 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
-import { AuditTrailTab } from '../components/Reports/AuditTrailTab'
-import { ProfitabilityTab } from '../components/Reports/ProfitabilityTab'
-import { TurnoverTab } from '../components/Reports/TurnoverTab'
-import { ValuationTab } from '../components/Reports/ValuationTab'
-import { useReportsData, useReportsRefresh } from '../hooks/queries/useReports'
+import { useReportsData } from '../hooks/queries/useReports'
+import { InventoryValuationTab } from '../components/Reports/InventoryValuationTab'
+import { StockMovementUsageTab } from '../components/Reports/StockMovementUsageTab'
+import { ReorderDeadStockTab } from '../components/Reports/ReorderDeadStockTab'
+import { ExportsTab } from '../components/Reports/ExportsTab'
 
 export const ReportsPage = () => {
   const { companyId } = useCompany()
   const { data, isLoading } = useReportsData(companyId)
-  const refreshReports = useReportsRefresh(companyId)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   const products = data?.products ?? []
   const transactions = data?.transactions ?? []
-  const schedules = data?.schedules ?? []
   const series = data?.series ?? []
 
-  // Avg Inventory Value for Turnover Calculation
-  const avgValue = useMemo(() => {
-    if (series.length === 0) return 0
-    const sum = series.reduce((acc, s) => acc + s.value, 0)
-    return sum / series.length
-  }, [series])
+  const filteredTransactions = useMemo(() => {
+    if (!startDate && !endDate) return transactions
+
+    const start = startDate ? new Date(startDate).getTime() : Number.NEGATIVE_INFINITY
+    const end = endDate ? new Date(endDate).getTime() + 24 * 60 * 60 * 1000 - 1 : Number.POSITIVE_INFINITY
+
+    return transactions.filter((transaction) => {
+      const time = new Date(transaction.created_at).getTime()
+      return time >= start && time <= end
+    })
+  }, [transactions, startDate, endDate])
 
   return (
     <BasePage companyId={companyId} isLoading={isLoading}>
+      <div className="card stack" style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>Reports</h1>
+        <div className="small muted">Custom date ranges apply across all report tabs.</div>
+        <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+          <label className="stack">
+            Start Date
+            <input className="input" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+          </label>
+          <label className="stack">
+            End Date
+            <input className="input" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+          </label>
+          <button className="button ghost" onClick={() => {
+            setStartDate('')
+            setEndDate('')
+          }}>
+            Reset Range
+          </button>
+        </div>
+      </div>
       <Tabs
       tabs={[
         {
           id: 'valuation',
           label: 'Inventory Valuation',
-          content: <ValuationTab series={series} schedules={schedules} companyId={companyId!} onScheduleChange={refreshReports} />,
+          content: <InventoryValuationTab series={series} filteredTransactions={filteredTransactions} />,
         },
         {
-          id: 'profit',
-          label: 'COGS & Profitability',
-          content: <ProfitabilityTab transactions={transactions} />,
+          id: 'movement-usage',
+          label: 'Stock Movement & Usage',
+          content: <StockMovementUsageTab transactions={filteredTransactions} />,
         },
         {
-          id: 'turnover',
-          label: 'Inventory Turnover',
-          content: <TurnoverTab transactions={transactions} products={products} avgInventoryValue={avgValue} />,
+          id: 'reorder-dead-stock',
+          label: 'Reorder & Dead Stock',
+          content: <ReorderDeadStockTab products={products} transactions={transactions} startDate={startDate} endDate={endDate} />,
         },
         {
-          id: 'audit',
-          label: 'Audit Trail',
-          content: <AuditTrailTab transactions={transactions} />,
+          id: 'exports',
+          label: 'Exports',
+          content: <ExportsTab products={products} transactions={filteredTransactions} startDate={startDate} endDate={endDate} />,
         },
       ]}
       />
