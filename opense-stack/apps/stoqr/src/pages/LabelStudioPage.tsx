@@ -15,9 +15,6 @@ export const LabelStudioPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to access label tools."
     >
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Label Studio</h1>
-      </div>
       <Tabs
         tabs={[
           { id: 'templates', label: 'Templates', content: <TemplateLibraryTab companyId={companyId || ''} /> },
