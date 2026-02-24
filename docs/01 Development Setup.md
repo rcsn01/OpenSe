@@ -16,6 +16,7 @@ cp .env.example .env
 
 # 3. Local Supabase Backend Dev
 Location: Open-ETL/ (Root)
+THIS SHOULD BE DONE IN SEPERATE TERMINAL
 Commands:
 
 ```Zsh
