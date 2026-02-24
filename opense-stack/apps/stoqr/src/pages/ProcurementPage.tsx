@@ -60,9 +60,6 @@ export const ProcurementPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
     >
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Procurement</h1>
-      </div>
       <Tabs tabs={tabs} />
     </BasePage>
   )
