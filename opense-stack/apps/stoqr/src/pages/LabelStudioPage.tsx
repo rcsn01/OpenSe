@@ -1,9 +1,9 @@
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
-import { ItemLabelsTab } from '../components/LabelStudio/ItemLabelsTab'
-import { LocationLabelsTab } from '../components/LabelStudio/LocationLabelsTab'
-import { ShippingLabelsTab } from '../components/LabelStudio/ShippingLabelsTab'
+import { TemplateLibraryTab } from '../components/LabelStudio/TemplateLibraryTab'
+import { LabelDesignerTab } from '../components/LabelStudio/LabelDesignerTab'
+import { LabelPreviewBatchTab } from '../components/LabelStudio/LabelPreviewBatchTab'
 
 export const LabelStudioPage = () => {
   const { companyId } = useCompany()
@@ -15,11 +15,14 @@ export const LabelStudioPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to access label tools."
     >
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>Label Studio</h1>
+      </div>
       <Tabs
         tabs={[
-          { id: 'items', label: 'Item Labels', content: <ItemLabelsTab /> },
-          { id: 'locations', label: 'Bin / Shelf', content: <LocationLabelsTab /> },
-          { id: 'shipping', label: 'Shipping', content: <ShippingLabelsTab /> },
+          { id: 'templates', label: 'Templates', content: <TemplateLibraryTab companyId={companyId || ''} /> },
+          { id: 'design', label: 'Design', content: <LabelDesignerTab companyId={companyId || ''} /> },
+          { id: 'preview-batch', label: 'Preview & Batch', content: <LabelPreviewBatchTab companyId={companyId || ''} /> },
         ]}
       />
     </BasePage>

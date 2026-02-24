@@ -21,11 +21,26 @@ export type PurchaseOrder = {
 }
 
 export type ReceivingLog = {
+  id?: string
+  po_id?: string | null
+  product_id?: string | null
   quantity_received: number
   received_at: string
+  notes?: string | null
   products: { name: string; sku: string } | null
   purchase_orders: { po_number: number } | null
   profiles: { full_name: string | null; username: string | null } | null
+}
+
+export type PurchaseOrderItem = {
+  id: string
+  po_id: string
+  product_id: string | null
+  quantity_ordered: number
+  quantity_received: number
+  unit_cost: number
+  products: { id: string; name: string; sku: string } | null
+  purchase_orders: { id: string; po_number: number; status: PurchaseOrder['status']; expected_date: string | null } | null
 }
 
 export const fetchProcurementProducts = async (companyId: string): Promise<Product[]> => {
@@ -91,11 +106,26 @@ export const createPurchaseOrder = async (
 }
 
 type ReceivingLogRow = {
+  id: string
+  po_id: string | null
+  product_id: string | null
   quantity_received: number
   received_at: string
+  notes: string | null
   products: { name: string; sku: string } | { name: string; sku: string }[] | null
   purchase_orders: { po_number: number } | { po_number: number }[] | null
   profiles: { full_name: string | null; username: string | null } | { full_name: string | null; username: string | null }[] | null
+}
+
+type PurchaseOrderItemRow = {
+  id: string
+  po_id: string
+  product_id: string | null
+  quantity_ordered: number
+  quantity_received: number
+  unit_cost: number
+  products: { id: string; name: string; sku: string } | { id: string; name: string; sku: string }[] | null
+  purchase_orders: { id: string; po_number: number; status: PurchaseOrder['status']; expected_date: string | null } | { id: string; po_number: number; status: PurchaseOrder['status']; expected_date: string | null }[] | null
 }
 
 const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
@@ -119,10 +149,186 @@ export const fetchReceivingLogs = async (companyId: string): Promise<ReceivingLo
   if (error) throw error
 
   return ((data as ReceivingLogRow[] | null) ?? []).map((item) => ({
+    id: item.id,
+    po_id: item.po_id,
+    product_id: item.product_id,
     quantity_received: item.quantity_received,
     received_at: item.received_at,
+    notes: item.notes,
     products: normalizeSingle(item.products),
     purchase_orders: normalizeSingle(item.purchase_orders),
     profiles: normalizeSingle(item.profiles),
   }))
+}
+
+export const fetchPurchaseOrderItems = async (companyId: string): Promise<PurchaseOrderItem[]> => {
+  const { data, error } = await db
+    .from('purchase_order_items')
+    .select(`
+      id,
+      po_id,
+      product_id,
+      quantity_ordered,
+      quantity_received,
+      unit_cost,
+      products(id, name, sku),
+      purchase_orders(id, po_number, status, expected_date)
+    `)
+    .eq('purchase_orders.company_id', companyId)
+    .order('id', { ascending: false })
+
+  if (error) throw error
+
+  return ((data as PurchaseOrderItemRow[] | null) ?? []).map((item) => ({
+    id: item.id,
+    po_id: item.po_id,
+    product_id: item.product_id,
+    quantity_ordered: item.quantity_ordered,
+    quantity_received: item.quantity_received,
+    unit_cost: item.unit_cost,
+    products: normalizeSingle(item.products),
+    purchase_orders: normalizeSingle(item.purchase_orders),
+  }))
+}
+
+export const createPurchaseOrderItem = async (
+  companyId: string,
+  payload: { poId: string; productId: string; quantityOrdered: number; unitCost: number },
+): Promise<void> => {
+  const { data: orderData, error: orderError } = await db
+    .from('purchase_orders')
+    .select('id')
+    .eq('id', payload.poId)
+    .eq('company_id', companyId)
+    .maybeSingle()
+
+  if (orderError) throw orderError
+  if (!orderData) throw new Error('Purchase order not found')
+
+  const { error } = await db.from('purchase_order_items').insert({
+    po_id: payload.poId,
+    product_id: payload.productId,
+    quantity_ordered: payload.quantityOrdered,
+    quantity_received: 0,
+    unit_cost: payload.unitCost,
+  })
+
+  if (error) throw error
+}
+
+const updatePurchaseOrderStatusFromItems = async (poId: string) => {
+  const { data: items, error: itemsError } = await db
+    .from('purchase_order_items')
+    .select('quantity_ordered, quantity_received')
+    .eq('po_id', poId)
+
+  if (itemsError) throw itemsError
+
+  const rows = (items as Array<{ quantity_ordered: number; quantity_received: number }> | null) ?? []
+  let status: PurchaseOrder['status'] = 'sent'
+
+  if (rows.length > 0) {
+    const allReceived = rows.every((item) => item.quantity_received >= item.quantity_ordered && item.quantity_ordered > 0)
+    const anyReceived = rows.some((item) => item.quantity_received > 0)
+
+    if (allReceived) status = 'closed'
+    else if (anyReceived) status = 'partial'
+  }
+
+  const { error: updateError } = await db
+    .from('purchase_orders')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', poId)
+
+  if (updateError) throw updateError
+}
+
+export const recordPurchaseOrderReceipt = async (
+  companyId: string,
+  payload: { poId: string; productId: string; quantityReceived: number; notes?: string },
+): Promise<void> => {
+  if (payload.quantityReceived <= 0) {
+    throw new Error('Received quantity must be greater than zero')
+  }
+
+  const { data: item, error: itemError } = await db
+    .from('purchase_order_items')
+    .select('id, quantity_ordered, quantity_received')
+    .eq('po_id', payload.poId)
+    .eq('product_id', payload.productId)
+    .maybeSingle()
+
+  if (itemError) throw itemError
+
+  if (!item) {
+    throw new Error('Purchase order item not found')
+  }
+
+  const remaining = Math.max(item.quantity_ordered - item.quantity_received, 0)
+  if (payload.quantityReceived > remaining) {
+    throw new Error('Received quantity exceeds remaining quantity')
+  }
+
+  const nextReceived = item.quantity_received + payload.quantityReceived
+
+  const { error: updateItemError } = await db
+    .from('purchase_order_items')
+    .update({ quantity_received: nextReceived })
+    .eq('id', item.id)
+
+  if (updateItemError) throw updateItemError
+
+  const { error: logError } = await db.from('receiving_logs').insert({
+    company_id: companyId,
+    po_id: payload.poId,
+    product_id: payload.productId,
+    quantity_received: payload.quantityReceived,
+    notes: payload.notes ?? null,
+  })
+
+  if (logError) throw logError
+
+  const { data: product, error: readError } = await db
+    .from('products')
+    .select('quantity_on_hand')
+    .eq('id', payload.productId)
+    .eq('company_id', companyId)
+    .maybeSingle()
+
+  if (readError) throw readError
+
+  const nextQty = (product?.quantity_on_hand ?? 0) + payload.quantityReceived
+  const { error: updateProductError } = await db
+    .from('products')
+    .update({ quantity_on_hand: nextQty })
+    .eq('id', payload.productId)
+    .eq('company_id', companyId)
+
+  if (updateProductError) throw updateProductError
+
+  const { error: txError } = await db.from('inventory_transactions').insert({
+    company_id: companyId,
+    product_id: payload.productId,
+    transaction_type: 'purchase',
+    source: 'receiving',
+    quantity_change: payload.quantityReceived,
+    notes: payload.notes ?? null,
+  })
+
+  if (txError) throw txError
+
+  await updatePurchaseOrderStatusFromItems(payload.poId)
+}
+
+export const fetchPurchaseOrderHistory = async (companyId: string): Promise<PurchaseOrder[]> => {
+  const { data, error } = await db
+    .from('purchase_orders')
+    .select('*, suppliers(name)')
+    .eq('company_id', companyId)
+    .in('status', ['closed', 'cancelled'])
+    .order('updated_at', { ascending: false })
+
+  if (error) throw error
+
+  return (data as PurchaseOrder[] | null) ?? []
 }

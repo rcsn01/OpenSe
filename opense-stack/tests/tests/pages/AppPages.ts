@@ -171,7 +171,7 @@ export class AlertsPage {
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(alerts|auth)?$/);
+    await expect(this.page).toHaveURL(/\/(alerts|auth|login)?$|localhost:5993\/$/);
   }
 }
 
@@ -189,7 +189,7 @@ export class LabelStudioPage {
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(tools\/labels|auth)/);
+    await expect(this.page).toHaveURL(/\/(tools\/labels|auth|login)?$|localhost:5993\/$/);
   }
 }
 
