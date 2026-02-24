@@ -13,6 +13,8 @@ vi.mock('../../supabaseClient', () => ({
 }))
 
 import {
+  bulkUpdateInventoryProducts,
+  fetchInventoryReferenceData,
   fetchInventoryProducts,
   fetchInventoryStats,
   importInventoryProducts,
@@ -110,5 +112,100 @@ describe('inventory api', () => {
     expect(result.totalCount).toBe(2)
     expect(result.products).toHaveLength(1)
     expect(result.products[0]?.id).toBe('p-1')
+  })
+
+  it('fetches categories, locations and barcodes reference data', async () => {
+    const categoryOrder = vi.fn().mockResolvedValue({
+      data: [{ id: 'c-1', name: 'Consumables', description: null }],
+      error: null,
+    })
+    const locationOrder = vi.fn().mockResolvedValue({
+      data: [{ id: 'l-1', name: 'Main', code: 'WH-A', description: null }],
+      error: null,
+    })
+    const barcodeOrder = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'b-1',
+          product_id: 'p-1',
+          barcode: 'BC-1',
+          barcode_type: 'barcode',
+          is_primary: true,
+          products: { id: 'p-1', name: 'Prod', sku: 'SKU-1' },
+        },
+      ],
+      error: null,
+    })
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'product_categories') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ order: categoryOrder })),
+          })),
+        }
+      }
+
+      if (table === 'inventory_locations') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ order: locationOrder })),
+          })),
+        }
+      }
+
+      if (table === 'product_barcodes') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ order: barcodeOrder })),
+          })),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const result = await fetchInventoryReferenceData('company-1')
+    expect(result.categories).toHaveLength(1)
+    expect(result.locations).toHaveLength(1)
+    expect(result.barcodes[0]?.products?.sku).toBe('SKU-1')
+  })
+
+  it('bulk updates quantity and selling price for scoped products', async () => {
+    const selectIn = vi.fn().mockResolvedValue({
+      data: [
+        { id: 'p-1', quantity_on_hand: 10, selling_price: 20 },
+        { id: 'p-2', quantity_on_hand: 5, selling_price: 30 },
+      ],
+      error: null,
+    })
+
+    const updateEqCompany = vi.fn().mockResolvedValue({ error: null })
+    const updateEqId = vi.fn(() => ({ eq: updateEqCompany }))
+    const update = vi.fn(() => ({ eq: updateEqId }))
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'products') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ in: selectIn })),
+          })),
+          update,
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const updated = await bulkUpdateInventoryProducts('company-1', {
+      productIds: ['p-1', 'p-2'],
+      quantityDelta: -2,
+      priceMultiplier: 1.1,
+    })
+
+    expect(updated).toBe(2)
+    expect(update).toHaveBeenCalled()
+    expect(updateEqId).toHaveBeenCalledWith('id', 'p-1')
+    expect(updateEqCompany).toHaveBeenCalledWith('company_id', 'company-1')
   })
 })
