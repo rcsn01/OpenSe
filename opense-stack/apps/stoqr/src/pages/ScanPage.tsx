@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
-import { StackLayout } from '@repo/ui'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
-import { CycleCountTab } from '../components/Scan/CycleCountTab'
-import { PickPackTab } from '../components/Scan/PickPackTab'
-import { PutawayTab } from '../components/Scan/PutawayTab'
-import { QuickScanTab, ScannerModule } from '../components/Scan/QuickScanTab'
+import { QuickScanTab } from '../components/Scan/QuickScanTab'
+import { ScanHistoryTab } from '../components/Scan/ScanHistoryTab'
 import { toast } from 'sonner'
 
 export const ScanPage = () => {
   const { companyId } = useCompany()
   const [scanValue, setScanValue] = useState('')
   const [isScanning, setIsScanning] = useState(false)
+  const [entryMethod, setEntryMethod] = useState<'camera' | 'manual'>('manual')
   const scannerRef = useRef<Html5Qrcode | null>(null)
+
+  const handleManualScanValue = (value: string) => {
+    setEntryMethod('manual')
+    setScanValue(value)
+  }
 
   // Cleanup scanner on unmount
   useEffect(() => {
@@ -65,6 +68,7 @@ export const ScanPage = () => {
         (decodedText) => {
           if (decodedText !== scanValue) {
             setScanValue(decodedText)
+            setEntryMethod('camera')
             toast.success(`Scanned: ${decodedText}`)
             stopCamera()
           }
@@ -80,76 +84,39 @@ export const ScanPage = () => {
     }
   }, [scanValue, stopCamera])
 
-  // Reusable Scanner UI Component - Fluid Width
-  const ScannerModuleComponent = (
-    <ScannerModule
-      scanValue={scanValue}
-      setScanValue={setScanValue}
-      isScanning={isScanning}
-      startCamera={startCamera}
-      stopCamera={stopCamera}
-    />
-  )
-
   return (
     <BasePage companyId={companyId} isLoading={false}>
+      <div className="card stack" style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>Scan</h1>
+        <div className="row wrap">
+          <button className="button" onClick={startCamera} disabled={isScanning}>
+            Start Camera
+          </button>
+          <button className="button secondary" onClick={stopCamera} disabled={!isScanning}>
+            Stop Camera
+          </button>
+        </div>
+        <div id="reader" style={{ width: '100%', minHeight: 220 }} />
+      </div>
+
       <Tabs
         tabs={[
           { 
-            id: 'quick', 
-            label: 'Quick Scan', 
+            id: 'scan-actions', 
+            label: 'Scan', 
             content: (
               <QuickScanTab
                 scanValue={scanValue}
-                setScanValue={setScanValue}
+                setScanValue={handleManualScanValue}
                 companyId={companyId || ''}
-                isScanning={isScanning}
-                startCamera={startCamera}
-                stopCamera={stopCamera}
+                entryMethod={entryMethod}
               />
             )
           },
-          { 
-            id: 'pick', 
-            label: 'Pick & Pack', 
-            content: (
-              <StackLayout variant="grid-2" className="items-start">
-                <div style={{ position: 'sticky', top: 24 }}>
-                  {ScannerModuleComponent}
-                </div>
-                <div className="stack">
-                  <PickPackTab scanValue={scanValue} /> 
-                </div>
-              </StackLayout>
-            )
-          },
-          { 
-            id: 'cycle', 
-            label: 'Cycle Count', 
-            content: (
-              <StackLayout variant="grid-2" className="items-start">
-                <div style={{ position: 'sticky', top: 24 }}>
-                  {ScannerModuleComponent}
-                </div>
-                <div className="stack">
-                  <CycleCountTab scanValue={scanValue} />
-                </div>
-              </StackLayout>
-            ) 
-          },
-          { 
-            id: 'putaway', 
-            label: 'Putaway', 
-            content: (
-              <StackLayout variant="grid-2" className="items-start">
-                <div style={{ position: 'sticky', top: 24 }}>
-                  {ScannerModuleComponent}
-                </div>
-                <div className="stack">
-                  <PutawayTab scanValue={scanValue} />
-                </div>
-              </StackLayout>
-            ) 
+          {
+            id: 'scan-history',
+            label: 'History',
+            content: <ScanHistoryTab companyId={companyId || ''} />,
           },
         ]}
       />
