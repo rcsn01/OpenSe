@@ -5,10 +5,12 @@ import { Tabs } from '../components/Tabs'
 import { ActivityLogsTab } from '../components/TeamSettings/ActivityLogsTab'
 import { MembersTab } from '../components/TeamSettings/MembersTab'
 import { RolesTab } from '../components/TeamSettings/RolesTab'
+import { TwoFactorTab } from '../components/TeamSettings/TwoFactorTab'
 import {
   useCreateRoleWithPermissions,
   useInviteCompanyMember,
   useSaveRoleWithPermissions,
+  useTeamActivityEvents,
   useTeamSettingsData,
   useUpdateCompanyMemberRole,
 } from '../hooks/queries/useTeamSettings'
@@ -17,6 +19,7 @@ import type { Role } from '../api/teamSettings'
 export const TeamSettingsPage = () => {
   const { companyId } = useCompany()
   const { data, isLoading } = useTeamSettingsData(companyId)
+  const { data: activity = [], isLoading: loadingActivity } = useTeamActivityEvents(companyId)
   const inviteMutation = useInviteCompanyMember(companyId)
   const updateMemberRoleMutation = useUpdateCompanyMemberRole(companyId)
   const saveRoleMutation = useSaveRoleWithPermissions(companyId)
@@ -28,6 +31,7 @@ export const TeamSettingsPage = () => {
   const [inviteMessage, setInviteMessage] = useState<string | null>(null)
 
   const members = data?.members ?? []
+  const invitations = data?.invitations ?? []
   const permissions = data?.permissions ?? []
 
   useEffect(() => {
@@ -78,14 +82,18 @@ export const TeamSettingsPage = () => {
       emptyStateDescription="Choose a company to manage your team."
       loadingMessage="Loading team settings..."
     >
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>Team Settings</h1>
+      </div>
       <Tabs
         tabs={[
           {
-            id: 'members',
-            label: 'Members',
+            id: 'user-management',
+            label: 'User Management',
             content: (
               <MembersTab
                 members={members}
+                invitations={invitations}
                 roles={roles}
                 onRoleChange={handleRoleChange}
                 onInvite={handleInvite}
@@ -94,8 +102,8 @@ export const TeamSettingsPage = () => {
             ),
           },
           {
-            id: 'roles',
-            label: 'Roles',
+            id: 'rbac',
+            label: 'RBAC',
             content: (
               <RolesTab
                 roles={roles}
@@ -111,7 +119,12 @@ export const TeamSettingsPage = () => {
           {
             id: 'activity',
             label: 'Activity Logs',
-            content: <ActivityLogsTab />,
+            content: loadingActivity ? <div className="empty-state">Loading activity logs...</div> : <ActivityLogsTab logs={activity} />,
+          },
+          {
+            id: 'two-factor',
+            label: 'Two-Factor Authentication',
+            content: <TwoFactorTab />,
           },
         ]}
       />
