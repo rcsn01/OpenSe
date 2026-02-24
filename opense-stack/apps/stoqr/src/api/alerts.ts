@@ -1,5 +1,41 @@
-import { supabase } from '../supabaseClient'
+import { db, supabase } from '../supabaseClient'
 import type { Product } from '../types'
+
+export type AlertRule = {
+  id: string
+  company_id: string
+  name: string
+  alert_type: 'low_stock' | 'reorder_point' | 'expiration' | 'custom'
+  enabled: boolean
+  condition: Record<string, unknown>
+  delivery_channels: Array<'in_app' | 'email' | 'push'>
+  recipients: string[]
+  created_at: string
+}
+
+export type AlertEvent = {
+  id: string
+  company_id: string
+  rule_id: string | null
+  product_id: string | null
+  alert_type: 'low_stock' | 'reorder_point' | 'expiration' | 'custom'
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  status: 'open' | 'acknowledged' | 'resolved'
+  message: string
+  triggered_at: string
+  products: { name: string; sku: string } | null
+}
+
+export type AlertDeliveryLog = {
+  id: string
+  alert_event_id: string
+  channel: 'in_app' | 'email' | 'push'
+  recipient: string | null
+  status: 'pending' | 'sent' | 'failed'
+  sent_at: string | null
+  error_message: string | null
+  alert_events: { message: string; alert_type: string; severity: string; triggered_at: string } | null
+}
 
 export const fetchAlertProducts = async (companyId: string): Promise<Product[]> => {
   const { data, error } = await supabase
@@ -16,5 +52,120 @@ export const fetchAlertProducts = async (companyId: string): Promise<Product[]> 
     folder_id: null,
     image_urls: [],
     custom_fields: {},
+  }))
+}
+
+const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
+  if (!value) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
+}
+
+type AlertEventRow = Omit<AlertEvent, 'products'> & {
+  products: { name: string; sku: string } | { name: string; sku: string }[] | null
+}
+
+type AlertDeliveryLogRow = Omit<AlertDeliveryLog, 'alert_events'> & {
+  alert_events:
+    | { message: string; alert_type: string; severity: string; triggered_at: string }
+    | { message: string; alert_type: string; severity: string; triggered_at: string }[]
+    | null
+}
+
+export const fetchAlertRules = async (companyId: string): Promise<AlertRule[]> => {
+  const { data, error } = await db
+    .from('alert_rules')
+    .select('id, company_id, name, alert_type, enabled, condition, delivery_channels, recipients, created_at')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return (data as AlertRule[] | null) ?? []
+}
+
+export const createAlertRule = async (
+  companyId: string,
+  payload: {
+    name: string
+    alertType: AlertRule['alert_type']
+    condition: Record<string, unknown>
+    deliveryChannels: Array<'in_app' | 'email' | 'push'>
+    recipients: string[]
+  },
+) => {
+  const { error } = await db.from('alert_rules').insert({
+    company_id: companyId,
+    name: payload.name,
+    alert_type: payload.alertType,
+    condition: payload.condition,
+    delivery_channels: payload.deliveryChannels,
+    recipients: payload.recipients,
+    enabled: true,
+  })
+
+  if (error) throw error
+}
+
+export const updateAlertRuleEnabled = async (
+  companyId: string,
+  ruleId: string,
+  enabled: boolean,
+) => {
+  const { error } = await db
+    .from('alert_rules')
+    .update({ enabled })
+    .eq('id', ruleId)
+    .eq('company_id', companyId)
+
+  if (error) throw error
+}
+
+export const fetchAlertEvents = async (companyId: string): Promise<AlertEvent[]> => {
+  const { data, error } = await db
+    .from('alert_events')
+    .select('id, company_id, rule_id, product_id, alert_type, severity, status, message, triggered_at, products(name, sku)')
+    .eq('company_id', companyId)
+    .order('triggered_at', { ascending: false })
+    .limit(100)
+
+  if (error) throw error
+
+  return ((data as AlertEventRow[] | null) ?? []).map((row) => ({
+    ...row,
+    products: normalizeSingle(row.products),
+  }))
+}
+
+export const updateAlertEventStatus = async (
+  companyId: string,
+  eventId: string,
+  status: AlertEvent['status'],
+) => {
+  const patch: { status: AlertEvent['status']; acknowledged_at?: string | null; resolved_at?: string | null } = { status }
+  if (status === 'acknowledged') patch.acknowledged_at = new Date().toISOString()
+  if (status === 'resolved') patch.resolved_at = new Date().toISOString()
+
+  const { error } = await db
+    .from('alert_events')
+    .update(patch)
+    .eq('id', eventId)
+    .eq('company_id', companyId)
+
+  if (error) throw error
+}
+
+export const fetchAlertDeliveryLogs = async (companyId: string): Promise<AlertDeliveryLog[]> => {
+  const { data, error } = await db
+    .from('alert_delivery_logs')
+    .select('id, alert_event_id, channel, recipient, status, sent_at, error_message, alert_events(message, alert_type, severity, triggered_at)')
+    .eq('company_id', companyId)
+    .order('sent_at', { ascending: false })
+    .limit(100)
+
+  if (error) throw error
+
+  return ((data as AlertDeliveryLogRow[] | null) ?? []).map((row) => ({
+    ...row,
+    alert_events: normalizeSingle(row.alert_events),
   }))
 }

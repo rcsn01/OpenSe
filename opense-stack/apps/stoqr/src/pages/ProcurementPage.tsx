@@ -3,8 +3,9 @@ import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { PurchaseOrdersTab } from '../components/Procurement/PurchaseOrdersTab'
-import { ReceivingLogTab } from '../components/Procurement/ReceivingLogTab'
-import { ReplenishmentTab } from '../components/Procurement/ReplenishmentTab'
+import { ReceivingWorkflowTab } from '../components/Procurement/ReceivingWorkflowTab'
+import { OrderTrackingTab } from '../components/Procurement/OrderTrackingTab'
+import { OrderHistoryTab } from '../components/Procurement/OrderHistoryTab'
 import { SuppliersTab } from '../components/Procurement/SuppliersTab'
 import { useProcurementProducts } from '../hooks/queries/useProcurement'
 
@@ -16,33 +17,38 @@ export const ProcurementPage = () => {
     if (!companyId) {
       return [
         {
-          id: 'replenishment',
-          label: 'Replenishment',
-          content: <ReplenishmentTab products={products} isLoading={isLoading} />,
+          id: 'purchase-orders',
+          label: 'Purchase Orders',
+          content: <div className="empty-state">Select a company to manage procurement workflows.</div>,
         },
       ]
     }
 
     return [
       {
-        id: 'replenishment',
-        label: 'Replenishment',
-        content: <ReplenishmentTab products={products} isLoading={isLoading} />,
-      },
-      {
-        id: 'pos',
+        id: 'purchase-orders',
         label: 'Purchase Orders',
-        content: <PurchaseOrdersTab companyId={companyId} />,
+        content: <PurchaseOrdersTab companyId={companyId} products={products} />,
       },
       {
         id: 'suppliers',
-        label: 'Suppliers',
+        label: 'Supplier Management',
         content: <SuppliersTab companyId={companyId} />,
       },
       {
-        id: 'receiving',
-        label: 'Receiving Log',
-        content: <ReceivingLogTab companyId={companyId} />,
+        id: 'order-tracking',
+        label: 'Order Tracking',
+        content: <OrderTrackingTab companyId={companyId} />,
+      },
+      {
+        id: 'receiving-workflow',
+        label: 'Receiving Workflow',
+        content: <ReceivingWorkflowTab companyId={companyId} />,
+      },
+      {
+        id: 'order-history',
+        label: 'Order History',
+        content: <OrderHistoryTab companyId={companyId} />,
       },
     ]
   }, [companyId, products, isLoading])
@@ -54,6 +60,9 @@ export const ProcurementPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
     >
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0 }}>Procurement</h1>
+      </div>
       <Tabs tabs={tabs} />
     </BasePage>
   )
