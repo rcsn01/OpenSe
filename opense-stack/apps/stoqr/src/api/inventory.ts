@@ -24,12 +24,26 @@ export type InventoryListResponse = {
   totalCount: number
 }
 
-export type QuickCreateProductPayload = {
+export type InventoryCategory = {
+  id: string
   name: string
-  sku: string
-  quantity_on_hand: number
-  cost_price: number
-  selling_price: number
+  description: string | null
+}
+
+export type InventoryLocation = {
+  id: string
+  name: string
+  code: string | null
+  description: string | null
+}
+
+export type ProductBarcode = {
+  id: string
+  product_id: string
+  barcode: string
+  barcode_type: 'barcode' | 'qr'
+  is_primary: boolean
+  products: { id: string; name: string; sku: string } | null
 }
 
 export const fetchInventoryFilters = async (companyId: string): Promise<{ folders: Folder[]; tags: Tag[] }> => {
@@ -168,18 +182,6 @@ export const createFolderInInventory = async (
   if (error) throw error
 }
 
-export const createInventoryQuickProduct = async (
-  companyId: string,
-  payload: QuickCreateProductPayload,
-) => {
-  const { error } = await db.from('products').insert({
-    company_id: companyId,
-    ...payload,
-  })
-
-  if (error) throw error
-}
-
 export type ImportInventoryRow = Record<string, string>
 
 export const importInventoryProducts = async (companyId: string, rows: ImportInventoryRow[]): Promise<number> => {
@@ -202,4 +204,166 @@ export const importInventoryProducts = async (companyId: string, rows: ImportInv
   if (error) throw error
 
   return preparedProducts.length
+}
+
+type BarcodeRow = Omit<ProductBarcode, 'products'> & {
+  products: { id: string; name: string; sku: string } | { id: string; name: string; sku: string }[] | null
+}
+
+const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
+  if (!value) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
+}
+
+export const fetchInventoryReferenceData = async (companyId: string): Promise<{
+  categories: InventoryCategory[]
+  locations: InventoryLocation[]
+  barcodes: ProductBarcode[]
+}> => {
+  const [
+    { data: categoryData, error: categoryError },
+    { data: locationData, error: locationError },
+    { data: barcodeData, error: barcodeError },
+  ] = await Promise.all([
+    db.from('product_categories').select('id, name, description').eq('company_id', companyId).order('name'),
+    db.from('inventory_locations').select('id, name, code, description').eq('company_id', companyId).order('name'),
+    db
+      .from('product_barcodes')
+      .select('id, product_id, barcode, barcode_type, is_primary, products(id, name, sku)')
+      .eq('company_id', companyId)
+      .order('barcode', { ascending: true }),
+  ])
+
+  if (categoryError) throw categoryError
+  if (locationError) throw locationError
+  if (barcodeError) throw barcodeError
+
+  return {
+    categories: (categoryData as InventoryCategory[] | null) ?? [],
+    locations: (locationData as InventoryLocation[] | null) ?? [],
+    barcodes: ((barcodeData as BarcodeRow[] | null) ?? []).map((row) => ({
+      ...row,
+      products: normalizeSingle(row.products),
+    })),
+  }
+}
+
+export const createInventoryCategory = async (
+  companyId: string,
+  payload: { name: string; description: string },
+) => {
+  const { error } = await db.from('product_categories').insert({
+    company_id: companyId,
+    name: payload.name,
+    description: payload.description || null,
+  })
+
+  if (error) throw error
+}
+
+export const createInventoryLocation = async (
+  companyId: string,
+  payload: { name: string; code: string; description: string },
+) => {
+  const { error } = await db.from('inventory_locations').insert({
+    company_id: companyId,
+    name: payload.name,
+    code: payload.code || null,
+    description: payload.description || null,
+  })
+
+  if (error) throw error
+}
+
+export const upsertProductBarcode = async (
+  companyId: string,
+  payload: {
+    productId: string
+    barcode: string
+    barcodeType: 'barcode' | 'qr'
+    isPrimary: boolean
+  },
+) => {
+  const { data: existing, error: existingError } = await db
+    .from('product_barcodes')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('product_id', payload.productId)
+    .eq('barcode', payload.barcode)
+    .maybeSingle()
+
+  if (existingError) throw existingError
+
+  if (existing?.id) {
+    const { error } = await db
+      .from('product_barcodes')
+      .update({
+        barcode_type: payload.barcodeType,
+        is_primary: payload.isPrimary,
+      })
+      .eq('id', existing.id)
+
+    if (error) throw error
+  } else {
+    const { error } = await db.from('product_barcodes').insert({
+      company_id: companyId,
+      product_id: payload.productId,
+      barcode: payload.barcode,
+      barcode_type: payload.barcodeType,
+      is_primary: payload.isPrimary,
+    })
+
+    if (error) throw error
+  }
+
+  if (payload.isPrimary) {
+    const { error } = await db
+      .from('products')
+      .update({ primary_barcode: payload.barcode })
+      .eq('id', payload.productId)
+      .eq('company_id', companyId)
+
+    if (error) throw error
+  }
+}
+
+export const bulkUpdateInventoryProducts = async (
+  companyId: string,
+  payload: {
+    productIds: string[]
+    quantityDelta?: number
+    priceMultiplier?: number
+  },
+): Promise<number> => {
+  if (payload.productIds.length === 0) return 0
+
+  const { data: existingRows, error: existingError } = await db
+    .from('products')
+    .select('id, quantity_on_hand, selling_price')
+    .eq('company_id', companyId)
+    .in('id', payload.productIds)
+
+  if (existingError) throw existingError
+
+  const rows = (existingRows as Array<{ id: string; quantity_on_hand: number; selling_price: number | null }> | null) ?? []
+
+  for (const row of rows) {
+    const nextQty = payload.quantityDelta !== undefined ? Math.max((row.quantity_on_hand ?? 0) + payload.quantityDelta, 0) : row.quantity_on_hand
+    const nextPrice = payload.priceMultiplier !== undefined
+      ? Math.max(Number((((row.selling_price ?? 0) * payload.priceMultiplier).toFixed(2))), 0)
+      : row.selling_price
+
+    const { error } = await db
+      .from('products')
+      .update({
+        quantity_on_hand: nextQty,
+        selling_price: nextPrice,
+      })
+      .eq('id', row.id)
+      .eq('company_id', companyId)
+
+    if (error) throw error
+  }
+
+  return rows.length
 }

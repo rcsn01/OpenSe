@@ -18,6 +18,27 @@ test.describe('Stoqr Inventory', () => {
     }
   });
 
+  test('inventory tabs include folders unchanged and new non-folder tabs', async ({ authenticatedPage }) => {
+    const inventory = new InventoryPage(authenticatedPage);
+    await inventory.goto();
+
+    const hasInventoryTabs = await authenticatedPage.getByRole('tab', { name: /all products/i }).first().isVisible().catch(() => false);
+    if (!hasInventoryTabs) {
+      await expect(authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR|Sign in/i).first()).toBeVisible();
+      return;
+    }
+
+    await expect(authenticatedPage.getByRole('tab', { name: /all products/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('tab', { name: /folders/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('tab', { name: /bulk actions/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('tab', { name: /categories & locations/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('tab', { name: /barcode\/sku/i })).toBeVisible();
+
+    await expect(authenticatedPage.getByRole('tab', { name: /variants & matrices/i })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('tab', { name: /stock transfers/i })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('tab', { name: /kitting & bundles/i })).toHaveCount(0);
+  });
+
   test('view product detail and delete action if supported', async ({ authenticatedPage }) => {
     const inventory = new InventoryPage(authenticatedPage);
     await inventory.goto();

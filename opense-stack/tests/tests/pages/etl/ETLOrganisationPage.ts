@@ -16,7 +16,17 @@ export class ETLOrganisationPage {
   }
 
   async goto() {
-    await this.page.goto('/organisation');
+    try {
+      await this.page.goto('/organisation', { waitUntil: 'commit' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isExpectedRedirectAbort =
+        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+      if (!isExpectedRedirectAbort) {
+        throw error;
+      }
+    }
   }
 
   async expectLoaded() {

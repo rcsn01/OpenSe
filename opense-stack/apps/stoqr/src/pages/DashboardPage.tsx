@@ -7,6 +7,8 @@ import { StatsCards } from '../components/dashboard/StatsCards'
 import { StockHealth } from '../components/dashboard/StockHealth'
 import { TopMovers } from '../components/dashboard/TopMovers'
 import { ValuationChart } from '../components/dashboard/ValuationChart'
+import { UsageChart } from '../components/dashboard/UsageChart'
+import { AlertsSummary } from '../components/dashboard/AlertsSummary'
 import { useDashboard } from '../hooks/queries/useDashboard'
 
 // --- Main Component ---
@@ -33,25 +35,28 @@ export const DashboardPage = () => {
       <div className="stack">
       {/* Quick Actions */}
       <div className="flex-between">
-        <Label className="section-title" style={{ margin: 0 }}>Overview</Label>
+        <Label className="section-title">Overview</Label>
         <div className="row">
           <Link to="/inventory" className="button secondary small">Add Product</Link>
+          <Link to="/procurement" className="button secondary small">Create Order</Link>
           <Link to="/scan" className="button small">Scan Item</Link>
         </div>
       </div>
 
       {/* KPI Cards */}
       <StatsCards
-        revenue30Days={data.revenue30Days}
         totalValue={data.totalValue}
-        totalProducts={data.products.length}
+        totalStockUnits={data.totalStockUnits}
         lowStockCount={data.lowStockCount}
-        outOfStockCount={data.outOfStockCount}
+        pendingOrders={data.pendingOrders}
       />
 
       <StackLayout variant="grid-2">
         {/* Valuation Chart */}
         <ValuationChart chartData={data.chartData} />
+
+        {/* Usage Trend Chart */}
+        <UsageChart chartData={data.usageChartData} />
 
         {/* Stock Health */}
         <StockHealth
@@ -59,6 +64,9 @@ export const DashboardPage = () => {
           lowStockCount={data.lowStockCount}
           outOfStockCount={data.outOfStockCount}
         />
+
+        {/* Alerts Summary */}
+        <AlertsSummary summary={data.alertsSummary} />
 
         {/* Top Selling Products */}
         <TopMovers topMovers={data.topMovers} />
