@@ -350,7 +350,27 @@ BEGIN
       AND om.user_id = auth.uid()
       AND (
         om.role = 'owner'
-        OR (om.role = 'admin' AND _permission_code IN ('company.manage', 'billing.manage', 'members.view', 'members.manage', 'roles.manage'))
+        OR (om.role = 'admin' AND _permission_code IN (
+          'company.manage',
+          'billing.manage',
+          'members.view',
+          'members.manage',
+          'roles.manage',
+          'dashboard.view',
+          'products.view',
+          'products.manage',
+          'inventory.bulk_manage',
+          'scanner.use',
+          'labels.manage',
+          'reports.view',
+          'reports.export',
+          'procurement.manage',
+          'alerts.view',
+          'alerts.manage',
+          'activity.view',
+          'transactions.view',
+          'transactions.create'
+        ))
         OR rp.role_id IS NOT NULL
       )
   );
@@ -365,8 +385,12 @@ DECLARE
 BEGIN
   IF NEW.transaction_type IN ('purchase', 'return', 'adjustment') THEN
     qty_delta := NEW.quantity_change;
-  ELSIF NEW.transaction_type IN ('sale', 'loss') THEN
+  ELSIF NEW.transaction_type IN ('sale', 'loss', 'scan_out') THEN
     qty_delta := -abs(NEW.quantity_change);
+  ELSIF NEW.transaction_type = 'scan_in' THEN
+    qty_delta := abs(NEW.quantity_change);
+  ELSE
+    RAISE EXCEPTION 'Unsupported transaction_type: %', NEW.transaction_type;
   END IF;
 
   SELECT quantity_on_hand INTO current_qty
@@ -390,6 +414,149 @@ CREATE TRIGGER on_inventory_transaction
   BEFORE INSERT ON stoqr.inventory_transactions
   FOR EACH ROW EXECUTE PROCEDURE stoqr.update_inventory_count();
 
+CREATE OR REPLACE FUNCTION stoqr.log_activity_event(
+  p_company_id UUID,
+  p_event_type TEXT,
+  p_entity_type TEXT,
+  p_entity_id UUID,
+  p_message TEXT,
+  p_metadata JSONB DEFAULT '{}'::jsonb,
+  p_actor_user_id UUID DEFAULT auth.uid()
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = stoqr, public
+AS $$
+BEGIN
+  INSERT INTO stoqr.activity_events (
+    company_id,
+    actor_user_id,
+    event_type,
+    entity_type,
+    entity_id,
+    message,
+    metadata
+  )
+  VALUES (
+    p_company_id,
+    p_actor_user_id,
+    p_event_type,
+    p_entity_type,
+    p_entity_id,
+    p_message,
+    COALESCE(p_metadata, '{}'::jsonb)
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION stoqr.capture_activity_event()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = stoqr, public
+AS $$
+DECLARE
+  v_company_id UUID;
+  v_actor_id UUID;
+  v_entity_id UUID;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    v_entity_id := OLD.id;
+  ELSE
+    v_entity_id := NEW.id;
+  END IF;
+
+  IF TG_TABLE_NAME = 'purchase_order_items' THEN
+    IF TG_OP = 'DELETE' THEN
+      SELECT company_id, created_by INTO v_company_id, v_actor_id
+      FROM stoqr.purchase_orders
+      WHERE id = OLD.po_id;
+    ELSE
+      SELECT company_id, created_by INTO v_company_id, v_actor_id
+      FROM stoqr.purchase_orders
+      WHERE id = NEW.po_id;
+    END IF;
+  ELSE
+    IF TG_OP = 'DELETE' THEN
+      v_company_id := OLD.company_id;
+      v_actor_id := COALESCE(
+        NULLIF(to_jsonb(OLD)->>'performed_by', '')::UUID,
+        NULLIF(to_jsonb(OLD)->>'created_by', '')::UUID,
+        NULLIF(to_jsonb(OLD)->>'received_by', '')::UUID,
+        NULLIF(to_jsonb(OLD)->>'scanned_by', '')::UUID,
+        auth.uid()
+      );
+    ELSE
+      v_company_id := NEW.company_id;
+      v_actor_id := COALESCE(
+        NULLIF(to_jsonb(NEW)->>'performed_by', '')::UUID,
+        NULLIF(to_jsonb(NEW)->>'created_by', '')::UUID,
+        NULLIF(to_jsonb(NEW)->>'received_by', '')::UUID,
+        NULLIF(to_jsonb(NEW)->>'scanned_by', '')::UUID,
+        auth.uid()
+      );
+    END IF;
+  END IF;
+
+  IF v_company_id IS NULL THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  PERFORM stoqr.log_activity_event(
+    v_company_id,
+    lower(TG_TABLE_NAME) || '.' || lower(TG_OP),
+    lower(TG_TABLE_NAME),
+    v_entity_id,
+    TG_TABLE_NAME || ' ' || TG_OP,
+    jsonb_build_object('operation', TG_OP),
+    v_actor_id
+  );
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_activity_inventory_transactions ON stoqr.inventory_transactions;
+CREATE TRIGGER trg_activity_inventory_transactions
+  AFTER INSERT OR UPDATE OR DELETE ON stoqr.inventory_transactions
+  FOR EACH ROW EXECUTE PROCEDURE stoqr.capture_activity_event();
+
+DROP TRIGGER IF EXISTS trg_activity_purchase_orders ON stoqr.purchase_orders;
+CREATE TRIGGER trg_activity_purchase_orders
+  AFTER INSERT OR UPDATE OR DELETE ON stoqr.purchase_orders
+  FOR EACH ROW EXECUTE PROCEDURE stoqr.capture_activity_event();
+
+DROP TRIGGER IF EXISTS trg_activity_purchase_order_items ON stoqr.purchase_order_items;
+CREATE TRIGGER trg_activity_purchase_order_items
+  AFTER INSERT OR UPDATE OR DELETE ON stoqr.purchase_order_items
+  FOR EACH ROW EXECUTE PROCEDURE stoqr.capture_activity_event();
+
+DROP TRIGGER IF EXISTS trg_activity_receiving_logs ON stoqr.receiving_logs;
+CREATE TRIGGER trg_activity_receiving_logs
+  AFTER INSERT OR UPDATE OR DELETE ON stoqr.receiving_logs
+  FOR EACH ROW EXECUTE PROCEDURE stoqr.capture_activity_event();
+
+DROP TRIGGER IF EXISTS trg_activity_scan_events ON stoqr.scan_events;
+CREATE TRIGGER trg_activity_scan_events
+  AFTER INSERT OR UPDATE OR DELETE ON stoqr.scan_events
+  FOR EACH ROW EXECUTE PROCEDURE stoqr.capture_activity_event();
+
+DROP TRIGGER IF EXISTS trg_activity_alert_events ON stoqr.alert_events;
+CREATE TRIGGER trg_activity_alert_events
+  AFTER INSERT OR UPDATE OR DELETE ON stoqr.alert_events
+  FOR EACH ROW EXECUTE PROCEDURE stoqr.capture_activity_event();
+
+DROP TRIGGER IF EXISTS trg_activity_inventory_bulk_operations ON stoqr.inventory_bulk_operations;
+CREATE TRIGGER trg_activity_inventory_bulk_operations
+  AFTER INSERT OR UPDATE OR DELETE ON stoqr.inventory_bulk_operations
+  FOR EACH ROW EXECUTE PROCEDURE stoqr.capture_activity_event();
+
+DROP TRIGGER IF EXISTS trg_activity_label_print_jobs ON stoqr.label_print_jobs;
+CREATE TRIGGER trg_activity_label_print_jobs
+  AFTER INSERT OR UPDATE OR DELETE ON stoqr.label_print_jobs
+  FOR EACH ROW EXECUTE PROCEDURE stoqr.capture_activity_event();
+
 GRANT EXECUTE ON FUNCTION public.is_org_owner(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_org_member(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_org_admin(UUID, UUID) TO authenticated;
@@ -399,3 +566,4 @@ GRANT EXECUTE ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) TO authenticat
 GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.enforce_org_app_seat_limit() TO authenticated;
+GRANT EXECUTE ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) TO authenticated;

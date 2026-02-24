@@ -305,8 +305,17 @@ DROP POLICY IF EXISTS "Members can view role permissions" ON stoqr.role_permissi
 DROP POLICY IF EXISTS "Admins can manage role permissions" ON stoqr.role_permissions;
 DROP POLICY IF EXISTS "Members can view products" ON stoqr.products;
 DROP POLICY IF EXISTS "Staff can manage products" ON stoqr.products;
+DROP POLICY IF EXISTS "Members can view categories" ON stoqr.product_categories;
+DROP POLICY IF EXISTS "Staff can manage categories" ON stoqr.product_categories;
+DROP POLICY IF EXISTS "Members can view locations" ON stoqr.inventory_locations;
+DROP POLICY IF EXISTS "Staff can manage locations" ON stoqr.inventory_locations;
+DROP POLICY IF EXISTS "Members can view product barcodes" ON stoqr.product_barcodes;
+DROP POLICY IF EXISTS "Staff can manage product barcodes" ON stoqr.product_barcodes;
 DROP POLICY IF EXISTS "Members can view transactions" ON stoqr.inventory_transactions;
 DROP POLICY IF EXISTS "Staff can create transactions" ON stoqr.inventory_transactions;
+DROP POLICY IF EXISTS "Staff can manage bulk operations" ON stoqr.inventory_bulk_operations;
+DROP POLICY IF EXISTS "Members can view scan events" ON stoqr.scan_events;
+DROP POLICY IF EXISTS "Staff can create scan events" ON stoqr.scan_events;
 DROP POLICY IF EXISTS "Members can view folders" ON stoqr.folders;
 DROP POLICY IF EXISTS "Staff can manage folders" ON stoqr.folders;
 DROP POLICY IF EXISTS "Members can view tags" ON stoqr.tags;
@@ -316,10 +325,22 @@ DROP POLICY IF EXISTS "Managers can view all members" ON stoqr.company_members;
 DROP POLICY IF EXISTS "Managers can view and create invitations" ON stoqr.company_invitations;
 DROP POLICY IF EXISTS "Members can view report schedules" ON stoqr.report_schedules;
 DROP POLICY IF EXISTS "Admins can manage report schedules" ON stoqr.report_schedules;
+DROP POLICY IF EXISTS "Members can view report exports" ON stoqr.report_exports;
+DROP POLICY IF EXISTS "Staff can manage report exports" ON stoqr.report_exports;
 DROP POLICY IF EXISTS "Staff can manage suppliers" ON stoqr.suppliers;
 DROP POLICY IF EXISTS "Staff can manage POs" ON stoqr.purchase_orders;
 DROP POLICY IF EXISTS "Staff can manage PO items" ON stoqr.purchase_order_items;
 DROP POLICY IF EXISTS "Staff can view receiving logs" ON stoqr.receiving_logs;
+DROP POLICY IF EXISTS "Staff can manage receiving logs" ON stoqr.receiving_logs;
+DROP POLICY IF EXISTS "Members can view alert rules" ON stoqr.alert_rules;
+DROP POLICY IF EXISTS "Staff can manage alert rules" ON stoqr.alert_rules;
+DROP POLICY IF EXISTS "Members can view alert events" ON stoqr.alert_events;
+DROP POLICY IF EXISTS "Staff can manage alert events" ON stoqr.alert_events;
+DROP POLICY IF EXISTS "Staff can view alert deliveries" ON stoqr.alert_delivery_logs;
+DROP POLICY IF EXISTS "Members can view activity events" ON stoqr.activity_events;
+DROP POLICY IF EXISTS "Members can view label templates" ON stoqr.label_templates;
+DROP POLICY IF EXISTS "Staff can manage label templates" ON stoqr.label_templates;
+DROP POLICY IF EXISTS "Staff can manage label print jobs" ON stoqr.label_print_jobs;
 DROP POLICY IF EXISTS "Give users access to their company folder" ON storage.objects;
 DROP POLICY IF EXISTS "Users can view images from their company" ON storage.objects;
 
@@ -362,11 +383,44 @@ CREATE POLICY "Members can view products" ON stoqr.products
 CREATE POLICY "Staff can manage products" ON stoqr.products
   FOR ALL USING (has_permission(company_id, 'products.manage'));
 
+CREATE POLICY "Members can view categories" ON stoqr.product_categories
+  FOR SELECT USING (has_permission(company_id, 'products.view'));
+
+CREATE POLICY "Staff can manage categories" ON stoqr.product_categories
+  FOR ALL USING (has_permission(company_id, 'products.manage'));
+
+CREATE POLICY "Members can view locations" ON stoqr.inventory_locations
+  FOR SELECT USING (has_permission(company_id, 'products.view'));
+
+CREATE POLICY "Staff can manage locations" ON stoqr.inventory_locations
+  FOR ALL USING (has_permission(company_id, 'products.manage'));
+
+CREATE POLICY "Members can view product barcodes" ON stoqr.product_barcodes
+  FOR SELECT USING (has_permission(company_id, 'products.view'));
+
+CREATE POLICY "Staff can manage product barcodes" ON stoqr.product_barcodes
+  FOR ALL USING (has_permission(company_id, 'products.manage'));
+
 CREATE POLICY "Members can view transactions" ON stoqr.inventory_transactions
   FOR SELECT USING (has_permission(company_id, 'transactions.view'));
 
 CREATE POLICY "Staff can create transactions" ON stoqr.inventory_transactions
   FOR INSERT WITH CHECK (has_permission(company_id, 'transactions.create'));
+
+CREATE POLICY "Staff can manage bulk operations" ON stoqr.inventory_bulk_operations
+  FOR ALL USING (has_permission(company_id, 'inventory.bulk_manage'));
+
+CREATE POLICY "Members can view scan events" ON stoqr.scan_events
+  FOR SELECT USING (
+    has_permission(company_id, 'scanner.use')
+    OR has_permission(company_id, 'transactions.view')
+  );
+
+CREATE POLICY "Staff can create scan events" ON stoqr.scan_events
+  FOR INSERT WITH CHECK (
+    has_permission(company_id, 'scanner.use')
+    OR has_permission(company_id, 'transactions.create')
+  );
 
 CREATE POLICY "Members can view folders" ON stoqr.folders
   FOR SELECT USING (has_permission(company_id, 'products.view'));
@@ -390,29 +444,107 @@ CREATE POLICY "Managers can view and create invitations" ON stoqr.company_invita
   FOR ALL USING (has_permission(company_id, 'members.manage'));
 
 CREATE POLICY "Members can view report schedules" ON stoqr.report_schedules
-  FOR SELECT USING (has_permission(company_id, 'transactions.view'));
+  FOR SELECT USING (has_permission(company_id, 'reports.view'));
 
 CREATE POLICY "Admins can manage report schedules" ON stoqr.report_schedules
-  FOR ALL USING (has_permission(company_id, 'company.manage'))
-  WITH CHECK (has_permission(company_id, 'company.manage'));
+  FOR ALL USING (has_permission(company_id, 'reports.export'))
+  WITH CHECK (has_permission(company_id, 'reports.export'));
+
+CREATE POLICY "Members can view report exports" ON stoqr.report_exports
+  FOR SELECT USING (
+    has_permission(company_id, 'reports.view')
+    OR requested_by = auth.uid()
+  );
+
+CREATE POLICY "Staff can manage report exports" ON stoqr.report_exports
+  FOR ALL USING (has_permission(company_id, 'reports.export'))
+  WITH CHECK (has_permission(company_id, 'reports.export'));
 
 CREATE POLICY "Staff can manage suppliers" ON stoqr.suppliers
-  FOR ALL USING (has_permission(company_id, 'products.manage'));
+  FOR ALL USING (
+    has_permission(company_id, 'procurement.manage')
+    OR has_permission(company_id, 'products.manage')
+  );
 
 CREATE POLICY "Staff can manage POs" ON stoqr.purchase_orders
-  FOR ALL USING (has_permission(company_id, 'products.manage'));
+  FOR ALL USING (
+    has_permission(company_id, 'procurement.manage')
+    OR has_permission(company_id, 'products.manage')
+  );
 
 CREATE POLICY "Staff can manage PO items" ON stoqr.purchase_order_items
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM stoqr.purchase_orders
       WHERE id = purchase_order_items.po_id
-        AND has_permission(company_id, 'products.manage')
+        AND (
+          has_permission(company_id, 'procurement.manage')
+          OR has_permission(company_id, 'products.manage')
+        )
     )
   );
 
 CREATE POLICY "Staff can view receiving logs" ON stoqr.receiving_logs
-  FOR SELECT USING (has_permission(company_id, 'transactions.view'));
+  FOR SELECT USING (
+    has_permission(company_id, 'transactions.view')
+    OR has_permission(company_id, 'procurement.manage')
+  );
+
+CREATE POLICY "Staff can manage receiving logs" ON stoqr.receiving_logs
+  FOR INSERT WITH CHECK (
+    has_permission(company_id, 'procurement.manage')
+    OR has_permission(company_id, 'products.manage')
+  );
+
+CREATE POLICY "Members can view alert rules" ON stoqr.alert_rules
+  FOR SELECT USING (
+    has_permission(company_id, 'alerts.view')
+    OR has_permission(company_id, 'alerts.manage')
+  );
+
+CREATE POLICY "Staff can manage alert rules" ON stoqr.alert_rules
+  FOR ALL USING (has_permission(company_id, 'alerts.manage'))
+  WITH CHECK (has_permission(company_id, 'alerts.manage'));
+
+CREATE POLICY "Members can view alert events" ON stoqr.alert_events
+  FOR SELECT USING (
+    has_permission(company_id, 'alerts.view')
+    OR has_permission(company_id, 'alerts.manage')
+    OR has_permission(company_id, 'dashboard.view')
+  );
+
+CREATE POLICY "Staff can manage alert events" ON stoqr.alert_events
+  FOR ALL USING (has_permission(company_id, 'alerts.manage'))
+  WITH CHECK (has_permission(company_id, 'alerts.manage'));
+
+CREATE POLICY "Staff can view alert deliveries" ON stoqr.alert_delivery_logs
+  FOR SELECT USING (has_permission(company_id, 'alerts.manage'));
+
+CREATE POLICY "Members can view activity events" ON stoqr.activity_events
+  FOR SELECT USING (
+    has_permission(company_id, 'activity.view')
+    OR has_permission(company_id, 'members.view')
+  );
+
+CREATE POLICY "Members can view label templates" ON stoqr.label_templates
+  FOR SELECT USING (
+    company_id IS NULL
+    OR has_permission(company_id, 'products.view')
+  );
+
+CREATE POLICY "Staff can manage label templates" ON stoqr.label_templates
+  FOR ALL USING (
+    company_id IS NOT NULL
+    AND has_permission(company_id, 'labels.manage')
+  )
+  WITH CHECK (
+    company_id IS NOT NULL
+    AND has_permission(company_id, 'labels.manage')
+  );
+
+CREATE POLICY "Staff can manage label print jobs" ON stoqr.label_print_jobs
+  FOR ALL USING (has_permission(company_id, 'labels.manage'))
+  WITH CHECK (has_permission(company_id, 'labels.manage'));
 
 CREATE POLICY "Give users access to their company folder" ON storage.objects
   FOR INSERT WITH CHECK (
