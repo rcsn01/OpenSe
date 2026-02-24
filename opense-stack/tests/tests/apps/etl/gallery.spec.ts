@@ -22,6 +22,13 @@ test.describe('ETL Gallery', () => {
 
   test('non-admin ETL user can clone a gallery workflow', async ({ authenticatedEtlPage }) => {
     const gallery = new ETLGalleryPage(authenticatedEtlPage);
+
+    await gallery.goto();
+    await gallery.expectLoaded();
+
+    const isOnGallery = /\/gallery/.test(authenticatedEtlPage.url());
+    test.skip(!isOnGallery, 'Gallery route unavailable in current auth/session state');
+
     const galleryResponsePromise = authenticatedEtlPage.waitForResponse(
       (response) =>
         response.request().method() === 'GET' &&
@@ -29,12 +36,6 @@ test.describe('ETL Gallery', () => {
         response.url().includes('is_template=eq.true'),
       { timeout: 5000 },
     );
-
-    await gallery.goto();
-    await gallery.expectLoaded();
-
-    const isOnGallery = /\/gallery/.test(authenticatedEtlPage.url());
-    test.skip(!isOnGallery, 'Gallery route unavailable in current auth/session state');
 
     const galleryResponse = await galleryResponsePromise.catch(() => null);
     test.skip(!galleryResponse, 'Gallery workflows request was not observed in this environment');
@@ -48,6 +49,13 @@ test.describe('ETL Gallery', () => {
 
   test('non-admin cannot edit gallery template in editor', async ({ authenticatedEtlPage }) => {
     const gallery = new ETLGalleryPage(authenticatedEtlPage);
+
+    await gallery.goto();
+    await gallery.expectLoaded();
+
+    const isOnGallery = /\/gallery/.test(authenticatedEtlPage.url());
+    test.skip(!isOnGallery, 'Gallery route unavailable in current auth/session state');
+
     const galleryResponsePromise = authenticatedEtlPage.waitForResponse(
       (response) =>
         response.request().method() === 'GET' &&
@@ -55,12 +63,6 @@ test.describe('ETL Gallery', () => {
         response.url().includes('is_template=eq.true'),
       { timeout: 5000 },
     );
-
-    await gallery.goto();
-    await gallery.expectLoaded();
-
-    const isOnGallery = /\/gallery/.test(authenticatedEtlPage.url());
-    test.skip(!isOnGallery, 'Gallery route unavailable in current auth/session state');
 
     const galleryResponse = await galleryResponsePromise.catch(() => null);
     test.skip(!galleryResponse, 'Gallery workflows request was not observed in this environment');
