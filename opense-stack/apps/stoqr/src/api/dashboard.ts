@@ -30,11 +30,21 @@ type TopMover = {
 type DashboardSnapshotRpc = {
   kpis?: {
     total_inventory_value?: number | string | null
+    total_stock_units?: number | string | null
     low_stock_items?: number | string | null
     out_of_stock_items?: number | string | null
+    pending_orders?: number | string | null
+  }
+  alerts_summary?: {
+    open_alerts?: number | string | null
+    critical_alerts?: number | string | null
+    low_stock_alerts?: number | string | null
+    reorder_alerts?: number | string | null
+    expiration_alerts?: number | string | null
   }
   charts?: {
     inventory_trend?: Array<{ day: string; delta: number | string | null }>
+    usage_trend?: Array<{ day: string; usage: number | string | null }>
   }
 }
 
@@ -84,10 +94,20 @@ export type DashboardData = {
   transactions: TransactionSummary[]
   revenue30Days: number
   totalValue: number
+  totalStockUnits: number
+  pendingOrders: number
   lowStockCount: number
   outOfStockCount: number
   topMovers: TopMover[]
   chartData: { date: string; value: number }[]
+  usageChartData: { date: string; value: number }[]
+  alertsSummary: {
+    openAlerts: number
+    criticalAlerts: number
+    lowStockAlerts: number
+    reorderAlerts: number
+    expirationAlerts: number
+  }
 }
 
 export const fetchDashboardData = async (companyId: string): Promise<DashboardData> => {
@@ -190,14 +210,32 @@ export const fetchDashboardData = async (companyId: string): Promise<DashboardDa
       }
     })
 
+  const usageChartData = (snapshot.charts?.usage_trend ?? [])
+    .slice()
+    .sort((left, right) => String(left.day).localeCompare(String(right.day)))
+    .map((point) => ({
+      date: String(point.day),
+      value: toNumber(point.usage, 0),
+    }))
+
   return {
     products,
     transactions,
     revenue30Days,
     totalValue,
+    totalStockUnits: toNumber(snapshot.kpis?.total_stock_units, 0),
+    pendingOrders: toNumber(snapshot.kpis?.pending_orders, 0),
     lowStockCount: toNumber(snapshot.kpis?.low_stock_items, 0),
     outOfStockCount: toNumber(snapshot.kpis?.out_of_stock_items, 0),
     topMovers,
     chartData,
+    usageChartData,
+    alertsSummary: {
+      openAlerts: toNumber(snapshot.alerts_summary?.open_alerts, 0),
+      criticalAlerts: toNumber(snapshot.alerts_summary?.critical_alerts, 0),
+      lowStockAlerts: toNumber(snapshot.alerts_summary?.low_stock_alerts, 0),
+      reorderAlerts: toNumber(snapshot.alerts_summary?.reorder_alerts, 0),
+      expirationAlerts: toNumber(snapshot.alerts_summary?.expiration_alerts, 0),
+    },
   }
 }

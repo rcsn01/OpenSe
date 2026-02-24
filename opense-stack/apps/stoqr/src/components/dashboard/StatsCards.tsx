@@ -1,56 +1,54 @@
-import { DollarSign, Package, AlertTriangle, XCircle } from 'lucide-react'
+import { Package, Layers3, AlertTriangle, ClipboardList } from 'lucide-react'
 import { StackLayout } from '@repo/ui'
 import { formatCurrency } from '../../utils'
 
 export const StatsCards = ({
-  revenue30Days,
   totalValue,
-  totalProducts,
+  totalStockUnits,
   lowStockCount,
-  outOfStockCount,
+  pendingOrders,
 }: {
-  revenue30Days: number
   totalValue: number
-  totalProducts: number
+  totalStockUnits: number
   lowStockCount: number
-  outOfStockCount: number
+  pendingOrders: number
 }) => {
   const items = [
     {
-      title: 'Revenue (30d)',
-      value: formatCurrency(revenue30Days),
-      subtext: 'Sales from tracked items',
-      trend: '+5% from last month',
-      icon: DollarSign,
-      iconBg: 'rgba(34, 197, 94, 0.16)',
-      iconColor: '#15803d',
-    },
-    {
-      title: 'Inventory Value',
+      title: 'Total Inventory Value',
       value: formatCurrency(totalValue),
-      subtext: `${totalProducts} total SKUs`,
-      trend: '+2% from last month',
+      subtext: 'Based on current cost price',
+      trend: 'KPI',
       icon: Package,
       iconBg: 'rgba(59, 130, 246, 0.16)',
       iconColor: '#1d4ed8',
     },
     {
-      title: 'Low Stock',
+      title: 'Stock Levels',
+      value: totalStockUnits,
+      subtext: 'Total units currently on hand',
+      trend: 'KPI',
+      icon: Layers3,
+      iconBg: 'rgba(99, 102, 241, 0.16)',
+      iconColor: '#4338ca',
+    },
+    {
+      title: 'Low Stock Alerts',
       value: lowStockCount,
       subtext: 'Items below reorder point',
-      trend: '+3% from last month',
+      trend: 'KPI',
       icon: AlertTriangle,
       iconBg: 'rgba(245, 158, 11, 0.18)',
       iconColor: '#b45309',
     },
     {
-      title: 'Out of Stock',
-      value: outOfStockCount,
-      subtext: 'Items with 0 quantity',
-      trend: '-1% from last month',
-      icon: XCircle,
-      iconBg: 'rgba(239, 68, 68, 0.18)',
-      iconColor: '#b91c1c',
+      title: 'Pending Orders',
+      value: pendingOrders,
+      subtext: 'Draft, sent, or partially received',
+      trend: 'KPI',
+      icon: ClipboardList,
+      iconBg: 'rgba(16, 185, 129, 0.16)',
+      iconColor: '#047857',
     },
   ]
 
@@ -81,8 +79,8 @@ export const StatsCards = ({
               </div>
             </div>
             <div className="muted small" style={{ marginTop: 6 }}>{item.subtext}</div>
-            <div className="small" style={{ marginTop: 8, color: '#16a34a', fontWeight: 600 }}>
-              ↑ {item.trend}
+            <div className="small" style={{ marginTop: 8, color: 'var(--muted)', fontWeight: 600 }}>
+              {item.trend}
             </div>
           </div>
         )
