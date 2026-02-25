@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('UI Design Mobile Side Navigation', () => {
-  test('side panel retracts and opens on mobile viewport', async ({ page }) => {
+  test('side panel opens from top bar and closes via outside tap or swipe left', async ({ page }) => {
     await page.goto('/buttons');
     await expect(page).toHaveURL(/\/buttons$/);
 
@@ -18,36 +18,25 @@ test.describe('UI Design Mobile Side Navigation', () => {
       });
     };
 
-    const getToggleCenterX = async () => {
-      return toggleNavButton.evaluate((element) => {
-        const rect = element.getBoundingClientRect();
-        return rect.x + rect.width / 2;
-      });
-    };
-
     await expect(toggleNavButton).toBeVisible();
     await expect.poll(async () => (await getSidebarMetrics()).x).toBeLessThanOrEqual(-120);
-    await expect.poll(async () => {
-      const metrics = await getSidebarMetrics();
-      const toggleCenterX = await getToggleCenterX();
-      return Math.abs(toggleCenterX - metrics.right);
-    }).toBeLessThanOrEqual(8);
 
     await toggleNavButton.click();
     await expect.poll(async () => (await getSidebarMetrics()).x).toBeGreaterThanOrEqual(-4);
-    await expect.poll(async () => {
-      const metrics = await getSidebarMetrics();
-      const toggleCenterX = await getToggleCenterX();
-      return Math.abs(toggleCenterX - metrics.right);
-    }).toBeLessThanOrEqual(8);
+
+    await page.mouse.click(viewportWidth - 16, 80);
+    await expect.poll(async () => (await getSidebarMetrics()).x).toBeLessThanOrEqual(-120);
 
     await toggleNavButton.click();
-    await expect(toggleNavButton).toBeVisible();
+    await expect.poll(async () => (await getSidebarMetrics()).x).toBeGreaterThanOrEqual(-4);
+
+    await sidebar.dispatchEvent('touchstart', {
+      changedTouches: [{ identifier: 1, clientX: 220, clientY: 200 }],
+    });
+    await sidebar.dispatchEvent('touchend', {
+      changedTouches: [{ identifier: 1, clientX: 100, clientY: 200 }],
+    });
+
     await expect.poll(async () => (await getSidebarMetrics()).x).toBeLessThanOrEqual(-120);
-    await expect.poll(async () => {
-      const metrics = await getSidebarMetrics();
-      const toggleCenterX = await getToggleCenterX();
-      return Math.abs(toggleCenterX - metrics.right);
-    }).toBeLessThanOrEqual(8);
   });
 });
