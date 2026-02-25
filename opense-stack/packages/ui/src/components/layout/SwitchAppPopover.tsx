@@ -42,10 +42,10 @@ export function SwitchAppPopover({ open, triggerEl, onClose }: SwitchAppPopoverP
 
   const apps = useMemo(() => {
     const env = import.meta.env as unknown as Record<string, string | undefined>
-    const etlUrl = env.VITE_ETL_URL || DEFAULT_APP_URLS.etl
-    const stoqrUrl = env.VITE_STOQR_URL || DEFAULT_APP_URLS.stoqr
-    const uiDesignUrl = env.VITE_UI_DESIGN_URL || DEFAULT_APP_URLS['ui-design']
-    const adminUrl = env.VITE_ADMIN_URL || DEFAULT_APP_URLS.admin
+    const etlUrl = env.VITE_ETL_PUBLIC_URL || env.VITE_ETL_URL || DEFAULT_APP_URLS.etl
+    const stoqrUrl = env.VITE_STOQR_PUBLIC_URL || env.VITE_STOQR_URL || DEFAULT_APP_URLS.stoqr
+    const uiDesignUrl = env.VITE_UI_PUBLIC_URL || env.VITE_UI_DESIGN_URL || DEFAULT_APP_URLS['ui-design']
+    const adminUrl = env.VITE_ADMIN_PUBLIC_URL || env.VITE_ADMIN_URL || DEFAULT_APP_URLS.admin
 
     return [
       { key: 'etl', label: 'ETL', url: etlUrl, path: '/dashboard', icon: <Workflow className="h-5 w-5" /> },
