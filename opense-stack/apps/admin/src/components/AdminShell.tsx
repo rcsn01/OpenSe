@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   AppLayout,
@@ -24,8 +24,35 @@ export const AdminShell = () => {
   const location = useLocation()
   const { logout } = useAuth()
   const [search, setSearch] = useState('')
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(max-width: 767px)').matches
+  })
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const applyViewport = () => {
+      const isMobile = mediaQuery.matches || window.innerWidth <= 767
+      setIsMobileViewport(isMobile)
+      if (!isMobile) {
+        setIsMobileNavOpen(false)
+      }
+    }
+
+    applyViewport()
+
+    const onChange = () => applyViewport()
+    mediaQuery.addEventListener('change', onChange)
+    window.addEventListener('resize', onChange)
+
+    return () => {
+      mediaQuery.removeEventListener('change', onChange)
+      window.removeEventListener('resize', onChange)
+    }
+  }, [])
 
   return (
     <AppLayout
@@ -36,6 +63,13 @@ export const AdminShell = () => {
       searchPlaceholder="Search items..."
       searchValue={search}
       onSearchChange={setSearch}
+      mobileSidebar={{
+        enabled: isMobileViewport,
+        isOpen: isMobileNavOpen,
+        onOpen: () => setIsMobileNavOpen(true),
+        onClose: () => setIsMobileNavOpen(false),
+        toggleAriaLabel: 'Toggle side navigation',
+      }}
       sidebar={
         <>
           <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Admin" version="v1" />

@@ -25,6 +25,11 @@ const mainNavItems = [
 export const AppLayout = () => {
   const { session, user, loading, isDemoUser, logout } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(max-width: 767px)').matches
+  })
   const location = useLocation()
   const [pendingRedirect, setPendingRedirect] = useState(false)
   const accountsUrl =
@@ -37,6 +42,28 @@ export const AppLayout = () => {
   const { data: userOrgs = [] } = useUserOrganisations(user?.id)
   const isDashboard = location.pathname.startsWith('/dashboard')
   const isGallery = location.pathname.startsWith('/gallery')
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const applyViewport = () => {
+      const isMobile = mediaQuery.matches || window.innerWidth <= 767
+      setIsMobileViewport(isMobile)
+      if (!isMobile) {
+        setIsMobileNavOpen(false)
+      }
+    }
+
+    applyViewport()
+
+    const onChange = () => applyViewport()
+    mediaQuery.addEventListener('change', onChange)
+    window.addEventListener('resize', onChange)
+
+    return () => {
+      mediaQuery.removeEventListener('change', onChange)
+      window.removeEventListener('resize', onChange)
+    }
+  }, [])
 
   useEffect(() => {
     if (userOrgs.length > 0 && !currentOrg) {
@@ -159,6 +186,12 @@ export const AppLayout = () => {
     <SwitchAppTopBar
       left={topBarSearch}
       profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
+      mobileSidebarToggle={{
+        enabled: isMobileViewport,
+        isOpen: isMobileNavOpen,
+        onOpen: () => setIsMobileNavOpen(true),
+        ariaLabel: 'Toggle side navigation',
+      }}
       onSettingsClick={() => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
       }}
@@ -181,6 +214,13 @@ export const AppLayout = () => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
       }}
       onLogout={handleSignOut}
+      mobileSidebar={{
+        enabled: isMobileViewport,
+        isOpen: isMobileNavOpen,
+        onOpen: () => setIsMobileNavOpen(true),
+        onClose: () => setIsMobileNavOpen(false),
+        toggleAriaLabel: 'Toggle side navigation',
+      }}
     >
       <Outlet context={outletContext} />
     </SharedAppLayout>

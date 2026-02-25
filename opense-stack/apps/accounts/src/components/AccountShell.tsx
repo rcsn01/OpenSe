@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AppLayout,
-  Button,
   SideNav,
   SideNavBrandSlot,
   SideNavGroup,
@@ -10,7 +9,7 @@ import {
   SideNavItem,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
-import { Building2, ChevronLeft, ChevronRight, CreditCard, Settings, ShieldCheck, SlidersHorizontal, Users } from 'lucide-react'
+import { Building2, CreditCard, Settings, ShieldCheck, SlidersHorizontal, Users } from 'lucide-react'
 import {
   accountNavigationItems,
   detectAccountsMobileViewport,
@@ -79,73 +78,51 @@ export const AccountShell = () => {
   const layoutClassName = `accounts-layout ${getAccountsLayoutViewportClass(isMobileViewport)} ${getAccountsLayoutMobileStateClass(isMobileNavOpen)}`
 
   return (
-    <>
-      {isMobileViewport && !isMobileNavOpen ? (
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed left-2 top-16 z-[60]"
-          aria-label="Open side navigation"
-          onClick={() => setIsMobileNavOpen(true)}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      ) : null}
-
-      <AppLayout
-        className={layoutClassName}
-        onSettingsClick={() => navigate('/settings')}
-        onLogout={() => void logout()}
-        searchPlaceholder="Search items..."
-        searchValue={search}
-        onSearchChange={setSearch}
-        sidebar={
-          <>
-            <SideNavBrandSlot
-              icon={<ShieldCheck />}
-              name="OpenSe Accounts"
-              version="v1"
-              trailing={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={isMobileViewport ? '' : 'hidden'}
-                  aria-label="Close side navigation"
-                  onClick={() => setIsMobileNavOpen(false)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              }
-            />
-            <SideNav>
-              <SideNavGroupList>
-                <SideNavGroup category="main">
-                  {accountNavigationItems.map(({ to, label }) => {
-                    const Icon = navIconsByPath[to as keyof typeof navIconsByPath]
-                    const isActive = isAccountNavItemActive(location.pathname, to)
-                    return (
-                      <SideNavItem
-                        key={to}
-                        active={isActive}
-                        renderLink={({ className, children }) => (
-                          <NavLink to={to} className={className}>
-                            {children}
-                          </NavLink>
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span>{label}</span>
-                      </SideNavItem>
-                    )
-                  })}
-                </SideNavGroup>
-              </SideNavGroupList>
-            </SideNav>
-          </>
-        }
-      >
-        <Outlet />
-      </AppLayout>
-    </>
+    <AppLayout
+      className={layoutClassName}
+      onSettingsClick={() => navigate('/settings')}
+      onLogout={() => void logout()}
+      searchPlaceholder="Search items..."
+      searchValue={search}
+      onSearchChange={setSearch}
+      mobileSidebar={{
+        enabled: isMobileViewport,
+        isOpen: isMobileNavOpen,
+        onOpen: () => setIsMobileNavOpen(true),
+        onClose: () => setIsMobileNavOpen(false),
+        toggleAriaLabel: 'Toggle side navigation',
+      }}
+      sidebar={
+        <>
+          <SideNavBrandSlot icon={<ShieldCheck />} name="OpenSe Accounts" version="v1" />
+          <SideNav>
+            <SideNavGroupList>
+              <SideNavGroup category="main">
+                {accountNavigationItems.map(({ to, label }) => {
+                  const Icon = navIconsByPath[to as keyof typeof navIconsByPath]
+                  const isActive = isAccountNavItemActive(location.pathname, to)
+                  return (
+                    <SideNavItem
+                      key={to}
+                      active={isActive}
+                      renderLink={({ className, children }) => (
+                        <NavLink to={to} className={className}>
+                          {children}
+                        </NavLink>
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{label}</span>
+                    </SideNavItem>
+                  )
+                })}
+              </SideNavGroup>
+            </SideNavGroupList>
+          </SideNav>
+        </>
+      }
+    >
+      <Outlet />
+    </AppLayout>
   )
 }
