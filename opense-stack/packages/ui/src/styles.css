@@ -244,9 +244,8 @@ button, input, select, textarea { font: inherit; }
     margin-left: 0 !important;
   }
 
-  /* Reserve left space for mobile sidebar toggle so search input doesn't overlap */
-  .app-layout.app-layout-mobile-enabled .app-top-bar {
-    padding-left: 52px; /* 36px toggle button + 16px gap */
+  .app-layout.app-layout-mobile-enabled .app-sidebar-backdrop {
+    background: color-mix(in srgb, var(--shade-black-1) 35%, transparent);
   }
 }
 
