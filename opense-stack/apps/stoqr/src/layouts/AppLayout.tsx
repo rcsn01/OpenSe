@@ -41,12 +41,39 @@ export const AppLayout = () => {
   const { user, logout } = useAuth()
   const [userName, setUserName] = useState<string>('')
   const [search, setSearch] = useState('')
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(max-width: 767px)').matches
+  })
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
 
   useEffect(() => {
     setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
   }, [user])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const applyViewport = () => {
+      const isMobile = mediaQuery.matches || window.innerWidth <= 767
+      setIsMobileViewport(isMobile)
+      if (!isMobile) {
+        setIsMobileNavOpen(false)
+      }
+    }
+
+    applyViewport()
+
+    const onChange = () => applyViewport()
+    mediaQuery.addEventListener('change', onChange)
+    window.addEventListener('resize', onChange)
+
+    return () => {
+      mediaQuery.removeEventListener('change', onChange)
+      window.removeEventListener('resize', onChange)
+    }
+  }, [])
 
   const handleSignOut = async () => {
     await logout()
@@ -95,6 +122,13 @@ export const AppLayout = () => {
       searchPlaceholder="Search items..."
       searchValue={search}
       onSearchChange={setSearch}
+      mobileSidebar={{
+        enabled: isMobileViewport,
+        isOpen: isMobileNavOpen,
+        onOpen: () => setIsMobileNavOpen(true),
+        onClose: () => setIsMobileNavOpen(false),
+        toggleAriaLabel: 'Toggle side navigation',
+      }}
     >
       <Outlet />
     </SharedAppLayout>
