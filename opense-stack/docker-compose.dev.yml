@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────────────
+# docker-compose.dev.yml
+# Mount the monorepo source and run Vite dev servers in containers.
+# No image build needed — uses the stock Node image directly.
+#
+# Usage:
+#   cd opense-stack
+#   docker compose -f docker-compose.dev.yml up
+# ─────────────────────────────────────────────────────────────
+name: opense-dev
+
+x-base: &base
+  image: node:22-alpine
+  working_dir: /app
+  volumes:
+    - .:/app
+    - pnpm-store:/app/.pnpm-store
+  env_file: .env
+  # Install deps on first run, then start the dev server
+  entrypoint: ["/bin/sh", "-c"]
+
+services:
+  # ── shared one-time install ────────────────────────────────
+  install:
+    <<: *base
+    command:
+      - |
+        corepack enable &&
+        corepack prepare pnpm@9.15.0 --activate &&
+        pnpm install --frozen-lockfile
+    profiles: ["setup"]
+
+  # ── web apps ───────────────────────────────────────────────
+  admin:
+    <<: *base
+    command:
+      - |
+        corepack enable &&
+        corepack prepare pnpm@9.15.0 --activate &&
+        pnpm install --frozen-lockfile &&
+        pnpm --filter @repo/admin dev
+    ports:
+      - "5990:5990"
+
+  accounts:
+    <<: *base
+    command:
+      - |
+        corepack enable &&
+        corepack prepare pnpm@9.15.0 --activate &&
+        pnpm install --frozen-lockfile &&
+        pnpm --filter @repo/accounts dev
+    ports:
+      - "5991:5991"
+
+  etl:
+    <<: *base
+    command:
+      - |
+        corepack enable &&
+        corepack prepare pnpm@9.15.0 --activate &&
+        pnpm install --frozen-lockfile &&
+        pnpm --filter @repo/etl dev
+    ports:
+      - "5992:5992"
+
+  stoqr:
+    <<: *base
+    command:
+      - |
+        corepack enable &&
+        corepack prepare pnpm@9.15.0 --activate &&
+        pnpm install --frozen-lockfile &&
+        pnpm --filter @repo/stoqr dev
+    ports:
+      - "5993:5993"
+
+  ui-design:
+    <<: *base
+    command:
+      - |
+        corepack enable &&
+        corepack prepare pnpm@9.15.0 --activate &&
+        pnpm install --frozen-lockfile &&
+        pnpm --filter @repo/ui-design dev
+    ports:
+      - "5999:5999"
+
+volumes:
+  pnpm-store:
