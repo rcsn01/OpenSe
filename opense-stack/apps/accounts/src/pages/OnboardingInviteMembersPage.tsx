@@ -38,7 +38,7 @@ export const OnboardingInviteMembersPage = () => {
       if (!nextStatus.needsOnboarding) {
         const redirected = redirectBackToApp()
         if (!redirected) {
-          navigate('/settings', { replace: true })
+          navigate('/general', { replace: true })
         }
         return
       }
@@ -97,7 +97,7 @@ export const OnboardingInviteMembersPage = () => {
       await completeOrganisationOnboarding()
       const redirected = redirectBackToApp()
       if (!redirected) {
-        navigate('/settings', { replace: true })
+        navigate('/general', { replace: true })
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to complete onboarding.'
