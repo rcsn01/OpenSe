@@ -26,7 +26,7 @@ export const loginToAccounts = async (page: Page, user: AccountsUser = ACCOUNTS_
     await submit.click();
   }
 
-  await page.waitForURL(/\/(billing|login)/);
+  await page.waitForURL(/\/(billing|general|login)/);
 };
 
 export interface AccountsAuthFixtures {

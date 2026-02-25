@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AppLayout,
@@ -13,7 +13,9 @@ import { useAuth } from '@repo/shared/auth/context'
 import { Building2, ChevronLeft, ChevronRight, CreditCard, Settings, ShieldCheck, SlidersHorizontal, Users } from 'lucide-react'
 import {
   accountNavigationItems,
+  detectAccountsMobileViewport,
   getAccountsLayoutMobileStateClass,
+  getAccountsLayoutViewportClass,
   isAccountNavItemActive,
 } from './accountNavigation'
 
@@ -31,16 +33,58 @@ export const AccountShell = () => {
   const { logout } = useAuth()
   const [search, setSearch] = useState('')
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return detectAccountsMobileViewport(
+      window.matchMedia('(max-width: 767px)').matches,
+      window.innerWidth,
+      window.screen?.width,
+      window.visualViewport?.width,
+    )
+  })
 
-  const layoutClassName = `accounts-layout ${getAccountsLayoutMobileStateClass(isMobileNavOpen)}`
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const applyViewport = () => {
+      const isMobile = detectAccountsMobileViewport(
+        mediaQuery.matches,
+        window.innerWidth,
+        window.screen?.width,
+        window.visualViewport?.width,
+      )
+
+      setIsMobileViewport(isMobile)
+      if (!isMobile) {
+        setIsMobileNavOpen(false)
+      }
+    }
+
+    applyViewport()
+
+    const onChange = () => {
+      applyViewport()
+    }
+
+    mediaQuery.addEventListener('change', onChange)
+    window.addEventListener('resize', onChange)
+    window.visualViewport?.addEventListener('resize', onChange)
+
+    return () => {
+      mediaQuery.removeEventListener('change', onChange)
+      window.removeEventListener('resize', onChange)
+      window.visualViewport?.removeEventListener('resize', onChange)
+    }
+  }, [])
+
+  const layoutClassName = `accounts-layout ${getAccountsLayoutViewportClass(isMobileViewport)} ${getAccountsLayoutMobileStateClass(isMobileNavOpen)}`
 
   return (
     <>
-      {!isMobileNavOpen ? (
+      {isMobileViewport && !isMobileNavOpen ? (
         <Button
           variant="outline"
           size="icon"
-          className="fixed left-2 top-16 z-[60] md:hidden"
+          className="fixed left-2 top-16 z-[60]"
           aria-label="Open side navigation"
           onClick={() => setIsMobileNavOpen(true)}
         >
@@ -65,7 +109,7 @@ export const AccountShell = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="md:hidden"
+                  className={isMobileViewport ? '' : 'hidden'}
                   aria-label="Close side navigation"
                   onClick={() => setIsMobileNavOpen(false)}
                 >
