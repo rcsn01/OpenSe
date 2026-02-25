@@ -193,7 +193,8 @@ function AppLayoutContent() {
       mobileSidebar={{
         enabled: isMobileViewport,
         isOpen: isMobileNavOpen,
-        onToggle: () => setIsMobileNavOpen((previous) => !previous),
+        onOpen: () => setIsMobileNavOpen(true),
+        onClose: () => setIsMobileNavOpen(false),
         toggleAriaLabel: 'Toggle side navigation',
       }}
     >
