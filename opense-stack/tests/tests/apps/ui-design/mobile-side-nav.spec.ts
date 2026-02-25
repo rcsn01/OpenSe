@@ -9,22 +9,45 @@ test.describe('UI Design Mobile Side Navigation', () => {
     expect(viewportWidth).toBeLessThanOrEqual(430);
 
     const sidebar = page.locator('aside[aria-label="Sidebar navigation"]');
-    const openNavButton = page.getByRole('button', { name: /open side navigation/i });
-    const closeNavButton = page.getByRole('button', { name: /close side navigation/i });
+    const toggleNavButton = page.getByRole('button', { name: /toggle side navigation/i });
 
-    const getSidebarX = async () => {
-      return sidebar.evaluate((element) => element.getBoundingClientRect().x);
+    const getSidebarMetrics = async () => {
+      return sidebar.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { x: rect.x, right: rect.right };
+      });
     };
 
-    await expect(openNavButton).toBeVisible();
-    await expect.poll(getSidebarX).toBeLessThanOrEqual(-120);
+    const getToggleCenterX = async () => {
+      return toggleNavButton.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.x + rect.width / 2;
+      });
+    };
 
-    await openNavButton.click();
-    await expect(closeNavButton).toBeVisible();
-    await expect.poll(getSidebarX).toBeGreaterThanOrEqual(-4);
+    await expect(toggleNavButton).toBeVisible();
+    await expect.poll(async () => (await getSidebarMetrics()).x).toBeLessThanOrEqual(-120);
+    await expect.poll(async () => {
+      const metrics = await getSidebarMetrics();
+      const toggleCenterX = await getToggleCenterX();
+      return Math.abs(toggleCenterX - metrics.right);
+    }).toBeLessThanOrEqual(8);
 
-    await closeNavButton.click();
-    await expect(openNavButton).toBeVisible();
-    await expect.poll(getSidebarX).toBeLessThanOrEqual(-120);
+    await toggleNavButton.click();
+    await expect.poll(async () => (await getSidebarMetrics()).x).toBeGreaterThanOrEqual(-4);
+    await expect.poll(async () => {
+      const metrics = await getSidebarMetrics();
+      const toggleCenterX = await getToggleCenterX();
+      return Math.abs(toggleCenterX - metrics.right);
+    }).toBeLessThanOrEqual(8);
+
+    await toggleNavButton.click();
+    await expect(toggleNavButton).toBeVisible();
+    await expect.poll(async () => (await getSidebarMetrics()).x).toBeLessThanOrEqual(-120);
+    await expect.poll(async () => {
+      const metrics = await getSidebarMetrics();
+      const toggleCenterX = await getToggleCenterX();
+      return Math.abs(toggleCenterX - metrics.right);
+    }).toBeLessThanOrEqual(8);
   });
 });
