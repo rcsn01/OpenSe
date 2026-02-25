@@ -1,3 +1,18 @@
 @import "tailwindcss";
 @import "@repo/ui/styles";
 @source "../../../packages/ui/src";
+
+@media (max-width: 767px) {
+	.accounts-layout .app-sidebar {
+		transform: translateX(-100%);
+		transition: transform 150ms ease-in-out;
+	}
+
+	.accounts-layout.accounts-layout-mobile-open .app-sidebar {
+		transform: translateX(0);
+	}
+
+	.accounts-layout main {
+		margin-left: 0;
+	}
+}
