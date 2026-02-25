@@ -133,6 +133,17 @@ export default defineConfig({
               baseURL: process.env.BASE_URL_ACCOUNTS || 'http://localhost:5991',
             },
           },
+          {
+            name: 'accounts-mobile-chromium',
+            testMatch: 'apps/accounts/general-mobile-nav.spec.ts',
+            use: {
+              ...devices['Desktop Chrome'],
+              viewport: { width: 390, height: 844 },
+              isMobile: true,
+              hasTouch: true,
+              baseURL: process.env.BASE_URL_ACCOUNTS || 'http://localhost:5991',
+            },
+          },
         ]
       : []),
   ],
