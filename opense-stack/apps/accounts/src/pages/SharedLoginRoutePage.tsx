@@ -10,7 +10,7 @@ const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
   if (status.step === 'invites') return '/onboarding/invitations'
   if (status.step === 'create') return '/onboarding/create-organisation'
   if (status.step === 'invite-members') return '/onboarding/invite-members'
-  return '/settings'
+  return '/general'
 }
 
 export const SharedLoginRoutePage = () => {
@@ -55,7 +55,7 @@ export const SharedLoginRoutePage = () => {
       return
     }
 
-    navigate('/settings', { replace: true })
+    navigate('/general', { replace: true })
   }, [getInternalNextPath, navigate])
 
   // Primary: redirect immediately when user becomes available (from any source)
@@ -73,7 +73,7 @@ export const SharedLoginRoutePage = () => {
     const id = setTimeout(() => {
       const path = window.location.pathname
       if (path === '/login' || path === '/signin') {
-        window.location.replace('/settings')
+        window.location.replace('/general')
       }
     }, 3000)
     return () => clearTimeout(id)
