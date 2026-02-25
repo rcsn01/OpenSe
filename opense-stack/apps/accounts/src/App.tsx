@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { SharedLoginRoutePage } from './pages/SharedLoginRoutePage'
 import { SharedSignupRoutePage } from './pages/SharedSignupRoutePage'
 import { AccountShell } from './components/AccountShell'
+import { GeneralSettingsPage } from './pages/GeneralSettingsPage'
 import { AccountSettingsPage } from './pages/AccountSettingsPage'
 import { OrganisationSettingsPage } from './pages/OrganisationSettingsPage'
 import { BillingPage } from './pages/BillingPage'
@@ -19,7 +20,7 @@ const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
   if (status.step === 'invites') return '/onboarding/invitations'
   if (status.step === 'create') return '/onboarding/create-organisation'
   if (status.step === 'invite-members') return '/onboarding/invite-members'
-  return '/settings'
+  return '/general'
 }
 
 const ProtectedAccountRoute = ({ children }: { children: React.ReactNode }) => {
@@ -73,7 +74,7 @@ const ProtectedAccountRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!onboardingStatus?.needsOnboarding && isOnboardingRoute) {
-    return <Navigate to="/settings" replace />
+    return <Navigate to="/general" replace />
   }
 
   return <>{children}</>
@@ -92,7 +93,7 @@ function App() {
           path="/"
           element={
             <ProtectedAccountRoute>
-              <Navigate to="/settings" replace />
+              <Navigate to="/general" replace />
             </ProtectedAccountRoute>
           }
         />
@@ -139,12 +140,14 @@ function App() {
             </ProtectedAccountRoute>
           }
         >
+          <Route path="/general" element={<GeneralSettingsPage />} />
           <Route path="/settings" element={<AccountSettingsPage />} />
           <Route path="/organisation" element={<OrganisationSettingsPage />} />
           <Route path="/billing" element={<BillingPage />} />
           <Route path="/seats" element={<SeatManagementPage />} />
 
-          <Route path="/account" element={<Navigate to="/settings" replace />} />
+          <Route path="/account" element={<Navigate to="/general" replace />} />
+          <Route path="/account/general" element={<Navigate to="/general" replace />} />
           <Route path="/account/settings" element={<Navigate to="/settings" replace />} />
           <Route path="/account/organisation" element={<Navigate to="/organisation" replace />} />
           <Route path="/account/billing" element={<Navigate to="/billing" replace />} />

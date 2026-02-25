@@ -26,7 +26,7 @@ export const OnboardingInvitationChoicePage = () => {
       if (!status.needsOnboarding) {
         const redirected = redirectBackToApp()
         if (!redirected) {
-          navigate('/settings', { replace: true })
+          navigate('/general', { replace: true })
         }
         return
       }
