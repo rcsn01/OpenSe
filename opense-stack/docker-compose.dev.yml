@@ -28,60 +28,69 @@ services:
         corepack enable &&
         corepack prepare pnpm@9.15.0 --activate &&
         pnpm install --frozen-lockfile
-    profiles: ["setup"]
 
   # ── web apps ───────────────────────────────────────────────
   admin:
     <<: *base
+    depends_on:
+      install:
+        condition: service_completed_successfully
     command:
       - |
         corepack enable &&
         corepack prepare pnpm@9.15.0 --activate &&
-        pnpm install --frozen-lockfile &&
         pnpm --filter @repo/admin dev
     ports:
       - "5990:5990"
 
   accounts:
     <<: *base
+    depends_on:
+      install:
+        condition: service_completed_successfully
     command:
       - |
         corepack enable &&
         corepack prepare pnpm@9.15.0 --activate &&
-        pnpm install --frozen-lockfile &&
         pnpm --filter @repo/accounts dev
     ports:
       - "5991:5991"
 
   etl:
     <<: *base
+    depends_on:
+      install:
+        condition: service_completed_successfully
     command:
       - |
         corepack enable &&
         corepack prepare pnpm@9.15.0 --activate &&
-        pnpm install --frozen-lockfile &&
         pnpm --filter @repo/etl dev
     ports:
       - "5992:5992"
 
   stoqr:
     <<: *base
+    depends_on:
+      install:
+        condition: service_completed_successfully
     command:
       - |
         corepack enable &&
         corepack prepare pnpm@9.15.0 --activate &&
-        pnpm install --frozen-lockfile &&
         pnpm --filter @repo/stoqr dev
     ports:
       - "5993:5993"
 
   ui-design:
     <<: *base
+    depends_on:
+      install:
+        condition: service_completed_successfully
     command:
       - |
         corepack enable &&
         corepack prepare pnpm@9.15.0 --activate &&
-        pnpm install --frozen-lockfile &&
         pnpm --filter @repo/ui-design dev
     ports:
       - "5999:5999"
