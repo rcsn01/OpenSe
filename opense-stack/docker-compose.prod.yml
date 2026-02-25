@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────
+# docker-compose.prod.yml
+# Run production-built images behind nginx.
+#
+# Build all images first:
+#   docker compose -f docker-compose.prod.yml build
+#
+# Then run them:
+#   docker compose -f docker-compose.prod.yml up -d
+# ─────────────────────────────────────────────────────────────
+name: opense-prod
+
+services:
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: admin
+    image: opense/admin
+    ports:
+      - "5990:80"
+    restart: unless-stopped
+
+  accounts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: accounts
+    image: opense/accounts
+    ports:
+      - "5991:80"
+    restart: unless-stopped
+
+  etl:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: etl
+    image: opense/etl
+    ports:
+      - "5992:80"
+    restart: unless-stopped
+
+  stoqr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: stoqr
+    image: opense/stoqr
+    ports:
+      - "5993:80"
+    restart: unless-stopped
+
+  ui-design:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: ui-design
+    image: opense/ui-design
+    ports:
+      - "5999:80"
+    restart: unless-stopped
