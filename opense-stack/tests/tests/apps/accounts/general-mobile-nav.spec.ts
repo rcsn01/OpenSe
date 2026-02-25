@@ -1,16 +1,16 @@
 import { test, expect } from '../../fixtures/accountsAuth';
 
 test.describe('Accounts General and Mobile Navigation', () => {
-  test('general page allows switching theme mode', async ({ authenticatedAccountsPage }) => {
-    await authenticatedAccountsPage.goto('/general');
-    await expect(authenticatedAccountsPage).toHaveURL(/\/(general|login)/);
+  test('general page allows switching theme mode', async ({ authenticatedRequiredAccountsPage }) => {
+    await authenticatedRequiredAccountsPage.goto('/general');
+    await expect(authenticatedRequiredAccountsPage).toHaveURL(/\/general/);
 
-    const heading = authenticatedAccountsPage.getByRole('heading', { name: /general/i }).first();
+    const heading = authenticatedRequiredAccountsPage.getByRole('heading', { name: /general/i }).first();
     if (!(await heading.isVisible().catch(() => false))) return;
 
     await expect(heading).toBeVisible();
 
-    const toggle = authenticatedAccountsPage.getByRole('switch', { name: /dark mode/i }).first();
+    const toggle = authenticatedRequiredAccountsPage.getByRole('switch', { name: /dark mode/i }).first();
     await expect(toggle).toBeVisible();
 
     const initialState = await toggle.getAttribute('aria-checked');
@@ -20,34 +20,26 @@ test.describe('Accounts General and Mobile Navigation', () => {
     expect(toggledState).not.toBe(initialState);
   });
 
-  test('mobile view side nav opens with > and retracts with <', async ({ authenticatedAccountsPage }) => {
-    test.skip(!test.info().project.name.includes('accounts-mobile'), 'Mobile side-nav assertions run only in mobile project');
+  test('mobile view side nav opens with > and retracts with <', async ({ authenticatedRequiredAccountsPage }) => {
+    await authenticatedRequiredAccountsPage.goto('/general');
+    await expect(authenticatedRequiredAccountsPage).toHaveURL(/\/general/);
 
-    await authenticatedAccountsPage.goto('/general');
-    await expect(authenticatedAccountsPage).toHaveURL(/\/(general|login)/);
-
-    if (/\/login$/.test(authenticatedAccountsPage.url())) {
-      test.skip(true, 'Requires authenticated accounts session for mobile side-nav assertion');
-    }
-
-    await expect(authenticatedAccountsPage).toHaveURL(/\/general/);
-
-    const viewportWidth = await authenticatedAccountsPage.evaluate(() => window.innerWidth);
+    const viewportWidth = await authenticatedRequiredAccountsPage.evaluate(() => window.innerWidth);
     expect(viewportWidth).toBeLessThanOrEqual(430);
 
-    const sidebar = authenticatedAccountsPage.locator('aside[aria-label="Sidebar navigation"]');
+    const sidebar = authenticatedRequiredAccountsPage.locator('aside[aria-label="Sidebar navigation"]');
 
     const getSidebarX = async () => {
       return sidebar.evaluate((element) => element.getBoundingClientRect().x);
     };
 
-    const openNavButton = authenticatedAccountsPage.getByRole('button', { name: /open side navigation/i });
+    const openNavButton = authenticatedRequiredAccountsPage.getByRole('button', { name: /open side navigation/i });
     await expect(openNavButton).toBeVisible();
     await expect.poll(getSidebarX).toBeLessThanOrEqual(-120);
 
     await openNavButton.click();
 
-    const closeNavButton = authenticatedAccountsPage.getByRole('button', { name: /close side navigation/i });
+    const closeNavButton = authenticatedRequiredAccountsPage.getByRole('button', { name: /close side navigation/i });
     await expect(closeNavButton).toBeVisible();
     await expect.poll(getSidebarX).toBeGreaterThanOrEqual(-4);
 
