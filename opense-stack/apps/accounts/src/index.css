@@ -3,16 +3,16 @@
 @source "../../../packages/ui/src";
 
 @media (max-width: 767px) {
-	.accounts-layout .app-sidebar {
-		transform: translateX(-100%);
+	.accounts-layout.accounts-layout-is-mobile .app-sidebar {
+		transform: translateX(-100%) !important;
 		transition: transform 150ms ease-in-out;
 	}
 
-	.accounts-layout.accounts-layout-mobile-open .app-sidebar {
-		transform: translateX(0);
+	.accounts-layout.accounts-layout-is-mobile.accounts-layout-mobile-open .app-sidebar {
+		transform: translateX(0) !important;
 	}
 
-	.accounts-layout main {
-		margin-left: 0;
+	.accounts-layout.accounts-layout-is-mobile main {
+		margin-left: 0 !important;
 	}
 }

@@ -21,21 +21,38 @@ test.describe('Accounts General and Mobile Navigation', () => {
   });
 
   test('mobile view side nav opens with > and retracts with <', async ({ authenticatedAccountsPage }) => {
-    await authenticatedAccountsPage.setViewportSize({ width: 390, height: 844 });
+    test.skip(!test.info().project.name.includes('accounts-mobile'), 'Mobile side-nav assertions run only in mobile project');
+
     await authenticatedAccountsPage.goto('/general');
     await expect(authenticatedAccountsPage).toHaveURL(/\/(general|login)/);
 
-    const openNavButton = authenticatedAccountsPage.getByRole('button', { name: /open side navigation/i });
-    if (!(await openNavButton.isVisible().catch(() => false))) return;
+    if (/\/login$/.test(authenticatedAccountsPage.url())) {
+      test.skip(true, 'Requires authenticated accounts session for mobile side-nav assertion');
+    }
 
+    await expect(authenticatedAccountsPage).toHaveURL(/\/general/);
+
+    const viewportWidth = await authenticatedAccountsPage.evaluate(() => window.innerWidth);
+    expect(viewportWidth).toBeLessThanOrEqual(430);
+
+    const sidebar = authenticatedAccountsPage.locator('aside[aria-label="Sidebar navigation"]');
+
+    const getSidebarX = async () => {
+      return sidebar.evaluate((element) => element.getBoundingClientRect().x);
+    };
+
+    const openNavButton = authenticatedAccountsPage.getByRole('button', { name: /open side navigation/i });
     await expect(openNavButton).toBeVisible();
+    await expect.poll(getSidebarX).toBeLessThanOrEqual(-120);
 
     await openNavButton.click();
 
     const closeNavButton = authenticatedAccountsPage.getByRole('button', { name: /close side navigation/i });
     await expect(closeNavButton).toBeVisible();
+    await expect.poll(getSidebarX).toBeGreaterThanOrEqual(-4);
 
     await closeNavButton.click();
     await expect(openNavButton).toBeVisible();
+    await expect.poll(getSidebarX).toBeLessThanOrEqual(-120);
   });
 });
