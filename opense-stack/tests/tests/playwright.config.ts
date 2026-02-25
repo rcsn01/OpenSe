@@ -31,6 +31,7 @@ const loadEnvFromFile = (filePath: string) => {
 
 loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test'));
 loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test.local'));
+loadEnvFromFile(resolve(workspaceRoot, '.env'));
 
 const withAccounts = process.env.E2E_WITH_ACCOUNTS !== 'false';
 const reuseExistingServer = process.env.E2E_REUSE_SERVER === 'true';
@@ -85,7 +86,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: [['html', { outputFolder: '../playwright-report' }]],
+  reporter: [['html', { outputFolder: '../playwright-report', open: 'never' }]],
   use: {
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -118,8 +119,20 @@ export default defineConfig({
     {
       name: 'ui-design-chromium',
       testMatch: 'apps/ui-design/**/*.spec.ts',
+      testIgnore: 'apps/ui-design/mobile-side-nav.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
+        baseURL: process.env.BASE_URL_UI_DESIGN || 'http://localhost:5999',
+      },
+    },
+    {
+      name: 'ui-design-mobile-chromium',
+      testMatch: 'apps/ui-design/mobile-side-nav.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
         baseURL: process.env.BASE_URL_UI_DESIGN || 'http://localhost:5999',
       },
     },
@@ -128,6 +141,7 @@ export default defineConfig({
           {
             name: 'accounts-chromium',
             testMatch: 'apps/accounts/**/*.spec.ts',
+            testIgnore: 'apps/accounts/general-mobile-nav.spec.ts',
             use: {
               ...devices['Desktop Chrome'],
               baseURL: process.env.BASE_URL_ACCOUNTS || 'http://localhost:5991',
