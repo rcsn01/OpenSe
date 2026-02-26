@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import {
   AppLayout as SharedAppLayout,
-  Button,
   SideNav,
   SideNavItem,
   SideNavGroup,
@@ -26,8 +25,6 @@ import {
   Box,
   SeparatorHorizontal,
   FlaskConical,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react'
 
 const foundationItems = [
@@ -96,17 +93,6 @@ function AppLayoutContent() {
         icon={<Palette className="w-5 h-5" />}
         name="UI Design Kit"
         version="v1.0"
-        trailing={
-          <Button
-            variant="ghost"
-            size="icon"
-            className={isMobileViewport ? '' : 'hidden'}
-            aria-label="Close side navigation"
-            onClick={() => setIsMobileNavOpen(false)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        }
       />
       <SideNav>
         <SideNavGroupList>
@@ -196,31 +182,23 @@ function AppLayoutContent() {
   )
 
   return (
-    <>
-      {isMobileViewport && !isMobileNavOpen ? (
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed left-2 top-16 z-[60]"
-          aria-label="Open side navigation"
-          onClick={() => setIsMobileNavOpen(true)}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      ) : null}
-
-      <SharedAppLayout
-        className={`ui-design-layout ${isMobileViewport ? 'ui-design-layout-is-mobile' : 'ui-design-layout-is-desktop'} ${isMobileNavOpen ? 'ui-design-layout-mobile-open' : 'ui-design-layout-mobile-closed'}`}
-        sidebar={sidebar}
-        profileFallback="U"
-        onLogout={handleLogout}
-        searchPlaceholder="Search items..."
-        searchValue={search}
-        onSearchChange={setSearch}
-      >
-        <Outlet />
-      </SharedAppLayout>
-    </>
+    <SharedAppLayout
+      className="ui-design-layout"
+      sidebar={sidebar}
+      profileFallback="U"
+      onLogout={handleLogout}
+      searchPlaceholder="Search items..."
+      searchValue={search}
+      onSearchChange={setSearch}
+      mobileSidebar={{
+        enabled: isMobileViewport,
+        isOpen: isMobileNavOpen,
+        onToggle: () => setIsMobileNavOpen((previous) => !previous),
+        toggleAriaLabel: 'Toggle side navigation',
+      }}
+    >
+      <Outlet />
+    </SharedAppLayout>
   )
 }
 
