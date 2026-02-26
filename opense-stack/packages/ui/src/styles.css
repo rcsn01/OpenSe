@@ -230,6 +230,26 @@ button, input, select, textarea { font: inherit; }
   background: var(--shade-black-2);
 }
 
+@media (max-width: 767px) {
+  .app-layout.app-layout-mobile-enabled .app-sidebar {
+    transform: translateX(-100%);
+    transition: transform 150ms ease-in-out;
+  }
+
+  .app-layout.app-layout-mobile-enabled.app-layout-mobile-open .app-sidebar {
+    transform: translateX(0);
+  }
+
+  .app-layout.app-layout-mobile-enabled .app-layout-main {
+    margin-left: 0 !important;
+  }
+
+  /* Reserve left space for mobile sidebar toggle so search input doesn't overlap */
+  .app-layout.app-layout-mobile-enabled .app-top-bar {
+    padding-left: 52px; /* 36px toggle button + 16px gap */
+  }
+}
+
 /* AppSidebar main content - reserve left space for fixed sidebar on desktop (1024px+) */
 @media (min-width: 1024px) {
   .app-sidebar-main {
