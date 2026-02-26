@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { SearchX, ScanBarcode } from 'lucide-react'
 import { StackLayout } from '@repo/ui'
 import {
@@ -12,11 +12,13 @@ export const QuickScanTab = ({
   setScanValue,
   companyId,
   entryMethod,
+  cameraContent,
 }: {
   scanValue: string
   setScanValue: (value: string) => void
   companyId: string
   entryMethod: 'camera' | 'manual'
+  cameraContent?: ReactNode
 }) => {
   const [quantity, setQuantity] = useState(1)
   const [message, setMessage] = useState<string | null>(null)
@@ -58,64 +60,71 @@ export const QuickScanTab = ({
   return (
     <StackLayout variant="grid-2">
       <div className="card stack">
-        <h2 className="section-title">Scan Lookup</h2>
-
-        {!scanValue && (
-          <div className="empty-state">
-            <ScanBarcode size={28} />
-            <div>Scan a barcode/QR or type SKU manually.</div>
-          </div>
-        )}
-
-        {!!scanValue && lookupQuery.isLoading && <div className="small muted">Looking up product...</div>}
-
-        {!product && notFoundSku && !lookupQuery.isLoading && (
-          <div className="empty-state">
-            <SearchX size={24} />
-            <div>No product found for: <strong>{notFoundSku}</strong></div>
-          </div>
-        )}
-
-        {product && (
-          <div className="stack">
-            <div className="flex-between">
-              <div>
-                <div style={{ fontWeight: 700 }}>{product.name}</div>
-                <div className="small muted">SKU: {product.sku}</div>
+        {!scanValue ? (
+          <>
+            <h2 className="section-title">Scan</h2>
+            {cameraContent ?? (
+              <div className="empty-state">
+                <ScanBarcode size={28} />
+                <div>Scan a barcode/QR to start lookup.</div>
               </div>
-              <span className="pill">On hand: {product.quantity_on_hand}</span>
-            </div>
+            )}
+          </>
+        ) : (
+          <>
+            <h2 className="section-title">Scan Lookup</h2>
 
-            <div className="small muted">Last handled by {lastHandledBy}</div>
+            {lookupQuery.isLoading && <div className="small muted">Looking up product...</div>}
 
-            <label className="stack">
-              Quantity
-              <input
-                className="input"
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(event) => setQuantity(Number(event.target.value || 1))}
-              />
-            </label>
+            {!product && notFoundSku && !lookupQuery.isLoading && (
+              <div className="empty-state">
+                <SearchX size={24} />
+                <div>No product found for: <strong>{notFoundSku}</strong></div>
+              </div>
+            )}
 
-            <div className="row">
-              <button
-                className="button"
-                disabled={transactionMutation.isPending}
-                onClick={() => submitTransaction('scan_in')}
-              >
-                Add Stock
-              </button>
-              <button
-                className="button secondary"
-                disabled={transactionMutation.isPending}
-                onClick={() => submitTransaction('scan_out')}
-              >
-                Remove Stock
-              </button>
-            </div>
-          </div>
+            {product && (
+              <div className="stack">
+                <div className="flex-between">
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{product.name}</div>
+                    <div className="small muted">SKU: {product.sku}</div>
+                  </div>
+                  <span className="pill">On hand: {product.quantity_on_hand}</span>
+                </div>
+
+                <div className="small muted">Last handled by {lastHandledBy}</div>
+
+                <label className="stack">
+                  Quantity
+                  <input
+                    className="input"
+                    type="number"
+                    min={1}
+                    value={quantity}
+                    onChange={(event) => setQuantity(Number(event.target.value || 1))}
+                  />
+                </label>
+
+                <div className="row">
+                  <button
+                    className="button"
+                    disabled={transactionMutation.isPending}
+                    onClick={() => submitTransaction('scan_in')}
+                  >
+                    Add Stock
+                  </button>
+                  <button
+                    className="button secondary"
+                    disabled={transactionMutation.isPending}
+                    onClick={() => submitTransaction('scan_out')}
+                  >
+                    Remove Stock
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {message && <div className="pill success">{message}</div>}
