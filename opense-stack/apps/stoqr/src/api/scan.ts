@@ -87,6 +87,21 @@ export const lookupProductByScanValue = async (
   }
 
   if (!resolvedProduct) {
+    const { data: nameMatch } = await db
+      .from('products')
+      .select('id, name, sku, quantity_on_hand, reorder_point, description, category, cost_price, selling_price, folder_id, image_urls, custom_fields, expiry_date, primary_barcode')
+      .eq('company_id', companyId)
+      .ilike('name', `%${cleanValue}%`)
+      .order('name', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (nameMatch) {
+      resolvedProduct = normalizeProduct(nameMatch as Partial<Product>)
+    }
+  }
+
+  if (!resolvedProduct) {
     return { product: null, lastHandledBy: '—', notFoundSku: cleanValue }
   }
 

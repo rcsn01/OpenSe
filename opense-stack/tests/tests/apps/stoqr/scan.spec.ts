@@ -23,10 +23,12 @@ test.describe('Stoqr Scan', () => {
 
     await expect(authenticatedPage.getByRole('button', { name: /start camera/i })).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /stop camera/i })).toBeVisible();
+    await expect(authenticatedPage.getByText(/manual entry/i)).toBeVisible();
     await expect(authenticatedPage.getByText(/Scan Lookup/i)).toHaveCount(0);
 
-    await authenticatedPage.getByLabel(/Barcode \/ SKU \/ QR value/i).fill('TEST-SKU-001');
+    await authenticatedPage.getByLabel(/Barcode \/ SKU \/ Product Name/i).fill('TEST-SKU-001');
     await expect(authenticatedPage.getByText(/Scan Lookup/i)).toBeVisible();
+    await expect(authenticatedPage.getByText(/search again/i)).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /start camera/i })).toHaveCount(0);
 
     await authenticatedPage.getByRole('tab', { name: /history/i }).click();

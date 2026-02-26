@@ -95,6 +95,84 @@ describe('scan api', () => {
     expect(result.notFoundSku).toBeNull()
   })
 
+  it('falls back to product name search when sku/barcode lookup misses', async () => {
+    const initialProductsQuery = {
+      select: vi.fn(() => initialProductsQuery),
+      eq: vi.fn(() => initialProductsQuery),
+      or: vi.fn(() => initialProductsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+
+    const barcodesQuery = {
+      select: vi.fn(() => barcodesQuery),
+      eq: vi.fn(() => barcodesQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+
+    const nameProductsQuery = {
+      select: vi.fn(() => nameProductsQuery),
+      eq: vi.fn(() => nameProductsQuery),
+      ilike: vi.fn(() => nameProductsQuery),
+      order: vi.fn(() => nameProductsQuery),
+      limit: vi.fn(() => nameProductsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: 'p-name-1',
+          name: 'Milk 2L',
+          sku: 'MILK-2L',
+          quantity_on_hand: 8,
+          reorder_point: 2,
+          description: null,
+          category: null,
+          cost_price: null,
+          selling_price: null,
+          folder_id: null,
+          image_urls: [],
+          custom_fields: {},
+          expiry_date: null,
+        },
+        error: null,
+      }),
+    }
+
+    const transactionsQuery = {
+      select: vi.fn(() => transactionsQuery),
+      eq: vi.fn(() => transactionsQuery),
+      order: vi.fn(() => transactionsQuery),
+      limit: vi.fn(() => transactionsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { performed_by: 'user-1' }, error: null }),
+    }
+
+    let productsCallCount = 0
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') {
+        productsCallCount += 1
+        return productsCallCount === 1 ? initialProductsQuery : nameProductsQuery
+      }
+      if (table === 'product_barcodes') return barcodesQuery
+      if (table === 'inventory_transactions') return transactionsQuery
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table !== 'profiles') throw new Error(`Unexpected supabase table: ${table}`)
+      return {
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: { full_name: 'Name Match User', username: null }, error: null }),
+          }),
+        }),
+      }
+    })
+
+    const result = await lookupProductByScanValue('company-1', 'milk')
+
+    expect(nameProductsQuery.ilike).toHaveBeenCalledWith('name', '%milk%')
+    expect(result.product?.id).toBe('p-name-1')
+    expect(result.product?.name).toBe('Milk 2L')
+    expect(result.notFoundSku).toBeNull()
+  })
+
   it('creates scan_out transaction and writes scan event log', async () => {
     const inventoryInsert = vi.fn(() => ({
       select: vi.fn(() => ({
