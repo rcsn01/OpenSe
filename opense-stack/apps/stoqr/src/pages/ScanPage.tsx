@@ -86,19 +86,6 @@ export const ScanPage = () => {
 
   return (
     <BasePage companyId={companyId} isLoading={false}>
-      <div className="card stack" style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Scan</h1>
-        <div className="row wrap">
-          <button className="button" onClick={startCamera} disabled={isScanning}>
-            Start Camera
-          </button>
-          <button className="button secondary" onClick={stopCamera} disabled={!isScanning}>
-            Stop Camera
-          </button>
-        </div>
-        <div id="reader" style={{ width: '100%', minHeight: 220 }} />
-      </div>
-
       <Tabs
         tabs={[
           { 
@@ -110,6 +97,19 @@ export const ScanPage = () => {
                 setScanValue={handleManualScanValue}
                 companyId={companyId || ''}
                 entryMethod={entryMethod}
+                cameraContent={
+                  <>
+                    <div className="row wrap">
+                      <button className="button" onClick={startCamera} disabled={isScanning}>
+                        Start Camera
+                      </button>
+                      <button className="button secondary" onClick={stopCamera} disabled={!isScanning}>
+                        Stop Camera
+                      </button>
+                    </div>
+                    <div id="reader" style={{ width: '100%', minHeight: 220 }} />
+                  </>
+                }
               />
             )
           },
