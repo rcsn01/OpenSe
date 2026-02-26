@@ -1,10 +1,16 @@
 import { useMemo, useState } from 'react'
-import { useCreateLabelPrintJob, useLabelPrintJobs, useLabelProducts, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
+import { useCreateLabelPrintJob, useLabelProductFolders, useLabelProducts, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
+import { createLabelPdfDataUrl } from './pdfExport'
+
+type BatchTarget = 'product' | 'folder'
 
 export const LabelPreviewBatchTab = ({ companyId }: { companyId: string }) => {
   const { data: templates = [], isLoading: loadingTemplates } = useLabelTemplates(companyId)
-  const { data: products = [], isLoading: loadingProducts } = useLabelProducts(companyId, '')
-  const { data: printJobs = [], isLoading: loadingJobs } = useLabelPrintJobs(companyId)
+  const [targetType, setTargetType] = useState<BatchTarget>('product')
+  const [folderId, setFolderId] = useState('')
+  const activeFolderId = targetType === 'folder' ? folderId : undefined
+  const { data: products = [], isLoading: loadingProducts } = useLabelProducts(companyId, '', activeFolderId)
+  const { data: folders = [], isLoading: loadingFolders } = useLabelProductFolders(companyId)
   const createPrintJobMutation = useCreateLabelPrintJob(companyId)
 
   const [templateId, setTemplateId] = useState('')
@@ -14,36 +20,74 @@ export const LabelPreviewBatchTab = ({ companyId }: { companyId: string }) => {
 
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === templateId) ?? null, [templates, templateId])
   const selectedProduct = useMemo(() => products.find((product) => product.id === productId) ?? null, [products, productId])
+  const selectedFolder = useMemo(() => folders.find((folder) => folder.id === folderId) ?? null, [folders, folderId])
 
-  const createPrintJob = async () => {
+  const exportPdf = async () => {
     setMessage(null)
-    if (!templateId || !productId || quantity < 1) {
-      setMessage('Select template, product, and valid quantity.')
+    if (!templateId || quantity < 1) {
+      setMessage('Select template and valid quantity.')
       return
     }
 
+    if (targetType === 'product' && !productId) {
+      setMessage('Select a product.')
+      return
+    }
+
+    if (targetType === 'folder') {
+      if (!folderId) {
+        setMessage('Select a folder.')
+        return
+      }
+
+      if (products.length === 0) {
+        setMessage('Selected folder has no products.')
+        return
+      }
+    }
+
+    const payload =
+      targetType === 'folder'
+        ? {
+            targetType,
+            folderId,
+            productIds: products.map((product) => product.id),
+            products: products.map((product) => ({ id: product.id, sku: product.sku, name: product.name })),
+          }
+        : {
+            targetType,
+            productId,
+            sku: selectedProduct?.sku,
+            name: selectedProduct?.name,
+          }
+
     try {
+      const productsToExport = targetType === 'folder' ? products : selectedProduct ? [selectedProduct] : []
+      const outputUrl = await createLabelPdfDataUrl({
+        templateName: selectedTemplate?.name ?? 'Unknown template',
+        layout: selectedTemplate?.layout,
+        products: productsToExport,
+        quantity,
+      })
+
       await createPrintJobMutation.mutateAsync({
         templateId,
         format: 'pdf',
         quantity,
-        payload: {
-          productId,
-          sku: selectedProduct?.sku,
-          name: selectedProduct?.name,
-        },
+        payload,
+        outputUrl,
+        status: 'completed',
       })
-      setMessage('Batch print job queued.')
+      setMessage('PDF exported. Open the Downloads tab to download it.')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to queue print job.')
+      setMessage(error instanceof Error ? error.message : 'Failed to export PDF.')
     }
   }
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-      <div className="card stack">
-        <h3 className="section-title">Preview & Batch Print</h3>
-        {loadingTemplates || loadingProducts ? (
+    <div className="card stack">
+      <h3 className="section-title">Preview & Batch</h3>
+      {loadingTemplates || loadingProducts || loadingFolders ? (
           <div className="empty-state">Loading data...</div>
         ) : (
           <>
@@ -60,16 +104,54 @@ export const LabelPreviewBatchTab = ({ companyId }: { companyId: string }) => {
             </label>
 
             <label className="stack">
-              Product
-              <select className="select" value={productId} onChange={(event) => setProductId(event.target.value)}>
-                <option value="">Select product</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} ({product.sku})
-                  </option>
-                ))}
+              Scope
+              <select
+                className="select"
+                value={targetType}
+                onChange={(event) => {
+                  const nextType = event.target.value as BatchTarget
+                  setTargetType(nextType)
+                  setMessage(null)
+                  setProductId('')
+                  if (nextType === 'product') {
+                    setFolderId('')
+                  }
+                }}
+              >
+                <option value="product">Single Product</option>
+                <option value="folder">Entire Folder</option>
               </select>
             </label>
+
+            {targetType === 'folder' ? (
+              <label className="stack">
+                Folder
+                <select className="select" value={folderId} onChange={(event) => setFolderId(event.target.value)}>
+                  <option value="">Select folder</option>
+                  {folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            {targetType === 'product' ? (
+              <label className="stack">
+                Product
+                <select className="select" value={productId} onChange={(event) => setProductId(event.target.value)}>
+                  <option value="">Select product</option>
+                  {products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name} ({product.sku})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <div className="small muted">Products in folder: {products.length}</div>
+            )}
 
             <label className="stack">
               Quantity
@@ -83,35 +165,18 @@ export const LabelPreviewBatchTab = ({ companyId }: { companyId: string }) => {
             </label>
 
             <div className="small muted">
-              Preview: {selectedTemplate ? selectedTemplate.name : 'No template'} · {selectedProduct ? selectedProduct.name : 'No product'} · x{quantity}
+              Preview: {selectedTemplate ? selectedTemplate.name : 'No template'} ·{' '}
+              {targetType === 'product'
+                ? selectedProduct?.name ?? 'No product'
+                : selectedFolder
+                  ? `${selectedFolder.name} (${products.length} products)`
+                  : 'No folder'} · x{quantity}
             </div>
 
-            <button className="button" onClick={createPrintJob} disabled={createPrintJobMutation.isPending}>Queue Print Job</button>
+            <button className="button" onClick={exportPdf} disabled={createPrintJobMutation.isPending}>Export PDF</button>
             {message && <div className="small muted">{message}</div>}
           </>
         )}
-      </div>
-
-      <div className="card stack">
-        <h3 className="section-title">Recent Print Jobs</h3>
-        {loadingJobs ? (
-          <div className="empty-state">Loading print jobs...</div>
-        ) : printJobs.length === 0 ? (
-          <div className="empty-state">No print jobs yet.</div>
-        ) : (
-          <div className="list">
-            {printJobs.map((job) => (
-              <div key={job.id} className="flex-between" style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{job.status.toUpperCase()}</div>
-                  <div className="small muted">{job.quantity} labels · {new Date(job.created_at).toLocaleString()}</div>
-                </div>
-                <span className="pill">{job.template_id ? 'Template' : 'Custom'}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

@@ -1,16 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockDbFrom = vi.fn()
+const mockSupabaseFrom = vi.fn()
+const mockGetUser = vi.fn()
 
 vi.mock('../../supabaseClient', () => ({
   db: {
     from: (...args: unknown[]) => mockDbFrom(...args),
+  },
+  supabase: {
+    auth: {
+      getUser: (...args: unknown[]) => mockGetUser(...args),
+    },
+    from: (...args: unknown[]) => mockSupabaseFrom(...args),
   },
 }))
 
 import {
   createLabelPrintJob,
   createLabelTemplate,
+  fetchLabelProductFolders,
   fetchLabelPrintJobs,
   fetchLabelProducts,
   fetchLabelTemplates,
@@ -19,12 +28,13 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
 })
 
 describe('label studio api', () => {
   it('fetches label products with search filter', async () => {
     const queryResult = {
-      data: [{ id: 'p-1', name: 'Label Product', sku: 'LBL-1' }],
+      data: [{ id: 'p-1', name: 'Label Product', sku: 'LBL-1', folder_id: 'folder-a' }],
       error: null,
     }
 
@@ -50,8 +60,65 @@ describe('label studio api', () => {
 
     const rows = await fetchLabelProducts('company-1', 'LBL')
 
-    expect(rows).toEqual([{ id: 'p-1', name: 'Label Product', sku: 'LBL-1' }])
+    expect(rows).toEqual([{ id: 'p-1', name: 'Label Product', sku: 'LBL-1', folder_id: 'folder-a' }])
     expect(query.or).toHaveBeenCalledWith('name.ilike.%LBL%,sku.ilike.%LBL%')
+  })
+
+  it('fetches label products scoped to selected folder', async () => {
+    const queryResult = {
+      data: [{ id: 'p-2', name: 'Folder Product', sku: 'FLD-1', folder_id: 'folder-b' }],
+      error: null,
+    }
+
+    const query = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      order: vi.fn(),
+      or: vi.fn(),
+    }
+
+    query.select.mockReturnValue(query)
+    query.eq.mockReturnValue(query)
+    query.order.mockReturnValue(query)
+    query.or.mockResolvedValue(queryResult)
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') {
+        return query
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const rows = await fetchLabelProducts('company-1', 'FLD', 'folder-b')
+
+    expect(rows).toEqual([{ id: 'p-2', name: 'Folder Product', sku: 'FLD-1', folder_id: 'folder-b' }])
+    expect(query.eq).toHaveBeenCalledWith('folder_id', 'folder-b')
+  })
+
+  it('fetches label product folders', async () => {
+    const order = vi.fn().mockResolvedValue({
+      data: [{ id: 'folder-a', name: 'Beverages' }],
+      error: null,
+    })
+
+    const eq = vi.fn(() => ({ order }))
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'folders') {
+        return {
+          select: vi.fn(() => ({ eq })),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const rows = await fetchLabelProductFolders('company-1')
+
+    expect(rows).toEqual([{ id: 'folder-a', name: 'Beverages' }])
+    expect(eq).toHaveBeenCalledWith('company_id', 'company-1')
+    expect(order).toHaveBeenCalledWith('name')
   })
 
   it('fetches templates from system and company scope', async () => {
@@ -162,6 +229,7 @@ describe('label studio api', () => {
           status: 'queued',
           quantity: 2,
           output_url: null,
+          requested_by: 'user-1',
           created_at: '2026-02-24T00:00:00Z',
         },
       ],
@@ -182,12 +250,29 @@ describe('label studio api', () => {
       throw new Error(`Unexpected table: ${table}`)
     })
 
+    const inProfiles = vi.fn().mockResolvedValue({
+      data: [{ id: 'user-1', full_name: 'Demo User', username: 'demo' }],
+      error: null,
+    })
+
+    mockSupabaseFrom.mockImplementation((table: string) => {
+      if (table === 'profiles') {
+        return {
+          select: vi.fn(() => ({ in: inProfiles })),
+        }
+      }
+
+      throw new Error(`Unexpected supabase table: ${table}`)
+    })
+
     await createLabelPrintJob({
       companyId: 'company-1',
       templateId: 'tpl-1',
       format: 'pdf',
       quantity: 2,
       payload: { productId: 'p-1' },
+      outputUrl: 'data:application/pdf;base64,abc',
+      status: 'completed',
     })
 
     expect(insert).toHaveBeenCalledWith({
@@ -196,11 +281,15 @@ describe('label studio api', () => {
       format: 'pdf',
       quantity: 2,
       payload: { productId: 'p-1' },
-      status: 'queued',
+      status: 'completed',
+      output_url: 'data:application/pdf;base64,abc',
+      requested_by: 'user-1',
+      completed_at: expect.any(String),
     })
 
     const jobs = await fetchLabelPrintJobs('company-1')
     expect(jobs).toHaveLength(1)
+    expect(jobs[0]?.requester?.full_name).toBe('Demo User')
     expect(eq).toHaveBeenCalledWith('company_id', 'company-1')
     expect(order).toHaveBeenCalledWith('created_at', { ascending: false })
     expect(limit).toHaveBeenCalledWith(50)

@@ -14,7 +14,9 @@ export default defineConfig({
   envDir: resolve(__dirname, '../..'),
   test: {
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
+    environmentMatchGlobs: [['src/api/**/*.{test,spec}.ts', 'node']],
+    setupFiles: ['./src/__tests__/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
 })
