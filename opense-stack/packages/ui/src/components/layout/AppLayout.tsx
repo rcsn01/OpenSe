@@ -1,7 +1,5 @@
-import { type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { type ReactNode, useCallback, useRef } from 'react'
 import { cn } from '../../lib/cn'
-import { Button } from '../ui/Button'
 import { SwitchAppTopBar } from './SwitchAppTopBar'
 
 /**
@@ -35,7 +33,9 @@ export interface AppLayoutProps {
   mobileSidebar?: {
     enabled: boolean
     isOpen: boolean
-    onToggle: () => void
+    onToggle?: () => void
+    onOpen?: () => void
+    onClose?: () => void
     toggleAriaLabel?: string
   }
 }
@@ -54,8 +54,57 @@ export function AppLayout({
   className,
   mobileSidebar,
 }: AppLayoutProps) {
+  const touchStartXRef = useRef<number | null>(null)
   const isMobileSidebarEnabled = Boolean(mobileSidebar?.enabled)
   const isMobileSidebarOpen = Boolean(mobileSidebar?.isOpen)
+
+  const openMobileSidebar = useCallback(() => {
+    if (!isMobileSidebarEnabled || isMobileSidebarOpen) return
+    if (mobileSidebar?.onOpen) {
+      mobileSidebar.onOpen()
+      return
+    }
+    mobileSidebar?.onToggle?.()
+  }, [isMobileSidebarEnabled, isMobileSidebarOpen, mobileSidebar])
+
+  const closeMobileSidebar = useCallback(() => {
+    if (!isMobileSidebarEnabled || !isMobileSidebarOpen) return
+    if (mobileSidebar?.onClose) {
+      mobileSidebar.onClose()
+      return
+    }
+    mobileSidebar?.onToggle?.()
+  }, [isMobileSidebarEnabled, isMobileSidebarOpen, mobileSidebar])
+
+  const handleSidebarTouchStart = useCallback(
+    (event: React.TouchEvent<HTMLElement>) => {
+      if (!isMobileSidebarEnabled || !isMobileSidebarOpen) return
+      touchStartXRef.current = event.changedTouches[0]?.clientX ?? null
+    },
+    [isMobileSidebarEnabled, isMobileSidebarOpen],
+  )
+
+  const handleSidebarTouchEnd = useCallback(
+    (event: React.TouchEvent<HTMLElement>) => {
+      if (!isMobileSidebarEnabled || !isMobileSidebarOpen) return
+      const touchStartX = touchStartXRef.current
+      touchStartXRef.current = null
+      if (touchStartX == null) return
+
+      const touchEndX = event.changedTouches[0]?.clientX
+      if (touchEndX == null) return
+
+      const horizontalDelta = touchEndX - touchStartX
+      if (horizontalDelta <= -40) {
+        closeMobileSidebar()
+      }
+    },
+    [closeMobileSidebar, isMobileSidebarEnabled, isMobileSidebarOpen],
+  )
+
+  const handleSidebarTouchCancel = useCallback(() => {
+    touchStartXRef.current = null
+  }, [])
 
   const showTopBar = topBar !== null
   const resolvedTopBar =
@@ -68,6 +117,12 @@ export function AppLayout({
         searchPlaceholder={searchPlaceholder}
         searchValue={searchValue}
         onSearchChange={onSearchChange}
+        mobileSidebarToggle={{
+          enabled: isMobileSidebarEnabled,
+          isOpen: isMobileSidebarOpen,
+          onOpen: openMobileSidebar,
+          ariaLabel: mobileSidebar?.toggleAriaLabel,
+        }}
       />
     ) : (
       topBar
@@ -86,22 +141,21 @@ export function AppLayout({
       <aside
         className="app-sidebar fixed inset-y-0 left-0 z-50 flex h-screen w-60 shrink-0 flex-col"
         aria-label="Sidebar navigation"
+        onTouchStart={handleSidebarTouchStart}
+        onTouchEnd={handleSidebarTouchEnd}
+        onTouchCancel={handleSidebarTouchCancel}
       >
         {sidebar}
-        {isMobileSidebarEnabled ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="mobile-sidebar-toggle absolute left-full top-7 z-[70] -translate-y-1/2 md:hidden"
-            aria-label={mobileSidebar?.toggleAriaLabel ?? 'Toggle side navigation'}
-            aria-pressed={isMobileSidebarOpen}
-            onClick={mobileSidebar?.onToggle}
-          >
-            {isMobileSidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </Button>
-        ) : null}
       </aside>
+
+      {isMobileSidebarEnabled && isMobileSidebarOpen ? (
+        <button
+          type="button"
+          className="app-sidebar-backdrop fixed inset-0 z-40 md:hidden"
+          aria-label="Close side navigation"
+          onClick={closeMobileSidebar}
+        />
+      ) : null}
 
       {/* Main content - top bar + scrollable area */}
       <main className="app-layout-main ml-60 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
