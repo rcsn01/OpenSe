@@ -58,7 +58,7 @@ export const QuickScanTab = ({
   }
 
   return (
-    <StackLayout variant="grid-2">
+    <StackLayout>
       <div className="card stack">
         {!scanValue ? (
           <>
@@ -69,6 +69,18 @@ export const QuickScanTab = ({
                 <div>Scan a barcode/QR to start lookup.</div>
               </div>
             )}
+
+            <h3 className="section-title" style={{ marginTop: 8 }}>Manual Entry</h3>
+            <label className="stack">
+              Barcode / SKU / Product Name
+              <input
+                className="input"
+                value={scanValue}
+                onChange={(event) => setScanValue(event.target.value)}
+                placeholder="Type barcode, SKU, or product name"
+              />
+            </label>
+            <div className="small muted">Entry mode: {entryMethod === 'camera' ? 'Camera' : 'Manual'}</div>
           </>
         ) : (
           <>
@@ -124,24 +136,22 @@ export const QuickScanTab = ({
                 </div>
               </div>
             )}
+
+            <h3 className="section-title" style={{ marginTop: 8 }}>Search Again</h3>
+            <label className="stack">
+              Barcode / SKU / Product Name
+              <input
+                className="input"
+                value={scanValue}
+                onChange={(event) => setScanValue(event.target.value)}
+                placeholder="Type barcode, SKU, or product name"
+              />
+            </label>
+            <div className="small muted">Entry mode: {entryMethod === 'camera' ? 'Camera' : 'Manual'}</div>
           </>
         )}
 
         {message && <div className="pill success">{message}</div>}
-      </div>
-
-      <div className="card stack">
-        <h3 className="section-title">Manual Entry</h3>
-        <label className="stack">
-          Barcode / SKU / QR value
-          <input
-            className="input"
-            value={scanValue}
-            onChange={(event) => setScanValue(event.target.value)}
-            placeholder="Type barcode or SKU"
-          />
-        </label>
-        <div className="small muted">Entry mode: {entryMethod === 'camera' ? 'Camera' : 'Manual'}</div>
       </div>
     </StackLayout>
   )
