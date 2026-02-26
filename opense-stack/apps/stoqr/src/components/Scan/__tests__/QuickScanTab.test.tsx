@@ -41,6 +41,8 @@ describe('QuickScanTab', () => {
     )
 
     expect(screen.getByText('Camera Panel')).toBeInTheDocument()
+    expect(screen.getByText('Manual Entry')).toBeInTheDocument()
+    expect(screen.getByLabelText('Barcode / SKU / Product Name')).toBeInTheDocument()
     expect(screen.queryByText('Scan Lookup')).not.toBeInTheDocument()
   })
 
@@ -67,6 +69,8 @@ describe('QuickScanTab', () => {
 
     expect(screen.getByText('Scan Lookup')).toBeInTheDocument()
     expect(screen.queryByText('Camera Panel')).not.toBeInTheDocument()
+    expect(screen.getByText('Search Again')).toBeInTheDocument()
+    expect(screen.getByLabelText('Barcode / SKU / Product Name')).toBeInTheDocument()
     expect(screen.getByText(/No product found for:/i)).toBeInTheDocument()
   })
 })
