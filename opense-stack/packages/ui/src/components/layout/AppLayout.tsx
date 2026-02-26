@@ -1,5 +1,7 @@
 import { type ReactNode } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { Button } from '../ui/Button'
 import { SwitchAppTopBar } from './SwitchAppTopBar'
 
 /**
@@ -29,6 +31,13 @@ export interface AppLayoutProps {
   onSearchChange?: (value: string) => void
   /** Optional class for the root container */
   className?: string
+  /** Mobile sidebar toggle behavior for small screens */
+  mobileSidebar?: {
+    enabled: boolean
+    isOpen: boolean
+    onToggle: () => void
+    toggleAriaLabel?: string
+  }
 }
 
 export function AppLayout({
@@ -43,7 +52,11 @@ export function AppLayout({
   searchValue,
   onSearchChange,
   className,
+  mobileSidebar,
 }: AppLayoutProps) {
+  const isMobileSidebarEnabled = Boolean(mobileSidebar?.enabled)
+  const isMobileSidebarOpen = Boolean(mobileSidebar?.isOpen)
+
   const showTopBar = topBar !== null
   const resolvedTopBar =
     topBar === undefined ? (
@@ -63,7 +76,9 @@ export function AppLayout({
   return (
     <div
       className={cn(
-        'flex h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]',
+        'app-layout flex h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]',
+        isMobileSidebarEnabled ? 'app-layout-mobile-enabled' : 'app-layout-mobile-disabled',
+        isMobileSidebarEnabled && isMobileSidebarOpen ? 'app-layout-mobile-open' : 'app-layout-mobile-closed',
         className,
       )}
     >
@@ -73,10 +88,23 @@ export function AppLayout({
         aria-label="Sidebar navigation"
       >
         {sidebar}
+        {isMobileSidebarEnabled ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="mobile-sidebar-toggle absolute left-full top-7 z-[70] -translate-y-1/2 md:hidden"
+            aria-label={mobileSidebar?.toggleAriaLabel ?? 'Toggle side navigation'}
+            aria-pressed={isMobileSidebarOpen}
+            onClick={mobileSidebar?.onToggle}
+          >
+            {isMobileSidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
+        ) : null}
       </aside>
 
       {/* Main content - top bar + scrollable area */}
-      <main className="ml-60 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="app-layout-main ml-60 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {showTopBar && resolvedTopBar}
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </main>
