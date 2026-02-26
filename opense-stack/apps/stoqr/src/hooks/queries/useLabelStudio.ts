@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createLabelPrintJob,
   createLabelTemplate,
+  fetchLabelProductFolders,
   fetchLabelPrintJobs,
   fetchLabelProducts,
   fetchLabelTemplates,
@@ -11,14 +12,22 @@ import {
 const labelStudioKeys = {
   products: (companyId: string | null, search: string) =>
     ['stoqr', 'label-studio', 'products', companyId, search] as const,
+  productFolders: (companyId: string | null) => ['stoqr', 'label-studio', 'product-folders', companyId] as const,
   templates: (companyId: string | null) => ['stoqr', 'label-studio', 'templates', companyId] as const,
   printJobs: (companyId: string | null) => ['stoqr', 'label-studio', 'print-jobs', companyId] as const,
 }
 
-export const useLabelProducts = (companyId: string | null, search: string) =>
+export const useLabelProducts = (companyId: string | null, search: string, folderId?: string) =>
   useQuery({
-    queryKey: labelStudioKeys.products(companyId, search),
-    queryFn: () => fetchLabelProducts(companyId as string, search),
+    queryKey: [...labelStudioKeys.products(companyId, search), folderId ?? 'all'] as const,
+    queryFn: () => fetchLabelProducts(companyId as string, search, folderId),
+    enabled: !!companyId,
+  })
+
+export const useLabelProductFolders = (companyId: string | null) =>
+  useQuery({
+    queryKey: labelStudioKeys.productFolders(companyId),
+    queryFn: () => fetchLabelProductFolders(companyId as string),
     enabled: !!companyId,
   })
 
@@ -88,6 +97,8 @@ export const useCreateLabelPrintJob = (companyId: string | null) => {
       format: 'pdf' | 'png'
       quantity: number
       payload: Record<string, unknown>
+      outputUrl?: string | null
+      status?: 'queued' | 'processing' | 'completed' | 'failed'
     }) => {
       if (!companyId) throw new Error('No company selected')
       await createLabelPrintJob({ companyId, ...payload })
