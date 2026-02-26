@@ -20,7 +20,7 @@ test.describe('Accounts General and Mobile Navigation', () => {
     expect(toggledState).not.toBe(initialState);
   });
 
-  test('mobile view side nav opens with > and retracts with <', async ({ authenticatedRequiredAccountsPage }) => {
+  test('mobile view side nav opens from top bar toggle and retracts on outside tap', async ({ authenticatedRequiredAccountsPage }) => {
     await authenticatedRequiredAccountsPage.goto('/general');
     await expect(authenticatedRequiredAccountsPage).toHaveURL(/\/general/);
 
@@ -33,18 +33,16 @@ test.describe('Accounts General and Mobile Navigation', () => {
       return sidebar.evaluate((element) => element.getBoundingClientRect().x);
     };
 
-    const openNavButton = authenticatedRequiredAccountsPage.getByRole('button', { name: /open side navigation/i });
-    await expect(openNavButton).toBeVisible();
+    const toggleNavButton = authenticatedRequiredAccountsPage.getByRole('button', { name: /toggle side navigation/i });
+    await expect(toggleNavButton).toBeVisible();
     await expect.poll(getSidebarX).toBeLessThanOrEqual(-120);
 
-    await openNavButton.click();
+    await toggleNavButton.click();
 
-    const closeNavButton = authenticatedRequiredAccountsPage.getByRole('button', { name: /close side navigation/i });
-    await expect(closeNavButton).toBeVisible();
     await expect.poll(getSidebarX).toBeGreaterThanOrEqual(-4);
 
-    await closeNavButton.click();
-    await expect(openNavButton).toBeVisible();
+    await authenticatedRequiredAccountsPage.mouse.click(viewportWidth - 16, 80);
+    await expect(toggleNavButton).toBeVisible();
     await expect.poll(getSidebarX).toBeLessThanOrEqual(-120);
   });
 });
