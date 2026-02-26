@@ -15,6 +15,9 @@ export const ScanPage = () => {
   const scannerRef = useRef<Html5Qrcode | null>(null)
 
   const handleManualScanValue = (value: string) => {
+    if (value.trim()) {
+      void stopCamera()
+    }
     setEntryMethod('manual')
     setScanValue(value)
   }
