@@ -3,6 +3,14 @@ import { Menu, Search } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ProfileDropdown } from '../ui/ProfileDropdown'
 import { Input } from '../ui/Input'
+import { Button } from '../ui/Button'
+
+export interface MobileSidebarToggleProps {
+  enabled: boolean
+  isOpen: boolean
+  onOpen: () => void
+  ariaLabel?: string
+}
 
 export interface TopBarProps {
   /** Optional left slot (empty by default). Ignored when search props are provided. */
@@ -27,6 +35,8 @@ export interface TopBarProps {
   onSettingsClick?: () => void
   /** Optional callback for profile menu Log out item */
   onLogout?: () => void
+  /** Optional mobile side navigation open button */
+  mobileSidebarToggle?: MobileSidebarToggleProps
 }
 
 /**
@@ -45,8 +55,10 @@ export function TopBar({
   searchPlaceholder,
   searchValue,
   onSearchChange,
+  mobileSidebarToggle,
 }: TopBarProps) {
   const hasSearch = searchPlaceholder != null && searchValue != null && onSearchChange != null
+  const showMobileSidebarToggle = Boolean(mobileSidebarToggle?.enabled)
   const leftContent = hasSearch ? (
     <Input
       placeholder={searchPlaceholder}
@@ -60,11 +72,26 @@ export function TopBar({
   return (
     <header
       className={cn(
-        'app-top-bar flex h-14 shrink-0 items-center justify-between gap-4 px-4',
+        'app-top-bar flex h-14 shrink-0 items-center justify-between gap-4 px-[var(--gap-4)] py-0',
         className,
       )}
     >
-      <div className="flex items-center shrink-0">{leftContent}</div>
+      <div className="flex items-center shrink-0 gap-2">
+        {showMobileSidebarToggle ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="mobile-sidebar-toggle shrink-0 md:hidden"
+            aria-label={mobileSidebarToggle?.ariaLabel ?? 'Toggle side navigation'}
+            aria-pressed={mobileSidebarToggle?.isOpen}
+            onClick={mobileSidebarToggle?.onOpen}
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+        ) : null}
+        {leftContent}
+      </div>
 
       {/* Empty center */}
       <div className="flex-1 min-w-0" />
