@@ -60,23 +60,30 @@ export function TopBar({
   const hasSearch = searchPlaceholder != null && searchValue != null && onSearchChange != null
   const showMobileSidebarToggle = Boolean(mobileSidebarToggle?.enabled)
   const leftContent = hasSearch ? (
-    <Input
-      placeholder={searchPlaceholder}
-      value={searchValue}
-      onChange={(e) => onSearchChange(e.target.value)}
-      prefix={<Search className="w-4 h-4" />}
-      className="max-w-xs rounded-[var(--radius-lg)]"
-    />
+    <div className="min-w-0 flex-1 max-w-xs">
+      <Input
+        placeholder={searchPlaceholder}
+        value={searchValue}
+        onChange={(e) => onSearchChange(e.target.value)}
+        prefix={<Search className="w-4 h-4" />}
+        className="rounded-[var(--radius-lg)]"
+      />
+    </div>
   ) : left
 
   return (
     <header
       className={cn(
-        'app-top-bar flex h-14 shrink-0 items-center justify-between gap-4 px-[var(--gap-4)] py-0',
+        'app-top-bar flex h-14 shrink-0 items-center justify-between gap-4 px-[var(--gap-4)] py-0 min-w-0',
         className,
       )}
     >
-      <div className="flex items-center shrink-0 gap-2">
+      <div
+        className={cn(
+          'flex items-center gap-2',
+          hasSearch ? 'min-w-0 flex-1' : 'shrink-0',
+        )}
+      >
         {showMobileSidebarToggle ? (
           <Button
             type="button"
@@ -93,10 +100,9 @@ export function TopBar({
         {leftContent}
       </div>
 
-      {/* Empty center */}
-      <div className="flex-1 min-w-0" />
+      {!hasSearch && <div className="flex-1 min-w-0" />}
 
-      <div className="flex items-center shrink-0 gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         {right ?? (
           <>
             <button

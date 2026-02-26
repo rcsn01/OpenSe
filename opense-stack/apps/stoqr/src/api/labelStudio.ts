@@ -1,5 +1,12 @@
-import { db } from '../supabaseClient'
+import { db, supabase } from '../supabaseClient'
 import type { Product } from '../types'
+
+export type LabelProduct = Pick<Product, 'id' | 'name' | 'sku' | 'folder_id'>
+
+export type LabelProductFolder = {
+  id: string
+  name: string
+}
 
 export type LabelTemplate = {
   id: string
@@ -20,18 +27,28 @@ export type LabelPrintJob = {
   status: 'queued' | 'processing' | 'completed' | 'failed'
   quantity: number
   output_url: string | null
+  requested_by: string | null
+  requester: {
+    full_name: string | null
+    username: string | null
+  } | null
   created_at: string
 }
 
 export const fetchLabelProducts = async (
   companyId: string,
   search: string,
-): Promise<Array<Pick<Product, 'id' | 'name' | 'sku'>>> => {
+  folderId?: string,
+): Promise<LabelProduct[]> => {
   let query = db
     .from('products')
-    .select('id, name, sku')
+    .select('id, name, sku, folder_id')
     .eq('company_id', companyId)
     .order('name')
+
+  if (folderId?.trim()) {
+    query = query.eq('folder_id', folderId)
+  }
 
   if (search.trim()) {
     query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`)
@@ -41,7 +58,19 @@ export const fetchLabelProducts = async (
 
   if (error) throw error
 
-  return (data as Array<Pick<Product, 'id' | 'name' | 'sku'>> | null) ?? []
+  return (data as LabelProduct[] | null) ?? []
+}
+
+export const fetchLabelProductFolders = async (companyId: string): Promise<LabelProductFolder[]> => {
+  const { data, error } = await db
+    .from('folders')
+    .select('id, name')
+    .eq('company_id', companyId)
+    .order('name')
+
+  if (error) throw error
+
+  return (data as LabelProductFolder[] | null) ?? []
 }
 
 export const fetchLabelTemplates = async (companyId: string): Promise<LabelTemplate[]> => {
@@ -100,14 +129,22 @@ export const createLabelPrintJob = async (params: {
   format: 'pdf' | 'png'
   quantity: number
   payload: Record<string, unknown>
+  outputUrl?: string | null
+  status?: 'queued' | 'processing' | 'completed' | 'failed'
 }) => {
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError) throw userError
+
   const { error } = await db.from('label_print_jobs').insert({
     company_id: params.companyId,
     template_id: params.templateId,
     format: params.format,
     quantity: params.quantity,
     payload: params.payload,
-    status: 'queued',
+    status: params.status ?? 'queued',
+    output_url: params.outputUrl ?? null,
+    requested_by: userData.user?.id ?? null,
+    completed_at: params.status === 'completed' ? new Date().toISOString() : null,
   })
 
   if (error) throw error
@@ -116,12 +153,37 @@ export const createLabelPrintJob = async (params: {
 export const fetchLabelPrintJobs = async (companyId: string): Promise<LabelPrintJob[]> => {
   const { data, error } = await db
     .from('label_print_jobs')
-    .select('id, company_id, template_id, format, status, quantity, output_url, created_at')
+    .select('id, company_id, template_id, format, status, quantity, output_url, requested_by, created_at')
     .eq('company_id', companyId)
     .order('created_at', { ascending: false })
     .limit(50)
 
   if (error) throw error
 
-  return (data as LabelPrintJob[] | null) ?? []
+  const rows = (data as Array<Omit<LabelPrintJob, 'requester'> | null> | null)?.filter(Boolean) ?? []
+  const requesterIds = Array.from(
+    new Set(rows.map((job) => job?.requested_by).filter((value): value is string => !!value)),
+  )
+
+  let requesterById = new Map<string, { full_name: string | null; username: string | null }>()
+  if (requesterIds.length > 0) {
+    const { data: requesterRows, error: requesterError } = await supabase
+      .from('profiles')
+      .select('id, full_name, username')
+      .in('id', requesterIds)
+
+    if (requesterError) throw requesterError
+
+    requesterById = new Map(
+      ((requesterRows ?? []) as Array<{ id: string; full_name: string | null; username: string | null }>).map((row) => [
+        row.id,
+        { full_name: row.full_name, username: row.username },
+      ]),
+    )
+  }
+
+  return rows.map((job) => ({
+    ...job,
+    requester: job.requested_by ? requesterById.get(job.requested_by) ?? null : null,
+  })) as LabelPrintJob[]
 }

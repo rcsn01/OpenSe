@@ -4,6 +4,7 @@ import { Tabs } from '../components/Tabs'
 import { TemplateLibraryTab } from '../components/LabelStudio/TemplateLibraryTab'
 import { LabelDesignerTab } from '../components/LabelStudio/LabelDesignerTab'
 import { LabelPreviewBatchTab } from '../components/LabelStudio/LabelPreviewBatchTab'
+import { LabelDownloadsTab } from '../components/LabelStudio/LabelDownloadsTab'
 
 export const LabelStudioPage = () => {
   const { companyId } = useCompany()
@@ -20,6 +21,7 @@ export const LabelStudioPage = () => {
           { id: 'templates', label: 'Templates', content: <TemplateLibraryTab companyId={companyId || ''} /> },
           { id: 'design', label: 'Design', content: <LabelDesignerTab companyId={companyId || ''} /> },
           { id: 'preview-batch', label: 'Preview & Batch', content: <LabelPreviewBatchTab companyId={companyId || ''} /> },
+          { id: 'downloads', label: 'Downloads', content: <LabelDownloadsTab companyId={companyId || ''} /> },
         ]}
       />
     </BasePage>

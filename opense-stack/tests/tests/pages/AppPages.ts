@@ -185,7 +185,7 @@ export class LabelStudioPage {
   }
 
   async goto() {
-    await this.page.goto('/tools/labels');
+    await this.page.goto('/tools/labels', { waitUntil: 'commit' });
   }
 
   async expectLoaded() {
