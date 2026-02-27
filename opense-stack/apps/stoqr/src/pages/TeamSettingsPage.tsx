@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
@@ -18,6 +19,10 @@ import type { Role } from '../api/teamSettings'
 
 export const TeamSettingsPage = () => {
   const { companyId } = useCompany()
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
+  const validTabs = ['user-management', 'rbac', 'activity', 'two-factor'] as const
+  const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'user-management'
   const { data, isLoading } = useTeamSettingsData(companyId)
   const { data: activity = [], isLoading: loadingActivity } = useTeamActivityEvents(companyId)
   const inviteMutation = useInviteCompanyMember(companyId)
@@ -83,6 +88,8 @@ export const TeamSettingsPage = () => {
       loadingMessage="Loading team settings..."
     >
       <Tabs
+        activeTab={activeTab}
+        onTabChange={(nextTab) => navigate(`/settings/team/${nextTab}`)}
         tabs={[
           {
             id: 'user-management',

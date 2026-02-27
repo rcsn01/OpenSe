@@ -30,7 +30,8 @@ export default function App() {
           <Route path="/badges" element={<BadgesPage />} />
           <Route path="/alerts" element={<AlertsPage />} />
           <Route path="/data" element={<DataDisplayPage />} />
-          <Route path="/navigation" element={<NavigationPage />} />
+          <Route path="/navigation" element={<Navigate to="/navigation/overview" replace />} />
+          <Route path="/navigation/:tab" element={<NavigationPage />} />
           <Route path="/overlays" element={<OverlaysPage />} />
           <Route path="/dividers" element={<DividersPage />} />
           <Route path="/test" element={<TestPage />} />
