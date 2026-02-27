@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
@@ -11,15 +12,40 @@ import { useProcurementProducts } from '../hooks/queries/useProcurement'
 
 export const ProcurementPage = () => {
   const { companyId } = useCompany()
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
+  const validTabs = ['purchase-orders', 'suppliers', 'order-tracking', 'receiving-workflow', 'order-history'] as const
+  const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'purchase-orders'
   const { data: products = [], isLoading } = useProcurementProducts(companyId)
 
   const tabs = useMemo(() => {
     if (!companyId) {
+      const emptyState = <div className="empty-state">Select a company to manage procurement workflows.</div>
       return [
         {
           id: 'purchase-orders',
           label: 'Purchase Orders',
-          content: <div className="empty-state">Select a company to manage procurement workflows.</div>,
+          content: emptyState,
+        },
+        {
+          id: 'suppliers',
+          label: 'Supplier Management',
+          content: emptyState,
+        },
+        {
+          id: 'order-tracking',
+          label: 'Order Tracking',
+          content: emptyState,
+        },
+        {
+          id: 'receiving-workflow',
+          label: 'Receiving Workflow',
+          content: emptyState,
+        },
+        {
+          id: 'order-history',
+          label: 'Order History',
+          content: emptyState,
         },
       ]
     }
@@ -51,7 +77,7 @@ export const ProcurementPage = () => {
         content: <OrderHistoryTab companyId={companyId} />,
       },
     ]
-  }, [companyId, products, isLoading])
+  }, [companyId, products])
 
   return (
     <BasePage
@@ -60,7 +86,7 @@ export const ProcurementPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
     >
-      <Tabs tabs={tabs} />
+      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/procurement/${nextTab}`)} />
     </BasePage>
   )
 }

@@ -4,11 +4,11 @@ export interface AccountNavigationItem {
 }
 
 export const accountNavigationItems: AccountNavigationItem[] = [
-  { to: '/general', label: 'General' },
-  { to: '/settings', label: 'Account Settings' },
-  { to: '/organisation', label: 'Organisation' },
-  { to: '/billing', label: 'Billing & Limits' },
-  { to: '/seats', label: 'Seat Assignments' },
+  { to: '/account/general', label: 'General' },
+  { to: '/account/settings', label: 'Account Settings' },
+  { to: '/account/organisation', label: 'Organisation' },
+  { to: '/account/billing', label: 'Billing & Limits' },
+  { to: '/account/seats', label: 'Seat Assignments' },
 ]
 
 export const isAccountNavItemActive = (pathname: string, itemPath: string) => {

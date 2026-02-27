@@ -74,7 +74,8 @@ function AppContent() {
                     </Route>
 
                     <Route path="/gallery" element={<GalleryPage />} />
-                    <Route path="/activity" element={<ActivitiesPage />} />
+                    <Route path="/activity" element={<Navigate to="usage" replace />} />
+                    <Route path="/activity/:tab" element={<ActivitiesPage />} />
                     <Route path="/settings/profile" element={<UserSettingsPage />} />
                   </Route>
 

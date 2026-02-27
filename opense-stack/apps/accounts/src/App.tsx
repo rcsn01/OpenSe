@@ -20,7 +20,7 @@ const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
   if (status.step === 'invites') return '/onboarding/invitations'
   if (status.step === 'create') return '/onboarding/create-organisation'
   if (status.step === 'invite-members') return '/onboarding/invite-members'
-  return '/general'
+  return '/account/general'
 }
 
 const ProtectedAccountRoute = ({ children }: { children: React.ReactNode }) => {
@@ -74,7 +74,7 @@ const ProtectedAccountRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!onboardingStatus?.needsOnboarding && isOnboardingRoute) {
-    return <Navigate to="/general" replace />
+    return <Navigate to="/account/general" replace />
   }
 
   return <>{children}</>
@@ -93,7 +93,7 @@ function App() {
           path="/"
           element={
             <ProtectedAccountRoute>
-              <Navigate to="/general" replace />
+              <Navigate to="/account/general" replace />
             </ProtectedAccountRoute>
           }
         />
@@ -140,18 +140,18 @@ function App() {
             </ProtectedAccountRoute>
           }
         >
-          <Route path="/general" element={<GeneralSettingsPage />} />
-          <Route path="/settings" element={<AccountSettingsPage />} />
-          <Route path="/organisation" element={<OrganisationSettingsPage />} />
-          <Route path="/billing" element={<BillingPage />} />
-          <Route path="/seats" element={<SeatManagementPage />} />
+          <Route path="/account" element={<Navigate to="/account/general" replace />} />
+          <Route path="/account/general" element={<GeneralSettingsPage />} />
+          <Route path="/account/settings" element={<AccountSettingsPage />} />
+          <Route path="/account/organisation" element={<OrganisationSettingsPage />} />
+          <Route path="/account/billing" element={<BillingPage />} />
+          <Route path="/account/seats" element={<SeatManagementPage />} />
 
-          <Route path="/account" element={<Navigate to="/general" replace />} />
-          <Route path="/account/general" element={<Navigate to="/general" replace />} />
-          <Route path="/account/settings" element={<Navigate to="/settings" replace />} />
-          <Route path="/account/organisation" element={<Navigate to="/organisation" replace />} />
-          <Route path="/account/billing" element={<Navigate to="/billing" replace />} />
-          <Route path="/account/seats" element={<Navigate to="/seats" replace />} />
+          <Route path="/general" element={<Navigate to="/account/general" replace />} />
+          <Route path="/settings" element={<Navigate to="/account/settings" replace />} />
+          <Route path="/organisation" element={<Navigate to="/account/organisation" replace />} />
+          <Route path="/billing" element={<Navigate to="/account/billing" replace />} />
+          <Route path="/seats" element={<Navigate to="/account/seats" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

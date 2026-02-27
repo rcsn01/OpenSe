@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   BasePage,
   Button,
@@ -63,7 +64,9 @@ const statusOptions = [
 ]
 
 export const ApplicationManagementPage = () => {
-  const [activeTab, setActiveTab] = useState<AppSettingsTabId>('etl')
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
+  const activeTab: AppSettingsTabId = tab === 'stoqr' || tab === 'shared' ? tab : 'etl'
   const [flags, setFlags] = useState<FeatureFlag[]>([])
   const [releaseNotes, setReleaseNotes] = useState<ReleaseNote[]>([])
   const [defaultRetentionDays, setDefaultRetentionDays] = useState('365')
@@ -198,7 +201,7 @@ export const ApplicationManagementPage = () => {
     try {
       await addWorkflowToGallery(selectedWorkflowToAdd)
       setMessage('Workflow added to ETL gallery')
-      setActiveTab('etl')
+      navigate('/applications/etl')
       const [templates, workflows] = await Promise.all([listGalleryTemplates(), listAllWorkflowsForAdmin()])
       setGalleryWorkflows(templates)
       const promotable = workflows.filter((workflow) => !workflow.is_template)
@@ -240,7 +243,7 @@ export const ApplicationManagementPage = () => {
           </Card>
         ) : null}
 
-        <TabBar tabs={settingsTabs} activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as AppSettingsTabId)} />
+        <TabBar tabs={settingsTabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/applications/${nextTab}`)} />
 
         <Card>
           <CardHeader>

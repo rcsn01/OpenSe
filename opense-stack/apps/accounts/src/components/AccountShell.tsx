@@ -19,11 +19,11 @@ import {
 } from './accountNavigation'
 
 const navIconsByPath = {
-  '/general': SlidersHorizontal,
-  '/settings': Settings,
-  '/organisation': Building2,
-  '/billing': CreditCard,
-  '/seats': Users,
+  '/account/general': SlidersHorizontal,
+  '/account/settings': Settings,
+  '/account/organisation': Building2,
+  '/account/billing': CreditCard,
+  '/account/seats': Users,
 } as const
 
 export const AccountShell = () => {
@@ -80,7 +80,7 @@ export const AccountShell = () => {
   return (
     <AppLayout
       className={layoutClassName}
-      onSettingsClick={() => navigate('/settings')}
+      onSettingsClick={() => navigate('/account/settings')}
       onLogout={() => void logout()}
       searchPlaceholder="Search items..."
       searchValue={search}

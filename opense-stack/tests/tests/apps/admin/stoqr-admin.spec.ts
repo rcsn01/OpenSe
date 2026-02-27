@@ -11,6 +11,7 @@ test.describe('Admin Organization Profile', () => {
 
     const usersTab = authenticatedAdminPage.getByRole('button', { name: /users/i }).first();
     await usersTab.click();
+    await expect(authenticatedAdminPage).toHaveURL(/\/organisations\/[^/]+\/users$/);
     await expect(authenticatedAdminPage.getByRole('heading', { name: /users/i })).toBeVisible();
   });
 
@@ -24,6 +25,7 @@ test.describe('Admin Organization Profile', () => {
 
     const billingTab = authenticatedAdminPage.getByRole('button', { name: /billing\s*&\s*invoices/i }).first();
     await billingTab.click();
+    await expect(authenticatedAdminPage).toHaveURL(/\/organisations\/[^/]+\/billing$/);
     await expect(authenticatedAdminPage.getByRole('heading', { name: /billing\s*&\s*invoices/i })).toBeVisible();
   });
 });

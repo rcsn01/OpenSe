@@ -69,15 +69,23 @@ function App() {
             <Route element={<CompanyGate />}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/inventory" element={<InventoryListPage />} />
+              <Route path="/inventory" element={<Navigate to="/inventory/all" replace />} />
+              <Route path="/inventory/:tab" element={<InventoryListPage />} />
               <Route path="/inventory/new" element={<CreateProductPage />} />
-              <Route path="/inventory/:id" element={<ProductDetailPage />} />
-              <Route path="/scan" element={<ScanPage />} />
-              <Route path="/tools/labels" element={<LabelStudioPage />} />
-              <Route path="/settings/team" element={<TeamSettingsPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/procurement" element={<ProcurementPage />} />
-              <Route path="/alerts" element={<AlertsPage />} />
+              <Route path="/inventory/:id" element={<Navigate to="overview" replace />} />
+              <Route path="/inventory/:id/:tab" element={<ProductDetailPage />} />
+              <Route path="/scan" element={<Navigate to="/scan/scan-actions" replace />} />
+              <Route path="/scan/:tab" element={<ScanPage />} />
+              <Route path="/tools/labels" element={<Navigate to="/tools/labels/templates" replace />} />
+              <Route path="/tools/labels/:tab" element={<LabelStudioPage />} />
+              <Route path="/settings/team" element={<Navigate to="/settings/team/user-management" replace />} />
+              <Route path="/settings/team/:tab" element={<TeamSettingsPage />} />
+              <Route path="/reports" element={<Navigate to="/reports/valuation" replace />} />
+              <Route path="/reports/:tab" element={<ReportsPage />} />
+              <Route path="/procurement" element={<Navigate to="/procurement/purchase-orders" replace />} />
+              <Route path="/procurement/:tab" element={<ProcurementPage />} />
+              <Route path="/alerts" element={<Navigate to="/alerts/notifications" replace />} />
+              <Route path="/alerts/:tab" element={<AlertsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

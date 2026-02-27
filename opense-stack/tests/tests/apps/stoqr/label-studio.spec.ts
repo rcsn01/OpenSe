@@ -39,16 +39,19 @@ test.describe('Stoqr Label Studio', () => {
     await expect(authenticatedPage.getByText(/Create Template/i)).toBeVisible()
 
     await authenticatedPage.getByRole('tab', { name: /^Design$/i }).click()
+    await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/design$/)
     await expect(authenticatedPage.getByText(/Label Designer|Create a template first/i).first()).toBeVisible()
     await expect(authenticatedPage.getByText(/GUI Preview|Select a template to preview design settings/i).first()).toBeVisible()
 
     await authenticatedPage.getByRole('tab', { name: /^Preview & Batch$/i }).click()
+    await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/preview-batch$/)
     await expect(authenticatedPage.getByText(/Preview & Batch/i).first()).toBeVisible()
     await expect(authenticatedPage.getByText(/Single Product|Entire Folder/i).first()).toBeVisible()
     await expect(authenticatedPage.getByRole('button', { name: /export pdf/i })).toBeVisible()
     await expect(authenticatedPage.getByText(/Recent Print Jobs/i)).toHaveCount(0)
 
     await authenticatedPage.getByRole('tab', { name: /^Downloads$/i }).click()
+    await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/downloads$/)
     await expect(authenticatedPage.getByText(/Downloads|No PDF exports yet/i).first()).toBeVisible()
   })
 
@@ -75,12 +78,14 @@ test.describe('Stoqr Label Studio', () => {
     }
 
     await authenticatedPage.getByRole('tab', { name: /^Preview & Batch$/i }).click()
+    await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/preview-batch$/)
     await expect(authenticatedPage.getByRole('button', { name: /export pdf/i })).toBeVisible()
 
     await authenticatedPage.getByRole('button', { name: /export pdf/i }).click()
     await expect(authenticatedPage.getByText(/Select template and valid quantity\./i)).toBeVisible()
 
     await authenticatedPage.getByRole('tab', { name: /^Downloads$/i }).click()
+    await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/downloads$/)
     await expect(authenticatedPage.getByText(/No PDF exports yet\./i)).toBeVisible()
   })
 })

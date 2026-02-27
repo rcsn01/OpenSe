@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   Button,
   Breadcrumb,
@@ -16,27 +17,30 @@ import {
 import { Section, SubSection } from '../components/shared/PageSection'
 
 const tabs = [
-  { id: 'tab1', label: 'Overview' },
-  { id: 'tab2', label: 'Settings' },
-  { id: 'tab3', label: 'Members' },
+  { id: 'overview', label: 'Overview' },
+  { id: 'settings', label: 'Settings' },
+  { id: 'members', label: 'Members' },
 ]
 
 function TabsDemo() {
-  const [activeTab, setActiveTab] = useState('tab1')
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
+  const activeTab = tab === 'settings' || tab === 'members' ? tab : 'overview'
+
   return (
     <>
-      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-      {activeTab === 'tab1' && (
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/navigation/${nextTab}`)} />
+      {activeTab === 'overview' && (
         <Card>
           <Body size="body4">Overview content goes here.</Body>
         </Card>
       )}
-      {activeTab === 'tab2' && (
+      {activeTab === 'settings' && (
         <Card>
           <Body size="body4">Settings content goes here.</Body>
         </Card>
       )}
-      {activeTab === 'tab3' && (
+      {activeTab === 'members' && (
         <Card>
           <Body size="body4">Members list goes here.</Body>
         </Card>
