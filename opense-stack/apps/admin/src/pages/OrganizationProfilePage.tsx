@@ -37,14 +37,15 @@ const profileTabs: Array<{ id: OrgDetailTabId; label: string }> = [
 ]
 
 export const OrganizationProfilePage = () => {
-  const { orgId } = useParams<{ orgId: string }>()
+  const { orgId, tab } = useParams<{ orgId: string; tab?: string }>()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [seatsLoading, setSeatsLoading] = useState(false)
   const [savingSeats, setSavingSeats] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<OrgDetailTabId>('overview')
+  const activeTab: OrgDetailTabId =
+    tab === 'subscriptions' || tab === 'etl-config' || tab === 'stoqr-config' || tab === 'users' || tab === 'billing' ? tab : 'overview'
   const [app1SeatLimit, setApp1SeatLimit] = useState('0')
   const [app2SeatLimit, setApp2SeatLimit] = useState('0')
   const [app1UsedSeats, setApp1UsedSeats] = useState(0)
@@ -171,7 +172,14 @@ export const OrganizationProfilePage = () => {
           </Card>
         ) : null}
 
-        <TabBar tabs={profileTabs} activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as OrgDetailTabId)} />
+        <TabBar
+          tabs={profileTabs}
+          activeTab={activeTab}
+          onTabChange={(nextTab) => {
+            if (!orgId) return
+            navigate(`/organisations/${orgId}/${nextTab}`)
+          }}
+        />
 
         {activeTab === 'overview' ? (
           <Card>

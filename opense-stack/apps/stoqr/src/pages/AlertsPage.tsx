@@ -1,4 +1,5 @@
 import { useCompany } from '../contexts/CompanyContext'
+import { useNavigate, useParams } from 'react-router-dom'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { NotificationsTab } from '../components/Alerts/NotificationsTab'
@@ -9,6 +10,10 @@ import { useAlertProducts } from '../hooks/queries/useAlerts'
 
 export const AlertsPage = () => {
   const { companyId } = useCompany()
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
+  const validTabs = ['notifications', 'rules', 'delivery', 'history'] as const
+  const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'notifications'
   const { data: products = [], isLoading } = useAlertProducts(companyId)
 
   return (
@@ -19,6 +24,8 @@ export const AlertsPage = () => {
       emptyStateDescription="Choose a company to view alerts."
     >
       <Tabs
+        activeTab={activeTab}
+        onTabChange={(nextTab) => navigate(`/alerts/${nextTab}`)}
         tabs={[
           { id: 'notifications', label: 'Notifications', content: <NotificationsTab products={products} /> },
           { id: 'rules', label: 'Custom Rules', content: <CustomRulesTab companyId={companyId || ''} /> },

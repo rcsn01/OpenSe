@@ -23,9 +23,11 @@ import { toast } from 'sonner'
 import { useProductDetail } from '../../hooks/queries/useProducts'
 
 export const ProductDetailPage = () => {
-  const { id } = useParams()
+  const { id, tab } = useParams<{ id?: string; tab?: string }>()
   const navigate = useNavigate()
   const { companyId } = useCompany()
+  const validTabs = ['overview', 'suppliers', 'batch', 'attachments'] as const
+  const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'overview'
 
   const { data, isLoading } = useProductDetail(companyId, id ?? null)
   const product = data?.product ?? null
@@ -206,6 +208,8 @@ export const ProductDetailPage = () => {
 
       {/* Tabs Section */}
       <Tabs
+        activeTab={activeTab}
+        onTabChange={(nextTab) => navigate(`/inventory/${product.id}/${nextTab}`)}
         tabs={[
           {
             id: 'overview',

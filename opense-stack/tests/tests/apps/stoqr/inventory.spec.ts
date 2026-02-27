@@ -37,6 +37,15 @@ test.describe('Stoqr Inventory', () => {
     await expect(authenticatedPage.getByRole('tab', { name: /variants & matrices/i })).toHaveCount(0);
     await expect(authenticatedPage.getByRole('tab', { name: /stock transfers/i })).toHaveCount(0);
     await expect(authenticatedPage.getByRole('tab', { name: /kitting & bundles/i })).toHaveCount(0);
+
+    await authenticatedPage.getByRole('tab', { name: /folders/i }).click();
+    await expect(authenticatedPage).toHaveURL(/\/inventory\/folders$/);
+
+    await authenticatedPage.getByRole('tab', { name: /bulk actions/i }).click();
+    await expect(authenticatedPage).toHaveURL(/\/inventory\/bulk-actions$/);
+
+    await authenticatedPage.getByRole('tab', { name: /all products/i }).click();
+    await expect(authenticatedPage).toHaveURL(/\/inventory\/all$/);
   });
 
   test('view product detail and delete action if supported', async ({ authenticatedPage }) => {

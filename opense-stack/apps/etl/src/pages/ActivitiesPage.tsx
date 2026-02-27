@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BarChart3, FileText } from 'lucide-react';
 import { BasePage } from '@repo/ui';
 import { useAuth } from '@repo/shared/auth/context';
@@ -10,7 +10,9 @@ import { Tabs } from '../components/ui/Tabs';
 
 export const ActivitiesPage = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'usage' | 'logs'>('usage');
+  const navigate = useNavigate();
+  const { tab } = useParams<{ tab?: string }>();
+  const activeTab: 'usage' | 'logs' = tab === 'logs' ? 'logs' : 'usage';
 
   // Personal logs (org_id = null)
   const { data: logs = [], isLoading: logsLoading } = useExecutionLogs(user?.id, null);
@@ -26,7 +28,7 @@ export const ActivitiesPage = () => {
           { id: 'logs', label: 'Logs (Personal)', icon: <FileText className="w-4 h-4" /> },
         ]}
         activeTab={activeTab}
-        onTabChange={(id) => setActiveTab(id as 'usage' | 'logs')}
+        onTabChange={(id) => navigate(`/activity/${id}`)}
       />
 
       {activeTab === 'usage' ? (
