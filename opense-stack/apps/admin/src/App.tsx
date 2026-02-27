@@ -46,10 +46,14 @@ const AppRoutes = () => {
       >
         <Route path="/platform" element={<PlatformOverviewPage />} />
         <Route path="/organisations" element={<OrganizationsListPage />} />
-        <Route path="/organisations/:orgId" element={<OrganizationProfilePage />} />
-        <Route path="/applications" element={<ApplicationManagementPage />} />
-        <Route path="/financials" element={<FinancialsPage />} />
-        <Route path="/platform-admin" element={<PlatformAdministrationPage />} />
+        <Route path="/organisations/:orgId" element={<Navigate to="overview" replace />} />
+        <Route path="/organisations/:orgId/:tab" element={<OrganizationProfilePage />} />
+        <Route path="/applications" element={<Navigate to="/applications/etl" replace />} />
+        <Route path="/applications/:tab" element={<ApplicationManagementPage />} />
+        <Route path="/financials" element={<Navigate to="/financials/pricing" replace />} />
+        <Route path="/financials/:tab" element={<FinancialsPage />} />
+        <Route path="/platform-admin" element={<Navigate to="/platform-admin/team" replace />} />
+        <Route path="/platform-admin/:tab" element={<PlatformAdministrationPage />} />
       </Route>
       <Route path="/etl-admin" element={<Navigate to="/organisations" replace />} />
       <Route path="/super-admin" element={<Navigate to="/organisations" replace />} />

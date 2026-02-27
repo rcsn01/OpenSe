@@ -16,6 +16,37 @@ const safeGoto = async (page: Page, url: string) => {
 };
 
 test.describe('Stoqr Route Coverage', () => {
+  const nestedTabRoutes = [
+    '/tools/labels/templates',
+    '/tools/labels/design',
+    '/tools/labels/preview-batch',
+    '/tools/labels/downloads',
+    '/inventory/all',
+    '/inventory/folders',
+    '/inventory/bulk-actions',
+    '/inventory/categories-locations',
+    '/inventory/barcode-sku',
+    '/scan/scan-actions',
+    '/scan/scan-history',
+    '/settings/team/user-management',
+    '/settings/team/rbac',
+    '/settings/team/activity',
+    '/settings/team/two-factor',
+    '/reports/valuation',
+    '/reports/movement-usage',
+    '/reports/reorder-dead-stock',
+    '/reports/exports',
+    '/procurement/purchase-orders',
+    '/procurement/suppliers',
+    '/procurement/order-tracking',
+    '/procurement/receiving-workflow',
+    '/procurement/order-history',
+    '/alerts/notifications',
+    '/alerts/rules',
+    '/alerts/delivery',
+    '/alerts/history',
+  ];
+
   test('public auth entry routes resolve', async ({ page }) => {
     await safeGoto(page, '/');
     await expect(page).toHaveURL(/\/$|\/dashboard$|\/auth$/);
@@ -28,9 +59,24 @@ test.describe('Stoqr Route Coverage', () => {
   });
 
   test('label studio route resolves', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/tools/labels');
-    await expect(authenticatedPage).toHaveURL(/\/(tools\/labels|auth|login|$)/);
+    await safeGoto(authenticatedPage, '/tools/labels');
+    await expect(authenticatedPage).toHaveURL(/\/(tools\/labels\/templates|auth|login|$)/);
   });
+
+  for (const route of nestedTabRoutes) {
+    test(`nested tab route ${route} resolves`, async ({ authenticatedPage }) => {
+      await safeGoto(authenticatedPage, route);
+      const url = authenticatedPage.url();
+      const isExpectedResolvedUrl =
+        url.includes(route) ||
+        url.includes('/auth') ||
+        url.includes('/login') ||
+        url.includes('/dashboard') ||
+        url === 'http://localhost:5993/' ||
+        url.includes('/tools/labels/templates');
+      expect(isExpectedResolvedUrl).toBeTruthy();
+    });
+  }
 
   test('wildcard route redirects to dashboard flow', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/does-not-exist');

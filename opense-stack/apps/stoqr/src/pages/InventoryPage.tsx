@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import type { Folder, Tag } from '../types'
@@ -22,8 +22,11 @@ import {
 
 export const InventoryListPage = () => {
   const { companyId } = useCompany()
-  const navigate = useNavigate() // Hook
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
   const [searchParams] = useSearchParams()
+  const validTabs = ['all', 'folders', 'bulk-actions', 'categories-locations', 'barcode-sku'] as const
+  const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'all'
 
   // Removed isCreateOpen state
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -133,6 +136,8 @@ export const InventoryListPage = () => {
       emptyStateDescription="Select a company to manage inventory."
     >
       <Tabs
+        activeTab={activeTab}
+        onTabChange={(nextTab) => navigate(`/inventory/${nextTab}`)}
         tabs={[
           {
             id: 'all',
@@ -149,7 +154,7 @@ export const InventoryListPage = () => {
                 setSelectedTag={setSelectedTag}
                 tags={tags}
                 onImportOpen={() => setIsImportOpen(true)}
-                onCreateOpen={() => navigate('/inventory/new')} // Changed handler
+                onCreateOpen={() => navigate('/inventory/new')}
                 products={products}
                 isLoading={isLoading}
                 selectedRowIds={selectedRowIds}

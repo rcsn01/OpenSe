@@ -20,6 +20,18 @@ baseTest.describe('Admin Public Route Coverage', () => {
 });
 
 authTest.describe('Admin Protected Route Coverage', () => {
+  const nestedTabRoutes = [
+    '/applications/etl',
+    '/applications/stoqr',
+    '/applications/shared',
+    '/financials/pricing',
+    '/financials/coupons',
+    '/financials/reports',
+    '/platform-admin/team',
+    '/platform-admin/roles',
+    '/platform-admin/audit',
+  ];
+
   authTest('root resolves to platform shell', async ({ authenticatedAdminPage }) => {
     await authenticatedAdminPage.goto('/');
     await authExpect(authenticatedAdminPage).toHaveURL(/\/(platform|login)/);
@@ -42,12 +54,20 @@ authTest.describe('Admin Protected Route Coverage', () => {
 
   authTest('new admin section routes resolve', async ({ authenticatedAdminPage }) => {
     await authenticatedAdminPage.goto('/applications');
-    await authExpect(authenticatedAdminPage).toHaveURL(/\/(applications|login)/);
+    await authExpect(authenticatedAdminPage).toHaveURL(/\/(applications\/etl|login)/);
 
     await authenticatedAdminPage.goto('/financials');
-    await authExpect(authenticatedAdminPage).toHaveURL(/\/(financials|login)/);
+    await authExpect(authenticatedAdminPage).toHaveURL(/\/(financials\/pricing|login)/);
 
     await authenticatedAdminPage.goto('/platform-admin');
-    await authExpect(authenticatedAdminPage).toHaveURL(/\/(platform-admin|login)/);
+    await authExpect(authenticatedAdminPage).toHaveURL(/\/(platform-admin\/team|login)/);
   });
+
+  for (const route of nestedTabRoutes) {
+    authTest(`nested tab route ${route} resolves`, async ({ authenticatedAdminPage }) => {
+      await authenticatedAdminPage.goto(route);
+      const escapedRoute = route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      await authExpect(authenticatedAdminPage).toHaveURL(new RegExp(`^.+${escapedRoute}$|/login$`));
+    });
+  }
 });

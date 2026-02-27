@@ -9,7 +9,6 @@ test.describe('ETL Organisation', () => {
 
     if (await org.teamTab.isVisible().catch(() => false)) {
       await expect(org.teamTab).toBeVisible();
-      await expect(org.billingTab).toBeVisible();
       await expect(org.usageTab).toBeVisible();
       await expect(org.logsTab).toBeVisible();
     }

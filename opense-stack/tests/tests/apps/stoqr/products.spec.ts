@@ -1,5 +1,20 @@
 import { test, expect } from '../../fixtures/auth';
 import { CreateProductPage, InventoryPage, ProductDetailPage } from '../../pages/AppPages';
+import type { Page } from '@playwright/test';
+
+const safeGoto = async (page: Page, url: string) => {
+  try {
+    await page.goto(url, { waitUntil: 'commit' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isExpectedRedirectAbort =
+      message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+    if (!isExpectedRedirectAbort) {
+      throw error;
+    }
+  }
+};
 
 test.describe('Stoqr Products', () => {
   test('inventory list loads', async ({ authenticatedPage }) => {
@@ -27,7 +42,7 @@ test.describe('Stoqr Products', () => {
   });
 
   test('product detail route renders and edit controls appear if available', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/inventory');
+    await safeGoto(authenticatedPage, '/inventory');
     const firstProduct = authenticatedPage.locator('tbody tr a[href*="/inventory/"]').first();
 
     if (await firstProduct.isVisible().catch(() => false)) {
