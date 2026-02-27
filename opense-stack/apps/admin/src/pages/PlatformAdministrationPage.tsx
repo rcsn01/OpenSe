@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   BasePage,
   Button,
@@ -64,7 +65,9 @@ const defaultPolicies: RolePolicy[] = [
 ]
 
 export const PlatformAdministrationPage = () => {
-  const [activeTab, setActiveTab] = useState<PlatformAdminTabId>('team')
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
+  const activeTab: PlatformAdminTabId = tab === 'roles' || tab === 'audit' ? tab : 'team'
   const [users, setUsers] = useState<AdminUserRow[]>([])
   const [auditEvents, setAuditEvents] = useState<AdminAuditEventRow[]>([])
   const [platformAuditEvents, setPlatformAuditEvents] = useState<PlatformAuditEventRow[]>([])
@@ -112,7 +115,7 @@ export const PlatformAdministrationPage = () => {
           </Card>
         ) : null}
 
-        <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as PlatformAdminTabId)} />
+        <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/platform-admin/${nextTab}`)} />
 
         {activeTab === 'team' ? (
           <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">

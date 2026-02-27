@@ -18,21 +18,21 @@ test.describe('Admin Global Sections', () => {
     const applicationsButton = authenticatedAdminPage.getByRole('button', { name: /application management/i });
     if (await applicationsButton.isVisible().catch(() => false)) {
       await applicationsButton.click();
-      await expect(authenticatedAdminPage).toHaveURL(/\/(applications|login)/);
+      await expect(authenticatedAdminPage).toHaveURL(/\/(applications\/etl|login)/);
     }
 
     await authenticatedAdminPage.goto('/platform');
     const financialsButton = authenticatedAdminPage.getByRole('button', { name: /financials\s*&\s*billing|financials/i });
     if (await financialsButton.isVisible().catch(() => false)) {
       await financialsButton.click();
-      await expect(authenticatedAdminPage).toHaveURL(/\/(financials|login)/);
+      await expect(authenticatedAdminPage).toHaveURL(/\/(financials\/pricing|login)/);
     }
 
     await authenticatedAdminPage.goto('/platform');
     const platformAdminButton = authenticatedAdminPage.getByRole('button', { name: /platform administration/i });
     if (await platformAdminButton.isVisible().catch(() => false)) {
       await platformAdminButton.click();
-      await expect(authenticatedAdminPage).toHaveURL(/\/(platform-admin|login)/);
+      await expect(authenticatedAdminPage).toHaveURL(/\/(platform-admin\/team|login)/);
     }
   });
 });
