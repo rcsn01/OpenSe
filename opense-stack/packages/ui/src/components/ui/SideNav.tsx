@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react'
-import { User, LogOut, Sun, Moon } from 'lucide-react'
+import { User, LogOut } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { useTheme } from './ThemeProvider'
 import { Label, SubLabel } from './Typography'
 
 /* ── SideNavItem: styling only – apps provide icon & text via children ── */
@@ -114,9 +113,7 @@ export interface SideNavBrandSlotProps {
   name: string
   /** Version string (e.g. "v1.0") */
   version?: string
-  /** Show light/dark mode toggle (default: true). Requires ThemeProvider. */
-  showThemeToggle?: boolean
-  /** Optional extra trailing slot (rendered after theme toggle) */
+  /** Optional extra trailing slot */
   trailing?: ReactNode
 }
 
@@ -124,11 +121,8 @@ export function SideNavBrandSlot({
   icon,
   name,
   version,
-  showThemeToggle = true,
   trailing,
 }: SideNavBrandSlotProps) {
-  const { resolvedTheme, toggleTheme } = useTheme()
-
   return (
     <div className="side-nav-brand-slot flex h-14 shrink-0 items-center px-4">
       <div className="flex items-center justify-between gap-3">
@@ -145,23 +139,11 @@ export function SideNavBrandSlot({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {showThemeToggle && (
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="rounded-[var(--radius-md)] p-1.5 hover:bg-[var(--color-background)] transition-colors"
-              title={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {resolvedTheme === 'dark' ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </button>
-          )}
-          {trailing}
-        </div>
+        {trailing && (
+          <div className="flex items-center gap-1 shrink-0">
+            {trailing}
+          </div>
+        )}
       </div>
     </div>
   )
