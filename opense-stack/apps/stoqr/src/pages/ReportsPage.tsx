@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
@@ -10,6 +11,10 @@ import { ExportsTab } from '../components/Reports/ExportsTab'
 
 export const ReportsPage = () => {
   const { companyId } = useCompany()
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
+  const validTabs = ['valuation', 'movement-usage', 'reorder-dead-stock', 'exports'] as const
+  const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'valuation'
   const { data, isLoading } = useReportsData(companyId)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -53,6 +58,8 @@ export const ReportsPage = () => {
         </div>
       </div>
       <Tabs
+      activeTab={activeTab}
+      onTabChange={(nextTab) => navigate(`/reports/${nextTab}`)}
       tabs={[
         {
           id: 'valuation',

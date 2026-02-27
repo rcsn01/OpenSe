@@ -7,13 +7,27 @@ type Tab = {
   content: React.ReactNode
 }
 
-export const Tabs = ({ tabs }: { tabs: Tab[] }) => {
-  const [activeTab, setActiveTab] = useState(tabs[0].id)
+type TabsProps = {
+  tabs: Tab[]
+  activeTab?: string
+  onTabChange?: (tabId: string) => void
+}
+
+export const Tabs = ({ tabs, activeTab, onTabChange }: TabsProps) => {
+  const [internalTab, setInternalTab] = useState(tabs[0]?.id)
+  const resolvedActiveTab = activeTab ?? internalTab
+
+  const handleTabChange = (tabId: string) => {
+    onTabChange?.(tabId)
+    if (!activeTab) {
+      setInternalTab(tabId)
+    }
+  }
 
   return (
     <div className="stack">
-      <TabsHeader tabs={tabs} activeTabId={activeTab} onTabChange={setActiveTab} />
-      {tabs.find((t) => t.id === activeTab)?.content}
+      <TabsHeader tabs={tabs} activeTabId={resolvedActiveTab} onTabChange={handleTabChange} />
+      {tabs.find((t) => t.id === resolvedActiveTab)?.content}
     </div>
   )
 }

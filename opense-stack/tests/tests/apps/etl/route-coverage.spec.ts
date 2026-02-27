@@ -7,7 +7,8 @@ const authenticatedRoutes = [
   '/organisation/team',
   '/organisation/usage',
   '/organisation/logs',
-  '/activity',
+  '/activity/usage',
+  '/activity/logs',
   '/settings/profile',
 ];
 

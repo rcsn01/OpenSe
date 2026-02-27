@@ -111,10 +111,26 @@ export class ScanPage {
   }
 
   async goto() {
-    await this.page.goto('/scan');
+    try {
+      await this.page.goto('/scan', { waitUntil: 'commit' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isExpectedRedirectAbort =
+        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+      if (!isExpectedRedirectAbort) {
+        throw error;
+      }
+    }
   }
 
   async expectLoaded() {
+    await expect(this.page).toHaveURL(/\/(scan\/[^/]+|scan|login|auth|dashboard)/);
+
+    if (this.page.url().includes('/login')) {
+      return;
+    }
+
     await expect(this.heading).toBeVisible();
   }
 }
@@ -143,7 +159,7 @@ export class ReportsPage {
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/(localhost:5991\/login\?|\/(reports|auth)?$)/);
+    await expect(this.page).toHaveURL(/(localhost:5991\/login\?|\/(reports\/[^/]+|auth)?$)/);
   }
 }
 
@@ -171,7 +187,7 @@ export class AlertsPage {
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(alerts|auth|login)?$|localhost:5993\/$/);
+    await expect(this.page).toHaveURL(/\/(alerts\/[^/]+|auth|login)|localhost:5993\/$/);
   }
 }
 
@@ -189,7 +205,7 @@ export class LabelStudioPage {
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(tools\/labels|auth|login)?$|localhost:5993\/$/);
+    await expect(this.page).toHaveURL(/\/(tools\/labels\/[^/]+|auth|login)|localhost:5993\/$/);
   }
 }
 

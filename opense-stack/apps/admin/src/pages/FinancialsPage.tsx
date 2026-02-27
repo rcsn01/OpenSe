@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   BasePage,
   Button,
@@ -50,7 +51,9 @@ const tabs: Array<{ id: FinancialTabId; label: string }> = [
 ]
 
 export const FinancialsPage = () => {
-  const [activeTab, setActiveTab] = useState<FinancialTabId>('pricing')
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
+  const activeTab: FinancialTabId = tab === 'coupons' || tab === 'reports' ? tab : 'pricing'
   const [plans, setPlans] = useState<PricingPlan[]>([])
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [newCouponCode, setNewCouponCode] = useState('')
@@ -194,7 +197,7 @@ export const FinancialsPage = () => {
           </Card>
         ) : null}
 
-        <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as FinancialTabId)} />
+        <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/financials/${nextTab}`)} />
 
         {activeTab === 'pricing' ? (
           <Card>

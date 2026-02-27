@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
@@ -9,6 +10,10 @@ import { toast } from 'sonner'
 
 export const ScanPage = () => {
   const { companyId } = useCompany()
+  const navigate = useNavigate()
+  const { tab } = useParams<{ tab?: string }>()
+  const validTabs = ['scan-actions', 'scan-history'] as const
+  const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'scan-actions'
   const [scanValue, setScanValue] = useState('')
   const [isScanning, setIsScanning] = useState(false)
   const [entryMethod, setEntryMethod] = useState<'camera' | 'manual'>('manual')
@@ -90,6 +95,8 @@ export const ScanPage = () => {
   return (
     <BasePage companyId={companyId} isLoading={false}>
       <Tabs
+        activeTab={activeTab}
+        onTabChange={(nextTab) => navigate(`/scan/${nextTab}`)}
         tabs={[
           { 
             id: 'scan-actions', 

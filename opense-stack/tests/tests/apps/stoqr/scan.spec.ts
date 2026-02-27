@@ -32,6 +32,10 @@ test.describe('Stoqr Scan', () => {
     await expect(authenticatedPage.getByRole('button', { name: /start camera/i })).toHaveCount(0);
 
     await authenticatedPage.getByRole('tab', { name: /history/i }).click();
+    await expect(authenticatedPage).toHaveURL(/\/scan\/scan-history$/);
     await expect(authenticatedPage.getByText(/Scan History Log|No scan history yet/i).first()).toBeVisible();
+
+    await authenticatedPage.getByRole('tab', { name: /^Scan$/i }).click();
+    await expect(authenticatedPage).toHaveURL(/\/scan\/scan-actions$/);
   });
 });
