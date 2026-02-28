@@ -24,6 +24,7 @@ import { WorkflowList } from './components/dashboard/WorkflowList';
 import { TeamTab } from './components/organisation/TeamTab';
 import { OrgUsageAnalytics } from './components/organisation/UsageAnalytics';
 import { OrgLogsTab } from './components/organisation/OrgLogsTab';
+import { PermissionsTab } from './components/organisation/PermissionsTab';
 
 const DashboardIndexRedirect = () => {
   const lastTab = typeof window !== 'undefined' ? window.localStorage.getItem('dashboardLastTab') : null;
@@ -69,6 +70,7 @@ function AppContent() {
                     <Route path="/organisation" element={<OrganisationPage />}>
                       <Route index element={<Navigate to="team" replace />} />
                       <Route path="team" element={<TeamTab />} />
+                      <Route path="permissions" element={<PermissionsTab />} />
                       <Route path="usage" element={<OrgUsageAnalytics />} />
                       <Route path="logs" element={<OrgLogsTab />} />
                     </Route>

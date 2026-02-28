@@ -8,6 +8,7 @@ import { OrgSimple } from '../../types/organisation';
 import { useOutletContext } from 'react-router-dom';
 import { useOrgUsageStats, useOrgActiveUsers } from '../../hooks/queries/useUsageStats';
 import { UsageSummary, ActiveUser } from '../../api/usage';
+import { Card } from '@repo/ui';
 
 const COLORS = {
   success: '#10b981',
@@ -98,7 +99,7 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
           {/* ── Charts Row ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Execution Volume */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-6">
                 <BarChart3 className="w-5 h-5 text-slate-600" />
                 <h3 className="text-base font-bold text-slate-900">Execution Volume</h3>
@@ -122,10 +123,10 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
               ) : (
                 <EmptyChart message="No execution data in the last 30 days." />
               )}
-            </div>
+            </Card>
 
             {/* Execution Status Breakdown */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-6">
                 <TrendingUp className="w-5 h-5 text-slate-600" />
                 <h3 className="text-base font-bold text-slate-900">Status Breakdown</h3>
@@ -157,12 +158,12 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
               ) : (
                 <EmptyChart message="No execution data to display." />
               )}
-            </div>
+            </Card>
           </div>
 
           {/* ── Trend Chart ── */}
           {chartData.length > 1 && (
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-6">
                 <TrendingUp className="w-5 h-5 text-slate-600" />
                 <h3 className="text-base font-bold text-slate-900">Execution Trend</h3>
@@ -186,12 +187,12 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </Card>
           )}
 
           {/* ── Active Users Table ── */}
           {!hideActiveUsers && activeUsers.length > 0 && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <Card className="overflow-hidden" padding="none">
               <div className="p-6 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-slate-600" />
@@ -234,7 +235,7 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Card>
           )}
         </>
       )}
@@ -284,7 +285,7 @@ const MetricCard = ({
   value: string;
   subtitle?: string;
 }) => (
-  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+  <Card className="p-5">
     <div className="flex items-center gap-3 mb-3">
       <div className={`p-2 rounded-lg ${iconColor}`}>
         <Icon className="w-4 h-4" />
@@ -293,7 +294,7 @@ const MetricCard = ({
     </div>
     <p className="text-2xl font-bold text-slate-900">{value}</p>
     {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
-  </div>
+  </Card>
 );
 
 const EmptyChart = ({ message }: { message: string }) => (

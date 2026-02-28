@@ -9,8 +9,21 @@ test.describe('ETL Organisation', () => {
 
     if (await org.teamTab.isVisible().catch(() => false)) {
       await expect(org.teamTab).toBeVisible();
+      await expect(org.permissionsTab).toBeVisible();
       await expect(org.usageTab).toBeVisible();
       await expect(org.logsTab).toBeVisible();
+    }
+  });
+
+  test('permissions tab opens role management UI', async ({ authenticatedEtlPage }) => {
+    const org = new ETLOrganisationPage(authenticatedEtlPage);
+    await org.goto();
+    await org.expectLoaded();
+
+    if (await org.permissionsTab.isVisible().catch(() => false)) {
+      await org.permissionsTab.click();
+      await expect(authenticatedEtlPage).toHaveURL(/\/organisation\/permissions$/);
+      await expect(authenticatedEtlPage.getByRole('heading', { name: /roles/i }).first()).toBeVisible();
     }
   });
 
