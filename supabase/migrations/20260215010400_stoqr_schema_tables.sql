@@ -44,38 +44,13 @@ CREATE TABLE IF NOT EXISTS stoqr.role_permissions (
   PRIMARY KEY (role_id, permission_code)
 );
 
-CREATE TABLE IF NOT EXISTS stoqr.company_members (
+CREATE TABLE IF NOT EXISTS stoqr.organisation_member_roles (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   company_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL,
   role_id UUID REFERENCES stoqr.roles(id) ON DELETE SET NULL,
   joined_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(user_id, company_id)
-);
-
-CREATE TABLE IF NOT EXISTS stoqr.company_invitations (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  company_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL,
-  email CITEXT NOT NULL,
-  role_id UUID REFERENCES stoqr.roles(id) ON DELETE CASCADE NOT NULL,
-  token TEXT DEFAULT gen_random_uuid()::text NOT NULL UNIQUE,
-  invited_by UUID REFERENCES public.profiles(id),
-  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-  accepted_at TIMESTAMPTZ,
-  UNIQUE(company_id, email)
-);
-
-CREATE TABLE IF NOT EXISTS stoqr.subscriptions (
-  id TEXT PRIMARY KEY,
-  company_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL,
-  status TEXT CHECK (status IN ('active', 'trialing', 'past_due', 'canceled', 'unpaid', 'incomplete')) NOT NULL,
-  price_id TEXT,
-  quantity INTEGER DEFAULT 1,
-  cancel_at_period_end BOOLEAN DEFAULT false,
-  current_period_start TIMESTAMPTZ,
-  current_period_end TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-  ended_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS stoqr.product_categories (
@@ -418,9 +393,7 @@ CREATE INDEX idx_label_print_jobs_company_status ON stoqr.label_print_jobs(compa
 ALTER TABLE stoqr.app_permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.role_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stoqr.company_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stoqr.company_invitations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stoqr.subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stoqr.organisation_member_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.product_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.inventory_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.folders ENABLE ROW LEVEL SECURITY;

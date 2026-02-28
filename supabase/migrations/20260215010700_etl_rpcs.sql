@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.accept_invite(invite_id UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, etl
+SET search_path = public
 AS $$
 DECLARE
   v_invite RECORD;
@@ -21,7 +21,7 @@ BEGIN
   END IF;
 
   SELECT * INTO v_invite
-  FROM etl.organisation_invites
+  FROM public.organisation_invites
   WHERE id = invite_id;
 
   IF v_invite IS NULL THEN
@@ -33,18 +33,11 @@ BEGIN
   END IF;
 
   INSERT INTO public.organisation_members (org_id, user_id, role)
-  VALUES (v_invite.org_id, v_user_id, v_invite.role)
+  VALUES (v_invite.org_id, v_user_id, 'member')
   ON CONFLICT (org_id, user_id) DO UPDATE
-    SET role = public.pick_higher_org_role(public.organisation_members.role, EXCLUDED.role);
+    SET role = public.pick_higher_org_role(public.organisation_members.role, 'member');
 
-  INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
-  SELECT om.id, 'etl'
-  FROM public.organisation_members om
-  WHERE om.org_id = v_invite.org_id
-    AND om.user_id = v_user_id
-  ON CONFLICT (org_member_id, app_code) DO NOTHING;
-
-  DELETE FROM etl.organisation_invites WHERE id = invite_id;
+  DELETE FROM public.organisation_invites WHERE id = invite_id;
 
   RETURN true;
 END;

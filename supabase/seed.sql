@@ -271,11 +271,54 @@ ON CONFLICT (org_member_id, app_code) DO NOTHING;
 -- 2) ETL tables
 -- ------------------------------------------------------------
 
-INSERT INTO etl.organisation_invites (id, org_id, email, role, invited_by)
+INSERT INTO public.organisation_invites (id, org_id, email, invited_by, token)
 VALUES
-  ('c1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'newjoiner@acme.test', 'member', '33333333-3333-3333-3333-333333333333'),
-  ('c2222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'analyst@globex.test', 'editor', '66666666-6666-6666-6666-666666666666')
+  ('c1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'newjoiner@acme.test', '33333333-3333-3333-3333-333333333333', 'token-org-acme-newjoiner'),
+  ('c2222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'analyst@globex.test', '66666666-6666-6666-6666-666666666666', 'token-org-globex-analyst')
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO etl.roles (id, org_id, name, description)
+VALUES
+  ('19191919-1919-1919-1919-191919191901', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Admin', 'Full ETL administration for Acme'),
+  ('19191919-1919-1919-1919-191919191902', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Operator', 'Run and monitor ETL workflows for Acme'),
+  ('19191919-1919-1919-1919-191919191903', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'ETL Admin', 'Full ETL administration for Globex')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO etl.role_permissions (role_id, permission_code)
+VALUES
+  ('19191919-1919-1919-1919-191919191901', 'workflows.view'),
+  ('19191919-1919-1919-1919-191919191901', 'workflows.manage'),
+  ('19191919-1919-1919-1919-191919191901', 'executions.view'),
+  ('19191919-1919-1919-1919-191919191901', 'executions.run'),
+  ('19191919-1919-1919-1919-191919191901', 'notifications.manage'),
+  ('19191919-1919-1919-1919-191919191901', 'roles.manage'),
+  ('19191919-1919-1919-1919-191919191902', 'workflows.view'),
+  ('19191919-1919-1919-1919-191919191902', 'executions.view'),
+  ('19191919-1919-1919-1919-191919191902', 'executions.run'),
+  ('19191919-1919-1919-1919-191919191903', 'workflows.view'),
+  ('19191919-1919-1919-1919-191919191903', 'workflows.manage'),
+  ('19191919-1919-1919-1919-191919191903', 'executions.view'),
+  ('19191919-1919-1919-1919-191919191903', 'executions.run'),
+  ('19191919-1919-1919-1919-191919191903', 'notifications.manage'),
+  ('19191919-1919-1919-1919-191919191903', 'roles.manage')
+ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+INSERT INTO etl.organisation_member_roles (id, org_member_id, role_id)
+SELECT
+  src.id,
+  om.id,
+  src.role_id
+FROM (
+  VALUES
+    ('29292929-2929-2929-2929-292929292901'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, '19191919-1919-1919-1919-191919191901'::uuid),
+    ('29292929-2929-2929-2929-292929292902'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '33333333-3333-3333-3333-333333333333'::uuid, '19191919-1919-1919-1919-191919191902'::uuid),
+    ('29292929-2929-2929-2929-292929292903'::uuid, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, '66666666-6666-6666-6666-666666666666'::uuid, '19191919-1919-1919-1919-191919191903'::uuid)
+) AS src(id, org_id, user_id, role_id)
+JOIN public.organisation_members om
+  ON om.org_id = src.org_id
+ AND om.user_id = src.user_id
+ON CONFLICT (org_member_id) DO UPDATE
+SET role_id = EXCLUDED.role_id;
 
 INSERT INTO etl.workflows (id, name, description, graph_data, owner_id, org_id, is_template)
 VALUES
@@ -386,7 +429,7 @@ VALUES
   ('50505050-5050-5050-5050-505050505050', 'transactions.create')
 ON CONFLICT (role_id, permission_code) DO NOTHING;
 
-INSERT INTO stoqr.company_members (id, user_id, company_id, role_id)
+INSERT INTO stoqr.organisation_member_roles (id, user_id, company_id, role_id)
 VALUES
   ('60606060-6060-6060-6060-606060606001', '22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10101010-1010-1010-1010-101010101010'),
   ('60606060-6060-6060-6060-606060606002', '33333333-3333-3333-3333-333333333333', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '20202020-2020-2020-2020-202020202020'),
@@ -397,15 +440,9 @@ VALUES
 ON CONFLICT (user_id, company_id) DO UPDATE
 SET role_id = EXCLUDED.role_id;
 
-INSERT INTO stoqr.company_invitations (id, company_id, email, role_id, token, invited_by, accepted_at)
-VALUES
-  ('70707070-7070-7070-7070-707070707001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'candidate@acme.test', '30303030-3030-3030-3030-303030303030', 'token-acme-viewer', '33333333-3333-3333-3333-333333333333', NULL),
-  ('70707070-7070-7070-7070-707070707002', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'newoperator@globex.test', '50505050-5050-5050-5050-505050505050', 'token-globex-operator', '66666666-6666-6666-6666-666666666666', NULL)
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO stoqr.subscriptions (
+INSERT INTO public.subscriptions (
   id,
-  company_id,
+  org_id,
   status,
   price_id,
   quantity,
@@ -437,7 +474,15 @@ VALUES
     timezone('utc'::text, now()) - interval '15 days',
     NULL
   )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE
+SET
+  status = EXCLUDED.status,
+  price_id = EXCLUDED.price_id,
+  quantity = EXCLUDED.quantity,
+  cancel_at_period_end = EXCLUDED.cancel_at_period_end,
+  current_period_start = EXCLUDED.current_period_start,
+  current_period_end = EXCLUDED.current_period_end,
+  ended_at = EXCLUDED.ended_at;
 
 -- ------------------------------------------------------------
 -- 4) StoQR catalog + inventory flows

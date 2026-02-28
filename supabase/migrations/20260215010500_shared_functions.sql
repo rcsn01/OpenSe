@@ -340,7 +340,7 @@ BEGIN
   RETURN EXISTS (
     SELECT 1
     FROM public.organisation_members om
-    LEFT JOIN stoqr.company_members cm
+    LEFT JOIN stoqr.organisation_member_roles cm
       ON cm.company_id = om.org_id
      AND cm.user_id = om.user_id
     LEFT JOIN stoqr.role_permissions rp
@@ -373,6 +373,33 @@ BEGIN
         ))
         OR rp.role_id IS NOT NULL
       )
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.has_etl_permission(_org_id UUID, _permission_code TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public, etl
+AS $$
+BEGIN
+  IF public.is_app_super_admin() THEN
+    RETURN TRUE;
+  END IF;
+
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.organisation_members om
+    LEFT JOIN etl.organisation_member_roles emr
+      ON emr.org_member_id = om.id
+    LEFT JOIN etl.role_permissions rp
+      ON rp.role_id = emr.role_id
+     AND rp.permission_code = _permission_code
+    WHERE om.org_id = _org_id
+      AND om.user_id = auth.uid()
+      AND rp.role_id IS NOT NULL
   );
 END;
 $$;
@@ -562,6 +589,7 @@ GRANT EXECUTE ON FUNCTION public.is_org_member(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_org_admin(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_org_owner_strictly(UUID, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_permission(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.has_etl_permission(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO authenticated;
