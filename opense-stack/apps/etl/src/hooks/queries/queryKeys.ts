@@ -27,6 +27,13 @@ export const usageKeys = {
   personalStats: () => ['personalUsageStats'] as const,
 }
 
+export const permissionKeys = {
+  appPermissions: (isDemoUser: boolean) => ['appPermissions', isDemoUser] as const,
+  orgRoles: (orgId: string | undefined, isDemoUser: boolean) => ['orgRoles', orgId, isDemoUser] as const,
+  memberRoleAssignments: (orgId: string | undefined, isDemoUser: boolean) =>
+    ['memberRoleAssignments', orgId, isDemoUser] as const,
+}
+
 export const versionKeys = {
   list: (workflowId: string | null) => ['workflowVersions', workflowId] as const,
   detail: (versionId: string | null) => ['workflowVersion', versionId] as const,

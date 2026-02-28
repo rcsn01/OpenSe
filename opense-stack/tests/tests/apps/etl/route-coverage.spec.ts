@@ -5,6 +5,7 @@ const authenticatedRoutes = [
   '/dashboard/personal',
   '/dashboard/org',
   '/organisation/team',
+  '/organisation/permissions',
   '/organisation/usage',
   '/organisation/logs',
   '/activity/usage',

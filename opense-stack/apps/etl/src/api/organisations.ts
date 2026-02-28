@@ -59,6 +59,18 @@ export const removeOrganisationMember = async (memberId: string) => {
   if (error) throw error
 }
 
+export const updateOrganisationMemberRole = async (
+  memberId: string,
+  role: 'admin' | 'editor' | 'member',
+) => {
+  const { error } = await supabase
+    .from('organisation_members')
+    .update({ role })
+    .eq('id', memberId)
+
+  if (error) throw error
+}
+
 export const listUserOrganisations = async (userId: string) => {
   const { data, error } = await supabase
     .from('organisation_members')
