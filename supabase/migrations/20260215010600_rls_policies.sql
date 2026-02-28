@@ -144,10 +144,61 @@ CREATE POLICY member_app_seats_manage ON public.organisation_member_app_seats
     )
   );
 
-DROP POLICY IF EXISTS invite_select_own ON etl.organisation_invites;
-DROP POLICY IF EXISTS invite_select_admin ON etl.organisation_invites;
-DROP POLICY IF EXISTS invite_insert_admin ON etl.organisation_invites;
-DROP POLICY IF EXISTS invite_delete_admin_or_user ON etl.organisation_invites;
+DROP POLICY IF EXISTS organisation_invites_select_own ON public.organisation_invites;
+DROP POLICY IF EXISTS organisation_invites_select_admin ON public.organisation_invites;
+DROP POLICY IF EXISTS organisation_invites_insert_admin ON public.organisation_invites;
+DROP POLICY IF EXISTS organisation_invites_delete_admin_or_user ON public.organisation_invites;
+DROP POLICY IF EXISTS subscriptions_select ON public.subscriptions;
+DROP POLICY IF EXISTS subscriptions_manage ON public.subscriptions;
+
+CREATE POLICY organisation_invites_select_own ON public.organisation_invites
+  FOR SELECT USING (email = (SELECT auth.jwt() ->> 'email'));
+
+CREATE POLICY organisation_invites_select_admin ON public.organisation_invites
+  FOR SELECT USING (
+    public.is_org_admin(org_id, (SELECT auth.uid()))
+    OR public.is_org_owner(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY organisation_invites_insert_admin ON public.organisation_invites
+  FOR INSERT WITH CHECK (
+    public.is_org_admin(org_id, (SELECT auth.uid()))
+    OR public.is_org_owner(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY organisation_invites_delete_admin_or_user ON public.organisation_invites
+  FOR DELETE USING (
+    public.is_org_admin(org_id, (SELECT auth.uid()))
+    OR public.is_org_owner(org_id, (SELECT auth.uid()))
+    OR public.is_app_super_admin()
+    OR email = (SELECT auth.jwt() ->> 'email')
+  );
+
+CREATE POLICY subscriptions_select ON public.subscriptions
+  FOR SELECT USING (
+    public.is_org_member(org_id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+CREATE POLICY subscriptions_manage ON public.subscriptions
+  FOR ALL USING (
+    public.is_org_owner_strictly(org_id, auth.uid())
+    OR public.is_app_super_admin()
+  )
+  WITH CHECK (
+    public.is_org_owner_strictly(org_id, auth.uid())
+    OR public.is_app_super_admin()
+  );
+
+DROP POLICY IF EXISTS etl_app_permissions_select ON etl.app_permissions;
+DROP POLICY IF EXISTS etl_roles_select ON etl.roles;
+DROP POLICY IF EXISTS etl_roles_manage ON etl.roles;
+DROP POLICY IF EXISTS etl_role_permissions_select ON etl.role_permissions;
+DROP POLICY IF EXISTS etl_role_permissions_manage ON etl.role_permissions;
+DROP POLICY IF EXISTS etl_member_roles_select ON etl.organisation_member_roles;
+DROP POLICY IF EXISTS etl_member_roles_manage ON etl.organisation_member_roles;
 DROP POLICY IF EXISTS workflows_select_unified ON etl.workflows;
 DROP POLICY IF EXISTS workflows_insert_owner_only ON etl.workflows;
 DROP POLICY IF EXISTS workflows_update_owner_or_member ON etl.workflows;
@@ -162,64 +213,115 @@ DROP POLICY IF EXISTS notifications_insert ON etl.notification_settings;
 DROP POLICY IF EXISTS notifications_update ON etl.notification_settings;
 DROP POLICY IF EXISTS notifications_delete ON etl.notification_settings;
 
-CREATE POLICY invite_select_own ON etl.organisation_invites
-  FOR SELECT USING (email = (SELECT auth.jwt() ->> 'email'));
+CREATE POLICY etl_app_permissions_select ON etl.app_permissions
+  FOR SELECT USING (true);
 
-CREATE POLICY invite_select_admin ON etl.organisation_invites
+CREATE POLICY etl_roles_select ON etl.roles
   FOR SELECT USING (
-    public.is_org_admin(org_id, (SELECT auth.uid()))
-    OR public.is_org_owner(org_id, (SELECT auth.uid()))
+    public.is_org_member(roles.org_id, auth.uid())
     OR public.is_app_super_admin()
   );
 
-CREATE POLICY invite_insert_admin ON etl.organisation_invites
-  FOR INSERT WITH CHECK (
-    public.is_org_admin(org_id, (SELECT auth.uid()))
-    OR public.is_org_owner(org_id, (SELECT auth.uid()))
+CREATE POLICY etl_roles_manage ON etl.roles
+  FOR ALL USING (
+    public.has_etl_permission(org_id, 'roles.manage')
+    OR public.is_app_super_admin()
+  )
+  WITH CHECK (
+    public.has_etl_permission(org_id, 'roles.manage')
     OR public.is_app_super_admin()
   );
 
-CREATE POLICY invite_delete_admin_or_user ON etl.organisation_invites
-  FOR DELETE USING (
-    public.is_org_admin(org_id, (SELECT auth.uid()))
-    OR public.is_org_owner(org_id, (SELECT auth.uid()))
-    OR public.is_app_super_admin()
-    OR email = (SELECT auth.jwt() ->> 'email')
+CREATE POLICY etl_role_permissions_select ON etl.role_permissions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM etl.roles r
+      WHERE r.id = role_permissions.role_id
+        AND (public.is_org_member(r.org_id, auth.uid()) OR public.is_app_super_admin())
+    )
+  );
+
+CREATE POLICY etl_role_permissions_manage ON etl.role_permissions
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM etl.roles r
+      WHERE r.id = role_permissions.role_id
+        AND (public.has_etl_permission(r.org_id, 'roles.manage') OR public.is_app_super_admin())
+    )
+  );
+
+CREATE POLICY etl_member_roles_select ON etl.organisation_member_roles
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM public.organisation_members om
+      WHERE om.id = organisation_member_roles.org_member_id
+        AND (om.user_id = auth.uid() OR public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
+    )
+  );
+
+CREATE POLICY etl_member_roles_manage ON etl.organisation_member_roles
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM public.organisation_members om
+      WHERE om.id = organisation_member_roles.org_member_id
+        AND (public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM public.organisation_members om
+      WHERE om.id = organisation_member_roles.org_member_id
+        AND (public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
+    )
   );
 
 CREATE POLICY workflows_select_unified ON etl.workflows
   FOR SELECT USING (
     (org_id IS NULL AND owner_id = (SELECT auth.uid()))
-    OR public.is_org_member(org_id, (SELECT auth.uid()))
+    OR public.has_etl_permission(org_id, 'workflows.view')
     OR public.is_app_super_admin()
   );
 
 CREATE POLICY workflows_insert_owner_only ON etl.workflows
-  FOR INSERT WITH CHECK ((SELECT auth.uid()) = owner_id);
+  FOR INSERT WITH CHECK (
+    (org_id IS NULL AND (SELECT auth.uid()) = owner_id)
+    OR (org_id IS NOT NULL AND public.has_etl_permission(org_id, 'workflows.manage'))
+    OR public.is_app_super_admin()
+  );
 
 CREATE POLICY workflows_update_owner_or_member ON etl.workflows
   FOR UPDATE USING (
     (SELECT auth.uid()) = owner_id
-    OR public.is_org_member(org_id, (SELECT auth.uid()))
+    OR public.has_etl_permission(org_id, 'workflows.manage')
     OR public.is_app_super_admin()
   );
 
 CREATE POLICY workflows_delete_owner_or_member ON etl.workflows
   FOR DELETE USING (
     (SELECT auth.uid()) = owner_id
-    OR public.is_org_member(org_id, (SELECT auth.uid()))
+    OR public.has_etl_permission(org_id, 'workflows.manage')
     OR public.is_app_super_admin()
   );
 
 CREATE POLICY workflow_executions_select_unified ON etl.workflow_executions
   FOR SELECT USING (
     (SELECT auth.uid()) = user_id
-    OR public.is_org_member(org_id, (SELECT auth.uid()))
+    OR public.has_etl_permission(org_id, 'executions.view')
     OR public.is_app_super_admin()
   );
 
 CREATE POLICY workflow_executions_insert_self ON etl.workflow_executions
-  FOR INSERT WITH CHECK ((SELECT auth.uid()) = user_id);
+  FOR INSERT WITH CHECK (
+    (SELECT auth.uid()) = user_id
+    AND (
+      org_id IS NULL
+      OR public.has_etl_permission(org_id, 'executions.run')
+      OR public.is_app_super_admin()
+    )
+  );
 
 CREATE POLICY workflow_executions_super_admin_select ON etl.workflow_executions
   FOR SELECT USING (public.is_app_super_admin());
@@ -231,7 +333,7 @@ CREATE POLICY versions_select ON etl.workflow_versions FOR SELECT
       WHERE w.id = workflow_versions.workflow_id
         AND (
           w.owner_id = auth.uid()
-          OR public.is_org_member(w.org_id, auth.uid())
+          OR public.has_etl_permission(w.org_id, 'workflows.view')
           OR public.is_app_super_admin()
         )
     )
@@ -244,7 +346,8 @@ CREATE POLICY versions_insert ON etl.workflow_versions FOR INSERT
       WHERE w.id = workflow_versions.workflow_id
         AND (
           w.owner_id = auth.uid()
-          OR public.is_org_member(w.org_id, auth.uid())
+          OR public.has_etl_permission(w.org_id, 'workflows.manage')
+          OR public.is_app_super_admin()
         )
     )
   );
@@ -256,7 +359,7 @@ CREATE POLICY notifications_select ON etl.notification_settings FOR SELECT
       WHERE w.id = notification_settings.workflow_id
         AND (
           w.owner_id = auth.uid()
-          OR public.is_org_member(w.org_id, auth.uid())
+          OR public.has_etl_permission(w.org_id, 'notifications.manage')
           OR public.is_app_super_admin()
         )
     )
@@ -269,7 +372,8 @@ CREATE POLICY notifications_insert ON etl.notification_settings FOR INSERT
       WHERE w.id = notification_settings.workflow_id
         AND (
           w.owner_id = auth.uid()
-          OR public.is_org_member(w.org_id, auth.uid())
+          OR public.has_etl_permission(w.org_id, 'notifications.manage')
+          OR public.is_app_super_admin()
         )
     )
   );
@@ -281,7 +385,8 @@ CREATE POLICY notifications_update ON etl.notification_settings FOR UPDATE
       WHERE w.id = notification_settings.workflow_id
         AND (
           w.owner_id = auth.uid()
-          OR public.is_org_member(w.org_id, auth.uid())
+          OR public.has_etl_permission(w.org_id, 'notifications.manage')
+          OR public.is_app_super_admin()
         )
     )
   );
@@ -293,7 +398,8 @@ CREATE POLICY notifications_delete ON etl.notification_settings FOR DELETE
       WHERE w.id = notification_settings.workflow_id
         AND (
           w.owner_id = auth.uid()
-          OR public.is_org_member(w.org_id, auth.uid())
+          OR public.has_etl_permission(w.org_id, 'notifications.manage')
+          OR public.is_app_super_admin()
         )
     )
   );
@@ -320,9 +426,8 @@ DROP POLICY IF EXISTS "Members can view folders" ON stoqr.folders;
 DROP POLICY IF EXISTS "Staff can manage folders" ON stoqr.folders;
 DROP POLICY IF EXISTS "Members can view tags" ON stoqr.tags;
 DROP POLICY IF EXISTS "Staff can manage tags" ON stoqr.tags;
-DROP POLICY IF EXISTS "Users can view their own memberships" ON stoqr.company_members;
-DROP POLICY IF EXISTS "Managers can view all members" ON stoqr.company_members;
-DROP POLICY IF EXISTS "Managers can view and create invitations" ON stoqr.company_invitations;
+DROP POLICY IF EXISTS "Users can view their own memberships" ON stoqr.organisation_member_roles;
+DROP POLICY IF EXISTS "Managers can view all members" ON stoqr.organisation_member_roles;
 DROP POLICY IF EXISTS "Members can view report schedules" ON stoqr.report_schedules;
 DROP POLICY IF EXISTS "Admins can manage report schedules" ON stoqr.report_schedules;
 DROP POLICY IF EXISTS "Members can view report exports" ON stoqr.report_exports;
@@ -434,14 +539,11 @@ CREATE POLICY "Members can view tags" ON stoqr.tags
 CREATE POLICY "Staff can manage tags" ON stoqr.tags
   FOR ALL USING (has_permission(company_id, 'products.manage'));
 
-CREATE POLICY "Users can view their own memberships" ON stoqr.company_members
+CREATE POLICY "Users can view their own memberships" ON stoqr.organisation_member_roles
   FOR SELECT USING (user_id = auth.uid());
 
-CREATE POLICY "Managers can view all members" ON stoqr.company_members
+CREATE POLICY "Managers can view all members" ON stoqr.organisation_member_roles
   FOR SELECT USING (has_permission(company_id, 'members.view'));
-
-CREATE POLICY "Managers can view and create invitations" ON stoqr.company_invitations
-  FOR ALL USING (has_permission(company_id, 'members.manage'));
 
 CREATE POLICY "Members can view report schedules" ON stoqr.report_schedules
   FOR SELECT USING (has_permission(company_id, 'reports.view'));
@@ -551,7 +653,7 @@ CREATE POLICY "Give users access to their company folder" ON storage.objects
     bucket_id = 'product-images'
     AND auth.role() = 'authenticated'
     AND (storage.foldername(name))[1] IN (
-      SELECT company_id::text FROM stoqr.company_members
+      SELECT company_id::text FROM stoqr.organisation_member_roles
       WHERE user_id = auth.uid()
         AND has_permission(company_id, 'products.manage')
     )
@@ -561,7 +663,7 @@ CREATE POLICY "Users can view images from their company" ON storage.objects
   FOR SELECT USING (
     bucket_id = 'product-images'
     AND (storage.foldername(name))[1] IN (
-      SELECT company_id::text FROM stoqr.company_members
+      SELECT company_id::text FROM stoqr.organisation_member_roles
       WHERE user_id = auth.uid()
     )
   );
