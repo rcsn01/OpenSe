@@ -32,7 +32,7 @@ beforeEach(() => {
 
 describe('team settings api', () => {
   it('fetches members, invitations, roles and permissions', async () => {
-    const companyMembers = {
+    const organisationMemberRoles = {
       select: vi.fn(() => ({
         eq: vi.fn().mockResolvedValue({
           data: [{ id: 'm-1', user_id: 'u-1', role_id: 'r-1', joined_at: '2026-02-24T00:00:00Z' }],
@@ -60,10 +60,12 @@ describe('team settings api', () => {
     const invitations = {
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
-          order: vi.fn().mockResolvedValue({
-            data: [{ id: 'i-1', email: 'user@example.com', role_id: 'r-1', accepted_at: null, created_at: '2026-02-24T00:00:00Z', roles: { id: 'r-1', name: 'Admin' } }],
-            error: null,
-          }),
+          is: vi.fn(() => ({
+            order: vi.fn().mockResolvedValue({
+              data: [{ id: 'i-1', email: 'user@example.com', created_at: '2026-02-24T00:00:00Z' }],
+              error: null,
+            }),
+          })),
         })),
       })),
     }
@@ -78,24 +80,28 @@ describe('team settings api', () => {
     }
 
     mockDbFrom.mockImplementation((table: string) => {
-      if (table === 'company_members') return companyMembers
+      if (table === 'organisation_member_roles') return organisationMemberRoles
       if (table === 'roles') return roles
       if (table === 'app_permissions') return permissions
-      if (table === 'company_invitations') return invitations
       if (table === 'role_permissions') return rolePermissions
       throw new Error(`Unexpected table: ${table}`)
     })
 
     mockSupabaseFrom.mockImplementation((table: string) => {
-      if (table !== 'profiles') throw new Error(`Unexpected supabase table: ${table}`)
-      return {
-        select: vi.fn(() => ({
-          in: vi.fn().mockResolvedValue({
-            data: [{ id: 'u-1', full_name: 'Jane Admin', username: 'jane', avatar_url: null }],
-            error: null,
-          }),
-        })),
+      if (table === 'profiles') {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: 'u-1', full_name: 'Jane Admin', username: 'jane', avatar_url: null }],
+              error: null,
+            }),
+          })),
+        }
       }
+
+      if (table === 'organisation_invites') return invitations
+
+      throw new Error(`Unexpected supabase table: ${table}`)
     })
 
     const result = await fetchTeamSettingsData('company-1')
