@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockGetUser = vi.fn()
 const mockRpc = vi.fn()
-const mockSchema = vi.fn()
+const mockFrom = vi.fn()
 
 vi.mock('../supabase', () => ({
   supabase: {
@@ -10,7 +10,7 @@ vi.mock('../supabase', () => ({
       getUser: (...args: unknown[]) => mockGetUser(...args),
     },
     rpc: (...args: unknown[]) => mockRpc(...args),
-    schema: (...args: unknown[]) => mockSchema(...args),
+    from: (...args: unknown[]) => mockFrom(...args),
   },
 }))
 
@@ -40,7 +40,7 @@ describe('organisation invites', () => {
     })
 
     await expect(declineOrganisationInvite('inv-1')).rejects.toMatchObject({ message: 'Auth failed' })
-    expect(mockSchema).not.toHaveBeenCalled()
+    expect(mockFrom).not.toHaveBeenCalled()
   })
 
   it('inviteOrganisationMember normalizes email before upsert', async () => {
@@ -50,11 +50,7 @@ describe('organisation invites', () => {
     })
 
     const upsert = vi.fn().mockResolvedValue({ error: null })
-    const schemaChain = {
-      from: vi.fn(() => ({ upsert })),
-    }
-
-    mockSchema.mockReturnValue(schemaChain)
+    mockFrom.mockReturnValue({ upsert })
 
     await inviteOrganisationMember('org-1', ' MEMBER@Example.com ', 'member')
 
@@ -62,7 +58,6 @@ describe('organisation invites', () => {
       {
         org_id: 'org-1',
         email: 'member@example.com',
-        role: 'member',
         invited_by: 'user-1',
       },
       { onConflict: 'org_id,email', ignoreDuplicates: false },
