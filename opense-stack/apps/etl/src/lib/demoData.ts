@@ -1,5 +1,6 @@
 import { WorkflowRow } from '../components/dashboard/types';
 import { OrgSimple, OrgMember } from '../types/organisation';
+import { AppPermission, MemberRoleAssignment, OrgRole } from '../types/permissions';
 
 // Demo user constants
 export const DEMO_USER_ID = 'demo-user';
@@ -28,6 +29,37 @@ export const mockOrgMembers: OrgMember[] = [
     { user_id: 'member-5', email: 'lisa.wang@democorp.com', full_name: 'Lisa Wang', role: 'member', avatar_url: null },
     { user_id: 'member-6', email: 'david.kim@democorp.com', full_name: 'David Kim', role: 'member', avatar_url: null },
     { user_id: 'member-7', email: 'jen.taylor@democorp.com', full_name: 'Jennifer Taylor', role: 'member', avatar_url: null },
+];
+
+export const mockAppPermissions: AppPermission[] = [
+    { code: 'workflows.view', description: 'View ETL workflows' },
+    { code: 'workflows.manage', description: 'Create and edit ETL workflows' },
+    { code: 'executions.view', description: 'View workflow execution history' },
+    { code: 'executions.run', description: 'Run workflows' },
+    { code: 'notifications.manage', description: 'Manage workflow notifications' },
+    { code: 'roles.manage', description: 'Manage ETL custom roles' },
+];
+
+export const mockOrgRoles: OrgRole[] = [
+    {
+        id: 'etl-role-analyst',
+        org_id: DEMO_ORG_ID,
+        name: 'Analyst',
+        description: 'Can view and run operational workflows.',
+        permissionCodes: ['workflows.view', 'executions.view', 'executions.run'],
+    },
+    {
+        id: 'etl-role-operator',
+        org_id: DEMO_ORG_ID,
+        name: 'Operator',
+        description: 'Can run and manage workflows and notifications.',
+        permissionCodes: ['workflows.view', 'workflows.manage', 'executions.view', 'executions.run', 'notifications.manage'],
+    },
+];
+
+export const mockMemberRoleAssignments: MemberRoleAssignment[] = [
+    { org_member_id: 'member-2', role_id: 'etl-role-analyst', role_name: 'Analyst' },
+    { org_member_id: 'member-3', role_id: 'etl-role-operator', role_name: 'Operator' },
 ];
 
 // Helper to generate timestamps within the past N days
