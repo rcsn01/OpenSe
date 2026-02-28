@@ -1,25 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Loader2, Users, Loader, Activity, FileText } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { Loader2, Users, Activity, FileText, ShieldCheck } from 'lucide-react';
+import { BasePage, StackLayout } from '@repo/ui';
 import { useAuth } from '@repo/shared/auth/context';
 import { Member } from '../components/settings/types';
 
-// New Imports
-import { ModernOrgHeader } from '../components/organisation/OrgHeader';
-
-
-// Existing Imports
 import { useOrganisationMembers, useUserOrganisations } from '../hooks/queries/useOrganisations';
-import {
-    updateOrganisationName,
-} from '../api/organisations';
 import { OrgSimple } from '../types/organisation';
-import { Button, Input } from '@repo/ui';
 import { Tabs } from '../components/ui/Tabs';
 
 // Context for AppLayout
-type OrganisationPageContext = { currentOrg: OrgSimple | null; };
+type OrganisationPageContext = {
+    currentOrg: OrgSimple | null;
+    teamSearch?: string;
+    setTeamSearch?: (value: string) => void;
+};
 
 // Context passed to child routes
 type OutletContextType = {
@@ -27,12 +22,13 @@ type OutletContextType = {
     members: Member[];
     refetchMembers: () => Promise<any>;
     userRole: string | null;
+    teamSearch?: string;
+    setTeamSearch?: (value: string) => void;
 };
 
 export const OrganisationPage = () => {
     const { user } = useAuth();
-    const { currentOrg: contextOrg } = useOutletContext<OrganisationPageContext>();
-    const queryClient = useQueryClient();
+    const { currentOrg: contextOrg, teamSearch, setTeamSearch } = useOutletContext<OrganisationPageContext>();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -41,47 +37,12 @@ export const OrganisationPage = () => {
 
     const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useOrganisationMembers(organisation?.id);
 
-    // Edit Org State
-    const [isEditingOrg, setIsEditingOrg] = useState(false);
-    const [orgNameInput, setOrgNameInput] = useState('');
-    const [savingOrg, setSavingOrg] = useState(false);
-    const [_genericError, setGenericError] = useState<string | null>(null);
-
-    // Sync org name to input when loaded
-    useEffect(() => {
-        if (organisation?.name) setOrgNameInput(organisation.name);
-    }, [organisation?.name]);
-
     const membershipRole = useMemo(() => {
         if (!organisation || !user) return null;
         if (organisation.owner_id === user.id) return 'owner';
         return members.find((m) => m.user_id === user.id)?.role ?? 'member';
     }, [organisation, user, members]);
 
-
-    // --- Handlers ---
-
-    const handleUpdateOrg = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!organisation) return;
-        const nextName = orgNameInput.trim();
-        if (!nextName || nextName === organisation.name) {
-            setIsEditingOrg(false);
-            return;
-        }
-
-        setSavingOrg(true);
-        setGenericError(null);
-        try {
-            await updateOrganisationName(organisation.id, nextName);
-            await queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
-            setIsEditingOrg(false);
-        } catch (err: any) {
-            setGenericError(err?.message ?? 'Failed to update organisation.');
-        } finally {
-            setSavingOrg(false);
-        }
-    };
 
     // --- Render Loading ---
     if (orgsLoading || (!!organisation && membersLoading)) {
@@ -95,21 +56,13 @@ export const OrganisationPage = () => {
 
     // --- Render Main View ---
     return (
-        <div className="min-h-screen bg-slate-50/50 pb-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-                {/* 1. Header Command Center */}
-                <ModernOrgHeader
-                    organisation={organisation}
-                    membersCount={members.length}
-                    userRole={membershipRole || 'member'}
-                    onEdit={() => setIsEditingOrg(true)}
-                />
-
-                {/* 2. Page Tabs (Navigation) */}
+        <BasePage>
+            <StackLayout>
+                {/* Page Tabs (Navigation) */}
                 <Tabs
                     tabs={[
-                        { id: 'team', label: 'Team Management', icon: <Users className="w-4 h-4" /> },
+                        { id: 'team', label: 'Teams', icon: <Users className="w-4 h-4" /> },
+                        { id: 'permissions', label: 'Permissions', icon: <ShieldCheck className="w-4 h-4" /> },
                         { id: 'usage', label: 'Usage', icon: <Activity className="w-4 h-4" /> },
                         { id: 'logs', label: 'Logs', icon: <FileText className="w-4 h-4" /> },
                     ]}
@@ -117,39 +70,18 @@ export const OrganisationPage = () => {
                     onTabChange={(id) => navigate(id)}
                 />
 
-                {/* 3. Tab Content */}
-                <Outlet context={{ currentOrg: organisation, members, refetchMembers, userRole: membershipRole } satisfies OutletContextType} />
-            </div>
-
-            {/* Edit Organisation Modal */}
-            {isEditingOrg && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-200 animate-in zoom-in-95 duration-200">
-                        <h3 className="text-lg font-bold text-slate-900 mb-4">Edit Organisation Details</h3>
-
-                        <form onSubmit={handleUpdateOrg} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Organisation Name</label>
-                                <Input
-                                    autoFocus
-                                    value={orgNameInput}
-                                    onChange={(e) => setOrgNameInput(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-3 mt-6">
-                                <Button type="button" variant="secondary" onClick={() => setIsEditingOrg(false)}>
-                                    Cancel
-                                </Button>
-                                <Button type="submit" disabled={savingOrg}>
-                                    {savingOrg ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
-                                    Save Changes
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-        </div>
+                {/* Tab Content */}
+                <Outlet
+                    context={{
+                        currentOrg: organisation,
+                        members,
+                        refetchMembers,
+                        userRole: membershipRole,
+                        teamSearch,
+                        setTeamSearch,
+                    } satisfies OutletContextType}
+                />
+            </StackLayout>
+        </BasePage>
     );
 };

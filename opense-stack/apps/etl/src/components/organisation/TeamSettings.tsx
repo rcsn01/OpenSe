@@ -1,13 +1,17 @@
 import { useState, useMemo } from 'react';
-import { Search, UserPlus, Mail, X, Loader2, User } from 'lucide-react';
+import { UserPlus, Mail, Loader2, User } from 'lucide-react';
 import { Member, Organisation } from '../settings/types';
 import { MemberTable } from '../settings/MemberTable'; // Reusing your existing table logic, but wrapped
-import { Button } from '@repo/ui';
+import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Select } from '@repo/ui';
 
 type ModernTeamSettingsProps = {
   organisation: Organisation;
   members: Member[];
   canManageTeam: boolean;
+  updatingMemberId: string | null;
+  customRoleOptions: { value: string; label: string }[];
+  memberCustomRoleMap: Record<string, string | null>;
+  searchTerm: string;
   
   // Invite Logic
   inviteEmail: string;
@@ -22,22 +26,22 @@ type ModernTeamSettingsProps = {
   removingId: string | null;
   onRemoveMember: (member: Member) => void;
   onUpdateRole: (memberId: string, newRole: 'admin' | 'editor' | 'member') => void;
+  onAssignCustomRole: (memberId: string, roleId: string | null) => void;
 };
 
 export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'editor' | 'member'>('all');
 
   // Local filtering
   const filteredMembers = useMemo(() => {
     return props.members.filter(m => {
-      const matchesSearch = (m.profiles?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            (m.profiles?.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (m.profiles?.full_name || '').toLowerCase().includes(props.searchTerm.toLowerCase()) || 
+                            (m.profiles?.email || '').toLowerCase().includes(props.searchTerm.toLowerCase());
       const matchesRole = roleFilter === 'all' || m.role === roleFilter;
       return matchesSearch && matchesRole;
     });
-  }, [props.members, searchTerm, roleFilter]);
+  }, [props.members, props.searchTerm, roleFilter]);
 
   const handleInviteSubmit = (e: React.FormEvent) => {
     props.onInviteSubmit(e);
@@ -47,28 +51,19 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <Card className="flex flex-col sm:flex-row justify-between items-center gap-4" padding="md">
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input 
-              type="text"
-              placeholder="Search members..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-            />
-          </div>
-          <select 
+          <Select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as any)}
-            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Roles</option>
-            <option value="admin">Admins</option>
-            <option value="editor">Editors</option>
-            <option value="member">Members</option>
-          </select>
+            options={[
+              { value: 'all', label: 'All Roles' },
+              { value: 'admin', label: 'Admins' },
+              { value: 'editor', label: 'Editors' },
+              { value: 'member', label: 'Members' },
+            ]}
+            className="min-w-36"
+          />
         </div>
 
         {props.canManageTeam && (
@@ -77,7 +72,7 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
             Invite Member
           </Button>
         )}
-      </div>
+      </Card>
 
       {/* Table Area */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -86,8 +81,12 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
           organisation={props.organisation}
           canManage={props.canManageTeam}
           removingId={props.removingId}
+          updatingId={props.updatingMemberId}
+          customRoleOptions={props.customRoleOptions}
+          memberCustomRoleMap={props.memberCustomRoleMap}
           onRemove={props.onRemoveMember}
           onUpdateRole={props.onUpdateRole}
+          onUpdateCustomRole={props.onAssignCustomRole}
         />
         {filteredMembers.length === 0 && (
           <div className="p-12 text-center text-slate-500">
@@ -99,16 +98,16 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
 
       {/* Invite Modal Overlay */}
       {isInviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-              <h3 className="text-lg font-semibold text-slate-900">Invite Team Member</h3>
-              <button onClick={() => setIsInviteModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6">
+        <Dialog open={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Invite Team Member</DialogTitle>
+              <DialogDescription>
+                Add a colleague to {props.organisation.name} and assign an initial role.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div>
               {props.inviteError && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg flex gap-2 items-start">
                   <div className="mt-0.5 min-w-[4px] h-4 bg-red-500 rounded-full" />
@@ -119,17 +118,14 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
               <form onSubmit={handleInviteSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      type="email" 
-                      required
-                      placeholder="colleague@company.com"
-                      value={props.inviteEmail}
-                      onChange={(e) => props.onInviteEmailChange(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
+                  <Input
+                    type="email"
+                    required
+                    placeholder="colleague@company.com"
+                    value={props.inviteEmail}
+                    onChange={(e) => props.onInviteEmailChange(e.target.value)}
+                    prefix={<Mail className="w-4 h-4" />}
+                  />
                 </div>
 
                 <div>
@@ -166,8 +162,8 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
                 </div>
               </form>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

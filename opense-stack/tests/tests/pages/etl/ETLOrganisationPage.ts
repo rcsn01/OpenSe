@@ -3,12 +3,14 @@ import { type Locator, type Page, expect } from '@playwright/test';
 export class ETLOrganisationPage {
   readonly page: Page;
   readonly teamTab: Locator;
+  readonly permissionsTab: Locator;
   readonly usageTab: Locator;
   readonly logsTab: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.teamTab = page.getByRole('button', { name: /team/i }).first();
+    this.permissionsTab = page.getByRole('button', { name: /permissions/i }).first();
     this.usageTab = page.getByRole('button', { name: /usage/i }).first();
     this.logsTab = page.getByRole('button', { name: /logs/i }).first();
   }
