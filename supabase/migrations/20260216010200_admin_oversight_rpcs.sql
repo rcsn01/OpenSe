@@ -144,7 +144,7 @@ BEGIN
     o.created_at,
     COUNT(cm.id) AS member_count
   FROM public.organisations o
-  LEFT JOIN stoqr.company_members cm ON cm.company_id = o.id
+  LEFT JOIN stoqr.organisation_member_roles cm ON cm.company_id = o.id
   GROUP BY o.id, o.name, o.created_at
   ORDER BY o.created_at DESC;
 END;
@@ -177,7 +177,7 @@ BEGIN
     r.name AS role_name,
     p.full_name,
     p.email
-  FROM stoqr.company_members cm
+  FROM stoqr.organisation_member_roles cm
   LEFT JOIN stoqr.roles r ON r.id = cm.role_id
   LEFT JOIN public.profiles p ON p.id = cm.user_id
   WHERE cm.company_id = p_company_id

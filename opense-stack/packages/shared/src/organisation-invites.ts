@@ -5,7 +5,6 @@ export type OrganisationInviteRole = 'admin' | 'editor' | 'member'
 interface OrganisationInviteRow {
   id: string
   org_id: string
-  role: OrganisationInviteRole
   created_at: string
   organisations: { name: string } | { name: string }[] | null
   inviter: { full_name: string | null; email: string | null } | { full_name: string | null; email: string | null }[] | null
@@ -41,9 +40,8 @@ export const getPendingOrganisationInvites = async (): Promise<PendingOrganisati
   const email = await getCurrentUserEmail()
 
   const { data, error } = await supabase
-    .schema('etl')
     .from('organisation_invites')
-    .select('id, org_id, role, created_at, organisations:organisations!organisation_invites_org_id_fkey(name), inviter:profiles!organisation_invites_invited_by_fkey(full_name, email)')
+    .select('id, org_id, created_at, organisations:organisations!organisation_invites_org_id_fkey(name), inviter:profiles!organisation_invites_invited_by_fkey(full_name, email)')
     .eq('email', email)
     .order('created_at', { ascending: true })
 
@@ -58,7 +56,7 @@ export const getPendingOrganisationInvites = async (): Promise<PendingOrganisati
       org_id: invite.org_id,
       org_name: organisation?.name ?? 'Organisation',
       inviter_name: inviter?.full_name ?? inviter?.email ?? 'Unknown',
-      role: invite.role,
+      role: 'member',
       created_at: invite.created_at,
     }
   })
@@ -73,7 +71,6 @@ export const declineOrganisationInvite = async (inviteId: string): Promise<void>
   const email = await getCurrentUserEmail()
 
   const { error } = await supabase
-    .schema('etl')
     .from('organisation_invites')
     .delete()
     .eq('id', inviteId)
@@ -85,7 +82,7 @@ export const declineOrganisationInvite = async (inviteId: string): Promise<void>
 export const inviteOrganisationMember = async (
   orgId: string,
   email: string,
-  role: OrganisationInviteRole,
+  _role: OrganisationInviteRole,
 ): Promise<void> => {
   const normalizedEmail = email.trim().toLowerCase()
   if (!normalizedEmail) {
@@ -96,13 +93,11 @@ export const inviteOrganisationMember = async (
   if (userError) throw userError
 
   const { error } = await supabase
-    .schema('etl')
     .from('organisation_invites')
     .upsert(
       {
         org_id: orgId,
         email: normalizedEmail,
-        role,
         invited_by: data.user?.id ?? null,
       },
       { onConflict: 'org_id,email', ignoreDuplicates: false },

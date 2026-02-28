@@ -23,10 +23,7 @@ export type Permission = {
 export type CompanyInvitation = {
   id: string
   email: string
-  role_id: string | null
-  accepted_at: string | null
   created_at: string
-  roles?: { id: string; name: string } | null
 }
 
 export type TeamActivityEvent = {
@@ -42,10 +39,7 @@ export type TeamActivityEvent = {
 type CompanyInvitationRow = {
   id: string
   email: string
-  role_id: string | null
-  accepted_at: string | null
   created_at: string
-  roles?: { id: string; name: string } | { id: string; name: string }[] | null
 }
 
 export type TwoFactorStatus = {
@@ -63,15 +57,16 @@ export const fetchTeamSettingsData = async (companyId: string) => {
     { data: invitationData, error: invitationError },
   ] = await Promise.all([
     db
-      .from('company_members')
+      .from('organisation_member_roles')
       .select('id, user_id, role_id, joined_at')
       .eq('company_id', companyId),
     db.from('roles').select('id, name, description').eq('company_id', companyId),
     db.from('app_permissions').select('code, description'),
-    db
-      .from('company_invitations')
-      .select('id, email, role_id, accepted_at, created_at, roles(id, name)')
-      .eq('company_id', companyId)
+    supabase
+      .from('organisation_invites')
+      .select('id, email, created_at')
+      .eq('org_id', companyId)
+      .is('accepted_at', null)
       .order('created_at', { ascending: false }),
   ])
 
@@ -125,10 +120,7 @@ export const fetchTeamSettingsData = async (companyId: string) => {
 
   return {
     members,
-    invitations: ((invitationData as CompanyInvitationRow[] | null) ?? []).map((invitation) => ({
-      ...invitation,
-      roles: Array.isArray(invitation.roles) ? (invitation.roles[0] ?? null) : (invitation.roles ?? null),
-    })),
+    invitations: (invitationData as CompanyInvitationRow[] | null) ?? [],
     roles: rolesList,
     permissions: (permissionData as Permission[] | null) ?? [],
     rolePermissions,
@@ -136,17 +128,22 @@ export const fetchTeamSettingsData = async (companyId: string) => {
 }
 
 export const inviteCompanyMember = async (companyId: string, email: string, roleId: string) => {
-  const { error } = await db.from('company_invitations').insert({
-    company_id: companyId,
+  const { data, error: userError } = await supabase.auth.getUser()
+  if (userError) throw userError
+
+  const { error } = await supabase.from('organisation_invites').upsert({
+    org_id: companyId,
     email,
-    role_id: roleId,
+    invited_by: data.user?.id ?? null,
   })
+
+  void roleId
 
   if (error) throw error
 }
 
 export const updateCompanyMemberRole = async (memberId: string, roleId: string) => {
-  const { error } = await db.from('company_members').update({ role_id: roleId }).eq('id', memberId)
+  const { error } = await db.from('organisation_member_roles').update({ role_id: roleId }).eq('id', memberId)
   if (error) throw error
 }
 
