@@ -39,9 +39,12 @@ export const AppLayout = () => {
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null)
   const [dashboardSearch, setDashboardSearch] = useState('')
   const [gallerySearch, setGallerySearch] = useState('')
+  const [teamSearch, setTeamSearch] = useState('')
   const { data: userOrgs = [] } = useUserOrganisations(user?.id)
   const isDashboard = location.pathname.startsWith('/dashboard')
   const isGallery = location.pathname.startsWith('/gallery')
+  const isOrganisationTeam =
+    location.pathname === '/organisation' || location.pathname.startsWith('/organisation/team')
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)')
@@ -180,6 +183,14 @@ export const AppLayout = () => {
         prefix={<Search className="w-4 h-4" />}
         className="max-w-xs rounded-[var(--radius-lg)]"
       />
+    ) : isOrganisationTeam ? (
+      <Input
+        placeholder="Search members..."
+        value={teamSearch}
+        onChange={(e) => setTeamSearch(e.target.value)}
+        prefix={<Search className="w-4 h-4" />}
+        className="max-w-xs rounded-[var(--radius-lg)]"
+      />
     ) : null
 
   const topBar = topBarSearch ? (
@@ -203,7 +214,7 @@ export const AppLayout = () => {
     ? { currentOrg, dashboardSearch, setDashboardSearch }
     : isGallery
       ? { currentOrg, gallerySearch, setGallerySearch }
-      : { currentOrg }
+      : { currentOrg, teamSearch, setTeamSearch }
 
   return (
     <SharedAppLayout

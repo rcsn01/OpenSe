@@ -1,14 +1,19 @@
 import { Trash2, Loader2 } from 'lucide-react';
 import { Member, Organisation } from './types';
 import clsx from 'clsx';
+import { Select } from '@repo/ui';
 
 type MemberTableProps = {
   members: Member[];
   organisation: Organisation;
   canManage: boolean;
   removingId: string | null;
+  updatingId: string | null;
+  customRoleOptions: { value: string; label: string }[];
+  memberCustomRoleMap: Record<string, string | null>;
   onRemove: (member: Member) => void;
   onUpdateRole: (memberId: string, role: 'admin' | 'editor' | 'member') => void;
+  onUpdateCustomRole: (memberId: string, roleId: string | null) => void;
 };
 
 const RoleBadge = ({ role }: { role: string }) => {
@@ -32,8 +37,12 @@ export const MemberTable: React.FC<MemberTableProps> = ({
   organisation,
   canManage,
   removingId,
+  updatingId,
+  customRoleOptions,
+  memberCustomRoleMap,
   onRemove,
-  onUpdateRole
+  onUpdateRole,
+  onUpdateCustomRole,
 }) => {
   return (
     <div className="overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -42,6 +51,7 @@ export const MemberTable: React.FC<MemberTableProps> = ({
           <tr>
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Member</th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Permissions Role</th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
             <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
           </tr>
@@ -75,24 +85,41 @@ export const MemberTable: React.FC<MemberTableProps> = ({
                   {isOwner ? (
                     <RoleBadge role="admin" />
                   ) : canManage ? (
-                    <div className="relative inline-block text-left">
-                      <select
+                    <div className="w-36">
+                      <Select
                         value={member.role}
                         onChange={(e) => onUpdateRole(member.id, e.target.value as any)}
-                        className="appearance-none bg-white border border-slate-300 text-slate-700 py-1 pl-3 pr-8 rounded-lg text-xs font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer hover:border-indigo-300 transition-colors"
-                      >
-                        <option value="member">Member</option>
-                        <option value="editor">Editor</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
+                        disabled={updatingId === member.id}
+                        options={[
+                          { value: 'member', label: 'Member' },
+                          { value: 'editor', label: 'Editor' },
+                          { value: 'admin', label: 'Admin' },
+                        ]}
+                        className="text-xs"
+                      />
                     </div>
                   ) : (
                     <RoleBadge role={member.role} />
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {isOwner ? (
+                    <span className="text-xs text-slate-500">Not required</span>
+                  ) : canManage ? (
+                    <div className="w-52">
+                      <Select
+                        value={memberCustomRoleMap[member.id] ?? ''}
+                        onChange={(e) => onUpdateCustomRole(member.id, e.target.value || null)}
+                        disabled={updatingId === member.id}
+                        options={[
+                          { value: '', label: 'No custom role' },
+                          ...customRoleOptions,
+                        ]}
+                        className="text-xs"
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-600">{memberCustomRoleMap[member.id] ? 'Assigned' : '—'}</span>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
