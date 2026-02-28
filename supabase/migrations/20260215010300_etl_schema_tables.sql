@@ -2,18 +2,42 @@
 -- Baseline: ETL Schema Tables (Canonical Org FK)
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS etl.organisation_invites (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  org_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
-  email TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('admin', 'editor', 'member')),
-  invited_by UUID REFERENCES public.profiles(id),
-  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-  UNIQUE (org_id, email)
+CREATE TABLE IF NOT EXISTS etl.app_permissions (
+  code TEXT PRIMARY KEY,
+  description TEXT
 );
 
-CREATE INDEX IF NOT EXISTS organisation_invites_org_idx ON etl.organisation_invites(org_id);
-CREATE INDEX IF NOT EXISTS organisation_invites_email_idx ON etl.organisation_invites(email);
+INSERT INTO etl.app_permissions (code, description) VALUES
+  ('workflows.view', 'View ETL workflows'),
+  ('workflows.manage', 'Create and edit ETL workflows'),
+  ('executions.view', 'View workflow execution history'),
+  ('executions.run', 'Run workflows'),
+  ('notifications.manage', 'Manage workflow notifications'),
+  ('roles.manage', 'Manage ETL custom roles')
+ON CONFLICT (code) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS etl.roles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  org_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(org_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS etl.role_permissions (
+  role_id UUID REFERENCES etl.roles(id) ON DELETE CASCADE NOT NULL,
+  permission_code TEXT REFERENCES etl.app_permissions(code) ON DELETE CASCADE NOT NULL,
+  PRIMARY KEY (role_id, permission_code)
+);
+
+CREATE TABLE IF NOT EXISTS etl.organisation_member_roles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  org_member_id UUID REFERENCES public.organisation_members(id) ON DELETE CASCADE NOT NULL,
+  role_id UUID REFERENCES etl.roles(id) ON DELETE SET NULL,
+  assigned_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(org_member_id)
+);
 
 CREATE TABLE IF NOT EXISTS etl.workflows (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -71,13 +95,19 @@ CREATE TABLE IF NOT EXISTS etl.notification_settings (
   UNIQUE(workflow_id, channel)
 );
 
-ALTER TABLE etl.organisation_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE etl.app_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE etl.roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE etl.role_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE etl.organisation_member_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE etl.workflows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE etl.workflow_executions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE etl.workflow_versions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE etl.notification_settings ENABLE ROW LEVEL SECURITY;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON etl.organisation_invites TO authenticated;
+GRANT SELECT ON etl.app_permissions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON etl.roles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON etl.role_permissions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON etl.organisation_member_roles TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON etl.workflows TO authenticated;
 GRANT SELECT ON etl.workflow_executions TO authenticated;
 GRANT SELECT, INSERT ON etl.workflow_versions TO authenticated;

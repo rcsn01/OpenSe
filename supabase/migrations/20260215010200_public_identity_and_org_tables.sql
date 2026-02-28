@@ -48,6 +48,20 @@ CREATE TABLE IF NOT EXISTS public.organisation_members (
 CREATE INDEX IF NOT EXISTS organisation_members_org_idx ON public.organisation_members(org_id);
 CREATE INDEX IF NOT EXISTS organisation_members_user_idx ON public.organisation_members(user_id);
 
+CREATE TABLE IF NOT EXISTS public.organisation_invites (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  org_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
+  email CITEXT NOT NULL,
+  invited_by UUID REFERENCES public.profiles(id),
+  token TEXT DEFAULT gen_random_uuid()::text NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+  accepted_at TIMESTAMPTZ,
+  UNIQUE (org_id, email)
+);
+
+CREATE INDEX IF NOT EXISTS organisation_invites_org_idx ON public.organisation_invites(org_id);
+CREATE INDEX IF NOT EXISTS organisation_invites_email_idx ON public.organisation_invites(email);
+
 CREATE TABLE IF NOT EXISTS public.apps (
   code TEXT PRIMARY KEY,
   name TEXT NOT NULL
@@ -76,21 +90,38 @@ CREATE TABLE IF NOT EXISTS public.organisation_member_app_seats (
   PRIMARY KEY (org_member_id, app_code)
 );
 
+CREATE TABLE IF NOT EXISTS public.subscriptions (
+  id TEXT PRIMARY KEY,
+  org_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  status TEXT CHECK (status IN ('active', 'trialing', 'past_due', 'canceled', 'unpaid', 'incomplete')) NOT NULL,
+  price_id TEXT,
+  quantity INTEGER DEFAULT 1,
+  cancel_at_period_end BOOLEAN DEFAULT false,
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+  ended_at TIMESTAMPTZ
+);
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.super_admin_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.organisation_invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.apps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_app_seats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_member_app_seats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 GRANT SELECT ON public.profiles TO authenticated;
 GRANT SELECT, UPDATE ON public.super_admin_members TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.organisations TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.organisation_members TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.organisation_invites TO authenticated;
 GRANT SELECT ON public.apps TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.organisation_app_seats TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.organisation_member_app_seats TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.subscriptions TO authenticated;
 
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
