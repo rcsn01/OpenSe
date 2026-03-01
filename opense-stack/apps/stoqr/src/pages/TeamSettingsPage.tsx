@@ -35,9 +35,9 @@ export const TeamSettingsPage = () => {
   const createRoleMutation = useCreateRoleWithPermissions(companyId)
 
   const [inviteMessage, setInviteMessage] = useState<string | null>(null)
+  const [roleChangeMessage, setRoleChangeMessage] = useState<string | null>(null)
 
   const members = data?.members ?? []
-  const invitations = data?.invitations ?? []
   const permissions = data?.permissions ?? []
   const rolePermissions = data?.rolePermissions ?? {}
   const roles = (data?.roles ?? []).map((role) => ({
@@ -57,7 +57,13 @@ export const TeamSettingsPage = () => {
   }
 
   const handleRoleChange = async (memberId: string, roleId: string) => {
-    await updateMemberRoleMutation.mutateAsync({ memberId, roleId })
+    setRoleChangeMessage(null)
+    try {
+      await updateMemberRoleMutation.mutateAsync({ memberId, roleId })
+      setRoleChangeMessage('Member role updated successfully.')
+    } catch (error) {
+      setRoleChangeMessage(error instanceof Error ? error.message : 'Failed to update member role.')
+    }
   }
 
   const handleCreateRole = async ({ name, description, permissionCodes }: { name: string; description: string; permissionCodes: string[] }) => {
@@ -96,11 +102,11 @@ export const TeamSettingsPage = () => {
             content: (
               <MembersTab
                 members={members}
-                invitations={invitations}
                 roles={data?.roles ?? []}
                 onRoleChange={handleRoleChange}
                 onInvite={handleInvite}
                 inviteMessage={inviteMessage}
+                roleChangeMessage={roleChangeMessage}
               />
             ),
           },

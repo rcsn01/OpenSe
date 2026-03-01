@@ -24,6 +24,7 @@ import {
   fetchTeamActivityEvents,
   fetchTeamSettingsData,
   fetchTwoFactorStatus,
+  updateCompanyMemberRole,
 } from '../teamSettings'
 
 beforeEach(() => {
@@ -169,5 +170,32 @@ describe('team settings api', () => {
     expect(result.nextLevel).toBe('aal2')
     expect(result.hasVerifiedFactor).toBe(true)
     expect(result.factors).toHaveLength(1)
+  })
+
+  it('updates company member role', async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null })
+    const update = vi.fn(() => ({ eq }))
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_member_roles') throw new Error(`Unexpected table: ${table}`)
+      return { update }
+    })
+
+    await expect(updateCompanyMemberRole('member-1', 'role-2')).resolves.toBeUndefined()
+    expect(update).toHaveBeenCalledWith({ role_id: 'role-2' })
+    expect(eq).toHaveBeenCalledWith('id', 'member-1')
+  })
+
+  it('throws when update company member role fails', async () => {
+    const dbError = new Error('rls denied')
+    const eq = vi.fn().mockResolvedValue({ error: dbError })
+    const update = vi.fn(() => ({ eq }))
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_member_roles') throw new Error(`Unexpected table: ${table}`)
+      return { update }
+    })
+
+    await expect(updateCompanyMemberRole('member-1', 'role-2')).rejects.toThrow('rls denied')
   })
 })
