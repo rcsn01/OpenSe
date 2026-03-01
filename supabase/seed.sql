@@ -361,7 +361,8 @@ VALUES
   ('19191919-1919-1919-1919-191919191901', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Admin', 'Full ETL administration for Acme'),
   ('19191919-1919-1919-1919-191919191902', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Operator', 'Run and monitor ETL workflows for Acme'),
   ('19191919-1919-1919-1919-191919191903', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'ETL Admin', 'Full ETL administration for Globex')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (org_id, name) DO UPDATE
+SET description = EXCLUDED.description;
 
 INSERT INTO etl.role_permissions (role_id, permission_code)
 VALUES
@@ -382,22 +383,32 @@ VALUES
   ('19191919-1919-1919-1919-191919191903', 'roles.manage')
 ON CONFLICT (role_id, permission_code) DO NOTHING;
 
+INSERT INTO etl.role_permissions (role_id, permission_code)
+SELECT r.id, p.code
+FROM etl.roles r
+JOIN etl.app_permissions p ON TRUE
+WHERE lower(r.name) = 'owner'
+ON CONFLICT (role_id, permission_code) DO NOTHING;
+
 INSERT INTO etl.organisation_member_roles (id, org_member_id, role_id)
 SELECT
   src.id,
   om.id,
-  src.role_id
+  er.id
 FROM (
   VALUES
-    ('29292929-2929-2929-2929-292929292904'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '11111111-1111-1111-1111-111111111111'::uuid, '19191919-1919-1919-1919-191919191901'::uuid),
-    ('29292929-2929-2929-2929-292929292901'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, '19191919-1919-1919-1919-191919191901'::uuid),
-    ('29292929-2929-2929-2929-292929292902'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '33333333-3333-3333-3333-333333333333'::uuid, '19191919-1919-1919-1919-191919191902'::uuid),
-    ('29292929-2929-2929-2929-292929292905'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '77777777-7777-7777-7777-777777777777'::uuid, '19191919-1919-1919-1919-191919191902'::uuid),
-    ('29292929-2929-2929-2929-292929292903'::uuid, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, '66666666-6666-6666-6666-666666666666'::uuid, '19191919-1919-1919-1919-191919191903'::uuid)
-) AS src(id, org_id, user_id, role_id)
+    ('29292929-2929-2929-2929-292929292904'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '11111111-1111-1111-1111-111111111111'::uuid, 'Owner'::text),
+    ('29292929-2929-2929-2929-292929292901'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, 'ETL Admin'::text),
+    ('29292929-2929-2929-2929-292929292902'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '33333333-3333-3333-3333-333333333333'::uuid, 'ETL Operator'::text),
+    ('29292929-2929-2929-2929-292929292905'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '77777777-7777-7777-7777-777777777777'::uuid, 'ETL Operator'::text),
+    ('29292929-2929-2929-2929-292929292903'::uuid, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, '66666666-6666-6666-6666-666666666666'::uuid, 'Owner'::text)
+) AS src(id, org_id, user_id, role_name)
 JOIN public.organisation_members om
   ON om.org_id = src.org_id
  AND om.user_id = src.user_id
+JOIN etl.roles er
+  ON er.org_id = src.org_id
+ AND er.name = src.role_name
 ON CONFLICT (org_member_id) DO UPDATE
 SET role_id = EXCLUDED.role_id;
 
@@ -459,34 +470,14 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO stoqr.roles (id, company_id, name, description)
 VALUES
-  ('10101010-1010-1010-1010-101010101010', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Owner', 'Full access role for Acme'),
   ('20202020-2020-2020-2020-202020202020', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Manager', 'Operational manager role for Acme'),
   ('30303030-3030-3030-3030-303030303030', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Viewer', 'Read-only role for Acme'),
-  ('40404040-4040-4040-4040-404040404040', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Owner', 'Full access role for Globex'),
   ('50505050-5050-5050-5050-505050505050', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Operator', 'Warehouse operator role for Globex')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (company_id, name) DO UPDATE
+SET description = EXCLUDED.description;
 
 INSERT INTO stoqr.role_permissions (role_id, permission_code)
 VALUES
-  ('10101010-1010-1010-1010-101010101010', 'company.manage'),
-  ('10101010-1010-1010-1010-101010101010', 'billing.manage'),
-  ('10101010-1010-1010-1010-101010101010', 'members.view'),
-  ('10101010-1010-1010-1010-101010101010', 'members.manage'),
-  ('10101010-1010-1010-1010-101010101010', 'roles.manage'),
-  ('10101010-1010-1010-1010-101010101010', 'dashboard.view'),
-  ('10101010-1010-1010-1010-101010101010', 'products.view'),
-  ('10101010-1010-1010-1010-101010101010', 'products.manage'),
-  ('10101010-1010-1010-1010-101010101010', 'inventory.bulk_manage'),
-  ('10101010-1010-1010-1010-101010101010', 'scanner.use'),
-  ('10101010-1010-1010-1010-101010101010', 'labels.manage'),
-  ('10101010-1010-1010-1010-101010101010', 'reports.view'),
-  ('10101010-1010-1010-1010-101010101010', 'reports.export'),
-  ('10101010-1010-1010-1010-101010101010', 'procurement.manage'),
-  ('10101010-1010-1010-1010-101010101010', 'alerts.view'),
-  ('10101010-1010-1010-1010-101010101010', 'alerts.manage'),
-  ('10101010-1010-1010-1010-101010101010', 'activity.view'),
-  ('10101010-1010-1010-1010-101010101010', 'transactions.view'),
-  ('10101010-1010-1010-1010-101010101010', 'transactions.create'),
   ('20202020-2020-2020-2020-202020202020', 'dashboard.view'),
   ('20202020-2020-2020-2020-202020202020', 'products.view'),
   ('20202020-2020-2020-2020-202020202020', 'products.manage'),
@@ -499,25 +490,65 @@ VALUES
   ('30303030-3030-3030-3030-303030303030', 'products.view'),
   ('30303030-3030-3030-3030-303030303030', 'reports.view'),
   ('30303030-3030-3030-3030-303030303030', 'transactions.view'),
-  ('40404040-4040-4040-4040-404040404040', 'company.manage'),
-  ('40404040-4040-4040-4040-404040404040', 'dashboard.view'),
-  ('40404040-4040-4040-4040-404040404040', 'products.view'),
-  ('40404040-4040-4040-4040-404040404040', 'products.manage'),
-  ('40404040-4040-4040-4040-404040404040', 'reports.view'),
-  ('40404040-4040-4040-4040-404040404040', 'transactions.view'),
   ('50505050-5050-5050-5050-505050505050', 'products.view'),
   ('50505050-5050-5050-5050-505050505050', 'scanner.use'),
   ('50505050-5050-5050-5050-505050505050', 'transactions.create')
 ON CONFLICT (role_id, permission_code) DO NOTHING;
 
 INSERT INTO stoqr.organisation_member_roles (id, user_id, company_id, role_id)
-VALUES
-  ('60606060-6060-6060-6060-606060606001', '22222222-2222-2222-2222-222222222222', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '10101010-1010-1010-1010-101010101010'),
-  ('60606060-6060-6060-6060-606060606002', '33333333-3333-3333-3333-333333333333', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '20202020-2020-2020-2020-202020202020'),
-  ('60606060-6060-6060-6060-606060606003', '44444444-4444-4444-4444-444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '20202020-2020-2020-2020-202020202020'),
-  ('60606060-6060-6060-6060-606060606004', '55555555-5555-5555-5555-555555555555', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '30303030-3030-3030-3030-303030303030'),
-  ('60606060-6060-6060-6060-606060606005', '66666666-6666-6666-6666-666666666666', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '40404040-4040-4040-4040-404040404040'),
-  ('60606060-6060-6060-6060-606060606006', '11111111-1111-1111-1111-111111111111', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '50505050-5050-5050-5050-505050505050')
+SELECT
+  src.id,
+  src.user_id,
+  src.company_id,
+  sr.id
+FROM (
+  VALUES
+    ('60606060-6060-6060-6060-606060606001'::uuid, '11111111-1111-1111-1111-111111111111'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, 'Owner'::text),
+    ('60606060-6060-6060-6060-606060606002'::uuid, '33333333-3333-3333-3333-333333333333'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, 'Manager'::text),
+    ('60606060-6060-6060-6060-606060606003'::uuid, '44444444-4444-4444-4444-444444444444'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, 'Manager'::text),
+    ('60606060-6060-6060-6060-606060606004'::uuid, '55555555-5555-5555-5555-555555555555'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, 'Viewer'::text),
+    ('60606060-6060-6060-6060-606060606005'::uuid, '66666666-6666-6666-6666-666666666666'::uuid, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, 'Owner'::text)
+) AS src(id, user_id, company_id, role_name)
+JOIN stoqr.roles sr
+  ON sr.company_id = src.company_id
+ AND sr.name = src.role_name
+ON CONFLICT (user_id, company_id) DO UPDATE
+SET role_id = EXCLUDED.role_id;
+
+-- Enforce owner invariants across public + app-specific membership tables.
+INSERT INTO public.organisation_members (org_id, user_id, role)
+SELECT o.id, o.owner_id, 'owner'
+FROM public.organisations o
+ON CONFLICT (org_id, user_id) DO UPDATE
+SET role = 'owner';
+
+INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
+SELECT om.id, apps.app_code
+FROM public.organisations o
+JOIN public.organisation_members om
+  ON om.org_id = o.id
+ AND om.user_id = o.owner_id
+CROSS JOIN (VALUES ('etl'::text), ('stoqr'::text)) AS apps(app_code)
+ON CONFLICT (org_member_id, app_code) DO NOTHING;
+
+INSERT INTO etl.organisation_member_roles (org_member_id, role_id)
+SELECT om.id, er.id
+FROM public.organisations o
+JOIN public.organisation_members om
+  ON om.org_id = o.id
+ AND om.user_id = o.owner_id
+JOIN etl.roles er
+  ON er.org_id = o.id
+ AND lower(er.name) = 'owner'
+ON CONFLICT (org_member_id) DO UPDATE
+SET role_id = EXCLUDED.role_id;
+
+INSERT INTO stoqr.organisation_member_roles (user_id, company_id, role_id)
+SELECT o.owner_id, o.id, sr.id
+FROM public.organisations o
+JOIN stoqr.roles sr
+  ON sr.company_id = o.id
+ AND lower(sr.name) = 'owner'
 ON CONFLICT (user_id, company_id) DO UPDATE
 SET role_id = EXCLUDED.role_id;
 

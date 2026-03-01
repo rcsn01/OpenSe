@@ -30,4 +30,43 @@ test.describe('Stoqr Organisations Settings', () => {
 
     await expect(authenticatedPage).toHaveURL(/(settings\/(team|organisations)\/.+|auth|login|dashboard|localhost:5993\/$)/)
   })
+
+  test('can change a member role from teams tab', async ({ authenticatedPage }) => {
+    await safeGoto(authenticatedPage, '/settings/organisations/teams')
+
+    if (!authenticatedPage.url().includes('/settings/organisations/teams')) {
+      test.skip(true, 'Not on organisations teams route in this environment')
+    }
+
+    const roleSelect = authenticatedPage.locator('table tbody tr select').first()
+    const rowCount = await authenticatedPage.locator('table tbody tr').count()
+
+    if (rowCount === 0 || (await roleSelect.count()) === 0) {
+      test.skip(true, 'No team members available for role change in this environment')
+    }
+
+    const currentValue = await roleSelect.inputValue()
+    const candidateValues = await roleSelect
+      .locator('option')
+      .evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value).filter(Boolean))
+
+    const nextValue = candidateValues.find((value) => value !== currentValue)
+    if (!nextValue) {
+      test.skip(true, 'Only one role option available for selected member')
+    }
+
+    const updateResponsePromise = authenticatedPage.waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' &&
+        response.url().includes('/organisation_member_roles') &&
+        response.url().includes('id=eq.'),
+      { timeout: 10_000 },
+    )
+
+    await roleSelect.selectOption(nextValue)
+
+    const updateResponse = await updateResponsePromise
+    expect(updateResponse.ok()).toBeTruthy()
+    await expect(roleSelect).toHaveValue(nextValue)
+  })
 })
