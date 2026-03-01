@@ -7,6 +7,7 @@ import {
   inviteCompanyMember,
   saveRoleWithPermissions,
   type Role,
+  updateRoleWithPermissions,
   updateCompanyMemberRole,
 } from '../../api/teamSettings'
 
@@ -61,6 +62,16 @@ export const useCreateRoleWithPermissions = (companyId: string | null) => {
       if (!companyId) throw new Error('No company selected')
       return createRoleWithPermissions(companyId, { name, description, perms })
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: teamSettingsKey(companyId) }),
+  })
+}
+
+export const useUpdateRoleWithPermissions = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ roleId, name, description, permissionCodes }: { roleId: string; name: string; description: string; permissionCodes: string[] }) =>
+      updateRoleWithPermissions(roleId, { name, description, permissionCodes }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: teamSettingsKey(companyId) }),
   })
 }

@@ -1,5 +1,19 @@
 import { useEffect, useState } from 'react'
 import { EmptyState } from '../EmptyState'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  OrganisationMembersTable,
+  OrganisationTeamsPage,
+  Select,
+  Button,
+  type OrganisationMembersTableRow,
+} from '@repo/ui'
+import { UserPlus } from 'lucide-react'
 
 type Member = {
   id: string
@@ -40,8 +54,10 @@ export const MembersTab = ({
   inviteMessage: string | null
   invitations: Invitation[]
 }) => {
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<string>(roles[0]?.id ?? '')
+  const [roleFilter, setRoleFilter] = useState('all')
 
   useEffect(() => {
     if (roles.length > 0 && !inviteRole) {
@@ -52,109 +68,119 @@ export const MembersTab = ({
   const handleInviteSubmit = () => {
     onInvite(inviteEmail, inviteRole)
     setInviteEmail('')
+    setIsInviteModalOpen(false)
   }
 
-  return (
-    <div className="stack">
-      <div className="card">
-        <h3 className="section-title">Team members</h3>
-        {members.length === 0 ? (
-          <EmptyState title="No members" description="Invite teammates to get started." />
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th>Joined</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member) => (
-                  <tr key={member.id}>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>
-                        {member.profiles?.full_name ?? member.profiles?.username ?? 'Unknown'}
-                      </div>
-                      <div className="small muted">{member.user_id}</div>
-                    </td>
-                    <td>
-                      <select
-                        className="select"
-                        value={member.role_id ?? ''}
-                        onChange={(event) => onRoleChange(member.id, event.target.value)}
-                      >
-                        {roles.map((role) => (
-                          <option key={role.id} value={role.id}>
-                            {role.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="muted small">{new Date(member.joined_at).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      <div className="grid grid-2">
-        <div className="card stack" style={{ height: 'fit-content' }}>
-          <h3 className="section-title">Invite members</h3>
-          <label className="stack">
-            Email
-            <input
-              className="input"
-              type="email"
-              value={inviteEmail}
-              onChange={(event) => setInviteEmail(event.target.value)}
-              placeholder="colleague@example.com"
-            />
-          </label>
-          <label className="stack">
-            Role
-            <select
-              className="select"
-              value={inviteRole}
-              onChange={(event) => setInviteRole(event.target.value)}
-            >
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="button" type="button" onClick={handleInviteSubmit} disabled={!inviteEmail}>
-            Send invite
-          </button>
-          {inviteMessage && <p className="muted">{inviteMessage}</p>}
-        </div>
+  const filteredMembers = members.filter((member) => {
+    if (roleFilter === 'all') return true
+    return member.role_id === roleFilter
+  })
 
-        <div className="card stack">
-          <h3 className="section-title">Pending Invitations</h3>
-          {invitations.filter((invite) => !invite.accepted_at).length === 0 ? (
-            <EmptyState title="No pending invites" description="Invitations will appear here until accepted." />
-          ) : (
-            <div className="list">
-              {invitations
-                .filter((invite) => !invite.accepted_at)
-                .slice(0, 20)
-                .map((invite) => (
-                  <div key={invite.id} className="flex-between">
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{invite.email}</div>
-                      <div className="small muted">{invite.roles?.name ?? 'Role pending'} · {new Date(invite.created_at).toLocaleDateString()}</div>
-                    </div>
-                    <span className="pill">Pending</span>
-                  </div>
-                ))}
+  const rows: OrganisationMembersTableRow[] = filteredMembers.map((member) => ({
+    id: member.id,
+    displayName: member.profiles?.full_name ?? member.profiles?.username ?? 'Unknown',
+    subtitle: member.user_id,
+    roleContent: (
+      <Select
+        value={member.role_id ?? ''}
+        onChange={(event) => onRoleChange(member.id, event.target.value)}
+        options={roles.map((role) => ({ value: role.id, label: role.name }))}
+        className="text-xs min-w-40"
+      />
+    ),
+  }))
+
+  const filterOptions = [
+    { value: 'all', label: 'All Roles' },
+    ...roles.map((role) => ({ value: role.id, label: role.name })),
+  ]
+
+  return (
+    <>
+      <OrganisationTeamsPage
+        filterValue={roleFilter}
+        onFilterChange={setRoleFilter}
+        filterOptions={filterOptions}
+        canManageTeam={true}
+        onInviteClick={() => setIsInviteModalOpen(true)}
+        inviteLabel="Invite Member"
+        inviteIcon={<UserPlus className="w-4 h-4 mr-2" />}
+        tableContent={
+          rows.length === 0 ? (
+            <div className="p-12">
+              <EmptyState title="No members" description="Invite teammates to get started." />
             </div>
-          )}
-        </div>
-      </div>
-    </div>
+          ) : (
+            <OrganisationMembersTable rows={rows} />
+          )
+        }
+        secondaryContent={
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">Pending Invitations</h3>
+            {invitations.filter((invite) => !invite.accepted_at).length === 0 ? (
+              <EmptyState title="No pending invites" description="Invitations will appear here until accepted." />
+            ) : (
+              <div className="space-y-2">
+                {invitations
+                  .filter((invite) => !invite.accepted_at)
+                  .slice(0, 20)
+                  .map((invite) => (
+                    <div key={invite.id} className="flex items-center justify-between border border-slate-100 rounded-lg p-2">
+                      <div>
+                        <div className="text-sm font-medium text-slate-900">{invite.email}</div>
+                        <div className="text-xs text-slate-500">{invite.roles?.name ?? 'Role pending'} · {new Date(invite.created_at).toLocaleDateString()}</div>
+                      </div>
+                      <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600">Pending</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        }
+      />
+
+      <Dialog open={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogDescription>Add a colleague and assign their initial role.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-slate-700">
+              Email
+              <Input
+                className="mt-1"
+                type="email"
+                value={inviteEmail}
+                onChange={(event) => setInviteEmail(event.target.value)}
+                placeholder="colleague@example.com"
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Role
+              <Select
+                className="mt-1"
+                value={inviteRole}
+                onChange={(event) => setInviteRole(event.target.value)}
+                options={roles.map((role) => ({ value: role.id, label: role.name }))}
+              />
+            </label>
+
+            {inviteMessage && <p className="text-sm text-slate-600">{inviteMessage}</p>}
+
+            <div className="flex gap-3">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setIsInviteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" className="flex-1" onClick={handleInviteSubmit} disabled={!inviteEmail}>
+                Send Invite
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
