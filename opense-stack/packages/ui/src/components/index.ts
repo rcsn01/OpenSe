@@ -35,6 +35,19 @@ export { TopBar, type TopBarProps } from './layout/TopBar'
 export { SwitchAppTopBar, type SwitchAppTopBarProps } from './layout/SwitchAppTopBar'
 export { SwitchAppPopover, type SwitchAppPopoverProps } from './layout/SwitchAppPopover'
 
+// Components – Organisation
+export {
+  OrganisationPermissionsPanel,
+  type OrganisationRole,
+  type OrganisationPermission,
+} from './organisation/OrganisationPermissionsPanel'
+export { OrganisationTeamsShell } from './organisation/OrganisationTeamsShell'
+export { OrganisationTeamsPage } from './organisation/OrganisationTeamsPage'
+export {
+  OrganisationMembersTable,
+  type OrganisationMembersTableRow,
+} from './organisation/OrganisationMembersTable'
+
 // Empty state
 export { EmptyState, type EmptyStateProps } from './ui/EmptyState'
 

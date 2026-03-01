@@ -202,6 +202,29 @@ export const createRoleWithPermissions = async (
   }
 }
 
+export const updateRoleWithPermissions = async (
+  roleId: string,
+  payload: { name: string; description: string; permissionCodes: string[] },
+) => {
+  const { error: roleError } = await db
+    .from('roles')
+    .update({ name: payload.name, description: payload.description })
+    .eq('id', roleId)
+
+  if (roleError) throw roleError
+
+  const { error: deleteError } = await db.from('role_permissions').delete().eq('role_id', roleId)
+  if (deleteError) throw deleteError
+
+  if (payload.permissionCodes.length > 0) {
+    const { error: permissionError } = await db.from('role_permissions').insert(
+      payload.permissionCodes.map((permissionCode) => ({ role_id: roleId, permission_code: permissionCode })),
+    )
+
+    if (permissionError) throw permissionError
+  }
+}
+
 export const fetchTeamActivityEvents = async (companyId: string): Promise<TeamActivityEvent[]> => {
   const { data, error } = await db
     .from('activity_events')

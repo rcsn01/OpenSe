@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { UserPlus, Mail, Loader2, User } from 'lucide-react';
 import { Member, Organisation } from '../settings/types';
 import { MemberTable } from '../settings/MemberTable'; // Reusing your existing table logic, but wrapped
-import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Select } from '@repo/ui';
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, OrganisationTeamsPage } from '@repo/ui';
 
 type ModernTeamSettingsProps = {
   organisation: Organisation;
@@ -49,52 +49,43 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
   };
 
   return (
-    <div className="space-y-6">
-      {/* Toolbar */}
-      <Card className="flex flex-col sm:flex-row justify-between items-center gap-4" padding="md">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as any)}
-            options={[
-              { value: 'all', label: 'All Roles' },
-              { value: 'admin', label: 'Admins' },
-              { value: 'editor', label: 'Editors' },
-              { value: 'member', label: 'Members' },
-            ]}
-            className="min-w-36"
-          />
-        </div>
-
-        {props.canManageTeam && (
-          <Button onClick={() => setIsInviteModalOpen(true)} className="w-full sm:w-auto shadow-md shadow-blue-500/20">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Invite Member
-          </Button>
-        )}
-      </Card>
-
-      {/* Table Area */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <MemberTable 
-          members={filteredMembers}
-          organisation={props.organisation}
-          canManage={props.canManageTeam}
-          removingId={props.removingId}
-          updatingId={props.updatingMemberId}
-          customRoleOptions={props.customRoleOptions}
-          memberCustomRoleMap={props.memberCustomRoleMap}
-          onRemove={props.onRemoveMember}
-          onUpdateRole={props.onUpdateRole}
-          onUpdateCustomRole={props.onAssignCustomRole}
-        />
-        {filteredMembers.length === 0 && (
-          <div className="p-12 text-center text-slate-500">
-            <User className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-            <p>No members found matching your search.</p>
-          </div>
-        )}
-      </div>
+    <>
+      <OrganisationTeamsPage
+        filterValue={roleFilter}
+        onFilterChange={(value) => setRoleFilter(value as any)}
+        filterOptions={[
+          { value: 'all', label: 'All Roles' },
+          { value: 'admin', label: 'Admins' },
+          { value: 'editor', label: 'Editors' },
+          { value: 'member', label: 'Members' },
+        ]}
+        canManageTeam={props.canManageTeam}
+        onInviteClick={() => setIsInviteModalOpen(true)}
+        inviteIcon={<UserPlus className="w-4 h-4 mr-2" />}
+        inviteLabel="Invite Member"
+        tableContent={
+          <>
+            <MemberTable 
+              members={filteredMembers}
+              organisation={props.organisation}
+              canManage={props.canManageTeam}
+              removingId={props.removingId}
+              updatingId={props.updatingMemberId}
+              customRoleOptions={props.customRoleOptions}
+              memberCustomRoleMap={props.memberCustomRoleMap}
+              onRemove={props.onRemoveMember}
+              onUpdateRole={props.onUpdateRole}
+              onUpdateCustomRole={props.onAssignCustomRole}
+            />
+            {filteredMembers.length === 0 && (
+              <div className="p-12 text-center text-slate-500">
+                <User className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+                <p>No members found matching your search.</p>
+              </div>
+            )}
+          </>
+        }
+      />
 
       {/* Invite Modal Overlay */}
       {isInviteModalOpen && (
@@ -165,6 +156,6 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </>
   );
 };
