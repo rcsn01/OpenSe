@@ -44,6 +44,11 @@ export {
 export { OrganisationTeamsShell } from './organisation/OrganisationTeamsShell'
 export { OrganisationTeamsPage } from './organisation/OrganisationTeamsPage'
 export {
+  OrganisationTeamsTab,
+  type OrganisationTeamsTabMember,
+  type OrganisationTeamsTabRole,
+} from './organisation/OrganisationTeamsTab'
+export {
   OrganisationMembersTable,
   type OrganisationMembersTableRow,
 } from './organisation/OrganisationMembersTable'

@@ -12,8 +12,6 @@ import {
     updateOrganisationMemberRole,
     userHasAnyMembership,
 } from '../../api/organisations';
-import { upsertMemberRoleAssignment } from '../../api/permissions';
-import { useMemberRoleAssignments, useOrgRoles } from '../../hooks/queries/usePermissions';
 
 type OrganisationPageContext = {
     currentOrg: OrgSimple | null;
@@ -31,40 +29,25 @@ export const TeamTab = () => {
         members,
         refetchMembers,
         userRole,
-        teamSearch = '',
     } = useOutletContext<OrganisationPageContext>();
     const queryClient = useQueryClient();
 
     // Invite State
-    const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteRole, setInviteRole] = useState<'admin' | 'editor' | 'member'>('member');
-    const [inviting, setInviting] = useState(false);
     const [inviteError, setInviteError] = useState<string | null>(null);
 
     // Member Action State
-    const [removingId, setRemovingId] = useState<string | null>(null);
     const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
 
     const canManageTeam = userRole === 'owner' || userRole === 'admin';
-    const { data: orgRoles = [] } = useOrgRoles(organisation?.id);
-    const { data: memberRoleAssignments = [] } = useMemberRoleAssignments(organisation?.id);
-
-    const memberCustomRoleMap = memberRoleAssignments.reduce<Record<string, string | null>>((acc, assignment) => {
-        acc[assignment.org_member_id] = assignment.role_id;
-        return acc;
-    }, {});
-
-    const handleInvite = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleInvite = async (email: string, role: 'admin' | 'editor' | 'member') => {
         if (!organisation) return;
 
-        const email = inviteEmail.trim().toLowerCase();
-        if (!email) return;
+        const normalizedEmail = email.trim().toLowerCase();
+        if (!normalizedEmail) return;
 
-        setInviting(true);
         setInviteError(null);
         try {
-            const profile = await findProfileByEmail(email);
+            const profile = await findProfileByEmail(normalizedEmail);
             if (!profile) {
                 setInviteError('User not found. Please ask them to sign up first.');
                 return;
@@ -77,34 +60,12 @@ export const TeamTab = () => {
                 return;
             }
 
-            await addOrganisationMember(organisation.id, profileId, inviteRole);
-            setInviteEmail('');
-            setInviteRole('member');
+            await addOrganisationMember(organisation.id, profileId, role);
             await refetchMembers();
 
             queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
         } catch (err: any) {
             setInviteError(err?.message ?? 'Failed to invite member.');
-        } finally {
-            setInviting(false);
-        }
-    };
-
-    const handleRemoveMember = async (member: Member) => {
-        if (!organisation) return;
-        if (member.user_id === organisation.owner_id) return;
-
-        if (!window.confirm(`Are you sure you want to remove ${member.profiles?.email}?`)) return;
-
-        setRemovingId(member.id);
-        try {
-            await removeOrganisationMember(member.id);
-            await refetchMembers();
-            queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
-        } catch (err: any) {
-            alert(err?.message ?? 'Failed to remove member.');
-        } finally {
-            setRemovingId(null);
         }
     };
 
@@ -121,18 +82,6 @@ export const TeamTab = () => {
         }
     };
 
-    const handleAssignCustomRole = async (memberId: string, roleId: string | null) => {
-        try {
-            setUpdatingMemberId(memberId);
-            await upsertMemberRoleAssignment(memberId, roleId);
-            queryClient.invalidateQueries({ queryKey: ['memberRoleAssignments', organisation?.id] });
-        } catch (err: any) {
-            alert(err?.message ?? 'Failed to update custom permissions role.');
-        } finally {
-            setUpdatingMemberId(null);
-        }
-    };
-
     if (!organisation) return null;
 
     return (
@@ -141,22 +90,9 @@ export const TeamTab = () => {
             members={members}
             canManageTeam={canManageTeam}
             updatingMemberId={updatingMemberId}
-            customRoleOptions={orgRoles.map((role) => ({ value: role.id, label: role.name }))}
-            memberCustomRoleMap={memberCustomRoleMap}
-            searchTerm={teamSearch}
-            // Invite Props
-            inviteEmail={inviteEmail}
-            inviteRole={inviteRole}
-            inviting={inviting}
             inviteError={inviteError}
-            onInviteEmailChange={setInviteEmail}
-            onInviteRoleChange={setInviteRole}
-            onInviteSubmit={handleInvite}
-            // Member Props
-            removingId={removingId}
-            onRemoveMember={handleRemoveMember}
+            onInvite={handleInvite}
             onUpdateRole={handleUpdateRole}
-            onAssignCustomRole={handleAssignCustomRole}
         />
     );
 };
