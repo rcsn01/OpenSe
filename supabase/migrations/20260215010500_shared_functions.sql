@@ -247,8 +247,12 @@ CREATE OR REPLACE FUNCTION public.ensure_org_owner_member_and_default_seats()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, stoqr, etl
 AS $$
+DECLARE
+  v_owner_member_id UUID;
+  v_owner_stoqr_role_id UUID;
+  v_owner_etl_role_id UUID;
 BEGIN
   IF pg_trigger_depth() > 1 THEN
     RETURN NEW;
@@ -259,10 +263,77 @@ BEGIN
   ON CONFLICT (org_id, user_id) DO UPDATE
     SET role = public.pick_higher_org_role(public.organisation_members.role, EXCLUDED.role);
 
+  IF TG_OP = 'UPDATE' AND OLD.owner_id IS DISTINCT FROM NEW.owner_id AND OLD.owner_id IS NOT NULL THEN
+    UPDATE public.organisation_members
+    SET role = 'admin'
+    WHERE org_id = NEW.id
+      AND user_id = OLD.owner_id
+      AND role = 'owner';
+  END IF;
+
   INSERT INTO public.organisation_app_seats (org_id, app_code, seat_limit)
-  SELECT NEW.id, a.code, 0
+  SELECT NEW.id, a.code, CASE WHEN a.code IN ('etl', 'stoqr') THEN 1 ELSE 0 END
   FROM public.apps a
-  ON CONFLICT (org_id, app_code) DO NOTHING;
+  ON CONFLICT (org_id, app_code) DO UPDATE
+    SET seat_limit = GREATEST(public.organisation_app_seats.seat_limit, EXCLUDED.seat_limit);
+
+  SELECT id INTO v_owner_member_id
+  FROM public.organisation_members
+  WHERE org_id = NEW.id
+    AND user_id = NEW.owner_id
+  LIMIT 1;
+
+  INSERT INTO stoqr.roles (company_id, name, description)
+  VALUES (NEW.id, 'Owner', 'System-managed owner role')
+  ON CONFLICT (company_id, name) DO NOTHING;
+
+  SELECT id INTO v_owner_stoqr_role_id
+  FROM stoqr.roles
+  WHERE company_id = NEW.id
+    AND lower(name) = 'owner'
+  ORDER BY created_at
+  LIMIT 1;
+
+  INSERT INTO stoqr.role_permissions (role_id, permission_code)
+  SELECT v_owner_stoqr_role_id, ap.code
+  FROM stoqr.app_permissions ap
+  WHERE v_owner_stoqr_role_id IS NOT NULL
+  ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+  INSERT INTO etl.roles (org_id, name, description)
+  VALUES (NEW.id, 'Owner', 'System-managed owner role')
+  ON CONFLICT (org_id, name) DO NOTHING;
+
+  SELECT id INTO v_owner_etl_role_id
+  FROM etl.roles
+  WHERE org_id = NEW.id
+    AND lower(name) = 'owner'
+  ORDER BY created_at
+  LIMIT 1;
+
+  INSERT INTO etl.role_permissions (role_id, permission_code)
+  SELECT v_owner_etl_role_id, ap.code
+  FROM etl.app_permissions ap
+  WHERE v_owner_etl_role_id IS NOT NULL
+  ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+  IF v_owner_member_id IS NOT NULL THEN
+    INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
+    VALUES
+      (v_owner_member_id, 'etl'),
+      (v_owner_member_id, 'stoqr')
+    ON CONFLICT (org_member_id, app_code) DO NOTHING;
+
+    INSERT INTO etl.organisation_member_roles (org_member_id, role_id)
+    VALUES (v_owner_member_id, v_owner_etl_role_id)
+    ON CONFLICT (org_member_id) DO UPDATE
+      SET role_id = EXCLUDED.role_id;
+  END IF;
+
+  INSERT INTO stoqr.organisation_member_roles (user_id, company_id, role_id)
+  VALUES (NEW.owner_id, NEW.id, v_owner_stoqr_role_id)
+  ON CONFLICT (user_id, company_id) DO UPDATE
+    SET role_id = EXCLUDED.role_id;
 
   RETURN NEW;
 END;
@@ -270,7 +341,7 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_ensure_org_owner_member_and_default_seats ON public.organisations;
 CREATE TRIGGER trg_ensure_org_owner_member_and_default_seats
-  AFTER INSERT ON public.organisations
+  AFTER INSERT OR UPDATE OF owner_id ON public.organisations
   FOR EACH ROW EXECUTE PROCEDURE public.ensure_org_owner_member_and_default_seats();
 
 CREATE OR REPLACE FUNCTION public.enforce_org_app_seat_limit()
@@ -281,6 +352,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_org_id UUID;
+  v_member_role TEXT;
   v_seat_limit INTEGER;
   v_assigned_count INTEGER;
 BEGIN
@@ -288,8 +360,16 @@ BEGIN
   FROM public.organisation_members
   WHERE id = NEW.org_member_id;
 
+  SELECT role INTO v_member_role
+  FROM public.organisation_members
+  WHERE id = NEW.org_member_id;
+
   IF v_org_id IS NULL THEN
     RAISE EXCEPTION 'Invalid organisation member id: %', NEW.org_member_id;
+  END IF;
+
+  IF v_member_role = 'owner' THEN
+    RETURN NEW;
   END IF;
 
   SELECT seat_limit INTO v_seat_limit
@@ -305,6 +385,7 @@ BEGIN
   FROM public.organisation_member_app_seats mas
   JOIN public.organisation_members om ON om.id = mas.org_member_id
   WHERE om.org_id = v_org_id
+    AND om.role <> 'owner'
     AND mas.app_code = NEW.app_code
     AND (
       TG_OP <> 'UPDATE'
