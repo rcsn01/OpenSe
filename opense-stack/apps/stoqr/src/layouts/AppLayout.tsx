@@ -32,7 +32,7 @@ const mainNavItems = [
 
 const configNavItems = [
   { href: '/alerts', label: 'Alerts', icon: <Bell className="w-5 h-5" /> },
-  { href: '/settings/team', label: 'Team Settings', icon: <Settings className="w-5 h-5" /> },
+  { href: '/settings/organisations', label: 'Organisations', icon: <Settings className="w-5 h-5" /> },
 ]
 
 export const AppLayout = () => {
