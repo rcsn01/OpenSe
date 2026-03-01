@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom'
 import { ThemeProvider } from '@repo/ui'
 import { AuthRedirectPage } from '@repo/shared/auth'
 import './App.css'
@@ -27,6 +27,11 @@ const CompanyGate = () => {
   }
 
   return <Outlet />
+}
+
+const LegacyTeamSettingsRedirect = () => {
+  const { tab } = useParams<{ tab?: string }>()
+  return <Navigate to={`/settings/organisations/${tab ?? 'teams'}`} replace />
 }
 
 function App() {
@@ -78,8 +83,10 @@ function App() {
               <Route path="/scan/:tab" element={<ScanPage />} />
               <Route path="/tools/labels" element={<Navigate to="/tools/labels/templates" replace />} />
               <Route path="/tools/labels/:tab" element={<LabelStudioPage />} />
-              <Route path="/settings/team" element={<Navigate to="/settings/team/user-management" replace />} />
-              <Route path="/settings/team/:tab" element={<TeamSettingsPage />} />
+              <Route path="/settings/team" element={<Navigate to="/settings/organisations/teams" replace />} />
+              <Route path="/settings/team/:tab" element={<LegacyTeamSettingsRedirect />} />
+              <Route path="/settings/organisations" element={<Navigate to="/settings/organisations/teams" replace />} />
+              <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
               <Route path="/reports" element={<Navigate to="/reports/valuation" replace />} />
               <Route path="/reports/:tab" element={<ReportsPage />} />
               <Route path="/procurement" element={<Navigate to="/procurement/purchase-orders" replace />} />

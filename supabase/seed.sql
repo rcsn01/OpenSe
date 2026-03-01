@@ -110,6 +110,48 @@ VALUES
     timezone('utc'::text, now()),
     timezone('utc'::text, now()),
     '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '77777777-7777-7777-7777-777777777777',
+    'authenticated',
+    'authenticated',
+    'analyst@acme.test',
+    extensions.crypt('!Password1', extensions.gen_salt('bf')),
+    timezone('utc'::text, now()),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Avery Analyst","username":"averyanalyst","avatar_url":"https://i.pravatar.cc/150?u=avery"}'::jsonb,
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now()),
+    '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '88888888-8888-8888-8888-888888888888',
+    'authenticated',
+    'authenticated',
+    'coordinator@acme.test',
+    extensions.crypt('!Password1', extensions.gen_salt('bf')),
+    timezone('utc'::text, now()),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Casey Coordinator","username":"caseycoordinator","avatar_url":"https://i.pravatar.cc/150?u=casey"}'::jsonb,
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now()),
+    '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '99999999-9999-9999-9999-999999999999',
+    'authenticated',
+    'authenticated',
+    'qa@acme.test',
+    extensions.crypt('!Password1', extensions.gen_salt('bf')),
+    timezone('utc'::text, now()),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Quinn QA","username":"quinnqa","avatar_url":"https://i.pravatar.cc/150?u=quinn"}'::jsonb,
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now()),
+    '', '', '', ''
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -183,6 +225,36 @@ VALUES
     timezone('utc'::text, now()),
     timezone('utc'::text, now()),
     timezone('utc'::text, now())
+  ),
+  (
+    'aaaaaaa7-aaaa-aaaa-aaaa-aaaaaaaaaaa7',
+    '77777777-7777-7777-7777-777777777777',
+    jsonb_build_object('sub', '77777777-7777-7777-7777-777777777777', 'email', 'analyst@acme.test'),
+    'email',
+    'analyst@acme.test',
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now())
+  ),
+  (
+    'aaaaaaa8-aaaa-aaaa-aaaa-aaaaaaaaaaa8',
+    '88888888-8888-8888-8888-888888888888',
+    jsonb_build_object('sub', '88888888-8888-8888-8888-888888888888', 'email', 'coordinator@acme.test'),
+    'email',
+    'coordinator@acme.test',
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now())
+  ),
+  (
+    'aaaaaaa9-aaaa-aaaa-aaaa-aaaaaaaaaaa9',
+    '99999999-9999-9999-9999-999999999999',
+    jsonb_build_object('sub', '99999999-9999-9999-9999-999999999999', 'email', 'qa@acme.test'),
+    'email',
+    'qa@acme.test',
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now())
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -212,7 +284,7 @@ VALUES
   (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     'Acme Distribution',
-    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
     'cus_acme_001',
     'sub_acme_001',
     'active'
@@ -229,12 +301,15 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.organisation_members (id, org_id, user_id, role)
 VALUES
-  ('a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '22222222-2222-2222-2222-222222222222', 'owner'),
+  ('a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '22222222-2222-2222-2222-222222222222', 'admin'),
   ('a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '33333333-3333-3333-3333-333333333333', 'admin'),
   ('a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '44444444-4444-4444-4444-444444444444', 'editor'),
   ('a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '55555555-5555-5555-5555-555555555555', 'member'),
-  ('b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '66666666-6666-6666-6666-666666666666', 'owner'),
-  ('b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b002', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', 'admin')
+  ('a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a005', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'owner'),
+  ('a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a006', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '77777777-7777-7777-7777-777777777777', 'editor'),
+  ('a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a007', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '88888888-8888-8888-8888-888888888888', 'member'),
+  ('a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a008', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '99999999-9999-9999-9999-999999999999', 'member'),
+  ('b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '66666666-6666-6666-6666-666666666666', 'owner')
 ON CONFLICT (org_id, user_id) DO UPDATE
 SET role = EXCLUDED.role;
 
@@ -251,6 +326,8 @@ INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
 SELECT om.id, src.app_code
 FROM (
   VALUES
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '11111111-1111-1111-1111-111111111111'::uuid, 'etl'::text),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '11111111-1111-1111-1111-111111111111'::uuid, 'stoqr'::text),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, 'etl'::text),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, 'stoqr'::text),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '33333333-3333-3333-3333-333333333333'::uuid, 'etl'::text),
@@ -258,9 +335,11 @@ FROM (
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '44444444-4444-4444-4444-444444444444'::uuid, 'etl'::text),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '44444444-4444-4444-4444-444444444444'::uuid, 'stoqr'::text),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '55555555-5555-5555-5555-555555555555'::uuid, 'stoqr'::text),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '77777777-7777-7777-7777-777777777777'::uuid, 'etl'::text),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '88888888-8888-8888-8888-888888888888'::uuid, 'stoqr'::text),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '99999999-9999-9999-9999-999999999999'::uuid, 'etl'::text),
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, '66666666-6666-6666-6666-666666666666'::uuid, 'etl'::text),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, '66666666-6666-6666-6666-666666666666'::uuid, 'stoqr'::text),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, '11111111-1111-1111-1111-111111111111'::uuid, 'etl'::text)
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, '66666666-6666-6666-6666-666666666666'::uuid, 'stoqr'::text)
 ) AS src(org_id, user_id, app_code)
 JOIN public.organisation_members om
   ON om.org_id = src.org_id
@@ -310,8 +389,10 @@ SELECT
   src.role_id
 FROM (
   VALUES
+    ('29292929-2929-2929-2929-292929292904'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '11111111-1111-1111-1111-111111111111'::uuid, '19191919-1919-1919-1919-191919191901'::uuid),
     ('29292929-2929-2929-2929-292929292901'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, '19191919-1919-1919-1919-191919191901'::uuid),
     ('29292929-2929-2929-2929-292929292902'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '33333333-3333-3333-3333-333333333333'::uuid, '19191919-1919-1919-1919-191919191902'::uuid),
+    ('29292929-2929-2929-2929-292929292905'::uuid, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, '77777777-7777-7777-7777-777777777777'::uuid, '19191919-1919-1919-1919-191919191902'::uuid),
     ('29292929-2929-2929-2929-292929292903'::uuid, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, '66666666-6666-6666-6666-666666666666'::uuid, '19191919-1919-1919-1919-191919191903'::uuid)
 ) AS src(id, org_id, user_id, role_id)
 JOIN public.organisation_members om
@@ -1167,7 +1248,7 @@ VALUES
     '66666666-6666-6666-6666-666666666666',
     'org_member_app_seat_assigned',
     'etl',
-    'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b002',
+    NULL,
     '{"app_code":"etl"}'::jsonb,
     timezone('utc'::text, now()) - interval '1 day'
   )
