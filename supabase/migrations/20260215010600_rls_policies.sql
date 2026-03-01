@@ -545,6 +545,16 @@ CREATE POLICY "Users can view their own memberships" ON stoqr.organisation_membe
 CREATE POLICY "Managers can view all members" ON stoqr.organisation_member_roles
   FOR SELECT USING (has_permission(company_id, 'members.view'));
 
+CREATE POLICY "Managers can update members" ON stoqr.organisation_member_roles
+  FOR UPDATE USING (has_permission(company_id, 'members.manage'))
+  WITH CHECK (has_permission(company_id, 'members.manage'));
+
+CREATE POLICY "Managers can insert members" ON stoqr.organisation_member_roles
+  FOR INSERT WITH CHECK (has_permission(company_id, 'members.manage'));
+
+CREATE POLICY "Managers can delete members" ON stoqr.organisation_member_roles
+  FOR DELETE USING (has_permission(company_id, 'members.manage'));
+
 CREATE POLICY "Members can view report schedules" ON stoqr.report_schedules
   FOR SELECT USING (has_permission(company_id, 'reports.view'));
 
