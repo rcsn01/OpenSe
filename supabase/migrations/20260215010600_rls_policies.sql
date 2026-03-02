@@ -81,14 +81,23 @@ CREATE POLICY organisation_members_insert ON public.organisation_members
 
 CREATE POLICY organisation_members_update ON public.organisation_members
   FOR UPDATE USING (
-    public.is_org_admin(org_id, auth.uid())
-    OR public.is_app_super_admin()
+    (public.is_org_admin(org_id, auth.uid()) OR public.is_app_super_admin())
+    AND NOT (
+      user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = organisation_members.org_id)
+    )
+  )
+  WITH CHECK (
+    (public.is_org_admin(org_id, auth.uid()) OR public.is_app_super_admin())
+    AND NOT (
+      user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = organisation_members.org_id)
+      AND role <> 'owner'
+    )
   );
 
 CREATE POLICY organisation_members_delete ON public.organisation_members
   FOR DELETE USING (
     (public.is_org_admin(org_id, auth.uid()) OR public.is_app_super_admin())
-    AND NOT (role = 'owner' AND user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = organisation_members.org_id))
+    AND NOT (user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = organisation_members.org_id))
   );
 
 DROP POLICY IF EXISTS apps_select ON public.apps;
@@ -224,12 +233,70 @@ CREATE POLICY etl_roles_select ON etl.roles
 
 CREATE POLICY etl_roles_manage ON etl.roles
   FOR ALL USING (
-    public.has_etl_permission(org_id, 'roles.manage')
-    OR public.is_app_super_admin()
+    (public.has_etl_permission(org_id, 'roles.manage') OR public.is_app_super_admin())
+    AND lower(name) <> 'owner'
   )
   WITH CHECK (
-    public.has_etl_permission(org_id, 'roles.manage')
-    OR public.is_app_super_admin()
+    (public.has_etl_permission(org_id, 'roles.manage') OR public.is_app_super_admin())
+    AND lower(name) <> 'owner'
+  );
+
+CREATE POLICY etl_owner_role_permissions_select ON etl.role_permissions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM etl.roles r
+      WHERE r.id = role_permissions.role_id
+        AND lower(r.name) = 'owner'
+        AND (public.is_org_member(r.org_id, auth.uid()) OR public.is_app_super_admin())
+    )
+  );
+
+DROP POLICY IF EXISTS etl_role_permissions_manage ON etl.role_permissions;
+
+CREATE POLICY etl_role_permissions_manage ON etl.role_permissions
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM etl.roles r
+      WHERE r.id = role_permissions.role_id
+        AND (public.has_etl_permission(r.org_id, 'roles.manage') OR public.is_app_super_admin())
+        AND lower(r.name) <> 'owner'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM etl.roles r
+      WHERE r.id = role_permissions.role_id
+        AND (public.has_etl_permission(r.org_id, 'roles.manage') OR public.is_app_super_admin())
+        AND lower(r.name) <> 'owner'
+    )
+  );
+
+DROP POLICY IF EXISTS etl_member_roles_manage ON etl.organisation_member_roles;
+
+CREATE POLICY etl_member_roles_manage ON etl.organisation_member_roles
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM public.organisation_members om
+      WHERE om.id = organisation_member_roles.org_member_id
+        AND (public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
+        AND NOT (om.user_id = auth.uid() AND om.role = 'owner')
+        AND NOT (
+          om.user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = om.org_id)
+        )
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM public.organisation_members om
+      WHERE om.id = organisation_member_roles.org_member_id
+        AND (public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
+        AND NOT (om.user_id = auth.uid() AND om.role = 'owner')
+        AND NOT (
+          om.user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = om.org_id)
+        )
+    )
   );
 
 CREATE POLICY etl_role_permissions_select ON etl.role_permissions
@@ -241,15 +308,6 @@ CREATE POLICY etl_role_permissions_select ON etl.role_permissions
     )
   );
 
-CREATE POLICY etl_role_permissions_manage ON etl.role_permissions
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM etl.roles r
-      WHERE r.id = role_permissions.role_id
-        AND (public.has_etl_permission(r.org_id, 'roles.manage') OR public.is_app_super_admin())
-    )
-  );
-
 CREATE POLICY etl_member_roles_select ON etl.organisation_member_roles
   FOR SELECT USING (
     EXISTS (
@@ -257,24 +315,6 @@ CREATE POLICY etl_member_roles_select ON etl.organisation_member_roles
       FROM public.organisation_members om
       WHERE om.id = organisation_member_roles.org_member_id
         AND (om.user_id = auth.uid() OR public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
-    )
-  );
-
-CREATE POLICY etl_member_roles_manage ON etl.organisation_member_roles
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1
-      FROM public.organisation_members om
-      WHERE om.id = organisation_member_roles.org_member_id
-        AND (public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1
-      FROM public.organisation_members om
-      WHERE om.id = organisation_member_roles.org_member_id
-        AND (public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
     )
   );
 
@@ -459,7 +499,14 @@ CREATE POLICY "Members can view company roles" ON stoqr.roles
   );
 
 CREATE POLICY "Admins can manage roles" ON stoqr.roles
-  FOR ALL USING (has_permission(company_id, 'roles.manage'));
+  FOR ALL USING (
+    has_permission(company_id, 'roles.manage')
+    AND lower(name) <> 'owner'
+  )
+  WITH CHECK (
+    has_permission(company_id, 'roles.manage')
+    AND lower(name) <> 'owner'
+  );
 
 CREATE POLICY "Members can view role permissions" ON stoqr.role_permissions
   FOR SELECT USING (
@@ -476,6 +523,15 @@ CREATE POLICY "Admins can manage role permissions" ON stoqr.role_permissions
       SELECT 1 FROM stoqr.roles r
       WHERE r.id = role_permissions.role_id
         AND has_permission(r.company_id, 'roles.manage')
+        AND lower(r.name) <> 'owner'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM stoqr.roles r
+      WHERE r.id = role_permissions.role_id
+        AND has_permission(r.company_id, 'roles.manage')
+        AND lower(r.name) <> 'owner'
     )
   );
 
@@ -546,14 +602,25 @@ CREATE POLICY "Managers can view all members" ON stoqr.organisation_member_roles
   FOR SELECT USING (has_permission(company_id, 'members.view'));
 
 CREATE POLICY "Managers can update members" ON stoqr.organisation_member_roles
-  FOR UPDATE USING (has_permission(company_id, 'members.manage'))
-  WITH CHECK (has_permission(company_id, 'members.manage'));
+  FOR UPDATE USING (
+    has_permission(company_id, 'members.manage')
+    AND NOT (user_id = auth.uid() AND public.is_org_owner(company_id, auth.uid()))
+    AND NOT (user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = organisation_member_roles.company_id))
+  )
+  WITH CHECK (
+    has_permission(company_id, 'members.manage')
+    AND NOT (user_id = auth.uid() AND public.is_org_owner(company_id, auth.uid()))
+    AND NOT (user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = organisation_member_roles.company_id))
+  );
 
 CREATE POLICY "Managers can insert members" ON stoqr.organisation_member_roles
   FOR INSERT WITH CHECK (has_permission(company_id, 'members.manage'));
 
 CREATE POLICY "Managers can delete members" ON stoqr.organisation_member_roles
-  FOR DELETE USING (has_permission(company_id, 'members.manage'));
+  FOR DELETE USING (
+    has_permission(company_id, 'members.manage')
+    AND NOT (user_id = (SELECT owner_id FROM public.organisations o WHERE o.id = organisation_member_roles.company_id))
+  );
 
 CREATE POLICY "Members can view report schedules" ON stoqr.report_schedules
   FOR SELECT USING (has_permission(company_id, 'reports.view'));

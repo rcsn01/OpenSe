@@ -21,9 +21,13 @@ CREATE TABLE IF NOT EXISTS etl.roles (
   org_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
+  role_rank INTEGER NOT NULL DEFAULT 100 CHECK (role_rank >= 0),
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(org_id, name)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS etl_roles_org_id_name_lower_uidx
+  ON etl.roles (org_id, lower(name));
 
 CREATE TABLE IF NOT EXISTS etl.role_permissions (
   role_id UUID REFERENCES etl.roles(id) ON DELETE CASCADE NOT NULL,

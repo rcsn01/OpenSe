@@ -9,6 +9,7 @@ import {
 type ModernTeamSettingsProps = {
   organisation: Organisation;
   members: Member[];
+  currentUserId?: string;
   canManageTeam: boolean;
   inviteError: string | null;
   onInvite: (email: string, role: 'admin' | 'editor' | 'member') => Promise<void> | void;
@@ -22,6 +23,7 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
 
   const sharedMembers: OrganisationTeamsTabMember[] = props.members.map((member) => ({
     id: member.id,
+    userId: member.user_id,
     displayName: member.profiles?.full_name || member.profiles?.email || 'Unknown Member',
     subtitle: member.profiles?.email || member.user_id,
     roleId: member.role,
@@ -55,6 +57,7 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
         members={sharedMembers}
         roles={sharedRoles}
         canManageTeam={props.canManageTeam}
+        isRoleEditable={(member) => member.roleId !== 'owner' && member.userId !== props.currentUserId}
         onRoleChange={handleRoleChange}
         onInvite={handleInvite}
         inviteMessage={inviteMessage ?? undefined}

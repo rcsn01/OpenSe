@@ -35,4 +35,15 @@ test.describe('ETL Organisation', () => {
       await expect(inviteControl).toBeVisible();
     }
   });
+
+  test('owner row is not role-editable in team tab', async ({ authenticatedEtlPage }) => {
+    await authenticatedEtlPage.goto('/organisation/team');
+
+    const ownerRow = authenticatedEtlPage.locator('table tbody tr', { hasText: 'Owner' }).first();
+    if ((await ownerRow.count()) === 0) {
+      test.skip(true, 'No owner row available in this environment');
+    }
+
+    await expect(ownerRow.locator('select')).toHaveCount(0);
+  });
 });
