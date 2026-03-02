@@ -78,6 +78,19 @@ AS $$
   END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.demote_org_role(existing_role TEXT)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE COALESCE(existing_role, 'member')
+    WHEN 'owner' THEN 'admin'
+    WHEN 'admin' THEN 'editor'
+    WHEN 'editor' THEN 'member'
+    ELSE 'member'
+  END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.map_stoqr_role_to_org_role(_role_id UUID)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -155,7 +168,7 @@ BEGIN
         WHERE rp.role_id = r.id
           AND rp.permission_code = 'company.manage'
       )
-    ORDER BY r.created_at
+    ORDER BY r.role_rank DESC, r.created_at
     LIMIT 1;
 
     IF v_role_id IS NOT NULL THEN
@@ -172,7 +185,7 @@ BEGIN
         WHERE rp.role_id = r.id
           AND rp.permission_code = 'products.manage'
       )
-    ORDER BY r.created_at
+    ORDER BY r.role_rank DESC, r.created_at
     LIMIT 1;
 
     IF v_role_id IS NOT NULL THEN
@@ -183,7 +196,7 @@ BEGIN
   SELECT r.id INTO v_role_id
   FROM stoqr.roles r
   WHERE r.company_id = _org_id
-  ORDER BY r.created_at
+  ORDER BY r.role_rank DESC, r.created_at
   LIMIT 1;
 
   RETURN v_role_id;
@@ -243,6 +256,187 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION public.pick_next_stoqr_role(p_company_id UUID, p_excluded_role_id UUID DEFAULT NULL)
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+  SELECT r.id
+  FROM stoqr.roles r
+  WHERE r.company_id = p_company_id
+    AND lower(r.name) <> 'owner'
+    AND (p_excluded_role_id IS NULL OR r.id <> p_excluded_role_id)
+  ORDER BY r.role_rank DESC, r.created_at
+  LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.pick_next_etl_role(p_org_id UUID, p_excluded_role_id UUID DEFAULT NULL)
+RETURNS UUID
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, etl
+AS $$
+  SELECT r.id
+  FROM etl.roles r
+  WHERE r.org_id = p_org_id
+    AND lower(r.name) <> 'owner'
+    AND (p_excluded_role_id IS NULL OR r.id <> p_excluded_role_id)
+  ORDER BY r.role_rank DESC, r.created_at
+  LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ensure_owner_app_roles(p_org_id UUID)
+RETURNS TABLE (owner_stoqr_role_id UUID, owner_etl_role_id UUID)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr, etl
+AS $$
+BEGIN
+  SELECT r.id INTO owner_stoqr_role_id
+  FROM stoqr.roles r
+  WHERE r.company_id = p_org_id
+    AND lower(r.name) = 'owner'
+  ORDER BY r.created_at
+  LIMIT 1;
+
+  IF owner_stoqr_role_id IS NULL THEN
+    INSERT INTO stoqr.roles (company_id, name, description, role_rank)
+    VALUES (p_org_id, 'Owner', 'System-managed owner role', 1000)
+    RETURNING id INTO owner_stoqr_role_id;
+  END IF;
+
+  INSERT INTO stoqr.role_permissions (role_id, permission_code)
+  SELECT owner_stoqr_role_id, ap.code
+  FROM stoqr.app_permissions ap
+  ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+  SELECT r.id INTO owner_etl_role_id
+  FROM etl.roles r
+  WHERE r.org_id = p_org_id
+    AND lower(r.name) = 'owner'
+  ORDER BY r.created_at
+  LIMIT 1;
+
+  IF owner_etl_role_id IS NULL THEN
+    INSERT INTO etl.roles (org_id, name, description, role_rank)
+    VALUES (p_org_id, 'Owner', 'System-managed owner role', 1000)
+    RETURNING id INTO owner_etl_role_id;
+  END IF;
+
+  INSERT INTO etl.role_permissions (role_id, permission_code)
+  SELECT owner_etl_role_id, ap.code
+  FROM etl.app_permissions ap
+  ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+  RETURN QUERY SELECT owner_stoqr_role_id, owner_etl_role_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.prevent_owner_member_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_owner_id UUID;
+BEGIN
+  SELECT o.owner_id INTO v_owner_id
+  FROM public.organisations o
+  WHERE o.id = OLD.org_id;
+
+  IF v_owner_id IS NULL OR OLD.user_id <> v_owner_id THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Cannot delete the active owner membership for organisation %', OLD.org_id;
+  END IF;
+
+  IF NEW.role <> 'owner' THEN
+    RAISE EXCEPTION 'Cannot change the role for the active owner in organisation %', OLD.org_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.prevent_owner_role_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF lower(OLD.name) = 'owner' THEN
+    RAISE EXCEPTION 'The Owner role is system-managed and cannot be modified or deleted';
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.prevent_owner_role_permission_delete()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_is_owner_role BOOLEAN;
+BEGIN
+  IF TG_TABLE_SCHEMA = 'stoqr' THEN
+    SELECT EXISTS (
+      SELECT 1
+      FROM stoqr.roles r
+      WHERE r.id = OLD.role_id
+        AND lower(r.name) = 'owner'
+    ) INTO v_is_owner_role;
+  ELSE
+    SELECT EXISTS (
+      SELECT 1
+      FROM etl.roles r
+      WHERE r.id = OLD.role_id
+        AND lower(r.name) = 'owner'
+    ) INTO v_is_owner_role;
+  END IF;
+
+  IF v_is_owner_role THEN
+    RAISE EXCEPTION 'Cannot remove permissions from the Owner role';
+  END IF;
+
+  RETURN OLD;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.grant_new_permission_to_owner_roles()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_TABLE_SCHEMA = 'stoqr' THEN
+    INSERT INTO stoqr.role_permissions (role_id, permission_code)
+    SELECT r.id, NEW.code
+    FROM stoqr.roles r
+    WHERE lower(r.name) = 'owner'
+    ON CONFLICT (role_id, permission_code) DO NOTHING;
+  ELSE
+    INSERT INTO etl.role_permissions (role_id, permission_code)
+    SELECT r.id, NEW.code
+    FROM etl.roles r
+    WHERE lower(r.name) = 'owner'
+    ON CONFLICT (role_id, permission_code) DO NOTHING;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.ensure_org_owner_member_and_default_seats()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -251,24 +445,65 @@ SET search_path = public, stoqr, etl
 AS $$
 DECLARE
   v_owner_member_id UUID;
+  v_previous_owner_member_id UUID;
   v_owner_stoqr_role_id UUID;
   v_owner_etl_role_id UUID;
+  v_previous_stoqr_role_id UUID;
+  v_previous_etl_role_id UUID;
 BEGIN
   IF pg_trigger_depth() > 1 THEN
     RETURN NEW;
   END IF;
 
+  SELECT owner_stoqr_role_id, owner_etl_role_id
+  INTO v_owner_stoqr_role_id, v_owner_etl_role_id
+  FROM public.ensure_owner_app_roles(NEW.id);
+
   INSERT INTO public.organisation_members (org_id, user_id, role)
   VALUES (NEW.id, NEW.owner_id, 'owner')
   ON CONFLICT (org_id, user_id) DO UPDATE
-    SET role = public.pick_higher_org_role(public.organisation_members.role, EXCLUDED.role);
+    SET role = 'owner';
 
   IF TG_OP = 'UPDATE' AND OLD.owner_id IS DISTINCT FROM NEW.owner_id AND OLD.owner_id IS NOT NULL THEN
     UPDATE public.organisation_members
-    SET role = 'admin'
+    SET role = public.demote_org_role(public.organisation_members.role)
+    WHERE org_id = NEW.id
+      AND user_id = OLD.owner_id;
+
+    SELECT id INTO v_previous_owner_member_id
+    FROM public.organisation_members
     WHERE org_id = NEW.id
       AND user_id = OLD.owner_id
-      AND role = 'owner';
+    LIMIT 1;
+
+    SELECT public.pick_next_etl_role(NEW.id, v_owner_etl_role_id)
+    INTO v_previous_etl_role_id;
+
+    IF v_previous_owner_member_id IS NOT NULL THEN
+      IF v_previous_etl_role_id IS NULL THEN
+        DELETE FROM etl.organisation_member_roles
+        WHERE org_member_id = v_previous_owner_member_id;
+      ELSE
+        INSERT INTO etl.organisation_member_roles (org_member_id, role_id)
+        VALUES (v_previous_owner_member_id, v_previous_etl_role_id)
+        ON CONFLICT (org_member_id) DO UPDATE
+          SET role_id = EXCLUDED.role_id;
+      END IF;
+    END IF;
+
+    SELECT public.pick_next_stoqr_role(NEW.id, v_owner_stoqr_role_id)
+    INTO v_previous_stoqr_role_id;
+
+    IF v_previous_stoqr_role_id IS NULL THEN
+      DELETE FROM stoqr.organisation_member_roles
+      WHERE user_id = OLD.owner_id
+        AND company_id = NEW.id;
+    ELSE
+      INSERT INTO stoqr.organisation_member_roles (user_id, company_id, role_id)
+      VALUES (OLD.owner_id, NEW.id, v_previous_stoqr_role_id)
+      ON CONFLICT (user_id, company_id) DO UPDATE
+        SET role_id = EXCLUDED.role_id;
+    END IF;
   END IF;
 
   INSERT INTO public.organisation_app_seats (org_id, app_code, seat_limit)
@@ -282,40 +517,6 @@ BEGIN
   WHERE org_id = NEW.id
     AND user_id = NEW.owner_id
   LIMIT 1;
-
-  INSERT INTO stoqr.roles (company_id, name, description)
-  VALUES (NEW.id, 'Owner', 'System-managed owner role')
-  ON CONFLICT (company_id, name) DO NOTHING;
-
-  SELECT id INTO v_owner_stoqr_role_id
-  FROM stoqr.roles
-  WHERE company_id = NEW.id
-    AND lower(name) = 'owner'
-  ORDER BY created_at
-  LIMIT 1;
-
-  INSERT INTO stoqr.role_permissions (role_id, permission_code)
-  SELECT v_owner_stoqr_role_id, ap.code
-  FROM stoqr.app_permissions ap
-  WHERE v_owner_stoqr_role_id IS NOT NULL
-  ON CONFLICT (role_id, permission_code) DO NOTHING;
-
-  INSERT INTO etl.roles (org_id, name, description)
-  VALUES (NEW.id, 'Owner', 'System-managed owner role')
-  ON CONFLICT (org_id, name) DO NOTHING;
-
-  SELECT id INTO v_owner_etl_role_id
-  FROM etl.roles
-  WHERE org_id = NEW.id
-    AND lower(name) = 'owner'
-  ORDER BY created_at
-  LIMIT 1;
-
-  INSERT INTO etl.role_permissions (role_id, permission_code)
-  SELECT v_owner_etl_role_id, ap.code
-  FROM etl.app_permissions ap
-  WHERE v_owner_etl_role_id IS NOT NULL
-  ON CONFLICT (role_id, permission_code) DO NOTHING;
 
   IF v_owner_member_id IS NOT NULL THEN
     INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
@@ -343,6 +544,41 @@ DROP TRIGGER IF EXISTS trg_ensure_org_owner_member_and_default_seats ON public.o
 CREATE TRIGGER trg_ensure_org_owner_member_and_default_seats
   AFTER INSERT OR UPDATE OF owner_id ON public.organisations
   FOR EACH ROW EXECUTE PROCEDURE public.ensure_org_owner_member_and_default_seats();
+
+DROP TRIGGER IF EXISTS trg_prevent_owner_member_mutation ON public.organisation_members;
+CREATE TRIGGER trg_prevent_owner_member_mutation
+  BEFORE UPDATE OR DELETE ON public.organisation_members
+  FOR EACH ROW EXECUTE PROCEDURE public.prevent_owner_member_mutation();
+
+DROP TRIGGER IF EXISTS trg_prevent_owner_role_mutation_stoqr ON stoqr.roles;
+CREATE TRIGGER trg_prevent_owner_role_mutation_stoqr
+  BEFORE UPDATE OR DELETE ON stoqr.roles
+  FOR EACH ROW EXECUTE PROCEDURE public.prevent_owner_role_mutation();
+
+DROP TRIGGER IF EXISTS trg_prevent_owner_role_mutation_etl ON etl.roles;
+CREATE TRIGGER trg_prevent_owner_role_mutation_etl
+  BEFORE UPDATE OR DELETE ON etl.roles
+  FOR EACH ROW EXECUTE PROCEDURE public.prevent_owner_role_mutation();
+
+DROP TRIGGER IF EXISTS trg_prevent_owner_role_permission_delete_stoqr ON stoqr.role_permissions;
+CREATE TRIGGER trg_prevent_owner_role_permission_delete_stoqr
+  BEFORE DELETE ON stoqr.role_permissions
+  FOR EACH ROW EXECUTE PROCEDURE public.prevent_owner_role_permission_delete();
+
+DROP TRIGGER IF EXISTS trg_prevent_owner_role_permission_delete_etl ON etl.role_permissions;
+CREATE TRIGGER trg_prevent_owner_role_permission_delete_etl
+  BEFORE DELETE ON etl.role_permissions
+  FOR EACH ROW EXECUTE PROCEDURE public.prevent_owner_role_permission_delete();
+
+DROP TRIGGER IF EXISTS trg_grant_new_permission_to_owner_roles_stoqr ON stoqr.app_permissions;
+CREATE TRIGGER trg_grant_new_permission_to_owner_roles_stoqr
+  AFTER INSERT ON stoqr.app_permissions
+  FOR EACH ROW EXECUTE PROCEDURE public.grant_new_permission_to_owner_roles();
+
+DROP TRIGGER IF EXISTS trg_grant_new_permission_to_owner_roles_etl ON etl.app_permissions;
+CREATE TRIGGER trg_grant_new_permission_to_owner_roles_etl
+  AFTER INSERT ON etl.app_permissions
+  FOR EACH ROW EXECUTE PROCEDURE public.grant_new_permission_to_owner_roles();
 
 CREATE OR REPLACE FUNCTION public.enforce_org_app_seat_limit()
 RETURNS TRIGGER
@@ -480,7 +716,10 @@ BEGIN
      AND rp.permission_code = _permission_code
     WHERE om.org_id = _org_id
       AND om.user_id = auth.uid()
-      AND rp.role_id IS NOT NULL
+      AND (
+        om.role = 'owner'
+        OR rp.role_id IS NOT NULL
+      )
   );
 END;
 $$;
@@ -672,7 +911,11 @@ GRANT EXECUTE ON FUNCTION public.is_org_owner_strictly(UUID, UUID) TO authentica
 GRANT EXECUTE ON FUNCTION public.has_permission(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_etl_permission(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.demote_org_role(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.pick_next_etl_role(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ensure_owner_app_roles(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.enforce_org_app_seat_limit() TO authenticated;
 GRANT EXECUTE ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) TO authenticated;

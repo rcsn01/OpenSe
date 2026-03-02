@@ -143,6 +143,27 @@ export const inviteCompanyMember = async (companyId: string, email: string, role
 }
 
 export const updateCompanyMemberRole = async (memberId: string, roleId: string) => {
+  const { data: targetMember, error: targetMemberError } = await db
+    .from('organisation_member_roles')
+    .select('id, user_id, company_id, role_id')
+    .eq('id', memberId)
+    .single()
+
+  if (targetMemberError) throw targetMemberError
+
+  const { data: ownerRole, error: ownerRoleError } = await db
+    .from('roles')
+    .select('id')
+    .eq('company_id', targetMember.company_id)
+    .eq('name', 'Owner')
+    .single()
+
+  if (ownerRoleError) throw ownerRoleError
+
+  if (roleId === ownerRole.id || targetMember.role_id === ownerRole.id) {
+    throw new Error('Owner role is system-managed and cannot be changed directly.')
+  }
+
   const { error } = await db.from('organisation_member_roles').update({ role_id: roleId }).eq('id', memberId)
   if (error) throw error
 }

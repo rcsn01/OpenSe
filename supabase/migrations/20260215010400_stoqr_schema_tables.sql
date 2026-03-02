@@ -34,9 +34,13 @@ CREATE TABLE IF NOT EXISTS stoqr.roles (
   company_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
+  role_rank INTEGER NOT NULL DEFAULT 100 CHECK (role_rank >= 0),
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(company_id, name)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS stoqr_roles_company_id_name_lower_uidx
+  ON stoqr.roles (company_id, lower(name));
 
 CREATE TABLE IF NOT EXISTS stoqr.role_permissions (
   role_id UUID REFERENCES stoqr.roles(id) ON DELETE CASCADE NOT NULL,
