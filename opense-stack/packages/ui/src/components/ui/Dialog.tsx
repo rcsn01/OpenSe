@@ -7,7 +7,12 @@ import { X } from 'lucide-react'
 interface DialogContextValue { open: boolean; onClose: () => void }
 const DialogContext = createContext<DialogContextValue>({ open: false, onClose: () => {} })
 
-interface DialogProps { children: ReactNode; open: boolean; onClose: () => void }
+interface DialogProps {
+  children: ReactNode
+  open: boolean
+  onClose: () => void
+  layout?: 'center' | 'right-sheet'
+}
 
 const getFocusableElements = (container: HTMLElement): HTMLElement[] => {
   const selector =
@@ -18,8 +23,66 @@ const getFocusableElements = (container: HTMLElement): HTMLElement[] => {
   )
 }
 
-export function Dialog({ children, open, onClose }: DialogProps) {
+export function Dialog({ children, open, onClose, layout = 'center' }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
+  const closeTimerRef = useRef<number | null>(null)
+  const frameRef = useRef<number | null>(null)
+  const [isMounted, setIsMounted] = useState(open)
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    const animationDurationMs = 220
+
+    if (open) {
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = null
+      }
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+      }
+
+      setIsMounted(true)
+      setIsVisible(false)
+      frameRef.current = window.requestAnimationFrame(() => {
+        frameRef.current = window.requestAnimationFrame(() => {
+          setIsVisible(true)
+          frameRef.current = null
+        })
+      })
+      return () => {
+        if (frameRef.current) {
+          window.cancelAnimationFrame(frameRef.current)
+          frameRef.current = null
+        }
+      }
+    }
+
+    setIsVisible(false)
+    closeTimerRef.current = window.setTimeout(() => {
+      setIsMounted(false)
+      closeTimerRef.current = null
+    }, animationDurationMs)
+
+    return () => {
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = null
+      }
+    }
+  }, [open])
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current)
+      }
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -76,17 +139,34 @@ export function Dialog({ children, open, onClose }: DialogProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, onClose])
 
-  if (!open) return null
+  if (!isMounted) return null
+
+  const containerClassName =
+    layout === 'right-sheet' ? 'fixed inset-0 z-50 flex items-stretch justify-end' : 'fixed inset-0 z-50 flex items-center justify-center'
+
+  const panelClassName = cn(
+    'relative z-10 transition-transform duration-200 ease-out',
+    layout === 'right-sheet'
+      ? 'h-[100dvh] w-full max-w-none sm:w-[min(92vw,64rem)]'
+      : 'w-full max-w-lg mx-4 transition-all duration-200 ease-out',
+    layout === 'right-sheet' ? (isVisible ? 'translate-x-0' : 'translate-x-full') : isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-2 scale-95 opacity-0',
+  )
+
+  const backdropClassName = cn(
+    'fixed inset-0 transition-colors duration-200 ease-out',
+    isVisible ? 'bg-black/50 backdrop-blur-sm' : 'bg-black/0',
+  )
+
   return (
     <DialogContext.Provider value={{ open, onClose }}>
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div data-testid="dialog-backdrop" className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className={containerClassName}>
+        <div data-testid="dialog-backdrop" className={backdropClassName} onClick={onClose} />
         <div
           ref={dialogRef}
           role="dialog"
           aria-modal="true"
           tabIndex={-1}
-          className="relative z-10 w-full max-w-lg mx-4"
+          className={panelClassName}
         >
           {children}
         </div>

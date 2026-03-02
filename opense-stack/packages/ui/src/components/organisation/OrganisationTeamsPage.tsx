@@ -1,5 +1,4 @@
 import { type ReactNode } from 'react'
-import { Card } from '../ui/Card'
 import { Select } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { StackLayout } from '../layout/StackLayout'
@@ -29,7 +28,7 @@ export function OrganisationTeamsPage({
 }: OrganisationTeamsPageProps) {
   return (
     <StackLayout>
-      <Card className="flex flex-col sm:flex-row justify-between items-center gap-4" padding="md">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Select
             value={filterValue}
@@ -45,7 +44,7 @@ export function OrganisationTeamsPage({
             {inviteLabel}
           </Button>
         )}
-      </Card>
+      </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         {tableContent}

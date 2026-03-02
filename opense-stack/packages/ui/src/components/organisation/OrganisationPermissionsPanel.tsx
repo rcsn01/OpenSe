@@ -321,8 +321,8 @@ export function OrganisationPermissionsPanel({
         </CardContent>
       </Card>
 
-      <Dialog open={Boolean(editingRoleId)} onClose={closeEditRole}>
-        <DialogContent className="max-w-6xl">
+      <Dialog open={Boolean(editingRoleId)} onClose={closeEditRole} layout="right-sheet">
+        <DialogContent className="h-[100dvh] overflow-y-auto rounded-none border-0 p-4 shadow-none sm:rounded-l-[var(--radius-xl)] sm:border sm:p-6 sm:shadow-[var(--shadow-xl)]">
           <DialogHeader>
             <DialogTitle>Edit Role Permissions</DialogTitle>
             <DialogDescription>
@@ -350,7 +350,7 @@ export function OrganisationPermissionsPanel({
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200">
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
               {loadingPermissions ? (
                 <div className="py-8 text-center text-sm text-slate-500">Loading permissions...</div>
               ) : (
