@@ -245,8 +245,6 @@ export const createOrganisationWithOwner = async (orgName: string, ownerEmail: s
     .single()
 
   if (orgError) throw orgError
-
-  await addOrganisationMember(org.id, owner.id, 'admin')
   return org
 }
 
@@ -269,27 +267,8 @@ export const changeOrganisationOwner = async (orgId: string, email: string) => {
   const otherOrg = (memberships ?? []).find((item: { org_id: string }) => item.org_id !== orgId)
   if (otherOrg) throw new Error('User is already a member of another organisation.')
 
-  const { data: member } = await db
-    .from('organisation_members')
-    .select('id')
-    .eq('org_id', orgId)
-    .eq('user_id', profile.id)
-    .single()
-
   const { error: ownerError } = await db.from('organisations').update({ owner_id: profile.id }).eq('id', orgId)
   if (ownerError) throw ownerError
-
-  if (!member) {
-    await addOrganisationMember(orgId, profile.id, 'admin')
-    return
-  }
-
-  const { error: roleError } = await db
-    .from('organisation_members')
-    .update({ role: 'admin' })
-    .eq('id', member.id)
-
-  if (roleError) throw roleError
 }
 
 export const inviteMemberToOrganisation = async (

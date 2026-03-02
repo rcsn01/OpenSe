@@ -12,6 +12,7 @@ export type OrganisationTeamsTabMember = {
   displayName: string
   subtitle: string
   roleId: string | null
+  userId?: string
   initials?: string
 }
 
@@ -25,6 +26,7 @@ type OrganisationTeamsTabProps = {
   roles: OrganisationTeamsTabRole[]
   canManageTeam: boolean
   onRoleChange: (memberId: string, roleId: string) => Promise<void> | void
+  isRoleEditable?: (member: OrganisationTeamsTabMember) => boolean
   onInvite?: (email: string, roleId: string) => void
   inviteMessage?: string | null
   roleChangeMessage?: string | null
@@ -37,6 +39,7 @@ export function OrganisationTeamsTab({
   roles,
   canManageTeam,
   onRoleChange,
+  isRoleEditable,
   onInvite,
   inviteMessage,
   roleChangeMessage,
@@ -62,24 +65,28 @@ export function OrganisationTeamsTab({
     return members.filter((member) => member.roleId === roleFilter)
   }, [members, roleFilter])
 
-  const rows: OrganisationMembersTableRow[] = filteredMembers.map((member) => ({
-    id: member.id,
-    displayName: member.displayName,
-    subtitle: member.subtitle,
-    initials: member.initials,
-    roleContent: canManageTeam ? (
-      <Select
-        value={member.roleId ?? ''}
-        onChange={(event) => {
-          void onRoleChange(member.id, event.target.value)
-        }}
-        options={roles.map((role) => ({ value: role.id, label: role.name }))}
-        className="text-xs min-w-40"
-      />
-    ) : (
-      <span className="text-sm text-slate-700">{roles.find((role) => role.id === member.roleId)?.name ?? 'Member'}</span>
-    ),
-  }))
+  const rows: OrganisationMembersTableRow[] = filteredMembers.map((member) => {
+    const editable = canManageTeam && (isRoleEditable ? isRoleEditable(member) : true)
+
+    return {
+      id: member.id,
+      displayName: member.displayName,
+      subtitle: member.subtitle,
+      initials: member.initials,
+      roleContent: editable ? (
+        <Select
+          value={member.roleId ?? ''}
+          onChange={(event) => {
+            void onRoleChange(member.id, event.target.value)
+          }}
+          options={roles.map((role) => ({ value: role.id, label: role.name }))}
+          className="text-xs min-w-40"
+        />
+      ) : (
+        <span className="text-sm text-slate-700">{roles.find((role) => role.id === member.roleId)?.name ?? member.roleId ?? 'Member'}</span>
+      ),
+    }
+  })
 
   const filterOptions = [
     { value: 'all', label: 'All Roles' },

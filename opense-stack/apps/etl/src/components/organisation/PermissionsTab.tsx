@@ -38,6 +38,7 @@ export const PermissionsTab = () => {
       loadingRoles={rolesLoading}
       loadingPermissions={permissionsLoading}
       canManage={canManageRoles}
+      isRoleEditable={(role) => role.name.trim().toLowerCase() !== 'owner'}
       onCreateRole={async ({ name, description, permissionCodes }) => {
         await createOrgRole(currentOrg.id, { name, description, permissionCodes });
         await refreshRoles();

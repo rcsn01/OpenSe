@@ -36,6 +36,7 @@ export const RolesTab = ({
       loadingRoles={loadingRoles}
       loadingPermissions={loadingPermissions}
       canManage={canManage}
+      isRoleEditable={(role) => role.name.trim().toLowerCase() !== 'owner'}
       onCreateRole={onCreateRole}
       onUpdateRole={onUpdateRole}
     />

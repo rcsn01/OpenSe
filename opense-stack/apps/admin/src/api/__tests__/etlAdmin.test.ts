@@ -14,6 +14,7 @@ vi.mock('@repo/shared/supabase', () => ({
 }))
 
 import {
+  changeOrganisationOwner,
   createOrganisationWithOwner,
   listAdminOrgs,
   listAdminUsers,
@@ -106,7 +107,7 @@ describe('etlAdmin api', () => {
     )
   })
 
-  it('createOrganisationWithOwner creates org and owner membership', async () => {
+  it('createOrganisationWithOwner creates organisation with owner id', async () => {
     const profile = { id: 'user-1', email: 'owner@example.com', full_name: 'Owner' }
 
     const profilesChain = {
@@ -135,22 +136,11 @@ describe('etlAdmin api', () => {
       })),
     }
 
-    const memberInsert = vi.fn().mockResolvedValue({ error: null })
-    const membersInsertChain = {
-      insert: memberInsert,
-    }
-
     mockFrom.mockImplementation((table: string) => {
       if (table === 'profiles') return profilesChain
       if (table === 'organisations') return organisationsChain
       if (table === 'organisation_members') {
-        if (membersInsertChain.insert.mock.calls.length > 0) {
-          return membersInsertChain
-        }
-        return {
-          ...membersSelectChain,
-          insert: memberInsert,
-        }
+        return membersSelectChain
       }
       throw new Error(`Unexpected table: ${table}`)
     })
@@ -158,6 +148,47 @@ describe('etlAdmin api', () => {
     const result = await createOrganisationWithOwner('Acme', 'OWNER@EXAMPLE.COM')
 
     expect(result).toEqual({ id: 'org-1', name: 'Acme', owner_id: 'user-1', created_at: '2026-02-19' })
-    expect(memberInsert).toHaveBeenCalledWith({ org_id: 'org-1', user_id: 'user-1', role: 'admin' })
+  })
+
+  it('changeOrganisationOwner updates only organisation owner_id', async () => {
+    const profile = { id: 'user-2', email: 'new-owner@example.com', full_name: 'New Owner' }
+
+    const profilesChain = {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          limit: vi.fn().mockResolvedValue({ data: [profile], error: null }),
+        })),
+      })),
+    }
+
+    const membersChain = {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          data: [{ org_id: 'org-1' }],
+          error: null,
+        })),
+      })),
+      update: vi.fn(),
+      insert: vi.fn(),
+    }
+
+    const orgUpdateEq = vi.fn().mockResolvedValue({ error: null })
+    const organisationsChain = {
+      update: vi.fn(() => ({ eq: orgUpdateEq })),
+    }
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'profiles') return profilesChain
+      if (table === 'organisation_members') return membersChain
+      if (table === 'organisations') return organisationsChain
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await expect(changeOrganisationOwner('org-1', 'new-owner@example.com')).resolves.toBeUndefined()
+
+    expect(organisationsChain.update).toHaveBeenCalledWith({ owner_id: 'user-2' })
+    expect(orgUpdateEq).toHaveBeenCalledWith('id', 'org-1')
+    expect(membersChain.update).not.toHaveBeenCalled()
+    expect(membersChain.insert).not.toHaveBeenCalled()
   })
 })

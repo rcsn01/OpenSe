@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockGetSession = vi.fn()
+const mockFrom = vi.fn()
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: (...args: unknown[]) => mockGetSession(...args),
     },
-    from: vi.fn(),
+    from: (...args: unknown[]) => mockFrom(...args),
   },
 }))
 
@@ -18,7 +19,7 @@ vi.mock('@repo/shared/organisation-invites', () => ({
   inviteOrganisationMember: vi.fn(),
 }))
 
-import { updateOrganisationTier } from '../api/organisations'
+import { updateOrganisationMemberRole, updateOrganisationTier } from '../api/organisations'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -84,5 +85,45 @@ describe('updateOrganisationTier', () => {
     )
 
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('updateOrganisationMemberRole', () => {
+  it('throws when target member is owner', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { role: 'owner' }, error: null })
+    const update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_members') throw new Error(`Unexpected table: ${table}`)
+
+      return {
+        select: vi.fn(() => ({ eq: vi.fn(() => ({ single })) })),
+        update,
+      }
+    })
+
+    await expect(updateOrganisationMemberRole('member-1', 'admin')).rejects.toThrow(
+      'Owner role is system-managed and cannot be changed directly.',
+    )
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('updates role for non-owner members', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { role: 'editor' }, error: null })
+    const updateEq = vi.fn().mockResolvedValue({ error: null })
+    const update = vi.fn(() => ({ eq: updateEq }))
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_members') throw new Error(`Unexpected table: ${table}`)
+
+      return {
+        select: vi.fn(() => ({ eq: vi.fn(() => ({ single })) })),
+        update,
+      }
+    })
+
+    await expect(updateOrganisationMemberRole('member-2', 'admin')).resolves.toBeUndefined()
+    expect(update).toHaveBeenCalledWith({ role: 'admin' })
+    expect(updateEq).toHaveBeenCalledWith('id', 'member-2')
   })
 })
