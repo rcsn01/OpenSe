@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '@repo/shared/auth/context'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
@@ -18,6 +19,7 @@ import {
 
 export const TeamSettingsPage = () => {
   const { companyId } = useCompany()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const { tab } = useParams<{ tab?: string }>()
   const tabAliasMap: Record<string, string> = {
@@ -103,6 +105,7 @@ export const TeamSettingsPage = () => {
               <MembersTab
                 members={members}
                 roles={data?.roles ?? []}
+                currentUserId={user?.id}
                 onRoleChange={handleRoleChange}
                 onInvite={handleInvite}
                 inviteMessage={inviteMessage}

@@ -63,6 +63,18 @@ export const updateOrganisationMemberRole = async (
   memberId: string,
   role: 'admin' | 'editor' | 'member',
 ) => {
+  const { data: currentMember, error: currentMemberError } = await supabase
+    .from('organisation_members')
+    .select('role')
+    .eq('id', memberId)
+    .single()
+
+  if (currentMemberError) throw currentMemberError
+
+  if (currentMember?.role === 'owner') {
+    throw new Error('Owner role is system-managed and cannot be changed directly.')
+  }
+
   const { error } = await supabase
     .from('organisation_members')
     .update({ role })
