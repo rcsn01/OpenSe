@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../Dialog'
@@ -15,6 +15,17 @@ const DialogHarness = ({ open, onClose }: { open: boolean; onClose: () => void }
         <button type="button">Cancel</button>
         <button type="button">Save</button>
       </DialogFooter>
+    </DialogContent>
+  </Dialog>
+)
+
+const RightSheetDialogHarness = ({ open, onClose }: { open: boolean; onClose: () => void }) => (
+  <Dialog open={open} onClose={onClose} layout="right-sheet">
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Test Sheet</DialogTitle>
+      </DialogHeader>
+      <button type="button">Action</button>
     </DialogContent>
   </Dialog>
 )
@@ -83,5 +94,39 @@ describe('Dialog', () => {
 
     await user.tab({ shift: true })
     expect(saveButton).toHaveFocus()
+  })
+
+  it('starts hidden when right-sheet opens initially', () => {
+    const onClose = vi.fn()
+
+    render(<RightSheetDialogHarness open={true} onClose={onClose} />)
+
+    expect(screen.getByRole('dialog')).toHaveClass('translate-x-full')
+  })
+
+  it('animates right-sheet to visible after animation frames', async () => {
+    const onClose = vi.fn()
+    const frameCallbacks: FrameRequestCallback[] = []
+    const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frameCallbacks.push(callback)
+      return frameCallbacks.length
+    })
+
+    try {
+      render(<RightSheetDialogHarness open={true} onClose={onClose} />)
+
+      expect(screen.getByRole('dialog')).toHaveClass('translate-x-full')
+
+      await act(async () => {
+        const firstFrame = frameCallbacks.shift()
+        firstFrame?.(0)
+        const secondFrame = frameCallbacks.shift()
+        secondFrame?.(16)
+      })
+
+      expect(screen.getByRole('dialog')).toHaveClass('translate-x-0')
+    } finally {
+      rafSpy.mockRestore()
+    }
   })
 })
