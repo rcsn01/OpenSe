@@ -173,29 +173,127 @@ describe('team settings api', () => {
   })
 
   it('updates company member role', async () => {
-    const eq = vi.fn().mockResolvedValue({ error: null })
-    const update = vi.fn(() => ({ eq }))
+    const updateEq = vi.fn().mockResolvedValue({ error: null })
+    const update = vi.fn(() => ({ eq: updateEq }))
+
+    const memberSingle = vi.fn().mockResolvedValue({
+      data: { id: 'member-1', user_id: 'u-2', company_id: 'company-1', role_id: 'role-2' },
+      error: null,
+    })
+
+    const ownerSingle = vi.fn().mockResolvedValue({
+      data: { id: 'owner-role-id' },
+      error: null,
+    })
 
     mockDbFrom.mockImplementation((table: string) => {
-      if (table !== 'organisation_member_roles') throw new Error(`Unexpected table: ${table}`)
-      return { update }
+      if (table === 'organisation_member_roles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ single: memberSingle })),
+          })),
+          update,
+        }
+      }
+
+      if (table === 'roles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({ single: ownerSingle })),
+            })),
+          })),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
     })
 
     await expect(updateCompanyMemberRole('member-1', 'role-2')).resolves.toBeUndefined()
     expect(update).toHaveBeenCalledWith({ role_id: 'role-2' })
-    expect(eq).toHaveBeenCalledWith('id', 'member-1')
+    expect(updateEq).toHaveBeenCalledWith('id', 'member-1')
   })
 
   it('throws when update company member role fails', async () => {
     const dbError = new Error('rls denied')
-    const eq = vi.fn().mockResolvedValue({ error: dbError })
-    const update = vi.fn(() => ({ eq }))
+    const updateEq = vi.fn().mockResolvedValue({ error: dbError })
+    const update = vi.fn(() => ({ eq: updateEq }))
+
+    const memberSingle = vi.fn().mockResolvedValue({
+      data: { id: 'member-1', user_id: 'u-2', company_id: 'company-1', role_id: 'role-2' },
+      error: null,
+    })
+
+    const ownerSingle = vi.fn().mockResolvedValue({
+      data: { id: 'owner-role-id' },
+      error: null,
+    })
 
     mockDbFrom.mockImplementation((table: string) => {
-      if (table !== 'organisation_member_roles') throw new Error(`Unexpected table: ${table}`)
-      return { update }
+      if (table === 'organisation_member_roles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ single: memberSingle })),
+          })),
+          update,
+        }
+      }
+
+      if (table === 'roles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({ single: ownerSingle })),
+            })),
+          })),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
     })
 
     await expect(updateCompanyMemberRole('member-1', 'role-2')).rejects.toThrow('rls denied')
+  })
+
+  it('throws when updating owner role assignment', async () => {
+    const memberSingle = vi.fn().mockResolvedValue({
+      data: { id: 'member-1', user_id: 'u-2', company_id: 'company-1', role_id: 'owner-role-id' },
+      error: null,
+    })
+
+    const ownerSingle = vi.fn().mockResolvedValue({
+      data: { id: 'owner-role-id' },
+      error: null,
+    })
+
+    const update = vi.fn(() => ({ eq: vi.fn() }))
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'organisation_member_roles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ single: memberSingle })),
+          })),
+          update,
+        }
+      }
+
+      if (table === 'roles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({ single: ownerSingle })),
+            })),
+          })),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await expect(updateCompanyMemberRole('member-1', 'role-2')).rejects.toThrow(
+      'Owner role is system-managed and cannot be changed directly.',
+    )
+    expect(update).not.toHaveBeenCalled()
   })
 })

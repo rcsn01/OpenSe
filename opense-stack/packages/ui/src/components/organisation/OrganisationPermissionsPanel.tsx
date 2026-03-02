@@ -41,6 +41,7 @@ type OrganisationPermissionsPanelProps = {
   loadingRoles?: boolean
   loadingPermissions?: boolean
   canManage: boolean
+  isRoleEditable?: (role: OrganisationRole) => boolean
   onCreateRole: (payload: RolePayload) => Promise<void> | void
   onUpdateRole: (roleId: string, payload: RolePayload) => Promise<void> | void
   onDeleteRole?: (roleId: string) => Promise<void> | void
@@ -61,6 +62,7 @@ export function OrganisationPermissionsPanel({
   loadingRoles = false,
   loadingPermissions = false,
   canManage,
+  isRoleEditable,
   onCreateRole,
   onUpdateRole,
   onDeleteRole,
@@ -247,39 +249,43 @@ export function OrganisationPermissionsPanel({
                   </TableRow>
                 )}
 
-                {roles.map((role) => (
-                  <TableRow key={role.id}>
-                    <TableCell className="font-medium text-slate-900">{role.name}</TableCell>
-                    <TableCell className="text-slate-600">{role.description || '—'}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditRole(role.id)}
-                          disabled={!canManage || saving}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                        {onDeleteRole && (
+                {roles.map((role) => {
+                  const editable = isRoleEditable ? isRoleEditable(role) : true
+
+                  return (
+                    <TableRow key={role.id}>
+                      <TableCell className="font-medium text-slate-900">{role.name}</TableCell>
+                      <TableCell className="text-slate-600">{role.description || '—'}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDeleteRole(role.id)}
-                            disabled={!canManage || saving}
-                            className="text-red-600 hover:text-red-700"
+                            onClick={() => openEditRole(role.id)}
+                            disabled={!canManage || saving || !editable}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {onDeleteRole && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteRole(role.id)}
+                              disabled={!canManage || saving || !editable}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
 
                 <TableRow>
                   <TableCell>
