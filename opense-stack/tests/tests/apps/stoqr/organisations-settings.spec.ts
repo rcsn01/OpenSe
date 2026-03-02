@@ -31,7 +31,22 @@ test.describe('Stoqr Organisations Settings', () => {
     await expect(authenticatedPage).toHaveURL(/(settings\/(team|organisations)\/.+|auth|login|dashboard|localhost:5993\/$)/)
   })
 
-  test('can change a member role from teams tab', async ({ authenticatedPage }) => {
+  test('owner role row is not editable', async ({ authenticatedPage }) => {
+    await safeGoto(authenticatedPage, '/settings/organisations/teams')
+
+    if (!authenticatedPage.url().includes('/settings/organisations/teams')) {
+      test.skip(true, 'Not on organisations teams route in this environment')
+    }
+
+    const ownerRow = authenticatedPage.locator('table tbody tr', { hasText: 'Owner' }).first()
+    if ((await ownerRow.count()) === 0) {
+      test.skip(true, 'No owner row available in this environment')
+    }
+
+    await expect(ownerRow.locator('select')).toHaveCount(0)
+  })
+
+  test('can change a non-owner member role from teams tab', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/settings/organisations/teams')
 
     if (!authenticatedPage.url().includes('/settings/organisations/teams')) {

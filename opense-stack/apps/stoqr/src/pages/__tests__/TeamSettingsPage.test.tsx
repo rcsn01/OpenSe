@@ -9,6 +9,10 @@ vi.mock('../../contexts/CompanyContext', () => ({
   useCompany: () => ({ companyId: 'company-1' }),
 }))
 
+vi.mock('@repo/shared/auth/context', () => ({
+  useAuth: () => ({ user: { id: 'user-1' } }),
+}))
+
 vi.mock('../../components/BasePage', () => ({
   BasePage: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))

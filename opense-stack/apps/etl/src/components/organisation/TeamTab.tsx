@@ -88,6 +88,7 @@ export const TeamTab = () => {
         <ModernTeamSettings
             organisation={organisation}
             members={members}
+            currentUserId={user?.id}
             canManageTeam={canManageTeam}
             updatingMemberId={updatingMemberId}
             inviteError={inviteError}

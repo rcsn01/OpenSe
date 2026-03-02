@@ -356,13 +356,14 @@ VALUES
   ('c2222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'analyst@globex.test', '66666666-6666-6666-6666-666666666666', 'token-org-globex-analyst')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO etl.roles (id, org_id, name, description)
+INSERT INTO etl.roles (id, org_id, name, description, role_rank)
 VALUES
-  ('19191919-1919-1919-1919-191919191901', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Admin', 'Full ETL administration for Acme'),
-  ('19191919-1919-1919-1919-191919191902', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Operator', 'Run and monitor ETL workflows for Acme'),
-  ('19191919-1919-1919-1919-191919191903', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'ETL Admin', 'Full ETL administration for Globex')
+  ('19191919-1919-1919-1919-191919191901', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Admin', 'Full ETL administration for Acme', 900),
+  ('19191919-1919-1919-1919-191919191902', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Operator', 'Run and monitor ETL workflows for Acme', 600),
+  ('19191919-1919-1919-1919-191919191903', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'ETL Admin', 'Full ETL administration for Globex', 900)
 ON CONFLICT (org_id, name) DO UPDATE
-SET description = EXCLUDED.description;
+SET description = EXCLUDED.description,
+    role_rank = EXCLUDED.role_rank;
 
 INSERT INTO etl.role_permissions (role_id, permission_code)
 VALUES
@@ -468,13 +469,14 @@ ON CONFLICT (id) DO NOTHING;
 -- 3) StoQR reference + membership
 -- ------------------------------------------------------------
 
-INSERT INTO stoqr.roles (id, company_id, name, description)
+INSERT INTO stoqr.roles (id, company_id, name, description, role_rank)
 VALUES
-  ('20202020-2020-2020-2020-202020202020', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Manager', 'Operational manager role for Acme'),
-  ('30303030-3030-3030-3030-303030303030', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Viewer', 'Read-only role for Acme'),
-  ('50505050-5050-5050-5050-505050505050', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Operator', 'Warehouse operator role for Globex')
+  ('20202020-2020-2020-2020-202020202020', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Manager', 'Operational manager role for Acme', 800),
+  ('30303030-3030-3030-3030-303030303030', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Viewer', 'Read-only role for Acme', 300),
+  ('50505050-5050-5050-5050-505050505050', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Operator', 'Warehouse operator role for Globex', 600)
 ON CONFLICT (company_id, name) DO UPDATE
-SET description = EXCLUDED.description;
+SET description = EXCLUDED.description,
+    role_rank = EXCLUDED.role_rank;
 
 INSERT INTO stoqr.role_permissions (role_id, permission_code)
 VALUES
@@ -493,6 +495,13 @@ VALUES
   ('50505050-5050-5050-5050-505050505050', 'products.view'),
   ('50505050-5050-5050-5050-505050505050', 'scanner.use'),
   ('50505050-5050-5050-5050-505050505050', 'transactions.create')
+ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+INSERT INTO stoqr.role_permissions (role_id, permission_code)
+SELECT r.id, p.code
+FROM stoqr.roles r
+JOIN stoqr.app_permissions p ON TRUE
+WHERE lower(r.name) = 'owner'
 ON CONFLICT (role_id, permission_code) DO NOTHING;
 
 INSERT INTO stoqr.organisation_member_roles (id, user_id, company_id, role_id)

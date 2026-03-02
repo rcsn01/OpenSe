@@ -22,6 +22,7 @@ type Role = {
 export const MembersTab = ({
   members,
   roles,
+  currentUserId,
   onRoleChange,
   onInvite,
   inviteMessage,
@@ -29,6 +30,7 @@ export const MembersTab = ({
 }: {
   members: Member[]
   roles: Role[]
+  currentUserId?: string
   onRoleChange: (memberId: string, roleId: string) => Promise<void>
   onInvite: (email: string, roleId: string) => void
   inviteMessage: string | null
@@ -36,6 +38,7 @@ export const MembersTab = ({
 }) => {
   const sharedMembers: OrganisationTeamsTabMember[] = members.map((member) => ({
     id: member.id,
+    userId: member.user_id,
     displayName: member.profiles?.full_name ?? member.profiles?.username ?? 'Unknown',
     subtitle: member.user_id,
     roleId: member.role_id,
@@ -51,6 +54,10 @@ export const MembersTab = ({
         members={sharedMembers}
         roles={sharedRoles}
         canManageTeam={true}
+        isRoleEditable={(member) => {
+          const rawRoleName = members.find((item) => item.id === member.id)?.roles?.name ?? ''
+          return rawRoleName.trim().toLowerCase() !== 'owner' && member.userId !== currentUserId
+        }}
         onRoleChange={onRoleChange}
         onInvite={onInvite}
         inviteMessage={inviteMessage}
