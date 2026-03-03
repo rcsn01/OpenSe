@@ -9,6 +9,7 @@ import { LandingPage } from './pages/LandingPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { InventoryListPage } from './pages/InventoryPage'
 import { CreateProductPage } from './pages/product/CreateProductPage'
+import { EditProductPage } from './pages/product/EditProductPage'
 import { ScanPage } from './pages/ScanPage'
 import { LabelStudioPage } from './pages/LabelStudioPage'
 import { ProductDetailPage } from './pages/product/ProductDetailPage'
@@ -77,6 +78,7 @@ function App() {
               <Route path="/inventory" element={<Navigate to="/inventory/all" replace />} />
               <Route path="/inventory/:tab" element={<InventoryListPage />} />
               <Route path="/inventory/new" element={<CreateProductPage />} />
+              <Route path="/inventory/:id/edit" element={<EditProductPage />} />
               <Route path="/inventory/:id" element={<Navigate to="overview" replace />} />
               <Route path="/inventory/:id/:tab" element={<ProductDetailPage />} />
               <Route path="/scan" element={<Navigate to="/scan/scan-actions" replace />} />

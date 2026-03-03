@@ -16,7 +16,7 @@ vi.mock('../../supabaseClient', () => ({
   },
 }))
 
-import { createProduct, fetchProductDetail } from '../products'
+import { createProduct, fetchProductDetail, updateProduct } from '../products'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -249,5 +249,68 @@ describe('products api', () => {
       product: { id: 'prod-4', name: 'Widget' },
       transactions: [],
     })
+  })
+
+  it('updates product fields and merges retained plus newly uploaded images', async () => {
+    const firstEqId = vi.fn().mockResolvedValue({ error: null })
+    const firstEqCompany = vi.fn(() => ({ eq: firstEqId }))
+    const secondEqId = vi.fn().mockResolvedValue({ error: null })
+    const secondEqCompany = vi.fn(() => ({ eq: secondEqId }))
+
+    const update = vi
+      .fn()
+      .mockReturnValueOnce({ eq: firstEqCompany })
+      .mockReturnValueOnce({ eq: secondEqCompany })
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') {
+        return { update }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    vi.spyOn(Date, 'now').mockReturnValue(1700000000123)
+
+    const upload = vi.fn().mockResolvedValue({ error: null })
+    mockStorageFrom.mockReturnValue({ upload })
+
+    const result = await updateProduct(
+      'company-1',
+      'prod-9',
+      {
+        name: 'Updated Widget',
+        sku: 'W-009',
+        description: '',
+        category: '',
+        quantity: '12',
+        reorderPoint: '4',
+        costPrice: '11.5',
+        sellingPrice: '18',
+        folderId: '',
+        expiryDate: '',
+        customFields: { quality: 'A' },
+      },
+      [{ name: 'new image.png' } as unknown as File],
+      ['company-1/prod-9/existing.png'],
+    )
+
+    expect(result).toEqual({ id: 'prod-9' })
+    expect(update).toHaveBeenNthCalledWith(1, {
+      name: 'Updated Widget',
+      sku: 'W-009',
+      description: null,
+      category: null,
+      quantity_on_hand: 12,
+      reorder_point: 4,
+      cost_price: 11.5,
+      selling_price: 18,
+      folder_id: null,
+      expiry_date: null,
+      custom_fields: { quality: 'A' },
+    })
+    expect(update).toHaveBeenNthCalledWith(2, {
+      image_urls: ['company-1/prod-9/existing.png', 'company-1/prod-9/1700000000123_new_image.png'],
+    })
+    expect(upload).toHaveBeenCalledWith('company-1/prod-9/1700000000123_new_image.png', expect.anything())
   })
 })

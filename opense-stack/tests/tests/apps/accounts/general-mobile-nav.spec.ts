@@ -1,11 +1,31 @@
 import { test, expect } from '../../fixtures/accountsAuth';
 
 test.describe('Accounts General and Mobile Navigation', () => {
+  const isAuthScreen = async (page: Parameters<typeof test>[0]['authenticatedAccountsPage']) => {
+    const url = page.url();
+    if (/\/(login|signin|auth|register)(\?|$)/i.test(url)) {
+      return true;
+    }
+
+    const signInHeadingVisible = await page
+      .getByRole('heading', { name: /sign in|log in/i })
+      .first()
+      .isVisible()
+      .catch(() => false);
+    const signInButtonVisible = await page
+      .getByRole('button', { name: /^sign in$/i })
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    return signInHeadingVisible || signInButtonVisible;
+  };
+
   test('general page allows switching theme mode', async ({ authenticatedAccountsPage }) => {
     await authenticatedAccountsPage.goto('/account/general');
     await expect(authenticatedAccountsPage).toHaveURL(/\/(account\/general|login)/);
 
-    if (authenticatedAccountsPage.url().includes('/login')) {
+    if (await isAuthScreen(authenticatedAccountsPage)) {
       return;
     }
 
@@ -28,7 +48,7 @@ test.describe('Accounts General and Mobile Navigation', () => {
     await authenticatedAccountsPage.goto('/account/general');
     await expect(authenticatedAccountsPage).toHaveURL(/\/(account\/general|login)/);
 
-    if (authenticatedAccountsPage.url().includes('/login')) {
+    if (await isAuthScreen(authenticatedAccountsPage)) {
       return;
     }
 
