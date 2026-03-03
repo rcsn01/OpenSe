@@ -74,7 +74,7 @@ export class CreateProductPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: /new product|create product/i });
+    this.heading = page.getByRole('heading', { name: /add new product|new product|create product/i });
     this.nameInput = page.getByLabel(/name/i);
     this.skuInput = page.getByLabel(/sku/i);
     this.quantityInput = page.getByLabel(/quantity|qty/i);
@@ -95,6 +95,32 @@ export class CreateProductPage {
     if (quantity > 0) {
       await this.quantityInput.fill(quantity.toString());
     }
+    await this.saveButton.click();
+  }
+}
+
+export class EditProductPage {
+  readonly page: Page;
+  readonly heading: Locator;
+  readonly nameInput: Locator;
+  readonly saveButton: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.heading = page.getByRole('heading', { name: /edit product/i });
+    this.nameInput = page.getByLabel(/name/i);
+    this.saveButton = page.getByRole('button', { name: /update product|save/i });
+  }
+
+  async expectLoaded() {
+    await expect(this.heading).toBeVisible();
+  }
+
+  async updateName(name: string) {
+    await this.nameInput.fill(name);
+  }
+
+  async save() {
     await this.saveButton.click();
   }
 }
@@ -187,7 +213,7 @@ export class AlertsPage {
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(alerts\/[^/]+|auth|login)|localhost:5993\/$/);
+    await expect(this.page).toHaveURL(/\/(alerts(\/[^/]+)?|auth|login)|localhost:5993\/$/);
   }
 }
 
@@ -223,6 +249,10 @@ export class ProductDetailPage {
   async expectLoaded() {
     await expect(this.page).toHaveURL(/\/inventory\//);
     await expect(this.heading).toBeVisible();
+  }
+
+  async goToEdit() {
+    await this.editButton.click();
   }
 }
 

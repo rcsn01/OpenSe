@@ -4,6 +4,8 @@ import {
   fetchProductDetail,
   fetchProductFolders,
   type CreateProductPayload,
+  updateProduct,
+  type UpdateProductPayload,
 } from '../../api/products'
 
 const productKeys = {
@@ -39,6 +41,31 @@ export const useCreateProduct = (companyId: string | null) => {
       queryClient.invalidateQueries({ queryKey: productKeys.root })
       queryClient.invalidateQueries({ queryKey: ['stoqr', 'inventory'] })
       queryClient.invalidateQueries({ queryKey: ['stoqr', 'procurement'] })
+    },
+  })
+}
+
+export const useUpdateProduct = (companyId: string | null, productId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (params: {
+      payload: UpdateProductPayload
+      images: File[]
+      retainedImageUrls: string[]
+    }) => {
+      if (!companyId) throw new Error('No company selected')
+      if (!productId) throw new Error('No product selected')
+      return updateProduct(companyId, productId, params.payload, params.images, params.retainedImageUrls)
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: productKeys.root })
+      queryClient.invalidateQueries({ queryKey: ['stoqr', 'inventory'] })
+      queryClient.invalidateQueries({ queryKey: ['stoqr', 'procurement'] })
+      queryClient.invalidateQueries({ queryKey: productKeys.detail(companyId, productId) })
+      if (variables.payload.folderId) {
+        queryClient.invalidateQueries({ queryKey: productKeys.folders(companyId) })
+      }
     },
   })
 }
