@@ -21,9 +21,11 @@ vi.mock('../../supabaseClient', () => ({
 }))
 
 import {
+  createRoleWithPermissions,
   fetchTeamActivityEvents,
   fetchTeamSettingsData,
   fetchTwoFactorStatus,
+  updateRoleWithPermissions,
   updateCompanyMemberRole,
 } from '../teamSettings'
 
@@ -45,7 +47,7 @@ describe('team settings api', () => {
     const roles = {
       select: vi.fn(() => ({
         eq: vi.fn().mockResolvedValue({
-          data: [{ id: 'r-1', name: 'Admin', description: 'Admin role' }],
+          data: [{ id: 'r-1', name: 'Admin', description: 'Admin role', role_rank: 100 }],
           error: null,
         }),
       })),
@@ -112,6 +114,88 @@ describe('team settings api', () => {
     expect(result.roles).toHaveLength(1)
     expect(result.permissions).toHaveLength(1)
     expect(result.rolePermissions['r-1']).toEqual(['inventory.read'])
+    expect(result.roles[0].role_rank).toBe(100)
+  })
+
+  it('prevents creating role when duplicate role rank exists in organisation', async () => {
+    const rolesTable = {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue({
+              data: [{ id: 'existing-role-id' }],
+              error: null,
+            }),
+          })),
+        })),
+      })),
+      insert: vi.fn(),
+    }
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'roles') return rolesTable
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await expect(
+      createRoleWithPermissions('company-1', {
+        name: 'Reviewer',
+        description: 'Review role',
+        roleRank: 100,
+        perms: [],
+      }),
+    ).rejects.toThrow('Role rank must be unique within your organisation.')
+
+    expect(rolesTable.insert).not.toHaveBeenCalled()
+  })
+
+  it('prevents updating role when duplicate role rank exists in organisation', async () => {
+    const rolesTable = {
+      select: vi.fn()
+        .mockImplementationOnce(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({
+              data: { company_id: 'company-1' },
+              error: null,
+            }),
+          })),
+        }))
+        .mockImplementationOnce(() => ({
+          eq: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              neq: vi.fn(() => ({
+                limit: vi.fn().mockResolvedValue({
+                  data: [{ id: 'other-role-id' }],
+                  error: null,
+                }),
+              })),
+            })),
+          })),
+        })),
+      update: vi.fn(),
+    }
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'roles') return rolesTable
+      if (table === 'role_permissions') {
+        return {
+          delete: vi.fn(() => ({ eq: vi.fn() })),
+          insert: vi.fn(),
+        }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await expect(
+      updateRoleWithPermissions('role-1', {
+        name: 'Admin',
+        description: 'Admin role',
+        roleRank: 100,
+        permissionCodes: ['users.view'],
+      }),
+    ).rejects.toThrow('Role rank must be unique within your organisation.')
+
+    expect(rolesTable.update).not.toHaveBeenCalled()
   })
 
   it('fetches activity events and enriches actor profile', async () => {
