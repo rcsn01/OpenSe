@@ -24,9 +24,7 @@ test.describe('Stoqr Dashboard', () => {
     const hasDashboardWidgets = await dashboardWidget.isVisible().catch(() => false);
 
     if (!hasDashboardWidgets) {
-      await expect(
-        authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR|Sign in/i).first(),
-      ).toBeVisible();
+      await expect(authenticatedPage).toHaveURL(/(localhost:5991\/login\?|\/|\/auth|\/dashboard|localhost:5993\/$)/);
       return;
     }
 

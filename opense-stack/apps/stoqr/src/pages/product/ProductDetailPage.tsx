@@ -19,7 +19,6 @@ import {
   Pencil
 } from 'lucide-react'
 import { Badge } from '../../components/Badge'
-import { toast } from 'sonner'
 import { useProductDetail } from '../../hooks/queries/useProducts'
 
 export const ProductDetailPage = () => {
@@ -130,7 +129,7 @@ export const ProductDetailPage = () => {
           </div>
 
           <div className="row">
-            <button className="button secondary" onClick={() => toast.info('Edit mode coming soon')}>
+            <button className="button secondary" onClick={() => navigate(`/inventory/${product.id}/edit`)}>
               <Pencil size={16} style={{ marginRight: 8 }} /> Edit
             </button>
             <button className="button secondary icon-button" title="Print Label" onClick={() => window.print()}>

@@ -289,7 +289,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                 <div key={product.id} className="file-row">
                   <div className="file-icon"><Package size={18} /></div>
                   <div className="file-name">
-                    <Link to={`/inventory/${product.id}`} style={{ display: 'block' }}>
+                    <Link to={`/inventory/${product.id}/overview`} style={{ display: 'block' }}>
                       {product.name}
                     </Link>
                     <span className="muted small" style={{ fontSize: 11, fontWeight: 400 }}>{product.sku}</span>
@@ -340,7 +340,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                   </div>
                 ))}
                 {products.map((product) => (
-                  <Link to={`/inventory/${product.id}`} key={product.id}>
+                  <Link to={`/inventory/${product.id}/overview`} key={product.id}>
                     <div 
                       className="card hover:shadow-md transition-shadow cursor-pointer"
                       style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8, height: '100%' }}
