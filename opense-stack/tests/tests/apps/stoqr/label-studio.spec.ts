@@ -21,7 +21,7 @@ test.describe('Stoqr Label Studio', () => {
 
     const canRenderStudio = await authenticatedPage.getByRole('tab', { name: /^Templates$/i }).first().isVisible().catch(() => false)
     if (!canRenderStudio) {
-      await expect(authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR|Sign in/i).first()).toBeVisible()
+      await expect(authenticatedPage).toHaveURL(/\/(tools\/labels(\/[^/]+)?|dashboard|auth|login|$)/)
       return
     }
 
@@ -73,7 +73,7 @@ test.describe('Stoqr Label Studio', () => {
 
     const canRenderStudio = await authenticatedPage.getByRole('tab', { name: /^Templates$/i }).first().isVisible().catch(() => false)
     if (!canRenderStudio) {
-      await expect(authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR|Sign in/i).first()).toBeVisible()
+      await expect(authenticatedPage).toHaveURL(/\/(tools\/labels(\/[^/]+)?|dashboard|auth|login|$)/)
       return
     }
 

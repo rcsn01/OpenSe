@@ -18,7 +18,6 @@ const {
       name: 'Existing Widget',
       sku: 'EX-001',
       description: 'Existing description',
-      category: 'Electronics',
       quantity_on_hand: 4,
       reorder_point: 2,
       cost_price: 10,

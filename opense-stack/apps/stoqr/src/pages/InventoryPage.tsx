@@ -7,7 +7,7 @@ import { Tabs } from '../components/Tabs'
 import { parseCsv } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
 import { BulkActionsTab } from '../components/Inventory/BulkActionsTab'
-import { CategoriesLocationsTab } from '../components/Inventory/CategoriesLocationsTab'
+import { LocationsTab } from '../components/Inventory/CategoriesLocationsTab'
 import { BarcodeSkuTab } from '../components/Inventory/BarcodeSkuTab'
 import { FoldersTab } from '../components/Inventory/FoldersTab'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
@@ -25,7 +25,7 @@ export const InventoryListPage = () => {
   const navigate = useNavigate()
   const { tab } = useParams<{ tab?: string }>()
   const [searchParams] = useSearchParams()
-  const validTabs = ['all', 'folders', 'bulk-actions', 'categories-locations', 'barcode-sku'] as const
+  const validTabs = ['all', 'folders', 'bulk-actions', 'locations', 'barcode-sku'] as const
   const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'all'
 
   // Removed isCreateOpen state
@@ -187,9 +187,9 @@ export const InventoryListPage = () => {
             content: <BulkActionsTab companyId={companyId} products={products} onImportOpen={() => setIsImportOpen(true)} onRefresh={refreshInventory} />,
           },
           {
-            id: 'categories-locations',
-            label: 'Categories & Locations',
-            content: <CategoriesLocationsTab companyId={companyId} />,
+            id: 'locations',
+            label: 'Locations',
+            content: <LocationsTab companyId={companyId} />,
           },
           {
             id: 'barcode-sku',
