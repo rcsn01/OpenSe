@@ -7,7 +7,6 @@ export type InventoryProduct = {
   folder_id: string | null
   cost_price: number | null
   selling_price: number | null
-  category: string | null
 }
 
 export type SortField = 'name' | 'sku' | 'quantity_on_hand' | 'selling_price'

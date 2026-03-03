@@ -7,7 +7,6 @@ type ReportProduct = {
   quantity_on_hand: number
   cost_price: number | null
   selling_price: number | null
-  category: string | null
 }
 
 type ReportTransaction = {
@@ -17,7 +16,7 @@ type ReportTransaction = {
   created_at: string
   notes: string | null
   performed_by: string | null
-  products: { id: string; name: string; sku: string; cost_price: number | null; selling_price: number | null; category: string | null } | null
+  products: { id: string; name: string; sku: string; cost_price: number | null; selling_price: number | null } | null
   profiles: { id: string | null; full_name: string | null; username: string | null } | null
 }
 
@@ -25,7 +24,6 @@ type ReportValuationRpcRow = {
   product_id: string
   sku: string
   name: string
-  category: string | null
   quantity_on_hand: number | string | null
   cost_price: number | string | null
   selling_price: number | string | null
@@ -106,7 +104,6 @@ export const fetchReportsData = async (companyId: string) => {
     quantity_on_hand: toNumber(row.quantity_on_hand, 0),
     cost_price: toNumber(row.cost_price, 0),
     selling_price: toNumber(row.selling_price, 0),
-    category: row.category,
   }))
 
   const productsById = new Map(
@@ -129,7 +126,6 @@ export const fetchReportsData = async (companyId: string) => {
             sku: row.sku ?? product?.sku ?? 'N/A',
             cost_price: product?.cost_price ?? null,
             selling_price: product?.selling_price ?? null,
-            category: product?.category ?? null,
           }
         : null,
       profiles: {

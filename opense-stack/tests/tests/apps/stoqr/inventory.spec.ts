@@ -30,7 +30,7 @@ test.describe('Stoqr Inventory', () => {
     await expect(authenticatedPage.getByRole('tab', { name: /all products/i })).toBeVisible();
     await expect(authenticatedPage.getByRole('tab', { name: /folders/i })).toBeVisible();
     await expect(authenticatedPage.getByRole('tab', { name: /bulk actions/i })).toBeVisible();
-    await expect(authenticatedPage.getByRole('tab', { name: /categories & locations/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('tab', { name: /locations/i })).toBeVisible();
     await expect(authenticatedPage.getByRole('tab', { name: /barcode\/sku/i })).toBeVisible();
 
     await expect(authenticatedPage.getByRole('tab', { name: /variants & matrices/i })).toHaveCount(0);

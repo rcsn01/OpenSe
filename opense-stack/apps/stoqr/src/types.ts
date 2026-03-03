@@ -8,7 +8,6 @@ export type Product = {
   name: string
   sku: string
   description: string | null
-  category: string | null
   quantity_on_hand: number
   reorder_point: number
   cost_price: number | null

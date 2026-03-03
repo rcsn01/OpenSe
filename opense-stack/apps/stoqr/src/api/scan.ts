@@ -18,7 +18,6 @@ const normalizeProduct = (row: Partial<Product>): Product => ({
   name: row.name ?? 'Unknown Product',
   sku: row.sku ?? 'N/A',
   description: row.description ?? null,
-  category: row.category ?? null,
   quantity_on_hand: Number(row.quantity_on_hand ?? 0),
   reorder_point: Number(row.reorder_point ?? 0),
   cost_price: row.cost_price ?? null,
@@ -46,7 +45,7 @@ export const lookupProductByScanValue = async (
 
   const { data, error } = await db
     .from('products')
-    .select('id, name, sku, quantity_on_hand, reorder_point, description, category, cost_price, selling_price, folder_id, image_urls, custom_fields, expiry_date, primary_barcode')
+    .select('id, name, sku, quantity_on_hand, reorder_point, description, cost_price, selling_price, folder_id, image_urls, custom_fields, expiry_date, primary_barcode')
     .eq('company_id', companyId)
     .or(`sku.eq."${cleanValue}",id.eq."${cleanValue}",primary_barcode.eq."${cleanValue}"`)
     .maybeSingle()
@@ -66,7 +65,6 @@ export const lookupProductByScanValue = async (
           quantity_on_hand,
           reorder_point,
           description,
-          category,
           cost_price,
           selling_price,
           folder_id,
@@ -89,7 +87,7 @@ export const lookupProductByScanValue = async (
   if (!resolvedProduct) {
     const { data: nameMatch } = await db
       .from('products')
-      .select('id, name, sku, quantity_on_hand, reorder_point, description, category, cost_price, selling_price, folder_id, image_urls, custom_fields, expiry_date, primary_barcode')
+      .select('id, name, sku, quantity_on_hand, reorder_point, description, cost_price, selling_price, folder_id, image_urls, custom_fields, expiry_date, primary_barcode')
       .eq('company_id', companyId)
       .ilike('name', `%${cleanValue}%`)
       .order('name', { ascending: true })

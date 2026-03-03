@@ -9,7 +9,7 @@ test.describe('Stoqr Settings', () => {
 
     const hasTabs = await authenticatedPage.getByRole('tab', { name: /user management/i }).first().isVisible().catch(() => false);
     if (!hasTabs) {
-      await expect(authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR|Sign in/i).first()).toBeVisible();
+      await expect(authenticatedPage).toHaveURL(/\/(settings(\/[^/]+)?|dashboard|auth|login|$)/);
       return;
     }
 

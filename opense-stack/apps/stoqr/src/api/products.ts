@@ -22,7 +22,6 @@ export type CreateProductPayload = {
   name: string
   sku: string
   description: string
-  category: string
   quantity: string
   reorderPoint: string
   costPrice: string
@@ -83,7 +82,6 @@ export const createProduct = async (
       name: payload.name,
       sku: payload.sku,
       description: payload.description || null,
-      category: payload.category || null,
       quantity_on_hand: toNumber(payload.quantity),
       reorder_point: toNumber(payload.reorderPoint),
       cost_price: toNumber(payload.costPrice),
@@ -125,7 +123,6 @@ export const updateProduct = async (
       name: payload.name,
       sku: payload.sku,
       description: payload.description || null,
-      category: payload.category || null,
       quantity_on_hand: toNumber(payload.quantity),
       reorder_point: toNumber(payload.reorderPoint),
       cost_price: toNumber(payload.costPrice),
