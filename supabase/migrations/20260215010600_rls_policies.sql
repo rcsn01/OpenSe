@@ -451,8 +451,6 @@ DROP POLICY IF EXISTS "Members can view role permissions" ON stoqr.role_permissi
 DROP POLICY IF EXISTS "Admins can manage role permissions" ON stoqr.role_permissions;
 DROP POLICY IF EXISTS "Members can view products" ON stoqr.products;
 DROP POLICY IF EXISTS "Staff can manage products" ON stoqr.products;
-DROP POLICY IF EXISTS "Members can view categories" ON stoqr.product_categories;
-DROP POLICY IF EXISTS "Staff can manage categories" ON stoqr.product_categories;
 DROP POLICY IF EXISTS "Members can view locations" ON stoqr.inventory_locations;
 DROP POLICY IF EXISTS "Staff can manage locations" ON stoqr.inventory_locations;
 DROP POLICY IF EXISTS "Members can view product barcodes" ON stoqr.product_barcodes;
@@ -542,12 +540,6 @@ CREATE POLICY "Members can view products" ON stoqr.products
   );
 
 CREATE POLICY "Staff can manage products" ON stoqr.products
-  FOR ALL USING (has_permission(company_id, 'products.manage'));
-
-CREATE POLICY "Members can view categories" ON stoqr.product_categories
-  FOR SELECT USING (has_permission(company_id, 'products.view'));
-
-CREATE POLICY "Staff can manage categories" ON stoqr.product_categories
   FOR ALL USING (has_permission(company_id, 'products.manage'));
 
 CREATE POLICY "Members can view locations" ON stoqr.inventory_locations

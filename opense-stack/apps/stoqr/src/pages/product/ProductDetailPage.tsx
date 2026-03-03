@@ -101,7 +101,6 @@ export const ProductDetailPage = () => {
           <div className="small muted">
             <Link to="/inventory" className="hover:underline">Inventory</Link>
             <span style={{ margin: '0 8px' }}>/</span>
-            {product.category ? <>{product.category}<span style={{ margin: '0 8px' }}>/</span></> : null}
             <span style={{ color: 'var(--text)', fontWeight: 500 }}>{product.name}</span>
           </div>
         </div>
