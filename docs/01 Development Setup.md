@@ -1,6 +1,6 @@
 ## Prerequisites to Download/Install
 1. Node.js (LTS version)
-2. pnpm v9.15.0 (install via: npm install -g pnpm@9.15.0)
+2. pnpm v9.15.0 (install via: npm install -g pnpm@9)
 3. Docker (required for Supabase local - must be running)
 4. Supabase CLI (npm install -g supabase)
 ## Step-by-Step Setup
