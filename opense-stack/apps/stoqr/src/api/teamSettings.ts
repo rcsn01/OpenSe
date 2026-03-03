@@ -13,6 +13,7 @@ export type Role = {
   id: string
   name: string
   description: string | null
+  role_rank: number
 }
 
 export type Permission = {
@@ -60,7 +61,7 @@ export const fetchTeamSettingsData = async (companyId: string) => {
       .from('organisation_member_roles')
       .select('id, user_id, role_id, joined_at')
       .eq('company_id', companyId),
-    db.from('roles').select('id, name, description').eq('company_id', companyId),
+    db.from('roles').select('id, name, description, role_rank').eq('company_id', companyId),
     db.from('app_permissions').select('code, description'),
     supabase
       .from('organisation_invites')
@@ -175,7 +176,7 @@ export const saveRoleWithPermissions = async (
 ) => {
   const { error: roleError } = await db
     .from('roles')
-    .update({ name: role.name, description: role.description })
+    .update({ name: role.name, description: role.description, role_rank: role.role_rank })
     .eq('id', role.id)
 
   if (roleError) throw roleError
@@ -204,11 +205,23 @@ export const saveRoleWithPermissions = async (
 
 export const createRoleWithPermissions = async (
   companyId: string,
-  payload: { name: string; description: string; perms: string[] },
+  payload: { name: string; description: string; roleRank: number; perms: string[] },
 ) => {
+  const { data: duplicateRanks, error: duplicateCheckError } = await db
+    .from('roles')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('role_rank', payload.roleRank)
+    .limit(1)
+
+  if (duplicateCheckError) throw duplicateCheckError
+  if ((duplicateRanks?.length ?? 0) > 0) {
+    throw new Error('Role rank must be unique within your organisation.')
+  }
+
   const { data, error } = await db
     .from('roles')
-    .insert({ company_id: companyId, name: payload.name, description: payload.description })
+    .insert({ company_id: companyId, name: payload.name, description: payload.description, role_rank: payload.roleRank })
     .select('id')
     .single()
 
@@ -225,11 +238,32 @@ export const createRoleWithPermissions = async (
 
 export const updateRoleWithPermissions = async (
   roleId: string,
-  payload: { name: string; description: string; permissionCodes: string[] },
+  payload: { name: string; description: string; roleRank: number; permissionCodes: string[] },
 ) => {
+  const { data: existingRole, error: existingRoleError } = await db
+    .from('roles')
+    .select('company_id')
+    .eq('id', roleId)
+    .single()
+
+  if (existingRoleError) throw existingRoleError
+
+  const { data: duplicateRanks, error: duplicateCheckError } = await db
+    .from('roles')
+    .select('id')
+    .eq('company_id', existingRole.company_id)
+    .eq('role_rank', payload.roleRank)
+    .neq('id', roleId)
+    .limit(1)
+
+  if (duplicateCheckError) throw duplicateCheckError
+  if ((duplicateRanks?.length ?? 0) > 0) {
+    throw new Error('Role rank must be unique within your organisation.')
+  }
+
   const { error: roleError } = await db
     .from('roles')
-    .update({ name: payload.name, description: payload.description })
+    .update({ name: payload.name, description: payload.description, role_rank: payload.roleRank })
     .eq('id', roleId)
 
   if (roleError) throw roleError

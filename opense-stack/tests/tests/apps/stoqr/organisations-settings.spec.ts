@@ -84,4 +84,55 @@ test.describe('Stoqr Organisations Settings', () => {
     expect(updateResponse.ok()).toBeTruthy()
     await expect(roleSelect).toHaveValue(nextValue)
   })
+
+  test('permissions tab shows and edits role rank', async ({ authenticatedPage }) => {
+    await safeGoto(authenticatedPage, '/settings/organisations/permissions')
+
+    if (!authenticatedPage.url().includes('/settings/organisations/permissions')) {
+      test.skip(true, 'Not on organisations permissions route in this environment')
+    }
+
+    const roleRankHeader = authenticatedPage.getByRole('columnheader', { name: 'Role Rank' }).first()
+    if ((await roleRankHeader.count()) === 0) {
+      test.skip(true, 'Permissions role table is not available in this environment')
+    }
+
+    await expect(roleRankHeader).toBeVisible()
+
+    const editButton = authenticatedPage
+      .locator('table tbody tr', { hasNotText: 'Owner' })
+      .getByRole('button', { name: /^edit$/i })
+      .first()
+
+    if ((await editButton.count()) === 0) {
+      test.skip(true, 'No editable role available in this environment')
+    }
+
+    await editButton.click()
+
+    const roleRankInput = authenticatedPage.getByLabel('Role Rank')
+    await expect(roleRankInput).toBeVisible()
+
+    const originalValue = await roleRankInput.inputValue()
+    const numericValue = Number.parseInt(originalValue, 10)
+
+    if (!Number.isFinite(numericValue)) {
+      test.skip(true, 'Current role rank is not numeric in this environment')
+    }
+
+    const nextRoleRank = String(numericValue + 1000)
+    const updateResponsePromise = authenticatedPage.waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' &&
+        response.url().includes('/roles') &&
+        response.url().includes('id=eq.'),
+      { timeout: 10_000 },
+    )
+
+    await roleRankInput.fill(nextRoleRank)
+    await authenticatedPage.getByRole('button', { name: /^save$/i }).click()
+
+    const updateResponse = await updateResponsePromise
+    expect(updateResponse.ok()).toBeTruthy()
+  })
 })

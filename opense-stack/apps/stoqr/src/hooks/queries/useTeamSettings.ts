@@ -58,9 +58,9 @@ export const useCreateRoleWithPermissions = (companyId: string | null) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ name, description, perms }: { name: string; description: string; perms: string[] }) => {
+    mutationFn: ({ name, description, roleRank, perms }: { name: string; description: string; roleRank: number; perms: string[] }) => {
       if (!companyId) throw new Error('No company selected')
-      return createRoleWithPermissions(companyId, { name, description, perms })
+      return createRoleWithPermissions(companyId, { name, description, roleRank, perms })
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: teamSettingsKey(companyId) }),
   })
@@ -70,8 +70,8 @@ export const useUpdateRoleWithPermissions = (companyId: string | null) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ roleId, name, description, permissionCodes }: { roleId: string; name: string; description: string; permissionCodes: string[] }) =>
-      updateRoleWithPermissions(roleId, { name, description, permissionCodes }),
+    mutationFn: ({ roleId, name, description, roleRank, permissionCodes }: { roleId: string; name: string; description: string; roleRank: number; permissionCodes: string[] }) =>
+      updateRoleWithPermissions(roleId, { name, description, roleRank, permissionCodes }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: teamSettingsKey(companyId) }),
   })
 }

@@ -20,7 +20,16 @@ major_version = 17
 
 [db.seed]
 enabled = true
-sql_paths = ["./seed.sql"]
+sql_paths = [
+	"./seeds/00_cleanup.sql",
+	"./seeds/10_auth_users.sql",
+	"./seeds/20_public_core.sql",
+	"./seeds/30_etl_core.sql",
+	"./seeds/40_stoqr_reference_membership.sql",
+	"./seeds/50_stoqr_catalog_inventory.sql",
+	"./seeds/60_admin_audit.sql",
+	"./seeds/90_synthetic_volume.sql"
+]
 
 [db.pooler]
 enabled = false
