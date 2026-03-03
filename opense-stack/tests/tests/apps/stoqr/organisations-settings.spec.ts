@@ -31,6 +31,27 @@ test.describe('Stoqr Organisations Settings', () => {
     await expect(authenticatedPage).toHaveURL(/(settings\/(team|organisations)\/.+|auth|login|dashboard|localhost:5993\/$)/)
   })
 
+  test('organisation settings tabs expose activity and two-factor content', async ({ authenticatedPage }) => {
+    await safeGoto(authenticatedPage, '/settings/organisations/teams')
+
+    if (!authenticatedPage.url().includes('/settings/organisations/')) {
+      test.skip(true, 'Not on organisations settings route in this environment')
+    }
+
+    const activityTab = authenticatedPage.getByRole('tab', { name: /activity/i }).first()
+    const twoFactorTab = authenticatedPage.getByRole('tab', { name: /two-factor/i }).first()
+
+    if ((await activityTab.count()) === 0 || (await twoFactorTab.count()) === 0) {
+      test.skip(true, 'Organisation settings tabs are not available in this environment')
+    }
+
+    await activityTab.click()
+    await expect(authenticatedPage.getByText(/Activity|No activity events found/i).first()).toBeVisible()
+
+    await twoFactorTab.click()
+    await expect(authenticatedPage.getByText(/Current Auth Level|Two-Factor Authentication/i).first()).toBeVisible()
+  })
+
   test('owner role row is not editable', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/settings/organisations/teams')
 
