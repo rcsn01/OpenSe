@@ -19,6 +19,7 @@ export type OrganisationRole = {
   id: string
   name: string
   description: string | null
+  roleRank?: number
   permissionCodes: string[]
 }
 
@@ -30,6 +31,7 @@ export type OrganisationPermission = {
 type RolePayload = {
   name: string
   description: string
+  roleRank: number
   permissionCodes: string[]
 }
 
@@ -69,9 +71,11 @@ export function OrganisationPermissionsPanel({
 }: OrganisationPermissionsPanelProps) {
   const [addName, setAddName] = useState('')
   const [addDescription, setAddDescription] = useState('')
+  const [addRoleRank, setAddRoleRank] = useState('100')
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [editRoleRank, setEditRoleRank] = useState('100')
   const [editPermissions, setEditPermissions] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -123,6 +127,7 @@ export function OrganisationPermissionsPanel({
     setEditingRoleId(role.id)
     setEditName(role.name)
     setEditDescription(role.description ?? '')
+    setEditRoleRank(String(role.roleRank ?? 100))
     setEditPermissions(role.permissionCodes)
     setError(null)
   }
@@ -131,8 +136,20 @@ export function OrganisationPermissionsPanel({
     setEditingRoleId(null)
     setEditName('')
     setEditDescription('')
+    setEditRoleRank('100')
     setEditPermissions([])
     setError(null)
+  }
+
+  const parseRoleRank = (value: string): number | null => {
+    if (!value.trim()) return null
+    const parsed = Number(value)
+    if (!Number.isInteger(parsed) || parsed < 0) return null
+    return parsed
+  }
+
+  const hasDuplicateRoleRank = (roleRank: number, ignoreRoleId?: string) => {
+    return roles.some((role) => role.id !== ignoreRoleId && role.roleRank === roleRank)
   }
 
   const handleTogglePermission = (permissionCode: string, checked: boolean) => {
@@ -151,16 +168,29 @@ export function OrganisationPermissionsPanel({
       return
     }
 
+    const parsedRoleRank = parseRoleRank(addRoleRank)
+    if (parsedRoleRank === null) {
+      setError('Role rank must be a non-negative integer.')
+      return
+    }
+
+    if (hasDuplicateRoleRank(parsedRoleRank)) {
+      setError('Role rank must be unique within your organisation.')
+      return
+    }
+
     try {
       setSaving(true)
       setError(null)
       await onCreateRole({
         name: trimmedName,
         description: addDescription,
+        roleRank: parsedRoleRank,
         permissionCodes: [],
       })
       setAddName('')
       setAddDescription('')
+      setAddRoleRank('100')
     } catch (err: any) {
       setError(err?.message ?? 'Failed to save role.')
     } finally {
@@ -178,12 +208,24 @@ export function OrganisationPermissionsPanel({
       return
     }
 
+    const parsedRoleRank = parseRoleRank(editRoleRank)
+    if (parsedRoleRank === null) {
+      setError('Role rank must be a non-negative integer.')
+      return
+    }
+
+    if (hasDuplicateRoleRank(parsedRoleRank, editingRoleId)) {
+      setError('Role rank must be unique within your organisation.')
+      return
+    }
+
     try {
       setSaving(true)
       setError(null)
       await onUpdateRole(editingRoleId, {
         name: trimmedName,
         description: editDescription,
+        roleRank: parsedRoleRank,
         permissionCodes: editPermissions,
       })
       closeEditRole()
@@ -237,13 +279,14 @@ export function OrganisationPermissionsPanel({
                 <TableRow>
                   <TableHead>Role Name</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead>Role Rank</TableHead>
                   <TableHead className="w-[220px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {roles.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-slate-500">
+                    <TableCell colSpan={4} className="text-center text-slate-500">
                       No roles yet.
                     </TableCell>
                   </TableRow>
@@ -256,6 +299,7 @@ export function OrganisationPermissionsPanel({
                     <TableRow key={role.id}>
                       <TableCell className="font-medium text-slate-900">{role.name}</TableCell>
                       <TableCell className="text-slate-600">{role.description || '—'}</TableCell>
+                      <TableCell className="text-slate-600">{role.roleRank ?? '—'}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -305,6 +349,17 @@ export function OrganisationPermissionsPanel({
                     />
                   </TableCell>
                   <TableCell>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={addRoleRank}
+                      onChange={(event) => setAddRoleRank(event.target.value)}
+                      placeholder="Role rank"
+                      disabled={!canManage || saving}
+                    />
+                  </TableCell>
+                  <TableCell>
                     <Button
                       type="button"
                       onClick={handleAddRole}
@@ -331,7 +386,7 @@ export function OrganisationPermissionsPanel({
           </DialogHeader>
 
           <form className="space-y-4" onSubmit={handleSaveRoleEdits}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Role Name</label>
                 <Input
@@ -345,6 +400,17 @@ export function OrganisationPermissionsPanel({
                 <Textarea
                   value={editDescription}
                   onChange={(event) => setEditDescription(event.target.value)}
+                  disabled={!canManage || saving}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Role Rank</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={editRoleRank}
+                  onChange={(event) => setEditRoleRank(event.target.value)}
                   disabled={!canManage || saving}
                 />
               </div>

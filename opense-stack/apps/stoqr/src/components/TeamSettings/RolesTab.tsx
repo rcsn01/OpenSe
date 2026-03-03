@@ -7,6 +7,7 @@ import {
 type RolePayload = {
   name: string
   description: string
+  roleRank: number
   permissionCodes: string[]
 }
 
