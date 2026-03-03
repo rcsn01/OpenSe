@@ -128,7 +128,7 @@ export const ProductListView = ({
                         />
                       </td>
                       <td>
-                        <Link to={`/inventory/${product.id}`} style={{ fontWeight: 600, display: 'block' }}>
+                        <Link to={`/inventory/${product.id}/overview`} style={{ fontWeight: 600, display: 'block' }}>
                           {product.name}
                         </Link>
                         <span className="muted small">{product.sku}</span>
