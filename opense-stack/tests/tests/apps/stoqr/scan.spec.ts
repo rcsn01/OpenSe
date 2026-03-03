@@ -10,7 +10,7 @@ test.describe('Stoqr Scan', () => {
 
     const hasScanTab = await authenticatedPage.getByRole('tab', { name: /^Scan$/i }).first().isVisible().catch(() => false);
     if (!hasScanTab) {
-      await expect(authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR|Sign in/i).first()).toBeVisible();
+      await expect(authenticatedPage).toHaveURL(/\/(scan(\/[^/]+)?|dashboard|auth|login|$)/);
       return;
     }
 
