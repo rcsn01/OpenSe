@@ -44,6 +44,7 @@ export const TeamSettingsPage = () => {
   const rolePermissions = data?.rolePermissions ?? {}
   const roles = (data?.roles ?? []).map((role) => ({
     ...role,
+    roleRank: role.role_rank,
     permissionCodes: rolePermissions[role.id] ?? [],
   }))
 
@@ -68,16 +69,16 @@ export const TeamSettingsPage = () => {
     }
   }
 
-  const handleCreateRole = async ({ name, description, permissionCodes }: { name: string; description: string; permissionCodes: string[] }) => {
+  const handleCreateRole = async ({ name, description, roleRank, permissionCodes }: { name: string; description: string; roleRank: number; permissionCodes: string[] }) => {
     if (!companyId || !name) return
-    await createRoleMutation.mutateAsync({ name, description, perms: permissionCodes })
+    await createRoleMutation.mutateAsync({ name, description, roleRank, perms: permissionCodes })
   }
 
   const handleUpdateRole = async (
     roleId: string,
-    { name, description, permissionCodes }: { name: string; description: string; permissionCodes: string[] },
+    { name, description, roleRank, permissionCodes }: { name: string; description: string; roleRank: number; permissionCodes: string[] },
   ) => {
-    await updateRoleMutation.mutateAsync({ roleId, name, description, permissionCodes })
+    await updateRoleMutation.mutateAsync({ roleId, name, description, roleRank, permissionCodes })
   }
 
   useEffect(() => {
