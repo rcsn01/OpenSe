@@ -3,7 +3,6 @@ import { formatCurrency } from '../../utils'
 type ExportProduct = {
   sku: string
   name: string
-  category: string | null
   quantity_on_hand: number
   cost_price: number | null
 }
@@ -41,11 +40,10 @@ export const ExportsTab = ({
 }) => {
   const exportValuationCsv = () => {
     const rows = [
-      ['SKU', 'Name', 'Category', 'Quantity', 'Cost Price', 'Total Value'],
+      ['SKU', 'Name', 'Quantity', 'Cost Price', 'Total Value'],
       ...products.map((product) => [
         product.sku,
         product.name,
-        product.category ?? '',
         String(product.quantity_on_hand),
         String(product.cost_price ?? 0),
         String(product.quantity_on_hand * (product.cost_price ?? 0)),

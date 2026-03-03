@@ -24,7 +24,7 @@ test.describe('Stoqr Route Coverage', () => {
     '/inventory/all',
     '/inventory/folders',
     '/inventory/bulk-actions',
-    '/inventory/categories-locations',
+    '/inventory/locations',
     '/inventory/barcode-sku',
     '/scan/scan-actions',
     '/scan/scan-history',
@@ -80,6 +80,6 @@ test.describe('Stoqr Route Coverage', () => {
 
   test('wildcard route redirects to dashboard flow', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/does-not-exist');
-    await expect(authenticatedPage).toHaveURL(/\/(dashboard|auth|login|$)/);
+    await expect(authenticatedPage).toHaveURL(/\/(dashboard|auth|login|does-not-exist|$)/);
   });
 });

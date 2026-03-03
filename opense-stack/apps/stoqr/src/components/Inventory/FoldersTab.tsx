@@ -294,7 +294,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                     </Link>
                     <span className="muted small" style={{ fontSize: 11, fontWeight: 400 }}>{product.sku}</span>
                   </div>
-                  <div className="muted small">{product.category || 'Product'}</div>
+                  <div className="muted small">Product</div>
                   <div>
                     <span className={`badge-pill ${product.quantity_on_hand === 0 ? 'danger' : 'neutral'} small`}>
                       {product.quantity_on_hand} units

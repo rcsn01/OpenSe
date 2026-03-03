@@ -31,7 +31,7 @@ export const BulkActionsTab = ({ companyId, products, onImportOpen, onRefresh }:
 
   const exportCsv = () => {
     const rows = [
-      ['Name', 'SKU', 'Quantity', 'Reorder Point', 'Cost Price', 'Selling Price', 'Category'],
+      ['Name', 'SKU', 'Quantity', 'Reorder Point', 'Cost Price', 'Selling Price'],
       ...products.map((product) => [
         product.name,
         product.sku,
@@ -39,7 +39,6 @@ export const BulkActionsTab = ({ companyId, products, onImportOpen, onRefresh }:
         String(product.reorder_point),
         String(product.cost_price ?? 0),
         String(product.selling_price ?? 0),
-        product.category ?? '',
       ]),
     ]
 
