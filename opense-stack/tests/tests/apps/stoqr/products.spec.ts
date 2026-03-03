@@ -41,6 +41,8 @@ test.describe('Stoqr Products', () => {
     await detail.goToEdit();
     await expect(authenticatedPage).toHaveURL(/\/inventory\/[^/]+\/edit$/);
     await editProduct.expectLoaded();
+    await expect(authenticatedPage.getByRole('heading', { name: /edit product/i })).toBeVisible();
+    await expect(authenticatedPage.getByLabel(/product name/i)).toHaveValue(productName);
     await editProduct.updateName(updatedProductName);
     await editProduct.save();
 
@@ -50,36 +52,5 @@ test.describe('Stoqr Products', () => {
     await authenticatedPage.goto(authenticatedPage.url().replace('/edit', '/overview'));
     await detail.expectLoaded();
     await expect(authenticatedPage.getByRole('heading', { name: updatedProductName })).toBeVisible();
-  });
-
-  test('edit route renders form for an existing product', async ({ authenticatedPage }) => {
-    const createProduct = new CreateProductPage(authenticatedPage);
-    const detail = new ProductDetailPage(authenticatedPage);
-    const productName = `E2E Edit Seed ${Date.now()}`;
-    const productSku = `E2E-EDIT-${Date.now()}`;
-
-    await createProduct.goto();
-    await authenticatedPage.waitForLoadState('domcontentloaded');
-    const currentUrl = authenticatedPage.url();
-    const landingHeadingVisible = await authenticatedPage
-      .getByRole('heading', { name: /inventory control made simple/i })
-      .first()
-      .isVisible()
-      .catch(() => false);
-    test.skip(
-      await shouldSkipForAuthState(currentUrl, landingHeadingVisible),
-      'Requires authenticated Stoqr session to run strict edit route assertions.',
-    );
-    const createFormVisible = await createProduct.heading.isVisible().catch(() => false);
-    test.skip(!createFormVisible, 'Stoqr create form is not accessible in current environment state.');
-
-    await createProduct.expectLoaded();
-    await createProduct.createProduct(productName, productSku, 1);
-    await expect(authenticatedPage).toHaveURL(/\/inventory\/[^/]+\/overview$/);
-
-    await detail.goToEdit();
-    await expect(authenticatedPage).toHaveURL(/\/inventory\/[^/]+\/edit$/);
-    await expect(authenticatedPage.getByRole('heading', { name: /edit product/i })).toBeVisible();
-    await expect(authenticatedPage.getByLabel(/product name/i)).toHaveValue(productName);
   });
 });
