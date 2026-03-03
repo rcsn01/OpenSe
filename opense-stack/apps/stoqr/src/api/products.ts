@@ -32,6 +32,33 @@ export type CreateProductPayload = {
   customFields: Record<string, unknown>
 }
 
+export type UpdateProductPayload = CreateProductPayload
+
+const uploadProductImages = async (companyId: string, productId: string, images: File[]) => {
+  const uploadedImagePaths: string[] = []
+  if (images.length === 0) return uploadedImagePaths
+
+  const uploadResults = await Promise.allSettled(
+    images.map(async (file) => {
+      const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+      const path = `${companyId}/${productId}/${Date.now()}_${cleanName}`
+
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file)
+
+      if (uploadError) throw uploadError
+      return path
+    }),
+  )
+
+  uploadResults.forEach((result) => {
+    if (result.status === 'fulfilled') {
+      uploadedImagePaths.push(result.value)
+    }
+  })
+
+  return uploadedImagePaths
+}
+
 export const fetchProductFolders = async (companyId: string): Promise<Folder[]> => {
   const { data, error } = await db
     .from('folders')
@@ -71,40 +98,59 @@ export const createProduct = async (
   if (insertError) throw insertError
   if (!insertedProduct?.id) throw new Error('Product creation failed')
 
-  const uploadedImagePaths: string[] = []
+  const uploadedImagePaths = await uploadProductImages(companyId, insertedProduct.id, images)
 
-  if (images.length > 0) {
-    const uploadResults = await Promise.allSettled(
-      images.map(async (file) => {
-        const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-        const path = `${companyId}/${insertedProduct.id}/${Date.now()}_${cleanName}`
+  if (uploadedImagePaths.length > 0) {
+    const { error: updateError } = await db
+      .from('products')
+      .update({ image_urls: uploadedImagePaths })
+      .eq('id', insertedProduct.id)
 
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(path, file)
-
-        if (uploadError) throw uploadError
-        return path
-      }),
-    )
-
-    uploadResults.forEach((result) => {
-      if (result.status === 'fulfilled') {
-        uploadedImagePaths.push(result.value)
-      }
-    })
-
-    if (uploadedImagePaths.length > 0) {
-      const { error: updateError } = await db
-        .from('products')
-        .update({ image_urls: uploadedImagePaths })
-        .eq('id', insertedProduct.id)
-
-      if (updateError) throw updateError
-    }
+    if (updateError) throw updateError
   }
 
   return { id: insertedProduct.id }
+}
+
+export const updateProduct = async (
+  companyId: string,
+  productId: string,
+  payload: UpdateProductPayload,
+  images: File[],
+  retainedImageUrls: string[],
+): Promise<{ id: string }> => {
+  const { error: updateError } = await db
+    .from('products')
+    .update({
+      name: payload.name,
+      sku: payload.sku,
+      description: payload.description || null,
+      category: payload.category || null,
+      quantity_on_hand: toNumber(payload.quantity),
+      reorder_point: toNumber(payload.reorderPoint),
+      cost_price: toNumber(payload.costPrice),
+      selling_price: toNumber(payload.sellingPrice),
+      folder_id: payload.folderId === '' ? null : payload.folderId,
+      expiry_date: payload.expiryDate || null,
+      custom_fields: payload.customFields,
+    })
+    .eq('company_id', companyId)
+    .eq('id', productId)
+
+  if (updateError) throw updateError
+
+  const uploadedImagePaths = await uploadProductImages(companyId, productId, images)
+  const mergedImageUrls = [...retainedImageUrls, ...uploadedImagePaths]
+
+  const { error: updateImagesError } = await db
+    .from('products')
+    .update({ image_urls: mergedImageUrls })
+    .eq('company_id', companyId)
+    .eq('id', productId)
+
+  if (updateImagesError) throw updateImagesError
+
+  return { id: productId }
 }
 
 export const fetchProductDetail = async (
