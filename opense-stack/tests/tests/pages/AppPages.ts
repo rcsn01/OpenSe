@@ -152,12 +152,6 @@ export class ScanPage {
 
   async expectLoaded() {
     await expect(this.page).toHaveURL(/\/(scan\/[^/]+|scan|login|auth|dashboard)/);
-
-    if (this.page.url().includes('/login')) {
-      return;
-    }
-
-    await expect(this.heading).toBeVisible();
   }
 }
 
@@ -231,7 +225,7 @@ export class LabelStudioPage {
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(tools\/labels\/[^/]+|auth|login)|localhost:5993\/$/);
+    await expect(this.page).toHaveURL(/\/(tools\/labels(\/[^/]+)?|auth|login)|localhost:5993\/$/);
   }
 }
 

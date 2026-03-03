@@ -46,7 +46,6 @@ export const fetchAlertProducts = async (companyId: string): Promise<Product[]> 
   return ((data as Product[] | null) ?? []).map((product) => ({
     ...product,
     description: null,
-    category: null,
     cost_price: null,
     selling_price: null,
     folder_id: null,

@@ -14,3 +14,6 @@
 --   50_stoqr_catalog_inventory.sql
 --   60_admin_audit.sql
 --   90_synthetic_volume.sql
+--
+-- Note: StoQR product categories are no longer a dedicated table.
+-- Optional categorization should be stored in products.custom_fields JSONB.

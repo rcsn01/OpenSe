@@ -24,12 +24,6 @@ export type InventoryListResponse = {
   totalCount: number
 }
 
-export type InventoryCategory = {
-  id: string
-  name: string
-  description: string | null
-}
-
 export type InventoryLocation = {
   id: string
   name: string
@@ -90,7 +84,7 @@ export const fetchInventoryProducts = async ({
 }: FetchInventoryProductsParams): Promise<InventoryListResponse> => {
   let query = db
     .from('products')
-    .select('id, name, sku, quantity_on_hand, reorder_point, folder_id, cost_price, selling_price, category', { count: 'exact' })
+    .select('id, name, sku, quantity_on_hand, reorder_point, folder_id, cost_price, selling_price', { count: 'exact' })
     .eq('company_id', companyId)
 
   if (search.trim()) {
@@ -152,7 +146,7 @@ export const fetchFolderProducts = async (
 ): Promise<InventoryProduct[]> => {
   let query = db
     .from('products')
-    .select('id, name, sku, quantity_on_hand, reorder_point, folder_id, cost_price, selling_price, category')
+    .select('id, name, sku, quantity_on_hand, reorder_point, folder_id, cost_price, selling_price')
     .eq('company_id', companyId)
 
   if (folderId) {
@@ -216,16 +210,13 @@ const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
 }
 
 export const fetchInventoryReferenceData = async (companyId: string): Promise<{
-  categories: InventoryCategory[]
   locations: InventoryLocation[]
   barcodes: ProductBarcode[]
 }> => {
   const [
-    { data: categoryData, error: categoryError },
     { data: locationData, error: locationError },
     { data: barcodeData, error: barcodeError },
   ] = await Promise.all([
-    db.from('product_categories').select('id, name, description').eq('company_id', companyId).order('name'),
     db.from('inventory_locations').select('id, name, code, description').eq('company_id', companyId).order('name'),
     db
       .from('product_barcodes')
@@ -234,31 +225,16 @@ export const fetchInventoryReferenceData = async (companyId: string): Promise<{
       .order('barcode', { ascending: true }),
   ])
 
-  if (categoryError) throw categoryError
   if (locationError) throw locationError
   if (barcodeError) throw barcodeError
 
   return {
-    categories: (categoryData as InventoryCategory[] | null) ?? [],
     locations: (locationData as InventoryLocation[] | null) ?? [],
     barcodes: ((barcodeData as BarcodeRow[] | null) ?? []).map((row) => ({
       ...row,
       products: normalizeSingle(row.products),
     })),
   }
-}
-
-export const createInventoryCategory = async (
-  companyId: string,
-  payload: { name: string; description: string },
-) => {
-  const { error } = await db.from('product_categories').insert({
-    company_id: companyId,
-    name: payload.name,
-    description: payload.description || null,
-  })
-
-  if (error) throw error
 }
 
 export const createInventoryLocation = async (

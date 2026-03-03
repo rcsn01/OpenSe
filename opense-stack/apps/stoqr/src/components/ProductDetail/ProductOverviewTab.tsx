@@ -34,7 +34,6 @@ export const ProductOverviewTab = ({
             <span className="pill">Reorder at: {product.reorder_point}</span>
             <span className="pill">Cost: {formatCurrency(product.cost_price)}</span>
             <span className="pill">Selling: {formatCurrency(product.selling_price)}</span>
-            {product.category && <span className="pill">Category: {product.category}</span>}
             {product.expiry_date && <span className="pill">Expiry: {product.expiry_date}</span>}
           </div>
           <div>

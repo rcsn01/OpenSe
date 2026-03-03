@@ -57,7 +57,6 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
   const [name, setName] = useState('')
   const [sku, setSku] = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState('')
   const [quantity, setQuantity] = useState<string>('0')
   const [reorderPoint, setReorderPoint] = useState<string>('10')
   const [expiryDate, setExpiryDate] = useState('')
@@ -102,7 +101,6 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
     setName(product.name ?? '')
     setSku(product.sku ?? '')
     setDescription(product.description ?? '')
-    setCategory(product.category ?? '')
     setQuantity(String(product.quantity_on_hand ?? 0))
     setReorderPoint(String(product.reorder_point ?? 0))
     setCostPrice(product.cost_price !== null && product.cost_price !== undefined ? String(product.cost_price) : '')
@@ -198,7 +196,6 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
         name,
         sku,
         description,
-        category,
         quantity,
         reorderPoint,
         costPrice,
@@ -322,21 +319,6 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
                       <Wand2 size={18} />
                     </button>
                   </div>
-                </label>
-                <label className="stack">
-                  <span className="small font-semibold">Category</span>
-                  <input
-                    className="input"
-                    value={category}
-                    onChange={(event) => setCategory(event.target.value)}
-                    placeholder="e.g. Electronics"
-                    list="categories"
-                  />
-                  <datalist id="categories">
-                    <option value="Electronics" />
-                    <option value="Office Supplies" />
-                    <option value="Furniture" />
-                  </datalist>
                 </label>
               </div>
               <label className="stack">
