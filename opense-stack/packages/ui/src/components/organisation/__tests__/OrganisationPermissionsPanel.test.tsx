@@ -8,7 +8,15 @@ const roles = [
     id: 'role-1',
     name: 'Admin',
     description: 'Can manage everything',
+    roleRank: 100,
     permissionCodes: ['users.view', 'users.manage'],
+  },
+  {
+    id: 'role-2',
+    name: 'Viewer',
+    description: 'Read-only role',
+    roleRank: 50,
+    permissionCodes: ['users.view'],
   },
 ]
 
@@ -41,6 +49,7 @@ describe('OrganisationPermissionsPanel', () => {
     expect(onCreateRole).toHaveBeenCalledWith({
       name: 'Reviewer',
       description: 'Review only role',
+      roleRank: 100,
       permissionCodes: [],
     })
   })
@@ -59,7 +68,7 @@ describe('OrganisationPermissionsPanel', () => {
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: /^edit$/i }))
+    await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0])
     expect(screen.getByRole('heading', { name: /edit role permissions/i })).toBeInTheDocument()
 
     const checkboxes = screen.getAllByRole('checkbox')
@@ -71,6 +80,33 @@ describe('OrganisationPermissionsPanel', () => {
     const [roleId, payload] = onUpdateRole.mock.calls[0]
     expect(roleId).toBe('role-1')
     expect(payload.name).toBe('Admin')
+    expect(payload.roleRank).toBe(100)
+  })
+
+  it('shows role rank in list and blocks duplicate rank creation', async () => {
+    const user = userEvent.setup()
+    const onCreateRole = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <OrganisationPermissionsPanel
+        roles={roles}
+        permissions={permissions}
+        canManage={true}
+        onCreateRole={onCreateRole}
+        onUpdateRole={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('100')).toBeInTheDocument()
+    expect(screen.getByText('50')).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText('New role name'), 'Duplicate Rank Role')
+    await user.clear(screen.getByPlaceholderText('Role rank'))
+    await user.type(screen.getByPlaceholderText('Role rank'), '50')
+    await user.click(screen.getByRole('button', { name: /add role/i }))
+
+    expect(onCreateRole).not.toHaveBeenCalled()
+    expect(screen.getByText(/role rank must be unique within your organisation/i)).toBeInTheDocument()
   })
 
   it('renders permission type columns in preferred order', async () => {
@@ -86,7 +122,7 @@ describe('OrganisationPermissionsPanel', () => {
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: /^edit$/i }))
+    await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0])
 
     const headers = screen.getAllByRole('columnheader').map((header) => header.textContent?.trim())
     expect(headers).toContain('View')
