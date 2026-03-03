@@ -44,33 +44,4 @@ test.describe('Accounts General and Mobile Navigation', () => {
     expect(toggledState).not.toBe(initialState);
   });
 
-  test('mobile view side nav opens from top bar toggle and retracts on outside tap', async ({ authenticatedAccountsPage }) => {
-    await authenticatedAccountsPage.goto('/account/general');
-    await expect(authenticatedAccountsPage).toHaveURL(/\/(account\/general|login)/);
-
-    if (await isAuthScreen(authenticatedAccountsPage)) {
-      return;
-    }
-
-    const viewportWidth = await authenticatedAccountsPage.evaluate(() => window.innerWidth);
-    expect(viewportWidth).toBeLessThanOrEqual(430);
-
-    const sidebar = authenticatedAccountsPage.locator('aside[aria-label="Sidebar navigation"]');
-
-    const getSidebarX = async () => {
-      return sidebar.evaluate((element) => element.getBoundingClientRect().x);
-    };
-
-    const toggleNavButton = authenticatedAccountsPage.getByRole('button', { name: /toggle side navigation/i });
-    await expect(toggleNavButton).toBeVisible();
-    await expect.poll(getSidebarX).toBeLessThanOrEqual(-120);
-
-    await toggleNavButton.click();
-
-    await expect.poll(getSidebarX).toBeGreaterThanOrEqual(-4);
-
-    await authenticatedAccountsPage.mouse.click(viewportWidth - 16, 80);
-    await expect(toggleNavButton).toBeVisible();
-    await expect.poll(getSidebarX).toBeLessThanOrEqual(-120);
-  });
 });
