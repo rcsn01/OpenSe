@@ -7,7 +7,7 @@ const formatCustomFieldValue = (value: string | number | boolean): string => {
   return String(value)
 }
 
-const formatCustomFieldTypeLabel = (value: string | null) => value ?? 'Select field type'
+const formatCustomFieldTypeLabel = (value: string | null) => value ?? 'Attribute'
 
 const stockFilterLabels: Record<'all' | 'low' | 'out', string> = {
   all: 'All Statuses',
@@ -18,8 +18,6 @@ const stockFilterLabels: Record<'all' | 'low' | 'out', string> = {
 export const InventoryFiltersBar = ({
   isSelectionMode,
   selectedRowIds,
-  search,
-  setSearch,
   stockFilter,
   setStockFilter,
   selectedCustomFieldKey,
@@ -59,13 +57,6 @@ export const InventoryFiltersBar = ({
       ) : (
         <>
           <div className="row wrap" style={{ flex: 1 }}>
-            <input
-              className="input"
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ width: 220 }}
-            />
             <Dropdown
               className="min-w-[160px]"
               trigger={
@@ -115,7 +106,7 @@ export const InventoryFiltersBar = ({
                       setSelectedCustomFieldValue(null)
                     }}
                   >
-                    Select field type
+                    Attribute
                   </DropdownItem>
                   {customFieldFilters.map((field) => (
                     <DropdownItem
