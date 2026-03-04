@@ -35,7 +35,6 @@ export const InventoryListPage = () => {
 
   const [selectedCustomFieldKey, setSelectedCustomFieldKey] = useState<string | null>(null)
   const [selectedCustomFieldValue, setSelectedCustomFieldValue] = useState<CustomFieldPrimitive | null>(null)
-  const [search, setSearch] = useState('')
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
 
   const [page, setPage] = useState(1)
@@ -47,7 +46,7 @@ export const InventoryListPage = () => {
 
   const productsQuery = useInventoryProducts({
     companyId,
-    search,
+    search: '',
     stockFilter,
     customFieldKey: selectedCustomFieldKey,
     customFieldValue: selectedCustomFieldValue,
@@ -169,8 +168,6 @@ export const InventoryListPage = () => {
               <AllProductsTab
                 companyId={companyId}
                 stats={stats}
-                search={search}
-                setSearch={setSearch}
                 stockFilter={stockFilter}
                 setStockFilter={setStockFilter}
                 selectedCustomFieldKey={selectedCustomFieldKey}

@@ -6,8 +6,6 @@ import type { AllProductsTabProps } from './all-products/types'
 export const AllProductsTab = ({
   companyId,
   stats,
-  search,
-  setSearch,
   stockFilter,
   setStockFilter,
   selectedCustomFieldKey,
@@ -60,8 +58,6 @@ export const AllProductsTab = ({
         <InventoryFiltersBar
           isSelectionMode={isSelectionMode}
           selectedRowIds={selectedRowIds}
-          search={search}
-          setSearch={setSearch}
           stockFilter={stockFilter}
           setStockFilter={setStockFilter}
           selectedCustomFieldKey={selectedCustomFieldKey}
