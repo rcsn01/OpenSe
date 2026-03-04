@@ -24,8 +24,6 @@ export type ProductListViewProps = {
 export type InventoryFiltersBarProps = {
   isSelectionMode: boolean
   selectedRowIds: Set<string>
-  search: string
-  setSearch: (value: string) => void
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
   selectedCustomFieldKey: string | null
@@ -41,8 +39,6 @@ export type InventoryFiltersBarProps = {
 export type AllProductsTabProps = {
   companyId: string | null
   stats: { totalItems: number; lowStockItems: number; totalValue: number }
-  search: string
-  setSearch: (value: string) => void
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
   selectedCustomFieldKey: string | null
