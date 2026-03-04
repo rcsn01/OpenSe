@@ -6,8 +6,6 @@ import { InventoryFiltersBar } from '../InventoryFiltersBar'
 const createProps = () => ({
   isSelectionMode: false,
   selectedRowIds: new Set<string>(),
-  search: '',
-  setSearch: vi.fn(),
   stockFilter: 'all' as const,
   setStockFilter: vi.fn(),
   selectedCustomFieldKey: null,
