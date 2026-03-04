@@ -62,6 +62,7 @@ export const useInventoryProducts = (
     queryKey: inventoryKeys.products(params as FetchInventoryProductsParams & { companyId: string | null }),
     queryFn: () => fetchInventoryProducts({ ...(params as FetchInventoryProductsParams), companyId: params.companyId as string }),
     enabled: !!params.companyId,
+    placeholderData: (previousData) => previousData,
   })
 
 export const useDeleteInventoryProducts = (companyId: string | null) => {

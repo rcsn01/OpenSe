@@ -1,5 +1,5 @@
 import { db, supabase } from '../supabaseClient'
-import type { Folder, Tag } from '../types'
+import type { CustomFieldFilterOption, CustomFieldPrimitive, CustomFieldValueType, Folder, Tag } from '../types'
 import { toNumber } from '../utils'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
 
@@ -13,6 +13,8 @@ export type FetchInventoryProductsParams = {
   companyId: string
   search: string
   stockFilter: 'all' | 'low' | 'out'
+  customFieldKey?: string | null
+  customFieldValue?: CustomFieldPrimitive | null
   page: number
   pageSize: number
   sortField: SortField
@@ -40,18 +42,72 @@ export type ProductBarcode = {
   products: { id: string; name: string; sku: string } | null
 }
 
-export const fetchInventoryFilters = async (companyId: string): Promise<{ folders: Folder[]; tags: Tag[] }> => {
-  const [{ data: folderData, error: folderError }, { data: tagData, error: tagError }] = await Promise.all([
+const inferCustomFieldType = (value: CustomFieldPrimitive): CustomFieldValueType => {
+  if (typeof value === 'boolean') return 'boolean'
+  if (typeof value === 'number') return 'number'
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return 'date'
+  return 'text'
+}
+
+const isCustomFieldPrimitive = (value: unknown): value is CustomFieldPrimitive => (
+  typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+)
+
+const normalizeCustomFieldString = (value: string): string | null => {
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+export const fetchInventoryFilters = async (companyId: string): Promise<{ folders: Folder[]; tags: Tag[]; customFieldFilters: CustomFieldFilterOption[] }> => {
+  const [{ data: folderData, error: folderError }, { data: tagData, error: tagError }, { data: customFieldRows, error: customFieldError }] = await Promise.all([
     db.from('folders').select('id, name, parent_id').eq('company_id', companyId),
     db.from('tags').select('id, name, color').eq('company_id', companyId),
+    db.from('products').select('custom_fields').eq('company_id', companyId),
   ])
 
   if (folderError) throw folderError
   if (tagError) throw tagError
+  if (customFieldError) throw customFieldError
+
+  const customFieldMap = new Map<string, { valueType: CustomFieldValueType; values: Map<string, CustomFieldPrimitive> }>()
+
+  ;((customFieldRows as Array<{ custom_fields: Record<string, unknown> | null }> | null) ?? []).forEach((row) => {
+    const customFields = row.custom_fields ?? {}
+
+    Object.entries(customFields).forEach(([key, rawValue]) => {
+      if (!isCustomFieldPrimitive(rawValue)) return
+
+      const value = typeof rawValue === 'string' ? normalizeCustomFieldString(rawValue) : rawValue
+      if (value === null) return
+
+      const existing = customFieldMap.get(key)
+      const nextType = inferCustomFieldType(value)
+
+      if (!existing) {
+        customFieldMap.set(key, {
+          valueType: nextType,
+          values: new Map([[JSON.stringify(value), value]]),
+        })
+        return
+      }
+
+      existing.valueType = existing.valueType === nextType ? existing.valueType : 'text'
+      existing.values.set(JSON.stringify(value), value)
+    })
+  })
+
+  const customFieldFilters = Array.from(customFieldMap.entries())
+    .map(([key, config]) => ({
+      key,
+      valueType: config.valueType,
+      values: Array.from(config.values.values()).sort((left, right) => String(left).localeCompare(String(right))),
+    }))
+    .sort((left, right) => left.key.localeCompare(right.key))
 
   return {
     folders: (folderData as Folder[] | null) ?? [],
     tags: (tagData as Tag[] | null) ?? [],
+    customFieldFilters,
   }
 }
 
@@ -77,6 +133,8 @@ export const fetchInventoryProducts = async ({
   companyId,
   search,
   stockFilter,
+  customFieldKey,
+  customFieldValue,
   page,
   pageSize,
   sortField,
@@ -93,6 +151,10 @@ export const fetchInventoryProducts = async ({
 
   if (stockFilter === 'out') {
     query = query.eq('quantity_on_hand', 0)
+  }
+
+  if (customFieldKey && customFieldValue !== null && customFieldValue !== undefined) {
+    query = query.contains('custom_fields', { [customFieldKey]: customFieldValue })
   }
 
   query = query.order(sortField, { ascending: sortDir === 'asc' })

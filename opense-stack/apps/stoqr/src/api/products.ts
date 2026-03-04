@@ -2,6 +2,10 @@ import { db, supabase } from '../supabaseClient'
 import { toNumber } from '../utils'
 import type { Folder, InventoryTransaction, Product } from '../types'
 
+type CustomFieldPrimitive = string | number | boolean
+
+type CustomFieldType = 'text' | 'number' | 'boolean' | 'date'
+
 type ProductTransactionRow = {
   id: string
   transaction_type: string
@@ -32,6 +36,32 @@ export type CreateProductPayload = {
 }
 
 export type UpdateProductPayload = CreateProductPayload
+
+export type ProductAttributeCatalogEntry = {
+  key: string
+  type: CustomFieldType
+  values: CustomFieldPrimitive[]
+}
+
+const inferCustomFieldType = (value: CustomFieldPrimitive): CustomFieldType => {
+  if (typeof value === 'boolean') return 'boolean'
+  if (typeof value === 'number') return 'number'
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return 'date'
+  return 'text'
+}
+
+const isCustomFieldPrimitive = (value: unknown): value is CustomFieldPrimitive => (
+  typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+)
+
+const normalizeCustomFieldValue = (value: CustomFieldPrimitive): CustomFieldPrimitive | null => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed.length ? trimmed : null
+  }
+
+  return value
+}
 
 const uploadProductImages = async (companyId: string, productId: string, images: File[]) => {
   const uploadedImagePaths: string[] = []
@@ -68,6 +98,50 @@ export const fetchProductFolders = async (companyId: string): Promise<Folder[]> 
   if (error) throw error
 
   return (data as Folder[] | null) ?? []
+}
+
+export const fetchProductAttributeCatalog = async (companyId: string): Promise<ProductAttributeCatalogEntry[]> => {
+  const { data, error } = await db
+    .from('products')
+    .select('custom_fields')
+    .eq('company_id', companyId)
+
+  if (error) throw error
+
+  const catalog = new Map<string, { type: CustomFieldType; values: Map<string, CustomFieldPrimitive> }>()
+
+  ;((data as Array<{ custom_fields: Record<string, unknown> | null }> | null) ?? []).forEach((row) => {
+    const customFields = row.custom_fields ?? {}
+
+    Object.entries(customFields).forEach(([key, rawValue]) => {
+      if (!isCustomFieldPrimitive(rawValue)) return
+
+      const normalizedValue = normalizeCustomFieldValue(rawValue)
+      if (normalizedValue === null) return
+
+      const nextType = inferCustomFieldType(normalizedValue)
+      const existing = catalog.get(key)
+
+      if (!existing) {
+        catalog.set(key, {
+          type: nextType,
+          values: new Map([[JSON.stringify(normalizedValue), normalizedValue]]),
+        })
+        return
+      }
+
+      existing.type = existing.type === nextType ? existing.type : 'text'
+      existing.values.set(JSON.stringify(normalizedValue), normalizedValue)
+    })
+  })
+
+  return Array.from(catalog.entries())
+    .map(([key, config]) => ({
+      key,
+      type: config.type,
+      values: Array.from(config.values.values()).sort((left, right) => String(left).localeCompare(String(right))),
+    }))
+    .sort((left, right) => left.key.localeCompare(right.key))
 }
 
 export const createProduct = async (

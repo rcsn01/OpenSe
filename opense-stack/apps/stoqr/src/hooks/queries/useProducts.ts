@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createProduct,
+  fetchProductAttributeCatalog,
   fetchProductDetail,
   fetchProductFolders,
   type CreateProductPayload,
@@ -11,6 +12,7 @@ import {
 const productKeys = {
   root: ['stoqr', 'products'] as const,
   folders: (companyId: string | null) => ['stoqr', 'products', 'folders', companyId] as const,
+  attributeCatalog: (companyId: string | null) => ['stoqr', 'products', 'attribute-catalog', companyId] as const,
   detail: (companyId: string | null, productId: string | null) =>
     ['stoqr', 'products', 'detail', companyId, productId] as const,
 }
@@ -19,6 +21,13 @@ export const useProductFolders = (companyId: string | null) =>
   useQuery({
     queryKey: productKeys.folders(companyId),
     queryFn: () => fetchProductFolders(companyId as string),
+    enabled: !!companyId,
+  })
+
+export const useProductAttributeCatalog = (companyId: string | null) =>
+  useQuery({
+    queryKey: productKeys.attributeCatalog(companyId),
+    queryFn: () => fetchProductAttributeCatalog(companyId as string),
     enabled: !!companyId,
   })
 
