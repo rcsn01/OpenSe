@@ -10,9 +10,11 @@ export const AllProductsTab = ({
   setSearch,
   stockFilter,
   setStockFilter,
-  selectedTag,
-  setSelectedTag,
-  tags,
+  selectedCustomFieldKey,
+  setSelectedCustomFieldKey,
+  selectedCustomFieldValue,
+  setSelectedCustomFieldValue,
+  customFieldFilters,
   onImportOpen,
   onCreateOpen,
   products,
@@ -62,9 +64,11 @@ export const AllProductsTab = ({
           setSearch={setSearch}
           stockFilter={stockFilter}
           setStockFilter={setStockFilter}
-          selectedTag={selectedTag}
-          setSelectedTag={setSelectedTag}
-          tags={tags}
+          selectedCustomFieldKey={selectedCustomFieldKey}
+          setSelectedCustomFieldKey={setSelectedCustomFieldKey}
+          selectedCustomFieldValue={selectedCustomFieldValue}
+          setSelectedCustomFieldValue={setSelectedCustomFieldValue}
+          customFieldFilters={customFieldFilters}
           onImportOpen={onImportOpen}
           onCreateOpen={onCreateOpen}
           handleBulkDelete={handleBulkDelete}

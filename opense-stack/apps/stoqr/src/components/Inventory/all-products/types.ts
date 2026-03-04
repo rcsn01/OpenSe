@@ -1,4 +1,4 @@
-import type { Folder, Tag } from '../../../types'
+import type { CustomFieldFilterOption, CustomFieldPrimitive, Folder } from '../../../types'
 import type { InventoryProduct, SortDirection, SortField } from '../types'
 
 export type ProductListViewProps = {
@@ -28,9 +28,11 @@ export type InventoryFiltersBarProps = {
   setSearch: (value: string) => void
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
-  selectedTag: string | null
-  setSelectedTag: (value: string | null) => void
-  tags: Tag[]
+  selectedCustomFieldKey: string | null
+  setSelectedCustomFieldKey: (value: string | null) => void
+  selectedCustomFieldValue: CustomFieldPrimitive | null
+  setSelectedCustomFieldValue: (value: CustomFieldPrimitive | null) => void
+  customFieldFilters: CustomFieldFilterOption[]
   onImportOpen: () => void
   onCreateOpen: () => void
   handleBulkDelete: () => void
@@ -43,9 +45,11 @@ export type AllProductsTabProps = {
   setSearch: (value: string) => void
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
-  selectedTag: string | null
-  setSelectedTag: (value: string | null) => void
-  tags: Tag[]
+  selectedCustomFieldKey: string | null
+  setSelectedCustomFieldKey: (value: string | null) => void
+  selectedCustomFieldValue: CustomFieldPrimitive | null
+  setSelectedCustomFieldValue: (value: CustomFieldPrimitive | null) => void
+  customFieldFilters: CustomFieldFilterOption[]
   onImportOpen: () => void
   onCreateOpen: () => void
   products: InventoryProduct[]
