@@ -14,6 +14,7 @@ vi.mock('../../supabaseClient', () => ({
 
 import {
   bulkUpdateInventoryProducts,
+  fetchInventoryFilters,
   fetchInventoryReferenceData,
   fetchInventoryProducts,
   fetchInventoryStats,
@@ -29,6 +30,7 @@ const makeProductsQuery = (response: {
     select: vi.fn(() => query),
     eq: vi.fn(() => query),
     or: vi.fn(() => query),
+    contains: vi.fn(() => query),
     order: vi.fn(() => query),
     range: vi.fn(() => query),
     then: (resolve: (value: typeof response) => unknown) =>
@@ -110,6 +112,83 @@ describe('inventory api', () => {
     expect(result.totalCount).toBe(2)
     expect(result.products).toHaveLength(1)
     expect(result.products[0]?.id).toBe('p-1')
+  })
+
+  it('applies custom field filtering when key and value are selected', async () => {
+    const query = makeProductsQuery({
+      data: [
+        {
+          id: 'p-1',
+          name: 'Batch product',
+          sku: 'BATCH-1',
+          quantity_on_hand: 10,
+          reorder_point: 5,
+          folder_id: null,
+          cost_price: 1,
+          selling_price: 2,
+        },
+      ],
+      count: 1,
+      error: null,
+    })
+
+    mockFrom.mockReturnValue(query)
+
+    const result = await fetchInventoryProducts({
+      companyId: 'company-1',
+      search: '',
+      stockFilter: 'all',
+      customFieldKey: 'batch',
+      customFieldValue: 'acme',
+      page: 1,
+      pageSize: 10,
+      sortField: 'name',
+      sortDir: 'asc',
+    })
+
+    expect(query.contains).toHaveBeenCalledWith('custom_fields', { batch: 'acme' })
+    expect(result.products).toHaveLength(1)
+  })
+
+  it('builds org-scoped custom field options from existing product values', async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'folders') {
+        return {
+          select: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: [], error: null }) })),
+        }
+      }
+
+      if (table === 'tags') {
+        return {
+          select: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: [], error: null }) })),
+        }
+      }
+
+      if (table === 'products') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn().mockResolvedValue({
+              data: [
+                { custom_fields: { batch: 'acme', quality: 'A', active: true } },
+                { custom_fields: { batch: 'acme', quality: 'B', active: false } },
+                { custom_fields: { batch: 'beta', quality: '', ignored: null } },
+              ],
+              error: null,
+            }),
+          })),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const result = await fetchInventoryFilters('company-1')
+
+    expect(result.customFieldFilters).toEqual([
+      { key: 'active', valueType: 'boolean', values: [false, true] },
+      { key: 'batch', valueType: 'text', values: ['acme', 'beta'] },
+      { key: 'quality', valueType: 'text', values: ['A', 'B'] },
+    ])
   })
 
   it('fetches locations and barcodes reference data', async () => {

@@ -1,4 +1,19 @@
+import { useMemo, useState } from 'react'
+import { Dropdown, DropdownItem } from '@repo/ui'
 import type { InventoryFiltersBarProps } from './types'
+
+const formatCustomFieldValue = (value: string | number | boolean): string => {
+  if (typeof value === 'boolean') return value ? 'True' : 'False'
+  return String(value)
+}
+
+const formatCustomFieldTypeLabel = (value: string | null) => value ?? 'Select field type'
+
+const stockFilterLabels: Record<'all' | 'low' | 'out', string> = {
+  all: 'All Statuses',
+  low: 'Low Stock',
+  out: 'Out of Stock',
+}
 
 export const InventoryFiltersBar = ({
   isSelectionMode,
@@ -7,13 +22,24 @@ export const InventoryFiltersBar = ({
   setSearch,
   stockFilter,
   setStockFilter,
-  selectedTag,
-  setSelectedTag,
-  tags,
+  selectedCustomFieldKey,
+  setSelectedCustomFieldKey,
+  selectedCustomFieldValue,
+  setSelectedCustomFieldValue,
+  customFieldFilters,
   onImportOpen,
   onCreateOpen,
   handleBulkDelete,
 }: InventoryFiltersBarProps) => {
+  const [isCustomFilterOpen, setIsCustomFilterOpen] = useState(false)
+
+  const selectedCustomField = useMemo(
+    () => customFieldFilters.find((field) => field.key === selectedCustomFieldKey) ?? null,
+    [customFieldFilters, selectedCustomFieldKey],
+  )
+
+  const showCustomFilterControls = isCustomFilterOpen || !!selectedCustomFieldKey
+
   return (
     <div className="flex-between wrap" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', gap: 16, background: isSelectionMode ? 'rgba(59, 130, 246, 0.08)' : '#fff' }}>
       {isSelectionMode ? (
@@ -40,28 +66,111 @@ export const InventoryFiltersBar = ({
               onChange={(e) => setSearch(e.target.value)}
               style={{ width: 220 }}
             />
-            <select
-              className="select"
-              value={stockFilter}
-              onChange={(e) => setStockFilter(e.target.value as 'all' | 'low' | 'out')}
-              style={{ width: 160 }}
+            <Dropdown
+              className="min-w-[160px]"
+              trigger={
+                <button
+                  type="button"
+                  aria-label="Stock status filter"
+                  className="select text-left"
+                  style={{ width: 160 }}
+                >
+                  {stockFilterLabels[stockFilter]}
+                </button>
+              }
             >
-              <option value="all">All Statuses</option>
-              <option value="low">Low Stock</option>
-              <option value="out">Out of Stock</option>
-            </select>
+              <DropdownItem onClick={() => setStockFilter('all')}>All Statuses</DropdownItem>
+              <DropdownItem onClick={() => setStockFilter('low')}>Low Stock</DropdownItem>
+              <DropdownItem onClick={() => setStockFilter('out')}>Out of Stock</DropdownItem>
+            </Dropdown>
 
-            <select
-              className="select"
-              value={selectedTag ?? ''}
-              onChange={(e) => setSelectedTag(e.target.value || null)}
-              style={{ width: 160 }}
+            <button
+              className="button secondary"
+              type="button"
+              aria-label="Add custom field filter"
+              onClick={() => setIsCustomFilterOpen((current) => !current)}
+              style={{ width: 40, minWidth: 40, paddingInline: 0 }}
             >
-              <option value="">All Tags</option>
-              {tags.map((tag) => (
-                <option key={tag.id} value={tag.id}>{tag.name}</option>
-              ))}
-            </select>
+              +
+            </button>
+
+            {showCustomFilterControls && (
+              <>
+                <Dropdown
+                  className="min-w-[160px]"
+                  trigger={
+                    <button
+                      type="button"
+                      aria-label="Custom field type"
+                      className="select text-left"
+                      style={{ width: 160 }}
+                    >
+                      {formatCustomFieldTypeLabel(selectedCustomFieldKey)}
+                    </button>
+                  }
+                >
+                  <DropdownItem
+                    onClick={() => {
+                      setSelectedCustomFieldKey(null)
+                      setSelectedCustomFieldValue(null)
+                    }}
+                  >
+                    Select field type
+                  </DropdownItem>
+                  {customFieldFilters.map((field) => (
+                    <DropdownItem
+                      key={field.key}
+                      onClick={() => {
+                        setSelectedCustomFieldKey(field.key)
+                        setSelectedCustomFieldValue(null)
+                      }}
+                    >
+                      {field.key}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+
+                <Dropdown
+                  className="min-w-[160px]"
+                  trigger={
+                    <button
+                      type="button"
+                      aria-label="Custom field value"
+                      className="select text-left"
+                      disabled={!selectedCustomField || selectedCustomField.values.length === 0}
+                      style={{ width: 160 }}
+                    >
+                      {selectedCustomFieldValue === null
+                        ? 'Select value'
+                        : formatCustomFieldValue(selectedCustomFieldValue)}
+                    </button>
+                  }
+                >
+                  <DropdownItem onClick={() => setSelectedCustomFieldValue(null)}>Select value</DropdownItem>
+                  {(selectedCustomField?.values ?? []).map((value) => (
+                    <DropdownItem
+                      key={JSON.stringify(value)}
+                      onClick={() => setSelectedCustomFieldValue(value)}
+                    >
+                      {formatCustomFieldValue(value)}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+
+                {(selectedCustomFieldKey || selectedCustomFieldValue !== null) && (
+                  <button
+                    className="button ghost small"
+                    type="button"
+                    onClick={() => {
+                      setSelectedCustomFieldKey(null)
+                      setSelectedCustomFieldValue(null)
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           <div className="row">

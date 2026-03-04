@@ -14,8 +14,10 @@ import {
   Save,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Dropdown, DropdownItem } from '@repo/ui'
 import { useCompany } from '../../contexts/CompanyContext'
-import { useCreateProduct, useProductDetail, useProductFolders, useUpdateProduct } from '../../hooks/queries/useProducts'
+import type { ProductAttributeCatalogEntry } from '../../api/products'
+import { useCreateProduct, useProductAttributeCatalog, useProductDetail, useProductFolders, useUpdateProduct } from '../../hooks/queries/useProducts'
 import { getPublicImageUrl } from '../../utils'
 
 type ProductFormMode = 'create' | 'edit'
@@ -34,11 +36,44 @@ const readCustomFieldDefs = (companyId: string): CustomFieldDefinition[] => {
   }
 }
 
+const saveCustomFieldDefs = (companyId: string, definitions: CustomFieldDefinition[]) => {
+  const storageKey = getSettingsStorageKey(companyId)
+
+  try {
+    const raw = localStorage.getItem(storageKey)
+    const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {}
+
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        ...parsed,
+        custom_fields: definitions,
+      }),
+    )
+  } catch {
+    // no-op
+  }
+}
+
 const inferCustomFieldType = (value: unknown): CustomFieldDefinition['type'] => {
   if (typeof value === 'boolean') return 'boolean'
   if (typeof value === 'number') return 'number'
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return 'date'
   return 'text'
+}
+
+const getDefaultCustomFieldValue = (type: CustomFieldDefinition['type']) => (type === 'boolean' ? false : '')
+
+const parseCustomFieldValue = (type: CustomFieldDefinition['type'], value: string): unknown => {
+  if (type === 'number') {
+    return value === '' ? '' : Number(value)
+  }
+
+  if (type === 'boolean') {
+    return value === 'true'
+  }
+
+  return value
 }
 
 export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; productId?: string }) => {
@@ -47,11 +82,13 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
   const createProductMutation = useCreateProduct(companyId)
   const updateProductMutation = useUpdateProduct(companyId, mode === 'edit' ? productId ?? null : null)
   const { data: folders = [] } = useProductFolders(companyId)
+  const { data: attributeCatalog = [] } = useProductAttributeCatalog(companyId)
   const { data: detailData, isLoading: isLoadingDetail } = useProductDetail(
     companyId,
     mode === 'edit' ? productId ?? null : null,
   )
 
+  const [organisationFieldDefs, setOrganisationFieldDefs] = useState<CustomFieldDefinition[]>([])
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([])
 
   const [name, setName] = useState('')
@@ -70,6 +107,8 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
 
   const [newFieldKey, setNewFieldKey] = useState('')
   const [newFieldType, setNewFieldType] = useState<CustomFieldDefinition['type']>('text')
+  const [selectedExistingFieldKey, setSelectedExistingFieldKey] = useState('')
+  const [isCreatingNewField, setIsCreatingNewField] = useState(false)
 
   const margin = useMemo(() => {
     const cost = parseFloat(costPrice) || 0
@@ -80,18 +119,48 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
 
   const isSubmitting = mode === 'create' ? createProductMutation.isPending : updateProductMutation.isPending
 
+  const existingAttributeOptions = useMemo(
+    () => organisationFieldDefs.filter((definition) => !customFieldDefs.some((field) => field.key === definition.key)),
+    [customFieldDefs, organisationFieldDefs],
+  )
+
+  const existingAttributeValuesByKey = useMemo(
+    () => new Map(attributeCatalog.map((entry) => [entry.key, entry.values])),
+    [attributeCatalog],
+  )
+
   useEffect(() => {
     if (!companyId) return
     const customFieldDefinitions = readCustomFieldDefs(companyId)
-    setCustomFieldDefs(customFieldDefinitions)
+    setOrganisationFieldDefs(customFieldDefinitions)
+
     if (mode === 'create') {
-      const initial: Record<string, unknown> = {}
-      customFieldDefinitions.forEach((definition) => {
-        initial[definition.key] = definition.type === 'boolean' ? false : ''
-      })
-      setCustomFields(initial)
+      setCustomFieldDefs([])
+      setCustomFields({})
     }
   }, [companyId, mode])
+
+  useEffect(() => {
+    if (!attributeCatalog.length) return
+
+    setOrganisationFieldDefs((previous) => {
+      const next = [...previous]
+      let hasChanges = false
+
+      attributeCatalog.forEach((entry) => {
+        if (next.some((field) => field.key === entry.key)) return
+
+        next.push({ key: entry.key, type: entry.type })
+        hasChanges = true
+      })
+
+      if (hasChanges && companyId) {
+        saveCustomFieldDefs(companyId, next)
+      }
+
+      return hasChanges ? next : previous
+    })
+  }, [attributeCatalog, companyId])
 
   useEffect(() => {
     if (mode !== 'edit') return
@@ -117,15 +186,35 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
     const productCustomFields = (product.custom_fields ?? {}) as Record<string, unknown>
     setCustomFields(productCustomFields)
 
-    setCustomFieldDefs((previous) => {
-      const existingKeys = new Set(previous.map((definition) => definition.key))
-      const missingDefinitions = Object.entries(productCustomFields)
-        .filter(([fieldKey]) => !existingKeys.has(fieldKey))
-        .map(([fieldKey, fieldValue]) => ({ key: fieldKey, type: inferCustomFieldType(fieldValue) }))
+    setCustomFieldDefs(
+      Object.entries(productCustomFields).map(([fieldKey, fieldValue]) => {
+        const existingDefinition = organisationFieldDefs.find((definition) => definition.key === fieldKey)
 
-      return [...previous, ...missingDefinitions]
+        return {
+          key: fieldKey,
+          type: existingDefinition?.type ?? inferCustomFieldType(fieldValue),
+        }
+      }),
+    )
+
+    setOrganisationFieldDefs((previous) => {
+      const next = [...previous]
+      let hasChanges = false
+
+      Object.entries(productCustomFields).forEach(([fieldKey, fieldValue]) => {
+        if (next.some((definition) => definition.key === fieldKey)) return
+
+        next.push({ key: fieldKey, type: inferCustomFieldType(fieldValue) })
+        hasChanges = true
+      })
+
+      if (hasChanges && companyId) {
+        saveCustomFieldDefs(companyId, next)
+      }
+
+      return hasChanges ? next : previous
     })
-  }, [detailData, mode])
+  }, [companyId, detailData, mode, organisationFieldDefs])
 
   useEffect(() => {
     return () => {
@@ -173,18 +262,67 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
       toast.error('Please enter a field name')
       return
     }
-    if (customFieldDefs.some((definition) => definition.key === newFieldKey.trim())) {
+    const normalizedKey = newFieldKey.trim()
+    if (organisationFieldDefs.some((definition) => definition.key === normalizedKey)) {
       toast.error('Field already exists')
       return
     }
 
-    const newDefinition: CustomFieldDefinition = { key: newFieldKey.trim(), type: newFieldType }
-    setCustomFieldDefs([...customFieldDefs, newDefinition])
+    const newDefinition: CustomFieldDefinition = { key: normalizedKey, type: newFieldType }
+
+    setOrganisationFieldDefs((previous) => {
+      const next = [...previous, newDefinition]
+
+      if (companyId) {
+        saveCustomFieldDefs(companyId, next)
+      }
+
+      return next
+    })
+
+    setCustomFieldDefs((previous) => [...previous, newDefinition])
     setCustomFields((previous) => ({
       ...previous,
-      [newDefinition.key]: newDefinition.type === 'boolean' ? false : '',
+      [newDefinition.key]: getDefaultCustomFieldValue(newDefinition.type),
     }))
     setNewFieldKey('')
+    setNewFieldType('text')
+    setIsCreatingNewField(false)
+  }
+
+  const handleAddExistingField = (fieldKey: string) => {
+    const definition = organisationFieldDefs.find((field) => field.key === fieldKey)
+    if (!definition) return
+
+    if (customFieldDefs.some((field) => field.key === fieldKey)) {
+      toast.error('Field already exists')
+      return
+    }
+
+    setCustomFieldDefs((previous) => [...previous, definition])
+    setCustomFields((previous) => ({
+      ...previous,
+      [fieldKey]: getDefaultCustomFieldValue(definition.type),
+    }))
+  }
+
+  const renderAttributeValueLabel = (value: string | number | boolean) => {
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+    return String(value)
+  }
+
+  const setAttributeValueFromSelect = (
+    definition: CustomFieldDefinition,
+    selectedValue: string,
+    availableValues: ProductAttributeCatalogEntry['values'],
+  ) => {
+    const value = availableValues.find((entry) => JSON.stringify(entry) === selectedValue)
+    if (value === undefined) return
+
+    setCustomFields((previous) => ({
+      ...previous,
+      [definition.key]: value,
+    }))
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -474,6 +612,46 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
                           <option value="false">No</option>
                           <option value="true">Yes</option>
                         </select>
+                      ) : (existingAttributeValuesByKey.get(definition.key)?.length ?? 0) > 0 ? (
+                        <Dropdown
+                          className="min-w-[180px]"
+                          trigger={
+                            <button
+                              type="button"
+                              className="select small text-left"
+                              aria-label={`Select existing value for ${definition.key}`}
+                            >
+                              {customFields[definition.key] === undefined || customFields[definition.key] === ''
+                                ? 'Select existing value'
+                                : renderAttributeValueLabel(customFields[definition.key] as string | number | boolean)}
+                            </button>
+                          }
+                        >
+                          <DropdownItem
+                            onClick={() => {
+                              setCustomFields((previous) => ({
+                                ...previous,
+                                [definition.key]: getDefaultCustomFieldValue(definition.type),
+                              }))
+                            }}
+                          >
+                            Select existing value
+                          </DropdownItem>
+                          {(existingAttributeValuesByKey.get(definition.key) ?? []).map((value) => (
+                            <DropdownItem
+                              key={JSON.stringify(value)}
+                              onClick={() => {
+                                setAttributeValueFromSelect(
+                                  definition,
+                                  JSON.stringify(value),
+                                  existingAttributeValuesByKey.get(definition.key) ?? [],
+                                )
+                              }}
+                            >
+                              {renderAttributeValueLabel(value)}
+                            </DropdownItem>
+                          ))}
+                        </Dropdown>
                       ) : (
                         <input
                           type={definition.type === 'number' ? 'number' : definition.type === 'date' ? 'date' : 'text'}
@@ -482,12 +660,7 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
                           onChange={(event) =>
                             setCustomFields({
                               ...customFields,
-                              [definition.key]:
-                                definition.type === 'number'
-                                  ? event.target.value === ''
-                                    ? ''
-                                    : Number(event.target.value)
-                                  : event.target.value,
+                              [definition.key]: parseCustomFieldValue(definition.type, event.target.value),
                             })
                           }
                         />
@@ -497,27 +670,57 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
                 </div>
               )}
 
-              <div className="row bg-slate-50 p-2 rounded-lg border border-slate-200 mt-2">
-                <input
-                  className="input small"
-                  placeholder="New Attribute Name"
-                  value={newFieldKey}
-                  onChange={(event) => setNewFieldKey(event.target.value)}
-                />
+              <div className="stack bg-slate-50 p-2 rounded-lg border border-slate-200 mt-2">
                 <select
+                  aria-label="Add attribute from existing list"
                   className="select small"
-                  value={newFieldType}
-                  onChange={(event) => setNewFieldType(event.target.value as CustomFieldDefinition['type'])}
-                  style={{ width: 100 }}
+                  value={selectedExistingFieldKey}
+                  onChange={(event) => {
+                    const nextValue = event.target.value
+                    setSelectedExistingFieldKey('')
+
+                    if (!nextValue) return
+
+                    if (nextValue === '__new__') {
+                      setIsCreatingNewField(true)
+                      return
+                    }
+
+                    handleAddExistingField(nextValue)
+                    setIsCreatingNewField(false)
+                  }}
                 >
-                  <option value="text">Text</option>
-                  <option value="number">Number</option>
-                  <option value="boolean">Yes/No</option>
-                  <option value="date">Date</option>
+                  <option value="">Select existing attribute</option>
+                  {existingAttributeOptions.map((definition) => (
+                    <option key={definition.key} value={definition.key}>{definition.key}</option>
+                  ))}
+                  <option value="__new__">Create new attribute...</option>
                 </select>
-                <button type="button" className="button secondary small" onClick={handleAddField}>
-                  <Plus size={16} /> Add
-                </button>
+
+                {isCreatingNewField && (
+                  <div className="row">
+                    <input
+                      className="input small"
+                      placeholder="New Attribute Name"
+                      value={newFieldKey}
+                      onChange={(event) => setNewFieldKey(event.target.value)}
+                    />
+                    <select
+                      className="select small"
+                      value={newFieldType}
+                      onChange={(event) => setNewFieldType(event.target.value as CustomFieldDefinition['type'])}
+                      style={{ width: 100 }}
+                    >
+                      <option value="text">Text</option>
+                      <option value="number">Number</option>
+                      <option value="boolean">Yes/No</option>
+                      <option value="date">Date</option>
+                    </select>
+                    <button type="button" className="button secondary small" onClick={handleAddField}>
+                      <Plus size={16} /> Add
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
