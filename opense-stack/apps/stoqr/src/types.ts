@@ -30,6 +30,16 @@ export type Tag = {
   color: string
 }
 
+export type CustomFieldPrimitive = string | number | boolean
+
+export type CustomFieldValueType = 'text' | 'number' | 'boolean' | 'date'
+
+export type CustomFieldFilterOption = {
+  key: string
+  valueType: CustomFieldValueType
+  values: CustomFieldPrimitive[]
+}
+
 export type InventoryTransaction = {
   id: string
   transaction_type: string

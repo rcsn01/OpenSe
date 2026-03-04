@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
-import type { Folder, Tag } from '../types'
+import type { CustomFieldPrimitive, Folder } from '../types'
 import { Tabs } from '../components/Tabs'
 import { parseCsv } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
@@ -33,7 +33,8 @@ export const InventoryListPage = () => {
   const [importRows, setImportRows] = useState<Record<string, string>[]>([])
   const [importMessage, setImportMessage] = useState<string | null>(null)
 
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [selectedCustomFieldKey, setSelectedCustomFieldKey] = useState<string | null>(null)
+  const [selectedCustomFieldValue, setSelectedCustomFieldValue] = useState<CustomFieldPrimitive | null>(null)
   const [search, setSearch] = useState('')
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
 
@@ -48,6 +49,8 @@ export const InventoryListPage = () => {
     companyId,
     search,
     stockFilter,
+    customFieldKey: selectedCustomFieldKey,
+    customFieldValue: selectedCustomFieldValue,
     page,
     pageSize,
     sortField,
@@ -63,7 +66,7 @@ export const InventoryListPage = () => {
   const products = productsQuery.data?.products ?? ([] as InventoryProduct[])
   const totalCount = productsQuery.data?.totalCount ?? 0
   const folders = filtersQuery.data?.folders ?? ([] as Folder[])
-  const tags = filtersQuery.data?.tags ?? ([] as Tag[])
+  const customFieldFilters = filtersQuery.data?.customFieldFilters ?? []
   const stats = statsQuery.data ?? { totalItems: 0, lowStockItems: 0, totalValue: 0 }
   const isLoading = useMemo(
     () => productsQuery.isLoading || filtersQuery.isLoading || statsQuery.isLoading,
@@ -76,6 +79,26 @@ export const InventoryListPage = () => {
       setStockFilter(stockParam)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    if (!selectedCustomFieldKey) {
+      if (selectedCustomFieldValue !== null) {
+        setSelectedCustomFieldValue(null)
+      }
+      return
+    }
+
+    const selectedFilter = customFieldFilters.find((filter) => filter.key === selectedCustomFieldKey)
+    if (!selectedFilter) {
+      setSelectedCustomFieldKey(null)
+      setSelectedCustomFieldValue(null)
+      return
+    }
+
+    if (selectedCustomFieldValue !== null && !selectedFilter.values.some((value) => value === selectedCustomFieldValue)) {
+      setSelectedCustomFieldValue(null)
+    }
+  }, [customFieldFilters, selectedCustomFieldKey, selectedCustomFieldValue])
 
   const toggleSelection = (id: string) => {
     const next = new Set(selectedRowIds)
@@ -150,9 +173,11 @@ export const InventoryListPage = () => {
                 setSearch={setSearch}
                 stockFilter={stockFilter}
                 setStockFilter={setStockFilter}
-                selectedTag={selectedTag}
-                setSelectedTag={setSelectedTag}
-                tags={tags}
+                selectedCustomFieldKey={selectedCustomFieldKey}
+                setSelectedCustomFieldKey={setSelectedCustomFieldKey}
+                selectedCustomFieldValue={selectedCustomFieldValue}
+                setSelectedCustomFieldValue={setSelectedCustomFieldValue}
+                customFieldFilters={customFieldFilters}
                 onImportOpen={() => setIsImportOpen(true)}
                 onCreateOpen={() => navigate('/inventory/new')}
                 products={products}
