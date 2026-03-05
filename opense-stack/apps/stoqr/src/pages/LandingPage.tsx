@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ScanLine, Box, FileJson, Network, CheckCircle2, ChevronRight, Github, Cloud, Server, ArrowRightLeft, QrCode, Barcode } from 'lucide-react'
 import gsap from 'gsap'
@@ -69,10 +69,21 @@ const Navbar = () => {
   const navRef = useRef<HTMLElement>(null)
 
   useGSAP(() => {
-    ScrollTrigger.create({
-      start: 'top -100',
-      end: 99999,
-      toggleClass: { className: 'bg-presetBackground/80 backdrop-blur-xl border-presetPrimary/10 border text-presetTextDark!', targets: navRef.current },
+    if (!navRef.current) return
+
+    gsap.to(navRef.current, {
+      backgroundColor: 'rgba(247, 246, 242, 0.8)',
+      backdropFilter: 'blur(20px)',
+      borderColor: 'rgba(0, 44, 52, 0.1)',
+      borderWidth: 1,
+      borderStyle: 'solid',
+      color: 'rgb(0, 44, 52)',
+      ease: 'none',
+      scrollTrigger: {
+        start: 'top -100',
+        end: 99999,
+        toggleActions: 'play reverse play reverse',
+      },
     })
   })
 
@@ -147,6 +158,79 @@ const Hero = () => {
 // C. FEATURES
 const Features = () => {
   const containerRef = useRef<HTMLDivElement>(null)
+  const card2Ref = useRef<HTMLDivElement>(null)
+
+  const defaultScanner: React.CSSProperties = {
+    opacity: 0,
+    top: '50%',
+    left: '50%',
+    width: '60px',
+    height: '60px',
+    transform: 'translate(-50%, -50%)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    boxShadow: 'none'
+  }
+
+  const [scannerStyle, setScannerStyle] = useState<React.CSSProperties>(defaultScanner)
+
+  const scanTargets = [
+    { top: 15, left: 15, width: 48, height: 48 },
+    { top: 30, left: 50, width: 160, height: 40 },
+    { top: 55, left: 65, width: 64, height: 64 },
+    { top: 65, left: 10, width: 130, height: 32 }
+  ]
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!card2Ref.current) return
+    const rect = card2Ref.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const pctX = (x / rect.width) * 100
+    const pctY = (y / rect.height) * 100
+
+    let snapped = false
+
+    for (const t of scanTargets) {
+      const tLeftPx = (t.left / 100) * rect.width
+      const tTopPx = (t.top / 100) * rect.height
+      const tCenterX = tLeftPx + (t.width / 2)
+      const tCenterY = tTopPx + (t.height / 2)
+
+      const dist = Math.hypot(x - tCenterX, y - tCenterY)
+
+      if (dist < 50) { // Snap threshold
+        setScannerStyle({
+          opacity: 1,
+          top: `${t.top}%`,
+          left: `${t.left}%`,
+          width: `${t.width + 16}px`,
+          height: `${t.height + 16}px`,
+          transform: 'translate(-8px, -8px)',
+          borderColor: '#f97316', // Using presetAccent hex manually here to ensure it applies via style
+          boxShadow: '0 0 20px rgba(249,115,22,0.3)'
+        })
+        snapped = true
+        break
+      }
+    }
+
+    if (!snapped) {
+      setScannerStyle({
+        opacity: 0.5,
+        top: `${pctY}%`,
+        left: `${pctX}%`,
+        width: '60px',
+        height: '60px',
+        transform: 'translate(-50%, -50%)',
+        borderColor: 'rgba(255,255,255,0.6)',
+        boxShadow: '0 0 10px rgba(255,255,255,0.1)'
+      })
+    }
+  }
+
+  const handleMouseLeave = () => {
+    setScannerStyle(defaultScanner)
+  }
 
   useGSAP(() => {
     const q = gsap.utils.selector(containerRef)
@@ -216,13 +300,21 @@ const Features = () => {
 
           {/* Card 2: Scanner Telemetry */}
           <div className="feature-card group relative flex flex-col justify-between overflow-hidden rounded-[2rem] bg-presetPrimary text-white p-8 shadow-xl">
-            <div className="mb-8 h-48 w-full rounded-2xl bg-black/40 relative overflow-hidden border border-white/10 p-0">
-               <QrCode className="absolute text-white/20" strokeWidth={1} style={{ top: '15%', left: '15%', width: '48px', height: '48px' }} />
-               <Barcode className="absolute text-white/20" strokeWidth={1} style={{ top: '30%', left: '50%', width: '160px', height: '40px' }} />
-               <QrCode className="absolute text-white/20" strokeWidth={1} style={{ top: '55%', left: '65%', width: '64px', height: '64px' }} />
-               <Barcode className="absolute text-white/20" strokeWidth={1} style={{ top: '65%', left: '10%', width: '130px', height: '32px' }} />
+            <div 
+               ref={card2Ref}
+               onMouseMove={handleMouseMove}
+               onMouseLeave={handleMouseLeave}
+               className="mb-8 h-48 w-full rounded-2xl bg-black/40 relative overflow-hidden border border-white/10 p-0 cursor-crosshair"
+            >
+               <QrCode className="absolute text-white/20" strokeWidth={1} style={{ top: '15%', left: '15%', width: '48px', height: '48px' }} preserveAspectRatio="none" />
+               <Barcode className="absolute text-white/20" strokeWidth={1} style={{ top: '30%', left: '50%', width: '160px', height: '40px' }} preserveAspectRatio="none" />
+               <QrCode className="absolute text-white/20" strokeWidth={1} style={{ top: '55%', left: '65%', width: '64px', height: '64px' }} preserveAspectRatio="none" />
+               <Barcode className="absolute text-white/20" strokeWidth={1} style={{ top: '65%', left: '10%', width: '130px', height: '32px' }} preserveAspectRatio="none" />
                
-               <div className="absolute border-2 border-presetAccent bg-presetAccent/10 rounded-xl shadow-[0_0_20px_rgba(249,115,22,0.3)] animate-[scan-target_8s_ease-in-out_infinite] z-20 transition-all duration-300 flex flex-col overflow-hidden pointer-events-none">
+               <div 
+                 className="absolute border-2 rounded-xl transition-all duration-200 ease-out flex flex-col overflow-hidden pointer-events-none z-20"
+                 style={scannerStyle}
+               >
                  <div className="w-full h-[2px] bg-presetAccent opacity-80 shadow-[0_0_10px_rgba(249,115,22,1)] absolute left-0 animate-[scan-line_2s_linear_infinite]" />
                </div>
             </div>
@@ -236,19 +328,60 @@ const Features = () => {
             </div>
           </div>
 
-          {/* Card 3: Workflow Typewriter */}
+          {/* Card 3: Modular Configuration / Isometric View */}
           <div className="feature-card group relative flex flex-col justify-between overflow-hidden rounded-[2rem] bg-white p-8 shadow-xl shadow-presetPrimary/5 border border-presetPrimary/5">
-            <div className="mb-8 h-48 w-full rounded-2xl bg-[#0F172A] p-4 relative overflow-hidden text-green-400 font-mono text-sm">
-                <div className="absolute top-3 right-3 flex items-center gap-2 text-[10px] text-white/50 bg-white/10 px-2 py-1 rounded-full">
-                  <div className="w-2 h-2 rounded-full bg-presetAccent animate-pulse" /> Live Config
-                </div>
-                <div className="mt-6 font-mono opacity-80 typing-effect whitespace-pre">
-                  <span className="text-pink-400">rules:</span><br/>
-                  &nbsp;&nbsp;<span className="text-blue-300">- match:</span><br/>
-                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-yellow-300">location:</span> <span className="text-green-300">"WH-1"</span><br/>
-                  &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">action:</span> <span className="text-green-300">"restock"</span><br/>
-                  <span className="animate-pulse">_</span>
-                </div>
+            <div className="mb-8 h-48 w-full rounded-2xl bg-presetPrimary/5 p-0 relative overflow-hidden flex items-center justify-center border border-presetPrimary/10 text-presetTextDark">
+               <div style={{ perspective: '1000px' }} className="w-full h-full flex items-center justify-center relative bg-gradient-to-tr from-transparent via-white/50 to-presetBackground group-hover:bg-white/50 transition-colors duration-700">
+                  <div 
+                    className="relative transition-all duration-700 ease-out group-hover:scale-105" 
+                    style={{ 
+                      transformStyle: 'preserve-3d', 
+                      transform: 'rotateX(60deg) rotateZ(-45deg)' 
+                    }}
+                  >
+                    {/* Main outer boundary base */}
+                    <div 
+                      className="w-44 h-44 bg-white/60 border-2 border-presetPrimary/10 rounded-3xl p-3 grid grid-cols-2 gap-3" 
+                      style={{ 
+                        transformStyle: 'preserve-3d', 
+                        boxShadow: '-15px 15px 20px -5px rgba(0,0,0,0.1), inset 0 0 20px rgba(0,0,0,0.05)' 
+                      }}
+                    >
+                      {[1, 2, 3, 4].map(idx => (
+                        <div 
+                          key={idx} 
+                          className="bg-white border border-presetPrimary/10 rounded-2xl flex flex-col justify-between p-2 pb-3 shadow-sm transform transition-all duration-500 hover:-translate-x-2 hover:translate-y-2 group-hover:first:-translate-x-1 group-hover:first:translate-y-1"
+                          style={{ 
+                            transformStyle: 'preserve-3d',
+                            transform: `translateZ(${idx * 4}px)`,
+                            boxShadow: '-8px 8px 12px -2px rgba(0,0,0,0.05)'
+                          }}
+                        >
+                           <div className="font-mono text-[7px] text-presetTextDark/60 font-bold uppercase tracking-widest pl-1">
+                             Folder 0{idx}
+                           </div>
+                           
+                           {/* Products container */}
+                           <div 
+                              className="w-full h-10 bg-presetBackground rounded-xl border border-presetPrimary/5 flex items-center justify-center relative mt-1"
+                              style={{ 
+                                transform: 'translateZ(12px)', 
+                                transformStyle: 'preserve-3d', 
+                                boxShadow: '-4px 4px 6px -1px rgba(0,0,0,0.05)' 
+                              }}
+                           >
+                              {/* Tags */}
+                              <div className="absolute -top-1.5 -right-1.5 flex gap-1" style={{ transform: 'translateZ(10px)' }}>
+                                <span className="w-3 h-1.5 rounded-full bg-presetAccent shadow-sm"></span>
+                                <span className="w-3 h-1.5 rounded-full bg-emerald-400 shadow-sm"></span>
+                              </div>
+                              <Box className="w-4 h-4 text-presetPrimary/40" style={{ transform: 'translateZ(5px)' }} />
+                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+               </div>
             </div>
             <div>
               <h3 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold text-presetPrimary">
@@ -343,10 +476,10 @@ const Protocol = () => {
             </ul>
           </div>
           <div className="order-1 md:order-2 bg-presetPrimary rounded-[2rem] h-96 relative overflow-hidden flex items-center justify-center">
-            <div className="w-5/6 h-1/2 flex gap-2 relative border-x-4 border-presetAccent/20 px-4">
+            <div className="w-5/6 h-1/2 flex gap-[2px] relative border-x-4 border-presetAccent/20 px-4 justify-between">
                 <div className="absolute top-0 left-1/2 -ml-px h-full w-[4px] bg-red-500 shadow-[0_0_15px_red] z-10 animate-[switch-pos_2s_infinite]" style={{ animationName: 'scan-vertical' }} />
-                {[...Array(24)].map((_, i) => (
-                    <div key={i} className="flex-1 bg-white/20 h-full rounded-sm" style={{ opacity: Math.random() * 0.5 + 0.3, width: `${Math.random() * 10 + 2}px` }}></div>
+                {[...Array(72)].map((_, i) => (
+                    <div key={i} className="bg-white/20 h-full rounded-[1px]" style={{ opacity: Math.random() * 0.5 + 0.3, width: `${Math.random() * 6 + 1.5}px` }}></div>
                 ))}
             </div>
           </div>
