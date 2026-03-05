@@ -1,3 +1,13 @@
 @import "tailwindcss";
 @import "@repo/ui/styles";
 @source "../../../packages/ui/src";
+
+@theme {
+  --color-presetPrimary: #1E293B;
+  --color-presetAccent: #F97316;
+  --color-presetBackground: #F8FAFC;
+  --color-presetTextDark: #0F172A;
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}

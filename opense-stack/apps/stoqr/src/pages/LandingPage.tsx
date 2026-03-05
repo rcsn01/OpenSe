@@ -1,213 +1,481 @@
+import React, { useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '@repo/shared/auth/context'
-import {
-  ArrowRight,
-  Package,
-  ScanLine,
-  BarChart3,
-  Lock,
-  CheckCircle,
-} from 'lucide-react'
-import { buildAccountsAuthUrl } from '../lib/authRedirect'
+import { ArrowRight, ScanLine, Box, FileJson, Network, CheckCircle2, ChevronRight, Github } from 'lucide-react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useGSAP } from '@gsap/react'
 
-export const LandingPage = () => {
-  const { user } = useAuth()
+gsap.registerPlugin(ScrollTrigger)
+
+// --- OVERLAYS & EFFECTS ---
+const NoiseOverlay = () => (
+  <div className="pointer-events-none fixed inset-0 z-50 h-full w-full opacity-5">
+    <svg className="h-full w-full" xmlns="http://www.w3.org/2000/svg">
+      <filter id="noiseFilter">
+        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+      </filter>
+      <rect width="100%" height="100%" filter="url(#noiseFilter)" />
+    </svg>
+  </div>
+)
+
+// --- COMPONENTS ---
+const MagneticButton = ({ children, className = '', href, onClick }: { children: React.ReactNode, className?: string, href?: string, onClick?: () => void }) => {
+  const buttonRef = useRef<HTMLButtonElement | HTMLAnchorElement>(null)
+
+  const handleMouseEnter = () => {
+    gsap.to(buttonRef.current, { scale: 1.03, duration: 0.3, ease: 'power2.out' })
+  }
+
+  const handleMouseLeave = () => {
+    gsap.to(buttonRef.current, { scale: 1, duration: 0.3, ease: 'power2.out' })
+  }
+
+  const baseClasses = `group relative inline-flex items-center justify-center overflow-hidden rounded-full px-6 py-3 font-sans font-medium text-white transition-transform hover:-translate-y-px ${className}`
+
+  if (href) {
+    return (
+      <Link
+        to={href}
+        // @ts-ignore
+        ref={buttonRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={baseClasses}
+      >
+        <span className="absolute inset-0 z-0 h-full w-full bg-black/20 translate-y-full transition-transform duration-300 ease-out group-hover:translate-y-0" />
+        <span className="relative z-10 flex items-center gap-2">{children}</span>
+      </Link>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-600 rounded-lg p-1.5">
-              <Package className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-              Open-StoQR
-            </span>
-          </div>
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
-            <a href="#features" className="hover:text-blue-600 transition-colors">
-              Features
-            </a>
-            <a href="#security" className="hover:text-blue-600 transition-colors">
-              Security
-            </a>
-          </div>
-          <div className="flex items-center gap-4">
-            {user ? (
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
-              >
-                Go to Dashboard <ArrowRight className="w-4 h-4" />
-              </Link>
-            ) : (
-              <>
-                <a
-                  href={buildAccountsAuthUrl('signin')}
-                  className="text-slate-600 hover:text-slate-900 font-medium text-sm"
-                >
-                  Log in
-                </a>
-                <a
-                  href={buildAccountsAuthUrl('signup')}
-                  className="px-4 py-2 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors text-sm"
-                >
-                  Get Started
-                </a>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
+    <button
+      // @ts-ignore
+      ref={buttonRef}
+      onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={baseClasses}
+    >
+      <span className="absolute inset-0 z-0 h-full w-full bg-black/20 translate-y-full transition-transform duration-300 ease-out group-hover:translate-y-0" />
+      <span className="relative z-10 flex items-center gap-2">{children}</span>
+    </button>
+  )
+}
 
-      {/* Hero Section */}
-      <div className="relative overflow-hidden pt-20 pb-32 lg:pt-32 lg:pb-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-            </span>
-            Smart inventory management for modern teams
-          </div>
+// A. NAVBAR
+const Navbar = () => {
+  const navRef = useRef<HTMLElement>(null)
 
-          <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-slate-900 mb-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-            Inventory Control <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-              Made Simple
-            </span>
+  useGSAP(() => {
+    ScrollTrigger.create({
+      start: 'top -100',
+      end: 99999,
+      toggleClass: { className: 'bg-presetBackground/80 backdrop-blur-xl border-presetPrimary/10 border text-presetTextDark!', targets: navRef.current },
+    })
+  })
+
+  return (
+    <nav ref={navRef} className="fixed left-1/2 top-6 z-40 flex -translate-x-1/2 items-center justify-between rounded-full bg-transparent px-6 py-3 text-white transition-all duration-300 w-[90%] max-w-5xl">
+      <div className="flex items-center gap-2 font-display font-bold text-xl tracking-tight">
+        <Box className="h-6 w-6 text-presetAccent" />
+        <span>StoQR</span>
+      </div>
+      <div className="hidden md:flex items-center gap-8 font-sans text-sm font-medium">
+        <a href="#features" className="hover:-translate-y-px transition-transform">Architecture</a>
+        <a href="#protocol" className="hover:-translate-y-px transition-transform">Protocol</a>
+        <a href="#manifesto" className="hover:-translate-y-px transition-transform">Manifesto</a>
+      </div>
+      <MagneticButton href="/auth" className="bg-presetAccent text-white! py-2 px-5 text-sm">
+        Get Started
+      </MagneticButton>
+    </nav>
+  )
+}
+
+// B. HERO
+const Hero = () => {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useGSAP(() => {
+    const q = gsap.utils.selector(containerRef)
+    gsap.from(q('.hero-elem'), {
+      y: 40,
+      opacity: 0,
+      duration: 1.2,
+      stagger: 0.1,
+      ease: 'power3.out',
+      delay: 0.2
+    })
+  }, { scope: containerRef })
+
+  return (
+    <section ref={containerRef} className="relative h-[100dvh] w-full overflow-hidden bg-presetPrimary flex items-end">
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="https://images.unsplash.com/photo-1586528116311-ad8ed7c80bc2?q=80&w=2940&auto=format&fit=crop" 
+          alt="Warehouse" 
+          className="h-full w-full object-cover opacity-40 mix-blend-overlay"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-presetPrimary via-presetPrimary/60 to-transparent" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pb-24 md:pb-32">
+        <div className="max-w-3xl">
+          <h1 className="hero-elem mb-6 font-display text-5xl tracking-tight text-white md:text-7xl lg:text-8xl leading-[1.1]">
+            <span className="block font-sans font-bold text-presetBackground">Control your</span>
+            <span className="block italic text-presetAccent">Inventory Engine.</span>
           </h1>
-
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-            Track stock, scan barcodes, manage procurement, and run reports—all in one place.
-            Open-StoQR gives you the tools to stay on top of your inventory without the hassle.
+          <p className="hero-elem mb-10 max-w-xl font-sans text-lg text-presetBackground/80 md:text-2xl leading-relaxed">
+            Scan the code, own the source, master your inventory. A modern logistics hub combined with premium developer tools.
           </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-            <a
-              href={buildAccountsAuthUrl('signup')}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 shadow-lg shadow-blue-600/20 hover:shadow-xl hover:shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
-            >
-              Start Free <ArrowRight className="w-5 h-5" />
-            </a>
-            <a
-              href={buildAccountsAuthUrl('signin')}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white text-slate-700 border border-slate-200 font-semibold text-lg hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2"
-            >
-              Sign in
-            </a>
-          </div>
-        </div>
-
-        {/* Abstract Background Shapes */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] opacity-10 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full filter blur-3xl transform mix-blend-multiply" />
-          <div className="absolute top-20 right-20 w-96 h-96 bg-indigo-300 rounded-full filter blur-3xl opacity-70" />
-          <div className="absolute bottom-[-100px] left-[-100px] w-80 h-80 bg-blue-300 rounded-full filter blur-3xl opacity-70" />
-        </div>
-      </div>
-
-      {/* Features Grid */}
-      <div id="features" className="py-24 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">
-              Everything You Need to Manage Inventory
-            </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              From products and variants to procurement and reporting—stay in control of your
-              stock with powerful, easy-to-use tools.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Package,
-                title: 'Products & Variants',
-                desc: 'Organize inventory with folders, bundles, and variants. Track stock levels, expiry dates, and batch history.',
-              },
-              {
-                icon: ScanLine,
-                title: 'Barcode Scanning',
-                desc: 'Quick scan for putaway, pick & pack, and cycle counts. Use your phone or webcam for instant stock updates.',
-              },
-              {
-                icon: BarChart3,
-                title: 'Reports & Valuation',
-                desc: 'Profitability, turnover, and valuation reports. Audit trails and full transparency for your operations.',
-              },
-            ].map((feature, i) => (
-              <div
-                key={i}
-                className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow"
-              >
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
-                  <feature.icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
-                <p className="text-slate-600 leading-relaxed">{feature.desc}</p>
-              </div>
-            ))}
+          <div className="hero-elem flex flex-wrap gap-4">
+            <MagneticButton href="/auth" className="bg-presetAccent text-xl py-4 px-8">
+              Initialize System <ArrowRight className="h-5 w-5" />
+            </MagneticButton>
+            <MagneticButton href="https://github.com" className="bg-white/10 backdrop-blur-md text-xl py-4 px-8 border border-white/20">
+              <Github className="h-5 w-5" /> View Source
+            </MagneticButton>
           </div>
         </div>
       </div>
+    </section>
+  )
+}
 
-      {/* Social Proof / Security */}
-      <div id="security" className="py-24 border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-12">
-          <div className="flex-1">
-            <h2 className="text-3xl font-bold text-slate-900 mb-6">Security First Architecture</h2>
-            <div className="space-y-4">
-              {[
-                'Row-level security for multi-tenant data isolation',
-                'Role-based access control for your team',
-                'Audit logs for inventory and procurement activity',
-                'Secure cloud storage with Supabase',
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span className="text-slate-700 font-medium">{item}</span>
-                </div>
-              ))}
+// C. FEATURES
+const Features = () => {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useGSAP(() => {
+    const q = gsap.utils.selector(containerRef)
+    
+    gsap.from(q('.feature-card'), {
+      scrollTrigger: {
+        trigger: containerRef.current,
+        start: 'top 70%',
+      },
+      y: 50,
+      opacity: 0,
+      duration: 0.8,
+      stagger: 0.15,
+      ease: 'power3.out'
+    })
+  }, { scope: containerRef })
+
+  return (
+    <section id="features" ref={containerRef} className="bg-presetBackground py-32 px-6">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-20 text-center">
+          <h2 className="font-display text-4xl tracking-tight text-presetPrimary md:text-5xl lg:text-6xl font-bold">
+            Interactive Functional Artifacts
+          </h2>
+          <p className="mt-4 font-sans text-lg text-presetTextDark/70">Unrestricted by vendor lock-in. Powered by pure open-source sovereignty.</p>
+        </div>
+
+        <div className="grid gap-8 md:grid-cols-3">
+          {/* Card 1: Architecture Graph */}
+          <div className="feature-card group relative flex flex-col justify-between overflow-hidden rounded-[2rem] bg-white p-8 shadow-xl shadow-presetPrimary/5 border border-presetPrimary/5">
+            <div className="mb-8 h-48 w-full rounded-2xl bg-presetPrimary/5 p-4 relative overflow-hidden flex items-center justify-center border border-presetPrimary/10">
+               <Network className="h-20 w-20 text-presetAccent/50 absolute z-0 group-hover:scale-110 transition-transform duration-700 ease-in-out" />
+               <div className="z-10 grid grid-cols-3 gap-4 w-full px-4">
+                  {[1,2,3,4,5,6].map(i => (
+                    <div key={i} className="h-2 rounded bg-presetPrimary/20 w-full animate-pulse" style={{animationDelay: `${i * 0.1}s`}}></div>
+                  ))}
+               </div>
             </div>
-          </div>
-          <div className="flex-1 bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden">
-            <div className="relative z-10">
-              <Lock className="w-12 h-12 text-blue-400 mb-6" />
-              <h3 className="text-2xl font-bold mb-2">Enterprise Ready</h3>
-              <p className="text-slate-400 mb-6">
-                Built on Supabase for reliability and scale. Your data stays secure and
-                accessible when you need it.
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold text-presetPrimary">
+                <Network className="h-6 w-6 text-presetAccent" /> Unrestricted Architecture
+              </h3>
+              <p className="font-sans text-presetTextDark/80 leading-relaxed">
+                No vendor lock-in. Pure open-source code for total system sovereignty and localized deployment. Assemble the components you need.
               </p>
-              <a
-                href={buildAccountsAuthUrl('signup')}
-                className="text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
-              >
-                Get Started <ArrowRight className="w-4 h-4" />
-              </a>
             </div>
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -mr-16 -mt-16" />
+          </div>
+
+          {/* Card 2: Scanner Telemetry */}
+          <div className="feature-card group relative flex flex-col justify-between overflow-hidden rounded-[2rem] bg-presetPrimary text-white p-8 shadow-xl">
+            <div className="mb-8 h-48 w-full rounded-2xl bg-black/40 p-4 relative overflow-hidden border border-white/10 flex flex-col justify-end">
+               <div className="absolute top-0 left-0 w-full h-1 bg-presetAccent opacity-50 shadow-[0_0_15px_rgba(249,115,22,0.8)] animate-[scan_2s_ease-in-out_infinite]" />
+               <div className="font-mono text-xs text-presetAccent/80 space-y-1">
+                 <p>&gt; SCND: WH-A1-Z9 <span className="opacity-50">14:02:01</span></p>
+                 <p>&gt; SCND: PL-9B-X1 <span className="opacity-50">14:02:04</span></p>
+                 <p className="text-white">&gt; AWAITING INPUT...</p>
+               </div>
+            </div>
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold text-presetBackground">
+                <ScanLine className="h-6 w-6 text-presetAccent" /> High-Velocity Scanning
+              </h3>
+              <p className="font-sans text-presetBackground/70 leading-relaxed">
+                Native QR and barcode parsing. Turn any existing camera or device into a rapid data-capture terminal without proprietary hardware.
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3: Workflow Typewriter */}
+          <div className="feature-card group relative flex flex-col justify-between overflow-hidden rounded-[2rem] bg-white p-8 shadow-xl shadow-presetPrimary/5 border border-presetPrimary/5">
+            <div className="mb-8 h-48 w-full rounded-2xl bg-[#0F172A] p-4 relative overflow-hidden text-green-400 font-mono text-sm">
+                <div className="absolute top-3 right-3 flex items-center gap-2 text-[10px] text-white/50 bg-white/10 px-2 py-1 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-presetAccent animate-pulse" /> Live Config
+                </div>
+                <div className="mt-6 font-mono opacity-80 typing-effect whitespace-pre">
+                  <span className="text-pink-400">rules:</span><br/>
+                  &nbsp;&nbsp;<span className="text-blue-300">- match:</span><br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-yellow-300">location:</span> <span className="text-green-300">"WH-1"</span><br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">action:</span> <span className="text-green-300">"restock"</span><br/>
+                  <span className="animate-pulse">_</span>
+                </div>
+            </div>
+            <div>
+              <h3 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold text-presetPrimary">
+                <FileJson className="h-6 w-6 text-presetAccent" /> Modular Configuration
+              </h3>
+              <p className="font-sans text-presetTextDark/80 leading-relaxed">
+                Dictate your own logic. Assemble a highly specialized inventory engine built around your exact operational workflows.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// D. PHILOSOPHY
+const Philosophy = () => {
+  const triggerRef = useRef<HTMLDivElement>(null)
+
+  useGSAP(() => {
+    gsap.from('.manifesto-highlight', {
+      scrollTrigger: {
+        trigger: triggerRef.current,
+        start: 'top 60%',
+      },
+      backgroundPositionX: '100%',
+      duration: 1.5,
+      ease: 'power3.out'
+    })
+  }, { scope: triggerRef })
+
+  return (
+    <section id="manifesto" ref={triggerRef} className="relative py-40 bg-presetTextDark overflow-hidden flex items-center justify-center mix-blend-multiply">
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="https://images.unsplash.com/photo-1566843972142-a7fcb70de55a?q=80&w=2938&auto=format&fit=crop" 
+          alt="Raw materials" 
+          className="h-full w-full object-cover opacity-10 grayscale mix-blend-screen"
+          data-speed="0.8"
+        />
+      </div>
+      <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+        <p className="font-sans text-xl md:text-3xl text-presetBackground/50 mb-8 font-medium">
+          Most inventory systems lock you in: <span className="line-through">bloated, proprietary models</span>.
+        </p>
+        <h2 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-presetBackground leading-[1.1]">
+          We give you the keys: <br/>
+          <span className="hero-elem text-transparent bg-clip-text bg-gradient-to-r from-presetAccent via-yellow-400 to-presetAccent bg-[length:200%_auto] manifesto-highlight">
+            pure open-source sovereignty.
+          </span>
+        </h2>
+      </div>
+    </section>
+  )
+}
+
+// E. PROTOCOL
+const Protocol = () => {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useGSAP(() => {
+    const cards = gsap.utils.toArray('.pin-card')
+    
+    cards.forEach((card, i) => {
+      ScrollTrigger.create({
+        trigger: card as Element,
+        start: 'top top',
+        pin: true,
+        pinSpacing: false,
+        id: `card-${i}`,
+      })
+    })
+
+    return () => {
+        ScrollTrigger.getAll().forEach(t => t.kill())
+    }
+  }, { scope: containerRef })
+
+  return (
+    <section id="protocol" ref={containerRef} className="bg-presetBackground relative z-10 w-full overflow-hidden">
+      {/* Card 1 */}
+      <div className="pin-card h-screen w-full bg-white flex items-center justify-center sticky top-0 border-b border-presetPrimary/10 shadow-[0_10px_30px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+          <div className="order-2 md:order-1">
+            <h2 className="font-display text-5xl lg:text-7xl font-bold text-presetPrimary mb-6">01. Scan</h2>
+            <p className="font-sans text-2xl text-presetTextDark/70 mb-8">Deploy optical recognition instantly. Connect the physical to the digital layer with zero latency.</p>
+            <ul className="space-y-4 font-mono text-sm text-presetTextDark">
+              <li className="flex gap-3 items-center"><CheckCircle2 className="text-presetAccent" /> EAN-13 & QR Native</li>
+              <li className="flex gap-3 items-center"><CheckCircle2 className="text-presetAccent" /> Web-First Camera Access</li>
+              <li className="flex gap-3 items-center"><CheckCircle2 className="text-presetAccent" /> Hardware Agnostic API</li>
+            </ul>
+          </div>
+          <div className="order-1 md:order-2 bg-presetPrimary rounded-[2rem] h-96 relative overflow-hidden flex items-center justify-center">
+            <div className="w-1/2 h-1/2 flex flex-col gap-2 relative">
+                <div className="absolute top-1/2 -mt-px left-0 w-full h-[2px] bg-red-500 shadow-[0_0_10px_red] z-10 animate-[bounce_2s_infinite]" />
+                {[...Array(12)].map((_, i) => (
+                    <div key={i} className="flex-1 bg-white/20 w-full rounded-sm"></div>
+                ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-slate-50 border-t border-slate-200 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="bg-slate-200 rounded-lg p-1">
-              <Package className="w-4 h-4 text-slate-600" />
-            </div>
-            <span className="font-semibold text-slate-700">Open-StoQR</span>
+      {/* Card 2 */}
+      <div className="pin-card h-screen w-full bg-presetBackground flex items-center justify-center sticky top-0 border-b border-presetPrimary/10 shadow-[0_20px_40px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+          <div className="order-2 md:order-1">
+            <h2 className="font-display text-5xl lg:text-7xl font-bold text-presetPrimary mb-6">02. Configure</h2>
+            <p className="font-sans text-2xl text-presetTextDark/70 mb-8">Construct workflows visually. Chain actions, design custom attributes, and align the software to your unique warehouse floor.</p>
           </div>
-          <div className="text-sm text-slate-500">
-            &copy; {new Date().getFullYear()} Open-StoQR. All rights reserved.
+          <div className="order-1 md:order-2 bg-white border border-presetPrimary/10 rounded-[2rem] h-96 relative overflow-hidden p-8 flex flex-col gap-4 justify-center">
+            <div className="bg-presetPrimary/5 rounded-xl p-4 border border-presetPrimary/10 flex justify-between items-center shadow-sm -ml-4">
+               <span className="font-mono text-sm font-bold">Trigger: Scan</span> <ChevronRight className="text-presetAccent" />
+            </div>
+            <div className="bg-presetPrimary/5 rounded-xl p-4 border border-presetPrimary/10 flex justify-between items-center shadow-sm">
+               <span className="font-mono text-sm font-bold">Condition: IF location_empty</span> <ChevronRight className="text-presetAccent" />
+            </div>
+            <div className="bg-presetAccent text-white rounded-xl p-4 border border-presetAccent/10 flex justify-between items-center shadow-md ml-4">
+               <span className="font-mono text-sm font-bold">Action: Create Restock Alert</span> <CheckCircle2 />
+            </div>
           </div>
         </div>
-      </footer>
+      </div>
+
+      {/* Card 3 */}
+      <div className="pin-card h-screen w-full bg-[#1E293B] flex items-center justify-center sticky top-0 text-white rounded-t-[2rem]">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+          <div className="order-2 md:order-1">
+            <h2 className="font-display text-5xl lg:text-7xl font-bold text-white mb-6">03. Deploy</h2>
+            <p className="font-sans text-2xl text-presetBackground/80 mb-8">Maintain sovereign control. Run entirely local, securely cloud-hosted, or hybridized. It is your data.</p>
+          </div>
+          <div className="order-1 md:order-2 bg-black/30 border border-white/10 rounded-[2rem] h-96 relative overflow-hidden flex items-center justify-center p-8">
+            <div className="relative w-full h-full flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                     <Network className="w-full h-full text-presetAccent" />
+                </div>
+                <div className="z-10 bg-[#0F172A] border border-presetAccent/30 p-6 rounded-2xl shadow-[0_0_40px_rgba(249,115,22,0.15)] backdrop-blur-md">
+                    <DatabaseIcon className="w-12 h-12 text-presetAccent mx-auto mb-4" />
+                    <p className="font-mono text-center font-bold">MAIN_DB_SYNC</p>
+                    <div className="mt-4 h-2 bg-black rounded-full overflow-hidden">
+                        <div className="h-full bg-presetAccent w-full animate-pulse"></div>
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+const DatabaseIcon = ({className}:{className?:string}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+)
+
+// F. TERMINAL CTA
+const TerminalCTA = () => {
+  return (
+    <section className="bg-presetBackground py-32 px-6">
+      <div className="mx-auto max-w-5xl bg-presetTextDark rounded-[2rem] overflow-hidden shadow-2xl">
+        <div className="bg-[#1e1e1e] px-4 py-3 flex items-center gap-2 border-b border-white/5">
+          <div className="flex gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+          </div>
+          <div className="mx-auto text-xs font-mono text-white/40">stoqr-core ~ bash</div>
+        </div>
+        <div className="p-8 md:p-12 font-mono text-sm md:text-base text-green-400">
+          <p className="mb-2"><span className="text-white/50">$</span> git clone https://github.com/opense/stoqr.git</p>
+          <p className="text-white/80 mb-4 opacity-50">Cloning into 'stoqr'...</p>
+          
+          <p className="mb-2"><span className="text-white/50">$</span> cd stoqr && docker-compose up -d</p>
+          <p className="text-presetAccent mb-6 opacity-80">Building core inventory modules... [OK]<br/>Starting database tier... [OK]<br/>System online at localhost:3000</p>
+          
+          <div className="mt-12 flex flex-col md:flex-row gap-6 items-center justify-between border-t border-white/10 pt-8">
+            <div className="text-white">
+                <h3 className="font-display text-2xl font-bold mb-2 text-presetBackground">Initialize System</h3>
+                <p className="font-sans text-presetBackground/60">Launch your instance instantly or manage it via cloud.</p>
+            </div>
+            <MagneticButton href="/auth" className="bg-presetAccent text-white! py-4 px-10 rounded-[1.5rem] whitespace-nowrap">
+              Start Onboarding <ArrowRight className="ml-2 w-5 h-5" />
+            </MagneticButton>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// G. FOOTER
+const Footer = () => {
+  return (
+    <footer className="bg-presetPrimary rounded-t-[4rem] text-white pt-20 pb-10 px-6 relative z-20">
+      <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 mb-16">
+        <div className="md:col-span-2">
+           <div className="flex items-center gap-2 font-display font-bold text-3xl tracking-tight mb-4">
+             <Box className="h-8 w-8 text-presetAccent" />
+             <span>StoQR</span>
+           </div>
+           <p className="font-sans text-presetBackground/60 max-w-sm">Scan the code, own the source, master your inventory. Enterprise-grade open source logistics toolkit.</p>
+        </div>
+        <div>
+           <h4 className="font-sans font-bold text-presetBackground mb-4">Architecture</h4>
+           <ul className="space-y-3 font-sans text-presetBackground/60">
+             <li><a href="#" className="hover:text-presetAccent transition-colors">Documentation</a></li>
+             <li><a href="#" className="hover:text-presetAccent transition-colors">API Reference</a></li>
+             <li><a href="#" className="hover:text-presetAccent transition-colors">Self-Hosting</a></li>
+           </ul>
+        </div>
+        <div>
+           <h4 className="font-sans font-bold text-presetBackground mb-4">Ecosystem</h4>
+           <ul className="space-y-3 font-sans text-presetBackground/60">
+             <li><a href="https://github.com" className="hover:text-presetAccent transition-colors flex items-center gap-2"><Github className="w-4 h-4"/> GitHub</a></li>
+             <li><a href="#" className="hover:text-presetAccent transition-colors">Community</a></li>
+             <li><a href="#" className="hover:text-presetAccent transition-colors">Releases</a></li>
+           </ul>
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+         <p className="font-mono text-sm text-presetBackground/40">© {new Date().getFullYear()} StoQR. Open Source Logistics.</p>
+         <div className="flex items-center gap-3 font-mono text-sm text-presetAccent bg-presetAccent/10 px-4 py-2 rounded-full border border-presetAccent/20">
+            <div className="w-2 h-2 rounded-full bg-presetAccent animate-pulse shadow-[0_0_8px_rgba(249,115,22,1)]" />
+            System Operational
+         </div>
+      </div>
+    </footer>
+  )
+}
+
+export const LandingPage = () => {
+  return (
+    <div className="bg-presetBackground min-h-screen text-presetTextDark selection:bg-presetAccent selection:text-white">
+      <NoiseOverlay />
+      <style>{`
+        @keyframes scan {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(180px); }
+        }
+      `}</style>
+      <Navbar />
+      <Hero />
+      <Features />
+      <Philosophy />
+      <Protocol />
+      <TerminalCTA />
+      <Footer />
     </div>
   )
 }
