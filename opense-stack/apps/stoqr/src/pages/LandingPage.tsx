@@ -1,6 +1,6 @@
 import React, { useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, ScanLine, Box, FileJson, Network, CheckCircle2, ChevronRight, Github } from 'lucide-react'
+import { ArrowRight, ScanLine, Box, FileJson, Network, CheckCircle2, ChevronRight, Github, Cloud, Server, ArrowRightLeft, QrCode, Barcode } from 'lucide-react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useGSAP } from '@gsap/react'
@@ -178,31 +178,52 @@ const Features = () => {
           {/* Card 1: Architecture Graph */}
           <div className="feature-card group relative flex flex-col justify-between overflow-hidden rounded-[2rem] bg-white p-8 shadow-xl shadow-presetPrimary/5 border border-presetPrimary/5">
             <div className="mb-8 h-48 w-full rounded-2xl bg-presetPrimary/5 p-4 relative overflow-hidden flex items-center justify-center border border-presetPrimary/10">
-               <Network className="h-20 w-20 text-presetAccent/50 absolute z-0 group-hover:scale-110 transition-transform duration-700 ease-in-out" />
-               <div className="z-10 grid grid-cols-3 gap-4 w-full px-4">
-                  {[1,2,3,4,5,6].map(i => (
-                    <div key={i} className="h-2 rounded bg-presetPrimary/20 w-full animate-pulse" style={{animationDelay: `${i * 0.1}s`}}></div>
-                  ))}
+               
+               <div className="flex w-full items-center justify-between z-10 px-2">
+                 <div className="flex flex-col items-center gap-3">
+                   <div className="bg-presetBackground rounded-full p-3 border border-presetPrimary/10 shadow-sm group-hover:-translate-y-1 transition-transform duration-500">
+                     <Cloud className="h-7 w-7 text-blue-500" />
+                   </div>
+                   <span className="text-[10px] font-mono font-bold text-presetTextDark/50 uppercase">Public</span>
+                 </div>
+                 
+                 <div className="relative flex-1 mx-2 flex items-center justify-center h-8">
+                    <div className="absolute w-full h-[2px] bg-presetPrimary/10 rounded-full" />
+                    <div className="absolute left-[10%] w-6 h-6 bg-white border border-presetPrimary/20 rounded-full flex items-center justify-center shadow-md z-20 animate-[switch-pos_3s_ease-in-out_infinite]">
+                      <ArrowRightLeft className="w-3 h-3 text-presetAccent" />
+                    </div>
+                 </div>
+
+                 <div className="flex flex-col items-center gap-3">
+                   <div className="bg-presetBackground rounded-full p-3 border border-presetPrimary/10 shadow-sm group-hover:-translate-y-1 transition-transform duration-500 delay-100">
+                     <Server className="h-7 w-7 text-emerald-500" />
+                   </div>
+                   <span className="text-[10px] font-mono font-bold text-presetTextDark/50 uppercase">Local</span>
+                 </div>
                </div>
+               
+               <div className="absolute inset-0 bg-gradient-to-t from-presetAccent/5 to-transparent z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
             <div>
               <h3 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold text-presetPrimary">
                 <Network className="h-6 w-6 text-presetAccent" /> Unrestricted Architecture
               </h3>
               <p className="font-sans text-presetTextDark/80 leading-relaxed">
-                No vendor lock-in. Pure open-source code for total system sovereignty and localized deployment. Assemble the components you need.
+                No vendor lock-in. Toggle seamlessly between public cloud infrastructure and private localized environments.
               </p>
             </div>
           </div>
 
           {/* Card 2: Scanner Telemetry */}
           <div className="feature-card group relative flex flex-col justify-between overflow-hidden rounded-[2rem] bg-presetPrimary text-white p-8 shadow-xl">
-            <div className="mb-8 h-48 w-full rounded-2xl bg-black/40 p-4 relative overflow-hidden border border-white/10 flex flex-col justify-end">
-               <div className="absolute top-0 left-0 w-full h-1 bg-presetAccent opacity-50 shadow-[0_0_15px_rgba(249,115,22,0.8)] animate-[scan_2s_ease-in-out_infinite]" />
-               <div className="font-mono text-xs text-presetAccent/80 space-y-1">
-                 <p>&gt; SCND: WH-A1-Z9 <span className="opacity-50">14:02:01</span></p>
-                 <p>&gt; SCND: PL-9B-X1 <span className="opacity-50">14:02:04</span></p>
-                 <p className="text-white">&gt; AWAITING INPUT...</p>
+            <div className="mb-8 h-48 w-full rounded-2xl bg-black/40 relative overflow-hidden border border-white/10 p-0">
+               <QrCode className="absolute text-white/20" strokeWidth={1} style={{ top: '15%', left: '15%', width: '48px', height: '48px' }} />
+               <Barcode className="absolute text-white/20" strokeWidth={1} style={{ top: '30%', left: '50%', width: '160px', height: '40px' }} />
+               <QrCode className="absolute text-white/20" strokeWidth={1} style={{ top: '55%', left: '65%', width: '64px', height: '64px' }} />
+               <Barcode className="absolute text-white/20" strokeWidth={1} style={{ top: '65%', left: '10%', width: '130px', height: '32px' }} />
+               
+               <div className="absolute border-2 border-presetAccent bg-presetAccent/10 rounded-xl shadow-[0_0_20px_rgba(249,115,22,0.3)] animate-[scan-target_8s_ease-in-out_infinite] z-20 transition-all duration-300 flex flex-col overflow-hidden pointer-events-none">
+                 <div className="w-full h-[2px] bg-presetAccent opacity-80 shadow-[0_0_10px_rgba(249,115,22,1)] absolute left-0 animate-[scan-line_2s_linear_infinite]" />
                </div>
             </div>
             <div>
@@ -322,10 +343,10 @@ const Protocol = () => {
             </ul>
           </div>
           <div className="order-1 md:order-2 bg-presetPrimary rounded-[2rem] h-96 relative overflow-hidden flex items-center justify-center">
-            <div className="w-1/2 h-1/2 flex flex-col gap-2 relative">
-                <div className="absolute top-1/2 -mt-px left-0 w-full h-[2px] bg-red-500 shadow-[0_0_10px_red] z-10 animate-[bounce_2s_infinite]" />
-                {[...Array(12)].map((_, i) => (
-                    <div key={i} className="flex-1 bg-white/20 w-full rounded-sm"></div>
+            <div className="w-5/6 h-1/2 flex gap-2 relative border-x-4 border-presetAccent/20 px-4">
+                <div className="absolute top-0 left-1/2 -ml-px h-full w-[4px] bg-red-500 shadow-[0_0_15px_red] z-10 animate-[switch-pos_2s_infinite]" style={{ animationName: 'scan-vertical' }} />
+                {[...Array(24)].map((_, i) => (
+                    <div key={i} className="flex-1 bg-white/20 h-full rounded-sm" style={{ opacity: Math.random() * 0.5 + 0.3, width: `${Math.random() * 10 + 2}px` }}></div>
                 ))}
             </div>
           </div>
@@ -467,6 +488,24 @@ export const LandingPage = () => {
         @keyframes scan {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(180px); }
+        }
+        @keyframes scan-vertical {
+          0%, 100% { left: 5%; }
+          50% { left: 95%; }
+        }
+        @keyframes switch-pos {
+          0%, 100% { left: 10%; transform: translateX(0); }
+          50% { left: 90%; transform: translateX(-100%); }
+        }
+        @keyframes scan-target {
+          0%, 100% { top: calc(15% - 8px); left: calc(15% - 8px); width: 64px; height: 64px; }
+          25% { top: calc(30% - 8px); left: calc(50% - 8px); width: 176px; height: 56px; }
+          50% { top: calc(55% - 8px); left: calc(65% - 8px); width: 80px; height: 80px; }
+          75% { top: calc(65% - 8px); left: calc(10% - 8px); width: 146px; height: 48px; }
+        }
+        @keyframes scan-line {
+          0%, 100% { top: 0%; }
+          50% { top: 100%; }
         }
       `}</style>
       <Navbar />
