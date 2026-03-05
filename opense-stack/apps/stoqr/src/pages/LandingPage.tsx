@@ -125,7 +125,7 @@ const Hero = () => {
     <section ref={containerRef} className="relative h-[100dvh] w-full overflow-hidden bg-presetPrimary flex items-end">
       <div className="absolute inset-0 z-0">
         <img 
-          src="https://images.unsplash.com/photo-1586528116311-ad8ed7c80bc2?q=80&w=2940&auto=format&fit=crop" 
+          src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2940&auto=format&fit=crop"
           alt="Warehouse" 
           className="h-full w-full object-cover opacity-40 mix-blend-overlay"
         />
@@ -462,7 +462,7 @@ const Protocol = () => {
   }, { scope: containerRef })
 
   return (
-    <section id="protocol" ref={containerRef} className="bg-presetBackground relative z-10 w-full overflow-hidden">
+    <section id="protocol" ref={containerRef} className="bg-presetBackground relative z-10 w-full">
       {/* Card 1 */}
       <div className="pin-card h-screen w-full bg-white flex items-center justify-center sticky top-0 border-b border-presetPrimary/10 shadow-[0_10px_30px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
@@ -508,7 +508,7 @@ const Protocol = () => {
       </div>
 
       {/* Card 3 */}
-      <div className="pin-card h-screen w-full bg-[#1E293B] flex items-center justify-center sticky top-0 text-white rounded-t-[2rem]">
+      <div className="pin-card h-screen w-full bg-[#1E293B] flex items-center justify-center sticky top-0 text-white rounded-t-[2rem] overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
           <div className="order-2 md:order-1">
             <h2 className="font-display text-5xl lg:text-7xl font-bold text-white mb-6">03. Deploy</h2>
@@ -530,6 +530,9 @@ const Protocol = () => {
           </div>
         </div>
       </div>
+
+      {/* Scroll-out spacer: gives Card 3 room to leave the viewport */}
+      <div className="h-screen" aria-hidden="true" />
     </section>
   )
 }
