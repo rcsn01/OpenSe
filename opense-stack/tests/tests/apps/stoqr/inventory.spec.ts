@@ -64,7 +64,7 @@ test.describe('Stoqr Inventory', () => {
     }
   });
 
-  test('inventory custom field filter uses + flow and removes All Tags', async ({ authenticatedPage }) => {
+  test('inventory custom field filter uses stepped + flow', async ({ authenticatedPage }) => {
     const inventory = new InventoryPage(authenticatedPage);
     await inventory.goto();
 
@@ -75,40 +75,44 @@ test.describe('Stoqr Inventory', () => {
 
     await expect(authenticatedPage.getByText('All Tags')).toHaveCount(0);
 
-    const addCustomFilterButton = authenticatedPage.getByRole('button', { name: /add custom field filter/i });
-    await expect(addCustomFilterButton.first()).toBeVisible();
-    await addCustomFilterButton.first().click();
+    // Step 1: Click "+" to open attribute dropdown
+    const addFilterButton = authenticatedPage.getByRole('button', { name: /add custom field filter/i });
+    await expect(addFilterButton.first()).toBeVisible();
+    await addFilterButton.first().click();
 
-    const stockStatusTrigger = authenticatedPage.getByRole('button', { name: /stock status filter/i });
-    await expect(stockStatusTrigger).toBeVisible();
-    await stockStatusTrigger.click();
-    await authenticatedPage.getByRole('button', { name: 'Low Stock' }).click();
-
-    const fieldTypeTrigger = authenticatedPage.getByRole('button', { name: 'Custom field type' });
-    const fieldValueTrigger = authenticatedPage.getByRole('button', { name: 'Custom field value' });
-    await expect(fieldTypeTrigger).toBeVisible();
-    await expect(fieldValueTrigger).toBeVisible();
-
-    await fieldTypeTrigger.click();
-
-    const typeOptions = authenticatedPage.locator('div.absolute.z-50').last().locator('button');
-    const optionCount = await typeOptions.count();
-    if (optionCount <= 1) {
+    const attributeDropdown = authenticatedPage.locator('div.absolute.z-50').last().locator('button');
+    const attrCount = await attributeDropdown.count();
+    if (attrCount === 0) {
       return;
     }
 
-    await typeOptions.nth(1).click();
+    // Step 2: Select an attribute — button shows "AttributeName:" and value dropdown auto-opens
+    const chosenAttrLabel = (await attributeDropdown.first().innerText()).trim();
+    await attributeDropdown.first().click();
 
-    await fieldValueTrigger.click();
+    const valueDropdownTrigger = authenticatedPage.getByRole('button', { name: 'Custom field value' });
+    await expect(valueDropdownTrigger).toBeVisible();
+    await expect(valueDropdownTrigger).toContainText(`${chosenAttrLabel}:`);
+
+    // Step 3: Value dropdown is already open — select a value for "AttributeName:ValueName" chip
     const valueOptions = authenticatedPage.locator('div.absolute.z-50').last().locator('button');
-    const valueOptionCount = await valueOptions.count();
-    if (valueOptionCount <= 1) {
+    const valueCount = await valueOptions.count();
+    if (valueCount === 0) {
       return;
     }
 
-    const selectedValueLabel = (await valueOptions.nth(1).innerText()).trim();
-    await valueOptions.nth(1).click();
-    await expect(fieldValueTrigger).toContainText(selectedValueLabel);
+    const chosenValueLabel = (await valueOptions.first().innerText()).trim();
+    await valueOptions.first().click();
+
+    const chipText = `${chosenAttrLabel}:${chosenValueLabel}`;
+    await expect(authenticatedPage.getByText(chipText)).toBeVisible();
+
+    const removeButton = authenticatedPage.getByRole('button', { name: /remove filter/i });
+    await expect(removeButton).toBeVisible();
+
+    // Step 4: Remove the filter — "+" should reappear
+    await removeButton.click();
+    await expect(addFilterButton.first()).toBeVisible();
   });
 
   test('product form attribute existing value uses shared dropdown', async ({ authenticatedPage }) => {
