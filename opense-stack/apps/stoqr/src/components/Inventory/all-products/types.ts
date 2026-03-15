@@ -38,7 +38,6 @@ export type InventoryFiltersBarProps = {
 
 export type AllProductsTabProps = {
   companyId: string | null
-  stats: { totalItems: number; lowStockItems: number; totalValue: number }
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
   selectedCustomFieldKey: string | null
