@@ -17,7 +17,6 @@ import {
   useInventoryFilters,
   useInventoryProducts,
   useInventoryRefresh,
-  useInventoryStats,
 } from '../hooks/queries/useInventory'
 
 export const InventoryListPage = () => {
@@ -57,7 +56,6 @@ export const InventoryListPage = () => {
   })
 
   const filtersQuery = useInventoryFilters(companyId)
-  const statsQuery = useInventoryStats(companyId)
   const deleteProductsMutation = useDeleteInventoryProducts(companyId)
   const importProductsMutation = useImportInventoryProducts(companyId)
   const refreshInventory = useInventoryRefresh()
@@ -66,10 +64,9 @@ export const InventoryListPage = () => {
   const totalCount = productsQuery.data?.totalCount ?? 0
   const folders = filtersQuery.data?.folders ?? ([] as Folder[])
   const customFieldFilters = filtersQuery.data?.customFieldFilters ?? []
-  const stats = statsQuery.data ?? { totalItems: 0, lowStockItems: 0, totalValue: 0 }
   const isLoading = useMemo(
-    () => productsQuery.isLoading || filtersQuery.isLoading || statsQuery.isLoading,
-    [productsQuery.isLoading, filtersQuery.isLoading, statsQuery.isLoading],
+    () => productsQuery.isLoading || filtersQuery.isLoading,
+    [productsQuery.isLoading, filtersQuery.isLoading],
   )
 
   useEffect(() => {
@@ -167,7 +164,6 @@ export const InventoryListPage = () => {
             content: (
               <AllProductsTab
                 companyId={companyId}
-                stats={stats}
                 stockFilter={stockFilter}
                 setStockFilter={setStockFilter}
                 selectedCustomFieldKey={selectedCustomFieldKey}
