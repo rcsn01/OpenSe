@@ -8,10 +8,11 @@ interface DropdownProps {
   children: ReactNode
   align?: 'left' | 'right'
   className?: string
+  defaultOpen?: boolean
 }
 
-export function Dropdown({ trigger, children, align = 'left', className }: DropdownProps) {
-  const [open, setOpen] = useState(false)
+export function Dropdown({ trigger, children, align = 'left', className, defaultOpen = false }: DropdownProps) {
+  const [open, setOpen] = useState(defaultOpen)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
