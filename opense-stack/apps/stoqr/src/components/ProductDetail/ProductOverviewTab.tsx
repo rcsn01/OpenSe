@@ -105,10 +105,10 @@ export const ProductOverviewTab = ({
               {Object.keys(customFields).length === 0 ? (
                 <EmptyState title="No custom fields" description="Add values in product settings." />
               ) : (
-                <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
+                <div className="flex flex-col gap-2">
                   {Object.entries(customFields).map(([key, value]) => (
-                    <div key={key} className="flex flex-col gap-0.5">
-                      <span className="text-xs font-medium text-[var(--color-muted-foreground)]">{key}</span>
+                    <div key={key} className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] pb-2 last:border-0 last:pb-0">
+                      <span className="text-sm text-[var(--color-muted-foreground)]">{key}</span>
                       <span className="text-sm font-semibold text-[var(--color-foreground)]">{String(value)}</span>
                     </div>
                   ))}
