@@ -41,32 +41,34 @@ export const InventoryFiltersBar = ({
   }
 
   return (
-    <div className="flex-between wrap" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', gap: 16, background: isSelectionMode ? 'rgba(59, 130, 246, 0.08)' : '#fff' }}>
+    <div className={`inventory-toolbar${isSelectionMode ? ' selection-mode' : ''}`}>
       {isSelectionMode ? (
-        <div className="flex-between" style={{ width: '100%' }}>
-          <span className="pill" style={{ background: 'var(--primary)', color: 'white' }}>
-            {selectedRowIds.size} items selected
-          </span>
+        <>
+          <div className="row">
+            <span className="pill" style={{ background: 'var(--primary)', color: 'white' }}>
+              {selectedRowIds.size} selected
+            </span>
+          </div>
           <div className="row">
             <button className="button ghost small" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete}>
-              Bulk Delete
+              Delete
             </button>
-            <button className="button ghost small" type="button">Move to Folder</button>
+            <button className="button ghost small" type="button">Move</button>
             <button className="button ghost small" type="button">Print Labels</button>
-            <button className="button ghost small" type="button">Export Selected</button>
+            <button className="button ghost small" type="button">Export</button>
           </div>
-        </div>
+        </>
       ) : (
         <>
           <div className="row wrap" style={{ flex: 1 }}>
             <Dropdown
-              className="min-w-[160px]"
+              className="min-w-[140px]"
               trigger={
                 <button
                   type="button"
                   aria-label="Stock status filter"
                   className="select text-left"
-                  style={{ width: 160 }}
+                  style={{ width: 140, padding: '7px 10px', fontSize: 13, borderRadius: 8 }}
                 >
                   {stockFilterLabels[stockFilter]}
                 </button>
@@ -85,12 +87,12 @@ export const InventoryFiltersBar = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  padding: '6px 8px 6px 12px',
-                  background: 'var(--color-muted, #f1f5f9)',
-                  border: '1px solid var(--color-border, #e2e8f0)',
-                  borderRadius: 'var(--radius-md, 6px)',
-                  fontSize: '0.875rem',
-                  lineHeight: 1.25,
+                  padding: '5px 8px 5px 10px',
+                  background: 'rgba(102, 193, 63, 0.08)',
+                  border: '1px solid rgba(102, 193, 63, 0.25)',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 500,
                 }}
               >
                 <span>{selectedCustomFieldKey}:{formatCustomFieldValue(selectedCustomFieldValue)}</span>
@@ -103,10 +105,10 @@ export const InventoryFiltersBar = ({
                     border: 'none',
                     cursor: 'pointer',
                     padding: '0 2px',
-                    fontSize: '1rem',
+                    fontSize: 14,
                     lineHeight: 1,
                     color: 'var(--color-foreground)',
-                    opacity: 0.6,
+                    opacity: 0.5,
                   }}
                 >
                   ×
@@ -117,14 +119,14 @@ export const InventoryFiltersBar = ({
             {isSelectingValue && (
               <div className="row" style={{ gap: 4, alignItems: 'center' }}>
                 <Dropdown
-                  className="min-w-[160px]"
+                  className="min-w-[140px]"
                   defaultOpen
                   trigger={
                     <button
                       type="button"
                       aria-label="Custom field value"
                       className="select text-left"
-                      style={{ width: 160 }}
+                      style={{ width: 140, padding: '7px 10px', fontSize: 13, borderRadius: 8 }}
                     >
                       {selectedCustomFieldKey}:
                     </button>
@@ -148,10 +150,10 @@ export const InventoryFiltersBar = ({
                     border: 'none',
                     cursor: 'pointer',
                     padding: '0 2px',
-                    fontSize: '1rem',
+                    fontSize: 14,
                     lineHeight: 1,
                     color: 'var(--color-foreground)',
-                    opacity: 0.6,
+                    opacity: 0.5,
                   }}
                 >
                   ×
@@ -161,13 +163,13 @@ export const InventoryFiltersBar = ({
 
             {!selectedCustomFieldKey && (
               <Dropdown
-                className="min-w-[160px]"
+                className="min-w-[140px]"
                 trigger={
                   <button
-                    className="button secondary"
+                    className="button ghost small"
                     type="button"
                     aria-label="Add custom field filter"
-                    style={{ width: 40, minWidth: 40, paddingInline: 0 }}
+                    style={{ width: 32, minWidth: 32, padding: 0, borderRadius: 8 }}
                   >
                     +
                   </button>
@@ -188,9 +190,9 @@ export const InventoryFiltersBar = ({
             )}
           </div>
 
-          <div className="row">
-            <button className="button secondary" onClick={onImportOpen}>Import CSV</button>
-            <button className="button" onClick={onCreateOpen}>Create Product</button>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="button ghost small" onClick={onImportOpen} style={{ borderRadius: 8 }}>Import CSV</button>
+            <button className="button small" onClick={onCreateOpen} style={{ borderRadius: 8 }}>+ New Product</button>
           </div>
         </>
       )}

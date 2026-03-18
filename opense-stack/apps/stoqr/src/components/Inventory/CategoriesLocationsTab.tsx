@@ -38,41 +38,48 @@ export const LocationsTab = ({ companyId }: Props) => {
   }
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: '360px 1fr', gap: 24 }}>
-      <div className="card stack">
-        <h3 className="section-title">Manage Locations</h3>
+    <div className="grid" style={{ gridTemplateColumns: '340px 1fr', gap: 16 }}>
+      <div className="card stack" style={{ gap: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Add Location</h3>
 
-        <label className="stack">
-          Location Name
-          <input className="input" value={locationName} onChange={(event) => setLocationName(event.target.value)} placeholder="e.g. Main Warehouse" />
+        <label className="stack" style={{ gap: 4 }}>
+          <span className="small muted">Location Name</span>
+          <input className="input" style={{ borderRadius: 8 }} value={locationName} onChange={(event) => setLocationName(event.target.value)} placeholder="e.g. Main Warehouse" />
         </label>
-        <label className="stack">
-          Location Code
-          <input className="input" value={locationCode} onChange={(event) => setLocationCode(event.target.value)} placeholder="e.g. WH-A" />
+        <label className="stack" style={{ gap: 4 }}>
+          <span className="small muted">Location Code</span>
+          <input className="input" style={{ borderRadius: 8 }} value={locationCode} onChange={(event) => setLocationCode(event.target.value)} placeholder="e.g. WH-A" />
         </label>
-        <label className="stack">
-          Location Description
-          <input className="input" value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} placeholder="Optional" />
+        <label className="stack" style={{ gap: 4 }}>
+          <span className="small muted">Description</span>
+          <input className="input" style={{ borderRadius: 8 }} value={locationDescription} onChange={(event) => setLocationDescription(event.target.value)} placeholder="Optional" />
         </label>
-        <button className="button" onClick={createLocation} disabled={createLocationMutation.isPending}>Add Location</button>
-        {message && <div className="small muted">{message}</div>}
+        <button className="button small" style={{ alignSelf: 'flex-start', borderRadius: 8 }} onClick={createLocation} disabled={createLocationMutation.isPending}>Add Location</button>
+        {message && <div className="small muted" style={{ color: 'var(--success)' }}>{message}</div>}
       </div>
 
-      <div className="card stack">
-        <div className="flex-between">
-          <h3 className="section-title">Locations</h3>
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-info-bar">
+          <span style={{ fontWeight: 600 }}>Locations</span>
           <span className="pill">{locations.length}</span>
         </div>
         {isLoading ? (
-          <div className="empty-state">Loading locations...</div>
+          <div className="empty-state" style={{ padding: 48 }}>Loading locations...</div>
         ) : locations.length === 0 ? (
-          <div className="empty-state">No locations yet.</div>
+          <div className="empty-state" style={{ padding: 48 }}>No locations yet. Add your first location.</div>
         ) : (
-          <div className="list">
-            {locations.map((location) => (
-              <div key={location.id} className="flex-between">
+          <div>
+            {locations.map((location, i) => (
+              <div
+                key={location.id}
+                className="flex-between"
+                style={{
+                  padding: '12px 16px',
+                  borderBottom: i < locations.length - 1 ? '1px solid var(--border)' : 'none',
+                }}
+              >
                 <div>
-                  <div style={{ fontWeight: 600 }}>{location.name}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{location.name}</div>
                   <div className="small muted">{location.code ?? 'No code'} · {location.description ?? '—'}</div>
                 </div>
               </div>

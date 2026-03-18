@@ -1,0 +1,85 @@
+<mxfile host="app.diagrams.net" modified="2026-03-16T10:00:00.000Z" agent="Mozilla/5.0" version="24.7.5" editor="draw.io">
+	<diagram id="system-architecture" name="System Architecture">
+		<mxGraphModel dx="1486" dy="862" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1080" math="0" shadow="0">
+			<root>
+				<mxCell id="0" />
+				<mxCell id="1" parent="0" />
+
+				<mxCell id="title" value="OpenSe System Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=24;fontStyle=1;" vertex="1" parent="1">
+					<mxGeometry x="680" y="30" width="560" height="40" as="geometry" />
+				</mxCell>
+
+				<mxCell id="users" value="Users / WAN Clients" style="shape=mxgraph.aws4.user;html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;" vertex="1" parent="1">
+					<mxGeometry x="120" y="220" width="90" height="90" as="geometry" />
+				</mxCell>
+
+				<mxCell id="cloudflare" value="Cloudflare Zero Trust Tunnel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+					<mxGeometry x="300" y="220" width="280" height="90" as="geometry" />
+				</mxCell>
+
+				<mxCell id="frontend-cluster" value="Frontend Cluster (k3s, HA)&#xa;3 Debian Servers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+					<mxGeometry x="700" y="120" width="440" height="260" as="geometry" />
+				</mxCell>
+
+				<mxCell id="fe1" value="Frontend Node 1&#xa;Debian + k3s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
+					<mxGeometry x="740" y="190" width="120" height="80" as="geometry" />
+				</mxCell>
+				<mxCell id="fe2" value="Frontend Node 2&#xa;Debian + k3s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
+					<mxGeometry x="900" y="190" width="120" height="80" as="geometry" />
+				</mxCell>
+				<mxCell id="fe3" value="Frontend Node 3&#xa;Debian + k3s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
+					<mxGeometry x="1060" y="190" width="120" height="80" as="geometry" />
+				</mxCell>
+
+				<mxCell id="backend-cluster" value="Backend Cluster (k3s + Helm, HA)&#xa;3 Debian Servers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+					<mxGeometry x="700" y="430" width="440" height="280" as="geometry" />
+				</mxCell>
+
+				<mxCell id="be1" value="Backend Node 1&#xa;Debian + k3s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+					<mxGeometry x="740" y="505" width="120" height="80" as="geometry" />
+				</mxCell>
+				<mxCell id="be2" value="Backend Node 2&#xa;Debian + k3s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+					<mxGeometry x="900" y="505" width="120" height="80" as="geometry" />
+				</mxCell>
+				<mxCell id="be3" value="Backend Node 3&#xa;Debian + k3s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+					<mxGeometry x="1060" y="505" width="120" height="80" as="geometry" />
+				</mxCell>
+
+				<mxCell id="helm" value="Helm Charts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+					<mxGeometry x="865" y="615" width="110" height="50" as="geometry" />
+				</mxCell>
+
+				<mxCell id="ha-note" value="High Availability + Redundancy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="1">
+					<mxGeometry x="1260" y="290" width="260" height="70" as="geometry" />
+				</mxCell>
+
+				<mxCell id="edge-users-cf" value="" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" parent="1" source="users" target="cloudflare">
+					<mxGeometry relative="1" as="geometry" />
+				</mxCell>
+				<mxCell id="edge-cf-fe" value="WAN ingress" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" parent="1" source="cloudflare" target="frontend-cluster">
+					<mxGeometry relative="1" as="geometry" />
+				</mxCell>
+				<mxCell id="edge-cf-be" value="Secure tunnel access" style="endArrow=classic;html=1;strokeWidth=2;dashed=1;" edge="1" parent="1" source="cloudflare" target="backend-cluster">
+					<mxGeometry relative="1" as="geometry" />
+				</mxCell>
+				<mxCell id="edge-fe-be" value="Internal service traffic" style="endArrow=classic;html=1;strokeWidth=2;" edge="1" parent="1" source="frontend-cluster" target="backend-cluster">
+					<mxGeometry relative="1" as="geometry" />
+				</mxCell>
+
+				<mxCell id="edge-fe1-fe2" value="" style="endArrow=none;html=1;strokeWidth=1;dashed=1;" edge="1" parent="1" source="fe1" target="fe2">
+					<mxGeometry relative="1" as="geometry" />
+				</mxCell>
+				<mxCell id="edge-fe2-fe3" value="" style="endArrow=none;html=1;strokeWidth=1;dashed=1;" edge="1" parent="1" source="fe2" target="fe3">
+					<mxGeometry relative="1" as="geometry" />
+				</mxCell>
+				<mxCell id="edge-be1-be2" value="" style="endArrow=none;html=1;strokeWidth=1;dashed=1;" edge="1" parent="1" source="be1" target="be2">
+					<mxGeometry relative="1" as="geometry" />
+				</mxCell>
+				<mxCell id="edge-be2-be3" value="" style="endArrow=none;html=1;strokeWidth=1;dashed=1;" edge="1" parent="1" source="be2" target="be3">
+					<mxGeometry relative="1" as="geometry" />
+				</mxCell>
+
+			</root>
+		</mxGraphModel>
+	</diagram>
+</mxfile>
