@@ -1,25 +1,40 @@
 import { useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useCompany } from '../../contexts/CompanyContext'
-import { EmptyState } from '../../components/EmptyState'
 import { Tabs } from '../../components/Tabs'
 import { getPublicImageUrl, formatCurrency } from '../../utils'
 import { ProductAttachmentsTab } from '../../components/ProductDetail/ProductAttachmentsTab'
 import { ProductBatchHistoryTab } from '../../components/ProductDetail/ProductBatchHistoryTab'
 import { ProductOverviewTab } from '../../components/ProductDetail/ProductOverviewTab'
 import { ProductSuppliersTab } from '../../components/ProductDetail/ProductSuppliersTab'
-import { 
-  ArrowLeft, 
-  Printer, 
-  MoreHorizontal, 
-  AlertTriangle, 
+import {
+  Printer,
+  MoreHorizontal,
   TrendingUp,
   Package,
   DollarSign,
-  Pencil
+  Pencil,
+  Archive,
+  Trash2,
 } from 'lucide-react'
-import { Badge } from '../../components/Badge'
 import { useProductDetail } from '../../hooks/queries/useProducts'
+import {
+  Container,
+  VStack,
+  HStack,
+  Card,
+  CardContent,
+  Badge,
+  Button,
+  Breadcrumb,
+  StackLayout,
+  Spinner,
+  EmptyState,
+  Tooltip,
+  Dropdown,
+  DropdownItem,
+  DropdownSeparator,
+} from '@repo/ui'
 
 export const ProductDetailPage = () => {
   const { id, tab } = useParams<{ id?: string; tab?: string }>()
@@ -37,7 +52,6 @@ export const ProductDetailPage = () => {
     return product.image_urls.map((url) => getPublicImageUrl(url))
   }, [product])
 
-  // Computed Metrics
   const financials = useMemo(() => {
     if (!product) return { margin: 0, totalValue: 0 }
     const cost = product.cost_price ?? 0
@@ -49,7 +63,7 @@ export const ProductDetailPage = () => {
 
   const stockStatus = useMemo(() => {
     if (!product) return { label: 'Unknown', variant: 'neutral' as const }
-    if (product.quantity_on_hand === 0) return { label: 'Out of Stock', variant: 'danger' as const }
+    if (product.quantity_on_hand === 0) return { label: 'Out of Stock', variant: 'destructive' as const }
     if (product.quantity_on_hand <= product.reorder_point) return { label: 'Low Stock', variant: 'warning' as const }
     return { label: 'In Stock', variant: 'success' as const }
   }, [product])
@@ -60,22 +74,11 @@ export const ProductDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
-        <div className="stack">
-          <div className="flex-between" style={{ marginBottom: 24 }}>
-            <div className="row">
-              <div style={{ width: 32, height: 32, background: '#e2e8f0', borderRadius: 8 }} />
-              <div className="stack" style={{ gap: 4 }}>
-                <div style={{ width: 120, height: 24, background: '#e2e8f0', borderRadius: 4 }} />
-                <div style={{ width: 80, height: 16, background: '#f1f5f9', borderRadius: 4 }} />
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-3" style={{ height: 100 }}>
-             {[1,2,3].map(i => <div key={i} className="card" style={{ background: '#f8fafc' }} />)}
-          </div>
+      <Container maxWidth="xl" className="py-10">
+        <div className="flex items-center justify-center py-32">
+          <Spinner size="lg" />
         </div>
-      </div>
+      </Container>
     )
   }
 
@@ -86,159 +89,158 @@ export const ProductDetailPage = () => {
   const qrValue = product.sku || product.id
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-    <div className="stack" style={{ paddingBottom: 64 }}>
-      {/* Top Navigation & Header */}
-      <div className="stack" style={{ gap: 24 }}>
-        <div className="row">
-          <button 
-            onClick={() => navigate('/inventory')} 
-            className="button ghost small icon-button"
-            title="Back to Inventory"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div className="small muted">
-            <Link to="/inventory" className="hover:underline">Inventory</Link>
-            <span style={{ margin: '0 8px' }}>/</span>
-            <span style={{ color: 'var(--text)', fontWeight: 500 }}>{product.name}</span>
-          </div>
-        </div>
+    <Container maxWidth="xl" className="py-8 pb-20">
+      <VStack className="gap-8">
+        {/* Breadcrumb */}
+        <Breadcrumb items={[
+          { label: 'Inventory', href: '/inventory' },
+          { label: product.name },
+        ]} />
 
-        <div className="flex-between wrap" style={{ gap: 16 }}>
-          <div className="row" style={{ alignItems: 'flex-start', gap: 16 }}>
+        {/* Header */}
+        <HStack justify="between" align="start" wrap className="gap-4">
+          <HStack align="start" className="gap-4">
             {images.length > 0 ? (
-              <img 
-                src={images[0]} 
-                alt={product.name} 
-                style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover', border: '1px solid var(--border)' }}
+              <img
+                src={images[0]}
+                alt={product.name}
+                className="h-14 w-14 rounded-xl object-cover border border-[var(--color-border)]"
               />
             ) : (
-              <div style={{ width: 64, height: 64, borderRadius: 12, background: '#f1f5f9', display: 'grid', placeItems: 'center', color: '#94a3b8' }}>
-                <Package size={24} />
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--color-muted)] text-[var(--color-muted-foreground)]">
+                <Package size={22} />
               </div>
             )}
             <div>
-              <h1 className="page-title" style={{ fontSize: 24, marginBottom: 4 }}>{product.name}</h1>
-              <div className="row">
-                <span className="badge neutral" style={{ fontFamily: 'monospace' }}>{product.sku}</span>
-                <Badge label={stockStatus.label} variant={stockStatus.variant} />
-              </div>
+              <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
+              <HStack className="mt-1.5 gap-2">
+                <Badge variant="outline" size="sm"><span className="font-mono">{product.sku}</span></Badge>
+                <Badge variant={stockStatus.variant} size="sm">{stockStatus.label}</Badge>
+              </HStack>
             </div>
-          </div>
+          </HStack>
 
-          <div className="row">
-            <button className="button secondary" onClick={() => navigate(`/inventory/${product.id}/edit`)}>
-              <Pencil size={16} style={{ marginRight: 8 }} /> Edit
-            </button>
-            <button className="button secondary icon-button" title="Print Label" onClick={() => window.print()}>
-              <Printer size={18} />
-            </button>
-            <button className="button ghost icon-button" title="More Options">
-              <MoreHorizontal size={18} />
-            </button>
-          </div>
-        </div>
-      </div>
+          <HStack className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate(`/inventory/${product.id}/edit`)}>
+              <Pencil size={14} /> Edit
+            </Button>
+            <Tooltip content="Print label">
+              <Button variant="ghost" size="icon" onClick={() => window.print()}>
+                <Printer size={16} />
+              </Button>
+            </Tooltip>
+            <Dropdown
+              trigger={
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal size={16} />
+                </Button>
+              }
+              align="right"
+            >
+              <DropdownItem icon={<Archive size={14} />}>Archive product</DropdownItem>
+              <DropdownSeparator />
+              <DropdownItem icon={<Trash2 size={14} />} destructive>Delete product</DropdownItem>
+            </Dropdown>
+          </HStack>
+        </HStack>
 
-      {/* Key Metrics Grid */}
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-        {/* Stock Card */}
-        <div className="card stat" style={{ borderLeft: stockStatus.variant === 'warning' ? '4px solid var(--warning)' : undefined }}>
-          <div className="flex-between">
-            <h3 style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Stock Level</h3>
-            <Package size={16} className="muted" />
-          </div>
-          <div className="row" style={{ alignItems: 'baseline', marginTop: 8 }}>
-            <span style={{ fontSize: 24, fontWeight: 700 }}>{product.quantity_on_hand}</span>
-            <span className="small muted"> / {product.reorder_point} min</span>
-          </div>
-        </div>
+        {/* Key Metrics */}
+        <StackLayout variant="stats">
+          {/* Stock Level */}
+          <Card padding="md" className={stockStatus.variant === 'warning' ? 'border-l-4 border-l-[var(--color-warning)]' : ''}>
+            <CardContent>
+              <HStack justify="between" className="mb-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">Stock</span>
+                <Package size={14} className="text-[var(--color-muted-foreground)]" />
+              </HStack>
+              <HStack align="end" className="gap-1.5">
+                <span className="text-2xl font-bold leading-none">{product.quantity_on_hand}</span>
+                <span className="mb-0.5 text-xs text-[var(--color-muted-foreground)]">/ {product.reorder_point} min</span>
+              </HStack>
+            </CardContent>
+          </Card>
 
-        {/* Financials Card */}
-        <div className="card stat">
-          <div className="flex-between">
-            <h3 style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Unit Financials</h3>
-            <DollarSign size={16} className="muted" />
-          </div>
-          <div className="stack" style={{ gap: 2, marginTop: 8 }}>
-            <div className="flex-between small">
-              <span className="muted">Cost:</span>
-              <span style={{ fontWeight: 500 }}>{formatCurrency(product.cost_price)}</span>
-            </div>
-            <div className="flex-between small">
-              <span className="muted">Sell:</span>
-              <span style={{ fontWeight: 500 }}>{formatCurrency(product.selling_price)}</span>
-            </div>
-          </div>
-        </div>
+          {/* Pricing */}
+          <Card padding="md">
+            <CardContent>
+              <HStack justify="between" className="mb-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">Pricing</span>
+                <DollarSign size={14} className="text-[var(--color-muted-foreground)]" />
+              </HStack>
+              <VStack className="gap-1">
+                <HStack justify="between">
+                  <span className="text-sm text-[var(--color-muted-foreground)]">Cost</span>
+                  <span className="text-sm font-medium">{formatCurrency(product.cost_price)}</span>
+                </HStack>
+                <HStack justify="between">
+                  <span className="text-sm text-[var(--color-muted-foreground)]">Sell</span>
+                  <span className="text-sm font-medium">{formatCurrency(product.selling_price)}</span>
+                </HStack>
+              </VStack>
+            </CardContent>
+          </Card>
 
-        {/* Margin Card */}
-        <div className="card stat">
-          <div className="flex-between">
-            <h3 style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Profit Margin</h3>
-            <TrendingUp size={16} className="muted" />
-          </div>
-          <div className="row" style={{ alignItems: 'baseline', marginTop: 8 }}>
-            <span style={{ fontSize: 24, fontWeight: 700, color: financials.margin > 30 ? 'var(--success)' : undefined }}>
-              {financials.margin.toFixed(1)}%
-            </span>
-          </div>
-          <div className="small muted" style={{ marginTop: 2 }}>
-            Est. Profit: {formatCurrency((product.selling_price ?? 0) - (product.cost_price ?? 0))}
-          </div>
-        </div>
+          {/* Margin */}
+          <Card padding="md">
+            <CardContent>
+              <HStack justify="between" className="mb-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">Margin</span>
+                <TrendingUp size={14} className="text-[var(--color-muted-foreground)]" />
+              </HStack>
+              <span className={`text-2xl font-bold leading-none ${financials.margin > 30 ? 'text-[var(--color-success)]' : ''}`}>
+                {financials.margin.toFixed(1)}%
+              </span>
+              <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                {formatCurrency((product.selling_price ?? 0) - (product.cost_price ?? 0))} per unit
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Asset Value Card */}
-        <div className="card stat">
-          <div className="flex-between">
-            <h3 style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Asset Value</h3>
-            <AlertTriangle size={16} className="muted" style={{ opacity: 0 }} /> {/* Spacer */}
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 700, marginTop: 8 }}>
-            {formatCurrency(financials.totalValue)}
-          </div>
-          <div className="small muted" style={{ marginTop: 2 }}>
-            Total Cost Basis
-          </div>
-        </div>
-      </div>
+          {/* Asset Value */}
+          <Card padding="md">
+            <CardContent>
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">Asset Value</span>
+              <p className="mt-2 text-2xl font-bold leading-none">{formatCurrency(financials.totalValue)}</p>
+              <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">Total cost basis</p>
+            </CardContent>
+          </Card>
+        </StackLayout>
 
-      {/* Tabs Section */}
-      <Tabs
-        activeTab={activeTab}
-        onTabChange={(nextTab) => navigate(`/inventory/${product.id}/${nextTab}`)}
-        tabs={[
-          {
-            id: 'overview',
-            label: 'Overview',
-            content: (
-              <ProductOverviewTab
-                product={product}
-                transactions={transactions}
-                images={images}
-                qrValue={qrValue}
-              />
-            ),
-          },
-          {
-            id: 'suppliers',
-            label: 'Suppliers & POs',
-            content: <ProductSuppliersTab productId={product.id} companyId={companyId} />,
-          },
-          {
-            id: 'batch',
-            label: 'Batch History',
-            content: <ProductBatchHistoryTab productId={product.id} companyId={companyId} />,
-          },
-          {
-            id: 'attachments',
-            label: 'Files',
-            content: <ProductAttachmentsTab productId={product.id} companyId={companyId} />,
-          },
-        ]}
-      />
-    </div>
-    </div>
+        {/* Tabs */}
+        <Tabs
+          activeTab={activeTab}
+          onTabChange={(nextTab) => navigate(`/inventory/${product.id}/${nextTab}`)}
+          tabs={[
+            {
+              id: 'overview',
+              label: 'Overview',
+              content: (
+                <ProductOverviewTab
+                  product={product}
+                  transactions={transactions}
+                  images={images}
+                  qrValue={qrValue}
+                />
+              ),
+            },
+            {
+              id: 'suppliers',
+              label: 'Suppliers & POs',
+              content: <ProductSuppliersTab productId={product.id} companyId={companyId} />,
+            },
+            {
+              id: 'batch',
+              label: 'Batch History',
+              content: <ProductBatchHistoryTab productId={product.id} companyId={companyId} />,
+            },
+            {
+              id: 'attachments',
+              label: 'Files',
+              content: <ProductAttachmentsTab productId={product.id} companyId={companyId} />,
+            },
+          ]}
+        />
+      </VStack>
+    </Container>
   )
 }
