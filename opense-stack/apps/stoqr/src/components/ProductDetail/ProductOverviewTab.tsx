@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Card,
   CardContent,
@@ -13,23 +15,28 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  HStack,
+  VStack,
+  StackLayout,
+  Breadcrumb,
+  Dropdown,
+  DropdownItem,
+  DropdownSeparator,
 } from '@repo/ui'
+import {
+  Package,
+  DollarSign,
+  TrendingUp,
+  Pencil,
+  Printer,
+  MoreHorizontal,
+  Archive,
+  Trash2,
+} from 'lucide-react'
 import { formatCurrency, formatDateTime } from '../../utils'
 import type { InventoryTransaction, Product } from '../../types'
-
-const StockStatusBadge = ({ quantity, reorderPoint }: { quantity: number; reorderPoint: number }) => {
-  if (quantity === 0) return <Badge variant="destructive">Out of stock</Badge>
-  if (quantity <= reorderPoint) return <Badge variant="warning">Low stock</Badge>
-  return <Badge variant="success">In stock</Badge>
-}
-
-const MetricCard = ({ label, value, sub }: { label: string; value: string | number; sub?: string }) => (
-  <div className="flex flex-col gap-0.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)] px-4 py-3">
-    <span className="text-xs font-medium text-[var(--color-muted-foreground)]">{label}</span>
-    <span className="text-lg font-semibold text-[var(--color-foreground)]">{value}</span>
-    {sub && <span className="text-xs text-[var(--color-muted-foreground)]">{sub}</span>}
-  </div>
-)
+import { useCompany } from '../../contexts/CompanyContext'
+import { useProductFolders } from '../../hooks/queries/useProducts'
 
 export const ProductOverviewTab = ({
   product,
@@ -42,47 +49,147 @@ export const ProductOverviewTab = ({
   images: string[]
   qrValue: string
 }) => {
+  const navigate = useNavigate()
+  const { companyId } = useCompany()
+  const { data: allFolders = [] } = useProductFolders(companyId)
   const customFields = product.custom_fields ?? {}
   const recentTransactions = transactions.slice(0, 8)
-  const stockRatio = product.reorder_point > 0 ? product.quantity_on_hand / product.reorder_point : 1
+
+  const folderPath = useMemo(() => {
+    if (!product.folder_id) return []
+    const folderMap = new Map(allFolders.map((f) => [f.id, f]))
+    const path: { id: string; name: string }[] = []
+    let current = folderMap.get(product.folder_id)
+    while (current) {
+      path.unshift({ id: current.id, name: current.name })
+      current = current.parent_id ? folderMap.get(current.parent_id) : undefined
+    }
+    return path
+  }, [product.folder_id, allFolders])
+
+  const breadcrumbItems = useMemo(() => [
+    { label: 'Inventory', href: '/inventory' },
+    ...folderPath.map((f) => ({ label: f.name })),
+    { label: product.name },
+  ], [folderPath, product.name])
+
+  const stockStatus = useMemo(() => {
+    if (product.quantity_on_hand === 0) return { label: 'Out of Stock', variant: 'destructive' as const }
+    if (product.quantity_on_hand <= product.reorder_point) return { label: 'Low Stock', variant: 'warning' as const }
+    return { label: 'In Stock', variant: 'success' as const }
+  }, [product.quantity_on_hand, product.reorder_point])
+
+  const financials = useMemo(() => {
+    const cost = product.cost_price ?? 0
+    const sell = product.selling_price ?? 0
+    const margin = sell > 0 ? ((sell - cost) / sell) * 100 : 0
+    const totalValue = (product.quantity_on_hand ?? 0) * cost
+    return { margin, totalValue }
+  }, [product.cost_price, product.selling_price, product.quantity_on_hand])
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 pt-6">
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold tracking-tight text-[var(--color-foreground)]">{product.name}</h2>
-            <StockStatusBadge quantity={product.quantity_on_hand} reorderPoint={product.reorder_point} />
+      <HStack justify="between" align="start" wrap className="gap-4">
+        <HStack align="start" className="gap-4">
+          {images.length > 0 ? (
+            <img
+              src={images[0]}
+              alt={product.name}
+              className="h-14 w-14 rounded-xl object-cover border border-[var(--color-border)]"
+            />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--color-muted)] text-[var(--color-muted-foreground)]">
+              <Package size={22} />
+            </div>
+          )}
+          <div>
+            <Breadcrumb items={breadcrumbItems} className="mb-1" />
+            <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
+            <HStack className="mt-1.5 gap-2">
+              <Badge variant="outline" size="sm"><span className="font-mono">{product.sku}</span></Badge>
+              <Badge variant={stockStatus.variant} size="sm">{stockStatus.label}</Badge>
+            </HStack>
           </div>
-          <span className="font-mono text-sm text-[var(--color-muted-foreground)]">SKU {product.sku}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Tooltip content="Copy SKU to clipboard" side="bottom">
-            <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(product.sku)}>
-              Copy SKU
+        </HStack>
+        <HStack className="gap-2">
+          <Button variant="outline" size="sm" onClick={() => navigate(`/inventory/${product.id}/edit`)}>
+            <Pencil size={14} /> Edit
+          </Button>
+          <Tooltip content="Print label">
+            <Button variant="ghost" size="icon" onClick={() => window.print()}>
+              <Printer size={16} />
             </Button>
           </Tooltip>
-          <Tooltip content="Copy QR payload to clipboard" side="bottom">
-            <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(qrValue)}>
-              Copy QR
-            </Button>
-          </Tooltip>
-        </div>
-      </div>
+          <Dropdown
+            trigger={
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal size={16} />
+              </Button>
+            }
+            align="right"
+          >
+            <DropdownItem icon={<Archive size={14} />}>Archive product</DropdownItem>
+            <DropdownSeparator />
+            <DropdownItem icon={<Trash2 size={14} />} destructive>Delete product</DropdownItem>
+          </Dropdown>
+        </HStack>
+      </HStack>
 
       {/* ── Key Metrics ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <MetricCard
-          label="On Hand"
-          value={product.quantity_on_hand}
-          sub={stockRatio <= 1 ? 'Below reorder point' : undefined}
-        />
-        <MetricCard label="Reorder Point" value={product.reorder_point} />
-        <MetricCard label="Cost Price" value={formatCurrency(product.cost_price)} />
-        <MetricCard label="Selling Price" value={formatCurrency(product.selling_price)} />
-        {product.expiry_date && <MetricCard label="Expiry" value={product.expiry_date} />}
-      </div>
+      <StackLayout variant="stats">
+        <Card padding="md" className={stockStatus.variant === 'warning' ? 'border-l-4 border-l-[var(--color-warning)]' : ''}>
+          <CardContent>
+            <HStack justify="between" className="mb-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">Stock</span>
+              <Package size={14} className="text-[var(--color-muted-foreground)]" />
+            </HStack>
+            <HStack align="end" className="gap-1.5">
+              <span className="text-2xl font-bold leading-none">{product.quantity_on_hand}</span>
+              <span className="mb-0.5 text-xs text-[var(--color-muted-foreground)]">/ {product.reorder_point} min</span>
+            </HStack>
+          </CardContent>
+        </Card>
+        <Card padding="md">
+          <CardContent>
+            <HStack justify="between" className="mb-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">Pricing</span>
+              <DollarSign size={14} className="text-[var(--color-muted-foreground)]" />
+            </HStack>
+            <VStack className="gap-1">
+              <HStack justify="between">
+                <span className="text-sm text-[var(--color-muted-foreground)]">Cost</span>
+                <span className="text-sm font-medium">{formatCurrency(product.cost_price)}</span>
+              </HStack>
+              <HStack justify="between">
+                <span className="text-sm text-[var(--color-muted-foreground)]">Sell</span>
+                <span className="text-sm font-medium">{formatCurrency(product.selling_price)}</span>
+              </HStack>
+            </VStack>
+          </CardContent>
+        </Card>
+        <Card padding="md">
+          <CardContent>
+            <HStack justify="between" className="mb-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">Margin</span>
+              <TrendingUp size={14} className="text-[var(--color-muted-foreground)]" />
+            </HStack>
+            <span className={`text-2xl font-bold leading-none ${financials.margin > 30 ? 'text-[var(--color-success)]' : ''}`}>
+              {financials.margin.toFixed(1)}%
+            </span>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+              {formatCurrency((product.selling_price ?? 0) - (product.cost_price ?? 0))} per unit
+            </p>
+          </CardContent>
+        </Card>
+        <Card padding="md">
+          <CardContent>
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">Asset Value</span>
+            <p className="mt-2 text-2xl font-bold leading-none">{formatCurrency(financials.totalValue)}</p>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">Total cost basis</p>
+          </CardContent>
+        </Card>
+      </StackLayout>
 
       {/* ── Main Content Grid ── */}
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
