@@ -38,48 +38,48 @@ export const BarcodeSkuTab = ({ companyId, products }: Props) => {
   }
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: '360px 1fr', gap: 24 }}>
-      <div className="card stack">
-        <h3 className="section-title">Barcode / SKU Management</h3>
-        <label className="stack">
-          Product
-          <select className="select" value={productId} onChange={(event) => setProductId(event.target.value)}>
+    <div className="grid" style={{ gridTemplateColumns: '340px 1fr', gap: 16 }}>
+      <div className="card stack" style={{ gap: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Add Barcode</h3>
+        <label className="stack" style={{ gap: 4 }}>
+          <span className="small muted">Product</span>
+          <select className="select" style={{ borderRadius: 8 }} value={productId} onChange={(event) => setProductId(event.target.value)}>
             <option value="">Select product...</option>
             {products.map((product) => (
               <option key={product.id} value={product.id}>{product.name} ({product.sku})</option>
             ))}
           </select>
         </label>
-        <label className="stack">
-          Barcode / QR Value
-          <input className="input" value={barcode} onChange={(event) => setBarcode(event.target.value)} placeholder="e.g. 0123456789012" />
+        <label className="stack" style={{ gap: 4 }}>
+          <span className="small muted">Barcode / QR Value</span>
+          <input className="input" style={{ borderRadius: 8 }} value={barcode} onChange={(event) => setBarcode(event.target.value)} placeholder="e.g. 0123456789012" />
         </label>
-        <label className="stack">
-          Barcode Type
-          <select className="select" value={barcodeType} onChange={(event) => setBarcodeType(event.target.value as 'barcode' | 'qr')}>
+        <label className="stack" style={{ gap: 4 }}>
+          <span className="small muted">Barcode Type</span>
+          <select className="select" style={{ borderRadius: 8 }} value={barcodeType} onChange={(event) => setBarcodeType(event.target.value as 'barcode' | 'qr')}>
             <option value="barcode">Barcode</option>
-            <option value="qr">QR</option>
+            <option value="qr">QR Code</option>
           </select>
         </label>
-        <label className="row" style={{ alignItems: 'center', gap: 8 }}>
+        <label className="row" style={{ alignItems: 'center', gap: 8, fontSize: 13 }}>
           <input type="checkbox" checked={isPrimary} onChange={(event) => setIsPrimary(event.target.checked)} />
           Set as primary barcode
         </label>
-        <button className="button" onClick={saveBarcode} disabled={upsertBarcodeMutation.isPending}>Save Barcode</button>
-        {message && <div className="small muted">{message}</div>}
+        <button className="button small" style={{ alignSelf: 'flex-start', borderRadius: 8 }} onClick={saveBarcode} disabled={upsertBarcodeMutation.isPending}>Save Barcode</button>
+        {message && <div className="small muted" style={{ color: 'var(--success)' }}>{message}</div>}
       </div>
 
-      <div className="card stack">
-        <div className="flex-between">
-          <h3 className="section-title">Existing Barcodes</h3>
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-info-bar">
+          <span style={{ fontWeight: 600 }}>Barcodes</span>
           <span className="pill">{barcodes.length}</span>
         </div>
         {isLoading ? (
-          <div className="empty-state">Loading barcodes...</div>
+          <div className="empty-state" style={{ padding: 48 }}>Loading barcodes...</div>
         ) : barcodes.length === 0 ? (
-          <div className="empty-state">No barcodes configured.</div>
+          <div className="empty-state" style={{ padding: 48 }}>No barcodes configured yet.</div>
         ) : (
-          <div className="table-wrap">
+          <div style={{ overflowX: 'auto' }}>
             <table className="table">
               <thead>
                 <tr>
@@ -93,11 +93,11 @@ export const BarcodeSkuTab = ({ companyId, products }: Props) => {
               <tbody>
                 {barcodes.map((row) => (
                   <tr key={row.id}>
-                    <td>{row.products?.name ?? 'Unknown'}</td>
-                    <td className="small muted">{row.products?.sku ?? '—'}</td>
-                    <td>{row.barcode}</td>
-                    <td>{row.barcode_type}</td>
-                    <td>{row.is_primary ? 'Yes' : 'No'}</td>
+                    <td style={{ fontWeight: 500 }}>{row.products?.name ?? 'Unknown'}</td>
+                    <td className="muted" style={{ fontSize: 13 }}>{row.products?.sku ?? '—'}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{row.barcode}</td>
+                    <td style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>{row.barcode_type}</td>
+                    <td>{row.is_primary ? '✓' : '—'}</td>
                   </tr>
                 ))}
               </tbody>
