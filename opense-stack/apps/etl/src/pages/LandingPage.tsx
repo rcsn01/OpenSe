@@ -626,7 +626,7 @@ const Philosophy = () => {
 
   const smallWords = 'Most ETL platforms process your data on their servers:'.split(' ');
   const highlightWords = 'cloud pipelines that see everything.'.split(' ');
-  const bigWords1 = 'We process it in yours:'.split(' ');
+  const bigWords1 = 'We give you the tools to process it:'.split(' ');
   const bigWords2 = 'zero data egress, total sovereignty.'.split(' ');
 
   return (
@@ -646,12 +646,12 @@ const Philosophy = () => {
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto">
-        <p className="flex flex-wrap gap-x-2 gap-y-1 text-lg md:text-xl mb-8" style={{ fontFamily: T.heading, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
+        <p className="flex flex-wrap gap-x-2 gap-y-1 text-lg md:text-xl mb-8" style={{ fontFamily: T.heading, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
           {smallWords.map((w, i) => (
             <span key={i} className="word-reveal">{w}</span>
           ))}
           {highlightWords.map((w, i) => (
-            <span key={`h-${i}`} className="word-reveal italic" style={{ color: 'rgba(255,255,255,0.25)', fontFamily: T.drama }}>{w}</span>
+            <span key={`h-${i}`} className="word-reveal italic" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: T.drama }}>{w}</span>
           ))}
         </p>
 
@@ -677,28 +677,77 @@ const Philosophy = () => {
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
 const IngestVisual = () => {
-  const lineRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!lineRef.current) return;
+    if (!svgRef.current) return;
     const ctx = gsap.context(() => {
-      gsap.to(lineRef.current, { x: '100%', duration: 2.5, ease: 'power2.inOut', yoyo: true, repeat: -1 });
-    });
+      const tl = gsap.timeline({ repeat: -1, repeatDelay: 2 });
+      tl.fromTo('.ingest-dot',
+        { x: -20, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.5, stagger: 0.12, ease: 'power2.out' },
+      );
+      tl.to('.ingest-dot', { opacity: 0, duration: 0.4, stagger: 0.08 }, '+=1.2');
+
+      gsap.to('.blocked-x', {
+        opacity: 0.35, duration: 1.2, yoyo: true, repeat: -1, ease: 'sine.inOut',
+      });
+    }, svgRef);
     return () => ctx.revert();
   }, []);
 
-  const headers = ['customer_id', 'name', 'email', 'dob', 'plan', 'status', 'region', 'created_at'];
-
   return (
-    <div className="relative h-40 md:h-52 overflow-hidden rounded-[1.5rem] flex items-center" style={{ backgroundColor: T.bg }}>
-      <div ref={lineRef} className="absolute top-0 left-0 w-full h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${T.accent}, transparent)`, transform: 'translateX(-100%)' }} />
-      <div className="grid grid-cols-4 gap-2 p-4 w-full">
-        {headers.map(h => (
-          <span key={h} className="text-[10px] md:text-xs px-2 py-1 rounded-lg text-center truncate" style={{ fontFamily: T.data, backgroundColor: T.surface, color: T.dark, border: `1px solid ${T.surfaceBorder}` }}>
-            {h}
-          </span>
+    <div className="relative h-40 md:h-52 overflow-hidden rounded-[1.5rem] flex items-center justify-center" style={{ backgroundColor: T.bg }}>
+      <svg ref={svgRef} viewBox="0 0 420 150" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+        {/* File source */}
+        <rect x="18" y="38" width="44" height="54" rx="4" fill="none" stroke={T.accent} strokeWidth="1.5" />
+        <path d="M42 38 L62 38 L62 46 L54 46 Z" fill="none" stroke={T.accent} strokeWidth="1" />
+        <line x1="26" y1="56" x2="54" y2="56" stroke={T.accent} strokeWidth="0.8" opacity="0.4" />
+        <line x1="26" y1="63" x2="50" y2="63" stroke={T.accent} strokeWidth="0.8" opacity="0.4" />
+        <line x1="26" y1="70" x2="52" y2="70" stroke={T.accent} strokeWidth="0.8" opacity="0.4" />
+        <line x1="26" y1="77" x2="46" y2="77" stroke={T.accent} strokeWidth="0.8" opacity="0.4" />
+        <text x="40" y="108" textAnchor="middle" fontSize="8" fontFamily={T.data} fill="#64748B">Upload</text>
+
+        {/* Data dots flowing to browser */}
+        {[80, 96, 112].map((cx, i) => (
+          <circle key={i} className="ingest-dot" cx={cx} cy={65} r="3.5" fill={T.accent} opacity={0} />
         ))}
-      </div>
+
+        {/* Arrow line from file to browser */}
+        <line x1="68" y1="65" x2="142" y2="65" stroke={T.accent} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.35" />
+        <polygon points="139,61 148,65 139,69" fill={T.accent} />
+
+        {/* Browser window */}
+        <rect x="150" y="22" width="125" height="86" rx="8" fill={T.surface} stroke={T.dark} strokeWidth="1.5" />
+        <line x1="150" y1="38" x2="275" y2="38" stroke={T.dark} strokeWidth="0.5" opacity="0.2" />
+        <circle cx="162" cy="30" r="2.5" fill="#EF4444" />
+        <circle cx="171" cy="30" r="2.5" fill="#F59E0B" />
+        <circle cx="180" cy="30" r="2.5" fill="#22C55E" />
+        <text x="212" y="62" textAnchor="middle" fontSize="10" fontFamily={T.heading} fontWeight="600" fill={T.dark}>Your Browser</text>
+        <text x="212" y="78" textAnchor="middle" fontSize="7.5" fontFamily={T.data} fill={T.accent}>data stays here ✓</text>
+
+        {/* Sandboxed boundary */}
+        <rect x="142" y="14" width="141" height="102" rx="12" fill="none" stroke={T.accent} strokeWidth="1" strokeDasharray="6 4" opacity="0.25" />
+        <text x="212" y="130" textAnchor="middle" fontSize="7" fontFamily={T.data} fill={T.accent} opacity="0.5">sandboxed</text>
+
+        {/* Blocked path to LAN */}
+        <line x1="282" y1="50" x2="335" y2="42" stroke="#CBD5E1" strokeWidth="1.5" strokeDasharray="3 3" />
+        <g className="blocked-x">
+          <line x1="303" y1="38" x2="313" y2="52" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="313" y1="38" x2="303" y2="52" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+        <rect x="340" y="28" width="52" height="28" rx="5" fill="none" stroke="#CBD5E1" strokeWidth="1.5" />
+        <text x="366" y="46" textAnchor="middle" fontSize="8" fontFamily={T.data} fill="#CBD5E1">LAN</text>
+
+        {/* Blocked path to WAN */}
+        <line x1="282" y1="82" x2="335" y2="92" stroke="#CBD5E1" strokeWidth="1.5" strokeDasharray="3 3" />
+        <g className="blocked-x">
+          <line x1="303" y1="79" x2="313" y2="93" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="313" y1="79" x2="303" y2="93" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+        <path d="M345 97 a7 7 0 0 1 7-7 a9 9 0 0 1 17 2 a6 6 0 0 1 2 12 h-22 a7 7 0 0 1-4-7z" fill="none" stroke="#CBD5E1" strokeWidth="1.5" />
+        <text x="365" y="116" textAnchor="middle" fontSize="8" fontFamily={T.data} fill="#CBD5E1">WAN</text>
+      </svg>
     </div>
   );
 };
@@ -781,21 +830,22 @@ const Protocol = () => {
 
       panels.forEach((panel, i) => {
         if (i === panels.length - 1) return;
-        ScrollTrigger.create({
-          trigger: panel,
-          start: 'top top',
-          endTrigger: panels[i + 1],
-          end: 'top top',
-          pin: true,
-          pinSpacing: false,
-          onUpdate: (self) => {
-            const progress = self.progress;
-            gsap.set(panel, {
-              scale: 1 - progress * 0.1,
-              filter: `blur(${progress * 20}px)`,
-              opacity: 1 - progress * 0.5,
-            });
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: panel,
+            start: 'top top',
+            end: '+=90%',
+            pin: true,
+            scrub: 0.6,
           },
+        });
+
+        tl.to(panel, {
+          scale: 0.95,
+          opacity: 0,
+          filter: 'blur(10px)',
+          ease: 'none',
         });
       });
     }, containerRef);
@@ -900,7 +950,7 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="pt-16 pb-10 px-6 md:px-16 lg:px-24" style={{ backgroundColor: '#0F172A', borderRadius: '4rem 4rem 0 0' }}>
+    <footer className="pt-16 pb-10 px-6 md:px-16 lg:px-24" style={{ backgroundColor: '#0F172A' }}>
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-12 mb-16">
           <div className="md:col-span-2">
