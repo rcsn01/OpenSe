@@ -1,13 +1,11 @@
-## Welcome to Open-SE
-Open-SE is a web-based B2B suite built to solve niche business problems. It's a monorepo containing 5 frontend applications that share authentication and UI components:
-- accounts - User login/signup
-- admin - Admin dashboard
-- etl - Data extraction/loading tools
-- stoqr - Inventory management with barcode scanning, labels, reports, and procurement
-- ui-design - Component library
-
 ## Open-ETL
 **Goal:** An open source web-based SaaS that allows organisations to create centralised, customised workflows to import, process, visualise, and export data.
+
+### Privacy-First Product Positioning
+- Open-ETL is designed so that source datasets are processed in the user's browser, not sent to the platform for transformation.
+- Teams can run practical ETL workflows without providing raw customer, patient, or financial records to a third-party processing backend.
+- This client-side execution model reduces data exposure risk and supports stronger data-minimisation practices.
+- As a result, Open-ETL is a strong fit for privacy-sensitive sectors such as biomedical, healthcare-adjacent, and fintech workloads.
 
 ### Core Product Capabilities
 - Visual workflow builder using drag-and-drop nodes (React Flow) for no-code/low-code pipeline authoring.
@@ -41,7 +39,8 @@ Open-SE is a web-based B2B suite built to solve niche business problems. It's a 
 - Plan and subscription updates designed for self-service upgrades.
 
 ### Data Management Constraint (Important)
-- Primary data processing for imported files happens in-browser, and uploaded CSV content is persisted locally in IndexedDB during execution.
+- Primary data processing for imported files happens in-browser, and CSV content is persisted locally in IndexedDB during execution.
+- Open-ETL does not require raw file contents to be uploaded to Supabase for transformation.
 - Workflow definitions, metadata, and execution logs are stored in Supabase for collaboration, governance, and analytics.
 - This means Open-ETL currently follows a hybrid model: browser-local data processing with cloud-backed workflow management.
 
@@ -56,25 +55,3 @@ Open-SE is a web-based B2B suite built to solve niche business problems. It's a 
 - Logging: all workflow executions and key actions are traceable.
 - Organisation management: teams, roles, and permissions are manageable in-app.
 - Payment systems: simple subscription and upgrade flow for organisations.
-
-## Tech Stack
-### Frontend
-- React 19 - UI framework
-- Vite 7 - Build tool and dev server
-- TypeScript - Type safety across all apps
-- Tailwind CSS 4 - Utility-first CSS framework
-- React Router 7 - Client-side routing
-### Backend
-- Supabase - Open source Firebase alternative
-  - PostgreSQL - Primary database
-  - Auth - User authentication and management
-  - Edge Functions - Serverless TypeScript functions
-  - Storage - File storage
-### Development Tools
-- Turbo - Build system for monorepos (caching, parallel execution)
-- pnpm - Fast, disk space efficient package manager
-- Playwright - End-to-end testing
-## Getting Started
-1. Have a look at [[01 Development Setup]]
-2. Have a look at [[02 Project Structure]]
-3. Start the project and play around!
