@@ -1,3 +1,20 @@
 @import "tailwindcss";
 @import "@repo/ui/styles";
 @source "../../../packages/ui/src";
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Clean Room Design Tokens ── */
+@theme {
+  --color-arctic: #EEF2F7;
+  --color-cobalt: #1D4ED8;
+  --color-slate-dark: #1E293B;
+  --color-mist: #F8FAFC;
+  --color-cobalt-hover: #1e40af;
+  --font-heading: "DM Sans", sans-serif;
+  --font-drama: "Lora", serif;
+  --font-data: "IBM Plex Mono", monospace;
+}
