@@ -75,7 +75,7 @@ test.describe('Stoqr Inventory', () => {
 
     await expect(authenticatedPage.getByText('All Tags')).toHaveCount(0);
 
-    // Step 1: Click "+" to open attribute dropdown
+    // Step 1: Click "+ Filter" to open attribute dropdown
     const addFilterButton = authenticatedPage.getByRole('button', { name: /add custom field filter/i });
     await expect(addFilterButton.first()).toBeVisible();
     await addFilterButton.first().click();
@@ -107,12 +107,88 @@ test.describe('Stoqr Inventory', () => {
     const chipText = `${chosenAttrLabel}:${chosenValueLabel}`;
     await expect(authenticatedPage.getByText(chipText)).toBeVisible();
 
-    const removeButton = authenticatedPage.getByRole('button', { name: /remove filter/i });
-    await expect(removeButton).toBeVisible();
+    // Step 4: + Filter button should still be visible after adding a filter
+    const addFilterButtonAfter = authenticatedPage.getByRole('button', { name: /add custom field filter/i });
+    const stillVisible = await addFilterButtonAfter.isVisible().catch(() => false);
+    // The button stays visible as long as there are remaining unused fields
+    if (attrCount > 1) {
+      expect(stillVisible).toBe(true);
+    }
 
-    // Step 4: Remove the filter — "+" should reappear
+    // Step 5: Remove the filter — "+" should remain
+    const removeButton = authenticatedPage.getByRole('button', { name: new RegExp(`remove ${chosenAttrLabel} filter`, 'i') });
+    await expect(removeButton).toBeVisible();
     await removeButton.click();
     await expect(addFilterButton.first()).toBeVisible();
+  });
+
+  test('inventory supports adding multiple custom field filters', async ({ authenticatedPage }) => {
+    const inventory = new InventoryPage(authenticatedPage);
+    await inventory.goto();
+
+    const hasInventoryTabs = await authenticatedPage.getByRole('tab', { name: /all products/i }).first().isVisible().catch(() => false);
+    if (!hasInventoryTabs) {
+      return;
+    }
+
+    const addFilterButton = authenticatedPage.getByRole('button', { name: /add custom field filter/i });
+    if (!(await addFilterButton.first().isVisible().catch(() => false))) {
+      return;
+    }
+
+    // Add first filter
+    await addFilterButton.first().click();
+    const firstDropdown = authenticatedPage.locator('div.absolute.z-50').last().locator('button');
+    const firstAttrCount = await firstDropdown.count();
+    if (firstAttrCount < 2) {
+      return;
+    }
+
+    const firstAttr = (await firstDropdown.first().innerText()).trim();
+    await firstDropdown.first().click();
+
+    const firstValueOptions = authenticatedPage.locator('div.absolute.z-50').last().locator('button');
+    if ((await firstValueOptions.count()) === 0) {
+      return;
+    }
+
+    const firstValue = (await firstValueOptions.first().innerText()).trim();
+    await firstValueOptions.first().click();
+
+    await expect(authenticatedPage.getByText(`${firstAttr}:${firstValue}`)).toBeVisible();
+
+    // + Filter button should still be visible for adding a second filter
+    await expect(addFilterButton.first()).toBeVisible();
+
+    // Add second filter
+    await addFilterButton.first().click();
+    const secondDropdown = authenticatedPage.locator('div.absolute.z-50').last().locator('button');
+    const secondAttrCount = await secondDropdown.count();
+    if (secondAttrCount === 0) {
+      return;
+    }
+
+    // The first attribute should not appear in the dropdown
+    const secondDropdownTexts: string[] = [];
+    for (let i = 0; i < secondAttrCount; i++) {
+      secondDropdownTexts.push((await secondDropdown.nth(i).innerText()).trim());
+    }
+    expect(secondDropdownTexts).not.toContain(firstAttr);
+
+    const secondAttr = secondDropdownTexts[0]!;
+    await secondDropdown.first().click();
+
+    const secondValueOptions = authenticatedPage.locator('div.absolute.z-50').last().locator('button');
+    if ((await secondValueOptions.count()) === 0) {
+      return;
+    }
+
+    const secondValue = (await secondValueOptions.first().innerText()).trim();
+    await secondValueOptions.first().click();
+
+    // Both filter chips should be visible
+    await expect(authenticatedPage.getByText(`${firstAttr}:${firstValue}`)).toBeVisible();
+    await expect(authenticatedPage.getByText(`${secondAttr}:${secondValue}`)).toBeVisible();
   });
 
   test('product form attribute existing value uses shared dropdown', async ({ authenticatedPage }) => {

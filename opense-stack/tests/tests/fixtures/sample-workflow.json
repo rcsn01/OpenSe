@@ -1,0 +1,852 @@
+{
+  "name": "Workflow dcfd59b3-86b2-404b-b1a6-4a9c64438cb2",
+  "graph_data": {
+    "nodes": [
+      {
+        "id": "file-1768188102307",
+        "type": "file",
+        "width": 256,
+        "height": 188,
+        "dragging": false,
+        "position": {
+          "x": -118.8709404401327,
+          "y": 353.99898453510957
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": -118.8709404401327,
+          "y": 353.99898453510957
+        },
+        "data": {
+          "label": "File Input",
+          "description": ""
+        }
+      },
+      {
+        "id": "preview-1768188108973",
+        "type": "preview",
+        "style": {
+          "width": 426,
+          "height": 299
+        },
+        "width": 426,
+        "height": 299,
+        "dragging": false,
+        "position": {
+          "x": -168.42050551686145,
+          "y": -77.81857754370475
+        },
+        "resizing": false,
+        "selected": false,
+        "positionAbsolute": {
+          "x": -168.42050551686145,
+          "y": -77.81857754370475
+        },
+        "data": {
+          "label": "File Preview",
+          "description": ""
+        }
+      },
+      {
+        "id": "renameMap-1768194029902",
+        "type": "renameMap",
+        "width": 288,
+        "height": 239,
+        "dragging": false,
+        "position": {
+          "x": 479.0133723897475,
+          "y": -164.25992096020852
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 479.0133723897475,
+          "y": -164.25992096020852
+        },
+        "data": {
+          "label": "Rename (Mappings)",
+          "mappings": [
+            {
+              "newColumn": "Target",
+              "oldColumn": "Target_1"
+            },
+            {
+              "newColumn": "CQ",
+              "oldColumn": "Target_1_cq"
+            }
+          ],
+          "description": "",
+          "availableFields": [
+            "Sample ID",
+            "AssayResultTarget",
+            "AssayResultTargetCode",
+            "Outcome",
+            "IsInconclusive",
+            "IsInvalid",
+            "IsRetest",
+            "AssayResult",
+            "AssayResultNotifications",
+            "ControlValidity",
+            "SampleType",
+            "Filename(s)",
+            "Barcode(s)",
+            "Instrument ID(s)",
+            "Analysis created at (UTC)",
+            "Analysis created by",
+            "Analysis authorized at (UTC)",
+            "Analysis authorized by",
+            "FF analysis software version",
+            "Assay",
+            "AssayCode",
+            "AP version",
+            "SampleTypeName",
+            "Target_1",
+            "Target_1_plates",
+            "Target_1_wells",
+            "Target_1_dye",
+            "Target_1_result",
+            "Target_1_cq",
+            "Target_1_endpoint",
+            "Target_1_notifications",
+            "Target_2",
+            "Target_2_plates",
+            "Target_2_wells",
+            "Target_2_dye",
+            "Target_2_result",
+            "Target_2_cq",
+            "Target_2_endpoint",
+            "Target_2_notifications",
+            "Target_3",
+            "Target_3_plates",
+            "Target_3_wells",
+            "Target_3_dye",
+            "Target_3_result",
+            "Target_3_cq",
+            "Target_3_endpoint",
+            "Target_3_notifications",
+            "Analysis external reference",
+            "Target_1_concentration",
+            "Target_2_concentration",
+            "Target_3_concentration",
+            "Target_1_endfluorescences",
+            "Target_1_rawendfluorescences",
+            "Target_2_endfluorescences",
+            "Target_2_rawendfluorescences",
+            "Target_3_endfluorescences",
+            "Target_3_rawendfluorescences",
+            "Target_1_notifications_perwell",
+            "Target_2_notifications_perwell",
+            "Target_3_notifications_perwell",
+            "RetestReason"
+          ]
+        }
+      },
+      {
+        "id": "renameMap-1768194031650",
+        "type": "renameMap",
+        "width": 288,
+        "height": 239,
+        "dragging": false,
+        "position": {
+          "x": 477.8976330202198,
+          "y": 85.66569781401981
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 477.8976330202198,
+          "y": 85.66569781401981
+        },
+        "data": {
+          "label": "Rename (Mappings)",
+          "mappings": [
+            {
+              "newColumn": "Target",
+              "oldColumn": "Target_2"
+            },
+            {
+              "newColumn": "CQ",
+              "oldColumn": "Target_2_cq"
+            }
+          ],
+          "description": "",
+          "availableFields": [
+            "Sample ID",
+            "AssayResultTarget",
+            "AssayResultTargetCode",
+            "Outcome",
+            "IsInconclusive",
+            "IsInvalid",
+            "IsRetest",
+            "AssayResult",
+            "AssayResultNotifications",
+            "ControlValidity",
+            "SampleType",
+            "Filename(s)",
+            "Barcode(s)",
+            "Instrument ID(s)",
+            "Analysis created at (UTC)",
+            "Analysis created by",
+            "Analysis authorized at (UTC)",
+            "Analysis authorized by",
+            "FF analysis software version",
+            "Assay",
+            "AssayCode",
+            "AP version",
+            "SampleTypeName",
+            "Target_1",
+            "Target_1_plates",
+            "Target_1_wells",
+            "Target_1_dye",
+            "Target_1_result",
+            "Target_1_cq",
+            "Target_1_endpoint",
+            "Target_1_notifications",
+            "Target_2",
+            "Target_2_plates",
+            "Target_2_wells",
+            "Target_2_dye",
+            "Target_2_result",
+            "Target_2_cq",
+            "Target_2_endpoint",
+            "Target_2_notifications",
+            "Target_3",
+            "Target_3_plates",
+            "Target_3_wells",
+            "Target_3_dye",
+            "Target_3_result",
+            "Target_3_cq",
+            "Target_3_endpoint",
+            "Target_3_notifications",
+            "Analysis external reference",
+            "Target_1_concentration",
+            "Target_2_concentration",
+            "Target_3_concentration",
+            "Target_1_endfluorescences",
+            "Target_1_rawendfluorescences",
+            "Target_2_endfluorescences",
+            "Target_2_rawendfluorescences",
+            "Target_3_endfluorescences",
+            "Target_3_rawendfluorescences",
+            "Target_1_notifications_perwell",
+            "Target_2_notifications_perwell",
+            "Target_3_notifications_perwell",
+            "RetestReason"
+          ]
+        }
+      },
+      {
+        "id": "renameMap-1768194037816",
+        "type": "renameMap",
+        "width": 288,
+        "height": 239,
+        "dragging": false,
+        "position": {
+          "x": 514.2145419375573,
+          "y": 326.49906257552567
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 514.2145419375573,
+          "y": 326.49906257552567
+        },
+        "data": {
+          "label": "Rename (Mappings)",
+          "mappings": [
+            {
+              "newColumn": "Target",
+              "oldColumn": "Target_3"
+            },
+            {
+              "newColumn": "CQ",
+              "oldColumn": "Target_3_cq"
+            }
+          ],
+          "description": "",
+          "availableFields": [
+            "Sample ID",
+            "AssayResultTarget",
+            "AssayResultTargetCode",
+            "Outcome",
+            "IsInconclusive",
+            "IsInvalid",
+            "IsRetest",
+            "AssayResult",
+            "AssayResultNotifications",
+            "ControlValidity",
+            "SampleType",
+            "Filename(s)",
+            "Barcode(s)",
+            "Instrument ID(s)",
+            "Analysis created at (UTC)",
+            "Analysis created by",
+            "Analysis authorized at (UTC)",
+            "Analysis authorized by",
+            "FF analysis software version",
+            "Assay",
+            "AssayCode",
+            "AP version",
+            "SampleTypeName",
+            "Target_1",
+            "Target_1_plates",
+            "Target_1_wells",
+            "Target_1_dye",
+            "Target_1_result",
+            "Target_1_cq",
+            "Target_1_endpoint",
+            "Target_1_notifications",
+            "Target_2",
+            "Target_2_plates",
+            "Target_2_wells",
+            "Target_2_dye",
+            "Target_2_result",
+            "Target_2_cq",
+            "Target_2_endpoint",
+            "Target_2_notifications",
+            "Target_3",
+            "Target_3_plates",
+            "Target_3_wells",
+            "Target_3_dye",
+            "Target_3_result",
+            "Target_3_cq",
+            "Target_3_endpoint",
+            "Target_3_notifications",
+            "Analysis external reference",
+            "Target_1_concentration",
+            "Target_2_concentration",
+            "Target_3_concentration",
+            "Target_1_endfluorescences",
+            "Target_1_rawendfluorescences",
+            "Target_2_endfluorescences",
+            "Target_2_rawendfluorescences",
+            "Target_3_endfluorescences",
+            "Target_3_rawendfluorescences",
+            "Target_1_notifications_perwell",
+            "Target_2_notifications_perwell",
+            "Target_3_notifications_perwell",
+            "RetestReason"
+          ]
+        }
+      },
+      {
+        "id": "preview-1768194191533",
+        "type": "preview",
+        "style": {
+          "width": 462,
+          "height": 399
+        },
+        "width": 462,
+        "height": 399,
+        "dragging": false,
+        "position": {
+          "x": 2142.6311124970057,
+          "y": 91.3387837418721
+        },
+        "resizing": false,
+        "selected": false,
+        "positionAbsolute": {
+          "x": 2142.6311124970057,
+          "y": 91.3387837418721
+        },
+        "data": {
+          "label": "File Preview",
+          "description": ""
+        }
+      },
+      {
+        "id": "remove-1768194241650",
+        "type": "remove",
+        "width": 256,
+        "height": 280,
+        "dragging": false,
+        "position": {
+          "x": 1706.206401935453,
+          "y": 186.80462717532916
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 1706.206401935453,
+          "y": 186.80462717532916
+        },
+        "data": {
+          "label": "Filter Columns",
+          "description": "",
+          "selectedFields": [
+            "Sample ID",
+            "CQ",
+            "Target",
+            "Target_1_wells"
+          ],
+          "availableFields": [
+            "Sample ID",
+            "AssayResultTarget",
+            "AssayResultTargetCode",
+            "Outcome",
+            "IsInconclusive",
+            "IsInvalid",
+            "IsRetest",
+            "AssayResult",
+            "AssayResultNotifications",
+            "ControlValidity",
+            "SampleType",
+            "Filename(s)",
+            "Barcode(s)",
+            "Instrument ID(s)",
+            "Analysis created at (UTC)",
+            "Analysis created by",
+            "Analysis authorized at (UTC)",
+            "Analysis authorized by",
+            "FF analysis software version",
+            "Assay",
+            "AssayCode",
+            "AP version",
+            "SampleTypeName",
+            "Target_1",
+            "Target_1_plates",
+            "Target_1_wells",
+            "Target_1_dye",
+            "Target_1_result",
+            "Target_1_cq",
+            "Target_1_endpoint",
+            "Target_1_notifications",
+            "Target_2",
+            "Target_2_plates",
+            "Target_2_wells",
+            "Target_2_dye",
+            "Target_2_result",
+            "Target_2_cq",
+            "Target_2_endpoint",
+            "Target_2_notifications",
+            "Target",
+            "Target_3_plates",
+            "Target_3_wells",
+            "Target_3_dye",
+            "Target_3_result",
+            "CQ",
+            "Target_3_endpoint",
+            "Target_3_notifications",
+            "Analysis external reference",
+            "Target_1_concentration",
+            "Target_2_concentration",
+            "Target_3_concentration",
+            "Target_1_endfluorescences",
+            "Target_1_rawendfluorescences",
+            "Target_2_endfluorescences",
+            "Target_2_rawendfluorescences",
+            "Target_3_endfluorescences",
+            "Target_3_rawendfluorescences",
+            "Target_1_notifications_perwell",
+            "Target_2_notifications_perwell",
+            "Target_3_notifications_perwell",
+            "RetestReason",
+            "Target_3",
+            "Target_3_cq"
+          ]
+        }
+      },
+      {
+        "id": "joinVertical-1768194629909",
+        "type": "joinVertical",
+        "width": 256,
+        "height": 170,
+        "dragging": false,
+        "position": {
+          "x": 941.2901338893279,
+          "y": 40.77357179756348
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 941.2901338893279,
+          "y": 40.77357179756348
+        },
+        "data": {
+          "label": "Stack Tables",
+          "availableFields": [
+            "Sample ID",
+            "AssayResultTarget",
+            "AssayResultTargetCode",
+            "Outcome",
+            "IsInconclusive",
+            "IsInvalid",
+            "IsRetest",
+            "AssayResult",
+            "AssayResultNotifications",
+            "ControlValidity",
+            "SampleType",
+            "Filename(s)",
+            "Barcode(s)",
+            "Instrument ID(s)",
+            "Analysis created at (UTC)",
+            "Analysis created by",
+            "Analysis authorized at (UTC)",
+            "Analysis authorized by",
+            "FF analysis software version",
+            "Assay",
+            "AssayCode",
+            "AP version",
+            "SampleTypeName",
+            "Target",
+            "Target_1_plates",
+            "Target_1_wells",
+            "Target_1_dye",
+            "Target_1_result",
+            "CQ",
+            "Target_1_endpoint",
+            "Target_1_notifications",
+            "Target_2",
+            "Target_2_plates",
+            "Target_2_wells",
+            "Target_2_dye",
+            "Target_2_result",
+            "Target_2_cq",
+            "Target_2_endpoint",
+            "Target_2_notifications",
+            "Target_3",
+            "Target_3_plates",
+            "Target_3_wells",
+            "Target_3_dye",
+            "Target_3_result",
+            "Target_3_cq",
+            "Target_3_endpoint",
+            "Target_3_notifications",
+            "Analysis external reference",
+            "Target_1_concentration",
+            "Target_2_concentration",
+            "Target_3_concentration",
+            "Target_1_endfluorescences",
+            "Target_1_rawendfluorescences",
+            "Target_2_endfluorescences",
+            "Target_2_rawendfluorescences",
+            "Target_3_endfluorescences",
+            "Target_3_rawendfluorescences",
+            "Target_1_notifications_perwell",
+            "Target_2_notifications_perwell",
+            "Target_3_notifications_perwell",
+            "RetestReason",
+            "Target_1",
+            "Target_1_cq"
+          ]
+        }
+      },
+      {
+        "id": "joinVertical-1768194631463",
+        "type": "joinVertical",
+        "width": 256,
+        "height": 170,
+        "dragging": false,
+        "position": {
+          "x": 1321.3098133243632,
+          "y": 132.60107579681147
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 1321.3098133243632,
+          "y": 132.60107579681147
+        },
+        "data": {
+          "label": "Stack Tables",
+          "availableFields": [
+            "Sample ID",
+            "AssayResultTarget",
+            "AssayResultTargetCode",
+            "Outcome",
+            "IsInconclusive",
+            "IsInvalid",
+            "IsRetest",
+            "AssayResult",
+            "AssayResultNotifications",
+            "ControlValidity",
+            "SampleType",
+            "Filename(s)",
+            "Barcode(s)",
+            "Instrument ID(s)",
+            "Analysis created at (UTC)",
+            "Analysis created by",
+            "Analysis authorized at (UTC)",
+            "Analysis authorized by",
+            "FF analysis software version",
+            "Assay",
+            "AssayCode",
+            "AP version",
+            "SampleTypeName",
+            "Target_1",
+            "Target_1_plates",
+            "Target_1_wells",
+            "Target_1_dye",
+            "Target_1_result",
+            "Target_1_cq",
+            "Target_1_endpoint",
+            "Target_1_notifications",
+            "Target_2",
+            "Target_2_plates",
+            "Target_2_wells",
+            "Target_2_dye",
+            "Target_2_result",
+            "Target_2_cq",
+            "Target_2_endpoint",
+            "Target_2_notifications",
+            "Target",
+            "Target_3_plates",
+            "Target_3_wells",
+            "Target_3_dye",
+            "Target_3_result",
+            "CQ",
+            "Target_3_endpoint",
+            "Target_3_notifications",
+            "Analysis external reference",
+            "Target_1_concentration",
+            "Target_2_concentration",
+            "Target_3_concentration",
+            "Target_1_endfluorescences",
+            "Target_1_rawendfluorescences",
+            "Target_2_endfluorescences",
+            "Target_2_rawendfluorescences",
+            "Target_3_endfluorescences",
+            "Target_3_rawendfluorescences",
+            "Target_1_notifications_perwell",
+            "Target_2_notifications_perwell",
+            "Target_3_notifications_perwell",
+            "RetestReason",
+            "Target_3",
+            "Target_3_cq"
+          ]
+        }
+      },
+      {
+        "id": "preview-1768781298697",
+        "type": "preview",
+        "style": {
+          "width": 400,
+          "height": 300
+        },
+        "width": 400,
+        "height": 300,
+        "dragging": false,
+        "position": {
+          "x": 946.105303490072,
+          "y": -436.7128424932912
+        },
+        "selected": false,
+        "positionAbsolute": {
+          "x": 946.105303490072,
+          "y": -436.7128424932912
+        },
+        "data": {
+          "label": "Preview",
+          "description": ""
+        }
+      },
+      {
+        "id": "preview-1768781301114",
+        "type": "preview",
+        "style": {
+          "width": 1103,
+          "height": 300
+        },
+        "width": 1103,
+        "height": 300,
+        "dragging": false,
+        "position": {
+          "x": 1478.452734201383,
+          "y": -339.1128424932908
+        },
+        "resizing": false,
+        "selected": false,
+        "positionAbsolute": {
+          "x": 1478.452734201383,
+          "y": -339.1128424932908
+        },
+        "data": {
+          "label": "Preview",
+          "description": ""
+        }
+      },
+      {
+        "id": "multiPivot-1768785171385",
+        "type": "multiPivot",
+        "position": {
+          "x": 2698.105303490072,
+          "y": 190.64307102090925
+        },
+        "width": 320,
+        "height": 389,
+        "selected": false,
+        "positionAbsolute": {
+          "x": 2698.105303490072,
+          "y": 190.64307102090925
+        },
+        "dragging": false,
+        "data": {
+          "label": "Multi-Pivot",
+          "indexColumns": [
+            "Sample ID",
+            "Target_1_wells"
+          ],
+          "pivotColumn": "Target",
+          "valueColumns": [
+            "CQ"
+          ],
+          "availableFields": [
+            "Sample ID",
+            "CQ",
+            "Target",
+            "Target_1_wells"
+          ],
+          "description": ""
+        }
+      },
+      {
+        "id": "preview-1768785207002",
+        "type": "preview",
+        "position": {
+          "x": 3136.8589400573387,
+          "y": 265.6739485271792
+        },
+        "width": 627,
+        "height": 399,
+        "selected": true,
+        "positionAbsolute": {
+          "x": 3136.8589400573387,
+          "y": 265.6739485271792
+        },
+        "dragging": false,
+        "style": {
+          "width": 627,
+          "height": 399
+        },
+        "resizing": false,
+        "data": {
+          "label": "Preview",
+          "description": ""
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "reactflow__edge-file-1768188102307out-preview-1768188108973in",
+        "type": "smoothstep",
+        "source": "file-1768188102307",
+        "target": "preview-1768188108973",
+        "animated": true,
+        "sourceHandle": "out",
+        "targetHandle": "in"
+      },
+      {
+        "id": "reactflow__edge-file-1768188102307out-renameMap-1768194037816in",
+        "type": "smoothstep",
+        "source": "file-1768188102307",
+        "target": "renameMap-1768194037816",
+        "animated": true,
+        "sourceHandle": "out",
+        "targetHandle": "in"
+      },
+      {
+        "id": "reactflow__edge-file-1768188102307out-renameMap-1768194031650in",
+        "type": "smoothstep",
+        "source": "file-1768188102307",
+        "target": "renameMap-1768194031650",
+        "animated": true,
+        "sourceHandle": "out",
+        "targetHandle": "in"
+      },
+      {
+        "id": "reactflow__edge-file-1768188102307out-renameMap-1768194029902in",
+        "type": "smoothstep",
+        "source": "file-1768188102307",
+        "target": "renameMap-1768194029902",
+        "animated": true,
+        "sourceHandle": "out",
+        "targetHandle": "in"
+      },
+      {
+        "id": "reactflow__edge-remove-1768194241650out-preview-1768194191533in",
+        "type": "smoothstep",
+        "source": "remove-1768194241650",
+        "target": "preview-1768194191533",
+        "animated": true,
+        "sourceHandle": "out",
+        "targetHandle": "in"
+      },
+      {
+        "id": "reactflow__edge-renameMap-1768194029902out-joinVertical-1768194629909input-top",
+        "type": "smoothstep",
+        "source": "renameMap-1768194029902",
+        "target": "joinVertical-1768194629909",
+        "animated": true,
+        "sourceHandle": "out",
+        "targetHandle": "input-top"
+      },
+      {
+        "id": "reactflow__edge-renameMap-1768194031650out-joinVertical-1768194629909input-bottom",
+        "type": "smoothstep",
+        "source": "renameMap-1768194031650",
+        "target": "joinVertical-1768194629909",
+        "animated": true,
+        "sourceHandle": "out",
+        "targetHandle": "input-bottom"
+      },
+      {
+        "id": "reactflow__edge-renameMap-1768194037816out-joinVertical-1768194631463input-bottom",
+        "type": "smoothstep",
+        "source": "renameMap-1768194037816",
+        "target": "joinVertical-1768194631463",
+        "animated": true,
+        "selected": false,
+        "sourceHandle": "out",
+        "targetHandle": "input-bottom"
+      },
+      {
+        "id": "reactflow__edge-joinVertical-1768194629909output-stacked-joinVertical-1768194631463input-top",
+        "type": "smoothstep",
+        "source": "joinVertical-1768194629909",
+        "target": "joinVertical-1768194631463",
+        "animated": true,
+        "sourceHandle": "output-stacked",
+        "targetHandle": "input-top"
+      },
+      {
+        "id": "reactflow__edge-joinVertical-1768194631463output-stacked-remove-1768194241650in",
+        "type": "smoothstep",
+        "source": "joinVertical-1768194631463",
+        "target": "remove-1768194241650",
+        "animated": true,
+        "sourceHandle": "output-stacked",
+        "targetHandle": "in"
+      },
+      {
+        "id": "reactflow__edge-joinVertical-1768194629909output-stacked-preview-1768781298697in",
+        "type": "smoothstep",
+        "source": "joinVertical-1768194629909",
+        "target": "preview-1768781298697",
+        "animated": true,
+        "sourceHandle": "output-stacked",
+        "targetHandle": "in"
+      },
+      {
+        "id": "reactflow__edge-joinVertical-1768194631463output-stacked-preview-1768781301114in",
+        "type": "smoothstep",
+        "source": "joinVertical-1768194631463",
+        "target": "preview-1768781301114",
+        "animated": true,
+        "sourceHandle": "output-stacked",
+        "targetHandle": "in"
+      },
+      {
+        "source": "preview-1768194191533",
+        "sourceHandle": "out",
+        "target": "multiPivot-1768785171385",
+        "targetHandle": "in",
+        "animated": true,
+        "type": "smoothstep",
+        "id": "reactflow__edge-preview-1768194191533out-multiPivot-1768785171385in"
+      },
+      {
+        "source": "multiPivot-1768785171385",
+        "sourceHandle": "out",
+        "target": "preview-1768785207002",
+        "targetHandle": "in",
+        "animated": true,
+        "type": "smoothstep",
+        "id": "reactflow__edge-multiPivot-1768785171385out-preview-1768785207002in"
+      }
+    ]
+  }
+}

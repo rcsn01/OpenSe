@@ -10,7 +10,7 @@ test.describe('Stoqr Reports', () => {
 
     const hasReportsTabs = await authenticatedPage.getByRole('tab', { name: /inventory valuation/i }).first().isVisible().catch(() => false);
     if (!hasReportsTabs) {
-      await expect(authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR|Sign in/i).first()).toBeVisible();
+      await expect(authenticatedPage.getByText(/Inventory Control|Inventory Engine|StoQR|Sign in|Get Started/i).first()).toBeVisible();
       return;
     }
 

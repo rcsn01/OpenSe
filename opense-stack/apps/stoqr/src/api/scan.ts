@@ -34,6 +34,8 @@ export const fetchCurrentUserId = async (): Promise<string | null> => {
   return data.user?.id ?? null
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export const lookupProductByScanValue = async (
   companyId: string,
   scanValue: string,
@@ -43,11 +45,16 @@ export const lookupProductByScanValue = async (
     return { product: null, lastHandledBy: '—', notFoundSku: null }
   }
 
+  const orFilters = [`sku.eq."${cleanValue}"`, `primary_barcode.eq."${cleanValue}"`]
+  if (UUID_RE.test(cleanValue)) {
+    orFilters.push(`id.eq."${cleanValue}"`)
+  }
+
   const { data, error } = await db
     .from('products')
     .select('id, name, sku, quantity_on_hand, reorder_point, description, cost_price, selling_price, folder_id, image_urls, custom_fields, expiry_date, primary_barcode')
     .eq('company_id', companyId)
-    .or(`sku.eq."${cleanValue}",id.eq."${cleanValue}",primary_barcode.eq."${cleanValue}"`)
+    .or(orFilters.join(','))
     .maybeSingle()
 
   let resolvedProduct = !error && data ? normalizeProduct(data as Partial<Product>) : null

@@ -1,5 +1,6 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Edge, Node } from 'reactflow'
+import { focusManager } from '@tanstack/react-query'
 import { WorkflowNodeData } from '../../components/nodes/types'
 import { validateWorkflowImport, sanitizeText } from '../../lib/validation'
 
@@ -30,6 +31,18 @@ export const useWorkflowImportExport = ({
 }: UseWorkflowImportExportParams) => {
   const importInputRef = useRef<HTMLInputElement | null>(null)
 
+  // Keep mutable refs so the import handler stays stable across renders.
+  // This prevents the <input> onChange from being swapped out during the
+  // file-dialog open/close cycle (which races with window focus events).
+  const nodesRef = useRef(nodes)
+  const edgesRef = useRef(edges)
+  useEffect(() => { nodesRef.current = nodes }, [nodes])
+  useEffect(() => { edgesRef.current = edges }, [edges])
+
+  // Timer used to restore React Query focus tracking when the user
+  // cancels the file dialog (no `change` event fires).
+  const focusRestoreTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const handleExport = useCallback(() => {
     const sanitizedNodes = sanitizeNodes()
     const payload = {
@@ -50,10 +63,32 @@ export const useWorkflowImportExport = ({
   }, [edges, sanitizeNodes, setRunMessage, workflowName])
 
   const handleImportClick = useCallback(() => {
+    // Lock React Query's focus state so that the blur/focus cycle caused by
+    // the native file dialog does NOT trigger refetchOnWindowFocus cascades.
+    focusManager.setFocused(true)
+
     importInputRef.current?.click()
+
+    // Safety net: if the user cancels the dialog (no `change` event), restore
+    // focus tracking after a short delay following the next window focus event.
+    if (focusRestoreTimer.current) clearTimeout(focusRestoreTimer.current)
+    const onFocusRestore = () => {
+      focusRestoreTimer.current = setTimeout(() => {
+        focusManager.setFocused(undefined)
+        focusRestoreTimer.current = null
+      }, 500)
+    }
+    window.addEventListener('focus', onFocusRestore, { once: true })
   }, [])
 
   const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    // Restore React Query focus tracking now that we have the file.
+    if (focusRestoreTimer.current) {
+      clearTimeout(focusRestoreTimer.current)
+      focusRestoreTimer.current = null
+    }
+    focusManager.setFocused(undefined)
+
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -69,7 +104,7 @@ export const useWorkflowImportExport = ({
           return
         }
 
-        takeSnapshot(nodes, edges)
+        takeSnapshot(nodesRef.current, edgesRef.current)
 
         const graph = (parsed.graph_data || parsed) as { nodes?: Node<WorkflowNodeData>[]; edges?: Edge[] }
         const incomingNodes = withSetters((graph.nodes || []) as Node<WorkflowNodeData>[])
@@ -90,7 +125,7 @@ export const useWorkflowImportExport = ({
     }
 
     reader.readAsText(file)
-  }, [edges, nodes, setEdges, setNodes, setRunMessage, setWorkflowName, takeSnapshot, withSetters])
+  }, [setEdges, setNodes, setRunMessage, setWorkflowName, takeSnapshot, withSetters])
 
   return {
     importInputRef,

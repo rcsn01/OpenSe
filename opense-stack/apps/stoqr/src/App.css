@@ -293,6 +293,31 @@
   background: rgba(59, 130, 246, 0.06);
 }
 
+.add-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-foreground);
+  opacity: 0.6;
+  background: none;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+  height: 30px;
+}
+
+.add-filter-button:hover {
+  opacity: 1;
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(102, 193, 63, 0.06);
+}
+
 /* --- Inventory: Table Info Bar --- */
 .table-info-bar {
   display: flex;

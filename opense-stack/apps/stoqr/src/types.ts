@@ -40,6 +40,11 @@ export type CustomFieldFilterOption = {
   values: CustomFieldPrimitive[]
 }
 
+export type CustomFieldActiveFilter = {
+  key: string
+  value: CustomFieldPrimitive
+}
+
 export type InventoryTransaction = {
   id: string
   transaction_type: string

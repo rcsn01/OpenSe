@@ -217,6 +217,105 @@ describe('scan api', () => {
     }))
   })
 
+  it('finds product by numeric SKU without UUID cast error', async () => {
+    const productsQuery = {
+      select: vi.fn(() => productsQuery),
+      eq: vi.fn(() => productsQuery),
+      or: vi.fn(() => productsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: '84848484-8484-8484-8484-a00000000004',
+          name: '0.5mL Eppendorf Safe-Lock Tubes',
+          sku: '30123301',
+          quantity_on_hand: 10,
+          reorder_point: 5,
+          description: null,
+          cost_price: null,
+          selling_price: null,
+          folder_id: null,
+          image_urls: [],
+          custom_fields: {},
+          expiry_date: null,
+          primary_barcode: null,
+        },
+        error: null,
+      }),
+    }
+
+    const transactionsQuery = {
+      select: vi.fn(() => transactionsQuery),
+      eq: vi.fn(() => transactionsQuery),
+      order: vi.fn(() => transactionsQuery),
+      limit: vi.fn(() => transactionsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') return productsQuery
+      if (table === 'inventory_transactions') return transactionsQuery
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const result = await lookupProductByScanValue('company-1', '30123301')
+
+    expect(result.product).not.toBeNull()
+    expect(result.product?.sku).toBe('30123301')
+    expect(result.product?.name).toBe('0.5mL Eppendorf Safe-Lock Tubes')
+    expect(result.notFoundSku).toBeNull()
+
+    const orArg = productsQuery.or.mock.calls[0]?.[0] as string
+    expect(orArg).not.toContain('id.eq')
+    expect(orArg).toContain('sku.eq."30123301"')
+    expect(orArg).toContain('primary_barcode.eq."30123301"')
+  })
+
+  it('includes id filter when scan value is a valid UUID', async () => {
+    const testUuid = '84848484-8484-8484-8484-a00000000004'
+    const productsQuery = {
+      select: vi.fn(() => productsQuery),
+      eq: vi.fn(() => productsQuery),
+      or: vi.fn(() => productsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: testUuid,
+          name: 'Found by UUID',
+          sku: 'SKU-UUID',
+          quantity_on_hand: 1,
+          reorder_point: 0,
+          description: null,
+          cost_price: null,
+          selling_price: null,
+          folder_id: null,
+          image_urls: [],
+          custom_fields: {},
+          expiry_date: null,
+          primary_barcode: null,
+        },
+        error: null,
+      }),
+    }
+
+    const transactionsQuery = {
+      select: vi.fn(() => transactionsQuery),
+      eq: vi.fn(() => transactionsQuery),
+      order: vi.fn(() => transactionsQuery),
+      limit: vi.fn(() => transactionsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') return productsQuery
+      if (table === 'inventory_transactions') return transactionsQuery
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const result = await lookupProductByScanValue('company-1', testUuid)
+
+    expect(result.product?.id).toBe(testUuid)
+    const orArg = productsQuery.or.mock.calls[0]?.[0] as string
+    expect(orArg).toContain(`id.eq."${testUuid}"`)
+  })
+
   it('fetches scan history and enriches actor names', async () => {
     const historyQuery = {
       select: vi.fn(() => historyQuery),

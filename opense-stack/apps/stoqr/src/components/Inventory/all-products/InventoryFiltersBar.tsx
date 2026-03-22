@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Plus, X } from 'lucide-react'
 import { Dropdown, DropdownItem } from '@repo/ui'
 import type { InventoryFiltersBarProps } from './types'
 
@@ -18,26 +19,33 @@ export const InventoryFiltersBar = ({
   selectedRowIds,
   stockFilter,
   setStockFilter,
-  selectedCustomFieldKey,
-  setSelectedCustomFieldKey,
-  selectedCustomFieldValue,
-  setSelectedCustomFieldValue,
+  activeCustomFieldFilters,
+  onAddFilter,
+  onRemoveFilter,
+  pendingFilterKey,
+  setPendingFilterKey,
   customFieldFilters,
   onImportOpen,
   onCreateOpen,
   handleBulkDelete,
 }: InventoryFiltersBarProps) => {
-  const selectedCustomField = useMemo(
-    () => customFieldFilters.find((field) => field.key === selectedCustomFieldKey) ?? null,
-    [customFieldFilters, selectedCustomFieldKey],
+  const activeKeys = useMemo(
+    () => new Set(activeCustomFieldFilters.map((f) => f.key)),
+    [activeCustomFieldFilters],
   )
 
-  const hasActiveFilter = selectedCustomFieldKey !== null && selectedCustomFieldValue !== null
-  const isSelectingValue = selectedCustomFieldKey !== null && selectedCustomFieldValue === null
+  const availableFieldsForAdd = useMemo(
+    () => customFieldFilters.filter((field) => !activeKeys.has(field.key) && field.key !== pendingFilterKey),
+    [customFieldFilters, activeKeys, pendingFilterKey],
+  )
 
-  const handleRemoveFilter = () => {
-    setSelectedCustomFieldKey(null)
-    setSelectedCustomFieldValue(null)
+  const pendingField = useMemo(
+    () => (pendingFilterKey ? customFieldFilters.find((f) => f.key === pendingFilterKey) ?? null : null),
+    [customFieldFilters, pendingFilterKey],
+  )
+
+  const handleCancelPending = () => {
+    setPendingFilterKey(null)
   }
 
   return (
@@ -79,10 +87,11 @@ export const InventoryFiltersBar = ({
               <DropdownItem onClick={() => setStockFilter('out')}>Out of Stock</DropdownItem>
             </Dropdown>
 
-            {hasActiveFilter && (
+            {activeCustomFieldFilters.map((filter) => (
               <div
+                key={filter.key}
                 className="row"
-                aria-label="Active filter"
+                aria-label={`Active filter: ${filter.key}`}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -95,28 +104,33 @@ export const InventoryFiltersBar = ({
                   fontWeight: 500,
                 }}
               >
-                <span>{selectedCustomFieldKey}:{formatCustomFieldValue(selectedCustomFieldValue)}</span>
+                <span>{filter.key}:{formatCustomFieldValue(filter.value)}</span>
                 <button
                   type="button"
-                  aria-label="Remove filter"
-                  onClick={handleRemoveFilter}
+                  aria-label={`Remove ${filter.key} filter`}
+                  onClick={() => onRemoveFilter(filter.key)}
                   style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    padding: '0 2px',
-                    fontSize: 14,
+                    padding: 0,
+                    width: 16,
+                    height: 16,
                     lineHeight: 1,
                     color: 'var(--color-foreground)',
                     opacity: 0.5,
+                    borderRadius: 4,
                   }}
                 >
-                  ×
+                  <X size={12} />
                 </button>
               </div>
-            )}
+            ))}
 
-            {isSelectingValue && (
+            {pendingField && (
               <div className="row" style={{ gap: 4, alignItems: 'center' }}>
                 <Dropdown
                   className="min-w-[140px]"
@@ -128,14 +142,14 @@ export const InventoryFiltersBar = ({
                       className="select text-left"
                       style={{ width: 140, padding: '7px 10px', fontSize: 13, borderRadius: 8 }}
                     >
-                      {selectedCustomFieldKey}:
+                      {pendingFilterKey}:
                     </button>
                   }
                 >
-                  {(selectedCustomField?.values ?? []).map((value) => (
+                  {(pendingField.values ?? []).map((value) => (
                     <DropdownItem
                       key={JSON.stringify(value)}
-                      onClick={() => setSelectedCustomFieldValue(value)}
+                      onClick={() => onAddFilter(pendingFilterKey!, value)}
                     >
                       {formatCustomFieldValue(value)}
                     </DropdownItem>
@@ -143,44 +157,47 @@ export const InventoryFiltersBar = ({
                 </Dropdown>
                 <button
                   type="button"
-                  aria-label="Remove filter"
-                  onClick={handleRemoveFilter}
+                  aria-label="Cancel pending filter"
+                  onClick={handleCancelPending}
                   style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    padding: '0 2px',
-                    fontSize: 14,
+                    padding: 0,
+                    width: 16,
+                    height: 16,
                     lineHeight: 1,
                     color: 'var(--color-foreground)',
                     opacity: 0.5,
                   }}
                 >
-                  ×
+                  <X size={12} />
                 </button>
               </div>
             )}
 
-            {!selectedCustomFieldKey && (
+            {!pendingFilterKey && availableFieldsForAdd.length > 0 && (
               <Dropdown
                 className="min-w-[140px]"
                 trigger={
                   <button
-                    className="button ghost small"
+                    className="add-filter-button"
                     type="button"
                     aria-label="Add custom field filter"
-                    style={{ width: 32, minWidth: 32, padding: 0, borderRadius: 8 }}
                   >
-                    +
+                    <Plus size={14} strokeWidth={2.5} />
+                    <span>Filter</span>
                   </button>
                 }
               >
-                {customFieldFilters.map((field) => (
+                {availableFieldsForAdd.map((field) => (
                   <DropdownItem
                     key={field.key}
                     onClick={() => {
-                      setSelectedCustomFieldKey(field.key)
-                      setSelectedCustomFieldValue(null)
+                      setPendingFilterKey(field.key)
                     }}
                   >
                     {field.key}

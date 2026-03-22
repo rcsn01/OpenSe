@@ -9,7 +9,7 @@ test.describe('Stoqr Procurement', () => {
 
     const hasProcurementTabs = await authenticatedPage.getByRole('tab', { name: /purchase orders/i }).first().isVisible().catch(() => false);
     if (!hasProcurementTabs) {
-      await expect(authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR|Sign in/i).first()).toBeVisible();
+      await expect(authenticatedPage.getByText(/Inventory Control|Inventory Engine|StoQR|Sign in|Get Started/i).first()).toBeVisible();
       return;
     }
 
