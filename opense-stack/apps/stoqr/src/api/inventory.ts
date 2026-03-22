@@ -1,5 +1,5 @@
 import { db, supabase } from '../supabaseClient'
-import type { CustomFieldFilterOption, CustomFieldPrimitive, CustomFieldValueType, Folder, Tag } from '../types'
+import type { CustomFieldActiveFilter, CustomFieldFilterOption, CustomFieldPrimitive, CustomFieldValueType, Folder, Tag } from '../types'
 import { toNumber } from '../utils'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
 
@@ -13,8 +13,7 @@ export type FetchInventoryProductsParams = {
   companyId: string
   search: string
   stockFilter: 'all' | 'low' | 'out'
-  customFieldKey?: string | null
-  customFieldValue?: CustomFieldPrimitive | null
+  customFieldFilters?: CustomFieldActiveFilter[]
   page: number
   pageSize: number
   sortField: SortField
@@ -133,8 +132,7 @@ export const fetchInventoryProducts = async ({
   companyId,
   search,
   stockFilter,
-  customFieldKey,
-  customFieldValue,
+  customFieldFilters,
   page,
   pageSize,
   sortField,
@@ -153,8 +151,10 @@ export const fetchInventoryProducts = async ({
     query = query.eq('quantity_on_hand', 0)
   }
 
-  if (customFieldKey && customFieldValue !== null && customFieldValue !== undefined) {
-    query = query.contains('custom_fields', { [customFieldKey]: customFieldValue })
+  if (customFieldFilters) {
+    for (const filter of customFieldFilters) {
+      query = query.contains('custom_fields', { [filter.key]: filter.value })
+    }
   }
 
   query = query.order(sortField, { ascending: sortDir === 'asc' })

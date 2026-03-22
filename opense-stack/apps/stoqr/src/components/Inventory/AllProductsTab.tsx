@@ -7,10 +7,11 @@ export const AllProductsTab = ({
   companyId,
   stockFilter,
   setStockFilter,
-  selectedCustomFieldKey,
-  setSelectedCustomFieldKey,
-  selectedCustomFieldValue,
-  setSelectedCustomFieldValue,
+  activeCustomFieldFilters,
+  onAddFilter,
+  onRemoveFilter,
+  pendingFilterKey,
+  setPendingFilterKey,
   customFieldFilters,
   onImportOpen,
   onCreateOpen,
@@ -72,10 +73,11 @@ export const AllProductsTab = ({
           selectedRowIds={selectedRowIds}
           stockFilter={stockFilter}
           setStockFilter={setStockFilter}
-          selectedCustomFieldKey={selectedCustomFieldKey}
-          setSelectedCustomFieldKey={setSelectedCustomFieldKey}
-          selectedCustomFieldValue={selectedCustomFieldValue}
-          setSelectedCustomFieldValue={setSelectedCustomFieldValue}
+          activeCustomFieldFilters={activeCustomFieldFilters}
+          onAddFilter={onAddFilter}
+          onRemoveFilter={onRemoveFilter}
+          pendingFilterKey={pendingFilterKey}
+          setPendingFilterKey={setPendingFilterKey}
           customFieldFilters={customFieldFilters}
           onImportOpen={onImportOpen}
           onCreateOpen={onCreateOpen}

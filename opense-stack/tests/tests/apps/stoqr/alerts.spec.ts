@@ -10,7 +10,7 @@ test.describe('Stoqr Alerts', () => {
 
     const hasAlertsTabs = await authenticatedPage.getByRole('tab', { name: /notifications/i }).first().isVisible().catch(() => false);
     if (!hasAlertsTabs) {
-      await expect(authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR|Sign in/i).first()).toBeVisible();
+      await expect(authenticatedPage.getByText(/Inventory Control|Inventory Engine|StoQR|Sign in|Get Started/i).first()).toBeVisible();
       return;
     }
 

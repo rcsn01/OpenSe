@@ -1,4 +1,4 @@
-import type { CustomFieldFilterOption, CustomFieldPrimitive, Folder } from '../../../types'
+import type { CustomFieldActiveFilter, CustomFieldFilterOption, CustomFieldPrimitive, Folder } from '../../../types'
 import type { InventoryProduct, SortDirection, SortField } from '../types'
 
 export type ProductListViewProps = {
@@ -26,10 +26,11 @@ export type InventoryFiltersBarProps = {
   selectedRowIds: Set<string>
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
-  selectedCustomFieldKey: string | null
-  setSelectedCustomFieldKey: (value: string | null) => void
-  selectedCustomFieldValue: CustomFieldPrimitive | null
-  setSelectedCustomFieldValue: (value: CustomFieldPrimitive | null) => void
+  activeCustomFieldFilters: CustomFieldActiveFilter[]
+  onAddFilter: (key: string, value: CustomFieldPrimitive) => void
+  onRemoveFilter: (key: string) => void
+  pendingFilterKey: string | null
+  setPendingFilterKey: (key: string | null) => void
   customFieldFilters: CustomFieldFilterOption[]
   onImportOpen: () => void
   onCreateOpen: () => void
@@ -40,10 +41,11 @@ export type AllProductsTabProps = {
   companyId: string | null
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
-  selectedCustomFieldKey: string | null
-  setSelectedCustomFieldKey: (value: string | null) => void
-  selectedCustomFieldValue: CustomFieldPrimitive | null
-  setSelectedCustomFieldValue: (value: CustomFieldPrimitive | null) => void
+  activeCustomFieldFilters: CustomFieldActiveFilter[]
+  onAddFilter: (key: string, value: CustomFieldPrimitive) => void
+  onRemoveFilter: (key: string) => void
+  pendingFilterKey: string | null
+  setPendingFilterKey: (key: string | null) => void
   customFieldFilters: CustomFieldFilterOption[]
   onImportOpen: () => void
   onCreateOpen: () => void

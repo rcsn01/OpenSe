@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
-import type { CustomFieldPrimitive, Folder } from '../types'
+import type { CustomFieldActiveFilter, CustomFieldPrimitive, Folder } from '../types'
 import { Tabs } from '../components/Tabs'
 import { parseCsv } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
@@ -32,8 +32,8 @@ export const InventoryListPage = () => {
   const [importRows, setImportRows] = useState<Record<string, string>[]>([])
   const [importMessage, setImportMessage] = useState<string | null>(null)
 
-  const [selectedCustomFieldKey, setSelectedCustomFieldKey] = useState<string | null>(null)
-  const [selectedCustomFieldValue, setSelectedCustomFieldValue] = useState<CustomFieldPrimitive | null>(null)
+  const [activeCustomFieldFilters, setActiveCustomFieldFilters] = useState<CustomFieldActiveFilter[]>([])
+  const [pendingFilterKey, setPendingFilterKey] = useState<string | null>(null)
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
 
   const [page, setPage] = useState(1)
@@ -47,8 +47,7 @@ export const InventoryListPage = () => {
     companyId,
     search: '',
     stockFilter,
-    customFieldKey: selectedCustomFieldKey,
-    customFieldValue: selectedCustomFieldValue,
+    customFieldFilters: activeCustomFieldFilters.length > 0 ? activeCustomFieldFilters : undefined,
     page,
     pageSize,
     sortField,
@@ -77,24 +76,35 @@ export const InventoryListPage = () => {
   }, [searchParams])
 
   useEffect(() => {
-    if (!selectedCustomFieldKey) {
-      if (selectedCustomFieldValue !== null) {
-        setSelectedCustomFieldValue(null)
-      }
-      return
+    if (activeCustomFieldFilters.length === 0 && pendingFilterKey === null) return
+
+    const availableKeys = new Set(customFieldFilters.map((f) => f.key))
+
+    const validFilters = activeCustomFieldFilters.filter((f) => {
+      const option = customFieldFilters.find((o) => o.key === f.key)
+      return option && option.values.some((v) => v === f.value)
+    })
+
+    if (validFilters.length !== activeCustomFieldFilters.length) {
+      setActiveCustomFieldFilters(validFilters)
     }
 
-    const selectedFilter = customFieldFilters.find((filter) => filter.key === selectedCustomFieldKey)
-    if (!selectedFilter) {
-      setSelectedCustomFieldKey(null)
-      setSelectedCustomFieldValue(null)
-      return
+    if (pendingFilterKey !== null && !availableKeys.has(pendingFilterKey)) {
+      setPendingFilterKey(null)
     }
+  }, [customFieldFilters, activeCustomFieldFilters, pendingFilterKey])
 
-    if (selectedCustomFieldValue !== null && !selectedFilter.values.some((value) => value === selectedCustomFieldValue)) {
-      setSelectedCustomFieldValue(null)
-    }
-  }, [customFieldFilters, selectedCustomFieldKey, selectedCustomFieldValue])
+  const handleAddFilter = useCallback((key: string, value: CustomFieldPrimitive) => {
+    setActiveCustomFieldFilters((prev) => {
+      const filtered = prev.filter((f) => f.key !== key)
+      return [...filtered, { key, value }]
+    })
+    setPendingFilterKey(null)
+  }, [])
+
+  const handleRemoveFilter = useCallback((key: string) => {
+    setActiveCustomFieldFilters((prev) => prev.filter((f) => f.key !== key))
+  }, [])
 
   const toggleSelection = (id: string) => {
     const next = new Set(selectedRowIds)
@@ -166,10 +176,11 @@ export const InventoryListPage = () => {
                 companyId={companyId}
                 stockFilter={stockFilter}
                 setStockFilter={setStockFilter}
-                selectedCustomFieldKey={selectedCustomFieldKey}
-                setSelectedCustomFieldKey={setSelectedCustomFieldKey}
-                selectedCustomFieldValue={selectedCustomFieldValue}
-                setSelectedCustomFieldValue={setSelectedCustomFieldValue}
+                activeCustomFieldFilters={activeCustomFieldFilters}
+                onAddFilter={handleAddFilter}
+                onRemoveFilter={handleRemoveFilter}
+                pendingFilterKey={pendingFilterKey}
+                setPendingFilterKey={setPendingFilterKey}
                 customFieldFilters={customFieldFilters}
                 onImportOpen={() => setIsImportOpen(true)}
                 onCreateOpen={() => navigate('/inventory/new')}
