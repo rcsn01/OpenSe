@@ -140,8 +140,8 @@ const Navbar = () => {
             rel={l.href.startsWith('http') ? 'noopener noreferrer' : undefined}
           >{l.label}</a>
         ))}
-        <MagneticButton href="#terminal" className="!py-2 !px-5 !text-xs">
-          Start Building
+        <MagneticButton href="/login" className="!py-2 !px-5 !text-xs">
+          Get Started
         </MagneticButton>
       </div>
 
@@ -175,8 +175,8 @@ const Navbar = () => {
               rel={l.href.startsWith('http') ? 'noopener noreferrer' : undefined}
             >{l.label}</a>
           ))}
-          <MagneticButton href="#terminal" className="!justify-center" onClick={() => setMobileOpen(false)}>
-            Start Building
+          <MagneticButton href="/login" className="!justify-center" onClick={() => setMobileOpen(false)}>
+            Get Started
           </MagneticButton>
         </div>
       )}
