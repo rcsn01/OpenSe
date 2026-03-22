@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
+import { Camera, CameraOff, ScanBarcode } from 'lucide-react'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
@@ -108,17 +109,33 @@ export const ScanPage = () => {
                 companyId={companyId || ''}
                 entryMethod={entryMethod}
                 cameraContent={
-                  <>
-                    <div className="row wrap">
-                      <button className="button" onClick={startCamera} disabled={isScanning}>
-                        Start Camera
-                      </button>
-                      <button className="button secondary" onClick={stopCamera} disabled={!isScanning}>
-                        Stop Camera
-                      </button>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="relative w-full overflow-hidden rounded-lg bg-[var(--color-muted)]">
+                      <div
+                        id="reader"
+                        style={{ width: '100%', minHeight: isScanning ? 250 : 0 }}
+                      />
+                      {!isScanning && (
+                        <div className="flex flex-col items-center justify-center py-10 text-[var(--color-muted-foreground)]">
+                          <div className="mb-3 rounded-full bg-[var(--color-background)] p-3.5 shadow-sm">
+                            <ScanBarcode size={24} className="text-[var(--color-primary)]" />
+                          </div>
+                          <p className="text-sm font-medium">Point your camera at a barcode</p>
+                        </div>
+                      )}
                     </div>
-                    <div id="reader" style={{ width: '100%', minHeight: 220 }} />
-                  </>
+                    <button
+                      className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+                        isScanning
+                          ? 'border border-[var(--color-border)] text-[var(--color-destructive)] hover:bg-[var(--color-muted)]'
+                          : 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-sm hover:opacity-90'
+                      }`}
+                      onClick={isScanning ? stopCamera : startCamera}
+                    >
+                      {isScanning ? <CameraOff size={16} /> : <Camera size={16} />}
+                      {isScanning ? 'Stop Camera' : 'Start Camera'}
+                    </button>
+                  </div>
                 }
               />
             )
