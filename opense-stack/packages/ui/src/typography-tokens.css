@@ -1,0 +1,468 @@
+/* ── Semantic Typography Tokens ───────────────────────── */
+:root {
+  /* Primitive type scale */
+  --type-size-2xs: 0.625rem;
+  --type-size-xs: 0.75rem;
+  --type-size-sm: 0.875rem;
+  --type-size-md: 1rem;
+  --type-size-lg: 1.125rem;
+  --type-size-xl: 1.25rem;
+  --type-size-2xl: 1.5rem;
+  --type-size-3xl: 1.875rem;
+  --type-size-4xl: 2.25rem;
+  --type-size-5xl: 3rem;
+  --type-size-6xl: 3.75rem;
+
+  --type-leading-tight: 1.15;
+  --type-leading-snug: 1.3;
+  --type-leading-normal: 1.5;
+  --type-leading-relaxed: 1.65;
+
+  --type-weight-regular: 200;
+  --type-weight-medium: 250;
+  --type-weight-semibold: 300;
+  --type-weight-bold: 350;
+  --type-weight-extrabold: 400;
+
+  --type-tracking-tight: -0.02em;
+  --type-tracking-normal: 0em;
+  --type-tracking-wide: 0.03em;
+  --type-tracking-wider: 0.06em;
+
+  /* 1) Display */
+  --typography-display-1-size: var(--type-size-6xl);
+  --typography-display-1-line-height: 1.05;
+  --typography-display-1-weight: var(--type-weight-bold);
+  --typography-display-1-tracking: var(--type-tracking-tight);
+  --typography-display-1-color: var(--color-foreground);
+
+  --typography-display-2-size: var(--type-size-5xl);
+  --typography-display-2-line-height: 1.1;
+  --typography-display-2-weight: var(--type-weight-bold);
+  --typography-display-2-tracking: var(--type-tracking-tight);
+  --typography-display-2-color: var(--color-foreground);
+
+  --typography-display-3-size: var(--type-size-4xl);
+  --typography-display-3-line-height: var(--type-leading-tight);
+  --typography-display-3-weight: var(--type-weight-semibold);
+  --typography-display-3-tracking: var(--type-tracking-tight);
+  --typography-display-3-color: var(--color-foreground);
+
+  /* 2) Headings */
+  --typography-heading-1-size: var(--type-size-5xl);
+  --typography-heading-1-line-height: 1.1;
+  --typography-heading-1-weight: var(--type-weight-bold);
+  --typography-heading-1-tracking: var(--type-tracking-tight);
+  --typography-heading-1-color: var(--color-foreground);
+
+  --typography-heading-2-size: var(--type-size-4xl);
+  --typography-heading-2-line-height: var(--type-leading-tight);
+  --typography-heading-2-weight: var(--type-weight-bold);
+  --typography-heading-2-tracking: var(--type-tracking-tight);
+  --typography-heading-2-color: var(--color-foreground);
+
+  --typography-heading-3-size: var(--type-size-3xl);
+  --typography-heading-3-line-height: var(--type-leading-snug);
+  --typography-heading-3-weight: var(--type-weight-semibold);
+  --typography-heading-3-tracking: var(--type-tracking-normal);
+  --typography-heading-3-color: var(--color-foreground);
+
+  --typography-heading-4-size: var(--type-size-2xl);
+  --typography-heading-4-line-height: var(--type-leading-snug);
+  --typography-heading-4-weight: var(--type-weight-semibold);
+  --typography-heading-4-tracking: var(--type-tracking-normal);
+  --typography-heading-4-color: var(--color-foreground);
+
+  --typography-heading-5-size: var(--type-size-xl);
+  --typography-heading-5-line-height: var(--type-leading-normal);
+  --typography-heading-5-weight: var(--type-weight-semibold);
+  --typography-heading-5-tracking: var(--type-tracking-normal);
+  --typography-heading-5-color: var(--color-foreground);
+
+  --typography-heading-6-size: var(--type-size-lg);
+  --typography-heading-6-line-height: var(--type-leading-normal);
+  --typography-heading-6-weight: var(--type-weight-semibold);
+  --typography-heading-6-tracking: var(--type-tracking-normal);
+  --typography-heading-6-color: var(--color-foreground);
+
+  /* 3) Subtitle */
+  --typography-subtitle-large-size: var(--type-size-xl);
+  --typography-subtitle-large-line-height: var(--type-leading-relaxed);
+  --typography-subtitle-large-weight: var(--type-weight-medium);
+  --typography-subtitle-large-tracking: var(--type-tracking-normal);
+  --typography-subtitle-large-color: var(--color-foreground);
+
+  --typography-subtitle-medium-size: var(--type-size-lg);
+  --typography-subtitle-medium-line-height: var(--type-leading-relaxed);
+  --typography-subtitle-medium-weight: var(--type-weight-medium);
+  --typography-subtitle-medium-tracking: var(--type-tracking-normal);
+  --typography-subtitle-medium-color: var(--color-foreground);
+
+  --typography-subtitle-small-size: var(--type-size-md);
+  --typography-subtitle-small-line-height: var(--type-leading-relaxed);
+  --typography-subtitle-small-weight: var(--type-weight-medium);
+  --typography-subtitle-small-tracking: var(--type-tracking-normal);
+  --typography-subtitle-small-color: var(--color-muted-foreground);
+
+  /* 4) Body */
+  --typography-body-1-size: var(--type-size-xl);
+  --typography-body-1-line-height: var(--type-leading-relaxed);
+  --typography-body-1-weight: var(--type-weight-regular);
+  --typography-body-1-tracking: var(--type-tracking-normal);
+  --typography-body-1-color: var(--color-foreground);
+
+  --typography-body-2-size: var(--type-size-lg);
+  --typography-body-2-line-height: var(--type-leading-relaxed);
+  --typography-body-2-weight: var(--type-weight-regular);
+  --typography-body-2-tracking: var(--type-tracking-normal);
+  --typography-body-2-color: var(--color-foreground);
+
+  --typography-body-3-size: var(--type-size-md);
+  --typography-body-3-line-height: var(--type-leading-relaxed);
+  --typography-body-3-weight: var(--type-weight-regular);
+  --typography-body-3-tracking: var(--type-tracking-normal);
+  --typography-body-3-color: var(--color-foreground);
+
+  --typography-body-4-size: var(--type-size-sm);
+  --typography-body-4-line-height: var(--type-leading-normal);
+  --typography-body-4-weight: var(--type-weight-regular);
+  --typography-body-4-tracking: var(--type-tracking-normal);
+  --typography-body-4-color: var(--color-foreground);
+
+  --typography-body-5-size: var(--type-size-xs);
+  --typography-body-5-line-height: var(--type-leading-normal);
+  --typography-body-5-weight: var(--type-weight-regular);
+  --typography-body-5-tracking: var(--type-tracking-normal);
+  --typography-body-5-color: var(--color-foreground);
+
+  --typography-body-6-size: var(--type-size-2xs);
+  --typography-body-6-line-height: var(--type-leading-normal);
+  --typography-body-6-weight: var(--type-weight-regular);
+  --typography-body-6-tracking: var(--type-tracking-normal);
+  --typography-body-6-color: var(--color-foreground);
+
+  --typography-body-strong-size: var(--type-size-md);
+  --typography-body-strong-line-height: var(--type-leading-relaxed);
+  --typography-body-strong-weight: var(--type-weight-semibold);
+  --typography-body-strong-tracking: var(--type-tracking-normal);
+  --typography-body-strong-color: var(--color-foreground);
+
+  --typography-body-emphasis-size: var(--type-size-md);
+  --typography-body-emphasis-line-height: var(--type-leading-relaxed);
+  --typography-body-emphasis-weight: var(--type-weight-medium);
+  --typography-body-emphasis-tracking: var(--type-tracking-normal);
+  --typography-body-emphasis-color: var(--color-foreground);
+
+  --typography-muted-body-size: var(--type-size-sm);
+  --typography-muted-body-line-height: var(--type-leading-normal);
+  --typography-muted-body-weight: var(--type-weight-regular);
+  --typography-muted-body-tracking: var(--type-tracking-normal);
+  --typography-muted-body-color: var(--color-muted-foreground);
+
+  --typography-caption-size: var(--type-size-xs);
+  --typography-caption-line-height: var(--type-leading-normal);
+  --typography-caption-weight: var(--type-weight-regular);
+  --typography-caption-tracking: var(--type-tracking-normal);
+  --typography-caption-color: var(--color-muted-foreground);
+
+  --typography-overline-size: var(--type-size-2xs);
+  --typography-overline-line-height: var(--type-leading-normal);
+  --typography-overline-weight: var(--type-weight-semibold);
+  --typography-overline-tracking: var(--type-tracking-wider);
+  --typography-overline-color: var(--color-muted-foreground);
+
+  /* 5) Form and labels */
+  --typography-label-large-size: var(--type-size-md);
+  --typography-label-large-line-height: var(--type-leading-normal);
+  --typography-label-large-weight: var(--type-weight-semibold);
+  --typography-label-large-tracking: var(--type-tracking-normal);
+  --typography-label-large-color: var(--color-foreground);
+
+  --typography-label-medium-size: var(--type-size-sm);
+  --typography-label-medium-line-height: var(--type-leading-normal);
+  --typography-label-medium-weight: var(--type-weight-semibold);
+  --typography-label-medium-tracking: var(--type-tracking-normal);
+  --typography-label-medium-color: var(--color-foreground);
+
+  --typography-label-small-size: var(--type-size-xs);
+  --typography-label-small-line-height: var(--type-leading-normal);
+  --typography-label-small-weight: var(--type-weight-medium);
+  --typography-label-small-tracking: var(--type-tracking-normal);
+  --typography-label-small-color: var(--color-foreground);
+
+  --typography-field-label-size: var(--type-size-sm);
+  --typography-field-label-line-height: var(--type-leading-normal);
+  --typography-field-label-weight: var(--type-weight-medium);
+  --typography-field-label-tracking: var(--type-tracking-normal);
+  --typography-field-label-color: var(--color-foreground);
+
+  --typography-field-help-text-size: var(--type-size-xs);
+  --typography-field-help-text-line-height: var(--type-leading-normal);
+  --typography-field-help-text-weight: var(--type-weight-regular);
+  --typography-field-help-text-tracking: var(--type-tracking-normal);
+  --typography-field-help-text-color: var(--color-muted-foreground);
+
+  --typography-field-placeholder-size: var(--type-size-sm);
+  --typography-field-placeholder-line-height: var(--type-leading-normal);
+  --typography-field-placeholder-weight: var(--type-weight-regular);
+  --typography-field-placeholder-tracking: var(--type-tracking-normal);
+  --typography-field-placeholder-color: var(--color-muted-foreground);
+
+  --typography-validation-error-text-size: var(--type-size-xs);
+  --typography-validation-error-text-line-height: var(--type-leading-normal);
+  --typography-validation-error-text-weight: var(--type-weight-medium);
+  --typography-validation-error-text-tracking: var(--type-tracking-normal);
+  --typography-validation-error-text-color: var(--color-destructive);
+
+  --typography-validation-success-text-size: var(--type-size-xs);
+  --typography-validation-success-text-line-height: var(--type-leading-normal);
+  --typography-validation-success-text-weight: var(--type-weight-medium);
+  --typography-validation-success-text-tracking: var(--type-tracking-normal);
+  --typography-validation-success-text-color: var(--color-success);
+
+  /* 6) Links */
+  --typography-link-default-size: var(--type-size-sm);
+  --typography-link-default-line-height: var(--type-leading-normal);
+  --typography-link-default-weight: var(--type-weight-medium);
+  --typography-link-default-tracking: var(--type-tracking-normal);
+  --typography-link-default-color: var(--color-primary);
+
+  --typography-link-hover-size: var(--type-size-sm);
+  --typography-link-hover-line-height: var(--type-leading-normal);
+  --typography-link-hover-weight: var(--type-weight-semibold);
+  --typography-link-hover-tracking: var(--type-tracking-normal);
+  --typography-link-hover-color: var(--color-primary-hover);
+
+  --typography-link-visited-size: var(--type-size-sm);
+  --typography-link-visited-line-height: var(--type-leading-normal);
+  --typography-link-visited-weight: var(--type-weight-medium);
+  --typography-link-visited-tracking: var(--type-tracking-normal);
+  --typography-link-visited-color: var(--color-secondary);
+
+  --typography-link-inverse-size: var(--type-size-sm);
+  --typography-link-inverse-line-height: var(--type-leading-normal);
+  --typography-link-inverse-weight: var(--type-weight-medium);
+  --typography-link-inverse-tracking: var(--type-tracking-normal);
+  --typography-link-inverse-color: var(--color-background);
+
+  /* 7) Controls */
+  --typography-button-text-large-size: var(--type-size-md);
+  --typography-button-text-large-line-height: var(--type-leading-normal);
+  --typography-button-text-large-weight: var(--type-weight-semibold);
+  --typography-button-text-large-tracking: var(--type-tracking-normal);
+  --typography-button-text-large-color: var(--color-primary-foreground);
+
+  --typography-button-text-medium-size: var(--type-size-sm);
+  --typography-button-text-medium-line-height: var(--type-leading-normal);
+  --typography-button-text-medium-weight: var(--type-weight-semibold);
+  --typography-button-text-medium-tracking: var(--type-tracking-normal);
+  --typography-button-text-medium-color: var(--color-primary-foreground);
+
+  --typography-button-text-small-size: var(--type-size-xs);
+  --typography-button-text-small-line-height: var(--type-leading-normal);
+  --typography-button-text-small-weight: var(--type-weight-semibold);
+  --typography-button-text-small-tracking: var(--type-tracking-normal);
+  --typography-button-text-small-color: var(--color-primary-foreground);
+
+  --typography-badge-text-size: var(--type-size-xs);
+  --typography-badge-text-line-height: var(--type-leading-normal);
+  --typography-badge-text-weight: var(--type-weight-semibold);
+  --typography-badge-text-tracking: var(--type-tracking-wide);
+  --typography-badge-text-color: var(--color-foreground);
+
+  --typography-chip-text-size: var(--type-size-xs);
+  --typography-chip-text-line-height: var(--type-leading-normal);
+  --typography-chip-text-weight: var(--type-weight-medium);
+  --typography-chip-text-tracking: var(--type-tracking-normal);
+  --typography-chip-text-color: var(--color-foreground);
+
+  /* 8) Tables and data */
+  --typography-table-header-text-size: var(--type-size-xs);
+  --typography-table-header-text-line-height: var(--type-leading-normal);
+  --typography-table-header-text-weight: var(--type-weight-semibold);
+  --typography-table-header-text-tracking: var(--type-tracking-wide);
+  --typography-table-header-text-color: var(--color-muted-foreground);
+
+  --typography-table-cell-text-size: var(--type-size-sm);
+  --typography-table-cell-text-line-height: var(--type-leading-normal);
+  --typography-table-cell-text-weight: var(--type-weight-regular);
+  --typography-table-cell-text-tracking: var(--type-tracking-normal);
+  --typography-table-cell-text-color: var(--color-foreground);
+
+  --typography-table-numeric-cell-text-size: var(--type-size-sm);
+  --typography-table-numeric-cell-text-line-height: var(--type-leading-normal);
+  --typography-table-numeric-cell-text-weight: var(--type-weight-medium);
+  --typography-table-numeric-cell-text-tracking: var(--type-tracking-normal);
+  --typography-table-numeric-cell-text-color: var(--color-foreground);
+
+  --typography-data-metric-large-size: var(--type-size-4xl);
+  --typography-data-metric-large-line-height: var(--type-leading-tight);
+  --typography-data-metric-large-weight: var(--type-weight-bold);
+  --typography-data-metric-large-tracking: var(--type-tracking-tight);
+  --typography-data-metric-large-color: var(--color-foreground);
+
+  --typography-data-metric-medium-size: var(--type-size-3xl);
+  --typography-data-metric-medium-line-height: var(--type-leading-tight);
+  --typography-data-metric-medium-weight: var(--type-weight-bold);
+  --typography-data-metric-medium-tracking: var(--type-tracking-tight);
+  --typography-data-metric-medium-color: var(--color-foreground);
+
+  --typography-data-metric-small-size: var(--type-size-2xl);
+  --typography-data-metric-small-line-height: var(--type-leading-snug);
+  --typography-data-metric-small-weight: var(--type-weight-semibold);
+  --typography-data-metric-small-tracking: var(--type-tracking-tight);
+  --typography-data-metric-small-color: var(--color-foreground);
+
+  --typography-stat-delta-positive-size: var(--type-size-sm);
+  --typography-stat-delta-positive-line-height: var(--type-leading-normal);
+  --typography-stat-delta-positive-weight: var(--type-weight-semibold);
+  --typography-stat-delta-positive-tracking: var(--type-tracking-normal);
+  --typography-stat-delta-positive-color: var(--color-success);
+
+  --typography-stat-delta-negative-size: var(--type-size-sm);
+  --typography-stat-delta-negative-line-height: var(--type-leading-normal);
+  --typography-stat-delta-negative-weight: var(--type-weight-semibold);
+  --typography-stat-delta-negative-tracking: var(--type-tracking-normal);
+  --typography-stat-delta-negative-color: var(--color-destructive);
+
+  /* 9) Navigation and chrome */
+  --typography-navigation-primary-size: var(--type-size-sm);
+  --typography-navigation-primary-line-height: var(--type-leading-normal);
+  --typography-navigation-primary-weight: var(--type-weight-medium);
+  --typography-navigation-primary-tracking: var(--type-tracking-normal);
+  --typography-navigation-primary-color: var(--color-foreground);
+
+  --typography-navigation-secondary-size: var(--type-size-xs);
+  --typography-navigation-secondary-line-height: var(--type-leading-normal);
+  --typography-navigation-secondary-weight: var(--type-weight-medium);
+  --typography-navigation-secondary-tracking: var(--type-tracking-normal);
+  --typography-navigation-secondary-color: var(--color-muted-foreground);
+
+  --typography-sidebar-section-label-size: var(--type-size-2xs);
+  --typography-sidebar-section-label-line-height: var(--type-leading-normal);
+  --typography-sidebar-section-label-weight: var(--type-weight-bold);
+  --typography-sidebar-section-label-tracking: var(--type-tracking-wider);
+  --typography-sidebar-section-label-color: var(--sidebar-muted);
+
+  --typography-breadcrumb-text-size: var(--type-size-xs);
+  --typography-breadcrumb-text-line-height: var(--type-leading-normal);
+  --typography-breadcrumb-text-weight: var(--type-weight-medium);
+  --typography-breadcrumb-text-tracking: var(--type-tracking-normal);
+  --typography-breadcrumb-text-color: var(--color-muted-foreground);
+
+  --typography-tooltip-text-size: var(--type-size-xs);
+  --typography-tooltip-text-line-height: var(--type-leading-normal);
+  --typography-tooltip-text-weight: var(--type-weight-medium);
+  --typography-tooltip-text-tracking: var(--type-tracking-normal);
+  --typography-tooltip-text-color: var(--color-foreground);
+
+  /* 10) Feedback and containers */
+  --typography-toast-title-size: var(--type-size-sm);
+  --typography-toast-title-line-height: var(--type-leading-normal);
+  --typography-toast-title-weight: var(--type-weight-semibold);
+  --typography-toast-title-tracking: var(--type-tracking-normal);
+  --typography-toast-title-color: var(--color-foreground);
+
+  --typography-toast-body-size: var(--type-size-xs);
+  --typography-toast-body-line-height: var(--type-leading-normal);
+  --typography-toast-body-weight: var(--type-weight-regular);
+  --typography-toast-body-tracking: var(--type-tracking-normal);
+  --typography-toast-body-color: var(--color-muted-foreground);
+
+  --typography-modal-title-size: var(--type-size-xl);
+  --typography-modal-title-line-height: var(--type-leading-snug);
+  --typography-modal-title-weight: var(--type-weight-semibold);
+  --typography-modal-title-tracking: var(--type-tracking-tight);
+  --typography-modal-title-color: var(--color-foreground);
+
+  --typography-modal-body-size: var(--type-size-sm);
+  --typography-modal-body-line-height: var(--type-leading-relaxed);
+  --typography-modal-body-weight: var(--type-weight-regular);
+  --typography-modal-body-tracking: var(--type-tracking-normal);
+  --typography-modal-body-color: var(--color-foreground);
+
+  --typography-card-title-size: var(--type-size-lg);
+  --typography-card-title-line-height: var(--type-leading-snug);
+  --typography-card-title-weight: var(--type-weight-semibold);
+  --typography-card-title-tracking: var(--type-tracking-normal);
+  --typography-card-title-color: var(--color-foreground);
+
+  --typography-card-body-size: var(--type-size-sm);
+  --typography-card-body-line-height: var(--type-leading-relaxed);
+  --typography-card-body-weight: var(--type-weight-regular);
+  --typography-card-body-tracking: var(--type-tracking-normal);
+  --typography-card-body-color: var(--color-foreground);
+
+  --typography-empty-state-title-size: var(--type-size-xl);
+  --typography-empty-state-title-line-height: var(--type-leading-snug);
+  --typography-empty-state-title-weight: var(--type-weight-semibold);
+  --typography-empty-state-title-tracking: var(--type-tracking-tight);
+  --typography-empty-state-title-color: var(--color-foreground);
+
+  --typography-empty-state-body-size: var(--type-size-sm);
+  --typography-empty-state-body-line-height: var(--type-leading-relaxed);
+  --typography-empty-state-body-weight: var(--type-weight-regular);
+  --typography-empty-state-body-tracking: var(--type-tracking-normal);
+  --typography-empty-state-body-color: var(--color-muted-foreground);
+
+  /* 11) Code and technical */
+  --typography-code-inline-size: var(--type-size-xs);
+  --typography-code-inline-line-height: var(--type-leading-normal);
+  --typography-code-inline-weight: var(--type-weight-medium);
+  --typography-code-inline-tracking: var(--type-tracking-normal);
+  --typography-code-inline-color: var(--color-foreground);
+
+  --typography-code-block-size: var(--type-size-sm);
+  --typography-code-block-line-height: var(--type-leading-relaxed);
+  --typography-code-block-weight: var(--type-weight-regular);
+  --typography-code-block-tracking: var(--type-tracking-normal);
+  --typography-code-block-color: var(--color-foreground);
+
+  --typography-terminal-text-size: var(--type-size-sm);
+  --typography-terminal-text-line-height: var(--type-leading-relaxed);
+  --typography-terminal-text-weight: var(--type-weight-regular);
+  --typography-terminal-text-tracking: var(--type-tracking-normal);
+  --typography-terminal-text-color: #22c55e;
+
+  --typography-keyboard-key-text-size: var(--type-size-2xs);
+  --typography-keyboard-key-text-line-height: var(--type-leading-normal);
+  --typography-keyboard-key-text-weight: var(--type-weight-semibold);
+  --typography-keyboard-key-text-tracking: var(--type-tracking-wide);
+  --typography-keyboard-key-text-color: var(--color-foreground);
+
+  --typography-monospace-numeric-size: var(--type-size-sm);
+  --typography-monospace-numeric-line-height: var(--type-leading-normal);
+  --typography-monospace-numeric-weight: var(--type-weight-medium);
+  --typography-monospace-numeric-tracking: var(--type-tracking-normal);
+  --typography-monospace-numeric-color: var(--color-foreground);
+
+  /* 12) Compliance and utility */
+  --typography-legal-fine-print-size: var(--type-size-2xs);
+  --typography-legal-fine-print-line-height: var(--type-leading-normal);
+  --typography-legal-fine-print-weight: var(--type-weight-regular);
+  --typography-legal-fine-print-tracking: var(--type-tracking-normal);
+  --typography-legal-fine-print-color: var(--color-muted-foreground);
+
+  --typography-screen-reader-utility-size: 1px;
+  --typography-screen-reader-utility-line-height: 1;
+  --typography-screen-reader-utility-weight: var(--type-weight-regular);
+  --typography-screen-reader-utility-tracking: var(--type-tracking-normal);
+  --typography-screen-reader-utility-color: transparent;
+
+  --typography-truncation-ellipsis-size: var(--type-size-sm);
+  --typography-truncation-ellipsis-line-height: var(--type-leading-normal);
+  --typography-truncation-ellipsis-weight: var(--type-weight-regular);
+  --typography-truncation-ellipsis-tracking: var(--type-tracking-normal);
+  --typography-truncation-ellipsis-color: var(--color-foreground);
+
+  --typography-loading-skeleton-text-size: var(--type-size-sm);
+  --typography-loading-skeleton-text-line-height: var(--type-leading-normal);
+  --typography-loading-skeleton-text-weight: var(--type-weight-medium);
+  --typography-loading-skeleton-text-tracking: var(--type-tracking-normal);
+  --typography-loading-skeleton-text-color: var(--color-muted-foreground);
+}
+
+.dark {
+  --typography-link-inverse-color: var(--color-foreground);
+  --typography-terminal-text-color: #86efac;
+}

@@ -446,7 +446,6 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
                       value={sku}
                       onChange={(event) => setSku(event.target.value)}
                       placeholder="e.g. WM-001"
-                      style={{ fontFamily: 'monospace' }}
                     />
                     <button
                       type="button"

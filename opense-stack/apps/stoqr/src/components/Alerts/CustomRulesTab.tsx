@@ -57,7 +57,7 @@ export const CustomRulesTab = ({ companyId }: { companyId: string }) => {
         </label>
         <label className="stack">
           Condition JSON
-          <textarea className="input" style={{ minHeight: 90, fontFamily: 'monospace' }} value={conditionText} onChange={(event) => setConditionText(event.target.value)} />
+          <textarea className="input" style={{ minHeight: 90 }} value={conditionText} onChange={(event) => setConditionText(event.target.value)} />
         </label>
         <label className="stack">
           Delivery Channels
