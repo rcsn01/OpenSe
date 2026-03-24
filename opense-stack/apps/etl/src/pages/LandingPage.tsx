@@ -17,9 +17,9 @@ const T = {
   dark: '#1E293B',
   surface: '#F8FAFC',
   surfaceBorder: '#E2E8F0',
-  heading: 'inherit',
-  drama: 'inherit',
-  data: 'inherit',
+  heading: 'var(--font-family)',
+  drama: 'var(--font-family)',
+  data: 'var(--font-family)',
 } as const;
 
 /* ─── Noise Overlay ─── */

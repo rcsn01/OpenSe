@@ -31,7 +31,7 @@ const MagneticButton = ({ children, className = '', href, onClick }: { children:
     gsap.to(buttonRef.current, { scale: 1, duration: 0.3, ease: 'power2.out' })
   }
 
-  const baseClasses = `group relative inline-flex items-center justify-center overflow-hidden rounded-full px-6 py-3 font-sans font-medium text-white transition-transform hover:-translate-y-px ${className}`
+  const baseClasses = `group relative inline-flex items-center justify-center overflow-hidden rounded-full px-6 py-3 font-medium text-white transition-transform hover:-translate-y-px ${className}`
 
   if (href) {
     return (
@@ -89,11 +89,11 @@ const Navbar = () => {
 
   return (
     <nav ref={navRef} className="fixed left-1/2 top-6 z-40 flex -translate-x-1/2 items-center justify-between rounded-full bg-transparent px-6 py-3 text-white transition-all duration-300 w-[90%] max-w-5xl">
-      <div className="flex items-center gap-2 font-display font-bold text-xl tracking-tight">
+      <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
         <Box className="h-6 w-6 text-presetAccent" />
         <span>StoQR</span>
       </div>
-      <div className="hidden md:flex items-center gap-8 font-sans text-sm font-medium">
+      <div className="hidden md:flex items-center gap-8 text-sm font-medium">
         <a href="#features" className="hover:-translate-y-px transition-transform">Architecture</a>
         <a href="#protocol" className="hover:-translate-y-px transition-transform">Protocol</a>
         <a href="#manifesto" className="hover:-translate-y-px transition-transform">Manifesto</a>
@@ -134,11 +134,11 @@ const Hero = () => {
 
       <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pb-24 md:pb-32">
         <div className="max-w-3xl">
-          <h1 className="hero-elem mb-6 font-display text-5xl tracking-tight text-white md:text-7xl lg:text-8xl leading-[1.1]">
-            <span className="block font-sans font-bold text-presetBackground">Control your</span>
+          <h1 className="hero-elem mb-6 text-5xl tracking-tight text-white md:text-7xl lg:text-8xl leading-[1.1]">
+            <span className="block font-bold text-presetBackground">Control your</span>
             <span className="block italic text-presetAccent">Inventory Engine.</span>
           </h1>
-          <p className="hero-elem mb-10 max-w-xl font-sans text-lg text-presetBackground/80 md:text-2xl leading-relaxed">
+          <p className="hero-elem mb-10 max-w-xl text-lg text-presetBackground/80 md:text-2xl leading-relaxed">
             Scan the code, own the source, master your inventory. A modern logistics hub combined with premium developer tools.
           </p>
           <div className="hero-elem flex flex-wrap gap-4">
@@ -252,10 +252,10 @@ const Features = () => {
     <section id="features" ref={containerRef} className="bg-presetBackground py-32 px-6">
       <div className="mx-auto max-w-7xl">
         <div className="mb-20 text-center">
-          <h2 className="font-display text-4xl tracking-tight text-presetPrimary md:text-5xl lg:text-6xl font-bold">
+          <h2 className="text-4xl tracking-tight text-presetPrimary md:text-5xl lg:text-6xl font-bold">
             Interactive Functional Artifacts
           </h2>
-          <p className="mt-4 font-sans text-lg text-presetTextDark/70">Unrestricted by vendor lock-in. Powered by pure open-source sovereignty.</p>
+          <p className="mt-4 text-lg text-presetTextDark/70">Unrestricted by vendor lock-in. Powered by pure open-source sovereignty.</p>
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">
@@ -268,7 +268,7 @@ const Features = () => {
                    <div className="bg-presetBackground rounded-full p-3 border border-presetPrimary/10 shadow-sm group-hover:-translate-y-1 transition-transform duration-500">
                      <Cloud className="h-7 w-7 text-blue-500" />
                    </div>
-                   <span className="text-[10px] font-mono font-bold text-presetTextDark/50 uppercase">Public</span>
+                   <span className="text-[10px] font-bold text-presetTextDark/50 uppercase">Public</span>
                  </div>
                  
                  <div className="relative flex-1 mx-2 flex items-center justify-center h-8">
@@ -282,17 +282,17 @@ const Features = () => {
                    <div className="bg-presetBackground rounded-full p-3 border border-presetPrimary/10 shadow-sm group-hover:-translate-y-1 transition-transform duration-500 delay-100">
                      <Server className="h-7 w-7 text-emerald-500" />
                    </div>
-                   <span className="text-[10px] font-mono font-bold text-presetTextDark/50 uppercase">Local</span>
+                   <span className="text-[10px] font-bold text-presetTextDark/50 uppercase">Local</span>
                  </div>
                </div>
                
                <div className="absolute inset-0 bg-gradient-to-t from-presetAccent/5 to-transparent z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
             <div>
-              <h3 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold text-presetPrimary">
+              <h3 className="mb-3 flex items-center gap-2 text-2xl font-bold text-presetPrimary">
                 <Network className="h-6 w-6 text-presetAccent" /> Unrestricted Architecture
               </h3>
-              <p className="font-sans text-presetTextDark/80 leading-relaxed">
+              <p className="text-presetTextDark/80 leading-relaxed">
                 No vendor lock-in. Toggle seamlessly between public cloud infrastructure and private localized environments.
               </p>
             </div>
@@ -319,10 +319,10 @@ const Features = () => {
                </div>
             </div>
             <div>
-              <h3 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold text-presetBackground">
+              <h3 className="mb-3 flex items-center gap-2 text-2xl font-bold text-presetBackground">
                 <ScanLine className="h-6 w-6 text-presetAccent" /> High-Velocity Scanning
               </h3>
-              <p className="font-sans text-presetBackground/70 leading-relaxed">
+              <p className="text-presetBackground/70 leading-relaxed">
                 Native QR and barcode parsing. Turn any existing camera or device into a rapid data-capture terminal without proprietary hardware.
               </p>
             </div>
@@ -357,7 +357,7 @@ const Features = () => {
                             boxShadow: '-8px 8px 12px -2px rgba(0,0,0,0.05)'
                           }}
                         >
-                           <div className="font-mono text-[7px] text-presetTextDark/60 font-bold uppercase tracking-widest pl-1">
+                           <div className="text-[7px] text-presetTextDark/60 font-bold uppercase tracking-widest pl-1">
                              Folder 0{idx}
                            </div>
                            
@@ -384,10 +384,10 @@ const Features = () => {
                </div>
             </div>
             <div>
-              <h3 className="mb-3 flex items-center gap-2 font-display text-2xl font-bold text-presetPrimary">
+              <h3 className="mb-3 flex items-center gap-2 text-2xl font-bold text-presetPrimary">
                 <FileJson className="h-6 w-6 text-presetAccent" /> Modular Configuration
               </h3>
-              <p className="font-sans text-presetTextDark/80 leading-relaxed">
+              <p className="text-presetTextDark/80 leading-relaxed">
                 Dictate your own logic. Assemble a highly specialized inventory engine built around your exact operational workflows.
               </p>
             </div>
@@ -425,10 +425,10 @@ const Philosophy = () => {
         />
       </div>
       <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-        <p className="font-sans text-xl md:text-3xl text-presetBackground/50 mb-8 font-medium">
+        <p className="text-xl md:text-3xl text-presetBackground/50 mb-8 font-medium">
           Most inventory systems lock you in: <span className="line-through">bloated, proprietary models</span>.
         </p>
-        <h2 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-presetBackground leading-[1.1]">
+        <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold text-presetBackground leading-[1.1]">
           We give you the keys: <br/>
           <span className="hero-elem text-transparent bg-clip-text bg-gradient-to-r from-presetAccent via-yellow-400 to-presetAccent bg-[length:200%_auto] manifesto-highlight">
             pure open-source sovereignty.
@@ -467,9 +467,9 @@ const Protocol = () => {
       <div className="pin-card h-screen w-full bg-white flex items-center justify-center sticky top-0 border-b border-presetPrimary/10 shadow-[0_10px_30px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
           <div className="order-2 md:order-1">
-            <h2 className="font-display text-5xl lg:text-7xl font-bold text-presetPrimary mb-6">01. Scan</h2>
-            <p className="font-sans text-2xl text-presetTextDark/70 mb-8">Deploy optical recognition instantly. Connect the physical to the digital layer with zero latency.</p>
-            <ul className="space-y-4 font-mono text-sm text-presetTextDark">
+            <h2 className="text-5xl lg:text-7xl font-bold text-presetPrimary mb-6">01. Scan</h2>
+            <p className="text-2xl text-presetTextDark/70 mb-8">Deploy optical recognition instantly. Connect the physical to the digital layer with zero latency.</p>
+            <ul className="space-y-4 text-sm text-presetTextDark">
               <li className="flex gap-3 items-center"><CheckCircle2 className="text-presetAccent" /> EAN-13 & QR Native</li>
               <li className="flex gap-3 items-center"><CheckCircle2 className="text-presetAccent" /> Web-First Camera Access</li>
               <li className="flex gap-3 items-center"><CheckCircle2 className="text-presetAccent" /> Hardware Agnostic API</li>
@@ -490,18 +490,18 @@ const Protocol = () => {
       <div className="pin-card h-screen w-full bg-presetBackground flex items-center justify-center sticky top-0 border-b border-presetPrimary/10 shadow-[0_20px_40px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
           <div className="order-2 md:order-1">
-            <h2 className="font-display text-5xl lg:text-7xl font-bold text-presetPrimary mb-6">02. Configure</h2>
-            <p className="font-sans text-2xl text-presetTextDark/70 mb-8">Construct workflows visually. Chain actions, design custom attributes, and align the software to your unique warehouse floor.</p>
+            <h2 className="text-5xl lg:text-7xl font-bold text-presetPrimary mb-6">02. Configure</h2>
+            <p className="text-2xl text-presetTextDark/70 mb-8">Construct workflows visually. Chain actions, design custom attributes, and align the software to your unique warehouse floor.</p>
           </div>
           <div className="order-1 md:order-2 bg-white border border-presetPrimary/10 rounded-[2rem] h-96 relative overflow-hidden p-8 flex flex-col gap-4 justify-center">
             <div className="bg-presetPrimary/5 rounded-xl p-4 border border-presetPrimary/10 flex justify-between items-center shadow-sm -ml-4">
-               <span className="font-mono text-sm font-bold">Trigger: Scan</span> <ChevronRight className="text-presetAccent" />
+               <span className="text-sm font-bold">Trigger: Scan</span> <ChevronRight className="text-presetAccent" />
             </div>
             <div className="bg-presetPrimary/5 rounded-xl p-4 border border-presetPrimary/10 flex justify-between items-center shadow-sm">
-               <span className="font-mono text-sm font-bold">Condition: IF location_empty</span> <ChevronRight className="text-presetAccent" />
+               <span className="text-sm font-bold">Condition: IF location_empty</span> <ChevronRight className="text-presetAccent" />
             </div>
             <div className="bg-presetAccent text-white rounded-xl p-4 border border-presetAccent/10 flex justify-between items-center shadow-md ml-4">
-               <span className="font-mono text-sm font-bold">Action: Create Restock Alert</span> <CheckCircle2 />
+               <span className="text-sm font-bold">Action: Create Restock Alert</span> <CheckCircle2 />
             </div>
           </div>
         </div>
@@ -511,8 +511,8 @@ const Protocol = () => {
       <div className="pin-card h-screen w-full bg-[#1E293B] flex items-center justify-center sticky top-0 text-white rounded-t-[2rem] overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
           <div className="order-2 md:order-1">
-            <h2 className="font-display text-5xl lg:text-7xl font-bold text-white mb-6">03. Deploy</h2>
-            <p className="font-sans text-2xl text-presetBackground/80 mb-8">Maintain sovereign control. Run entirely local, securely cloud-hosted, or hybridized. It is your data.</p>
+            <h2 className="text-5xl lg:text-7xl font-bold text-white mb-6">03. Deploy</h2>
+            <p className="text-2xl text-presetBackground/80 mb-8">Maintain sovereign control. Run entirely local, securely cloud-hosted, or hybridized. It is your data.</p>
           </div>
           <div className="order-1 md:order-2 bg-black/30 border border-white/10 rounded-[2rem] h-96 relative overflow-hidden flex items-center justify-center p-8">
             <div className="relative w-full h-full flex items-center justify-center">
@@ -521,7 +521,7 @@ const Protocol = () => {
                 </div>
                 <div className="z-10 bg-[#0F172A] border border-presetAccent/30 p-6 rounded-2xl shadow-[0_0_40px_rgba(249,115,22,0.15)] backdrop-blur-md">
                     <DatabaseIcon className="w-12 h-12 text-presetAccent mx-auto mb-4" />
-                    <p className="font-mono text-center font-bold">MAIN_DB_SYNC</p>
+                    <p className="text-center font-bold">MAIN_DB_SYNC</p>
                     <div className="mt-4 h-2 bg-black rounded-full overflow-hidden">
                         <div className="h-full bg-presetAccent w-full animate-pulse"></div>
                     </div>
@@ -552,9 +552,9 @@ const TerminalCTA = () => {
             <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
             <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
           </div>
-          <div className="mx-auto text-xs font-mono text-white/40">stoqr-core ~ bash</div>
+          <div className="mx-auto text-xs text-white/40">stoqr-core ~ bash</div>
         </div>
-        <div className="p-8 md:p-12 font-mono text-sm md:text-base text-green-400">
+        <div className="p-8 md:p-12 text-sm md:text-base text-green-400">
           <p className="mb-2"><span className="text-white/50">$</span> git clone https://github.com/opense/stoqr.git</p>
           <p className="text-white/80 mb-4 opacity-50">Cloning into 'stoqr'...</p>
           
@@ -563,8 +563,8 @@ const TerminalCTA = () => {
           
           <div className="mt-12 flex flex-col md:flex-row gap-6 items-center justify-between border-t border-white/10 pt-8">
             <div className="text-white">
-                <h3 className="font-display text-2xl font-bold mb-2 text-presetBackground">Initialize System</h3>
-                <p className="font-sans text-presetBackground/60">Launch your instance instantly or manage it via cloud.</p>
+                <h3 className="text-2xl font-bold mb-2 text-presetBackground">Initialize System</h3>
+                <p className="text-presetBackground/60">Launch your instance instantly or manage it via cloud.</p>
             </div>
             <MagneticButton href="/auth" className="bg-presetAccent text-white! py-4 px-10 rounded-[1.5rem] whitespace-nowrap">
               Start Onboarding <ArrowRight className="ml-2 w-5 h-5" />
@@ -582,23 +582,23 @@ const Footer = () => {
     <footer className="bg-presetPrimary rounded-t-[4rem] text-white pt-20 pb-10 px-6 relative z-20">
       <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 mb-16">
         <div className="md:col-span-2">
-           <div className="flex items-center gap-2 font-display font-bold text-3xl tracking-tight mb-4">
+           <div className="flex items-center gap-2 font-bold text-3xl tracking-tight mb-4">
              <Box className="h-8 w-8 text-presetAccent" />
              <span>StoQR</span>
            </div>
-           <p className="font-sans text-presetBackground/60 max-w-sm">Scan the code, own the source, master your inventory. Enterprise-grade open source logistics toolkit.</p>
+           <p className="text-presetBackground/60 max-w-sm">Scan the code, own the source, master your inventory. Enterprise-grade open source logistics toolkit.</p>
         </div>
         <div>
-           <h4 className="font-sans font-bold text-presetBackground mb-4">Architecture</h4>
-           <ul className="space-y-3 font-sans text-presetBackground/60">
+           <h4 className="font-bold text-presetBackground mb-4">Architecture</h4>
+           <ul className="space-y-3 text-presetBackground/60">
              <li><a href="#" className="hover:text-presetAccent transition-colors">Documentation</a></li>
              <li><a href="#" className="hover:text-presetAccent transition-colors">API Reference</a></li>
              <li><a href="#" className="hover:text-presetAccent transition-colors">Self-Hosting</a></li>
            </ul>
         </div>
         <div>
-           <h4 className="font-sans font-bold text-presetBackground mb-4">Ecosystem</h4>
-           <ul className="space-y-3 font-sans text-presetBackground/60">
+           <h4 className="font-bold text-presetBackground mb-4">Ecosystem</h4>
+           <ul className="space-y-3 text-presetBackground/60">
              <li><a href="https://github.com" className="hover:text-presetAccent transition-colors flex items-center gap-2"><Github className="w-4 h-4"/> GitHub</a></li>
              <li><a href="#" className="hover:text-presetAccent transition-colors">Community</a></li>
              <li><a href="#" className="hover:text-presetAccent transition-colors">Releases</a></li>
@@ -606,8 +606,8 @@ const Footer = () => {
         </div>
       </div>
       <div className="max-w-7xl mx-auto border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-         <p className="font-mono text-sm text-presetBackground/40">© {new Date().getFullYear()} StoQR. Open Source Logistics.</p>
-         <div className="flex items-center gap-3 font-mono text-sm text-presetAccent bg-presetAccent/10 px-4 py-2 rounded-full border border-presetAccent/20">
+         <p className="text-sm text-presetBackground/40">(c) {new Date().getFullYear()} StoQR. Open Source Logistics.</p>
+         <div className="flex items-center gap-3 text-sm text-presetAccent bg-presetAccent/10 px-4 py-2 rounded-full border border-presetAccent/20">
             <div className="w-2 h-2 rounded-full bg-presetAccent animate-pulse shadow-[0_0_8px_rgba(249,115,22,1)]" />
             System Operational
          </div>
@@ -654,3 +654,4 @@ export const LandingPage = () => {
     </div>
   )
 }
+
