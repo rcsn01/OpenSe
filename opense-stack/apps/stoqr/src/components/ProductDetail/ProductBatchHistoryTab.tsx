@@ -29,7 +29,7 @@ export const ProductBatchHistoryTab = ({ productId, companyId }: { productId: st
                 {batches.map((b, i) => (
                   <tr key={i}>
                     <td className="small muted">{formatDateTime(b.created_at)}</td>
-                    <td className="small" style={{ fontFamily: 'monospace' }}>
+                    <td className="small">
                       {b.notes && b.notes.length > 5 ? b.notes : `BATCH-${new Date(b.created_at).getTime().toString().slice(-6)}`}
                     </td>
                     <td>{b.profiles?.full_name ?? 'Unknown / Retail Sale'}</td>

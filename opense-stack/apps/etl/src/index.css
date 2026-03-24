@@ -14,7 +14,9 @@
   --color-slate-dark: #1E293B;
   --color-mist: #F8FAFC;
   --color-cobalt-hover: #1e40af;
-  --font-heading: "DM Sans", sans-serif;
-  --font-drama: "Lora", serif;
-  --font-data: "IBM Plex Mono", monospace;
+  --font-heading: 'DM Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --font-drama: 'DM Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --font-data: 'DM Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --font-sans: 'DM Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 }

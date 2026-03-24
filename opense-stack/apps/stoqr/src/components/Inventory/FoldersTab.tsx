@@ -300,7 +300,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                       {product.quantity_on_hand} units
                     </span>
                   </div>
-                  <div style={{ textAlign: 'right', fontFamily: 'monospace' }}>
+                  <div style={{ textAlign: 'right' }}>
                     {formatCurrency(product.selling_price)}
                   </div>
                 </div>

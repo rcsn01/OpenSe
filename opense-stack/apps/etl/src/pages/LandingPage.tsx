@@ -17,9 +17,9 @@ const T = {
   dark: '#1E293B',
   surface: '#F8FAFC',
   surfaceBorder: '#E2E8F0',
-  heading: '"DM Sans", sans-serif',
-  drama: '"Lora", serif',
-  data: '"IBM Plex Mono", monospace',
+  heading: 'inherit',
+  drama: 'inherit',
+  data: 'inherit',
 } as const;
 
 /* ─── Noise Overlay ─── */

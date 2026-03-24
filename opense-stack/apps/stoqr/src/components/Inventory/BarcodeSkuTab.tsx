@@ -95,7 +95,7 @@ export const BarcodeSkuTab = ({ companyId, products }: Props) => {
                   <tr key={row.id}>
                     <td style={{ fontWeight: 500 }}>{row.products?.name ?? 'Unknown'}</td>
                     <td className="muted" style={{ fontSize: 13 }}>{row.products?.sku ?? '—'}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{row.barcode}</td>
+                    <td style={{ fontSize: 13 }}>{row.barcode}</td>
                     <td style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>{row.barcode_type}</td>
                     <td>{row.is_primary ? '✓' : '—'}</td>
                   </tr>
