@@ -20,11 +20,7 @@ test.describe('Stoqr Organisations Settings', () => {
 
     await expect(authenticatedPage).toHaveURL(/(settings\/organisations\/teams|auth|login|dashboard|localhost:5993\/$)/)
 
-    // If no auth session, the page may render the landing instead — skip in that case
-    const isOnTeamsPage = authenticatedPage.url().includes('/settings/organisations/teams')
-    const hasTeamsContent = isOnTeamsPage && await authenticatedPage.getByText('Teams').first().isVisible({ timeout: 5_000 }).catch(() => false)
-
-    if (hasTeamsContent) {
+    if (authenticatedPage.url().includes('/settings/organisations/teams')) {
       await expect(authenticatedPage.getByText('Teams').first()).toBeVisible()
     }
   })
