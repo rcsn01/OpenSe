@@ -29,7 +29,7 @@ export const FillMissingNode = ({ data, selected }: NodeProps<FillMissingNodeDat
           <p className="text-[11px] text-slate-600 truncate">
             Strategy: <span className="text-cyan-600">{strategyLabels[data.strategy] || data.strategy}</span>
             {data.strategy === 'static' && data.value && (
-              <span className="font-mono text-slate-500"> = "{data.value}"</span>
+              <span className="type-mono text-slate-500"> = "{data.value}"</span>
             )}
           </p>
         </div>

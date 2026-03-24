@@ -43,8 +43,8 @@ export const UsageChart = ({ chartData }: { chartData: { date: string; value: nu
               </linearGradient>
             </defs>
             <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={40} />
+            <XAxis dataKey="date" tick={{ fontSize: 'var(--type-size-xs)' }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 'var(--type-size-xs)' }} tickLine={false} axisLine={false} width={40} />
             {hasData && <Tooltip formatter={(value) => [Number(value).toLocaleString(), 'Usage']} />}
             <Area
               type="monotone"

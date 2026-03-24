@@ -109,7 +109,7 @@ export const ReceivingWorkflowTab = ({ companyId }: { companyId: string }) => {
                     <td>{item.products?.name ?? 'Unknown'} <span className="small muted">{item.products?.sku ?? '—'}</span></td>
                     <td style={{ textAlign: 'right' }}>{item.quantity_ordered}</td>
                     <td style={{ textAlign: 'right' }}>{item.quantity_received}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{Math.max(item.quantity_ordered - item.quantity_received, 0)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-bold)' }}>{Math.max(item.quantity_ordered - item.quantity_received, 0)}</td>
                   </tr>
                 ))}
               </tbody>

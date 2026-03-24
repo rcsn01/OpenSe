@@ -18,7 +18,7 @@ export const ConditionalRouterNode = ({ data, selected }: NodeProps<ConditionalR
         <p className="text-[11px] text-slate-600 truncate">
           If <span className="font-semibold text-rose-700">[{data.field}]</span>{' '}
           <span className="text-rose-500">{data.operator}</span>{' '}
-          <span className="font-mono text-slate-700">"{data.value}"</span>
+          <span className="type-mono text-slate-700">"{data.value}"</span>
         </p>
       ) : (
         <p className="text-[10px] text-slate-400 italic text-center py-1">No condition set</p>

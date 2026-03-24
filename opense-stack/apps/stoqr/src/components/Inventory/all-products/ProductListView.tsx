@@ -181,7 +181,7 @@ export const ProductListView = ({
                           </span>
                         )}
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 500 }}>
+                      <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-medium)' }}>
                         {isEditingQty ? (
                           <input
                             className="input small"
@@ -216,7 +216,7 @@ export const ProductListView = ({
                         )}
                       </td>
                       <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{allocated}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600, color: available > 0 ? 'var(--success)' : 'var(--danger)' }}>
+                      <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)', color: available > 0 ? 'var(--success)' : 'var(--danger)' }}>
                         {available}
                       </td>
                       <td>

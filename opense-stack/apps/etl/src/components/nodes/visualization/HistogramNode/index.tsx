@@ -59,9 +59,9 @@ export const HistogramNode = ({ data, selected }: NodeProps<HistogramNodeData>) 
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="range" tick={{ fontSize: 8 }} angle={-30} textAnchor="end" height={50} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <XAxis dataKey="range" tick={{ fontSize: 'var(--type-size-2xs)' }} angle={-30} textAnchor="end" height={50} />
+              <YAxis tick={{ fontSize: 'var(--type-size-2xs)' }} />
+              <Tooltip contentStyle={{ fontSize: 'var(--type-size-xs)' }} />
               <Bar dataKey="count" fill="#d97706" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

@@ -182,6 +182,9 @@ button, input, select, textarea { font: inherit; }
 
 /* EmptyState & utility */
 .muted { color: var(--color-muted-foreground); }
+.type-mono {
+  font-family: var(--typography-data-inline-font-family);
+}
 .empty-state {
   padding: 40px;
   text-align: center;

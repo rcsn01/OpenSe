@@ -21,7 +21,7 @@ export const RenameNode = ({ data, selected }: NodeProps<RenameNodeData>) => {
         {mappings.length > 0 ? (
           mappings.slice(0, 3).map((m, idx) => (
             <div key={idx} className="flex items-center text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-              <span className="font-mono text-[10px] truncate max-w-[80px]" title={m.oldColumn}>{m.oldColumn || '?'}</span>
+              <span className="type-mono text-[10px] truncate max-w-[80px]" title={m.oldColumn}>{m.oldColumn || '?'}</span>
               <ArrowRight className="w-3 h-3 mx-1 text-slate-400 shrink-0" />
               <span className="font-semibold truncate max-w-[80px]" title={m.newColumn}>{m.newColumn || '?'}</span>
             </div>

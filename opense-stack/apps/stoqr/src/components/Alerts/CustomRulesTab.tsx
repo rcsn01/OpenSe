@@ -82,7 +82,7 @@ export const CustomRulesTab = ({ companyId }: { companyId: string }) => {
             {rules.map((rule) => (
               <div key={rule.id} className="flex-between" style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                 <div>
-                  <div style={{ fontWeight: 700 }}>{rule.name}</div>
+                  <div style={{ fontWeight: 'var(--type-weight-bold)' }}>{rule.name}</div>
                   <div className="small muted">{rule.alert_type} · {rule.delivery_channels.join(', ')}</div>
                 </div>
                 <button

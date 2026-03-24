@@ -47,7 +47,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, 
                             <span className="font-semibold block mb-1">File Status</span>
                             {fileData.datasetId ? (
                                 <>
-                                    <p>Dataset ID: <span className="font-mono">{fileData.datasetId.slice(0, 8)}...</span></p>
+                                    <p>Dataset ID: <span className="type-mono">{fileData.datasetId.slice(0, 8)}...</span></p>
                                     <p>Rows: {fileData.count}</p>
                                     <p>File: {fileData.fileName || 'Uploaded File'}</p>
                                 </>
@@ -72,7 +72,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ selectedNode, 
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
                 <div>
                     <h3 className="text-sm font-semibold text-slate-900">{data.label}</h3>
-                    <p className="text-xs text-slate-500 font-mono">{type}</p>
+                    <p className="text-xs text-slate-500 type-mono">{type}</p>
                 </div>
                 <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
                     <X className="w-4 h-4" />

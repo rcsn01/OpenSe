@@ -198,7 +198,7 @@ export const PurchaseOrdersTab = ({
               <tbody>
                 {pos.map((po) => (
                   <tr key={po.id}>
-                    <td style={{ fontWeight: 600 }}>#{po.po_number}</td>
+                    <td style={{ fontWeight: 'var(--type-weight-semibold)' }}>#{po.po_number}</td>
                     <td>{po.suppliers?.name ?? 'Unknown'}</td>
                     <td>{getStatusBadge(po.status)}</td>
                     <td>{po.expected_date ?? '—'}</td>

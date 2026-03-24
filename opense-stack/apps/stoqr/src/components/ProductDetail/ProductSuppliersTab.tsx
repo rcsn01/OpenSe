@@ -39,7 +39,7 @@ export const ProductSuppliersTab = ({ productId, companyId }: { productId: strin
               <tbody>
                 {sortedSuppliers.map((supplier) => (
                   <tr key={supplier.supplier_id}>
-                    <td style={{ fontWeight: 600 }}>{supplier.supplier_name}</td>
+                    <td style={{ fontWeight: 'var(--type-weight-semibold)' }}>{supplier.supplier_name}</td>
                     <td className="muted small">Same as SKU</td>
                     <td style={{ textAlign: 'right' }}>{formatCurrency(supplier.last_unit_cost)}</td>
                     <td style={{ textAlign: 'right' }}>{supplier.total_quantity}</td>

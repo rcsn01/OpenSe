@@ -397,7 +397,7 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="page-title" style={{ fontSize: 24, marginBottom: 4 }}>
+              <h1 className="page-title" style={{ fontSize: 'var(--type-size-3xl)', marginBottom: 4 }}>
                 {heading}
               </h1>
               <div className="muted small">{subheading}</div>
@@ -429,7 +429,7 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
                 <span className="small font-semibold">Product Name *</span>
                 <input
                   className="input"
-                  style={{ fontSize: 16, padding: 12 }}
+                  style={{ fontSize: 'var(--type-size-md)', padding: 12 }}
                   required
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -538,7 +538,7 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
                   <span className="small muted">Margin</span>
                   <div
                     style={{
-                      fontWeight: 600,
+                      fontWeight: 'var(--type-weight-semibold)',
                       color: margin < 0 ? 'var(--danger)' : margin > 20 ? 'var(--success)' : 'var(--text)',
                     }}
                   >

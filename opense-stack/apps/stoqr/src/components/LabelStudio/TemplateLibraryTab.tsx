@@ -61,7 +61,7 @@ export const TemplateLibraryTab = ({ companyId }: { companyId: string }) => {
             {templates.map((template) => (
               <div key={template.id} className="flex-between" style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                 <div>
-                  <div style={{ fontWeight: 700 }}>{template.name}</div>
+                  <div style={{ fontWeight: 'var(--type-weight-bold)' }}>{template.name}</div>
                   <div className="small muted">{template.template_type} · {template.is_system ? 'System' : 'Custom'}</div>
                 </div>
                 <span className="pill">{template.variable_fields.length} vars</span>

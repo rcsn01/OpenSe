@@ -61,7 +61,7 @@ export const StatsCards = ({
             <div className="flex-between">
               <div>
                 <h3>{item.title}</h3>
-                <div className="value" style={{ fontWeight: 700, fontSize: 28 }}>
+                <div className="value" style={{ fontWeight: 'var(--type-weight-bold)', fontSize: 'var(--type-size-4xl)' }}>
                   {item.value}
                 </div>
               </div>
@@ -79,7 +79,7 @@ export const StatsCards = ({
               </div>
             </div>
             <div className="muted small" style={{ marginTop: 6 }}>{item.subtext}</div>
-            <div className="small" style={{ marginTop: 8, color: 'var(--muted)', fontWeight: 600 }}>
+            <div className="small" style={{ marginTop: 8, color: 'var(--muted)', fontWeight: 'var(--type-weight-semibold)' }}>
               {item.trend}
             </div>
           </div>

@@ -142,14 +142,14 @@ export const BulkActionsTab = ({ companyId, products, onImportOpen, onRefresh }:
       {/* Data operations */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-info-bar">
-          <span style={{ fontWeight: 600 }}>Data Operations</span>
+          <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>Data Operations</span>
         </div>
         <div className="bulk-ops-row">
           <div className="bulk-ops-icon" style={{ background: 'rgba(102, 193, 63, 0.1)', color: 'var(--primary)' }}>
             <Upload size={18} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>Import from CSV</div>
+            <div style={{ fontWeight: 'var(--type-weight-semibold)', fontSize: 'var(--type-size-sm)' }}>Import from CSV</div>
             <div className="small muted">Create or update products in bulk from a spreadsheet</div>
           </div>
           <button className="button small" style={{ borderRadius: 8, flexShrink: 0 }} onClick={onImportOpen}>
@@ -161,7 +161,7 @@ export const BulkActionsTab = ({ companyId, products, onImportOpen, onRefresh }:
             <Download size={18} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>Export to CSV</div>
+            <div style={{ fontWeight: 'var(--type-weight-semibold)', fontSize: 'var(--type-size-sm)' }}>Export to CSV</div>
             <div className="small muted">
               Download {stats.count > 0 ? `all ${stats.count} products` : 'inventory data'} as a CSV file
             </div>
@@ -178,12 +178,12 @@ export const BulkActionsTab = ({ companyId, products, onImportOpen, onRefresh }:
           <div className="table-info-bar">
             <div className="row" style={{ gap: 6 }}>
               <TrendingUp size={14} />
-              <span style={{ fontWeight: 600 }}>Price Adjustment</span>
+              <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>Price Adjustment</span>
             </div>
           </div>
           <div className="stack" style={{ padding: 20, gap: 16 }}>
             <label className="stack" style={{ gap: 6 }}>
-              <span className="small" style={{ fontWeight: 500 }}>Percentage change</span>
+              <span className="small" style={{ fontWeight: 'var(--type-weight-medium)' }}>Percentage change</span>
               <div className="row" style={{ gap: 8 }}>
                 <input
                   className="input"
@@ -193,7 +193,7 @@ export const BulkActionsTab = ({ companyId, products, onImportOpen, onRefresh }:
                   style={{ borderRadius: 8 }}
                   placeholder="0"
                 />
-                <span className="muted" style={{ fontSize: 14, flexShrink: 0 }}>%</span>
+                <span className="muted" style={{ fontSize: 'var(--type-size-sm)', flexShrink: 0 }}>%</span>
               </div>
               <span className="small muted">Positive values increase, negative values decrease.</span>
             </label>
@@ -220,12 +220,12 @@ export const BulkActionsTab = ({ companyId, products, onImportOpen, onRefresh }:
           <div className="table-info-bar">
             <div className="row" style={{ gap: 6 }}>
               <Package size={14} />
-              <span style={{ fontWeight: 600 }}>Quantity Adjustment</span>
+              <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>Quantity Adjustment</span>
             </div>
           </div>
           <div className="stack" style={{ padding: 20, gap: 16 }}>
             <label className="stack" style={{ gap: 6 }}>
-              <span className="small" style={{ fontWeight: 500 }}>Units to add or remove</span>
+              <span className="small" style={{ fontWeight: 'var(--type-weight-medium)' }}>Units to add or remove</span>
               <div className="row" style={{ gap: 8 }}>
                 <input
                   className="input"
@@ -235,7 +235,7 @@ export const BulkActionsTab = ({ companyId, products, onImportOpen, onRefresh }:
                   style={{ borderRadius: 8 }}
                   placeholder="0"
                 />
-                <span className="muted" style={{ fontSize: 14, flexShrink: 0 }}>units</span>
+                <span className="muted" style={{ fontSize: 'var(--type-size-sm)', flexShrink: 0 }}>units</span>
               </div>
               <span className="small muted">Positive values add stock, negative values subtract.</span>
             </label>

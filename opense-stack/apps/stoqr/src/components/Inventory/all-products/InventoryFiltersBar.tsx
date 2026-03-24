@@ -76,7 +76,7 @@ export const InventoryFiltersBar = ({
                   type="button"
                   aria-label="Stock status filter"
                   className="select text-left"
-                  style={{ width: 140, padding: '7px 10px', fontSize: 13, borderRadius: 8 }}
+                  style={{ width: 140, padding: '7px 10px', fontSize: 'var(--type-size-sm)', borderRadius: 8 }}
                 >
                   {stockFilterLabels[stockFilter]}
                 </button>
@@ -100,8 +100,8 @@ export const InventoryFiltersBar = ({
                   background: 'rgba(102, 193, 63, 0.08)',
                   border: '1px solid rgba(102, 193, 63, 0.25)',
                   borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 500,
+                  fontSize: 'var(--type-size-sm)',
+                  fontWeight: 'var(--type-weight-medium)',
                 }}
               >
                 <span>{filter.key}:{formatCustomFieldValue(filter.value)}</span>
@@ -140,7 +140,7 @@ export const InventoryFiltersBar = ({
                       type="button"
                       aria-label="Custom field value"
                       className="select text-left"
-                      style={{ width: 140, padding: '7px 10px', fontSize: 13, borderRadius: 8 }}
+                      style={{ width: 140, padding: '7px 10px', fontSize: 'var(--type-size-sm)', borderRadius: 8 }}
                     >
                       {pendingFilterKey}:
                     </button>

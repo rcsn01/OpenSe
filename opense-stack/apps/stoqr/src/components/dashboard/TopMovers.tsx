@@ -13,11 +13,11 @@ export const TopMovers = ({ topMovers }: { topMovers: TopMover[] }) => {
           {topMovers.map((item) => (
             <div key={item.id} className="flex-between" style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
               <div>
-                <div style={{ fontWeight: 600 }}>{item.name}</div>
+                <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>{item.name}</div>
                 <div className="small muted">SKU: {item.sku}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 600 }}>{formatCurrency(item.revenue)}</div>
+                <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>{formatCurrency(item.revenue)}</div>
                 <div className="small muted">{item.totalSold} sold</div>
               </div>
             </div>

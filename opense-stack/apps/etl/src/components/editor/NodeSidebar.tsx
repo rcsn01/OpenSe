@@ -96,7 +96,7 @@ export const NodeSidebar: React.FC<NodeSidebarProps> = ({ onDragStart }) => {
                                             </div>
                                             <div className="flex flex-col min-w-0">
                                                 <span className="text-sm font-medium text-slate-800 truncate">{node.label}</span>
-                                                <span className="text-[10px] text-slate-400 font-mono truncate">{node.type}</span>
+                                                <span className="text-[10px] text-slate-400 type-mono truncate">{node.type}</span>
                                             </div>
                                         </div>
                                     ))}

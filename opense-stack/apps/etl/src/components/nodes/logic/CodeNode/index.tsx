@@ -18,7 +18,7 @@ export const CodeNode = ({ data, selected }: NodeProps<CodeNodeData>) => {
     >
       {data.code ? (
         <p className="text-[11px] text-slate-600 truncate">
-          <span className="font-mono text-violet-600">{lineCount} lines</span>
+          <span className="type-mono text-violet-600">{lineCount} lines</span>
           {' · '}
           <span className="text-slate-500">{data.language}</span>
         </p>

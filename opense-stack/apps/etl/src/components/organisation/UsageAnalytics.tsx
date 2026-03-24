@@ -109,10 +109,10 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} barCategoryGap="20%">
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} allowDecimals={false} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 'var(--type-size-xs)' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 'var(--type-size-xs)' }} allowDecimals={false} />
                       <Tooltip
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.1)', fontSize: 12 }}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.1)', fontSize: 'var(--type-size-xs)' }}
                         cursor={{ fill: '#F1F5F9' }}
                       />
                       <Bar dataKey="success" stackId="a" fill={COLORS.success} radius={[0, 0, 0, 0]} name="Success" />
@@ -149,7 +149,7 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
                         ))}
                       </Pie>
                       <Tooltip
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.1)', fontSize: 12 }}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.1)', fontSize: 'var(--type-size-xs)' }}
                       />
                       <Legend verticalAlign="bottom" height={36} formatter={(value) => <span className="text-xs text-slate-600">{value}</span>} />
                     </PieChart>
@@ -178,10 +178,10 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} allowDecimals={false} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 'var(--type-size-xs)' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 'var(--type-size-xs)' }} allowDecimals={false} />
                     <Tooltip
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.1)', fontSize: 12 }}
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.1)', fontSize: 'var(--type-size-xs)' }}
                     />
                     <Area type="monotone" dataKey="total" stroke={COLORS.primary} fillOpacity={1} fill="url(#colorTotal)" strokeWidth={2} name="Total" />
                   </AreaChart>

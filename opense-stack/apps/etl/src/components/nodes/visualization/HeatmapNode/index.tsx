@@ -110,7 +110,7 @@ export const HeatmapNode = ({ data, selected }: NodeProps<HeatmapNodeData>) => {
                       style={{ backgroundColor: cell ? getColor(cell.intensity) : '#f1f5f9' }}
                       title={`${x}, ${y}: ${cell?.value.toFixed(1) ?? 0}`}
                     >
-                      <span className="text-[7px] text-white/80 font-mono">
+                      <span className="text-[7px] text-white/80 type-mono">
                         {cell?.value.toFixed(0)}
                       </span>
                     </div>

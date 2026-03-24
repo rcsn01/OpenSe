@@ -9,7 +9,7 @@ export function SpacingPage() {
           <VStack>
             {([1, 2, 3, 4, 5, 6] as const).map((g) => (
               <div key={g} className="flex items-center gap-4">
-                <Body size="body4" className="w-16 shrink-0 font-mono">
+                <Body size="body4" className="w-16 shrink-0 type-mono">
                   gap-{g}
                 </Body>
                 <div className="flex items-center" style={{ gap: `var(--gap-${g})` }}>
@@ -29,7 +29,7 @@ export function SpacingPage() {
           <VStack>
             {(['sm', 'md', 'lg', 'xl', 'full'] as const).map((size) => (
               <div key={size}>
-                <Body size="body5" className="mb-1 font-mono">
+                <Body size="body5" className="mb-1 type-mono">
                   Container size="{size}"
                 </Body>
                 <Container

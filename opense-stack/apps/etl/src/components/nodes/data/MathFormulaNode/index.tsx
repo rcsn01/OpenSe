@@ -16,7 +16,7 @@ export const MathFormulaNode = ({ data, selected }: NodeProps<MathFormulaNodeDat
     >
       {data.expression ? (
         <div className="space-y-0.5">
-          <p className="text-[11px] text-slate-600 font-mono truncate" title={data.expression}>
+          <p className="text-[11px] text-slate-600 type-mono truncate" title={data.expression}>
             {data.expression}
           </p>
           {data.newColumn && (
