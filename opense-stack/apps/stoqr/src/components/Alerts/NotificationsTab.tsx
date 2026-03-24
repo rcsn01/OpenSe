@@ -50,7 +50,7 @@ export const NotificationsTab = ({ products }: { products: Product[] }) => {
               {lowStock.slice(0, 20).map((product) => (
                 <div key={product.id} className="flex-between">
                   <div>
-                    <div style={{ fontWeight: 600 }}>{product.name}</div>
+                    <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>{product.name}</div>
                     <div className="small muted">SKU {product.sku}</div>
                   </div>
                   <span className="badge warning">{product.quantity_on_hand} / RP {product.reorder_point}</span>
@@ -69,7 +69,7 @@ export const NotificationsTab = ({ products }: { products: Product[] }) => {
               {expiring.slice(0, 20).map((product) => (
                 <div key={product.id} className="flex-between">
                   <div>
-                    <div style={{ fontWeight: 600 }}>{product.name}</div>
+                    <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>{product.name}</div>
                     <div className="small muted">SKU {product.sku}</div>
                   </div>
                   <span className="badge danger">{product.expiry_date}</span>

@@ -26,9 +26,9 @@ export const ScatterPlotNode = ({ data, selected }: NodeProps<ChartNodeData>) =>
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis type="number" dataKey={data.xAxis} name={data.xAxis} tick={{ fontSize: 10 }} />
-              <YAxis type="number" dataKey={data.yAxis} name={data.yAxis} tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: 11 }} cursor={{ strokeDasharray: '3 3' }} />
+              <XAxis type="number" dataKey={data.xAxis} name={data.xAxis} tick={{ fontSize: 'var(--type-size-2xs)' }} />
+              <YAxis type="number" dataKey={data.yAxis} name={data.yAxis} tick={{ fontSize: 'var(--type-size-2xs)' }} />
+              <Tooltip contentStyle={{ fontSize: 'var(--type-size-xs)' }} cursor={{ strokeDasharray: '3 3' }} />
               <Scatter data={rows} fill="#ef4444" />
             </ScatterChart>
           </ResponsiveContainer>

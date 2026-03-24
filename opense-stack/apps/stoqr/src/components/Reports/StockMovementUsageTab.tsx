@@ -74,7 +74,7 @@ export const StockMovementUsageTab = ({ transactions }: { transactions: Movement
                     <td><span className="pill">{row.transaction_type}</span></td>
                     <td>{row.products?.name ?? 'Unknown'}</td>
                     <td className="small muted">{row.products?.sku ?? '—'}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                    <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)' }}>
                       {row.quantity_change > 0 ? '+' : ''}{row.quantity_change}
                     </td>
                     <td className="small muted">{row.notes ?? '—'}</td>

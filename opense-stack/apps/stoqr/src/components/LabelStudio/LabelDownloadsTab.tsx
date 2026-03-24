@@ -41,7 +41,7 @@ export const LabelDownloadsTab = ({ companyId }: { companyId: string }) => {
           {downloads.map((job) => (
             <div key={job.id} className="flex-between" style={{ padding: '10px 0', borderBottom: '1px solid var(--border)', gap: 12 }}>
               <div>
-                <div style={{ fontWeight: 700 }}>PDF Export</div>
+                <div style={{ fontWeight: 'var(--type-weight-bold)' }}>PDF Export</div>
                 <div className="small muted">
                   Created by {formatRequestedBy(job)} · {new Date(job.created_at).toLocaleString()} · {job.quantity} labels
                 </div>

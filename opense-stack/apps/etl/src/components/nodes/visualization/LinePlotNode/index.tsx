@@ -26,9 +26,9 @@ export const LinePlotNode = ({ data, selected }: NodeProps<ChartNodeData>) => {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={rows} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey={data.xAxis} tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip contentStyle={{ fontSize: 11 }} />
+              <XAxis dataKey={data.xAxis} tick={{ fontSize: 'var(--type-size-2xs)' }} />
+              <YAxis tick={{ fontSize: 'var(--type-size-2xs)' }} />
+              <Tooltip contentStyle={{ fontSize: 'var(--type-size-xs)' }} />
               <Line type="monotone" dataKey={data.yAxis!} stroke="#22c55e" strokeWidth={2} dot={{ r: 2 }} />
             </LineChart>
           </ResponsiveContainer>

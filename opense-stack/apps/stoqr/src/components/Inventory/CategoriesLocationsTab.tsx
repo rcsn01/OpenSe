@@ -40,7 +40,7 @@ export const LocationsTab = ({ companyId }: Props) => {
   return (
     <div className="grid" style={{ gridTemplateColumns: '340px 1fr', gap: 16 }}>
       <div className="card stack" style={{ gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Add Location</h3>
+        <h3 style={{ margin: 0, fontSize: 'var(--type-size-md)', fontWeight: 'var(--type-weight-semibold)' }}>Add Location</h3>
 
         <label className="stack" style={{ gap: 4 }}>
           <span className="small muted">Location Name</span>
@@ -60,7 +60,7 @@ export const LocationsTab = ({ companyId }: Props) => {
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-info-bar">
-          <span style={{ fontWeight: 600 }}>Locations</span>
+          <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>Locations</span>
           <span className="pill">{locations.length}</span>
         </div>
         {isLoading ? (
@@ -79,7 +79,7 @@ export const LocationsTab = ({ companyId }: Props) => {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{location.name}</div>
+                  <div style={{ fontWeight: 'var(--type-weight-semibold)', fontSize: 'var(--type-size-sm)' }}>{location.name}</div>
                   <div className="small muted">{location.code ?? 'No code'} · {location.description ?? '—'}</div>
                 </div>
               </div>

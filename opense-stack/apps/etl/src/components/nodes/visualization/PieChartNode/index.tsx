@@ -51,8 +51,8 @@ export const PieChartNode = ({ data, selected }: NodeProps<PieChartNodeData>) =>
                   <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ fontSize: 11 }} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Tooltip contentStyle={{ fontSize: 'var(--type-size-xs)' }} />
+              <Legend wrapperStyle={{ fontSize: 'var(--type-size-2xs)' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>

@@ -40,7 +40,7 @@ export const BarcodeSkuTab = ({ companyId, products }: Props) => {
   return (
     <div className="grid" style={{ gridTemplateColumns: '340px 1fr', gap: 16 }}>
       <div className="card stack" style={{ gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Add Barcode</h3>
+        <h3 style={{ margin: 0, fontSize: 'var(--type-size-md)', fontWeight: 'var(--type-weight-semibold)' }}>Add Barcode</h3>
         <label className="stack" style={{ gap: 4 }}>
           <span className="small muted">Product</span>
           <select className="select" style={{ borderRadius: 8 }} value={productId} onChange={(event) => setProductId(event.target.value)}>
@@ -61,7 +61,7 @@ export const BarcodeSkuTab = ({ companyId, products }: Props) => {
             <option value="qr">QR Code</option>
           </select>
         </label>
-        <label className="row" style={{ alignItems: 'center', gap: 8, fontSize: 13 }}>
+        <label className="row" style={{ alignItems: 'center', gap: 8, fontSize: 'var(--type-size-sm)' }}>
           <input type="checkbox" checked={isPrimary} onChange={(event) => setIsPrimary(event.target.checked)} />
           Set as primary barcode
         </label>
@@ -71,7 +71,7 @@ export const BarcodeSkuTab = ({ companyId, products }: Props) => {
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div className="table-info-bar">
-          <span style={{ fontWeight: 600 }}>Barcodes</span>
+          <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>Barcodes</span>
           <span className="pill">{barcodes.length}</span>
         </div>
         {isLoading ? (
@@ -93,10 +93,10 @@ export const BarcodeSkuTab = ({ companyId, products }: Props) => {
               <tbody>
                 {barcodes.map((row) => (
                   <tr key={row.id}>
-                    <td style={{ fontWeight: 500 }}>{row.products?.name ?? 'Unknown'}</td>
-                    <td className="muted" style={{ fontSize: 13 }}>{row.products?.sku ?? '—'}</td>
-                    <td style={{ fontSize: 13 }}>{row.barcode}</td>
-                    <td style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>{row.barcode_type}</td>
+                    <td style={{ fontWeight: 'var(--type-weight-medium)' }}>{row.products?.name ?? 'Unknown'}</td>
+                    <td className="muted" style={{ fontSize: 'var(--type-size-sm)' }}>{row.products?.sku ?? '—'}</td>
+                    <td style={{ fontSize: 'var(--type-size-sm)' }}>{row.barcode}</td>
+                    <td style={{ textTransform: 'uppercase', fontSize: 'var(--type-size-xs)', fontWeight: 'var(--type-weight-semibold)', color: 'var(--muted)' }}>{row.barcode_type}</td>
                     <td>{row.is_primary ? '✓' : '—'}</td>
                   </tr>
                 ))}

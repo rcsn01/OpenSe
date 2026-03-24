@@ -22,7 +22,7 @@ export const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({ data, on
             {available.map((f) => (
               <span
                 key={f}
-                className="px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded text-[10px] font-mono border border-violet-200"
+                className="px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded text-[10px] type-mono border border-violet-200"
               >
                 {f}
               </span>
@@ -40,7 +40,7 @@ export const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({ data, on
           value={data.code || ''}
           onChange={(e) => onChange('code', e.target.value)}
           placeholder={`// rows is the input array\nreturn rows.map(row => ({\n  ...row,\n}));`}
-          className="w-full rounded-md border border-slate-300 py-2 px-3 text-xs font-mono focus:border-violet-500 focus:ring-1 focus:ring-violet-500 bg-slate-900 text-green-400 leading-relaxed"
+          className="w-full rounded-md border border-slate-300 py-2 px-3 text-xs type-mono focus:border-violet-500 focus:ring-1 focus:ring-violet-500 bg-slate-900 text-green-400 leading-relaxed"
           rows={14}
           spellCheck={false}
         />

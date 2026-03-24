@@ -65,15 +65,15 @@ export const ProductAttachmentsTab = ({ productId, companyId }: { productId: str
                         borderRadius: 6,
                         display: 'grid',
                         placeItems: 'center',
-                        fontSize: 10,
-                        fontWeight: 700,
+                        fontSize: 'var(--type-size-2xs)',
+                        fontWeight: 'var(--type-weight-bold)',
                         color: '#475569',
                       }}
                     >
                       {f.name.split('.').pop()?.toUpperCase().slice(0, 3)}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 500, fontSize: 14 }}>{f.name}</div>
+                      <div style={{ fontWeight: 'var(--type-weight-medium)', fontSize: 'var(--type-size-sm)' }}>{f.name}</div>
                       <div className="small muted">
                         {(f.size / 1024).toFixed(1)} KB &middot; {new Date(f.created_at).toLocaleDateString()}
                       </div>

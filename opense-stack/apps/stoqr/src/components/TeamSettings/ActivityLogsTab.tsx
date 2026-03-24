@@ -45,7 +45,7 @@ export const ActivityLogsTab = ({ logs }: { logs: ActivityEvent[] }) => {
                 <td className="small muted" style={{ whiteSpace: 'nowrap' }}>
                   {formatDateTime(log.created_at)}
                 </td>
-                <td style={{ fontWeight: 500 }}>{log.profiles?.full_name ?? log.profiles?.username ?? 'System'}</td>
+                <td style={{ fontWeight: 'var(--type-weight-medium)' }}>{log.profiles?.full_name ?? log.profiles?.username ?? 'System'}</td>
                 <td>
                   <span className="pill">
                     {log.event_type}

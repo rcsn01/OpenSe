@@ -123,7 +123,7 @@ export const NotificationSettingsPanel: React.FC<NotificationSettingsPanelProps>
                   </div>
 
                   {/* Config summary */}
-                  <div className="text-[10px] text-slate-500 font-mono bg-white rounded px-2 py-1 border border-slate-100">
+                  <div className="text-[10px] text-slate-500 type-mono bg-white rounded px-2 py-1 border border-slate-100">
                     {setting.channel === 'email' && (
                       <span>{(setting.config.recipients as string[])?.join(', ') || 'No recipients'}</span>
                     )}

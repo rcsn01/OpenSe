@@ -133,7 +133,7 @@ export function Code({ children, className, block = false }: CodeProps) {
     )
   }
   return (
-    <code className={cn('rounded-[var(--radius-sm)] bg-[var(--color-muted)] px-1.5 py-0.5 text-sm font-mono', className)}>
+    <code className={cn('rounded-[var(--radius-sm)] bg-[var(--color-muted)] px-1.5 py-0.5 text-sm type-mono', className)}>
       {children}
     </code>
   )

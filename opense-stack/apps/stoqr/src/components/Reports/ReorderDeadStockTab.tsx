@@ -62,7 +62,7 @@ export const ReorderDeadStockTab = ({
               {reorderCandidates.slice(0, 15).map((product) => (
                 <div key={product.id} className="flex-between">
                   <div>
-                    <div style={{ fontWeight: 600 }}>{product.name}</div>
+                    <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>{product.name}</div>
                     <div className="small muted">{product.sku}</div>
                   </div>
                   <span className="badge warning">Qty {product.quantity_on_hand}</span>
@@ -81,7 +81,7 @@ export const ReorderDeadStockTab = ({
               {deadStock.slice(0, 15).map((product) => (
                 <div key={product.id} className="flex-between">
                   <div>
-                    <div style={{ fontWeight: 600 }}>{product.name}</div>
+                    <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>{product.name}</div>
                     <div className="small muted">{product.sku}</div>
                   </div>
                   <span className="pill">No movement</span>

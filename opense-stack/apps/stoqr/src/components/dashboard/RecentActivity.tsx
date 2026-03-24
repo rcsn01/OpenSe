@@ -18,7 +18,7 @@ export const RecentActivity = ({ transactions }: { transactions: TransactionSumm
             <div key={t.id} className="timeline-item">
               <div className="flex-between">
                 <div>
-                  <span style={{ fontWeight: 500 }}>
+                  <span style={{ fontWeight: 'var(--type-weight-medium)' }}>
                     {t.products?.name ?? 'Unknown Product'}
                   </span>
                   <span className="muted"> &middot; {t.transaction_type}</span>

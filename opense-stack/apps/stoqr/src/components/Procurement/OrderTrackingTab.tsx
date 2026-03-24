@@ -44,7 +44,7 @@ export const OrderTrackingTab = ({ companyId }: { companyId: string }) => {
                 const pct = progress.ordered > 0 ? Math.min((progress.received / progress.ordered) * 100, 100) : 0
                 return (
                   <tr key={order.id}>
-                    <td style={{ fontWeight: 600 }}>#{order.po_number}</td>
+                    <td style={{ fontWeight: 'var(--type-weight-semibold)' }}>#{order.po_number}</td>
                     <td>{order.suppliers?.name ?? 'Unknown'}</td>
                     <td><span className="pill">{order.status}</span></td>
                     <td>{order.expected_date ?? '—'}</td>

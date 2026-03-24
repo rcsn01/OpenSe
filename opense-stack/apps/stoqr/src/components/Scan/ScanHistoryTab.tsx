@@ -38,7 +38,7 @@ export const ScanHistoryTab = ({ companyId }: { companyId: string }) => {
                   <div>{event.product?.name ?? 'Unknown item'}</div>
                   <div className="small muted">{event.product?.sku ?? event.barcode ?? '—'}</div>
                 </td>
-                <td style={{ textAlign: 'right', fontWeight: 600 }}>{event.quantity ?? 0}</td>
+                <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)' }}>{event.quantity ?? 0}</td>
                 <td className="small muted">{event.entry_method}</td>
                 <td className="small muted">{event.actorName}</td>
               </tr>

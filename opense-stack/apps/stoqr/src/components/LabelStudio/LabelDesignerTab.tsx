@@ -12,10 +12,12 @@ type LayoutControls = {
   showPrice: boolean
 }
 
+const DEFAULT_LABEL_FONT_SIZE = 12
+
 const defaultControls: LayoutControls = {
   width: 100,
   height: 50,
-  fontSize: 12,
+  fontSize: DEFAULT_LABEL_FONT_SIZE,
   showBarcode: true,
   showQr: false,
   showSku: true,

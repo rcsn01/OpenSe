@@ -167,7 +167,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
             <ArrowUp size={16} />
           </button>
           
-          <div className="explorer-breadcrumb" style={{ padding: '6px 12px', minWidth: 200, maxWidth: 400, background: 'var(--color-muted)', borderRadius: 8, fontSize: 13 }}>
+          <div className="explorer-breadcrumb" style={{ padding: '6px 12px', minWidth: 200, maxWidth: 400, background: 'var(--color-muted)', borderRadius: 8, fontSize: 'var(--type-size-sm)' }}>
             {breadcrumbPath.map((item, i) => (
               <span key={item.id ?? 'root'}>
                 {i > 0 && <span className="muted" style={{ margin: '0 6px' }}>/</span>}
@@ -292,7 +292,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                     <Link to={`/inventory/${product.id}/overview`} style={{ display: 'block' }}>
                       {product.name}
                     </Link>
-                    <span className="muted small" style={{ fontSize: 11, fontWeight: 400 }}>{product.sku}</span>
+                    <span className="muted small" style={{ fontSize: 'var(--type-size-xs)', fontWeight: 'var(--type-weight-regular)' }}>{product.sku}</span>
                   </div>
                   <div className="muted small">Product</div>
                   <div>
@@ -334,7 +334,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                     }}
                   >
                     <FolderIcon size={48} className="text-blue-500" fill="#eff6ff" />
-                    <div style={{ fontSize: 14, fontWeight: 500, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 'var(--type-size-sm)', fontWeight: 'var(--type-weight-medium)', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {folder.name}
                     </div>
                   </div>
@@ -346,7 +346,7 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                       style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8, height: '100%' }}
                     >
                       <Package size={48} className="text-slate-400" />
-                      <div style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.2 }}>
+                      <div style={{ fontSize: 'var(--type-size-sm)', fontWeight: 'var(--type-weight-medium)', lineHeight: 1.2 }}>
                         {product.name}
                       </div>
                       <div className="small muted">{product.quantity_on_hand} in stock</div>

@@ -29,7 +29,7 @@ export const SuppliersTab = ({ companyId }: { companyId: string }) => {
             {suppliers.map((s) => (
               <div key={s.id} className="card" style={{ boxShadow: 'none', background: '#f8fafc' }}>
                 <div className="flex-between">
-                  <div style={{ fontWeight: 600 }}>{s.name}</div>
+                  <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>{s.name}</div>
                   <button className="button ghost small">Edit</button>
                 </div>
                 <div className="small muted" style={{ marginTop: 4 }}>

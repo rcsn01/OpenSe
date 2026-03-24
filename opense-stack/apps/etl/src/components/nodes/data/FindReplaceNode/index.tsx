@@ -20,9 +20,9 @@ export const FindReplaceNode = ({ data, selected }: NodeProps<FindReplaceNodeDat
             In <span className="font-semibold text-pink-700">[{data.field}]</span>
           </p>
           <p className="text-[11px] text-slate-600 truncate">
-            <span className="font-mono text-red-500">"{data.search}"</span>
+            <span className="type-mono text-red-500">"{data.search}"</span>
             {' → '}
-            <span className="font-mono text-green-600">"{data.replace}"</span>
+            <span className="type-mono text-green-600">"{data.replace}"</span>
           </p>
           {data.caseSensitive && (
             <span className="text-[9px] text-slate-400 uppercase tracking-wider">Case sensitive</span>

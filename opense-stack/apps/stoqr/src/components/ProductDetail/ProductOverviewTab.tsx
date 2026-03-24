@@ -107,7 +107,7 @@ export const ProductOverviewTab = ({
             <Breadcrumb items={breadcrumbItems} className="mb-1" />
             <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
             <HStack className="mt-1.5 gap-2">
-              <Badge variant="outline" size="sm"><span className="font-mono">{product.sku}</span></Badge>
+              <Badge variant="outline" size="sm"><span className="type-mono">{product.sku}</span></Badge>
               <Badge variant={stockStatus.variant} size="sm">{stockStatus.label}</Badge>
             </HStack>
           </div>

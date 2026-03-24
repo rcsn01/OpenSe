@@ -24,7 +24,7 @@ export const AlertsSummary = ({
         {items.map((item) => (
           <div key={item.label} className="flex-between" style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
             <span className="small muted">{item.label}</span>
-            <span style={{ fontWeight: 700 }}>{item.value}</span>
+            <span style={{ fontWeight: 'var(--type-weight-bold)' }}>{item.value}</span>
           </div>
         ))}
       </div>
