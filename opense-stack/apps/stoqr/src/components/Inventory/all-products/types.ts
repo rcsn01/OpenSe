@@ -3,6 +3,7 @@ import type { InventoryProduct, SortDirection, SortField } from '../types'
 
 export type ProductListViewProps = {
   companyId: string | null
+  view: 'list' | 'grid'
   products: InventoryProduct[]
   isLoading: boolean
   selectedRowIds: Set<string>
@@ -39,6 +40,8 @@ export type InventoryFiltersBarProps = {
 
 export type AllProductsTabProps = {
   companyId: string | null
+  selectedFolderId: string | null
+  setSelectedFolderId: (value: string | null) => void
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
   activeCustomFieldFilters: CustomFieldActiveFilter[]

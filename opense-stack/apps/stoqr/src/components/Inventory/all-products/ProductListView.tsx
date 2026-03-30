@@ -9,6 +9,7 @@ import type { ProductListViewProps } from './types'
 
 export const ProductListView = ({
   companyId,
+  view,
   products,
   isLoading,
   selectedRowIds,
@@ -30,7 +31,7 @@ export const ProductListView = ({
   const { editingCell, editingValue, isSaving, setEditingValue, startEdit, commitEdit, cancelEdit } = useInlineProductEdit(companyId, onRefresh)
 
   return (
-    <div style={{ overflow: 'hidden' }}>
+    <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div
         className={`flex-between ${selectedRowIds.size > 0 ? 'action-bar' : ''}`}
         style={{ padding: '12px 20px', background: selectedRowIds.size > 0 ? 'rgba(59, 130, 246, 0.08)' : '#f8fafc', borderBottom: '1px solid var(--border)' }}
@@ -86,9 +87,90 @@ export const ProductListView = ({
         <div className="empty-state" style={{ padding: 48 }}>Loading inventory data...</div>
       ) : products.length === 0 ? (
         <EmptyState title="No products found" description="Try adjusting filters or adding new items." />
+      ) : view === 'grid' ? (
+        <>
+          <div style={{ padding: 20, overflowY: 'auto', flex: 1, minHeight: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+              {products.map((product) => {
+                const isLow = product.quantity_on_hand <= product.reorder_point
+                const isOut = product.quantity_on_hand === 0
+
+                return (
+                  <div
+                    key={product.id}
+                    className="card"
+                    style={{
+                      padding: 16,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
+                      border: selectedRowIds.has(product.id) ? '1px solid var(--primary)' : undefined,
+                      background: selectedRowIds.has(product.id) ? 'var(--primary-soft)' : undefined,
+                    }}
+                  >
+                    <div className="flex-between" style={{ alignItems: 'flex-start', gap: 12 }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedRowIds.has(product.id)}
+                        disabled={isSaving}
+                        onChange={() => toggleSelection(product.id)}
+                      />
+                      {isOut ? (
+                        <Badge label="Out of Stock" variant="danger" />
+                      ) : isLow ? (
+                        <Badge label="Low Stock" variant="warning" />
+                      ) : (
+                        <Badge label="In Stock" variant="success" />
+                      )}
+                    </div>
+
+                    <div style={{ minWidth: 0 }}>
+                      <Link to={`/inventory/${product.id}/overview`} style={{ display: 'block', minWidth: 0 }}>
+                        <Heading level="h6" style={{ margin: 0, lineHeight: 1.2 }}>
+                          {product.name}
+                        </Heading>
+                      </Link>
+                      <Label className="block">{product.sku}</Label>
+                    </div>
+
+                    <div className="stack" style={{ gap: 8 }}>
+                      <div className="flex-between small">
+                        <span className="muted">Folder</span>
+                        <span>{folderName(product.folder_id)}</span>
+                      </div>
+                      <div className="flex-between small">
+                        <span className="muted">Price</span>
+                        <span>{formatCurrency(product.selling_price)}</span>
+                      </div>
+                      <div className="flex-between small">
+                        <span className="muted">On Hand</span>
+                        <span>{product.quantity_on_hand}</span>
+                      </div>
+                      <div className="flex-between small">
+                        <span className="muted">Available</span>
+                        <span style={{ color: product.quantity_on_hand > 0 ? 'var(--success)' : 'var(--danger)' }}>
+                          {product.quantity_on_hand}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ padding: '0 20px 16px' }}>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              totalItems={totalCount}
+              onPageChange={setPage}
+            />
+          </div>
+        </>
       ) : (
         <>
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ flex: 1, minHeight: 0 }}>
             <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 900 }}>
               <colgroup>
                 <col style={{ width: 40 }} />

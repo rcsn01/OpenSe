@@ -12,6 +12,7 @@ export type InventoryStats = {
 export type FetchInventoryProductsParams = {
   companyId: string
   search: string
+  folderId?: string | null
   stockFilter: 'all' | 'low' | 'out'
   customFieldFilters?: CustomFieldActiveFilter[]
   page: number
@@ -131,6 +132,7 @@ export const fetchInventoryStats = async (companyId: string): Promise<InventoryS
 export const fetchInventoryProducts = async ({
   companyId,
   search,
+  folderId,
   stockFilter,
   customFieldFilters,
   page,
@@ -145,6 +147,10 @@ export const fetchInventoryProducts = async ({
 
   if (search.trim()) {
     query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`)
+  }
+
+  if (folderId) {
+    query = query.eq('folder_id', folderId)
   }
 
   if (stockFilter === 'out') {
