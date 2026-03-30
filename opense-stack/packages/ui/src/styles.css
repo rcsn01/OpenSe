@@ -5,7 +5,7 @@
 /* ── Shared Design Tokens ─────────────────────────────── */
 :root {
   /* Typography */
-  --font-family: 'DM Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --font-family: 'SF Pro Text', 'SF Pro Icons', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
   /* Brand palette */
   --color-primary: #66c13f;
