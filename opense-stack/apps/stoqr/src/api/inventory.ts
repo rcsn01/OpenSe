@@ -60,7 +60,7 @@ const normalizeCustomFieldString = (value: string): string | null => {
 
 export const fetchInventoryFilters = async (companyId: string): Promise<{ folders: Folder[]; tags: Tag[]; customFieldFilters: CustomFieldFilterOption[] }> => {
   const [{ data: folderData, error: folderError }, { data: tagData, error: tagError }, { data: customFieldRows, error: customFieldError }] = await Promise.all([
-    db.from('folders').select('id, name, parent_id').eq('company_id', companyId),
+    db.from('folders').select('id, name, parent_id').eq('company_id', companyId).order('name'),
     db.from('tags').select('id, name, color').eq('company_id', companyId),
     db.from('products').select('custom_fields').eq('company_id', companyId),
   ])
@@ -149,7 +149,9 @@ export const fetchInventoryProducts = async ({
     query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`)
   }
 
-  if (folderId) {
+  if (folderId === '__uncategorised__') {
+    query = query.is('folder_id', null)
+  } else if (folderId) {
     query = query.eq('folder_id', folderId)
   }
 
@@ -388,4 +390,88 @@ export const bulkUpdateInventoryProducts = async (
   }
 
   return rows.length
+}
+
+export const renameFolderInInventory = async (
+  companyId: string,
+  folderId: string,
+  newName: string,
+) => {
+  const { error } = await db
+    .from('folders')
+    .update({ name: newName })
+    .eq('id', folderId)
+    .eq('company_id', companyId)
+
+  if (error) throw error
+}
+
+const collectDescendantFolderIds = async (companyId: string, folderId: string): Promise<string[]> => {
+  const { data, error } = await db
+    .from('folders')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('parent_id', folderId)
+
+  if (error) throw error
+
+  const childIds = (data ?? []).map((row) => row.id)
+  const descendants: string[] = []
+
+  for (const childId of childIds) {
+    descendants.push(childId)
+    const nested = await collectDescendantFolderIds(companyId, childId)
+    descendants.push(...nested)
+  }
+
+  return descendants
+}
+
+export const deleteFolderInInventory = async (
+  companyId: string,
+  folderId: string,
+  action: 'move-uncategorised' | 'delete-products',
+) => {
+  const allFolderIds = [folderId, ...(await collectDescendantFolderIds(companyId, folderId))]
+
+  if (action === 'move-uncategorised') {
+    const { error: moveError } = await db
+      .from('products')
+      .update({ folder_id: null })
+      .eq('company_id', companyId)
+      .in('folder_id', allFolderIds)
+
+    if (moveError) throw moveError
+  } else {
+    const { error: deleteProductsError } = await db
+      .from('products')
+      .delete()
+      .eq('company_id', companyId)
+      .in('folder_id', allFolderIds)
+
+    if (deleteProductsError) throw deleteProductsError
+  }
+
+  const { error } = await db
+    .from('folders')
+    .delete()
+    .eq('id', folderId)
+    .eq('company_id', companyId)
+
+  if (error) throw error
+}
+
+export const moveFolderInInventory = async (
+  companyId: string,
+  folderId: string,
+  newParentId: string | null,
+  sortOrder: number,
+) => {
+  const { error } = await db
+    .from('folders')
+    .update({ parent_id: newParentId, sort_order: sortOrder })
+    .eq('id', folderId)
+    .eq('company_id', companyId)
+
+  if (error) throw error
 }

@@ -1,7 +1,12 @@
 import { useState } from 'react'
-import { LayoutGrid, List as ListIcon, Plus } from 'lucide-react'
+import { LayoutGrid, List as ListIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { useCreateInventoryFolder } from '../../hooks/queries/useInventory'
+import {
+  useCreateInventoryFolder,
+  useRenameFolderInInventory,
+  useDeleteFolderInInventory,
+  useMoveFolderInInventory,
+} from '../../hooks/queries/useInventory'
 import { InventoryFiltersBar } from './all-products/InventoryFiltersBar'
 import { ProductListView } from './all-products/ProductListView'
 import { FolderNavigationPanel } from './FolderNavigationPanel'
@@ -9,6 +14,8 @@ import type { AllProductsTabProps } from './all-products/types'
 
 export const AllProductsTab = ({
   companyId,
+  folderView,
+  setFolderView,
   selectedFolderId,
   setSelectedFolderId,
   stockFilter,
@@ -40,9 +47,20 @@ export const AllProductsTab = ({
 }: AllProductsTabProps) => {
   const isSelectionMode = selectedRowIds.size > 0
   const [view, setView] = useState<'list' | 'grid'>('list')
+
+  // Folder creation inline state
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+
+  // Folder delete dialog state
+  const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null)
+  const [deleteStep, setDeleteStep] = useState<'choose' | 'confirm' | null>(null)
+  const [deleteAction, setDeleteAction] = useState<'move-uncategorised' | 'delete-products' | null>(null)
+
   const createFolderMutation = useCreateInventoryFolder(companyId)
+  const renameFolderMutation = useRenameFolderInInventory(companyId)
+  const deleteFolderMutation = useDeleteFolderInInventory(companyId)
+  const moveFolderMutation = useMoveFolderInInventory(companyId)
 
   const handleFolderSelect = (folderId: string | null) => {
     setSelectedFolderId(folderId)
@@ -50,31 +68,108 @@ export const AllProductsTab = ({
   }
 
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) return
+    if (isCreatingFolder) {
+      // Submit
+      if (!newFolderName.trim()) return
+      try {
+        await createFolderMutation.mutateAsync({
+          name: newFolderName,
+          parentId: folderView === 'folder' ? selectedFolderId : null,
+        })
+        toast.success('Folder created')
+        setNewFolderName('')
+        setIsCreatingFolder(false)
+        onRefresh()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to create folder'
+        toast.error(message)
+      }
+    } else {
+      setIsCreatingFolder(true)
+    }
+  }
 
+  const handleRenameFolder = async (folderId: string, newName: string) => {
     try {
-      await createFolderMutation.mutateAsync({
-        name: newFolderName,
-        parentId: selectedFolderId,
-      })
-      toast.success('Folder created')
-      setNewFolderName('')
-      setIsCreatingFolder(false)
+      await renameFolderMutation.mutateAsync({ folderId, newName })
+      toast.success('Folder renamed')
       onRefresh()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create folder'
+      const message = error instanceof Error ? error.message : 'Failed to rename folder'
+      toast.error(message)
+    }
+  }
+
+  const handleDeleteStepChoose = (folderId: string) => {
+    setDeletingFolderId(folderId)
+    setDeleteStep('choose')
+    setDeleteAction(null)
+  }
+
+  const handleDeleteActionSelect = (action: 'move-uncategorised' | 'delete-products') => {
+    setDeleteAction(action)
+    setDeleteStep('confirm')
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingFolderId || !deleteAction) return
+    try {
+      await deleteFolderMutation.mutateAsync({ folderId: deletingFolderId, action: deleteAction })
+      toast.success('Folder deleted')
+      if (selectedFolderId === deletingFolderId) {
+        setFolderView('all')
+        setSelectedFolderId(null)
+      }
+      onRefresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete folder'
+      toast.error(message)
+    } finally {
+      setDeletingFolderId(null)
+      setDeleteStep(null)
+      setDeleteAction(null)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeletingFolderId(null)
+    setDeleteStep(null)
+    setDeleteAction(null)
+  }
+
+  const handleMoveFolder = async (folderId: string, newParentId: string | null, sortOrder: number) => {
+    try {
+      await moveFolderMutation.mutateAsync({ folderId, newParentId, sortOrder })
+      onRefresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to move folder'
       toast.error(message)
     }
   }
 
   return (
-    <div className="explorer-container" style={{ height: '600px' }}>
+    <div className="explorer-container" style={{ flex: 1, minHeight: 0 }}>
       <FolderNavigationPanel
         folders={folders}
         activeFolderId={selectedFolderId}
+        folderView={folderView}
         onSelectFolder={(folderId) => handleFolderSelect(folderId)}
-        rootLabel="All folders"
-        onSelectRoot={() => handleFolderSelect(null)}
+        onSelectView={(view) => {
+          setFolderView(view)
+          if (view !== 'folder') setSelectedFolderId(null)
+          setPage(1)
+        }}
+        onCreateFolder={handleCreateFolder}
+        onRenameFolder={handleRenameFolder}
+        onDeleteFolder={(folderId) => handleDeleteStepChoose(folderId)}
+        onMoveFolder={handleMoveFolder}
+        deletingFolderId={deletingFolderId}
+        deleteStep={deleteStep}
+        deleteAction={deleteAction}
+        onDeleteStepChoose={handleDeleteStepChoose}
+        onDeleteActionSelect={handleDeleteActionSelect}
+        onDeleteConfirm={handleDeleteConfirm}
+        onDeleteCancel={handleDeleteCancel}
       />
 
       <div className="explorer-main">
@@ -89,7 +184,13 @@ export const AllProductsTab = ({
                   placeholder="Folder Name"
                   value={newFolderName}
                   onChange={(event) => setNewFolderName(event.target.value)}
-                  onKeyDown={(event) => event.key === 'Enter' && void handleCreateFolder()}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') void handleCreateFolder()
+                    if (event.key === 'Escape') {
+                      setIsCreatingFolder(false)
+                      setNewFolderName('')
+                    }
+                  }}
                 />
                 <button className="button small" onClick={() => void handleCreateFolder()}>Save</button>
                 <button
@@ -102,11 +203,7 @@ export const AllProductsTab = ({
                   ✕
                 </button>
               </div>
-            ) : (
-              <button className="button small" onClick={() => setIsCreatingFolder(true)}>
-                <Plus size={16} style={{ marginRight: 4 }} /> New Folder
-              </button>
-            )}
+            ) : null}
           </div>
 
           <div className="row">
@@ -129,7 +226,7 @@ export const AllProductsTab = ({
           </div>
         </div>
 
-        <div className="card" style={{ padding: 0, overflow: 'hidden', border: 'none', borderRadius: 0, boxShadow: 'none', height: '100%' }}>
+        <div className="card" style={{ padding: 0, overflow: 'hidden', border: 'none', borderRadius: 0, boxShadow: 'none', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <InventoryFiltersBar
             isSelectionMode={isSelectionMode}
             selectedRowIds={selectedRowIds}

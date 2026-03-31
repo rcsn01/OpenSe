@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { ArrowDown, ArrowUp } from 'lucide-react'
 import { Heading, Label } from '@repo/ui'
 import { EmptyState } from '../../EmptyState'
 import { Pagination } from '../../Pagination'
@@ -6,6 +7,7 @@ import { Badge } from '../../Badge'
 import { formatCurrency } from '../../../utils'
 import { useInlineProductEdit } from './useInlineProductEdit'
 import type { ProductListViewProps } from './types'
+import type { SortField } from '../types'
 
 export const ProductListView = ({
   companyId,
@@ -30,25 +32,32 @@ export const ProductListView = ({
   const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name ?? '—'
   const { editingCell, editingValue, isSaving, setEditingValue, startEdit, commitEdit, cancelEdit } = useInlineProductEdit(companyId, onRefresh)
 
-  return (
-    <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div
-        className={`flex-between ${selectedRowIds.size > 0 ? 'action-bar' : ''}`}
-        style={{ padding: '12px 20px', background: selectedRowIds.size > 0 ? 'rgba(59, 130, 246, 0.08)' : '#f8fafc', borderBottom: '1px solid var(--border)' }}
-      >
-        <div className="row">
-          {selectedRowIds.size > 0 ? (
-            <div className="row">
-              <span className="pill" style={{ background: 'var(--primary)', color: 'white' }}>{selectedRowIds.size} items selected</span>
-            </div>
-          ) : (
-            <span className="small muted font-semibold">
-              {totalCount} products
-            </span>
-          )}
-        </div>
+  const handleColumnSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDir('asc')
+    }
+  }
 
-        {selectedRowIds.size > 0 ? (
+  const SortIndicator = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return null
+    return sortDir === 'asc'
+      ? <ArrowUp size={12} style={{ marginLeft: 4, display: 'inline' }} />
+      : <ArrowDown size={12} style={{ marginLeft: 4, display: 'inline' }} />
+  }
+
+  return (
+    <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      {selectedRowIds.size > 0 && (
+        <div
+          className="flex-between action-bar"
+          style={{ padding: '12px 20px', background: 'rgba(59, 130, 246, 0.08)', borderBottom: '1px solid var(--border)' }}
+        >
+          <div className="row">
+            <span className="pill" style={{ background: 'var(--primary)', color: 'white' }}>{selectedRowIds.size} items selected</span>
+          </div>
           <div className="row">
             <button className="button ghost small" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete}>
               Bulk Delete
@@ -57,31 +66,8 @@ export const ProductListView = ({
             <button className="button ghost small" type="button">Print Labels</button>
             <button className="button ghost small" type="button">Export Selected</button>
           </div>
-        ) : (
-          <div className="row">
-            <span className="small muted">Sort by:</span>
-            <select
-              className="select small"
-              style={{ width: 140, padding: '4px 8px', height: 32 }}
-              value={sortField}
-              onChange={(e) => setSortField(e.target.value as typeof sortField)}
-            >
-              <option value="name">Name</option>
-              <option value="quantity_on_hand">Stock Level</option>
-              <option value="sku">SKU</option>
-              <option value="selling_price">Price</option>
-            </select>
-            <button
-              className="button ghost small"
-              onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
-              title="Toggle Direction"
-              style={{ height: 32, width: 32, padding: 0, display: 'grid', placeItems: 'center' }}
-            >
-              {sortDir === 'asc' ? '↑' : '↓'}
-            </button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="empty-state" style={{ padding: 48 }}>Loading inventory data...</div>
@@ -170,7 +156,7 @@ export const ProductListView = ({
         </>
       ) : (
         <>
-          <div className="table-wrap" style={{ flex: 1, minHeight: 0 }}>
+          <div className="table-wrap" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
             <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 900 }}>
               <colgroup>
                 <col style={{ width: 40 }} />
@@ -192,10 +178,16 @@ export const ProductListView = ({
                       onChange={toggleAll}
                     />
                   </th>
-                  <th>Name / SKU</th>
+                  <th className="sortable-th" onClick={() => handleColumnSort('name')}>
+                    Name / SKU <SortIndicator field="name" />
+                  </th>
                   <th>Folder</th>
-                  <th style={{ textAlign: 'right' }}>Price</th>
-                  <th style={{ textAlign: 'right' }}>On Hand</th>
+                  <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('selling_price')}>
+                    Price <SortIndicator field="selling_price" />
+                  </th>
+                  <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('quantity_on_hand')}>
+                    On Hand <SortIndicator field="quantity_on_hand" />
+                  </th>
                   <th style={{ textAlign: 'right' }}>Allocated</th>
                   <th style={{ textAlign: 'right' }}>Available</th>
                   <th>Status</th>
