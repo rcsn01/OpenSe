@@ -260,7 +260,6 @@ export const AllProductsTab = ({
             totalCount={totalCount}
             setPage={setPage}
             folders={folders}
-            handleBulkDelete={handleBulkDelete}
             onRefresh={onRefresh}
           />
         </div>

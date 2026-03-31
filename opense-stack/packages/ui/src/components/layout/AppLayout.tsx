@@ -139,7 +139,7 @@ export function AppLayout({
     >
       {/* Fixed sidebar - never scrolls with the screen */}
       <aside
-        className="app-sidebar fixed inset-y-0 left-0 z-50 flex h-screen w-60 shrink-0 flex-col"
+        className="app-sidebar fixed inset-y-0 left-0 z-50 flex h-screen w-[220px] shrink-0 flex-col"
         aria-label="Sidebar navigation"
         onTouchStart={handleSidebarTouchStart}
         onTouchEnd={handleSidebarTouchEnd}
@@ -158,7 +158,7 @@ export function AppLayout({
       ) : null}
 
       {/* Main content - top bar + scrollable area */}
-      <main className="app-layout-main ml-60 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="app-layout-main ml-[220px] flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {showTopBar && resolvedTopBar}
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </main>

@@ -20,7 +20,6 @@ export type ProductListViewProps = {
   totalCount: number
   setPage: (page: number) => void
   folders: Folder[]
-  handleBulkDelete: () => void
   onRefresh: () => void
 }
 

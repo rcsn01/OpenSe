@@ -9,5 +9,5 @@ export type InventoryProduct = {
   selling_price: number | null
 }
 
-export type SortField = 'name' | 'sku' | 'quantity_on_hand' | 'selling_price'
+export type SortField = 'name' | 'sku' | 'quantity_on_hand' | 'selling_price' | 'folder_id' | 'reorder_point'
 export type SortDirection = 'asc' | 'desc'
