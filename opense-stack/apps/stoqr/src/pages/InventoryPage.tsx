@@ -9,7 +9,6 @@ import { AllProductsTab } from '../components/Inventory/AllProductsTab'
 import { BulkActionsTab } from '../components/Inventory/BulkActionsTab'
 import { LocationsTab } from '../components/Inventory/CategoriesLocationsTab'
 import { BarcodeSkuTab } from '../components/Inventory/BarcodeSkuTab'
-import { FoldersTab } from '../components/Inventory/FoldersTab'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
 import {
   useDeleteInventoryProducts,
@@ -24,7 +23,7 @@ export const InventoryListPage = () => {
   const navigate = useNavigate()
   const { tab } = useParams<{ tab?: string }>()
   const [searchParams] = useSearchParams()
-  const validTabs = ['all', 'folders', 'bulk-actions', 'locations', 'barcode-sku'] as const
+  const validTabs = ['all', 'bulk-actions', 'locations', 'barcode-sku'] as const
   const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'all'
 
   // Removed isCreateOpen state
@@ -208,11 +207,6 @@ export const InventoryListPage = () => {
                 }}
               />
             ),
-          },
-          {
-            id: 'folders',
-            label: 'Folders',
-            content: <FoldersTab companyId={companyId!} allFolders={folders} onRefresh={refreshInventory} />,
           },
           {
             id: 'bulk-actions',

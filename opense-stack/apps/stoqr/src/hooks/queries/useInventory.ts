@@ -4,7 +4,6 @@ import {
   createFolderInInventory,
   createInventoryLocation,
   fetchInventoryReferenceData,
-  fetchFolderProducts,
   deleteInventoryProducts,
   fetchInventoryFilters,
   fetchInventoryProducts,
@@ -21,8 +20,6 @@ const inventoryKeys = {
   filters: (companyId: string | null) => ['stoqr', 'inventory', 'filters', companyId] as const,
   stats: (companyId: string | null) => ['stoqr', 'inventory', 'stats', companyId] as const,
   reference: (companyId: string | null) => ['stoqr', 'inventory', 'reference', companyId] as const,
-  folderProducts: (companyId: string | null, folderId: string | null) =>
-    ['stoqr', 'inventory', 'folder-products', companyId, folderId] as const,
   products: (params: FetchInventoryProductsParams & { companyId: string | null }) =>
     ['stoqr', 'inventory', 'products', params] as const,
 }
@@ -45,13 +42,6 @@ export const useInventoryReferenceData = (companyId: string | null) =>
   useQuery({
     queryKey: inventoryKeys.reference(companyId),
     queryFn: () => fetchInventoryReferenceData(companyId as string),
-    enabled: !!companyId,
-  })
-
-export const useFolderProducts = (companyId: string | null, folderId: string | null) =>
-  useQuery({
-    queryKey: inventoryKeys.folderProducts(companyId, folderId),
-    queryFn: () => fetchFolderProducts(companyId as string, folderId),
     enabled: !!companyId,
   })
 

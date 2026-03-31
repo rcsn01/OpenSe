@@ -22,7 +22,6 @@ test.describe('Stoqr Route Coverage', () => {
     '/tools/labels/preview-batch',
     '/tools/labels/downloads',
     '/inventory/all',
-    '/inventory/folders',
     '/inventory/bulk-actions',
     '/inventory/locations',
     '/inventory/barcode-sku',

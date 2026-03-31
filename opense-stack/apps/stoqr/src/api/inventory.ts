@@ -208,28 +208,6 @@ export const updateInventoryProductField = async (
   if (error) throw error
 }
 
-export const fetchFolderProducts = async (
-  companyId: string,
-  folderId: string | null,
-): Promise<InventoryProduct[]> => {
-  let query = db
-    .from('products')
-    .select('id, name, sku, quantity_on_hand, reorder_point, folder_id, cost_price, selling_price')
-    .eq('company_id', companyId)
-
-  if (folderId) {
-    query = query.eq('folder_id', folderId)
-  } else {
-    query = query.is('folder_id', null)
-  }
-
-  const { data, error } = await query.order('name', { ascending: true })
-
-  if (error) throw error
-
-  return (data as InventoryProduct[] | null) ?? []
-}
-
 export const createFolderInInventory = async (
   companyId: string,
   name: string,
