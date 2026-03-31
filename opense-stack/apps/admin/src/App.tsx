@@ -16,7 +16,7 @@ const ProtectedSuperAdminRoute = ({ children }: { children: React.ReactNode }) =
   const { user, loading, isSuperAdmin, superAdminChecked } = useAuth()
 
   if (loading || !superAdminChecked) {
-    return <div className="min-h-screen grid place-items-center text-sm text-slate-500">Checking access...</div>
+    return <div className="min-h-screen grid place-items-center text-sm text-[var(--color-muted-foreground)]">Checking access...</div>
   }
 
   if (!user) {
@@ -61,7 +61,7 @@ const AppRoutes = () => {
         path="/"
         element={
           loading ? (
-            <div className="min-h-screen grid place-items-center text-sm text-slate-500">Loading session...</div>
+            <div className="min-h-screen grid place-items-center text-sm text-[var(--color-muted-foreground)]">Loading session...</div>
           ) : user && isSuperAdmin ? (
             <Navigate to="/platform" replace />
           ) : (

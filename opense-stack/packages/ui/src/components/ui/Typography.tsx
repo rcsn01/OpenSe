@@ -4,7 +4,7 @@ import { cn } from '../../lib/cn'
 
 /* ── Heading ──────────────────────────────────────────── */
 
-const HEADING_COLOR = { color: 'var(--shade-black-3)' }
+const HEADING_COLOR = { color: 'var(--color-heading)' }
 
 const headingVariants = cva('tracking-tight', {
   variants: {
@@ -41,7 +41,7 @@ export function Heading({ level = 'h1', children, className, style }: HeadingPro
 
 /* ── Body text ────────────────────────────────────────── */
 
-const BODY_COLOR = { color: 'var(--shade-black-7)' }
+const BODY_COLOR = { color: 'var(--color-body)' }
 
 const bodyVariants = cva('', {
   variants: {

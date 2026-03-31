@@ -329,7 +329,7 @@ export const WorkflowEditorPage = () => {
           <div
             className="absolute inset-0 opacity-[0.4]"
             style={{
-              backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
+              backgroundImage: 'radial-gradient(var(--color-border-hover) 1px, transparent 1px)',
               backgroundSize: '20px 20px'
             }}
           />
@@ -347,8 +347,8 @@ export const WorkflowEditorPage = () => {
             onDragOver={onDragOver}
             fitView
           >
-            <Background gap={20} size={1} color="#cbd5e1" />
-            <MiniMap nodeColor={() => '#0ea5e9'} />
+            <Background gap={20} size={1} color="var(--color-border-hover)" />
+            <MiniMap nodeColor={() => 'var(--etl-accent)'} />
             <Controls />
           </ReactFlow>
         </main>

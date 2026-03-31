@@ -60,16 +60,16 @@ export const SharedLoginPage = ({
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
         <div className="w-full overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-xl)]">
           <div className="grid md:grid-cols-2">
-            <section className="hidden min-h-[620px] flex-col justify-between border-r border-[var(--color-border)] bg-[var(--shade-white-2)] p-10 md:flex">
+            <section className="hidden min-h-[620px] flex-col justify-between border-r border-[var(--color-border)] bg-[var(--color-muted)] p-10 md:flex">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-muted-foreground)]">{appName}</p>
               </div>
 
               <div className="relative mx-auto h-72 w-72">
-                <div className="absolute inset-x-4 top-5 h-40 rounded-2xl border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-primary)_16%,white)]" />
-                <div className="absolute left-0 top-14 h-36 w-32 rounded-2xl border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-info)_16%,white)]" />
-                <div className="absolute right-0 top-16 h-28 w-28 rounded-2xl border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-warning)_14%,white)]" />
-                <div className="absolute bottom-1 left-12 h-36 w-48 rounded-2xl border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-success)_14%,white)]" />
+                <div className="absolute inset-x-4 top-5 h-40 rounded-2xl border border-[var(--color-border)] bg-[var(--color-primary-light)]" />
+                <div className="absolute left-0 top-14 h-36 w-32 rounded-2xl border border-[var(--color-border)] bg-[var(--color-info-light)]" />
+                <div className="absolute right-0 top-16 h-28 w-28 rounded-2xl border border-[var(--color-border)] bg-[var(--color-warning-light)]" />
+                <div className="absolute bottom-1 left-12 h-36 w-48 rounded-2xl border border-[var(--color-border)] bg-[var(--color-success-light)]" />
                 <div className="absolute bottom-10 right-10 h-20 w-20 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]" />
               </div>
 
@@ -131,7 +131,7 @@ export const SharedLoginPage = ({
                       type="button"
                       onClick={onGoogleSignIn}
                       disabled={loading}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2.5 text-sm font-medium text-[var(--color-foreground)] transition hover:bg-[var(--shade-white-2)] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2.5 text-sm font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <GoogleIcon />
                       {googleLabel}
@@ -143,7 +143,7 @@ export const SharedLoginPage = ({
                       type="button"
                       onClick={onDemoSignIn}
                       disabled={loading}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-success)] bg-[var(--color-success-light)] px-4 py-2.5 text-sm font-medium text-[var(--color-success)] transition hover:bg-[color-mix(in_srgb,var(--color-success-light)_78%,white)] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-success)] bg-[var(--color-success-light)] px-4 py-2.5 text-sm font-medium text-[var(--color-success)] transition hover:bg-[color-mix(in_srgb,var(--color-success)_28%,var(--color-background))] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Play className="h-4 w-4" />
                       {demoLabel}

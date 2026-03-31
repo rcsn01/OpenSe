@@ -71,8 +71,8 @@ export const OnboardingCreateOrganisationPage = () => {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Create your organisation</h1>
-        <p className="text-sm text-slate-600">Set up your organisation and choose app seat allocation. Free tier includes 5 seats per selected app.</p>
+        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">Create your organisation</h1>
+        <p className="text-sm text-[var(--color-muted-foreground)]">Set up your organisation and choose app seat allocation. Free tier includes 5 seats per selected app.</p>
       </div>
 
       {error ? <Alert variant="destructive" title="Unable to create organisation">{error}</Alert> : null}
@@ -85,7 +85,7 @@ export const OnboardingCreateOrganisationPage = () => {
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="onboarding-org-name">
+              <label className="text-sm font-medium text-[var(--color-body)]" htmlFor="onboarding-org-name">
                 Organisation name
               </label>
               <Input
@@ -98,7 +98,7 @@ export const OnboardingCreateOrganisationPage = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="onboarding-estimated-people">
+              <label className="text-sm font-medium text-[var(--color-body)]" htmlFor="onboarding-estimated-people">
                 Estimated number of people
               </label>
               <Select
@@ -112,7 +112,7 @@ export const OnboardingCreateOrganisationPage = () => {
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700">App seat allocation (free tier = 5 seats per app)</p>
+              <p className="text-sm font-medium text-[var(--color-body)]">App seat allocation (free tier = 5 seats per app)</p>
               <div className="space-y-2">
                 {appOptions.map((app) => (
                   <Checkbox
