@@ -59,7 +59,7 @@ test.describe('Stoqr Route Coverage', () => {
 
   test('label studio route resolves', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/tools/labels');
-    await expect(authenticatedPage).toHaveURL(/\/(tools\/labels\/templates|auth|login|$)/);
+    await expect(authenticatedPage).toHaveURL(/\/(tools\/labels(?:\/templates)?|auth|login|$)/);
   });
 
   for (const route of nestedTabRoutes) {

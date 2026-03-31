@@ -2,6 +2,10 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 
 type Theme = 'light' | 'dark' | 'system'
 
+function isTheme(value: string | null): value is Theme {
+  return value === 'light' || value === 'dark' || value === 'system'
+}
+
 interface ThemeContextValue {
   theme: Theme
   resolvedTheme: 'light' | 'dark'
@@ -27,6 +31,17 @@ function getSystemTheme(): 'light' | 'dark' {
 
 function resolveTheme(theme: Theme): 'light' | 'dark' {
   return theme === 'system' ? getSystemTheme() : theme
+}
+
+function readLocalTheme(storageKey: string): Theme | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const localValue = window.localStorage.getItem(storageKey)
+    return isTheme(localValue) ? localValue : null
+  } catch {
+    return null
+  }
 }
 
 function getCookieDomain(hostname: string): string | undefined {
@@ -55,6 +70,31 @@ function writeCookie(key: string, value: string) {
   document.cookie = `${key}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}${domain}`
 }
 
+function readStoredTheme(storageKey: string, cookieKey: string): Theme | null {
+  const cookieValue = readCookie(cookieKey)
+  if (isTheme(cookieValue)) {
+    return cookieValue
+  }
+
+  return readLocalTheme(storageKey)
+}
+
+function persistTheme(theme: Theme, storageKey: string, cookieKey: string) {
+  if (typeof window === 'undefined') return
+
+  try {
+    if (window.localStorage.getItem(storageKey) !== theme) {
+      window.localStorage.setItem(storageKey, theme)
+    }
+  } catch {
+    // Ignore environments that block localStorage writes.
+  }
+
+  if (readCookie(cookieKey) !== theme) {
+    writeCookie(cookieKey, theme)
+  }
+}
+
 interface ThemeProviderProps {
   children: ReactNode
   defaultTheme?: Theme
@@ -74,37 +114,50 @@ export function ThemeProvider({
     if (typeof window === 'undefined') return defaultTheme
     if (!respectStoredTheme) return defaultTheme
 
-    const localValue = localStorage.getItem(storageKey)
-    if (localValue === 'light' || localValue === 'dark' || localValue === 'system') {
-      return localValue
-    }
-
-    const cookieValue = readCookie(cookieKey)
-    if (cookieValue === 'light' || cookieValue === 'dark' || cookieValue === 'system') {
-      return cookieValue
-    }
-
-    return defaultTheme
+    return readStoredTheme(storageKey, cookieKey) ?? defaultTheme
   })
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => resolveTheme(theme))
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return
+
     if (!respectStoredTheme) {
       setThemeState(defaultTheme)
       return
     }
 
-    const localValue = localStorage.getItem(storageKey)
-    if (localValue === 'light' || localValue === 'dark' || localValue === 'system') {
-      setThemeState(localValue)
-      return
+    const syncStoredTheme = () => {
+      const storedTheme = readStoredTheme(storageKey, cookieKey) ?? defaultTheme
+      setThemeState((currentTheme) => (currentTheme === storedTheme ? currentTheme : storedTheme))
     }
 
-    const cookieValue = readCookie(cookieKey)
-    if (cookieValue === 'light' || cookieValue === 'dark' || cookieValue === 'system') {
-      setThemeState(cookieValue)
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key && event.key !== storageKey) return
+      syncStoredTheme()
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        syncStoredTheme()
+      }
+    }
+
+    syncStoredTheme()
+    window.addEventListener('focus', syncStoredTheme)
+    window.addEventListener('storage', handleStorage)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', syncStoredTheme)
+      window.removeEventListener('storage', handleStorage)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [respectStoredTheme, defaultTheme, storageKey, cookieKey])
+
+  useEffect(() => {
+    if (!respectStoredTheme) return
+    persistTheme(theme, storageKey, cookieKey)
+  }, [theme, respectStoredTheme, storageKey, cookieKey])
 
   // Apply dark class to document
   useEffect(() => {
@@ -129,8 +182,10 @@ export function ThemeProvider({
 
   const setTheme = (t: Theme) => {
     setThemeState(t)
-    localStorage.setItem(storageKey, t)
-    writeCookie(cookieKey, t)
+
+    if (respectStoredTheme) {
+      persistTheme(t, storageKey, cookieKey)
+    }
   }
 
   const toggleTheme = () => {

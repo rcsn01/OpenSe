@@ -86,7 +86,7 @@ function App() {
       defaultTheme="light"
       storageKey="opense-theme"
       cookieKey="opense-theme"
-      respectStoredTheme={false}
+      respectStoredTheme={true}
     >
       <Routes>
         <Route

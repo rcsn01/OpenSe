@@ -40,7 +40,7 @@ function AppContent() {
       defaultTheme="light"
       storageKey="opense-theme"
       cookieKey="opense-theme"
-      respectStoredTheme={Boolean(user)}
+      respectStoredTheme={true}
     >
       <BrowserRouter>
         <ReactFlowProvider>
