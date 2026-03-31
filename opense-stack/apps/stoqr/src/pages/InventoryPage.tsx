@@ -35,6 +35,7 @@ export const InventoryListPage = () => {
   const [activeCustomFieldFilters, setActiveCustomFieldFilters] = useState<CustomFieldActiveFilter[]>([])
   const [pendingFilterKey, setPendingFilterKey] = useState<string | null>(null)
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
 
   const [page, setPage] = useState(1)
   const [pageSize] = useState(10)
@@ -46,6 +47,7 @@ export const InventoryListPage = () => {
   const productsQuery = useInventoryProducts({
     companyId,
     search: '',
+    folderId: selectedFolderId,
     stockFilter,
     customFieldFilters: activeCustomFieldFilters.length > 0 ? activeCustomFieldFilters : undefined,
     page,
@@ -174,6 +176,8 @@ export const InventoryListPage = () => {
             content: (
               <AllProductsTab
                 companyId={companyId}
+                selectedFolderId={selectedFolderId}
+                setSelectedFolderId={setSelectedFolderId}
                 stockFilter={stockFilter}
                 setStockFilter={setStockFilter}
                 activeCustomFieldFilters={activeCustomFieldFilters}

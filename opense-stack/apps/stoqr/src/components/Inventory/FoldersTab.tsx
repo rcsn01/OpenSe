@@ -3,11 +3,10 @@ import { Link } from 'react-router-dom'
 import type { Folder } from '../../types'
 import { formatCurrency } from '../../utils'
 import { useCreateInventoryFolder, useFolderProducts } from '../../hooks/queries/useInventory'
+import { FolderNavigationPanel } from './FolderNavigationPanel'
 import { 
-  Folder as FolderIcon, 
   FolderOpen, 
-  ChevronRight, 
-  ChevronDown, 
+  Folder as FolderIcon,
   Package, 
   Plus, 
   ArrowUp,
@@ -16,87 +15,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-// --- Helper: Build Tree Structure ---
-type TreeNode = Folder & { children: TreeNode[] }
-
-const buildTree = (folders: Folder[], parentId: string | null = null): TreeNode[] => {
-  return folders
-    .filter((f) => f.parent_id === parentId)
-    .map((f) => ({
-      ...f,
-      children: buildTree(folders, f.id),
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name))
-}
-
-// --- Component: Recursive Tree Item ---
-const TreeItem = ({ 
-  node, 
-  level = 0, 
-  activeId, 
-  onSelect, 
-  expandedIds, 
-  toggleExpand 
-}: { 
-  node: TreeNode
-  level?: number
-  activeId: string | null
-  onSelect: (id: string) => void
-  expandedIds: Set<string>
-  toggleExpand: (id: string) => void
-}) => {
-  const isExpanded = expandedIds.has(node.id)
-  const hasChildren = node.children.length > 0
-  const isActive = activeId === node.id
-
-  return (
-    <div>
-      <div 
-        className={`tree-item ${isActive ? 'active' : ''}`} 
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
-        onClick={() => onSelect(node.id)}
-      >
-        <div 
-          className="tree-toggle"
-          onClick={(e) => {
-            e.stopPropagation()
-            toggleExpand(node.id)
-          }}
-        >
-          {hasChildren && (
-            isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
-          )}
-        </div>
-        
-        {isActive || isExpanded ? (
-          <FolderOpen size={16} style={{ marginRight: 8, color: isActive ? '#2563eb' : '#3b82f6' }} />
-        ) : (
-          <FolderIcon size={16} style={{ marginRight: 8, color: '#3b82f6' }} />
-        )}
-        
-        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {node.name}
-        </span>
-      </div>
-      
-      {isExpanded && node.children.map((child) => (
-        <TreeItem 
-          key={child.id} 
-          node={child} 
-          level={level + 1} 
-          activeId={activeId} 
-          onSelect={onSelect}
-          expandedIds={expandedIds}
-          toggleExpand={toggleExpand}
-        />
-      ))}
-    </div>
-  )
-}
-
 export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: string; allFolders: Folder[]; onRefresh: () => void }) => {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [view, setView] = useState<'list' | 'grid'>('list')
 
   // Actions
@@ -105,9 +25,6 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
 
   const { data: products = [], isLoading } = useFolderProducts(companyId, currentFolderId)
   const createFolderMutation = useCreateInventoryFolder(companyId)
-
-  // Build the tree
-  const tree = useMemo(() => buildTree(allFolders, null), [allFolders])
   
   // Current folder data
   const currentFolder = allFolders.find(f => f.id === currentFolderId)
@@ -124,15 +41,6 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
     return path.reverse()
   }, [currentFolder, allFolders])
 
-  // Expand parent folders when selecting a deep child (optional, but good UX)
-  // Simple version: just toggle expand manually
-  const toggleExpand = (id: string) => {
-    const next = new Set(expandedIds)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    setExpandedIds(next)
-  }
-
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return
     try {
@@ -144,8 +52,6 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
       setNewFolderName('')
       setIsCreating(false)
       onRefresh()
-      // If we are in a folder, ensure it is expanded so we see the new child
-      if (currentFolderId) setExpandedIds(prev => new Set(prev).add(currentFolderId))
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create folder'
       toast.error(message)
@@ -225,29 +131,13 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
       {/* --- Main Explorer --- */}
       <div className="explorer-container" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0, height: '600px' }}>
         {/* Left Pane: Tree */}
-        <div className="explorer-sidebar">
-          <div className="sidebar-header">Folders</div>
-          <div className="tree-content">
-            <div 
-              className={`tree-item ${!currentFolderId ? 'active' : ''}`}
-              onClick={() => setCurrentFolderId(null)}
-            >
-              <div className="tree-toggle" />
-              <FolderIcon size={16} style={{ marginRight: 8, color: '#64748b' }} />
-              Root
-            </div>
-            {tree.map(node => (
-              <TreeItem 
-                key={node.id} 
-                node={node} 
-                activeId={currentFolderId} 
-                onSelect={setCurrentFolderId}
-                expandedIds={expandedIds}
-                toggleExpand={toggleExpand}
-              />
-            ))}
-          </div>
-        </div>
+        <FolderNavigationPanel
+          folders={allFolders}
+          activeFolderId={currentFolderId}
+          onSelectFolder={setCurrentFolderId}
+          rootLabel="Root"
+          onSelectRoot={() => setCurrentFolderId(null)}
+        />
 
         {/* Right Pane: Content */}
         <div className="explorer-main">
@@ -273,7 +163,6 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                   className="file-row folder"
                   onClick={() => {
                     setCurrentFolderId(folder.id)
-                    setExpandedIds(prev => new Set(prev).add(folder.id))
                   }}
                 >
                   <div className="file-icon"><FolderIcon size={18} fill="currentColor" fillOpacity={0.2} /></div>
@@ -330,7 +219,6 @@ export const FoldersTab = ({ companyId, allFolders, onRefresh }: { companyId: st
                     style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}
                     onClick={() => {
                       setCurrentFolderId(folder.id)
-                      setExpandedIds(prev => new Set(prev).add(folder.id))
                     }}
                   >
                     <FolderIcon size={48} className="text-blue-500" fill="#eff6ff" />
