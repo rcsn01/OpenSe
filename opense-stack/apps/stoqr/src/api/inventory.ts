@@ -197,6 +197,20 @@ export const deleteInventoryProducts = async (companyId: string, productIds: str
   if (error) throw error
 }
 
+export const moveInventoryProducts = async (companyId: string, productIds: string[], folderId: string | null): Promise<number> => {
+  if (productIds.length === 0) return 0
+
+  const { error } = await db
+    .from('products')
+    .update({ folder_id: folderId })
+    .eq('company_id', companyId)
+    .in('id', productIds)
+
+  if (error) throw error
+
+  return productIds.length
+}
+
 export const updateInventoryProductField = async (
   companyId: string,
   payload: { productId: string; field: 'quantity_on_hand' | 'selling_price'; value: number },

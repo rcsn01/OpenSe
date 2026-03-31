@@ -214,6 +214,7 @@ export const InventoryListPage = () => {
                 setPage={setPage}
                 folders={folders}
                 handleBulkDelete={handleBulkDelete}
+                onClearSelection={() => setSelectedRowIds(new Set())}
                 onRefresh={() => {
                   refreshInventory()
                 }}

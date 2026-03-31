@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import {
   useCreateInventoryFolder,
   useRenameFolderInInventory,
   useDeleteFolderInInventory,
+  useMoveInventoryProducts,
   useMoveFolderInInventory,
 } from '../../hooks/queries/useInventory'
 import { InventoryFiltersBar } from './all-products/InventoryFiltersBar'
@@ -42,6 +43,7 @@ export const AllProductsTab = ({
   setPage,
   folders,
   handleBulkDelete,
+  onClearSelection,
   onRefresh,
 }: AllProductsTabProps) => {
   const isSelectionMode = selectedRowIds.size > 0
@@ -55,11 +57,39 @@ export const AllProductsTab = ({
   const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null)
   const [deleteStep, setDeleteStep] = useState<'choose' | 'confirm' | null>(null)
   const [deleteAction, setDeleteAction] = useState<'move-uncategorised' | 'delete-products' | null>(null)
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false)
+  const [moveTargetFolderId, setMoveTargetFolderId] = useState('__uncategorised__')
 
   const createFolderMutation = useCreateInventoryFolder(companyId)
   const renameFolderMutation = useRenameFolderInInventory(companyId)
   const deleteFolderMutation = useDeleteFolderInInventory(companyId)
+  const moveProductsMutation = useMoveInventoryProducts(companyId)
   const moveFolderMutation = useMoveFolderInInventory(companyId)
+
+  const moveTargetOptions = useMemo(() => {
+    const folderById = new Map(folders.map((folder) => [folder.id, folder]))
+
+    const getFolderPath = (folderId: string) => {
+      const segments: string[] = []
+      const seen = new Set<string>()
+      let currentId: string | null = folderId
+
+      while (currentId && !seen.has(currentId)) {
+        const currentFolder = folderById.get(currentId)
+        if (!currentFolder) break
+
+        segments.unshift(currentFolder.name)
+        seen.add(currentId)
+        currentId = currentFolder.parent_id
+      }
+
+      return segments.join(' / ')
+    }
+
+    return folders
+      .map((folder) => ({ value: folder.id, label: getFolderPath(folder.id) || folder.name }))
+      .sort((left, right) => left.label.localeCompare(right.label))
+  }, [folders])
 
   const handleFolderSelect = (folderId: string | null) => {
     setSelectedFolderId(folderId)
@@ -134,6 +164,37 @@ export const AllProductsTab = ({
     setDeletingFolderId(null)
     setDeleteStep(null)
     setDeleteAction(null)
+  }
+
+  const handleOpenMoveDialog = () => {
+    if (selectedRowIds.size === 0) return
+    setMoveTargetFolderId('__uncategorised__')
+    setIsMoveDialogOpen(true)
+  }
+
+  const handleCloseMoveDialog = () => {
+    if (moveProductsMutation.isPending) return
+    setIsMoveDialogOpen(false)
+    setMoveTargetFolderId('__uncategorised__')
+  }
+
+  const handleMoveSelectedProducts = async () => {
+    if (selectedRowIds.size === 0) return
+
+    try {
+      const movedCount = await moveProductsMutation.mutateAsync({
+        productIds: Array.from(selectedRowIds),
+        folderId: moveTargetFolderId === '__uncategorised__' ? null : moveTargetFolderId,
+      })
+
+      toast.success(`Moved ${movedCount} product${movedCount === 1 ? '' : 's'}`)
+      onClearSelection()
+      onRefresh()
+      handleCloseMoveDialog()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to move selected products'
+      toast.error(message)
+    }
   }
 
   const handleMoveFolder = async (folderId: string, newParentId: string | null, sortOrder: number) => {
@@ -223,6 +284,7 @@ export const AllProductsTab = ({
             onImportOpen={onImportOpen}
             onCreateOpen={onCreateOpen}
             handleBulkDelete={handleBulkDelete}
+            onMoveSelected={handleOpenMoveDialog}
           />
 
           <ProductListView
@@ -246,6 +308,49 @@ export const AllProductsTab = ({
           />
         </div>
       </div>
+
+      {isMoveDialogOpen && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="move-selected-products-title" onClick={handleCloseMoveDialog}>
+          <div className="modal" style={{ maxWidth: 420 }} onClick={(event) => event.stopPropagation()}>
+            <h3 id="move-selected-products-title" className="section-title" style={{ marginBottom: 12 }}>
+              Move {selectedRowIds.size} selected product{selectedRowIds.size === 1 ? '' : 's'}
+            </h3>
+            <p className="small muted" style={{ marginBottom: 16 }}>
+              Choose where the selected products should be moved.
+            </p>
+            <label className="stack" style={{ gap: 6 }}>
+              <span className="small" style={{ fontWeight: 'var(--type-weight-medium)' }}>Destination folder</span>
+              <select
+                className="select"
+                value={moveTargetFolderId}
+                onChange={(event) => setMoveTargetFolderId(event.target.value)}
+              >
+                <option value="__uncategorised__">Uncategorised</option>
+                {moveTargetOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="row" style={{ gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
+              <button className="button ghost small" type="button" onClick={handleCloseMoveDialog}>
+                Cancel
+              </button>
+              <button
+                className="button small"
+                type="button"
+                onClick={() => void handleMoveSelectedProducts()}
+                disabled={moveProductsMutation.isPending}
+              >
+                {moveProductsMutation.isPending
+                  ? 'Moving...'
+                  : `Move ${selectedRowIds.size} Product${selectedRowIds.size === 1 ? '' : 's'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
