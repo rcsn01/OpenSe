@@ -28,6 +28,8 @@ export type InventoryFiltersBarProps = {
   selectedRowIds: Set<string>
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
+  view: 'list' | 'grid'
+  setView: (value: 'list' | 'grid') => void
   activeCustomFieldFilters: CustomFieldActiveFilter[]
   onAddFilter: (key: string, value: CustomFieldPrimitive) => void
   onRemoveFilter: (key: string) => void

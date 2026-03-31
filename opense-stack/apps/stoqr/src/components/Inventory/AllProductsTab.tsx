@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { LayoutGrid, List as ListIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useCreateInventoryFolder,
@@ -173,9 +172,9 @@ export const AllProductsTab = ({
       />
 
       <div className="explorer-main">
-        <div className="explorer-toolbar" style={{ border: 'none', borderBottom: '1px solid var(--border)', borderRadius: 0 }}>
-          <div className="row">
-            {isCreatingFolder ? (
+        {isCreatingFolder ? (
+          <div className="explorer-toolbar" style={{ border: 'none', borderBottom: '1px solid var(--border)', borderRadius: 0 }}>
+            <div className="row">
               <div className="row bg-slate-50 p-1 rounded border border-slate-200">
                 <input
                   className="input small"
@@ -203,28 +202,9 @@ export const AllProductsTab = ({
                   ✕
                 </button>
               </div>
-            ) : null}
+            </div>
           </div>
-
-          <div className="row">
-            <button
-              className={`button ghost small ${view === 'list' ? 'active' : ''}`}
-              onClick={() => setView('list')}
-              style={{ padding: 6 }}
-              title="List view"
-            >
-              <ListIcon size={16} />
-            </button>
-            <button
-              className={`button ghost small ${view === 'grid' ? 'active' : ''}`}
-              onClick={() => setView('grid')}
-              style={{ padding: 6 }}
-              title="Module view"
-            >
-              <LayoutGrid size={16} />
-            </button>
-          </div>
-        </div>
+        ) : null}
 
         <div className="card" style={{ padding: 0, overflow: 'hidden', border: 'none', borderRadius: 0, boxShadow: 'none', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <InventoryFiltersBar
@@ -232,6 +212,8 @@ export const AllProductsTab = ({
             selectedRowIds={selectedRowIds}
             stockFilter={stockFilter}
             setStockFilter={setStockFilter}
+            view={view}
+            setView={setView}
             activeCustomFieldFilters={activeCustomFieldFilters}
             onAddFilter={onAddFilter}
             onRemoveFilter={onRemoveFilter}

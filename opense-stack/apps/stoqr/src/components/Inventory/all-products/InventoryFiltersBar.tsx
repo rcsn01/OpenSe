@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Plus, X } from 'lucide-react'
+import { ChevronDown, LayoutGrid, List as ListIcon, Plus, X } from 'lucide-react'
 import { Dropdown, DropdownItem } from '@repo/ui'
 import type { InventoryFiltersBarProps } from './types'
 
@@ -19,6 +19,8 @@ export const InventoryFiltersBar = ({
   selectedRowIds,
   stockFilter,
   setStockFilter,
+  view,
+  setView,
   activeCustomFieldFilters,
   onAddFilter,
   onRemoveFilter,
@@ -52,12 +54,12 @@ export const InventoryFiltersBar = ({
     <div className={`inventory-toolbar${isSelectionMode ? ' selection-mode' : ''}`}>
       {isSelectionMode ? (
         <>
-          <div className="row">
-            <span className="pill" style={{ background: 'var(--primary)', color: 'white' }}>
+          <div className="row" style={{ gap: 6 }}>
+            <span style={{ fontSize: 'var(--type-size-xs)', fontWeight: 'var(--type-weight-semibold)', color: 'var(--primary)' }}>
               {selectedRowIds.size} selected
             </span>
           </div>
-          <div className="row">
+          <div className="row" style={{ gap: 4 }}>
             <button className="button ghost small" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete}>
               Delete
             </button>
@@ -68,17 +70,30 @@ export const InventoryFiltersBar = ({
         </>
       ) : (
         <>
-          <div className="row wrap" style={{ flex: 1 }}>
+          <div className="row wrap" style={{ flex: 1, gap: 6, alignItems: 'center' }}>
             <Dropdown
-              className="min-w-[140px]"
+              className="min-w-[120px]"
               trigger={
                 <button
                   type="button"
                   aria-label="Stock status filter"
-                  className="select text-left"
-                  style={{ width: 140, padding: '7px 10px', fontSize: 'var(--type-size-sm)', borderRadius: 8 }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '4px 6px',
+                    fontSize: 'var(--type-size-xs)',
+                    fontWeight: stockFilter !== 'all' ? 'var(--type-weight-semibold)' : 'var(--type-weight-medium)',
+                    color: stockFilter !== 'all' ? 'var(--primary)' : 'var(--muted)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    borderRadius: 4,
+                    transition: 'color 0.15s',
+                  }}
                 >
                   {stockFilterLabels[stockFilter]}
+                  <ChevronDown size={12} />
                 </button>
               }
             >
@@ -86,6 +101,10 @@ export const InventoryFiltersBar = ({
               <DropdownItem onClick={() => setStockFilter('low')}>Low Stock</DropdownItem>
               <DropdownItem onClick={() => setStockFilter('out')}>Out of Stock</DropdownItem>
             </Dropdown>
+
+            {activeCustomFieldFilters.length > 0 && (
+              <div style={{ width: 1, height: 16, background: 'var(--border)', flexShrink: 0 }} />
+            )}
 
             {activeCustomFieldFilters.map((filter) => (
               <div
@@ -95,16 +114,17 @@ export const InventoryFiltersBar = ({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 6,
-                  padding: '5px 8px 5px 10px',
-                  background: 'rgba(102, 193, 63, 0.08)',
-                  border: '1px solid rgba(102, 193, 63, 0.25)',
-                  borderRadius: 8,
-                  fontSize: 'var(--type-size-sm)',
+                  gap: 4,
+                  padding: '3px 6px',
+                  background: 'rgba(102, 193, 63, 0.06)',
+                  borderRadius: 4,
+                  fontSize: 'var(--type-size-xs)',
                   fontWeight: 'var(--type-weight-medium)',
+                  color: 'var(--text)',
                 }}
               >
-                <span>{filter.key}:{formatCustomFieldValue(filter.value)}</span>
+                <span style={{ opacity: 0.5 }}>{filter.key}:</span>
+                <span>{formatCustomFieldValue(filter.value)}</span>
                 <button
                   type="button"
                   aria-label={`Remove ${filter.key} filter`}
@@ -117,15 +137,15 @@ export const InventoryFiltersBar = ({
                     border: 'none',
                     cursor: 'pointer',
                     padding: 0,
-                    width: 16,
-                    height: 16,
+                    width: 14,
+                    height: 14,
                     lineHeight: 1,
                     color: 'var(--color-foreground)',
-                    opacity: 0.5,
-                    borderRadius: 4,
+                    opacity: 0.35,
+                    borderRadius: 2,
                   }}
                 >
-                  <X size={12} />
+                  <X size={10} />
                 </button>
               </div>
             ))}
@@ -133,16 +153,28 @@ export const InventoryFiltersBar = ({
             {pendingField && (
               <div className="row" style={{ gap: 4, alignItems: 'center' }}>
                 <Dropdown
-                  className="min-w-[140px]"
+                  className="min-w-[120px]"
                   defaultOpen
                   trigger={
                     <button
                       type="button"
                       aria-label="Custom field value"
-                      className="select text-left"
-                      style={{ width: 140, padding: '7px 10px', fontSize: 'var(--type-size-sm)', borderRadius: 8 }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '4px 6px',
+                        fontSize: 'var(--type-size-xs)',
+                        fontWeight: 'var(--type-weight-medium)',
+                        color: 'var(--primary)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        borderRadius: 4,
+                      }}
                     >
                       {pendingFilterKey}:
+                      <ChevronDown size={12} />
                     </button>
                   }
                 >
@@ -167,28 +199,28 @@ export const InventoryFiltersBar = ({
                     border: 'none',
                     cursor: 'pointer',
                     padding: 0,
-                    width: 16,
-                    height: 16,
+                    width: 14,
+                    height: 14,
                     lineHeight: 1,
                     color: 'var(--color-foreground)',
-                    opacity: 0.5,
+                    opacity: 0.35,
                   }}
                 >
-                  <X size={12} />
+                  <X size={10} />
                 </button>
               </div>
             )}
 
             {!pendingFilterKey && availableFieldsForAdd.length > 0 && (
               <Dropdown
-                className="min-w-[140px]"
+                className="min-w-[120px]"
                 trigger={
                   <button
                     className="add-filter-button"
                     type="button"
                     aria-label="Add custom field filter"
                   >
-                    <Plus size={14} strokeWidth={2.5} />
+                    <Plus size={12} strokeWidth={2.5} />
                     <span>Filter</span>
                   </button>
                 }
@@ -207,9 +239,78 @@ export const InventoryFiltersBar = ({
             )}
           </div>
 
-          <div className="row" style={{ gap: 8 }}>
-            <button className="button ghost small" onClick={onImportOpen} style={{ borderRadius: 8 }}>Import CSV</button>
-            <button className="button small" onClick={onCreateOpen} style={{ borderRadius: 8 }}>+ New Product</button>
+          <div className="row" style={{ gap: 6, alignItems: 'center', flexShrink: 0 }}>
+            <div className="row" style={{ gap: 2 }}>
+              <button
+                type="button"
+                aria-label="List view"
+                onClick={() => setView('list')}
+                title="List view"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  padding: 0,
+                  background: view === 'list' ? 'var(--color-muted)' : 'none',
+                  border: 'none',
+                  borderRadius: 4,
+                  color: view === 'list' ? 'var(--text)' : 'var(--muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <ListIcon size={15} />
+              </button>
+              <button
+                type="button"
+                aria-label="Module view"
+                onClick={() => setView('grid')}
+                title="Module view"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  padding: 0,
+                  background: view === 'grid' ? 'var(--color-muted)' : 'none',
+                  border: 'none',
+                  borderRadius: 4,
+                  color: view === 'grid' ? 'var(--text)' : 'var(--muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <LayoutGrid size={15} />
+              </button>
+            </div>
+
+            <div style={{ width: 1, height: 16, background: 'var(--border)', flexShrink: 0 }} />
+
+            <button
+              type="button"
+              onClick={onImportOpen}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 8px',
+                fontSize: 'var(--type-size-xs)',
+                fontWeight: 'var(--type-weight-medium)',
+                color: 'var(--muted)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'color 0.15s',
+              }}
+            >
+              Import CSV
+            </button>
+            <button className="button small" onClick={onCreateOpen} style={{ padding: '5px 10px', fontSize: 'var(--type-size-xs)', borderRadius: 6 }}>
+              + New Product
+            </button>
           </div>
         </>
       )}

@@ -7,16 +7,40 @@
   /* Typography */
   --font-family: 'SF Pro Text', 'SF Pro Icons', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
-  /* Brand palette */
-  --color-primary: #66c13f;
-  --color-primary-hover: #8ed674;
-  --color-primary-light: #dbeafe;
-  --color-primary-foreground: #ffffff;
+  /* Primary scale (sage green) – base #ccd5ae at step 500 */
+  --color-primary-100: #ffffff;
+  --color-primary-200: #f2f5eb;
+  --color-primary-300: #e6ead7;
+  --color-primary-400: #d9e0c2;
+  --color-primary-500: #ccd5ae;
+  --color-primary-600: #adbb7c;
+  --color-primary-700: #899b50;
+  --color-primary-800: #5a6534;
+  --color-primary-900: #2d321a;
+  --color-primary-1000: #000000;
 
-  --color-secondary: #64748b;
-  --color-secondary-hover: #475569;
-  --color-secondary-light: #f1f5f9;
-  --color-secondary-foreground: #ffffff;
+  /* Secondary scale (warm terracotta) – base #d4a373 at step 500 */
+  --color-secondary-100: #ffffff;
+  --color-secondary-200: #f4e8dc;
+  --color-secondary-300: #e9d1b9;
+  --color-secondary-400: #dfba96;
+  --color-secondary-500: #d4a373;
+  --color-secondary-600: #c48240;
+  --color-secondary-700: #94612e;
+  --color-secondary-800: #65421f;
+  --color-secondary-900: #332110;
+  --color-secondary-1000: #000000;
+
+  /* Semantic brand aliases */
+  --color-primary: var(--color-primary-500);
+  --color-primary-hover: var(--color-primary-600);
+  --color-primary-light: var(--color-primary-200);
+  --color-primary-foreground: var(--color-primary-900);
+
+  --color-secondary: var(--color-secondary-500);
+  --color-secondary-hover: var(--color-secondary-600);
+  --color-secondary-light: var(--color-secondary-200);
+  --color-secondary-foreground: var(--color-secondary-900);
 
   --color-destructive: #dc2626;
   --color-destructive-hover: #b91c1c;
@@ -106,15 +130,15 @@
 
 /* Dark mode */
 .dark {
-  --color-primary: #3b82f6;
-  --color-primary-hover: #60a5fa;
-  --color-primary-light: #1e3a5f;
-  --color-primary-foreground: #ffffff;
+  --color-primary: var(--color-primary-400);
+  --color-primary-hover: var(--color-primary-300);
+  --color-primary-light: var(--color-primary-900);
+  --color-primary-foreground: var(--color-primary-900);
 
-  --color-secondary: #94a3b8;
-  --color-secondary-hover: #cbd5e1;
-  --color-secondary-light: #1e293b;
-  --color-secondary-foreground: #0f172a;
+  --color-secondary: var(--color-secondary-400);
+  --color-secondary-hover: var(--color-secondary-300);
+  --color-secondary-light: var(--color-secondary-900);
+  --color-secondary-foreground: var(--color-secondary-900);
 
   --color-destructive: #ef4444;
   --color-destructive-hover: #f87171;
@@ -171,6 +195,9 @@ button, input, select, textarea { font: inherit; }
 .base-page-content {
   padding: var(--gap-4);
   background: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 /* Stack layout - flex column with gap (used by BasePage default container) */
@@ -178,6 +205,8 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   flex-direction: column;
   gap: var(--gap-4);
+  flex: 1;
+  min-height: 0;
 }
 
 /* EmptyState & utility */

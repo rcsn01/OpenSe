@@ -77,7 +77,6 @@ const SortableTreeItem = ({
   onRenameCancel: () => void
 }) => {
   const isExpanded = expandedIds.has(node.id)
-  const hasChildren = node.children.length > 0
   const isActive = activeId === node.id
   const isRenaming = renamingId === node.id
   const inputRef = useRef<HTMLInputElement>(null)
@@ -117,10 +116,10 @@ const SortableTreeItem = ({
           className="tree-toggle"
           onClick={(event) => {
             event.stopPropagation()
-            if (hasChildren) toggleExpand(node.id)
+            toggleExpand(node.id)
           }}
         >
-          {hasChildren && (isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
+          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </div>
 
         {isActive || isExpanded ? (
@@ -320,7 +319,6 @@ export const FolderNavigationPanel = ({
           className={`tree-item ${folderView === 'all' ? 'active' : ''}`}
           onClick={() => onSelectView('all')}
         >
-          <div className="tree-toggle" />
           <Layers size={16} style={{ marginRight: 8, color: folderView === 'all' ? '#2563eb' : '#64748b' }} />
           All Products
         </div>
@@ -328,7 +326,6 @@ export const FolderNavigationPanel = ({
           className={`tree-item ${folderView === 'uncategorised' ? 'active' : ''}`}
           onClick={() => onSelectView('uncategorised')}
         >
-          <div className="tree-toggle" />
           <FolderX size={16} style={{ marginRight: 8, color: folderView === 'uncategorised' ? '#2563eb' : '#64748b' }} />
           Uncategorised
         </div>

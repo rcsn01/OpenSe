@@ -8,6 +8,8 @@ const createProps = () => ({
   selectedRowIds: new Set<string>(),
   stockFilter: 'all' as const,
   setStockFilter: vi.fn(),
+  view: 'list' as const,
+  setView: vi.fn(),
   activeCustomFieldFilters: [] as { key: string; value: string | number | boolean }[],
   onAddFilter: vi.fn(),
   onRemoveFilter: vi.fn(),
@@ -75,8 +77,9 @@ describe('InventoryFiltersBar', () => {
       />,
     )
 
-    expect(screen.getByText('batch:acme')).toBeInTheDocument()
-    expect(screen.getByLabelText('Active filter: batch')).toBeInTheDocument()
+    const chip = screen.getByLabelText('Active filter: batch')
+    expect(chip).toBeInTheDocument()
+    expect(within(chip).getByText('acme')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /remove batch filter/i })).toBeInTheDocument()
   })
 
@@ -104,6 +107,20 @@ describe('InventoryFiltersBar', () => {
     expect(props.setStockFilter).toHaveBeenCalledWith('low')
   })
 
+  it('renders view toggle buttons beside the action buttons and switches views', () => {
+    const props = createProps()
+    render(<InventoryFiltersBar {...props} />)
+
+    const listBtn = screen.getByRole('button', { name: 'List view' })
+    const gridBtn = screen.getByRole('button', { name: 'Module view' })
+    expect(listBtn).toBeInTheDocument()
+    expect(gridBtn).toBeInTheDocument()
+
+    fireEvent.click(gridBtn)
+
+    expect(props.setView).toHaveBeenCalledWith('grid')
+  })
+
   it('cancel button during value selection clears pending key', () => {
     const props = createProps()
     render(
@@ -124,7 +141,7 @@ describe('InventoryFiltersBar', () => {
       />,
     )
 
-    expect(screen.getByText('batch:acme')).toBeInTheDocument()
+    expect(screen.getByLabelText('Active filter: batch')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add custom field filter/i })).toBeInTheDocument()
   })
 
@@ -155,11 +172,10 @@ describe('InventoryFiltersBar', () => {
       />,
     )
 
-    expect(screen.getByText('batch:acme')).toBeInTheDocument()
-    expect(screen.getByText('active:True')).toBeInTheDocument()
-
     const batchChip = screen.getByLabelText('Active filter: batch')
     const activeChip = screen.getByLabelText('Active filter: active')
+    expect(within(batchChip).getByText('acme')).toBeInTheDocument()
+    expect(within(activeChip).getByText('True')).toBeInTheDocument()
     expect(within(batchChip).getByRole('button', { name: /remove batch filter/i })).toBeInTheDocument()
     expect(within(activeChip).getByRole('button', { name: /remove active filter/i })).toBeInTheDocument()
   })

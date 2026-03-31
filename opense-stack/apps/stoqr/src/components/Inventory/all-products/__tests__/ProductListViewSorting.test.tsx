@@ -84,19 +84,20 @@ describe('ProductListView table sorting', () => {
     expect(props.setSortDir).toHaveBeenCalledWith('asc')
   })
 
-  it('renders selection action bar only when items are selected', () => {
+  it('marks the table header when items are selected', () => {
     const props = createProps({ selectedRowIds: new Set(['p-1']) })
     renderWithRouter(props)
 
-    expect(screen.getByText('1 items selected')).toBeInTheDocument()
-    expect(screen.getByText('Bulk Delete')).toBeInTheDocument()
+    const tableHeader = screen.getByText(/Name \/ SKU/).closest('thead')
+    expect(tableHeader).toHaveClass('table-header-selected')
   })
 
-  it('does not render selection action bar when no items are selected', () => {
+  it('does not mark the table header when no items are selected', () => {
     const props = createProps()
     renderWithRouter(props)
 
-    expect(screen.queryByText(/items selected/)).not.toBeInTheDocument()
+    const tableHeader = screen.getByText(/Name \/ SKU/).closest('thead')
+    expect(tableHeader).not.toHaveClass('table-header-selected')
   })
 
   it('renders the table with data rows', () => {
