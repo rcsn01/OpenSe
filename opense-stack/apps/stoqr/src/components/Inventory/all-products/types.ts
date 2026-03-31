@@ -1,6 +1,8 @@
 import type { CustomFieldActiveFilter, CustomFieldFilterOption, CustomFieldPrimitive, Folder } from '../../../types'
 import type { InventoryProduct, SortDirection, SortField } from '../types'
 
+export type FolderView = 'all' | 'uncategorised' | 'folder'
+
 export type ProductListViewProps = {
   companyId: string | null
   view: 'list' | 'grid'
@@ -40,6 +42,8 @@ export type InventoryFiltersBarProps = {
 
 export type AllProductsTabProps = {
   companyId: string | null
+  folderView: FolderView
+  setFolderView: (value: FolderView) => void
   selectedFolderId: string | null
   setSelectedFolderId: (value: string | null) => void
   stockFilter: 'all' | 'low' | 'out'

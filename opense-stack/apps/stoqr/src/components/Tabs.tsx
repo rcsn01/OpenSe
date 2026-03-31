@@ -25,9 +25,11 @@ export const Tabs = ({ tabs, activeTab, onTabChange }: TabsProps) => {
   }
 
   return (
-    <div className="stack">
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <TabsHeader tabs={tabs} activeTabId={resolvedActiveTab} onTabChange={handleTabChange} />
-      {tabs.find((t) => t.id === resolvedActiveTab)?.content}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        {tabs.find((t) => t.id === resolvedActiveTab)?.content}
+      </div>
     </div>
   )
 }

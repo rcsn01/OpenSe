@@ -3,12 +3,15 @@ import {
   bulkUpdateInventoryProducts,
   createFolderInInventory,
   createInventoryLocation,
+  deleteFolderInInventory,
   fetchInventoryReferenceData,
   deleteInventoryProducts,
   fetchInventoryFilters,
   fetchInventoryProducts,
   fetchInventoryStats,
   importInventoryProducts,
+  moveFolderInInventory,
+  renameFolderInInventory,
   upsertProductBarcode,
   updateInventoryProductField,
   type FetchInventoryProductsParams,
@@ -151,6 +154,48 @@ export const useBulkUpdateInventoryProducts = (companyId: string | null) => {
     mutationFn: async (payload: { productIds: string[]; quantityDelta?: number; priceMultiplier?: number }) => {
       if (!companyId) throw new Error('No company selected')
       return bulkUpdateInventoryProducts(companyId, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
+    },
+  })
+}
+
+export const useRenameFolderInInventory = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { folderId: string; newName: string }) => {
+      if (!companyId) throw new Error('No company selected')
+      await renameFolderInInventory(companyId, payload.folderId, payload.newName)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
+    },
+  })
+}
+
+export const useDeleteFolderInInventory = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { folderId: string; action: 'move-uncategorised' | 'delete-products' }) => {
+      if (!companyId) throw new Error('No company selected')
+      await deleteFolderInInventory(companyId, payload.folderId, payload.action)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
+    },
+  })
+}
+
+export const useMoveFolderInInventory = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { folderId: string; newParentId: string | null; sortOrder: number }) => {
+      if (!companyId) throw new Error('No company selected')
+      await moveFolderInInventory(companyId, payload.folderId, payload.newParentId, payload.sortOrder)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.root })

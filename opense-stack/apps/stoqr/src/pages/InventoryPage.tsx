@@ -10,6 +10,7 @@ import { BulkActionsTab } from '../components/Inventory/BulkActionsTab'
 import { LocationsTab } from '../components/Inventory/CategoriesLocationsTab'
 import { BarcodeSkuTab } from '../components/Inventory/BarcodeSkuTab'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
+import type { FolderView } from '../components/Inventory/all-products/types'
 import {
   useDeleteInventoryProducts,
   useImportInventoryProducts,
@@ -34,6 +35,7 @@ export const InventoryListPage = () => {
   const [activeCustomFieldFilters, setActiveCustomFieldFilters] = useState<CustomFieldActiveFilter[]>([])
   const [pendingFilterKey, setPendingFilterKey] = useState<string | null>(null)
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
+  const [folderView, setFolderView] = useState<FolderView>('all')
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
 
   const [page, setPage] = useState(1)
@@ -43,10 +45,16 @@ export const InventoryListPage = () => {
 
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set())
 
+  const computedFolderId = folderView === 'uncategorised'
+    ? '__uncategorised__'
+    : folderView === 'folder'
+      ? selectedFolderId
+      : undefined
+
   const productsQuery = useInventoryProducts({
     companyId,
     search: '',
-    folderId: selectedFolderId,
+    folderId: computedFolderId,
     stockFilter,
     customFieldFilters: activeCustomFieldFilters.length > 0 ? activeCustomFieldFilters : undefined,
     page,
@@ -164,6 +172,8 @@ export const InventoryListPage = () => {
       isLoading={isLoading}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage inventory."
+      containerClassName="stack"
+      containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: 'calc(100vh - 120px)' }}
     >
       <Tabs
         activeTab={activeTab}
@@ -175,6 +185,8 @@ export const InventoryListPage = () => {
             content: (
               <AllProductsTab
                 companyId={companyId}
+                folderView={folderView}
+                setFolderView={setFolderView}
                 selectedFolderId={selectedFolderId}
                 setSelectedFolderId={setSelectedFolderId}
                 stockFilter={stockFilter}
