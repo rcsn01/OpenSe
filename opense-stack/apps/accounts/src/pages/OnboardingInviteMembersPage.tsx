@@ -108,7 +108,7 @@ export const OnboardingInviteMembersPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen grid place-items-center text-sm text-slate-500">
+      <div className="min-h-screen grid place-items-center text-sm text-[var(--color-muted-foreground)]">
         <div className="flex items-center gap-2">
           <Spinner size="sm" />
           Loading onboarding...
@@ -120,8 +120,8 @@ export const OnboardingInviteMembersPage = () => {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Invite members</h1>
-        <p className="text-sm text-slate-600">Invite teammates to your organisation before entering account settings.</p>
+        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">Invite members</h1>
+        <p className="text-sm text-[var(--color-muted-foreground)]">Invite teammates to your organisation before entering account settings.</p>
       </div>
 
       {error ? <Alert variant="destructive" title="Unable to continue">{error}</Alert> : null}
@@ -136,7 +136,7 @@ export const OnboardingInviteMembersPage = () => {
           {canInvite ? (
             <>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="onboarding-invite-emails">
+                <label className="text-sm font-medium text-[var(--color-body)]" htmlFor="onboarding-invite-emails">
                   Invite emails
                 </label>
                 <Textarea
@@ -146,7 +146,7 @@ export const OnboardingInviteMembersPage = () => {
                   placeholder="name@company.com, another@company.com"
                   disabled={sending || finishing}
                 />
-                <p className="text-xs text-slate-500">Separate multiple emails with commas or new lines.</p>
+                <p className="text-xs text-[var(--color-muted-foreground)]">Separate multiple emails with commas or new lines.</p>
               </div>
 
               <Button
@@ -159,7 +159,7 @@ export const OnboardingInviteMembersPage = () => {
               </Button>
             </>
           ) : (
-            <p className="text-sm text-slate-600">Your role does not allow inviting members. You can finish onboarding now.</p>
+            <p className="text-sm text-[var(--color-muted-foreground)]">Your role does not allow inviting members. You can finish onboarding now.</p>
           )}
 
           <Button

@@ -31,7 +31,7 @@ export const useWorkflowEditor = ({ setRunMessage }: UseWorkflowEditorParams) =>
     animated: true,
     style: {
       strokeWidth: 3,
-      stroke: '#64748b',
+      stroke: 'var(--color-muted-foreground)',
     },
   }), [])
 

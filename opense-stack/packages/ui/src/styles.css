@@ -77,13 +77,18 @@
   /* Surfaces */
   --color-background: var(--shade-white-1);
   --color-foreground: #0f172a;
+  --color-heading: var(--shade-black-3);
+  --color-body: var(--shade-black-7);
   --color-muted: var(--shade-white-2);
   --color-muted-foreground: #64748b;
   --color-border: #e2e8f0;
   --color-border-hover: #cbd5e1;
   --color-ring: #2563eb;
-  --color-card: #ffffff;
-  --color-card-foreground: #0f172a;
+  --color-card: var(--shade-white-1);
+  --color-card-foreground: var(--color-foreground);
+  --color-shell: var(--shade-white-1);
+  --color-shell-border: var(--shade-white-9);
+  --color-overlay: color-mix(in srgb, var(--shade-black-1) 35%, transparent);
 
   /* Sidebar */
   --sidebar-bg: #0f172a;
@@ -132,35 +137,40 @@
 .dark {
   --color-primary: var(--color-primary-400);
   --color-primary-hover: var(--color-primary-300);
-  --color-primary-light: var(--color-primary-900);
+  --color-primary-light: color-mix(in srgb, var(--color-primary) 22%, var(--color-background));
   --color-primary-foreground: var(--color-primary-900);
 
   --color-secondary: var(--color-secondary-400);
   --color-secondary-hover: var(--color-secondary-300);
-  --color-secondary-light: var(--color-secondary-900);
+  --color-secondary-light: color-mix(in srgb, var(--color-secondary) 22%, var(--color-background));
   --color-secondary-foreground: var(--color-secondary-900);
 
   --color-destructive: #ef4444;
   --color-destructive-hover: #f87171;
-  --color-destructive-light: #450a0a;
+  --color-destructive-light: color-mix(in srgb, var(--color-destructive) 20%, var(--color-background));
   --color-destructive-foreground: #ffffff;
 
   --color-success: #22c55e;
-  --color-success-light: #052e16;
+  --color-success-light: color-mix(in srgb, var(--color-success) 20%, var(--color-background));
   --color-warning: #f59e0b;
-  --color-warning-light: #451a03;
+  --color-warning-light: color-mix(in srgb, var(--color-warning) 22%, var(--color-background));
   --color-info: #38bdf8;
-  --color-info-light: #082f49;
+  --color-info-light: color-mix(in srgb, var(--color-info) 22%, var(--color-background));
 
   --color-background: var(--shade-black-1);
   --color-foreground: #f8fafc;
-  --color-muted: var(--shade-black-2);
+  --color-heading: var(--shade-white-3);
+  --color-body: var(--shade-white-7);
+  --color-muted: var(--shade-black-3);
   --color-muted-foreground: #94a3b8;
   --color-border: #334155;
   --color-border-hover: #475569;
   --color-ring: #3b82f6;
-  --color-card: #1e293b;
-  --color-card-foreground: #f8fafc;
+  --color-card: var(--shade-black-2);
+  --color-card-foreground: var(--color-foreground);
+  --color-shell: var(--shade-black-2);
+  --color-shell-border: color-mix(in srgb, var(--shade-white-1) 16%, transparent);
+  --color-overlay: color-mix(in srgb, var(--shade-black-1) 52%, transparent);
 
   /* Sidebar dark */
   --sidebar-bg: #020617;
@@ -235,7 +245,7 @@ button, input, select, textarea { font: inherit; }
 .app-top-bar,
 .side-nav,
 .app-sidebar {
-  background: var(--shade-white-1);
+  background: var(--color-shell);
 }
 
 /* SideNav label: inherit typography from parent (link/button), do not override */
@@ -254,13 +264,7 @@ button, input, select, textarea { font: inherit; }
   bottom: 8px;
   right: 0;
   width: 1px;
-  background: var(--shade-white-9);
-}
-.dark .side-nav-brand-slot,
-.dark .app-top-bar,
-.dark .side-nav,
-.dark .app-sidebar {
-  background: var(--shade-black-2);
+  background: var(--color-shell-border);
 }
 
 @media (max-width: 767px) {
@@ -278,7 +282,7 @@ button, input, select, textarea { font: inherit; }
   }
 
   .app-layout.app-layout-mobile-enabled .app-sidebar-backdrop {
-    background: color-mix(in srgb, var(--shade-black-1) 35%, transparent);
+    background: var(--color-overlay);
   }
 }
 

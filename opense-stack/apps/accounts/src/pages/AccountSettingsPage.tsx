@@ -70,8 +70,8 @@ export const AccountSettingsPage = () => {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Account Settings</h1>
-        <p className="text-sm text-slate-600">Manage your personal account details and sign-in security.</p>
+        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">Account Settings</h1>
+        <p className="text-sm text-[var(--color-muted-foreground)]">Manage your personal account details and sign-in security.</p>
       </div>
 
       {error ? <Alert variant="destructive" title="Unable to save settings">{error}</Alert> : null}
@@ -83,7 +83,7 @@ export const AccountSettingsPage = () => {
           <CardDescription>Update the full name shown across OpenSe apps.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <label className="block text-sm font-medium text-slate-700" htmlFor="account-full-name">
+          <label className="block text-sm font-medium text-[var(--color-body)]" htmlFor="account-full-name">
             Full name
           </label>
           <Input
@@ -104,7 +104,7 @@ export const AccountSettingsPage = () => {
           <CardDescription>Set a new password for your account.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <label className="block text-sm font-medium text-slate-700" htmlFor="account-password">
+          <label className="block text-sm font-medium text-[var(--color-body)]" htmlFor="account-password">
             New password
           </label>
           <Input
@@ -114,7 +114,7 @@ export const AccountSettingsPage = () => {
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Enter new password"
           />
-          <label className="block text-sm font-medium text-slate-700" htmlFor="account-password-confirm">
+          <label className="block text-sm font-medium text-[var(--color-body)]" htmlFor="account-password-confirm">
             Confirm new password
           </label>
           <Input

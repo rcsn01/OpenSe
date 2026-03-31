@@ -119,8 +119,8 @@ export const BillingPage = () => {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Billing & Limits</h1>
-        <p className="text-sm text-slate-600">Manage your organisation subscription seats for ETL and StoQR.</p>
+        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">Billing & Limits</h1>
+        <p className="text-sm text-[var(--color-muted-foreground)]">Manage your organisation subscription seats for ETL and StoQR.</p>
       </div>
 
       {error ? <Alert variant="destructive" title="Billing action failed">{error}</Alert> : null}
@@ -133,13 +133,13 @@ export const BillingPage = () => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
               <Spinner size="sm" />
               Loading billing summary...
             </div>
           ) : (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-slate-600">Subscription status:</span>
+              <span className="text-[var(--color-body)]">Subscription status:</span>
               <Badge variant={hasSubscription ? 'success' : 'neutral'}>{hasSubscription ? 'Active' : 'No seats'}</Badge>
             </div>
           )}
@@ -156,7 +156,7 @@ export const BillingPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <label className="block text-sm font-medium text-slate-700" htmlFor={`seat-limit-${app.appCode}`}>
+              <label className="block text-sm font-medium text-[var(--color-body)]" htmlFor={`seat-limit-${app.appCode}`}>
                 Seat limit
               </label>
               <Input
@@ -197,21 +197,21 @@ export const BillingPage = () => {
         </CardHeader>
         <CardContent>
           {activityLoading ? (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
               <Spinner size="sm" />
               Loading activity...
             </div>
           ) : auditEvents.length === 0 ? (
-            <p className="text-sm text-slate-500">No recent activity.</p>
+            <p className="text-sm text-[var(--color-muted-foreground)]">No recent activity.</p>
           ) : (
             <div className="space-y-3">
               {auditEvents.map((event) => (
-                <div key={event.id} className="rounded-md border border-slate-200 p-3">
-                  <p className="text-sm font-medium text-slate-900">
+                <div key={event.id} className="rounded-md border border-[var(--color-border)] p-3">
+                  <p className="text-sm font-medium text-[var(--color-heading)]">
                     {actionLabelMap[event.action] ?? event.action}
                     {event.appCode ? ` (${event.appCode.toUpperCase()})` : ''}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--color-muted-foreground)]">
                     By {event.actorFullName ?? event.actorEmail ?? 'Unknown user'} • {new Date(event.createdAt).toLocaleString()}
                   </p>
                 </div>

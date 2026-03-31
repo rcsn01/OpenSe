@@ -11,12 +11,12 @@ gsap.registerPlugin(ScrollTrigger);
 
 /* ─── Design Tokens ─── */
 const T = {
-  bg: '#EEF2F7',
-  accent: '#1D4ED8',
-  accentHover: '#1e40af',
-  dark: '#1E293B',
-  surface: '#F8FAFC',
-  surfaceBorder: '#E2E8F0',
+  bg: 'var(--color-muted)',
+  accent: 'var(--etl-accent)',
+  accentHover: 'var(--etl-accent-hover)',
+  dark: 'var(--color-heading)',
+  surface: 'var(--color-card)',
+  surfaceBorder: 'var(--color-border)',
   heading: 'var(--font-family)',
   drama: 'var(--font-family)',
   data: 'var(--font-family)',
@@ -47,7 +47,7 @@ const MagneticButton = ({
     ? `${base} text-white ${className}`
     : `${base} border border-current ${className}`;
   const bgColor = variant === 'primary' ? T.accent : 'transparent';
-  const bgHover = variant === 'primary' ? T.accentHover : 'rgba(29,78,216,0.08)';
+  const bgHover = variant === 'primary' ? T.accentHover : 'color-mix(in srgb, var(--etl-accent) 8%, transparent)';
 
   const Tag = href ? 'a' : 'button';
   const linkProps = href
@@ -59,7 +59,7 @@ const MagneticButton = ({
       {...linkProps}
       onClick={onClick}
       className={styles}
-      style={{ fontFamily: T.heading, backgroundColor: bgColor, color: variant === 'ghost' ? T.dark : '#fff' }}
+      style={{ fontFamily: T.heading, backgroundColor: bgColor, color: variant === 'ghost' ? T.dark : 'var(--shade-white-1)' }}
       onMouseEnter={e => {
         gsap.to(e.currentTarget, { scale: 1.03, duration: 0.3, ease: 'cubic-bezier(0.25,0.46,0.45,0.94)' });
         gsap.to(e.currentTarget, { backgroundColor: bgHover, duration: 0.3 });

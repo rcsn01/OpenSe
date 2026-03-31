@@ -19,9 +19,9 @@ export interface SideNavItemProps {
 const sideNavItemBase =
   'flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-sm text-left transition-colors w-full'
 const sideNavItemActive =
-  'bg-[var(--color-primary-light)] text-[var(--color-primary)] font-medium'
+  'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] font-medium'
 const sideNavItemInactive =
-  'text-[var(--color-foreground)] hover:bg-[var(--color-background)]'
+  'text-[var(--color-foreground)] hover:bg-[var(--color-muted)]'
 
 const sideNavItemLabelClass =
   'flex items-center gap-2 w-full m-0 p-0 font-inherit text-inherit'
@@ -193,7 +193,7 @@ export function SideNavUserProfile({
             type="button"
             onClick={onLogout}
             disabled={signingOut}
-            className="shrink-0 p-2 rounded-md text-[var(--color-muted-foreground)] hover:bg-[rgba(239,68,68,0.1)] hover:text-[var(--color-destructive)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="shrink-0 p-2 rounded-md text-[var(--color-muted-foreground)] hover:bg-[var(--color-destructive-light)] hover:text-[var(--color-destructive)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Log out"
           >
             <LogOut className="w-[18px] h-[18px]" />

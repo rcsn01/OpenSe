@@ -107,8 +107,8 @@ export const OnboardingInvitationChoicePage = () => {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Join an organisation</h1>
-        <p className="text-sm text-slate-600">You have pending invitations. Accept one, or decline and create your own organisation.</p>
+        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">Join an organisation</h1>
+        <p className="text-sm text-[var(--color-muted-foreground)]">You have pending invitations. Accept one, or decline and create your own organisation.</p>
       </div>
 
       {error ? <Alert variant="destructive" title="Unable to continue">{error}</Alert> : null}
@@ -120,13 +120,13 @@ export const OnboardingInvitationChoicePage = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
               <Spinner size="sm" />
               Loading invitations...
             </div>
           ) : invites.length === 0 ? (
             <div className="space-y-3">
-              <p className="text-sm text-slate-600">No pending invitations were found.</p>
+              <p className="text-sm text-[var(--color-muted-foreground)]">No pending invitations were found.</p>
               <Button
                 onClick={() => {
                   navigate(buildPathWithQuery('/onboarding/create-organisation'), { replace: true })
@@ -138,9 +138,9 @@ export const OnboardingInvitationChoicePage = () => {
           ) : (
             <div className="space-y-3">
               {invites.map((invite) => (
-                <div key={invite.id} className="rounded-md border border-slate-200 p-4">
-                  <p className="text-sm font-medium text-slate-900">{invite.orgName}</p>
-                  <p className="text-xs text-slate-500">Invited by {invite.inviterName} • Role: {invite.role}</p>
+                <div key={invite.id} className="rounded-md border border-[var(--color-border)] p-4">
+                  <p className="text-sm font-medium text-[var(--color-heading)]">{invite.orgName}</p>
+                  <p className="text-xs text-[var(--color-muted-foreground)]">Invited by {invite.inviterName} • Role: {invite.role}</p>
                   <div className="mt-3 flex gap-2">
                     <Button
                       disabled={actionLoading !== null}

@@ -7,8 +7,8 @@ export const GeneralSettingsPage = () => {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">General</h1>
-        <p className="text-sm text-slate-600">Manage general preferences for your account workspace.</p>
+        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">General</h1>
+        <p className="text-sm text-[var(--color-muted-foreground)]">Manage general preferences for your account workspace.</p>
       </div>
 
       <Card>

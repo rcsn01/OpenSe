@@ -73,8 +73,8 @@ export const SeatManagementPage = () => {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Seat Assignments</h1>
-        <p className="text-sm text-slate-600">Assign ETL and StoQR subscription seats to members in your organisation.</p>
+        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">Seat Assignments</h1>
+        <p className="text-sm text-[var(--color-muted-foreground)]">Assign ETL and StoQR subscription seats to members in your organisation.</p>
       </div>
 
       {error ? <Alert variant="destructive" title="Seat assignment failed">{error}</Alert> : null}
@@ -87,7 +87,7 @@ export const SeatManagementPage = () => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
               <Spinner size="sm" />
               Loading members...
             </div>
@@ -107,8 +107,8 @@ export const SeatManagementPage = () => {
                     <TableRow key={member.orgMemberId}>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium text-slate-900">{member.fullName ?? 'Unnamed user'}</span>
-                          <span className="text-xs text-slate-500">{member.email ?? member.userId}</span>
+                          <span className="font-medium text-[var(--color-heading)]">{member.fullName ?? 'Unnamed user'}</span>
+                          <span className="text-xs text-[var(--color-muted-foreground)]">{member.email ?? member.userId}</span>
                         </div>
                       </TableCell>
                       <TableCell>

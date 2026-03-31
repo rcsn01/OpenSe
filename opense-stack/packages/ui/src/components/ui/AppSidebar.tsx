@@ -146,7 +146,7 @@ export function AppSidebar({
                   className: cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
                     isActive
-                      ? 'bg-[var(--color-primary)] text-white font-semibold shadow-[0_4px_12px_rgba(59,130,246,0.25)]'
+                      ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] font-semibold shadow-[0_4px_12px_rgba(59,130,246,0.25)]'
                       : 'text-[var(--sidebar-nav-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]',
                     isCollapsed && 'justify-center px-2',
                   ),
@@ -186,7 +186,7 @@ export function AppSidebar({
                   <button
                     onClick={onSignOut}
                     disabled={signingOut}
-                    className="shrink-0 p-2 rounded-md text-[var(--sidebar-muted)] hover:bg-[rgba(239,68,68,0.1)] hover:text-[var(--color-destructive)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="shrink-0 p-2 rounded-md text-[var(--sidebar-muted)] hover:bg-[var(--color-destructive-light)] hover:text-[var(--color-destructive)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Sign out"
                   >
                     <LogOut className="w-[18px] h-[18px]" />
@@ -215,7 +215,7 @@ export function AppSidebar({
       {/* Mobile backdrop */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-[rgba(15,23,42,0.6)] backdrop-blur-[2px] z-40 lg:hidden"
+          className="fixed inset-0 bg-[var(--color-overlay)] backdrop-blur-[2px] z-40 lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
