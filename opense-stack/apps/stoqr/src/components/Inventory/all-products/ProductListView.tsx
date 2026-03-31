@@ -26,7 +26,6 @@ export const ProductListView = ({
   totalCount,
   setPage,
   folders,
-  handleBulkDelete,
   onRefresh,
 }: ProductListViewProps) => {
   const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name ?? '—'
@@ -50,25 +49,6 @@ export const ProductListView = ({
 
   return (
     <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      {selectedRowIds.size > 0 && (
-        <div
-          className="flex-between action-bar"
-          style={{ padding: '12px 20px', background: 'rgba(59, 130, 246, 0.08)', borderBottom: '1px solid var(--border)' }}
-        >
-          <div className="row">
-            <span className="pill" style={{ background: 'var(--primary)', color: 'white' }}>{selectedRowIds.size} items selected</span>
-          </div>
-          <div className="row">
-            <button className="button ghost small" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete}>
-              Bulk Delete
-            </button>
-            <button className="button ghost small" type="button">Move to Folder</button>
-            <button className="button ghost small" type="button">Print Labels</button>
-            <button className="button ghost small" type="button">Export Selected</button>
-          </div>
-        </div>
-      )}
-
       {isLoading ? (
         <div className="empty-state" style={{ padding: 48 }}>Loading inventory data...</div>
       ) : products.length === 0 ? (
@@ -134,8 +114,8 @@ export const ProductListView = ({
                       </div>
                       <div className="flex-between small">
                         <span className="muted">Available</span>
-                        <span style={{ color: product.quantity_on_hand > 0 ? 'var(--success)' : 'var(--danger)' }}>
-                          {product.quantity_on_hand}
+                        <span style={{ fontWeight: 600, color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}>
+                          {product.quantity_on_hand} / {product.reorder_point}
                         </span>
                       </div>
                     </div>
@@ -165,7 +145,6 @@ export const ProductListView = ({
                 <col style={{ width: 110 }} />
                 <col style={{ width: 100 }} />
                 <col style={{ width: 100 }} />
-                <col style={{ width: 100 }} />
                 <col style={{ width: 120 }} />
               </colgroup>
               <thead className={selectedRowIds.size > 0 ? 'table-header-selected' : undefined}>
@@ -181,16 +160,21 @@ export const ProductListView = ({
                   <th className="sortable-th" onClick={() => handleColumnSort('name')}>
                     Name / SKU <SortIndicator field="name" />
                   </th>
-                  <th>Folder</th>
+                  <th className="sortable-th" onClick={() => handleColumnSort('folder_id')}>
+                    Folder <SortIndicator field="folder_id" />
+                  </th>
                   <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('selling_price')}>
                     Price <SortIndicator field="selling_price" />
                   </th>
                   <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('quantity_on_hand')}>
                     On Hand <SortIndicator field="quantity_on_hand" />
                   </th>
-                  <th style={{ textAlign: 'right' }}>Allocated</th>
-                  <th style={{ textAlign: 'right' }}>Available</th>
-                  <th>Status</th>
+                  <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('quantity_on_hand')}>
+                    Allocated <SortIndicator field="quantity_on_hand" />
+                  </th>
+                  <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('reorder_point')}>
+                    Available <SortIndicator field="reorder_point" />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -214,11 +198,12 @@ export const ProductListView = ({
                       </td>
                       <td>
                         <Link to={`/inventory/${product.id}/overview`} style={{ display: 'block', minWidth: 0 }}>
-                          <Heading level="h6" style={{ margin: 0, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span
+                            className="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-normal text-[var(--color-foreground)]"
+                          >
                             {product.name}
-                          </Heading>
+                          </span>
                         </Link>
-                        <Label className="block">{product.sku}</Label>
                       </td>
                       <td className="muted small">{folderName(product.folder_id)}</td>
                       <td style={{ textAlign: 'right' }}>
@@ -290,17 +275,8 @@ export const ProductListView = ({
                         )}
                       </td>
                       <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{allocated}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)', color: available > 0 ? 'var(--success)' : 'var(--danger)' }}>
-                        {available}
-                      </td>
-                      <td>
-                        {isOut ? (
-                          <Badge label="Out of Stock" variant="danger" />
-                        ) : isLow ? (
-                          <Badge label="Low Stock" variant="warning" />
-                        ) : (
-                          <Badge label="In Stock" variant="success" />
-                        )}
+                      <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)', color: available >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}>
+                        {available} / {product.reorder_point}
                       </td>
                     </tr>
                   )
