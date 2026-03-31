@@ -17,6 +17,19 @@ export { Divider } from './ui/Divider'
 export { Tooltip } from './ui/Tooltip'
 export { Breadcrumb, type BreadcrumbItem } from './ui/Breadcrumb'
 export { Dropdown, DropdownItem, DropdownSeparator, DropdownMenu, type DropdownArrayItem } from './ui/Dropdown'
+export {
+  StockStatusFilterDropdown,
+  AddFilterDropdown,
+  InventoryViewToggle,
+  InventoryToolbarControls,
+  type StockStatusFilterOption,
+  type AddFilterItem,
+  type InventoryView,
+  type StockStatusFilterDropdownProps,
+  type AddFilterDropdownProps,
+  type InventoryViewToggleProps,
+  type InventoryToolbarControlsProps,
+} from './ui/InventoryToolbarControls'
 export { ProfileDropdown, type ProfileDropdownProps } from './ui/ProfileDropdown'
 export { Pagination } from './ui/Pagination'
 export { ToastProvider, useToast } from './ui/Toast'
