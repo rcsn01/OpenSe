@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from '@repo/shared/auth/context'
 import { AppLayout } from './layouts/AppLayout'
 import { IndexPage } from './pages/IndexPage'
 import { ColorPalettePage } from './pages/ColorPalettePage'
@@ -17,27 +18,29 @@ import { TestPage } from './pages/TestPage'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<IndexPage />} />
-          <Route path="/colors" element={<ColorPalettePage />} />
-          <Route path="/typography" element={<TypographyPage />} />
-          <Route path="/spacing" element={<SpacingPage />} />
-          <Route path="/buttons" element={<ButtonsPage />} />
-          <Route path="/forms" element={<FormsPage />} />
-          <Route path="/cards" element={<CardsPage />} />
-          <Route path="/badges" element={<BadgesPage />} />
-          <Route path="/alerts" element={<AlertsPage />} />
-          <Route path="/data" element={<DataDisplayPage />} />
-          <Route path="/navigation" element={<Navigate to="/navigation/overview" replace />} />
-          <Route path="/navigation/:tab" element={<NavigationPage />} />
-          <Route path="/overlays" element={<OverlaysPage />} />
-          <Route path="/dividers" element={<DividersPage />} />
-          <Route path="/test" element={<TestPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<IndexPage />} />
+            <Route path="/colors" element={<ColorPalettePage />} />
+            <Route path="/typography" element={<TypographyPage />} />
+            <Route path="/spacing" element={<SpacingPage />} />
+            <Route path="/buttons" element={<ButtonsPage />} />
+            <Route path="/forms" element={<FormsPage />} />
+            <Route path="/cards" element={<CardsPage />} />
+            <Route path="/badges" element={<BadgesPage />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/data" element={<DataDisplayPage />} />
+            <Route path="/navigation" element={<Navigate to="/navigation/overview" replace />} />
+            <Route path="/navigation/:tab" element={<NavigationPage />} />
+            <Route path="/overlays" element={<OverlaysPage />} />
+            <Route path="/dividers" element={<DividersPage />} />
+            <Route path="/test" element={<TestPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }

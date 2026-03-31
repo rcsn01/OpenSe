@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { useAuth } from '@repo/shared/auth/context'
 import {
   AppLayout as SharedAppLayout,
   SideNav,
@@ -204,8 +205,15 @@ function AppLayoutContent() {
 }
 
 export function AppLayout() {
+  const { user } = useAuth()
+
   return (
-    <ThemeProvider>
+    <ThemeProvider
+      defaultTheme="light"
+      storageKey="opense-theme"
+      cookieKey="opense-theme"
+      respectStoredTheme={Boolean(user)}
+    >
       <ToastProvider>
         <AppLayoutContent />
       </ToastProvider>
