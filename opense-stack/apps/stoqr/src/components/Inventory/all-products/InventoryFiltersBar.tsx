@@ -1,6 +1,12 @@
 import { useMemo } from 'react'
-import { ChevronDown, LayoutGrid, List as ListIcon, Plus, X } from 'lucide-react'
-import { Dropdown, DropdownItem } from '@repo/ui'
+import { ChevronDown, X } from 'lucide-react'
+import {
+  AddFilterDropdown,
+  Dropdown,
+  DropdownItem,
+  InventoryViewToggle,
+  StockStatusFilterDropdown,
+} from '@repo/ui'
 import type { InventoryFiltersBarProps } from './types'
 
 const formatCustomFieldValue = (value: string | number | boolean): string => {
@@ -8,11 +14,14 @@ const formatCustomFieldValue = (value: string | number | boolean): string => {
   return String(value)
 }
 
-const stockFilterLabels: Record<'all' | 'low' | 'out', string> = {
-  all: 'All Statuses',
-  low: 'Low Stock',
-  out: 'Out of Stock',
-}
+const stockFilterOptions = [
+  { value: 'all', label: 'All Statuses' },
+  { value: 'low', label: 'Low Stock' },
+  { value: 'out', label: 'Out of Stock' },
+] as const
+
+const isStockFilterValue = (value: string): value is InventoryFiltersBarProps['stockFilter'] =>
+  value === 'all' || value === 'low' || value === 'out'
 
 export const InventoryFiltersBar = ({
   isSelectionMode,
@@ -46,6 +55,11 @@ export const InventoryFiltersBar = ({
     [customFieldFilters, pendingFilterKey],
   )
 
+  const addFilterItems = useMemo(
+    () => availableFieldsForAdd.map((field) => ({ value: field.key, label: field.key })),
+    [availableFieldsForAdd],
+  )
+
   const handleCancelPending = () => {
     setPendingFilterKey(null)
   }
@@ -71,36 +85,15 @@ export const InventoryFiltersBar = ({
       ) : (
         <>
           <div className="row wrap" style={{ flex: 1, gap: 6, alignItems: 'center' }}>
-            <Dropdown
-              className="min-w-[120px]"
-              trigger={
-                <button
-                  type="button"
-                  aria-label="Stock status filter"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '4px 6px',
-                    fontSize: 'var(--type-size-xs)',
-                    fontWeight: stockFilter !== 'all' ? 'var(--type-weight-semibold)' : 'var(--type-weight-medium)',
-                    color: stockFilter !== 'all' ? 'var(--primary)' : 'var(--muted)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                    transition: 'color 0.15s',
-                  }}
-                >
-                  {stockFilterLabels[stockFilter]}
-                  <ChevronDown size={12} />
-                </button>
-              }
-            >
-              <DropdownItem onClick={() => setStockFilter('all')}>All Statuses</DropdownItem>
-              <DropdownItem onClick={() => setStockFilter('low')}>Low Stock</DropdownItem>
-              <DropdownItem onClick={() => setStockFilter('out')}>Out of Stock</DropdownItem>
-            </Dropdown>
+            <StockStatusFilterDropdown
+              value={stockFilter}
+              options={stockFilterOptions}
+              onChange={(value) => {
+                if (isStockFilterValue(value)) {
+                  setStockFilter(value)
+                }
+              }}
+            />
 
             {activeCustomFieldFilters.length > 0 && (
               <div style={{ width: 1, height: 16, background: 'var(--border)', flexShrink: 0 }} />
@@ -211,81 +204,13 @@ export const InventoryFiltersBar = ({
               </div>
             )}
 
-            {!pendingFilterKey && availableFieldsForAdd.length > 0 && (
-              <Dropdown
-                className="min-w-[120px]"
-                trigger={
-                  <button
-                    className="add-filter-button"
-                    type="button"
-                    aria-label="Add custom field filter"
-                  >
-                    <Plus size={12} strokeWidth={2.5} />
-                    <span>Filter</span>
-                  </button>
-                }
-              >
-                {availableFieldsForAdd.map((field) => (
-                  <DropdownItem
-                    key={field.key}
-                    onClick={() => {
-                      setPendingFilterKey(field.key)
-                    }}
-                  >
-                    {field.key}
-                  </DropdownItem>
-                ))}
-              </Dropdown>
+            {!pendingFilterKey && addFilterItems.length > 0 && (
+              <AddFilterDropdown items={addFilterItems} onSelect={setPendingFilterKey} />
             )}
           </div>
 
           <div className="row" style={{ gap: 6, alignItems: 'center', flexShrink: 0 }}>
-            <div className="row" style={{ gap: 2 }}>
-              <button
-                type="button"
-                aria-label="List view"
-                onClick={() => setView('list')}
-                title="List view"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 28,
-                  height: 28,
-                  padding: 0,
-                  background: view === 'list' ? 'var(--color-muted)' : 'none',
-                  border: 'none',
-                  borderRadius: 4,
-                  color: view === 'list' ? 'var(--text)' : 'var(--muted)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-              >
-                <ListIcon size={15} />
-              </button>
-              <button
-                type="button"
-                aria-label="Module view"
-                onClick={() => setView('grid')}
-                title="Module view"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 28,
-                  height: 28,
-                  padding: 0,
-                  background: view === 'grid' ? 'var(--color-muted)' : 'none',
-                  border: 'none',
-                  borderRadius: 4,
-                  color: view === 'grid' ? 'var(--text)' : 'var(--muted)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-              >
-                <LayoutGrid size={15} />
-              </button>
-            </div>
+            <InventoryViewToggle value={view} onChange={setView} />
 
             <div style={{ width: 1, height: 16, background: 'var(--border)', flexShrink: 0 }} />
 

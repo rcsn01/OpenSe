@@ -309,26 +309,6 @@
   background: rgba(59, 130, 246, 0.04);
 }
 
-.add-filter-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  font-size: var(--type-size-xs);
-  font-weight: var(--type-weight-medium);
-  color: var(--muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color 0.15s ease;
-  line-height: 1;
-  height: 26px;
-}
-
-.add-filter-button:hover {
-  color: var(--primary);
-}
-
 /* --- Inventory: Table Info Bar --- */
 .table-info-bar {
   display: flex;
