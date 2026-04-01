@@ -57,17 +57,6 @@ CREATE TABLE IF NOT EXISTS stoqr.organisation_member_roles (
   UNIQUE(user_id, company_id)
 );
 
-CREATE TABLE IF NOT EXISTS stoqr.inventory_locations (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  company_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL,
-  name TEXT NOT NULL,
-  code TEXT,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
-  UNIQUE(company_id, name),
-  UNIQUE(company_id, code)
-);
-
 CREATE TABLE IF NOT EXISTS stoqr.folders (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   company_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL,
@@ -90,7 +79,6 @@ CREATE TABLE IF NOT EXISTS stoqr.products (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   company_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE NOT NULL,
   folder_id UUID REFERENCES stoqr.folders(id) ON DELETE SET NULL,
-  location_id UUID REFERENCES stoqr.inventory_locations(id) ON DELETE SET NULL,
   sku TEXT NOT NULL,
   primary_barcode TEXT,
   name TEXT NOT NULL,
@@ -362,7 +350,6 @@ CREATE INDEX idx_product_tags_product ON stoqr.product_tags(product_id);
 CREATE INDEX idx_product_tags_tag ON stoqr.product_tags(tag_id);
 CREATE INDEX idx_role_permissions_role ON stoqr.role_permissions(role_id);
 CREATE INDEX idx_report_schedules_company ON stoqr.report_schedules(company_id);
-CREATE INDEX idx_products_company_location ON stoqr.products(company_id, location_id);
 CREATE INDEX idx_products_company_stock_levels ON stoqr.products(company_id, quantity_on_hand, min_stock_level, reorder_point);
 CREATE INDEX idx_product_barcodes_product ON stoqr.product_barcodes(product_id);
 CREATE INDEX idx_product_barcodes_company_type ON stoqr.product_barcodes(company_id, barcode_type);
@@ -386,7 +373,6 @@ ALTER TABLE stoqr.app_permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.role_permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.organisation_member_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stoqr.inventory_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.folders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.products ENABLE ROW LEVEL SECURITY;

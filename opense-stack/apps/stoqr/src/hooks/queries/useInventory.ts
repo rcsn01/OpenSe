@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   bulkUpdateInventoryProducts,
   createFolderInInventory,
-  createInventoryLocation,
   deleteFolderInInventory,
   fetchInventoryReferenceData,
   deleteInventoryProducts,
@@ -122,20 +121,6 @@ export const useUpdateInventoryProductField = (companyId: string | null) => {
     mutationFn: async (payload: { productId: string; field: 'quantity_on_hand' | 'selling_price'; value: number }) => {
       if (!companyId) throw new Error('No company selected')
       await updateInventoryProductField(companyId, payload)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
-    },
-  })
-}
-
-export const useCreateInventoryLocation = (companyId: string | null) => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (payload: { name: string; code: string; description: string }) => {
-      if (!companyId) throw new Error('No company selected')
-      await createInventoryLocation(companyId, payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
