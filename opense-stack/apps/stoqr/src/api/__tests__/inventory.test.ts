@@ -195,11 +195,7 @@ describe('inventory api', () => {
     ])
   })
 
-  it('fetches locations and barcodes reference data', async () => {
-    const locationOrder = vi.fn().mockResolvedValue({
-      data: [{ id: 'l-1', name: 'Main', code: 'WH-A', description: null }],
-      error: null,
-    })
+  it('fetches barcodes reference data', async () => {
     const barcodeOrder = vi.fn().mockResolvedValue({
       data: [
         {
@@ -215,14 +211,6 @@ describe('inventory api', () => {
     })
 
     mockFrom.mockImplementation((table: string) => {
-      if (table === 'inventory_locations') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({ order: locationOrder })),
-          })),
-        }
-      }
-
       if (table === 'product_barcodes') {
         return {
           select: vi.fn(() => ({
@@ -235,7 +223,7 @@ describe('inventory api', () => {
     })
 
     const result = await fetchInventoryReferenceData('company-1')
-    expect(result.locations).toHaveLength(1)
+    expect(result.barcodes).toHaveLength(1)
     expect(result.barcodes[0]?.products?.sku).toBe('SKU-1')
   })
 

@@ -167,7 +167,6 @@ RETURNS TABLE (
   product_id UUID,
   sku TEXT,
   name TEXT,
-  location TEXT,
   quantity_on_hand INTEGER,
   min_stock_level INTEGER,
   reorder_point INTEGER,
@@ -191,7 +190,6 @@ BEGIN
     p.id,
     p.sku,
     p.name,
-    il.name AS location,
     coalesce(p.quantity_on_hand, 0) AS quantity_on_hand,
     coalesce(p.min_stock_level, 0) AS min_stock_level,
     coalesce(p.reorder_point, 0) AS reorder_point,
@@ -201,7 +199,6 @@ BEGIN
     (coalesce(p.quantity_on_hand, 0) * coalesce(p.selling_price, 0))::NUMERIC AS potential_revenue,
     (coalesce(p.selling_price, 0) - coalesce(p.cost_price, 0))::NUMERIC AS margin_per_unit
   FROM stoqr.products p
-  LEFT JOIN stoqr.inventory_locations il ON il.id = p.location_id
   WHERE p.company_id = target_company_id
     AND p.deleted_at IS NULL
   ORDER BY p.name;

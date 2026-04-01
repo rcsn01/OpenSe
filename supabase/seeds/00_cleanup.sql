@@ -56,8 +56,7 @@ TRUNCATE TABLE
   stoqr.suppliers,
   stoqr.products,
   stoqr.tags,
-  stoqr.folders,
-  stoqr.inventory_locations
+  stoqr.folders
 CASCADE;
 
 -- ------------------------------------------------------------
