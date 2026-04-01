@@ -39,6 +39,7 @@ export const InventoryFiltersBar = ({
   onImportOpen,
   onCreateOpen,
   handleBulkDelete,
+  onMoveSelected,
 }: InventoryFiltersBarProps) => {
   const activeKeys = useMemo(
     () => new Set(activeCustomFieldFilters.map((f) => f.key)),
@@ -74,12 +75,15 @@ export const InventoryFiltersBar = ({
             </span>
           </div>
           <div className="row" style={{ gap: 4 }}>
-            <button className="button ghost small" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={handleBulkDelete}>
+            <button
+              type="button"
+              className="button ghost small"
+              style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
+              onClick={handleBulkDelete}
+            >
               Delete
             </button>
-            <button className="button ghost small" type="button">Move</button>
-            <button className="button ghost small" type="button">Print Labels</button>
-            <button className="button ghost small" type="button">Export</button>
+            <button className="button ghost small" type="button" onClick={onMoveSelected}>Move</button>
           </div>
         </>
       ) : (

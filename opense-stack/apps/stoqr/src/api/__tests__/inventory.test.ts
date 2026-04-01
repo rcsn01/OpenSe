@@ -21,6 +21,7 @@ import {
   fetchInventoryProducts,
   fetchInventoryStats,
   importInventoryProducts,
+  moveInventoryProducts,
   moveFolderInInventory,
   renameFolderInInventory,
 } from '../inventory'
@@ -274,6 +275,22 @@ describe('inventory api', () => {
     expect(update).toHaveBeenCalled()
     expect(updateEqId).toHaveBeenCalledWith('id', 'p-1')
     expect(updateEqCompany).toHaveBeenCalledWith('company_id', 'company-1')
+  })
+
+  it('moveInventoryProducts updates folder_id for the selected products', async () => {
+    const inIds = vi.fn().mockResolvedValue({ error: null })
+    const eqCompany = vi.fn(() => ({ in: inIds }))
+    const update = vi.fn(() => ({ eq: eqCompany }))
+
+    mockFrom.mockReturnValue({ update })
+
+    const moved = await moveInventoryProducts('company-1', ['p-1', 'p-2'], 'folder-9')
+
+    expect(moved).toBe(2)
+    expect(mockFrom).toHaveBeenCalledWith('products')
+    expect(update).toHaveBeenCalledWith({ folder_id: 'folder-9' })
+    expect(eqCompany).toHaveBeenCalledWith('company_id', 'company-1')
+    expect(inIds).toHaveBeenCalledWith('id', ['p-1', 'p-2'])
   })
 
   it('filters by folder_id IS NULL when folderId is __uncategorised__', async () => {

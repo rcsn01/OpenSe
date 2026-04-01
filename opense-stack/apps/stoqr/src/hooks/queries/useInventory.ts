@@ -10,6 +10,7 @@ import {
   fetchInventoryProducts,
   fetchInventoryStats,
   importInventoryProducts,
+  moveInventoryProducts,
   moveFolderInInventory,
   renameFolderInInventory,
   upsertProductBarcode,
@@ -65,6 +66,20 @@ export const useDeleteInventoryProducts = (companyId: string | null) => {
     mutationFn: async (productIds: string[]) => {
       if (!companyId) throw new Error('No company selected')
       await deleteInventoryProducts(companyId, productIds)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.root })
+    },
+  })
+}
+
+export const useMoveInventoryProducts = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { productIds: string[]; folderId: string | null }) => {
+      if (!companyId) throw new Error('No company selected')
+      return moveInventoryProducts(companyId, payload.productIds, payload.folderId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.root })

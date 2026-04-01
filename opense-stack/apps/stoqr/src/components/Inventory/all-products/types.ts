@@ -39,6 +39,7 @@ export type InventoryFiltersBarProps = {
   onImportOpen: () => void
   onCreateOpen: () => void
   handleBulkDelete: () => void
+  onMoveSelected: () => void
 }
 
 export type AllProductsTabProps = {
@@ -72,5 +73,6 @@ export type AllProductsTabProps = {
   setPage: (page: number) => void
   folders: Folder[]
   handleBulkDelete: () => void
+  onClearSelection: () => void
   onRefresh: () => void
 }

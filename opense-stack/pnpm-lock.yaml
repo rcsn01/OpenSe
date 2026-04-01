@@ -429,6 +429,9 @@ importers:
 
   apps/ui-design:
     dependencies:
+      '@repo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@repo/ui':
         specifier: '*'
         version: link:../../packages/ui

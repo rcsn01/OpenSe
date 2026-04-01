@@ -22,6 +22,7 @@ const createProps = () => ({
   onImportOpen: vi.fn(),
   onCreateOpen: vi.fn(),
   handleBulkDelete: vi.fn(),
+  onMoveSelected: vi.fn(),
 })
 
 describe('InventoryFiltersBar', () => {
@@ -224,5 +225,38 @@ describe('InventoryFiltersBar', () => {
 
     expect(props.onRemoveFilter).toHaveBeenCalledWith('batch')
     expect(props.onRemoveFilter).not.toHaveBeenCalledWith('active')
+  })
+
+  it('renders only delete and move actions in selection mode', () => {
+    render(
+      <InventoryFiltersBar
+        {...createProps()}
+        isSelectionMode
+        selectedRowIds={new Set(['p-1', 'p-2'])}
+      />,
+    )
+
+    expect(screen.getByText('2 selected')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Print Labels' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument()
+  })
+
+  it('clicking selection mode actions calls the mapped handlers', () => {
+    const props = createProps()
+    render(
+      <InventoryFiltersBar
+        {...props}
+        isSelectionMode
+        selectedRowIds={new Set(['p-1'])}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Move' }))
+
+    expect(props.handleBulkDelete).toHaveBeenCalledTimes(1)
+    expect(props.onMoveSelected).toHaveBeenCalledTimes(1)
   })
 })
