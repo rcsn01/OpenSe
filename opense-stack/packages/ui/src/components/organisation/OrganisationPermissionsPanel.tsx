@@ -4,13 +4,14 @@ import { Button } from '../ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { Checkbox } from '../ui/Checkbox'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/Dialog'
+  SideSheet,
+  SideSheetBody,
+  SideSheetContent,
+  SideSheetDescription,
+  SideSheetFooter,
+  SideSheetHeader,
+  SideSheetTitle,
+} from '../ui/SideSheet'
 import { Input, Textarea } from '../ui/Input'
 import { StackLayout } from '../layout/StackLayout'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table'
@@ -376,108 +377,110 @@ export function OrganisationPermissionsPanel({
         </CardContent>
       </Card>
 
-      <Dialog open={Boolean(editingRoleId)} onClose={closeEditRole} layout="right-sheet">
-        <DialogContent className="h-[100dvh] overflow-y-auto rounded-none border-0 p-4 shadow-none sm:rounded-l-[var(--radius-xl)] sm:border sm:p-6 sm:shadow-[var(--shadow-xl)]">
-          <DialogHeader>
-            <DialogTitle>Edit Role Permissions</DialogTitle>
-            <DialogDescription>
+      <SideSheet open={Boolean(editingRoleId)} onClose={closeEditRole}>
+        <SideSheetContent>
+          <SideSheetHeader>
+            <SideSheetTitle>Edit Role Permissions</SideSheetTitle>
+            <SideSheetDescription>
               Choose access types per permission area for this role.
-            </DialogDescription>
-          </DialogHeader>
+            </SideSheetDescription>
+          </SideSheetHeader>
 
-          <form className="space-y-4" onSubmit={handleSaveRoleEdits}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Role Name</label>
-                <Input
-                  value={editName}
-                  onChange={(event) => setEditName(event.target.value)}
-                  disabled={!canManage || saving}
-                />
+          <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={handleSaveRoleEdits}>
+            <SideSheetBody className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Role Name</label>
+                  <Input
+                    value={editName}
+                    onChange={(event) => setEditName(event.target.value)}
+                    disabled={!canManage || saving}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
+                  <Textarea
+                    value={editDescription}
+                    onChange={(event) => setEditDescription(event.target.value)}
+                    disabled={!canManage || saving}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Role Rank</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={editRoleRank}
+                    onChange={(event) => setEditRoleRank(event.target.value)}
+                    disabled={!canManage || saving}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
-                <Textarea
-                  value={editDescription}
-                  onChange={(event) => setEditDescription(event.target.value)}
-                  disabled={!canManage || saving}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Role Rank</label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={editRoleRank}
-                  onChange={(event) => setEditRoleRank(event.target.value)}
-                  disabled={!canManage || saving}
-                />
-              </div>
-            </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
-              {loadingPermissions ? (
-                <div className="py-8 text-center text-sm text-slate-500">Loading permissions...</div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Permission</TableHead>
-                      {permissionMatrix.types.map((type) => (
-                        <TableHead key={type}>{formatLabel(type)}</TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {permissionMatrix.rows.map((row) => (
-                      <TableRow key={row.key}>
-                        <TableCell className="font-medium text-slate-900">{row.label}</TableCell>
-                        {permissionMatrix.types.map((type) => {
-                          const permissionCode = row.codesByType[type]
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                {loadingPermissions ? (
+                  <div className="py-8 text-center text-sm text-slate-500">Loading permissions...</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Permission</TableHead>
+                        {permissionMatrix.types.map((type) => (
+                          <TableHead key={type}>{formatLabel(type)}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {permissionMatrix.rows.map((row) => (
+                        <TableRow key={row.key}>
+                          <TableCell className="font-medium text-slate-900">{row.label}</TableCell>
+                          {permissionMatrix.types.map((type) => {
+                            const permissionCode = row.codesByType[type]
 
-                          if (!permissionCode) {
+                            if (!permissionCode) {
+                              return (
+                                <TableCell key={`${row.key}-${type}`} className="text-slate-400">
+                                  —
+                                </TableCell>
+                              )
+                            }
+
                             return (
-                              <TableCell key={`${row.key}-${type}`} className="text-slate-400">
-                                —
+                              <TableCell key={`${row.key}-${type}`}>
+                                <Checkbox
+                                  checked={editPermissions.includes(permissionCode)}
+                                  onChange={(event) =>
+                                    handleTogglePermission(permissionCode, event.target.checked)
+                                  }
+                                  disabled={!canManage || saving}
+                                />
                               </TableCell>
                             )
-                          }
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
 
-                          return (
-                            <TableCell key={`${row.key}-${type}`}>
-                              <Checkbox
-                                checked={editPermissions.includes(permissionCode)}
-                                onChange={(event) =>
-                                  handleTogglePermission(permissionCode, event.target.checked)
-                                }
-                                disabled={!canManage || saving}
-                              />
-                            </TableCell>
-                          )
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
               )}
-            </div>
+            </SideSheetBody>
 
-            {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
-            )}
-
-            <DialogFooter>
+            <SideSheetFooter>
               <Button type="button" variant="outline" onClick={closeEditRole} disabled={saving}>
                 Cancel
               </Button>
               <Button type="submit" disabled={!canManage || saving || !editName.trim()}>
                 {saving ? 'Saving...' : 'Save'}
               </Button>
-            </DialogFooter>
+            </SideSheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SideSheetContent>
+      </SideSheet>
     </StackLayout>
   )
 }

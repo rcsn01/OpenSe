@@ -8,6 +8,15 @@ export { Badge, type BadgeProps } from './ui/Badge'
 export { StatusBadge } from './ui/StatusBadge'
 export { Alert, type AlertProps } from './ui/Alert'
 export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, useDialog } from './ui/Dialog'
+export {
+  SideSheet,
+  SideSheetContent,
+  SideSheetHeader,
+  SideSheetTitle,
+  SideSheetDescription,
+  SideSheetBody,
+  SideSheetFooter,
+} from './ui/SideSheet'
 export { TabBar, AccordionItem, type TabItem } from './ui/Tabs'
 export { Avatar, AvatarGroup, type AvatarProps } from './ui/Avatar'
 export { Progress, Skeleton } from './ui/Progress'
