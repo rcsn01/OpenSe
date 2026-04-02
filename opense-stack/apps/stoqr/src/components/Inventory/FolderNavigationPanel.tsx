@@ -123,7 +123,7 @@ const SortableTreeItem = ({
         </div>
 
         {isActive || isExpanded ? (
-          <FolderOpen size={16} style={{ marginRight: 8, flexShrink: 0, color: isActive ? '#2563eb' : '#3b82f6' }} />
+          <FolderOpen size={16} style={{ marginRight: 8, flexShrink: 0, color: isActive ? 'currentColor' : '#3b82f6' }} />
         ) : (
           <FolderIcon size={16} style={{ marginRight: 8, flexShrink: 0, color: '#3b82f6' }} />
         )}
@@ -319,14 +319,14 @@ export const FolderNavigationPanel = ({
           className={`tree-item ${folderView === 'all' ? 'active' : ''}`}
           onClick={() => onSelectView('all')}
         >
-          <Layers size={16} style={{ marginRight: 8, color: folderView === 'all' ? '#2563eb' : '#64748b' }} />
+          <Layers size={16} style={{ marginRight: 8, color: folderView === 'all' ? 'currentColor' : '#64748b' }} />
           All Products
         </div>
         <div
           className={`tree-item ${folderView === 'uncategorised' ? 'active' : ''}`}
           onClick={() => onSelectView('uncategorised')}
         >
-          <FolderX size={16} style={{ marginRight: 8, color: folderView === 'uncategorised' ? '#2563eb' : '#64748b' }} />
+          <FolderX size={16} style={{ marginRight: 8, color: folderView === 'uncategorised' ? 'currentColor' : '#64748b' }} />
           Uncategorised
         </div>
       </div>

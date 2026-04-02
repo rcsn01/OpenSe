@@ -21,7 +21,7 @@
   border-radius: 10px;
   border: none;
   background: var(--primary);
-  color: #fff;
+  color: var(--color-primary-foreground);
   font-weight: var(--type-weight-semibold);
   font-size: var(--type-size-sm);
   cursor: pointer;
@@ -200,7 +200,12 @@
   color: var(--text); transition: background 0.15s; position: relative;
 }
 .tree-item:hover { background: rgba(0,0,0,0.04); }
-.tree-item.active { background: rgba(37, 99, 235, 0.1); color: var(--primary); font-weight: var(--type-weight-medium); }
+.tree-item.active {
+  background: var(--color-explorer-active-bg);
+  color: var(--color-explorer-active-foreground);
+}
+.tree-item.active .tree-toggle,
+.tree-item.active .tree-action-btn { color: inherit; }
 
 .tree-item-actions {
   display: none; align-items: center; gap: 2px; margin-left: auto; flex-shrink: 0;

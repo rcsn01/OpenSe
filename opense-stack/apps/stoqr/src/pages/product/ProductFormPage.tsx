@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dropdown, DropdownItem } from '@repo/ui'
+import { BasePage } from '../../components/BasePage'
 import { useCompany } from '../../contexts/CompanyContext'
 import type { ProductAttributeCatalogEntry } from '../../api/products'
 import { useCreateProduct, useProductAttributeCatalog, useProductDetail, useProductFolders, useUpdateProduct } from '../../hooks/queries/useProducts'
@@ -372,10 +373,6 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
     }
   }
 
-  if (mode === 'edit' && isLoadingDetail) {
-    return <div className="empty-state">Loading product...</div>
-  }
-
   const destination = mode === 'edit' && productId ? `/inventory/${productId}/overview` : '/inventory'
   const heading = mode === 'create' ? 'Add New Product' : 'Edit Product'
   const subheading =
@@ -386,11 +383,17 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
   const pendingLabel = mode === 'create' ? 'Creating...' : 'Saving...'
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="stack" style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 80 }}>
+    <BasePage
+      companyId={companyId}
+      isLoading={mode === 'edit' && isLoadingDetail}
+      loadingMessage="Loading product..."
+      emptyStateTitle="No company selected"
+      emptyStateDescription="Select a company to manage inventory."
+    >
+      <div className="stack" style={{ width: '100%', maxWidth: 1100, margin: '0 auto', paddingBottom: 80 }}>
         <div
-          className="flex-between sticky top-0 bg-slate-50 py-4 z-10"
-          style={{ margin: '-32px -40px 24px', padding: '32px 40px 16px', background: 'var(--bg)' }}
+          className="flex-between sticky top-0 z-10"
+          style={{ marginBottom: 24, padding: '8px 0 16px', background: 'var(--bg)' }}
         >
           <div className="row">
             <button className="button ghost small icon-button" onClick={() => navigate(destination)}>
@@ -844,6 +847,6 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
           </div>
         </form>
       </div>
-    </div>
+    </BasePage>
   )
 }
