@@ -40,6 +40,9 @@ export type InventoryFiltersBarProps = {
   onCreateOpen: () => void
   handleBulkDelete: () => void
   onMoveSelected: () => void
+  onBulkPriceAdjust: () => void
+  onBulkQuantityAdjust: () => void
+  onExportCsv: () => void
 }
 
 export type AllProductsTabProps = {

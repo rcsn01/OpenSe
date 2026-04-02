@@ -40,6 +40,9 @@ export const InventoryFiltersBar = ({
   onCreateOpen,
   handleBulkDelete,
   onMoveSelected,
+  onBulkPriceAdjust,
+  onBulkQuantityAdjust,
+  onExportCsv,
 }: InventoryFiltersBarProps) => {
   const activeKeys = useMemo(
     () => new Set(activeCustomFieldFilters.map((f) => f.key)),
@@ -75,6 +78,10 @@ export const InventoryFiltersBar = ({
             </span>
           </div>
           <div className="row" style={{ gap: 4 }}>
+            <button className="button ghost small" type="button" onClick={onBulkPriceAdjust}>Adjust Price</button>
+            <button className="button ghost small" type="button" onClick={onBulkQuantityAdjust}>Adjust Qty</button>
+            <button className="button ghost small" type="button" onClick={onExportCsv}>Export CSV</button>
+            <button className="button ghost small" type="button" onClick={onMoveSelected}>Move</button>
             <button
               type="button"
               className="button ghost small"
@@ -83,7 +90,6 @@ export const InventoryFiltersBar = ({
             >
               Delete
             </button>
-            <button className="button ghost small" type="button" onClick={onMoveSelected}>Move</button>
           </div>
         </>
       ) : (

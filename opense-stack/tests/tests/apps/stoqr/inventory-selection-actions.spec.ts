@@ -14,10 +14,10 @@ test.describe('Stoqr Inventory selection actions', () => {
 
     await inventoryPage.goto();
 
-    const allProductsTab = authenticatedPage.getByRole('tab', { name: /all products/i });
-    const hasInventoryTabs = await allProductsTab.isVisible().catch(() => false);
+    const inventorySidebar = authenticatedPage.locator('.explorer-sidebar');
+    const hasInventoryPage = await inventorySidebar.isVisible().catch(() => false);
 
-    if (!hasInventoryTabs) {
+    if (!hasInventoryPage) {
       await loginPage.goto();
 
       if (await loginPage.demoButton.isVisible().catch(() => false)) {
@@ -26,7 +26,7 @@ test.describe('Stoqr Inventory selection actions', () => {
       }
     }
 
-    if (!(await allProductsTab.isVisible().catch(() => false))) {
+    if (!(await inventorySidebar.isVisible().catch(() => false))) {
       await expect(authenticatedPage.getByText(/get started|sign in|control your inventory engine/i).first()).toBeVisible();
       return;
     }

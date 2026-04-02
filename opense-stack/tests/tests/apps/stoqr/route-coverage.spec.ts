@@ -22,9 +22,7 @@ test.describe('Stoqr Route Coverage', () => {
     '/tools/labels/preview-batch',
     '/tools/labels/downloads',
     '/inventory/all',
-    '/inventory/bulk-actions',
     '/inventory/locations',
-    '/inventory/barcode-sku',
     '/scan/scan-actions',
     '/scan/scan-history',
     '/settings/organisations/teams',
@@ -60,6 +58,11 @@ test.describe('Stoqr Route Coverage', () => {
   test('label studio route resolves', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/tools/labels');
     await expect(authenticatedPage).toHaveURL(/\/(tools\/labels(?:\/templates)?|auth|login|$)/);
+  });
+
+  test('legacy barcode-sku route redirects to all products', async ({ authenticatedPage }) => {
+    await safeGoto(authenticatedPage, '/inventory/barcode-sku');
+    await expect(authenticatedPage).toHaveURL(/\/inventory\/all$/);
   });
 
   for (const route of nestedTabRoutes) {

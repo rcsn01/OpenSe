@@ -18,33 +18,24 @@ test.describe('Stoqr Inventory', () => {
     }
   });
 
-  test('inventory tabs include folders unchanged and new non-folder tabs', async ({ authenticatedPage }) => {
+  test('inventory uses sidebar navigation without a top tab bar', async ({ authenticatedPage }) => {
     const inventory = new InventoryPage(authenticatedPage);
     await inventory.goto();
 
-    const hasInventoryTabs = await authenticatedPage.getByRole('tab', { name: /all products/i }).first().isVisible().catch(() => false);
-    if (!hasInventoryTabs) {
+    const sidebar = authenticatedPage.locator('.explorer-sidebar');
+    const hasSidebar = await sidebar.isVisible().catch(() => false);
+    if (!hasSidebar) {
       return;
     }
 
-    await expect(authenticatedPage.getByRole('tab', { name: /all products/i })).toBeVisible();
-    await expect(authenticatedPage.getByRole('tab', { name: /folders/i })).toBeVisible();
-    await expect(authenticatedPage.getByRole('tab', { name: /bulk actions/i })).toBeVisible();
-    await expect(authenticatedPage.getByRole('tab', { name: /locations/i })).toBeVisible();
-    await expect(authenticatedPage.getByRole('tab', { name: /barcode\/sku/i })).toBeVisible();
-
+    await expect(sidebar.getByText('All Products')).toBeVisible();
+    await expect(sidebar.getByText('Folders')).toBeVisible();
+    await expect(authenticatedPage.getByRole('tab', { name: /all products/i })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('tab', { name: /folders/i })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('tab', { name: /locations/i })).toHaveCount(0);
     await expect(authenticatedPage.getByRole('tab', { name: /variants & matrices/i })).toHaveCount(0);
     await expect(authenticatedPage.getByRole('tab', { name: /stock transfers/i })).toHaveCount(0);
     await expect(authenticatedPage.getByRole('tab', { name: /kitting & bundles/i })).toHaveCount(0);
-
-    await authenticatedPage.getByRole('tab', { name: /folders/i }).click();
-    await expect(authenticatedPage).toHaveURL(/\/inventory\/folders$/);
-
-    await authenticatedPage.getByRole('tab', { name: /bulk actions/i }).click();
-    await expect(authenticatedPage).toHaveURL(/\/inventory\/bulk-actions$/);
-
-    await authenticatedPage.getByRole('tab', { name: /all products/i }).click();
-    await expect(authenticatedPage).toHaveURL(/\/inventory\/all$/);
   });
 
   test('clicking product opens detail overview route', async ({ authenticatedPage }) => {
@@ -68,8 +59,8 @@ test.describe('Stoqr Inventory', () => {
     const inventory = new InventoryPage(authenticatedPage);
     await inventory.goto();
 
-    const hasInventoryTabs = await authenticatedPage.getByRole('tab', { name: /all products/i }).first().isVisible().catch(() => false);
-    if (!hasInventoryTabs) {
+    const hasSidebar = await authenticatedPage.locator('.explorer-sidebar').isVisible().catch(() => false);
+    if (!hasSidebar) {
       return;
     }
 
@@ -126,8 +117,8 @@ test.describe('Stoqr Inventory', () => {
     const inventory = new InventoryPage(authenticatedPage);
     await inventory.goto();
 
-    const hasInventoryTabs = await authenticatedPage.getByRole('tab', { name: /all products/i }).first().isVisible().catch(() => false);
-    if (!hasInventoryTabs) {
+    const hasSidebar = await authenticatedPage.locator('.explorer-sidebar').isVisible().catch(() => false);
+    if (!hasSidebar) {
       return;
     }
 

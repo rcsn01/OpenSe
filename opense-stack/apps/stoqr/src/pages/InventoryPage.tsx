@@ -3,11 +3,8 @@ import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import type { CustomFieldActiveFilter, CustomFieldPrimitive, Folder } from '../types'
-import { Tabs } from '../components/Tabs'
 import { parseCsv } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
-import { BulkActionsTab } from '../components/Inventory/BulkActionsTab'
-import { BarcodeSkuTab } from '../components/Inventory/BarcodeSkuTab'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
 import type { FolderView } from '../components/Inventory/all-products/types'
 import {
@@ -23,8 +20,6 @@ export const InventoryListPage = () => {
   const navigate = useNavigate()
   const { tab } = useParams<{ tab?: string }>()
   const [searchParams] = useSearchParams()
-  const validTabs = ['all', 'bulk-actions', 'barcode-sku'] as const
-  const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'all'
 
   // Removed isCreateOpen state
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -75,6 +70,12 @@ export const InventoryListPage = () => {
     () => productsQuery.isLoading || filtersQuery.isLoading,
     [productsQuery.isLoading, filtersQuery.isLoading],
   )
+
+  useEffect(() => {
+    if (tab === 'barcode-sku') {
+      navigate('/inventory/all', { replace: true })
+    }
+  }, [navigate, tab])
 
   useEffect(() => {
     const stockParam = searchParams.get('stock')
@@ -174,63 +175,41 @@ export const InventoryListPage = () => {
       containerClassName="stack"
       containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: 'calc(100vh - 120px)' }}
     >
-      <Tabs
-        activeTab={activeTab}
-        onTabChange={(nextTab) => navigate(`/inventory/${nextTab}`)}
-        tabs={[
-          {
-            id: 'all',
-            label: 'All Products',
-            content: (
-              <AllProductsTab
-                companyId={companyId}
-                folderView={folderView}
-                setFolderView={setFolderView}
-                selectedFolderId={selectedFolderId}
-                setSelectedFolderId={setSelectedFolderId}
-                stockFilter={stockFilter}
-                setStockFilter={setStockFilter}
-                activeCustomFieldFilters={activeCustomFieldFilters}
-                onAddFilter={handleAddFilter}
-                onRemoveFilter={handleRemoveFilter}
-                pendingFilterKey={pendingFilterKey}
-                setPendingFilterKey={setPendingFilterKey}
-                customFieldFilters={customFieldFilters}
-                onImportOpen={() => setIsImportOpen(true)}
-                onCreateOpen={() => navigate('/inventory/new')}
-                products={products}
-                isLoading={isLoading}
-                selectedRowIds={selectedRowIds}
-                toggleSelection={toggleSelection}
-                toggleAll={toggleAll}
-                sortField={sortField}
-                setSortField={setSortField}
-                sortDir={sortDir}
-                setSortDir={setSortDir}
-                page={page}
-                pageSize={pageSize}
-                totalCount={totalCount}
-                setPage={setPage}
-                folders={folders}
-                handleBulkDelete={handleBulkDelete}
-                onClearSelection={() => setSelectedRowIds(new Set())}
-                onRefresh={() => {
-                  refreshInventory()
-                }}
-              />
-            ),
-          },
-          {
-            id: 'bulk-actions',
-            label: 'Bulk Actions',
-            content: <BulkActionsTab companyId={companyId} products={products} onImportOpen={() => setIsImportOpen(true)} onRefresh={refreshInventory} />,
-          },
-          {
-            id: 'barcode-sku',
-            label: 'Barcode/SKU',
-            content: <BarcodeSkuTab companyId={companyId} products={products} />,
-          },
-        ]}
+      <AllProductsTab
+        companyId={companyId}
+        folderView={folderView}
+        setFolderView={setFolderView}
+        selectedFolderId={selectedFolderId}
+        setSelectedFolderId={setSelectedFolderId}
+        stockFilter={stockFilter}
+        setStockFilter={setStockFilter}
+        activeCustomFieldFilters={activeCustomFieldFilters}
+        onAddFilter={handleAddFilter}
+        onRemoveFilter={handleRemoveFilter}
+        pendingFilterKey={pendingFilterKey}
+        setPendingFilterKey={setPendingFilterKey}
+        customFieldFilters={customFieldFilters}
+        onImportOpen={() => setIsImportOpen(true)}
+        onCreateOpen={() => navigate('/inventory/new')}
+        products={products}
+        isLoading={isLoading}
+        selectedRowIds={selectedRowIds}
+        toggleSelection={toggleSelection}
+        toggleAll={toggleAll}
+        sortField={sortField}
+        setSortField={setSortField}
+        sortDir={sortDir}
+        setSortDir={setSortDir}
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        setPage={setPage}
+        folders={folders}
+        handleBulkDelete={handleBulkDelete}
+        onClearSelection={() => setSelectedRowIds(new Set())}
+        onRefresh={() => {
+          refreshInventory()
+        }}
       />
 
       {/* Removed CreateProductModal */}
