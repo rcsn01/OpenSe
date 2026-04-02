@@ -9,6 +9,7 @@ import {
 } from '../../hooks/queries/useInventory'
 import { InventoryFiltersBar } from './all-products/InventoryFiltersBar'
 import { ProductListView } from './all-products/ProductListView'
+import { BulkAdjustModal } from './all-products/BulkAdjustModal'
 import { FolderNavigationPanel } from './FolderNavigationPanel'
 import type { AllProductsTabProps } from './all-products/types'
 
@@ -59,6 +60,7 @@ export const AllProductsTab = ({
   const [deleteAction, setDeleteAction] = useState<'move-uncategorised' | 'delete-products' | null>(null)
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false)
   const [moveTargetFolderId, setMoveTargetFolderId] = useState('__uncategorised__')
+  const [bulkModalMode, setBulkModalMode] = useState<'price' | 'quantity' | null>(null)
 
   const createFolderMutation = useCreateInventoryFolder(companyId)
   const renameFolderMutation = useRenameFolderInInventory(companyId)
@@ -197,6 +199,36 @@ export const AllProductsTab = ({
     }
   }
 
+  const selectedProducts = useMemo(
+    () => products.filter((p) => selectedRowIds.has(p.id)),
+    [products, selectedRowIds],
+  )
+
+  const exportSelectedCsv = () => {
+    if (selectedProducts.length === 0) return
+    const toCsv = (rows: string[][]) =>
+      rows.map((row) => row.map((cell) => `"${String(cell ?? '').replaceAll('"', '""')}"`).join(',')).join('\n')
+    const rows = [
+      ['Name', 'SKU', 'Quantity', 'Reorder Point', 'Cost Price', 'Selling Price'],
+      ...selectedProducts.map((p) => [
+        p.name,
+        p.sku,
+        String(p.quantity_on_hand),
+        String(p.reorder_point),
+        String(p.cost_price ?? 0),
+        String(p.selling_price ?? 0),
+      ]),
+    ]
+    const content = toCsv(rows)
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'inventory-export.csv'
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleMoveFolder = async (folderId: string, newParentId: string | null, sortOrder: number) => {
     try {
       await moveFolderMutation.mutateAsync({ folderId, newParentId, sortOrder })
@@ -285,6 +317,9 @@ export const AllProductsTab = ({
             onCreateOpen={onCreateOpen}
             handleBulkDelete={handleBulkDelete}
             onMoveSelected={handleOpenMoveDialog}
+            onBulkPriceAdjust={() => setBulkModalMode('price')}
+            onBulkQuantityAdjust={() => setBulkModalMode('quantity')}
+            onExportCsv={exportSelectedCsv}
           />
 
           <ProductListView
@@ -308,6 +343,20 @@ export const AllProductsTab = ({
           />
         </div>
       </div>
+
+      {bulkModalMode && (
+        <BulkAdjustModal
+          mode={bulkModalMode}
+          companyId={companyId}
+          selectedProducts={selectedProducts}
+          onClose={() => setBulkModalMode(null)}
+          onComplete={() => {
+            setBulkModalMode(null)
+            onClearSelection()
+            onRefresh()
+          }}
+        />
+      )}
 
       {isMoveDialogOpen && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="move-selected-products-title" onClick={handleCloseMoveDialog}>
