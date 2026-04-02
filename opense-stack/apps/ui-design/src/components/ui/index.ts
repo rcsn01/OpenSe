@@ -20,6 +20,7 @@ export {
   ToastProvider, useToast,
   // Overlays
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, useDialog,
+  SideSheet, SideSheetContent, SideSheetHeader, SideSheetTitle, SideSheetDescription, SideSheetBody, SideSheetFooter,
   Tooltip,
   Dropdown, DropdownItem, DropdownSeparator, DropdownMenu,
   StockStatusFilterDropdown, AddFilterDropdown, InventoryViewToggle, InventoryToolbarControls,

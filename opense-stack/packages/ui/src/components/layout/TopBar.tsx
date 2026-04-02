@@ -74,7 +74,7 @@ export function TopBar({
   return (
     <header
       className={cn(
-        'app-top-bar flex h-14 shrink-0 items-center justify-between gap-4 px-[var(--gap-4)] py-0 min-w-0',
+        'app-top-bar flex shrink-0 items-center justify-between gap-4 px-[var(--gap-4)] pt-[var(--gap-4)] pb-0 min-w-0',
         className,
       )}
     >
