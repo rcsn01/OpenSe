@@ -19,7 +19,7 @@ export interface SideNavItemProps {
 const sideNavItemBase =
   'flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-sm text-left transition-colors w-full'
 const sideNavItemActive =
-  'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] font-medium'
+  'bg-[var(--color-side-nav-active-bg)] text-[var(--color-side-nav-active-foreground)]'
 const sideNavItemInactive =
   'text-[var(--color-foreground)] hover:bg-[var(--color-muted)]'
 

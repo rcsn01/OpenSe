@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useCompany } from '../../contexts/CompanyContext'
+import { BasePage } from '../../components/BasePage'
 import { Tabs } from '../../components/Tabs'
 import { getPublicImageUrl } from '../../utils'
 import { ProductAttachmentsTab } from '../../components/ProductDetail/ProductAttachmentsTab'
@@ -9,9 +10,6 @@ import { ProductOverviewTab } from '../../components/ProductDetail/ProductOvervi
 import { ProductSuppliersTab } from '../../components/ProductDetail/ProductSuppliersTab'
 import { useProductDetail } from '../../hooks/queries/useProducts'
 import {
-  Container,
-  VStack,
-  Spinner,
   EmptyState,
 } from '@repo/ui'
 
@@ -31,64 +29,53 @@ export const ProductDetailPage = () => {
     return product.image_urls.map((url) => getPublicImageUrl(url))
   }, [product])
 
-  if (!companyId) {
-    return <EmptyState title="No company selected" description="Choose a company to view details." />
-  }
-
-  if (isLoading) {
-    return (
-      <Container maxWidth="xl" className="py-10">
-        <div className="flex items-center justify-center py-32">
-          <Spinner size="lg" />
-        </div>
-      </Container>
-    )
-  }
-
-  if (!product) {
-    return <EmptyState title="Product not found" description="Check the inventory list again." />
-  }
-
-  const qrValue = product.sku || product.id
-
   return (
-    <Container maxWidth="xl" className="py-8 pb-20">
-      <VStack className="gap-8">
-        {/* Tabs */}
-        <Tabs
-          activeTab={activeTab}
-          onTabChange={(nextTab) => navigate(`/inventory/${product.id}/${nextTab}`)}
-          tabs={[
-            {
-              id: 'overview',
-              label: 'Overview',
-              content: (
-                <ProductOverviewTab
-                  product={product}
-                  transactions={transactions}
-                  images={images}
-                  qrValue={qrValue}
-                />
-              ),
-            },
-            {
-              id: 'suppliers',
-              label: 'Suppliers & POs',
-              content: <ProductSuppliersTab productId={product.id} companyId={companyId} />,
-            },
-            {
-              id: 'batch',
-              label: 'Batch History',
-              content: <ProductBatchHistoryTab productId={product.id} companyId={companyId} />,
-            },
-            {
-              id: 'attachments',
-              label: 'Files',
-              content: <ProductAttachmentsTab productId={product.id} companyId={companyId} />,
-            },
-          ]}
-        />
-      </VStack>
-    </Container>
+    <BasePage
+      companyId={companyId}
+      isLoading={isLoading}
+      loadingMessage="Loading product..."
+      emptyStateTitle="No company selected"
+      emptyStateDescription="Choose a company to view details."
+    >
+      <div className="stack" style={{ width: '100%', maxWidth: 1280, margin: '0 auto', paddingBottom: 80 }}>
+        {product ? (
+          <Tabs
+            activeTab={activeTab}
+            onTabChange={(nextTab) => navigate(`/inventory/${product.id}/${nextTab}`)}
+            tabs={[
+              {
+                id: 'overview',
+                label: 'Overview',
+                content: (
+                  <ProductOverviewTab
+                    product={product}
+                    transactions={transactions}
+                    images={images}
+                    qrValue={product.sku || product.id}
+                  />
+                ),
+              },
+              {
+                id: 'suppliers',
+                label: 'Suppliers & POs',
+                content: <ProductSuppliersTab productId={product.id} companyId={companyId} />,
+              },
+              {
+                id: 'batch',
+                label: 'Batch History',
+                content: <ProductBatchHistoryTab productId={product.id} companyId={companyId} />,
+              },
+              {
+                id: 'attachments',
+                label: 'Files',
+                content: <ProductAttachmentsTab productId={product.id} companyId={companyId} />,
+              },
+            ]}
+          />
+        ) : (
+          <EmptyState title="Product not found" description="Check the inventory list again." />
+        )}
+      </div>
+    </BasePage>
   )
 }

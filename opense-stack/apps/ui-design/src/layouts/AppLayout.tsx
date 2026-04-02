@@ -184,7 +184,6 @@ function AppLayoutContent() {
 
   return (
     <SharedAppLayout
-      className="ui-design-layout"
       sidebar={sidebar}
       profileFallback="U"
       onLogout={handleLogout}

@@ -21,7 +21,7 @@ const buttonVariants = cva(
         ghost:
           'bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-muted)]',
         link:
-          'bg-transparent text-[var(--color-primary)] underline-offset-4 hover:underline p-0 h-auto',
+          'bg-transparent text-[var(--color-primary-hover)] underline-offset-4 hover:underline p-0 h-auto',
       },
       size: {
         xs: 'h-7 px-2.5 text-xs rounded-[var(--radius-sm)]',

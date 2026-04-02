@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
-import { Label, StackLayout } from '@repo/ui'
+import { Button, Label, StackLayout } from '@repo/ui'
 import { RecentActivity } from '../components/dashboard/RecentActivity'
 import { StatsCards } from '../components/dashboard/StatsCards'
 import { StockHealth } from '../components/dashboard/StockHealth'
@@ -14,6 +14,7 @@ import { useDashboard } from '../hooks/queries/useDashboard'
 // --- Main Component ---
 
 export const DashboardPage = () => {
+  const navigate = useNavigate()
   const { companyId } = useCompany()
   const { data, isLoading, isFetching, isError, error } = useDashboard(companyId)
 
@@ -39,7 +40,9 @@ export const DashboardPage = () => {
         <div className="row">
           <Link to="/inventory" className="button secondary small">Add Product</Link>
           <Link to="/procurement" className="button secondary small">Create Order</Link>
-          <Link to="/scan" className="button small">Scan Item</Link>
+          <Button type="button" onClick={() => navigate('/scan')}>
+            Scan Item
+          </Button>
         </div>
       </div>
 

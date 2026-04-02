@@ -14,7 +14,7 @@ export interface BasePageProps {
 
 /**
  * BasePage - shared page layout wrapper
- * Wraps content in base-page-content (padding via styles.css) max-w-7xl mx-auto
+ * Wraps content in base-page-content (padding via styles.css)
  * Supports optional empty state and loading state
  */
 export const BasePage = ({
@@ -34,7 +34,7 @@ export const BasePage = ({
   }
 
   return (
-    <div className="base-page-content max-w-7xl mx-auto">
+    <div className="base-page-content">
       <div className={containerClassName} style={containerStyle}>
         {children}
       </div>
