@@ -23,6 +23,9 @@ const createProps = () => ({
   onCreateOpen: vi.fn(),
   handleBulkDelete: vi.fn(),
   onMoveSelected: vi.fn(),
+  onBulkPriceAdjust: vi.fn(),
+  onBulkQuantityAdjust: vi.fn(),
+  onExportCsv: vi.fn(),
 })
 
 describe('InventoryFiltersBar', () => {

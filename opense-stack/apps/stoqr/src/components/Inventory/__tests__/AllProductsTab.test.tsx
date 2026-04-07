@@ -36,6 +36,18 @@ vi.mock('../all-products/ProductListView', () => ({
   ProductListView: () => <div data-testid="product-list-view" />,
 }))
 
+const mockMatchMedia = (matches: boolean) =>
+  vi.fn().mockImplementation(() => ({
+    matches,
+    media: '(max-width: 767px)',
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }))
+
 const createProps = () => ({
   companyId: 'company-1',
   folderView: 'all' as const,
@@ -89,6 +101,10 @@ describe('AllProductsTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.mockMoveProductsMutateAsync.mockResolvedValue(2)
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: mockMatchMedia(false),
+    })
   })
 
   it('moves selected products to the chosen folder and clears the current selection', async () => {
@@ -126,5 +142,33 @@ describe('AllProductsTab', () => {
         folderId: null,
       })
     })
+  })
+
+  it('opens and closes the folder navigation from the mobile toggle', () => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: mockMatchMedia(true),
+    })
+
+    const props = createProps()
+    render(<AllProductsTab {...props} />)
+
+    const sidebar = screen.getByRole('complementary', { hidden: true })
+    expect(sidebar).toHaveAttribute('aria-hidden', 'true')
+
+    const toggleButton = screen.getByRole('button', { name: 'Open folder navigation' })
+    expect(toggleButton).toHaveTextContent('>')
+    expect(toggleButton.closest('.inventory-toolbar')).not.toBeNull()
+
+    fireEvent.click(toggleButton)
+
+    expect(sidebar).toHaveAttribute('aria-hidden', 'false')
+    expect(screen.getByRole('button', { name: 'Close folder navigation' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open folder navigation' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close folder navigation' }))
+
+    expect(sidebar).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByRole('button', { name: 'Open folder navigation' })).toBeInTheDocument()
   })
 })
