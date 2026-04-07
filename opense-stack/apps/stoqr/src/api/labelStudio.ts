@@ -1,7 +1,7 @@
 import { db, supabase } from '../supabaseClient'
 import type { Product } from '../types'
 
-export type LabelProduct = Pick<Product, 'id' | 'name' | 'sku' | 'folder_id'>
+export type LabelProduct = Pick<Product, 'id' | 'name' | 'sku' | 'folder_id' | 'selling_price'>
 
 export type LabelProductFolder = {
   id: string
@@ -42,7 +42,7 @@ export const fetchLabelProducts = async (
 ): Promise<LabelProduct[]> => {
   let query = db
     .from('products')
-    .select('id, name, sku, folder_id')
+    .select('id, name, sku, folder_id, selling_price')
     .eq('company_id', companyId)
     .order('name')
 

@@ -21,6 +21,20 @@ const ensureTemplateExists = async (page: import('@playwright/test').Page) => {
   return createdTemplateButton
 }
 
+const createEditableTemplate = async (page: import('@playwright/test').Page) => {
+  const templateName = `E2E Designer ${Date.now()}`
+
+  await page.getByRole('button', { name: '+ New Template' }).click()
+  await page.getByLabel('Template Name').fill(templateName)
+  await page.getByRole('button', { name: 'Create Template' }).click()
+  await expect(page.getByText('Template created. Select it from the library to design it.')).toBeVisible()
+
+  const createdTemplateButton = page.getByRole('button', { name: `Edit ${templateName} template` })
+  await expect(createdTemplateButton).toBeVisible()
+
+  return createdTemplateButton
+}
+
 const selectFirstRealOption = async (select: Locator) => {
   const optionCount = await select.locator('option').count()
   if (optionCount <= 1) {
@@ -72,7 +86,9 @@ test.describe('Stoqr Label Studio', () => {
 
     await expect(authenticatedPage.getByText(/^Label Designer$/i).last()).toBeVisible()
     await expect(authenticatedPage.getByText(/Label Width \(mm\)/i)).toBeVisible()
-    await expect(authenticatedPage.getByText(/GUI Preview/i)).toBeVisible()
+    await expect(authenticatedPage.getByText(/Content Padding \(pt\)/i)).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: /Machine-readable/i })).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: /Live Design Preview/i })).toBeVisible()
 
     await authenticatedPage.getByRole('tab', { name: /^Preview & Batch$/i }).click()
     await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/preview-batch$/)
@@ -134,5 +150,44 @@ test.describe('Stoqr Label Studio', () => {
     const download = await downloadPromise
     expect(download.suggestedFilename()).toMatch(/\.pdf$/i)
     await expect(authenticatedPage.getByText(/PDF downloaded/i)).toBeVisible()
+  })
+
+  test('designer exposes advanced controls and saves a custom layout', async ({ authenticatedPage }) => {
+    const labelStudioPage = new LabelStudioPage(authenticatedPage)
+
+    try {
+      await labelStudioPage.goto()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const isExpectedRedirectAbort =
+        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation')
+      if (!isExpectedRedirectAbort) {
+        throw error
+      }
+    }
+
+    await labelStudioPage.expectLoaded()
+
+    const canRenderStudio = await authenticatedPage.getByRole('tab', { name: /^Templates$/i }).first().isVisible().catch(() => false)
+    if (!canRenderStudio) {
+      await expect(authenticatedPage).toHaveURL(/\/(tools\/labels(\/[^/]+)?|dashboard|auth|login|$)/)
+      return
+    }
+
+    const templateButton = await createEditableTemplate(authenticatedPage)
+    await templateButton.click()
+
+    await expect(authenticatedPage.getByRole('heading', { name: /Live Design Preview/i })).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: /Visible fields/i })).toBeVisible()
+
+    await authenticatedPage.getByLabel('Content Padding (pt)').fill('12')
+    await authenticatedPage.getByLabel('Barcode Scale (%)').fill('130')
+    await authenticatedPage.getByLabel('QR Scale (%)').fill('110')
+    await authenticatedPage.getByLabel('Text Alignment').selectOption('center')
+    await authenticatedPage.getByRole('button', { name: /PriceSelling price line/i }).click()
+    await authenticatedPage.getByRole('button', { name: 'Save Design' }).click()
+
+    await expect(authenticatedPage.getByText('Design saved.')).toBeVisible()
+    await expect(authenticatedPage.getByText('Price: $24.00')).toBeVisible()
   })
 })

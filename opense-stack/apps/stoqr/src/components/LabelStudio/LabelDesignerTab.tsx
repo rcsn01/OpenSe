@@ -1,56 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLabelTemplates, useUpdateLabelTemplateLayout } from '../../hooks/queries/useLabelStudio'
+import { LabelPreviewCard } from './LabelPreviewCard'
+import { controlsToLayout, getEnabledLabelFields, resolveLabelLayout, type LabelLayoutControls } from './labelLayout'
 
-type LayoutControls = {
-  width: number
-  height: number
-  fontSize: number
-  showBarcode: boolean
-  showQr: boolean
-  showSku: boolean
-  showName: boolean
-  showPrice: boolean
-}
+type ToggleField = 'showName' | 'showSku' | 'showPrice' | 'showBarcode' | 'showQr' | 'showBorder'
 
-const DEFAULT_LABEL_FONT_SIZE = 12
+const sizePresets = [
+  { label: 'Compact', description: '60 x 30 mm', width: 60, height: 30 },
+  { label: 'Shelf', description: '100 x 50 mm', width: 100, height: 50 },
+  { label: 'Shipping', description: '100 x 75 mm', width: 100, height: 75 },
+  { label: 'Bin', description: '150 x 100 mm', width: 150, height: 100 },
+]
 
-const defaultControls: LayoutControls = {
-  width: 100,
-  height: 50,
-  fontSize: DEFAULT_LABEL_FONT_SIZE,
-  showBarcode: true,
-  showQr: false,
-  showSku: true,
-  showName: true,
-  showPrice: false,
-}
-
-const controlsFromLayout = (layout: Record<string, unknown> | null | undefined): LayoutControls => {
-  const nextControls: LayoutControls = { ...defaultControls }
-  if (!layout || typeof layout !== 'object') return nextControls
-
-  if (typeof layout.width === 'number') nextControls.width = layout.width
-  if (typeof layout.height === 'number') nextControls.height = layout.height
-  if (typeof layout.fontSize === 'number') nextControls.fontSize = layout.fontSize
-  if (typeof layout.showBarcode === 'boolean') nextControls.showBarcode = layout.showBarcode
-  if (typeof layout.showQr === 'boolean') nextControls.showQr = layout.showQr
-  if (typeof layout.showSku === 'boolean') nextControls.showSku = layout.showSku
-  if (typeof layout.showName === 'boolean') nextControls.showName = layout.showName
-  if (typeof layout.showPrice === 'boolean') nextControls.showPrice = layout.showPrice
-
-  return nextControls
-}
-
-const controlsToLayout = (controls: LayoutControls): Record<string, unknown> => ({
-  width: controls.width,
-  height: controls.height,
-  fontSize: controls.fontSize,
-  showBarcode: controls.showBarcode,
-  showQr: controls.showQr,
-  showSku: controls.showSku,
-  showName: controls.showName,
-  showPrice: controls.showPrice,
-})
+const fieldOptions: Array<{ key: ToggleField; label: string; description: string }> = [
+  { key: 'showName', label: 'Name', description: 'Product title line' },
+  { key: 'showSku', label: 'SKU', description: 'Stock code line' },
+  { key: 'showPrice', label: 'Price', description: 'Selling price line' },
+  { key: 'showBarcode', label: 'Barcode', description: 'Machine-readable barcode' },
+  { key: 'showQr', label: 'QR', description: 'Compact QR code block' },
+  { key: 'showBorder', label: 'Border', description: 'Printed label outline' },
+]
 
 type LabelDesignerTabProps = {
   companyId: string
@@ -61,7 +30,7 @@ type LabelDesignerTabProps = {
 export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange }: LabelDesignerTabProps) => {
   const { data: templates = [], isLoading } = useLabelTemplates(companyId)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialSelectedTemplateId ?? '')
-  const [controls, setControls] = useState<LayoutControls>(defaultControls)
+  const [controls, setControls] = useState<LabelLayoutControls>(resolveLabelLayout(null))
   const [message, setMessage] = useState<string | null>(null)
   const updateLayoutMutation = useUpdateLabelTemplateLayout(companyId)
 
@@ -69,6 +38,7 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
     () => templates.find((template) => template.id === selectedTemplateId) ?? null,
     [templates, selectedTemplateId]
   )
+  const selectedTemplateLayoutKey = JSON.stringify(selectedTemplate?.layout ?? null)
 
   useEffect(() => {
     setSelectedTemplateId(initialSelectedTemplateId ?? '')
@@ -76,17 +46,32 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
 
   useEffect(() => {
     if (!selectedTemplateId) {
-      setControls(defaultControls)
+      setControls(resolveLabelLayout(null))
       return
     }
 
-    setControls(controlsFromLayout(selectedTemplate?.layout))
+    setControls(resolveLabelLayout(selectedTemplate?.layout))
     setMessage(null)
-  }, [selectedTemplate, selectedTemplateId])
+  }, [selectedTemplateId, selectedTemplateLayoutKey])
+
+  const enabledFields = useMemo(() => getEnabledLabelFields(controls), [controls])
+  const previewSummaryItems = useMemo(
+    () => [
+      { label: 'Size', value: `${controls.width}mm x ${controls.height}mm` },
+      { label: 'Type', value: `${controls.fontSize}pt / ${controls.textAlign}` },
+      { label: 'Fields', value: enabledFields.join(', ') || 'None' },
+    ],
+    [controls.fontSize, controls.height, controls.textAlign, controls.width, enabledFields],
+  )
 
   const onTemplateChange = (id: string) => {
     setSelectedTemplateId(id)
     onSelectedTemplateChange?.(id)
+    setMessage(null)
+  }
+
+  const updateControl = <TKey extends keyof LabelLayoutControls>(field: TKey, value: LabelLayoutControls[TKey]) => {
+    setControls((currentControls) => resolveLabelLayout({ ...currentControls, [field]: value }))
     setMessage(null)
   }
 
@@ -109,14 +94,27 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
     }
   }
 
-  const toggleControl = (field: keyof LayoutControls) => {
-    setControls((currentControls) => ({ ...currentControls, [field]: !currentControls[field] }))
+  const toggleControl = (field: ToggleField) => {
+    updateControl(field, !controls[field])
+  }
+
+  const resetToSavedLayout = () => {
+    setControls(resolveLabelLayout(selectedTemplate?.layout))
+    setMessage(null)
   }
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-      <div className="card stack">
-        <h3 className="section-title">Label Designer</h3>
+    <div className="label-designer-layout">
+      <div className="card stack label-designer-card">
+        <div className="label-designer-header">
+          <div>
+            <h3 className="section-title" style={{ marginBottom: 4 }}>Label Designer</h3>
+            <p className="small muted" style={{ margin: 0 }}>Adjust sizing, spacing, field visibility, and machine-readable elements.</p>
+          </div>
+          <button className="button ghost small" type="button" onClick={resetToSavedLayout} disabled={!selectedTemplate}>
+            Reset to saved
+          </button>
+        </div>
         {isLoading ? (
           <div className="empty-state">Loading templates...</div>
         ) : templates.length === 0 ? (
@@ -135,93 +133,195 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
               </select>
             </label>
 
-            <label className="stack">
-              Label Width (mm)
-              <input
-                className="input"
-                type="number"
-                min={20}
-                value={controls.width}
-                onChange={(event) => setControls((currentControls) => ({ ...currentControls, width: Number(event.target.value) || 20 }))}
-              />
-            </label>
+            <section className="label-designer-section">
+              <div>
+                <h4 className="label-designer-section-title">Size presets</h4>
+                <p className="small muted" style={{ margin: 0 }}>Start with a common format, then tune the details below.</p>
+              </div>
+              <div className="label-designer-preset-grid">
+                {sizePresets.map((preset) => {
+                  const isActive = controls.width === preset.width && controls.height === preset.height
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className={`label-designer-preset${isActive ? ' is-active' : ''}`}
+                      onClick={() => {
+                        updateControl('width', preset.width)
+                        updateControl('height', preset.height)
+                      }}
+                    >
+                      <span className="label-designer-preset-title">{preset.label}</span>
+                      <span className="small muted">{preset.description}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
 
-            <label className="stack">
-              Label Height (mm)
-              <input
-                className="input"
-                type="number"
-                min={20}
-                value={controls.height}
-                onChange={(event) => setControls((currentControls) => ({ ...currentControls, height: Number(event.target.value) || 20 }))}
-              />
-            </label>
+            <section className="label-designer-section">
+              <div>
+                <h4 className="label-designer-section-title">Canvas</h4>
+                <p className="small muted" style={{ margin: 0 }}>Control label size, spacing, and text flow.</p>
+              </div>
+              <div className="grid grid-2 label-designer-control-grid">
+                <label className="stack">
+                  Label Width (mm)
+                  <input
+                    className="input"
+                    type="number"
+                    min={20}
+                    max={200}
+                    value={controls.width}
+                    onChange={(event) => updateControl('width', Number(event.target.value) || 20)}
+                  />
+                </label>
 
-            <label className="stack">
-              Font Size (pt)
-              <input
-                className="input"
-                type="number"
-                min={8}
-                value={controls.fontSize}
-                onChange={(event) => setControls((currentControls) => ({ ...currentControls, fontSize: Number(event.target.value) || 8 }))}
-              />
-            </label>
+                <label className="stack">
+                  Label Height (mm)
+                  <input
+                    className="input"
+                    type="number"
+                    min={20}
+                    max={200}
+                    value={controls.height}
+                    onChange={(event) => updateControl('height', Number(event.target.value) || 20)}
+                  />
+                </label>
 
-            <div className="stack">
-              <label className="flex-between" style={{ alignItems: 'center' }}>
-                <span>Show Name</span>
-                <input type="checkbox" checked={controls.showName} onChange={() => toggleControl('showName')} />
-              </label>
-              <label className="flex-between" style={{ alignItems: 'center' }}>
-                <span>Show SKU</span>
-                <input type="checkbox" checked={controls.showSku} onChange={() => toggleControl('showSku')} />
-              </label>
-              <label className="flex-between" style={{ alignItems: 'center' }}>
-                <span>Show Price</span>
-                <input type="checkbox" checked={controls.showPrice} onChange={() => toggleControl('showPrice')} />
-              </label>
-              <label className="flex-between" style={{ alignItems: 'center' }}>
-                <span>Show Barcode</span>
-                <input type="checkbox" checked={controls.showBarcode} onChange={() => toggleControl('showBarcode')} />
-              </label>
-              <label className="flex-between" style={{ alignItems: 'center' }}>
-                <span>Show QR</span>
-                <input type="checkbox" checked={controls.showQr} onChange={() => toggleControl('showQr')} />
-              </label>
+                <label className="stack">
+                  Font Size (pt)
+                  <input
+                    className="input"
+                    type="number"
+                    min={8}
+                    max={48}
+                    value={controls.fontSize}
+                    onChange={(event) => updateControl('fontSize', Number(event.target.value) || 8)}
+                  />
+                </label>
+
+                <label className="stack">
+                  Content Padding (pt)
+                  <input
+                    className="input"
+                    type="number"
+                    min={4}
+                    max={24}
+                    value={controls.padding}
+                    onChange={(event) => updateControl('padding', Number(event.target.value) || 4)}
+                  />
+                </label>
+
+                <label className="stack">
+                  Name Lines
+                  <input
+                    className="input"
+                    type="number"
+                    min={1}
+                    max={3}
+                    value={controls.nameLines}
+                    onChange={(event) => updateControl('nameLines', Number(event.target.value) || 1)}
+                  />
+                </label>
+
+                <label className="stack">
+                  Text Alignment
+                  <select className="select" value={controls.textAlign} onChange={(event) => updateControl('textAlign', event.target.value as LabelLayoutControls['textAlign'])}>
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <section className="label-designer-section">
+              <div>
+                <h4 className="label-designer-section-title">Machine-readable</h4>
+                <p className="small muted" style={{ margin: 0 }}>Scale barcode and QR blocks without changing the label size.</p>
+              </div>
+              <div className="grid grid-2 label-designer-control-grid">
+                <label className="stack">
+                  Barcode Scale (%)
+                  <input
+                    className="input"
+                    type="number"
+                    min={50}
+                    max={160}
+                    value={controls.barcodeScale}
+                    onChange={(event) => updateControl('barcodeScale', Number(event.target.value) || 50)}
+                  />
+                </label>
+
+                <label className="stack">
+                  QR Scale (%)
+                  <input
+                    className="input"
+                    type="number"
+                    min={50}
+                    max={160}
+                    value={controls.qrScale}
+                    onChange={(event) => updateControl('qrScale', Number(event.target.value) || 50)}
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="label-designer-section">
+              <div>
+                <h4 className="label-designer-section-title">Visible fields</h4>
+                <p className="small muted" style={{ margin: 0 }}>Turn each piece of label content on or off for this template.</p>
+              </div>
+              <div className="label-designer-field-grid">
+                {fieldOptions.map((field) => (
+                  <button
+                    key={field.key}
+                    type="button"
+                    className={`label-designer-field-toggle${controls[field.key] ? ' is-active' : ''}`}
+                    aria-pressed={controls[field.key]}
+                    onClick={() => toggleControl(field.key)}
+                  >
+                    <span className="label-designer-field-title">{field.label}</span>
+                    <span className="small muted">{field.description}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <div className="label-designer-footer">
+              <div className="stack" style={{ gap: 8 }}>
+                <span className="small muted">Available variables</span>
+                <div className="row wrap">
+                  {(selectedTemplate?.variable_fields ?? []).map((field) => (
+                    <span key={field} className="pill">{field}</span>
+                  ))}
+                  {!selectedTemplate ? <span className="small muted">Select a template</span> : null}
+                </div>
+              </div>
+
+              <div className="row wrap">
+                <button className="button secondary" type="button" onClick={resetToSavedLayout} disabled={!selectedTemplate}>
+                  Reset
+                </button>
+                <button className="button" onClick={saveLayout} disabled={updateLayoutMutation.isPending}>Save Design</button>
+              </div>
             </div>
 
-          <div className="small muted">
-              Variables: {selectedTemplate ? selectedTemplate.variable_fields.join(', ') : 'Select a template'}
-            </div>
-
-            <button className="button" onClick={saveLayout} disabled={updateLayoutMutation.isPending}>Save Design</button>
-            {message && <div className="small muted">{message}</div>}
+            {message ? <div className="small muted">{message}</div> : null}
           </>
         )}
       </div>
 
-      <div className="card stack">
-        <h3 className="section-title">GUI Preview</h3>
-        {!selectedTemplateId ? (
-          <div className="empty-state">Select a template to preview design settings.</div>
-        ) : (
-          <>
-            <div className="small muted">Template: {selectedTemplate?.name ?? 'Unknown'}</div>
-            <div className="small muted">Size: {controls.width}mm × {controls.height}mm</div>
-            <div className="small muted">Font: {controls.fontSize}pt</div>
-            <div className="small muted">
-              Fields: {[
-                controls.showName ? 'Name' : null,
-                controls.showSku ? 'SKU' : null,
-                controls.showPrice ? 'Price' : null,
-                controls.showBarcode ? 'Barcode' : null,
-                controls.showQr ? 'QR' : null,
-              ].filter(Boolean).join(', ') || 'None'}
-            </div>
-          </>
-        )}
-      </div>
+      <LabelPreviewCard
+        title="Live Design Preview"
+        description="Every change renders here before you save it to the template."
+        templateName={selectedTemplate?.name}
+        layout={controls}
+        variableFields={selectedTemplate?.variable_fields}
+        emptyMessage="Select a template to preview design settings."
+        summaryItems={selectedTemplateId ? previewSummaryItems : undefined}
+      />
     </div>
   )
 }
