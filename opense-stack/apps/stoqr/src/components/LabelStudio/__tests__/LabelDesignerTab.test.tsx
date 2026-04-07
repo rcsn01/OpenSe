@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LabelDesignerTab } from '../LabelDesignerTab'
 
-const mockMutateAsync = vi.fn(async () => undefined)
+const mockMutateAsync = vi.fn(async (_args?: unknown) => undefined)
 
 vi.mock('../../../hooks/queries/useLabelStudio', () => ({
   useLabelTemplates: () => ({
@@ -37,7 +37,7 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
     isLoading: false,
   }),
   useUpdateLabelTemplateLayout: () => ({
-    mutateAsync: (...args: unknown[]) => mockMutateAsync(...args),
+    mutateAsync: mockMutateAsync,
     isPending: false,
   }),
 }))

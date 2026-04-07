@@ -805,6 +805,60 @@
   font-weight: var(--type-weight-semibold);
 }
 
+.label-preview-template-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.label-preview-template-chip,
+.label-preview-page-status,
+.label-preview-pagination-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--color-secondary);
+  font-size: var(--type-size-xs);
+  font-weight: var(--type-weight-semibold);
+}
+
+.label-preview-canvas.is-page-preview {
+  align-items: stretch;
+  min-height: 280px;
+}
+
+.label-preview-artboard {
+  width: min(100%, 340px);
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.label-preview-artboard.is-page {
+  width: min(100%, 480px);
+}
+
+.label-preview-svg,
+.label-preview-page-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #ffffff;
+}
+
+.label-preview-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .label-designer-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);

@@ -1,7 +1,10 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import type { LabelProduct } from '../../api/labelStudio'
-import { formatLabelPrice, resolveLabelLayout } from './labelLayout'
+import type { LabelAssetRenderers } from './labelAssetRenderers'
+import { LabelPagePreviewSvg, SingleLabelPreviewSvg } from './LabelRenderPreview'
+import { buildLabelPlacements, buildLabelRenderPlan, getPlacementPageCount, resolveLabelLayout } from './labelRenderPlan'
+import { useLabelAssetDataUrls } from './useLabelAssetDataUrls'
 
 type LabelPreviewSummaryItem = {
   label: string
@@ -18,24 +21,18 @@ type LabelPreviewCardProps = {
   badgeText?: string
   emptyMessage: string
   sampleProduct?: Partial<Pick<LabelProduct, 'id' | 'name' | 'sku' | 'selling_price'>> | null
+  products?: LabelProduct[]
+  previewMode?: 'label' | 'page'
+  renderers?: LabelAssetRenderers
   summaryItems?: LabelPreviewSummaryItem[]
 }
-
-const barcodeBarPattern = [2, 1, 1, 3, 2, 1, 2, 1, 3, 2, 1, 1, 2, 3, 1, 2, 2, 1, 3, 1]
-
-const qrCells = [
-  1, 1, 1, 0, 1,
-  1, 0, 1, 0, 0,
-  1, 1, 1, 0, 1,
-  0, 0, 1, 0, 1,
-  1, 0, 1, 1, 1,
-]
 
 const defaultSample = {
   id: 'sample-id',
   name: 'Sample Product Name',
   sku: 'SKU-001',
   selling_price: 24,
+  folder_id: null,
 }
 
 const formatFieldName = (value: string) => {
@@ -57,29 +54,63 @@ export const LabelPreviewCard = ({
   badgeText,
   emptyMessage,
   sampleProduct,
+  products,
+  previewMode = 'label',
+  renderers,
   summaryItems,
 }: LabelPreviewCardProps) => {
-  const resolvedLayout = resolveLabelLayout(layout)
-  const previewProduct = {
-    ...defaultSample,
-    ...(sampleProduct ?? {}),
-  }
-  const priceText = formatLabelPrice(previewProduct.selling_price)
-  const alignmentClass = `is-${resolvedLayout.textAlign}`
-  const surfaceStyle: CSSProperties = {
-    aspectRatio: `${resolvedLayout.width} / ${resolvedLayout.height}`,
-    padding: `${resolvedLayout.padding}px`,
-    borderWidth: resolvedLayout.showBorder ? '1px' : '0',
-  }
-  const copyStyle: CSSProperties = {
-    textAlign: resolvedLayout.textAlign,
-  }
-  const nameStyle: CSSProperties = {
-    WebkitBoxOrient: 'vertical',
-    WebkitLineClamp: resolvedLayout.nameLines,
-  }
-  const qrSize = Math.round(Math.max(54, Math.min(88, 60 * (resolvedLayout.qrScale / 100))))
-  const barcodeHeight = Math.round(Math.max(18, Math.min(42, 28 * (resolvedLayout.barcodeScale / 100))))
+  const layoutKey = JSON.stringify(layout ?? null)
+  const resolvedLayout = useMemo(() => resolveLabelLayout(layout), [layoutKey, layout])
+  const previewProduct = useMemo(
+    () => ({
+      ...defaultSample,
+      ...(sampleProduct ?? {}),
+    }),
+    [sampleProduct],
+  )
+  const previewProducts = useMemo(() => products ?? [], [products])
+  const singleLabelPlan = useMemo(
+    () => (templateName && previewMode === 'label' ? buildLabelRenderPlan(previewProduct, resolvedLayout) : null),
+    [previewMode, previewProduct, resolvedLayout, templateName],
+  )
+  const placements = useMemo(
+    () => (templateName && previewMode === 'page' ? buildLabelPlacements(previewProducts, quantity ?? 1, resolvedLayout) : []),
+    [previewMode, previewProducts, quantity, resolvedLayout, templateName],
+  )
+  const pageCount = useMemo(() => getPlacementPageCount(placements), [placements])
+  const [pageIndex, setPageIndex] = useState(0)
+
+  useEffect(() => {
+    setPageIndex(0)
+  }, [layoutKey, previewMode, quantity, templateName, previewProducts])
+
+  useEffect(() => {
+    if (pageIndex > Math.max(0, pageCount - 1)) {
+      setPageIndex(Math.max(0, pageCount - 1))
+    }
+  }, [pageCount, pageIndex])
+
+  const visiblePlacements = useMemo(
+    () => placements.filter((placement) => placement.page === pageIndex),
+    [pageIndex, placements],
+  )
+  const pageLabelPlans = useMemo(
+    () => visiblePlacements.map((placement) => ({
+      placement,
+      plan: buildLabelRenderPlan(placement.product, resolvedLayout),
+    })),
+    [resolvedLayout, visiblePlacements],
+  )
+  const assetRequests = useMemo(() => {
+    if (previewMode === 'page') {
+      return pageLabelPlans.flatMap((item) => item.plan.assetItems)
+    }
+
+    return singleLabelPlan?.assetItems ?? []
+  }, [pageLabelPlans, previewMode, singleLabelPlan])
+  const assetMap = useLabelAssetDataUrls(assetRequests, renderers)
+  const showPagePreview = previewMode === 'page' && templateName && pageLabelPlans.length > 0
+  const showSingleLabelPreview = previewMode === 'label' && templateName && singleLabelPlan
 
   return (
     <div className="card export-preview-card label-preview-card">
@@ -91,51 +122,54 @@ export const LabelPreviewCard = ({
         {badgeText ? <span className="badge neutral">{badgeText}</span> : null}
       </div>
 
-      <div className="label-preview-canvas">
-        {templateName ? (
-          <div className="label-preview-surface" style={surfaceStyle}>
-            <div className="label-preview-topline">
-              <span className="label-preview-tag">Template</span>
-              {quantity && quantity > 0 ? <span className="label-preview-qty">x{quantity}</span> : null}
-            </div>
+      {templateName ? (
+        <div className="label-preview-template-row">
+          <span className="label-preview-template-chip">{templateName}</span>
+          {previewMode === 'page' && pageCount > 0 ? (
+            <span className="label-preview-page-status">Page {pageIndex + 1} of {pageCount}</span>
+          ) : null}
+        </div>
+      ) : null}
 
-            <span className="label-preview-template-name" title={templateName}>{templateName}</span>
-
-            <div className={`label-preview-body ${alignmentClass}`}>
-              <div className="label-preview-copy" style={copyStyle}>
-                {resolvedLayout.showName ? <span className="label-preview-primary" style={nameStyle}>{previewProduct.name}</span> : null}
-                {resolvedLayout.showSku ? <span className="label-preview-secondary">SKU: {previewProduct.sku}</span> : null}
-                {resolvedLayout.showPrice && priceText ? <span className="label-preview-secondary">Price: {priceText}</span> : null}
-              </div>
-
-              {resolvedLayout.showQr ? (
-                <div className="label-preview-qr" aria-label="QR preview" style={{ width: qrSize, height: qrSize }}>
-                  {qrCells.map((cell, index) => (
-                    <span
-                      key={`qr-${index}`}
-                      className={`label-preview-qr-cell${cell ? ' is-active' : ''}`}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            {resolvedLayout.showBarcode ? (
-              <div className="label-preview-barcode" aria-label="Barcode preview" style={{ height: barcodeHeight }}>
-                {barcodeBarPattern.map((barWidth, index) => (
-                  <span
-                    key={`bar-${index}`}
-                    className="label-preview-bar"
-                    style={{ width: `${barWidth}px` }}
-                  />
-                ))}
-              </div>
-            ) : null}
+      <div className={`label-preview-canvas${previewMode === 'page' ? ' is-page-preview' : ''}`}>
+        {showPagePreview ? (
+          <div className="label-preview-artboard is-page">
+            <LabelPagePreviewSvg
+              templateName={templateName}
+              labels={pageLabelPlans}
+              assetMap={assetMap}
+            />
+          </div>
+        ) : showSingleLabelPreview ? (
+          <div className="label-preview-artboard is-label">
+            <SingleLabelPreviewSvg plan={singleLabelPlan} assetMap={assetMap} />
           </div>
         ) : (
           <div className="empty-state" style={{ padding: 24 }}>{emptyMessage}</div>
         )}
       </div>
+
+      {previewMode === 'page' && pageCount > 1 ? (
+        <div className="label-preview-pagination">
+          <button
+            type="button"
+            className="button ghost small"
+            onClick={() => setPageIndex((currentPage) => Math.max(0, currentPage - 1))}
+            disabled={pageIndex === 0}
+          >
+            Previous Page
+          </button>
+          <span className="label-preview-pagination-status">{pageIndex + 1} / {pageCount}</span>
+          <button
+            type="button"
+            className="button ghost small"
+            onClick={() => setPageIndex((currentPage) => Math.min(pageCount - 1, currentPage + 1))}
+            disabled={pageIndex >= pageCount - 1}
+          >
+            Next Page
+          </button>
+        </div>
+      ) : null}
 
       {summaryItems?.length ? (
         <div className="label-preview-meta-grid">
