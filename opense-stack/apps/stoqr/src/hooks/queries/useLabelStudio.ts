@@ -51,7 +51,6 @@ export const useCreateLabelTemplate = (companyId: string | null) => {
   return useMutation({
     mutationFn: async (payload: {
       name: string
-      templateType: 'product' | 'shelf' | 'bin' | 'shipping'
       layout: Record<string, unknown>
       variableFields: string[]
     }) => {

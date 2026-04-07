@@ -23,7 +23,6 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
         id: 'template-1',
         company_id: 'company-1',
         name: 'Product Label',
-        template_type: 'product',
         is_system: false,
         layout: {
           showQr: true,
@@ -33,6 +32,7 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
         },
         variable_fields: ['name', 'sku', 'barcode', 'qr'],
         created_at: '2026-02-20T00:00:00Z',
+        updated_at: null,
       },
     ],
     isLoading: false,
@@ -60,10 +60,10 @@ describe('LabelPreviewBatchTab', () => {
     vi.clearAllMocks()
   })
 
-  it('shows recent downloads inline with the export form', () => {
+  it('shows recent exports inline with the export form', () => {
     render(<LabelPreviewBatchTab companyId="company-1" />)
 
-    expect(screen.getByText('Recent Downloads')).toBeInTheDocument()
+    expect(screen.getByText('Recent Exports')).toBeInTheDocument()
     expect(screen.getByText('No PDF exports yet. Export one here to download it immediately.')).toBeInTheDocument()
   })
 
@@ -75,7 +75,7 @@ describe('LabelPreviewBatchTab', () => {
     await user.selectOptions(screen.getByLabelText('Template'), 'template-1')
     await user.selectOptions(screen.getByLabelText('Product'), 'product-1')
 
-    await user.click(screen.getByRole('button', { name: 'Export PDF' }))
+    await user.click(screen.getByRole('button', { name: /Export PDF Batch/i }))
 
     await waitFor(() => {
       expect(mockCreatePdfDataUrl).toHaveBeenCalledTimes(1)
@@ -111,7 +111,7 @@ describe('LabelPreviewBatchTab', () => {
 
     render(<LabelPreviewBatchTab companyId="company-1" />)
 
-    await user.click(screen.getByRole('button', { name: 'Export PDF' }))
+    await user.click(screen.getByRole('button', { name: /Export PDF Batch/i }))
 
     expect(screen.getByText('Select template and valid quantity.')).toBeInTheDocument()
     expect(mockCreatePdfDataUrl).not.toHaveBeenCalled()

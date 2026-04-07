@@ -41,6 +41,11 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   const selectedProduct = useMemo(() => products.find((product) => product.id === productId) ?? null, [products, productId])
   const selectedFolder = useMemo(() => folders.find((folder) => folder.id === folderId) ?? null, [folders, folderId])
 
+  const batchCount = useMemo(() => {
+    const items = targetType === 'folder' ? products.length : (productId ? 1 : 0)
+    return items * quantity
+  }, [targetType, products.length, productId, quantity])
+
   useEffect(() => {
     setTemplateId(initialSelectedTemplateId ?? '')
   }, [initialSelectedTemplateId])
@@ -128,106 +133,161 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   }
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 24 }}>
-      <div className="card stack">
-        <h3 className="section-title">Preview & Batch</h3>
+    <div className="export-layout">
+      <div className="card stack export-config-card">
+        <div>
+          <h3 className="section-title" style={{ marginBottom: 4 }}>Export Configuration</h3>
+          <p className="small muted" style={{ margin: 0 }}>Set up your batch print job.</p>
+        </div>
         {loadingTemplates || loadingProducts || loadingFolders ? (
           <div className="empty-state">Loading data...</div>
         ) : (
           <>
-            <label className="stack">
-              Template
-              <select className="select" value={templateId} onChange={(event) => handleTemplateChange(event.target.value)}>
-                <option value="">Select template</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="stack">
-              Scope
-              <select
-                className="select"
-                value={targetType}
-                onChange={(event) => {
-                  const nextType = event.target.value as BatchTarget
-                  setTargetType(nextType)
-                  setMessage(null)
-                  setProductId('')
-                  if (nextType === 'product') {
-                    setFolderId('')
-                  }
-                }}
-              >
-                <option value="product">Single Product</option>
-                <option value="folder">Entire Folder</option>
-              </select>
-            </label>
-
-            {targetType === 'folder' ? (
-              <label className="stack">
-                Folder
-                <select className="select" value={folderId} onChange={(event) => setFolderId(event.target.value)}>
-                  <option value="">Select folder</option>
-                  {folders.map((folder) => (
-                    <option key={folder.id} value={folder.id}>
-                      {folder.name}
+            <div className="export-step">
+              <span className="export-step-number">1</span>
+              <label className="stack" style={{ gap: 8, flex: 1 }}>
+                <span className="export-step-label">Select Template</span>
+                <select className="select" aria-label="Template" value={templateId} onChange={(event) => handleTemplateChange(event.target.value)}>
+                  <option value="">Select template</option>
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
                     </option>
                   ))}
                 </select>
               </label>
-            ) : null}
-
-            {targetType === 'product' ? (
-              <label className="stack">
-                Product
-                <select className="select" value={productId} onChange={(event) => setProductId(event.target.value)}>
-                  <option value="">Select product</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} ({product.sku})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <div className="small muted">Products in folder: {products.length}</div>
-            )}
-
-            <label className="stack">
-              Quantity
-              <input
-                className="input"
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(event) => setQuantity(Number(event.target.value) || 1)}
-              />
-            </label>
-
-            <div className="small muted">
-              Preview: {selectedTemplate ? selectedTemplate.name : 'No template'} ·{' '}
-              {targetType === 'product'
-                ? selectedProduct?.name ?? 'No product'
-                : selectedFolder
-                  ? `${selectedFolder.name} (${products.length} products)`
-                  : 'No folder'} · x{quantity}
             </div>
 
-            <button className="button" onClick={exportPdf} disabled={createPrintJobMutation.isPending}>Export PDF</button>
-            {message && <div className="small muted">{message}</div>}
+            <div className="export-step">
+              <span className="export-step-number">2</span>
+              <div className="stack" style={{ gap: 8, flex: 1 }}>
+                <span className="export-step-label">Target Data</span>
+                <div className="export-toggle-group" role="radiogroup" aria-label="Target type">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={targetType === 'product'}
+                    className={`export-toggle-btn${targetType === 'product' ? ' active' : ''}`}
+                    onClick={() => {
+                      setTargetType('product')
+                      setMessage(null)
+                      setProductId('')
+                      setFolderId('')
+                    }}
+                  >
+                    Single Product
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={targetType === 'folder'}
+                    className={`export-toggle-btn${targetType === 'folder' ? ' active' : ''}`}
+                    onClick={() => {
+                      setTargetType('folder')
+                      setMessage(null)
+                      setProductId('')
+                    }}
+                  >
+                    Entire Folder
+                  </button>
+                </div>
+
+                {targetType === 'folder' ? (
+                  <>
+                    <select className="select" aria-label="Folder" value={folderId} onChange={(event) => setFolderId(event.target.value)}>
+                      <option value="">Select folder</option>
+                      {folders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedFolder && (
+                      <span className="export-folder-chip">
+                        {selectedFolder.name} · {products.length} items 📁
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <select className="select" aria-label="Product" value={productId} onChange={(event) => setProductId(event.target.value)}>
+                    <option value="">Select product</option>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} ({product.sku})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            <div className="export-step">
+              <span className="export-step-number">3</span>
+              <div className="stack" style={{ gap: 8, flex: 1 }}>
+                <span className="export-step-label">Copies per item</span>
+                <div className="export-stepper">
+                  <button type="button" className="export-stepper-btn" aria-label="Decrease quantity" onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}>−</button>
+                  <input
+                    className="export-stepper-value"
+                    type="number"
+                    min={1}
+                    aria-label="Quantity"
+                    value={quantity}
+                    onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
+                  />
+                  <button type="button" className="export-stepper-btn" aria-label="Increase quantity" onClick={() => setQuantity((prev) => prev + 1)}>+</button>
+                </div>
+              </div>
+            </div>
+
+            <button className="button export-batch-btn" onClick={exportPdf} disabled={createPrintJobMutation.isPending}>
+              <span className="export-batch-btn-icon">⬇</span>
+              Export PDF Batch
+            </button>
+            {batchCount > 0 && (
+              <p className="small muted" style={{ textAlign: 'center', margin: 0 }}>
+                Generates a {batchCount}-page PDF document
+              </p>
+            )}
+            {message && <div className="small muted" style={{ textAlign: 'center' }}>{message}</div>}
           </>
         )}
       </div>
 
-      <LabelDownloadsTab
-        companyId={companyId}
-        title="Recent Downloads"
-        emptyStateMessage="No PDF exports yet. Export one here to download it immediately."
-      />
+      <div className="stack export-right-panel">
+        <div className="card export-preview-card">
+          <div className="flex-between" style={{ marginBottom: 16 }}>
+            <h3 className="section-title" style={{ margin: 0 }}>Live Preview</h3>
+            {batchCount > 0 && <span className="badge neutral">BATCH OF {batchCount}</span>}
+          </div>
+          <div className="export-preview-canvas">
+            {selectedTemplate ? (
+              <div className="export-preview-label">
+                <span className="export-preview-tag">PREVIEWING</span>
+                <span className="export-preview-name" title={selectedTemplate.name}>{selectedTemplate.name}</span>
+                <div className="export-preview-placeholder-lines">
+                  <div className="export-preview-line" style={{ width: '80%' }} />
+                  <div className="export-preview-line" style={{ width: '60%' }} />
+                </div>
+                <div className="export-preview-barcode" aria-label="Barcode preview">
+                  {Array.from({ length: 24 }).map((_, i) => (
+                    <div key={i} className="export-preview-bar" style={{ width: i % 3 === 0 ? 3 : 1 }} />
+                  ))}
+                </div>
+                {quantity > 0 && <span className="export-preview-qty">x{quantity}</span>}
+              </div>
+            ) : (
+              <div className="empty-state" style={{ padding: 24 }}>Select a template to preview</div>
+            )}
+          </div>
+        </div>
+
+        <LabelDownloadsTab
+          companyId={companyId}
+          title="Recent Exports"
+          emptyStateMessage="No PDF exports yet. Export one here to download it immediately."
+        />
+      </div>
     </div>
   )
 }

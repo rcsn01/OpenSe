@@ -299,7 +299,6 @@ CREATE TABLE IF NOT EXISTS stoqr.label_templates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   company_id UUID REFERENCES public.organisations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  template_type TEXT NOT NULL CHECK (template_type IN ('product', 'shelf', 'bin', 'shipping')),
   is_system BOOLEAN NOT NULL DEFAULT false,
   layout JSONB NOT NULL DEFAULT '{}'::jsonb,
   variable_fields TEXT[] NOT NULL DEFAULT '{barcode,sku,name,price,qr}'::text[],
@@ -328,12 +327,11 @@ CREATE TABLE IF NOT EXISTS stoqr.label_print_jobs (
   completed_at TIMESTAMPTZ
 );
 
-INSERT INTO stoqr.label_templates (company_id, name, template_type, is_system, layout, variable_fields)
+INSERT INTO stoqr.label_templates (company_id, name, is_system, layout, variable_fields)
 VALUES
-  (NULL, 'Product Default', 'product', true, '{}'::jsonb, '{barcode,sku,name,price,qr}'::text[]),
-  (NULL, 'Shelf Default', 'shelf', true, '{}'::jsonb, '{barcode,name,qr}'::text[]),
-  (NULL, 'Bin Default', 'bin', true, '{}'::jsonb, '{barcode,name,qr}'::text[]),
-  (NULL, 'Shipping Default', 'shipping', true, '{}'::jsonb, '{barcode,sku,name,qr}'::text[])
+  (NULL, 'Standard Product Barcode', true, '{}'::jsonb, '{barcode,sku,name,price,qr}'::text[]),
+  (NULL, 'Warehouse Bin Locator', true, '{}'::jsonb, '{barcode,name,qr}'::text[]),
+  (NULL, 'B2B Shipping Label (4x6)', true, '{}'::jsonb, '{barcode,sku,name,qr}'::text[])
 ON CONFLICT DO NOTHING;
 
 INSERT INTO storage.buckets (id, name, public)
@@ -363,7 +361,7 @@ CREATE INDEX idx_alert_events_company_status ON stoqr.alert_events(company_id, s
 CREATE INDEX idx_alert_events_product ON stoqr.alert_events(product_id, triggered_at DESC);
 CREATE INDEX idx_alert_delivery_logs_event ON stoqr.alert_delivery_logs(alert_event_id);
 CREATE INDEX idx_activity_events_company_created ON stoqr.activity_events(company_id, created_at DESC);
-CREATE INDEX idx_label_templates_company_type ON stoqr.label_templates(company_id, template_type);
+CREATE INDEX idx_label_templates_company ON stoqr.label_templates(company_id);
 CREATE UNIQUE INDEX idx_label_templates_global_name_unique
   ON stoqr.label_templates(name)
   WHERE company_id IS NULL;
