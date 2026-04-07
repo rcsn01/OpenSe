@@ -128,11 +128,11 @@ describe('label studio api', () => {
           id: 'tpl-1',
           company_id: null,
           name: 'System Product',
-          template_type: 'product',
           is_system: true,
           layout: {},
           variable_fields: ['name', 'sku'],
           created_at: '2026-02-24T00:00:00Z',
+          updated_at: null,
         },
       ],
       error: null,
@@ -173,7 +173,6 @@ describe('label studio api', () => {
     await createLabelTemplate({
       companyId: 'company-1',
       name: 'Custom Product',
-      templateType: 'product',
       layout: { width: 100 },
       variableFields: ['name', 'sku'],
     })
@@ -181,7 +180,6 @@ describe('label studio api', () => {
     expect(insert).toHaveBeenCalledWith({
       company_id: 'company-1',
       name: 'Custom Product',
-      template_type: 'product',
       layout: { width: 100 },
       variable_fields: ['name', 'sku'],
       is_system: false,

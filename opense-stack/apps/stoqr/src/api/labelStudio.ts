@@ -12,11 +12,11 @@ export type LabelTemplate = {
   id: string
   company_id: string | null
   name: string
-  template_type: 'product' | 'shelf' | 'bin' | 'shipping'
   is_system: boolean
   layout: Record<string, unknown>
   variable_fields: string[]
   created_at: string
+  updated_at: string | null
 }
 
 export type LabelPrintJob = {
@@ -76,7 +76,7 @@ export const fetchLabelProductFolders = async (companyId: string): Promise<Label
 export const fetchLabelTemplates = async (companyId: string): Promise<LabelTemplate[]> => {
   const { data, error } = await db
     .from('label_templates')
-    .select('id, company_id, name, template_type, is_system, layout, variable_fields, created_at')
+    .select('id, company_id, name, is_system, layout, variable_fields, created_at, updated_at')
     .or(`company_id.is.null,company_id.eq.${companyId}`)
     .order('is_system', { ascending: false })
     .order('name', { ascending: true })
@@ -89,14 +89,12 @@ export const fetchLabelTemplates = async (companyId: string): Promise<LabelTempl
 export const createLabelTemplate = async (params: {
   companyId: string
   name: string
-  templateType: 'product' | 'shelf' | 'bin' | 'shipping'
   layout: Record<string, unknown>
   variableFields: string[]
 }) => {
   const { error } = await db.from('label_templates').insert({
     company_id: params.companyId,
     name: params.name,
-    template_type: params.templateType,
     layout: params.layout,
     variable_fields: params.variableFields,
     is_system: false,

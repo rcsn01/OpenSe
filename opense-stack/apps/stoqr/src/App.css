@@ -454,4 +454,288 @@
 @media (max-width: 768px) {
   .grid-2 { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: 1fr; }
+  .export-layout { grid-template-columns: 1fr; }
+}
+
+/* --- Export Configuration (LabelPreviewBatchTab) --- */
+.export-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  gap: 24px;
+}
+
+.export-config-card {
+  align-self: start;
+}
+
+.export-right-panel {
+  gap: 24px;
+}
+
+.export-step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.export-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  font-size: var(--type-size-sm);
+  font-weight: var(--type-weight-bold);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.export-step-label {
+  font-size: var(--type-size-sm);
+  font-weight: var(--type-weight-semibold);
+  color: var(--text);
+}
+
+.export-toggle-group {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.export-toggle-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  background: var(--color-card);
+  color: var(--color-muted-foreground);
+  font-size: var(--type-size-sm);
+  font-weight: var(--type-weight-medium);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.export-toggle-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.export-toggle-btn.active {
+  background: var(--primary);
+  color: var(--color-primary-foreground);
+  font-weight: var(--type-weight-semibold);
+}
+
+.export-toggle-btn:hover:not(.active) {
+  background: var(--color-muted);
+}
+
+.export-folder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: var(--color-muted);
+  font-size: var(--type-size-sm);
+  color: var(--color-secondary);
+  font-weight: var(--type-weight-medium);
+}
+
+.export-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.export-stepper-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--color-card);
+  color: var(--primary);
+  font-size: var(--type-size-lg);
+  font-weight: var(--type-weight-bold);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.export-stepper-btn:hover {
+  background: var(--color-muted);
+}
+
+.export-stepper-value {
+  width: 56px;
+  height: 40px;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  background: var(--color-card);
+  color: var(--text);
+  font-size: var(--type-size-base);
+  font-weight: var(--type-weight-semibold);
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.export-stepper-value::-webkit-outer-spin-button,
+.export-stepper-value::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.export-batch-btn {
+  width: 100%;
+  padding: 14px 24px;
+  font-size: var(--type-size-base);
+  font-weight: var(--type-weight-semibold);
+  border-radius: 12px;
+}
+
+.export-batch-btn-icon {
+  margin-right: 4px;
+}
+
+/* --- Export: Live Preview --- */
+.export-preview-card {
+  min-height: 200px;
+}
+
+.export-preview-canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-muted);
+  border-radius: 12px;
+  padding: 24px;
+  min-height: 160px;
+}
+
+.export-preview-label {
+  position: relative;
+  background: var(--color-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  min-width: 220px;
+  max-width: 300px;
+  box-shadow: var(--shadow-sm);
+}
+
+.export-preview-tag {
+  display: block;
+  font-size: var(--type-size-xs);
+  font-weight: var(--type-weight-bold);
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.export-preview-name {
+  display: block;
+  font-size: var(--type-size-sm);
+  font-weight: var(--type-weight-semibold);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 12px;
+}
+
+.export-preview-placeholder-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.export-preview-line {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+}
+
+.export-preview-barcode {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 36px;
+}
+
+.export-preview-bar {
+  background: var(--text);
+  height: 100%;
+  border-radius: 0.5px;
+}
+
+.export-preview-qty {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--color-muted);
+  color: var(--color-secondary);
+  font-size: var(--type-size-xs);
+  font-weight: var(--type-weight-bold);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* --- Export: Downloads List --- */
+.export-downloads-card {
+  flex: 1;
+  min-height: 0;
+}
+
+.export-downloads-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.export-download-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.export-download-row:last-child {
+  border-bottom: none;
+}
+
+.export-download-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.export-download-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.export-download-name {
+  font-size: var(--type-size-sm);
+  font-weight: var(--type-weight-semibold);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.export-download-action {
+  flex-shrink: 0;
 }

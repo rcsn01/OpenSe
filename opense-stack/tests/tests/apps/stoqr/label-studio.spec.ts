@@ -9,6 +9,8 @@ const ensureTemplateExists = async (page: import('@playwright/test').Page) => {
     return templateButtons.first()
   }
 
+  await page.getByRole('button', { name: '+ New Template' }).click()
+
   const templateName = `E2E Template ${Date.now()}`
   await page.getByLabel('Template Name').fill(templateName)
   await page.getByRole('button', { name: 'Create Template' }).click()
@@ -63,7 +65,7 @@ test.describe('Stoqr Label Studio', () => {
     await expect(authenticatedPage.getByRole('tab', { name: /bin \/ shelf/i })).toHaveCount(0)
     await expect(authenticatedPage.getByRole('tab', { name: /shipping/i })).toHaveCount(0)
 
-    await expect(authenticatedPage.getByText(/Create Template/i)).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: /\+ New Template/i })).toBeVisible()
 
     const templateButton = await ensureTemplateExists(authenticatedPage)
     await templateButton.click()
@@ -75,9 +77,10 @@ test.describe('Stoqr Label Studio', () => {
     await authenticatedPage.getByRole('tab', { name: /^Preview & Batch$/i }).click()
     await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/preview-batch$/)
     await expect(authenticatedPage.getByText(/Preview & Batch/i).first()).toBeVisible()
-    await expect(authenticatedPage.getByText(/Single Product|Entire Folder/i).first()).toBeVisible()
-    await expect(authenticatedPage.getByRole('button', { name: /export pdf/i })).toBeVisible()
-    await expect(authenticatedPage.getByText(/Recent Downloads/i)).toBeVisible()
+    await expect(authenticatedPage.getByRole('radio', { name: /Single Product/i })).toBeVisible()
+    await expect(authenticatedPage.getByRole('radio', { name: /Entire Folder/i })).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: /export pdf batch/i })).toBeVisible()
+    await expect(authenticatedPage.getByText(/Recent Exports/i)).toBeVisible()
   })
 
   test('preview tab validates export inputs and downloads pdf directly', async ({ authenticatedPage }) => {
@@ -104,10 +107,10 @@ test.describe('Stoqr Label Studio', () => {
 
     await authenticatedPage.getByRole('tab', { name: /^Preview & Batch$/i }).click()
     await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/preview-batch$/)
-    await expect(authenticatedPage.getByRole('button', { name: /export pdf/i })).toBeVisible()
-    await expect(authenticatedPage.getByText(/Recent Downloads/i)).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: /export pdf batch/i })).toBeVisible()
+    await expect(authenticatedPage.getByText(/Recent Exports/i)).toBeVisible()
 
-    await authenticatedPage.getByRole('button', { name: /export pdf/i }).click()
+    await authenticatedPage.getByRole('button', { name: /export pdf batch/i }).click()
     await expect(authenticatedPage.getByText(/Select template and valid quantity\./i)).toBeVisible()
 
     await authenticatedPage.getByRole('tab', { name: /^Templates$/i }).click()
@@ -126,7 +129,7 @@ test.describe('Stoqr Label Studio', () => {
     }
 
     const downloadPromise = authenticatedPage.waitForEvent('download')
-    await authenticatedPage.getByRole('button', { name: /export pdf/i }).click()
+    await authenticatedPage.getByRole('button', { name: /export pdf batch/i }).click()
 
     const download = await downloadPromise
     expect(download.suggestedFilename()).toMatch(/\.pdf$/i)
