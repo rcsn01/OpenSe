@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import {
   useCreateInventoryFolder,
@@ -61,6 +61,11 @@ export const AllProductsTab = ({
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false)
   const [moveTargetFolderId, setMoveTargetFolderId] = useState('__uncategorised__')
   const [bulkModalMode, setBulkModalMode] = useState<'price' | 'quantity' | null>(null)
+  const [isMobileExplorerOpen, setIsMobileExplorerOpen] = useState(false)
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(max-width: 767px)').matches
+  })
 
   const createFolderMutation = useCreateInventoryFolder(companyId)
   const renameFolderMutation = useRenameFolderInInventory(companyId)
@@ -92,6 +97,36 @@ export const AllProductsTab = ({
       .map((folder) => ({ value: folder.id, label: getFolderPath(folder.id) || folder.name }))
       .sort((left, right) => left.label.localeCompare(right.label))
   }, [folders])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const applyViewport = () => {
+      const isMobile = mediaQuery.matches || window.innerWidth <= 767
+      setIsMobileViewport(isMobile)
+      if (!isMobile) {
+        setIsMobileExplorerOpen(false)
+      }
+    }
+
+    applyViewport()
+
+    const onChange = () => applyViewport()
+    mediaQuery.addEventListener('change', onChange)
+    window.addEventListener('resize', onChange)
+
+    return () => {
+      mediaQuery.removeEventListener('change', onChange)
+      window.removeEventListener('resize', onChange)
+    }
+  }, [])
+
+  const closeMobileExplorerIfNeeded = () => {
+    if (isMobileViewport) {
+      setIsMobileExplorerOpen(false)
+    }
+  }
 
   const handleFolderSelect = (folderId: string | null) => {
     setSelectedFolderId(folderId)
@@ -240,29 +275,56 @@ export const AllProductsTab = ({
   }
 
   return (
-    <div className="explorer-container" style={{ flex: 1, minHeight: 0 }}>
-      <FolderNavigationPanel
-        folders={folders}
-        activeFolderId={selectedFolderId}
-        folderView={folderView}
-        onSelectFolder={(folderId) => handleFolderSelect(folderId)}
-        onSelectView={(view) => {
-          setFolderView(view)
-          if (view !== 'folder') setSelectedFolderId(null)
-          setPage(1)
-        }}
-        onCreateFolder={handleCreateFolder}
-        onRenameFolder={handleRenameFolder}
-        onDeleteFolder={(folderId) => handleDeleteStepChoose(folderId)}
-        onMoveFolder={handleMoveFolder}
-        deletingFolderId={deletingFolderId}
-        deleteStep={deleteStep}
-        deleteAction={deleteAction}
-        onDeleteStepChoose={handleDeleteStepChoose}
-        onDeleteActionSelect={handleDeleteActionSelect}
-        onDeleteConfirm={handleDeleteConfirm}
-        onDeleteCancel={handleDeleteCancel}
-      />
+    <div
+      className={`explorer-container ${isMobileViewport ? 'mobile-explorer-enabled' : ''} ${isMobileExplorerOpen ? 'mobile-explorer-open' : ''}`}
+      style={{ flex: 1, minHeight: 0 }}
+    >
+      {isMobileViewport && isMobileExplorerOpen ? (
+        <button
+          type="button"
+          className="explorer-mobile-backdrop"
+          aria-label="Close folder navigation"
+          onClick={() => setIsMobileExplorerOpen(false)}
+        />
+      ) : null}
+
+      <div
+        id="inventory-folder-navigation"
+        className={`explorer-sidebar-shell ${isMobileExplorerOpen ? 'is-open' : ''}`}
+        role="complementary"
+        aria-label="Folder navigation"
+        aria-hidden={isMobileViewport ? !isMobileExplorerOpen : undefined}
+      >
+        <FolderNavigationPanel
+          folders={folders}
+          activeFolderId={selectedFolderId}
+          folderView={folderView}
+          onSelectFolder={(folderId) => {
+            handleFolderSelect(folderId)
+            closeMobileExplorerIfNeeded()
+          }}
+          onSelectView={(view) => {
+            setFolderView(view)
+            if (view !== 'folder') setSelectedFolderId(null)
+            setPage(1)
+            closeMobileExplorerIfNeeded()
+          }}
+          onCreateFolder={() => {
+            void handleCreateFolder()
+            closeMobileExplorerIfNeeded()
+          }}
+          onRenameFolder={handleRenameFolder}
+          onDeleteFolder={(folderId) => handleDeleteStepChoose(folderId)}
+          onMoveFolder={handleMoveFolder}
+          deletingFolderId={deletingFolderId}
+          deleteStep={deleteStep}
+          deleteAction={deleteAction}
+          onDeleteStepChoose={handleDeleteStepChoose}
+          onDeleteActionSelect={handleDeleteActionSelect}
+          onDeleteConfirm={handleDeleteConfirm}
+          onDeleteCancel={handleDeleteCancel}
+        />
+      </div>
 
       <div className="explorer-main">
         {isCreatingFolder ? (
@@ -313,6 +375,9 @@ export const AllProductsTab = ({
             pendingFilterKey={pendingFilterKey}
             setPendingFilterKey={setPendingFilterKey}
             customFieldFilters={customFieldFilters}
+            showMobileExplorerToggle={isMobileViewport && !isMobileExplorerOpen}
+            onMobileExplorerToggle={() => setIsMobileExplorerOpen(true)}
+            mobileExplorerControlsId="inventory-folder-navigation"
             onImportOpen={onImportOpen}
             onCreateOpen={onCreateOpen}
             handleBulkDelete={handleBulkDelete}

@@ -14,11 +14,11 @@ const formatCustomFieldValue = (value: string | number | boolean): string => {
   return String(value)
 }
 
-const stockFilterOptions = [
+const stockFilterOptions: { value: InventoryFiltersBarProps['stockFilter']; label: string }[] = [
   { value: 'all', label: 'All Statuses' },
   { value: 'low', label: 'Low Stock' },
   { value: 'out', label: 'Out of Stock' },
-] as const
+]
 
 const isStockFilterValue = (value: string): value is InventoryFiltersBarProps['stockFilter'] =>
   value === 'all' || value === 'low' || value === 'out'
@@ -36,6 +36,9 @@ export const InventoryFiltersBar = ({
   pendingFilterKey,
   setPendingFilterKey,
   customFieldFilters,
+  showMobileExplorerToggle = false,
+  onMobileExplorerToggle,
+  mobileExplorerControlsId = 'inventory-folder-navigation',
   onImportOpen,
   onCreateOpen,
   handleBulkDelete,
@@ -68,11 +71,26 @@ export const InventoryFiltersBar = ({
     setPendingFilterKey(null)
   }
 
+  const mobileExplorerToggle =
+    showMobileExplorerToggle && onMobileExplorerToggle ? (
+      <button
+        type="button"
+        className="explorer-mobile-toggle"
+        aria-label="Open folder navigation"
+        aria-controls={mobileExplorerControlsId}
+        aria-expanded="false"
+        onClick={onMobileExplorerToggle}
+      >
+        <span aria-hidden="true">&gt;</span>
+      </button>
+    ) : null
+
   return (
     <div className={`inventory-toolbar${isSelectionMode ? ' selection-mode' : ''}`}>
       {isSelectionMode ? (
         <>
           <div className="row" style={{ gap: 6 }}>
+            {mobileExplorerToggle}
             <span style={{ fontSize: 'var(--type-size-xs)', fontWeight: 'var(--type-weight-semibold)', color: 'var(--primary)' }}>
               {selectedRowIds.size} selected
             </span>
@@ -95,6 +113,7 @@ export const InventoryFiltersBar = ({
       ) : (
         <>
           <div className="row wrap" style={{ flex: 1, gap: 6, alignItems: 'center' }}>
+            {mobileExplorerToggle}
             <StockStatusFilterDropdown
               value={stockFilter}
               options={stockFilterOptions}

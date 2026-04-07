@@ -36,6 +36,9 @@ export type InventoryFiltersBarProps = {
   pendingFilterKey: string | null
   setPendingFilterKey: (key: string | null) => void
   customFieldFilters: CustomFieldFilterOption[]
+  showMobileExplorerToggle?: boolean
+  onMobileExplorerToggle?: () => void
+  mobileExplorerControlsId?: string
   onImportOpen: () => void
   onCreateOpen: () => void
   handleBulkDelete: () => void
