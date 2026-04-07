@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LabelPreviewBatchTab } from '../LabelPreviewBatchTab'
 
-const mockCreatePdfDataUrl = vi.fn(async () => 'data:application/pdf;base64,ZmFrZQ==')
-const mockDownloadLabelPdf = vi.fn()
-const mockMutateAsync = vi.fn(async () => undefined)
+const { mockCreatePdfDataUrl, mockDownloadLabelPdf, mockMutateAsync } = vi.hoisted(() => ({
+  mockCreatePdfDataUrl: vi.fn(async (_args?: unknown) => 'data:application/pdf;base64,ZmFrZQ=='),
+  mockDownloadLabelPdf: vi.fn(),
+  mockMutateAsync: vi.fn(async (_args?: unknown) => undefined),
+}))
 
 vi.mock('../pdfExport', () => ({
-  createLabelPdfDataUrl: (...args: unknown[]) => mockCreatePdfDataUrl(...args),
+  createLabelPdfDataUrl: mockCreatePdfDataUrl,
 }))
 
 vi.mock('../downloadLabelPdf', () => ({
@@ -46,7 +48,7 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
     isLoading: false,
   }),
   useCreateLabelPrintJob: () => ({
-    mutateAsync: (...args: unknown[]) => mockMutateAsync(...args),
+    mutateAsync: mockMutateAsync,
     isPending: false,
   }),
   useLabelPrintJobs: () => ({
@@ -65,6 +67,19 @@ describe('LabelPreviewBatchTab', () => {
 
     expect(screen.getByText('Recent Exports')).toBeInTheDocument()
     expect(screen.getByText('No PDF exports yet. Export one here to download it immediately.')).toBeInTheDocument()
+  })
+
+  it('renders the shared PDF page preview for the selected export target', async () => {
+    const user = userEvent.setup()
+
+    render(<LabelPreviewBatchTab companyId="company-1" />)
+
+    await user.selectOptions(screen.getByLabelText('Template'), 'template-1')
+    await user.selectOptions(screen.getByLabelText('Product'), 'product-1')
+
+    expect(screen.getByLabelText('PDF page preview')).toBeInTheDocument()
+    expect(screen.getByText('Page 1 of 1')).toBeInTheDocument()
+    expect(screen.getByText('Generates 1 PDF page across 1 label.')).toBeInTheDocument()
   })
 
   it('exports pdf with generated output url for selected product', async () => {

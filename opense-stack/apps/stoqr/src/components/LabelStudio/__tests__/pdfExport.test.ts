@@ -33,8 +33,8 @@ describe('label studio pdf export', () => {
 
   it('builds placements across pages without overlapping coordinates on same page', () => {
     const products = [
-      { id: 'p-1', name: 'Product One', sku: 'SKU-1', folder_id: null },
-      { id: 'p-2', name: 'Product Two', sku: 'SKU-2', folder_id: null },
+      { id: 'p-1', name: 'Product One', sku: 'SKU-1', folder_id: null, selling_price: null },
+      { id: 'p-2', name: 'Product Two', sku: 'SKU-2', folder_id: null, selling_price: null },
     ]
 
     const placements = buildLabelPlacements(products, 8, {

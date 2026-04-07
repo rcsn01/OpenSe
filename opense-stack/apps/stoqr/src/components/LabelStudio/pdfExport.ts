@@ -1,164 +1,39 @@
-import JsBarcode from 'jsbarcode'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import QRCode from 'qrcode'
 
 import type { LabelProduct } from '../../api/labelStudio'
-import { defaultLabelLayout, formatLabelPrice, resolveLabelLayout, type LabelLayoutControls } from './labelLayout'
+import { defaultLabelAssetRenderers, type LabelAssetRenderers } from './labelAssetRenderers'
+import {
+  A4_PAGE,
+  PAGE_MARGIN,
+  buildLabelPlacements,
+  buildLabelRenderPlan,
+  resolveLabelLayout,
+  type LabelTextRenderItem,
+} from './labelRenderPlan'
 
-const mmToPt = (value: number) => value * 2.83465
-
-const A4_PAGE = {
-  width: 595.28,
-  height: 841.89,
-}
-
-const PAGE_MARGIN = 24
-const CELL_GAP = 12
-const LABEL_PADDING = 8
-
-export { defaultLabelLayout, resolveLabelLayout } from './labelLayout'
-
-type LabelPageMetrics = {
-  labelWidthPt: number
-  labelHeightPt: number
-  columns: number
-  rows: number
-  perPage: number
-}
-
-const getPageMetrics = (layout: LabelLayoutControls): LabelPageMetrics => {
-  const labelWidthPt = Math.max(mmToPt(20), mmToPt(layout.width))
-  const labelHeightPt = Math.max(mmToPt(20), mmToPt(layout.height))
-  const printableWidth = A4_PAGE.width - PAGE_MARGIN * 2
-  const printableHeight = A4_PAGE.height - PAGE_MARGIN * 2
-  const columns = Math.max(1, Math.floor((printableWidth + CELL_GAP) / (labelWidthPt + CELL_GAP)))
-  const rows = Math.max(1, Math.floor((printableHeight + CELL_GAP) / (labelHeightPt + CELL_GAP)))
-  const perPage = columns * rows
-
-  return {
-    labelWidthPt,
-    labelHeightPt,
-    columns,
-    rows,
-    perPage,
-  }
-}
-
-export type LabelExportPlacement = {
-  x: number
-  y: number
-  page: number
-  width: number
-  height: number
-  product: LabelProduct
-}
-
-export const buildLabelPlacements = (products: LabelProduct[], quantity: number, layout: LabelLayoutControls): LabelExportPlacement[] => {
-  const safeQuantity = Math.max(1, Math.floor(quantity))
-  const source: LabelProduct[] = []
-
-  products.forEach((product) => {
-    for (let index = 0; index < safeQuantity; index += 1) {
-      source.push(product)
-    }
-  })
-
-  const metrics = getPageMetrics(layout)
-
-  return source.map((product, index) => {
-    const page = Math.floor(index / metrics.perPage)
-    const indexOnPage = index % metrics.perPage
-    const row = Math.floor(indexOnPage / metrics.columns)
-    const column = indexOnPage % metrics.columns
-    const x = PAGE_MARGIN + column * (metrics.labelWidthPt + CELL_GAP)
-    const y = A4_PAGE.height - PAGE_MARGIN - row * (metrics.labelHeightPt + CELL_GAP) - metrics.labelHeightPt
-
-    return {
-      x,
-      y,
-      page,
-      width: metrics.labelWidthPt,
-      height: metrics.labelHeightPt,
-      product,
-    }
-  })
-}
-
-const wrapText = (value: string, maxCharactersPerLine: number) => {
-  const words = value.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return []
-
-  const lines: string[] = []
-  let currentLine = words[0]
-  for (let index = 1; index < words.length; index += 1) {
-    const nextWord = words[index]
-    const nextLine = `${currentLine} ${nextWord}`
-    if (nextLine.length <= maxCharactersPerLine) {
-      currentLine = nextLine
-    } else {
-      lines.push(currentLine)
-      currentLine = nextWord
-    }
-  }
-
-  lines.push(currentLine)
-  return lines
-}
+export { buildLabelPlacements, defaultLabelLayout } from './labelRenderPlan'
+export { resolveLabelLayout } from './labelLayout'
 
 const getAlignedTextX = (
-  text: string,
+  textItem: Pick<LabelTextRenderItem, 'text' | 'fontSize' | 'x' | 'width' | 'textAlign'>,
   font: Awaited<ReturnType<PDFDocument['embedFont']>>,
-  fontSize: number,
-  contentLeft: number,
-  textMaxWidth: number,
-  textAlign: LabelLayoutControls['textAlign'],
 ) => {
-  if (textAlign === 'left') return contentLeft
+  if (textItem.textAlign === 'left') return textItem.x
 
-  const textWidth = font.widthOfTextAtSize(text, fontSize)
-  const remainingWidth = Math.max(0, textMaxWidth - Math.min(textWidth, textMaxWidth))
+  const textWidth = font.widthOfTextAtSize(textItem.text, textItem.fontSize)
+  const remainingWidth = Math.max(0, textItem.width - Math.min(textWidth, textItem.width))
 
-  if (textAlign === 'center') {
-    return contentLeft + remainingWidth / 2
+  if (textItem.textAlign === 'center') {
+    return textItem.x + remainingWidth / 2
   }
 
-  return contentLeft + remainingWidth
+  return textItem.x + remainingWidth
 }
 
 const dataUrlToBytes = (dataUrl: string) => {
   const base64Value = dataUrl.split(',')[1] ?? ''
   const binaryValue = atob(base64Value)
   return Uint8Array.from(binaryValue, (character) => character.charCodeAt(0))
-}
-
-export type LabelAssetRenderers = {
-  renderQrDataUrl: (value: string, size: number) => Promise<string>
-  renderBarcodeDataUrl: (value: string, width: number, height: number) => Promise<string>
-}
-
-const defaultAssetRenderers: LabelAssetRenderers = {
-  renderQrDataUrl: (value, size) =>
-    QRCode.toDataURL(value, {
-      width: Math.max(64, Math.floor(size)),
-      margin: 1,
-      errorCorrectionLevel: 'M',
-    }),
-  renderBarcodeDataUrl: async (value, width, height) => {
-    if (typeof document === 'undefined') {
-      throw new Error('Barcode rendering requires a browser-like environment.')
-    }
-
-    const canvas = document.createElement('canvas')
-    JsBarcode(canvas, value, {
-      format: 'CODE128',
-      displayValue: false,
-      margin: 0,
-      width: Math.max(1, Math.floor(width / 80)),
-      height: Math.max(24, Math.floor(height)),
-    })
-
-    return canvas.toDataURL('image/png')
-  },
 }
 
 type LabelPdfExportOptions = {
@@ -174,7 +49,7 @@ export const createLabelPdfDataUrl = async ({
   layout,
   products,
   quantity,
-  renderers = defaultAssetRenderers,
+  renderers = defaultLabelAssetRenderers,
 }: LabelPdfExportOptions) => {
   const resolvedLayout = resolveLabelLayout(layout)
   const placements = buildLabelPlacements(products, quantity, resolvedLayout)
@@ -205,97 +80,58 @@ export const createLabelPdfDataUrl = async ({
     const page = pages.get(placement.page)
     if (!page) continue
 
-    const productCode = placement.product.id
-    const fontSize = Math.max(8, resolvedLayout.fontSize)
-    const lineHeight = fontSize + 2
-    const contentPadding = Math.max(LABEL_PADDING, resolvedLayout.padding)
-    const contentLeft = placement.x + contentPadding
-    const contentWidth = placement.width - contentPadding * 2
-    const barcodeHeight = resolvedLayout.showBarcode
-      ? Math.min(34 * (resolvedLayout.barcodeScale / 100), placement.height * 0.35)
-      : 0
-    const qrSize = resolvedLayout.showQr
-      ? Math.min(44 * (resolvedLayout.qrScale / 100), placement.height * 0.4, contentWidth * 0.35)
-      : 0
-    const textRightLimit = placement.x + placement.width - contentPadding - (qrSize > 0 ? qrSize + 6 : 0)
-    const textMaxWidth = Math.max(40, textRightLimit - contentLeft)
+    const renderPlan = buildLabelRenderPlan(placement.product, resolvedLayout)
 
-    if (resolvedLayout.showBorder) {
+    if (renderPlan.borderWidth > 0) {
       page.drawRectangle({
         x: placement.x,
         y: placement.y,
         width: placement.width,
         height: placement.height,
-        borderWidth: 1,
+        borderWidth: renderPlan.borderWidth,
         borderColor: rgb(0.7, 0.7, 0.7),
       })
     }
 
-    let cursorY = placement.y + placement.height - contentPadding - fontSize
-
-    const drawTextLine = (value: string, size: number, y: number) => {
-      page.drawText(value, {
-        x: getAlignedTextX(value, font, size, contentLeft, textMaxWidth, resolvedLayout.textAlign),
-        y,
-        size,
+    renderPlan.textItems.forEach((textItem) => {
+      page.drawText(textItem.text, {
+        x: placement.x + getAlignedTextX(textItem, font),
+        y: placement.y + placement.height - textItem.baselineY,
+        size: textItem.fontSize,
         font,
       })
-    }
+    })
 
-    if (resolvedLayout.showName) {
-      const maxChars = Math.max(8, Math.floor(textMaxWidth / (fontSize * 0.6)))
-      const wrappedName = wrapText(placement.product.name, maxChars).slice(0, resolvedLayout.nameLines)
-      wrappedName.forEach((line) => {
-        drawTextLine(line, fontSize, cursorY)
-        cursorY -= lineHeight
-      })
-    }
+    for (const assetItem of renderPlan.assetItems) {
+      if (assetItem.kind === 'qr') {
+        let qrImage = qrCache.get(assetItem.key)
+        if (!qrImage) {
+          const qrDataUrl = await renderers.renderQrDataUrl(assetItem.value, assetItem.width)
+          qrImage = await pdf.embedPng(dataUrlToBytes(qrDataUrl))
+          qrCache.set(assetItem.key, qrImage)
+        }
 
-    if (resolvedLayout.showSku) {
-      drawTextLine(`SKU: ${placement.product.sku}`, Math.max(8, fontSize - 1), cursorY)
-      cursorY -= lineHeight
-    }
-
-    if (resolvedLayout.showPrice) {
-      const priceText = formatLabelPrice(placement.product.selling_price)
-      if (priceText) {
-        drawTextLine(`Price: ${priceText}`, Math.max(8, fontSize - 1), cursorY)
-        cursorY -= lineHeight
-      }
-    }
-
-    if (resolvedLayout.showQr && qrSize > 0) {
-      let qrImage = qrCache.get(productCode)
-      if (!qrImage) {
-        const qrDataUrl = await renderers.renderQrDataUrl(productCode, qrSize)
-        qrImage = await pdf.embedPng(dataUrlToBytes(qrDataUrl))
-        qrCache.set(productCode, qrImage)
+        page.drawImage(qrImage, {
+          x: placement.x + assetItem.x,
+          y: placement.y + placement.height - assetItem.y - assetItem.height,
+          width: assetItem.width,
+          height: assetItem.height,
+        })
+        continue
       }
 
-      const qrX = placement.x + placement.width - contentPadding - qrSize
-      const qrY = placement.y + placement.height - contentPadding - qrSize
-      page.drawImage(qrImage, {
-        x: qrX,
-        y: qrY,
-        width: qrSize,
-        height: qrSize,
-      })
-    }
-
-    if (resolvedLayout.showBarcode && barcodeHeight > 0) {
-      const barcodeWidth = placement.width - contentPadding * 2
-      let barcodeImage = barcodeCache.get(productCode)
+      let barcodeImage = barcodeCache.get(assetItem.key)
       if (!barcodeImage) {
-        const barcodeDataUrl = await renderers.renderBarcodeDataUrl(productCode, barcodeWidth, barcodeHeight)
+        const barcodeDataUrl = await renderers.renderBarcodeDataUrl(assetItem.value, assetItem.width, assetItem.height)
         barcodeImage = await pdf.embedPng(dataUrlToBytes(barcodeDataUrl))
-        barcodeCache.set(productCode, barcodeImage)
+        barcodeCache.set(assetItem.key, barcodeImage)
       }
 
       page.drawImage(barcodeImage, {
-        x: contentLeft,
-        y: placement.y + contentPadding,
-        width: barcodeWidth,
-        height: barcodeHeight,
+        x: placement.x + assetItem.x,
+        y: placement.y + placement.height - assetItem.y - assetItem.height,
+        width: assetItem.width,
+        height: assetItem.height,
       })
     }
   }

@@ -4,6 +4,7 @@ import { LabelDownloadsTab } from './LabelDownloadsTab'
 import { LabelPreviewCard } from './LabelPreviewCard'
 import { downloadLabelPdf } from './downloadLabelPdf'
 import { getEnabledLabelFields, resolveLabelLayout } from './labelLayout'
+import { buildLabelPlacements, getPlacementPageCount } from './labelRenderPlan'
 import { createLabelPdfDataUrl } from './pdfExport'
 
 type BatchTarget = 'product' | 'folder'
@@ -42,8 +43,8 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === templateId) ?? null, [templates, templateId])
   const selectedProduct = useMemo(() => products.find((product) => product.id === productId) ?? null, [products, productId])
   const selectedFolder = useMemo(() => folders.find((folder) => folder.id === folderId) ?? null, [folders, folderId])
-  const previewProduct = useMemo(
-    () => (targetType === 'folder' ? products[0] ?? null : selectedProduct),
+  const productsToPreview = useMemo(
+    () => (targetType === 'folder' ? products : selectedProduct ? [selectedProduct] : []),
     [products, selectedProduct, targetType],
   )
   const enabledFieldSummary = useMemo(() => {
@@ -81,6 +82,11 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
     const items = targetType === 'folder' ? products.length : (productId ? 1 : 0)
     return items * quantity
   }, [targetType, products.length, productId, quantity])
+  const exportPageCount = useMemo(() => {
+    if (!selectedTemplate || productsToPreview.length === 0) return 0
+
+    return getPlacementPageCount(buildLabelPlacements(productsToPreview, quantity, selectedTemplate.layout))
+  }, [productsToPreview, quantity, selectedTemplate])
 
   useEffect(() => {
     setTemplateId(initialSelectedTemplateId ?? '')
@@ -280,9 +286,9 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
               <span className="export-batch-btn-icon">⬇</span>
               Export PDF Batch
             </button>
-            {batchCount > 0 && (
+            {batchCount > 0 && exportPageCount > 0 && (
               <p className="small muted" style={{ textAlign: 'center', margin: 0 }}>
-                Generates a {batchCount}-page PDF document
+                Generates {exportPageCount} PDF {exportPageCount === 1 ? 'page' : 'pages'} across {batchCount} label{batchCount === 1 ? '' : 's'}.
               </p>
             )}
             {message && <div className="small muted" style={{ textAlign: 'center' }}>{message}</div>}
@@ -292,15 +298,16 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
 
       <div className="stack export-right-panel">
         <LabelPreviewCard
-          title="Live Preview"
-          description="Spot-check the active template before exporting a batch."
+          title="Live Export Preview"
+          description="The page preview below uses the same layout, placement, and assets as the exported PDF."
           templateName={selectedTemplate?.name}
           layout={selectedTemplate?.layout}
           variableFields={selectedTemplate?.variable_fields}
           quantity={quantity}
-          badgeText={batchCount > 0 ? `Batch of ${batchCount}` : undefined}
-          emptyMessage="Select a template to preview"
-          sampleProduct={previewProduct}
+          badgeText={batchCount > 0 ? `${batchCount} labels` : undefined}
+          emptyMessage="Select a template and export target to preview the PDF page."
+          previewMode="page"
+          products={productsToPreview}
           summaryItems={previewSummaryItems}
         />
 
