@@ -14,12 +14,18 @@ describe('label studio pdf export', () => {
   it('resolves layout controls with defaults', () => {
     const layout = resolveLabelLayout({
       width: 80,
+      padding: 12,
+      textAlign: 'center',
+      showPrice: true,
       showQr: true,
       showBarcode: false,
     })
 
     expect(layout.width).toBe(80)
     expect(layout.height).toBe(defaultLabelLayout.height)
+    expect(layout.padding).toBe(12)
+    expect(layout.textAlign).toBe('center')
+    expect(layout.showPrice).toBe(true)
     expect(layout.showQr).toBe(true)
     expect(layout.showBarcode).toBe(false)
     expect(layout.showName).toBe(true)
@@ -58,10 +64,11 @@ describe('label studio pdf export', () => {
       layout: {
         showQr: true,
         showBarcode: true,
+        showPrice: true,
         showSku: false,
         showName: true,
       },
-      products: [{ id: 'product-id-123', name: 'Orange Juice Bottle', sku: 'OJ-01', folder_id: null }],
+      products: [{ id: 'product-id-123', name: 'Orange Juice Bottle', sku: 'OJ-01', folder_id: null, selling_price: 6.5 }],
       quantity: 1,
       renderers: {
         renderQrDataUrl,

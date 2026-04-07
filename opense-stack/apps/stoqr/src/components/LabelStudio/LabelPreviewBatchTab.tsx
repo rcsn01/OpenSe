@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useCreateLabelPrintJob, useLabelProductFolders, useLabelProducts, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
 import { LabelDownloadsTab } from './LabelDownloadsTab'
+import { LabelPreviewCard } from './LabelPreviewCard'
 import { downloadLabelPdf } from './downloadLabelPdf'
+import { getEnabledLabelFields, resolveLabelLayout } from './labelLayout'
 import { createLabelPdfDataUrl } from './pdfExport'
 
 type BatchTarget = 'product' | 'folder'
@@ -40,6 +42,40 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === templateId) ?? null, [templates, templateId])
   const selectedProduct = useMemo(() => products.find((product) => product.id === productId) ?? null, [products, productId])
   const selectedFolder = useMemo(() => folders.find((folder) => folder.id === folderId) ?? null, [folders, folderId])
+  const previewProduct = useMemo(
+    () => (targetType === 'folder' ? products[0] ?? null : selectedProduct),
+    [products, selectedProduct, targetType],
+  )
+  const enabledFieldSummary = useMemo(() => {
+    if (!selectedTemplate) return 'Select a template'
+
+    const enabledFields = getEnabledLabelFields(resolveLabelLayout(selectedTemplate.layout))
+    return enabledFields.join(', ') || 'None'
+  }, [selectedTemplate])
+  const previewSummaryItems = useMemo(
+    () => [
+      {
+        label: 'Target',
+        value:
+          targetType === 'folder'
+            ? selectedFolder
+              ? `${selectedFolder.name} (${products.length} items)`
+              : 'Choose a folder'
+            : selectedProduct
+              ? selectedProduct.name
+              : 'Choose a product',
+      },
+      {
+        label: 'Copies',
+        value: `${quantity} per item`,
+      },
+      {
+        label: 'Fields',
+        value: enabledFieldSummary,
+      },
+    ],
+    [enabledFieldSummary, products.length, quantity, selectedFolder, selectedProduct, targetType],
+  )
 
   const batchCount = useMemo(() => {
     const items = targetType === 'folder' ? products.length : (productId ? 1 : 0)
@@ -255,32 +291,18 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
       </div>
 
       <div className="stack export-right-panel">
-        <div className="card export-preview-card">
-          <div className="flex-between" style={{ marginBottom: 16 }}>
-            <h3 className="section-title" style={{ margin: 0 }}>Live Preview</h3>
-            {batchCount > 0 && <span className="badge neutral">BATCH OF {batchCount}</span>}
-          </div>
-          <div className="export-preview-canvas">
-            {selectedTemplate ? (
-              <div className="export-preview-label">
-                <span className="export-preview-tag">PREVIEWING</span>
-                <span className="export-preview-name" title={selectedTemplate.name}>{selectedTemplate.name}</span>
-                <div className="export-preview-placeholder-lines">
-                  <div className="export-preview-line" style={{ width: '80%' }} />
-                  <div className="export-preview-line" style={{ width: '60%' }} />
-                </div>
-                <div className="export-preview-barcode" aria-label="Barcode preview">
-                  {Array.from({ length: 24 }).map((_, i) => (
-                    <div key={i} className="export-preview-bar" style={{ width: i % 3 === 0 ? 3 : 1 }} />
-                  ))}
-                </div>
-                {quantity > 0 && <span className="export-preview-qty">x{quantity}</span>}
-              </div>
-            ) : (
-              <div className="empty-state" style={{ padding: 24 }}>Select a template to preview</div>
-            )}
-          </div>
-        </div>
+        <LabelPreviewCard
+          title="Live Preview"
+          description="Spot-check the active template before exporting a batch."
+          templateName={selectedTemplate?.name}
+          layout={selectedTemplate?.layout}
+          variableFields={selectedTemplate?.variable_fields}
+          quantity={quantity}
+          badgeText={batchCount > 0 ? `Batch of ${batchCount}` : undefined}
+          emptyMessage="Select a template to preview"
+          sampleProduct={previewProduct}
+          summaryItems={previewSummaryItems}
+        />
 
         <LabelDownloadsTab
           companyId={companyId}
