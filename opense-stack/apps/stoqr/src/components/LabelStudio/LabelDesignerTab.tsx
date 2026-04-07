@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLabelTemplates, useUpdateLabelTemplateLayout } from '../../hooks/queries/useLabelStudio'
 
 type LayoutControls = {
@@ -52,9 +52,15 @@ const controlsToLayout = (controls: LayoutControls): Record<string, unknown> => 
   showPrice: controls.showPrice,
 })
 
-export const LabelDesignerTab = ({ companyId }: { companyId: string }) => {
+type LabelDesignerTabProps = {
+  companyId: string
+  selectedTemplateId?: string
+  onSelectedTemplateChange?: (templateId: string) => void
+}
+
+export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange }: LabelDesignerTabProps) => {
   const { data: templates = [], isLoading } = useLabelTemplates(companyId)
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialSelectedTemplateId ?? '')
   const [controls, setControls] = useState<LayoutControls>(defaultControls)
   const [message, setMessage] = useState<string | null>(null)
   const updateLayoutMutation = useUpdateLabelTemplateLayout(companyId)
@@ -64,10 +70,23 @@ export const LabelDesignerTab = ({ companyId }: { companyId: string }) => {
     [templates, selectedTemplateId]
   )
 
+  useEffect(() => {
+    setSelectedTemplateId(initialSelectedTemplateId ?? '')
+  }, [initialSelectedTemplateId])
+
+  useEffect(() => {
+    if (!selectedTemplateId) {
+      setControls(defaultControls)
+      return
+    }
+
+    setControls(controlsFromLayout(selectedTemplate?.layout))
+    setMessage(null)
+  }, [selectedTemplate, selectedTemplateId])
+
   const onTemplateChange = (id: string) => {
     setSelectedTemplateId(id)
-    const template = templates.find((entry) => entry.id === id)
-    setControls(controlsFromLayout(template?.layout))
+    onSelectedTemplateChange?.(id)
     setMessage(null)
   }
 
@@ -98,23 +117,23 @@ export const LabelDesignerTab = ({ companyId }: { companyId: string }) => {
     <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 24 }}>
       <div className="card stack">
         <h3 className="section-title">Label Designer</h3>
-      {isLoading ? (
-        <div className="empty-state">Loading templates...</div>
-      ) : templates.length === 0 ? (
-        <div className="empty-state">Create a template first in the Templates tab.</div>
-      ) : (
-        <>
-          <label className="stack">
-            Template
-            <select className="select" value={selectedTemplateId} onChange={(event) => onTemplateChange(event.target.value)}>
-              <option value="">Select template</option>
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        {isLoading ? (
+          <div className="empty-state">Loading templates...</div>
+        ) : templates.length === 0 ? (
+          <div className="empty-state">Create a template first in the Templates tab.</div>
+        ) : (
+          <>
+            <label className="stack">
+              Template
+              <select className="select" value={selectedTemplateId} onChange={(event) => onTemplateChange(event.target.value)}>
+                <option value="">Select template</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <label className="stack">
               Label Width (mm)
@@ -174,12 +193,12 @@ export const LabelDesignerTab = ({ companyId }: { companyId: string }) => {
 
           <div className="small muted">
               Variables: {selectedTemplate ? selectedTemplate.variable_fields.join(', ') : 'Select a template'}
-          </div>
+            </div>
 
             <button className="button" onClick={saveLayout} disabled={updateLayoutMutation.isPending}>Save Design</button>
-          {message && <div className="small muted">{message}</div>}
-        </>
-      )}
+            {message && <div className="small muted">{message}</div>}
+          </>
+        )}
       </div>
 
       <div className="card stack">

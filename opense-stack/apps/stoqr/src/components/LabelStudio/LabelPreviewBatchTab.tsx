@@ -1,10 +1,29 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useCreateLabelPrintJob, useLabelProductFolders, useLabelProducts, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
+import { LabelDownloadsTab } from './LabelDownloadsTab'
+import { downloadLabelPdf } from './downloadLabelPdf'
 import { createLabelPdfDataUrl } from './pdfExport'
 
 type BatchTarget = 'product' | 'folder'
 
-export const LabelPreviewBatchTab = ({ companyId }: { companyId: string }) => {
+type LabelPreviewBatchTabProps = {
+  companyId: string
+  selectedTemplateId?: string
+  onSelectedTemplateChange?: (templateId: string) => void
+}
+
+const sanitizeFileNamePart = (value: string | null | undefined) =>
+  (value ?? 'label')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'label'
+
+const buildPdfFileName = (templateName: string | null | undefined, targetName: string | null | undefined) => {
+  const timestamp = new Date().toISOString().replace(/[.:]/g, '-')
+  return `${sanitizeFileNamePart(templateName)}-${sanitizeFileNamePart(targetName)}-${timestamp}.pdf`
+}
+
+export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange }: LabelPreviewBatchTabProps) => {
   const { data: templates = [], isLoading: loadingTemplates } = useLabelTemplates(companyId)
   const [targetType, setTargetType] = useState<BatchTarget>('product')
   const [folderId, setFolderId] = useState('')
@@ -13,7 +32,7 @@ export const LabelPreviewBatchTab = ({ companyId }: { companyId: string }) => {
   const { data: folders = [], isLoading: loadingFolders } = useLabelProductFolders(companyId)
   const createPrintJobMutation = useCreateLabelPrintJob(companyId)
 
-  const [templateId, setTemplateId] = useState('')
+  const [templateId, setTemplateId] = useState(initialSelectedTemplateId ?? '')
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [message, setMessage] = useState<string | null>(null)
@@ -21,6 +40,16 @@ export const LabelPreviewBatchTab = ({ companyId }: { companyId: string }) => {
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === templateId) ?? null, [templates, templateId])
   const selectedProduct = useMemo(() => products.find((product) => product.id === productId) ?? null, [products, productId])
   const selectedFolder = useMemo(() => folders.find((folder) => folder.id === folderId) ?? null, [folders, folderId])
+
+  useEffect(() => {
+    setTemplateId(initialSelectedTemplateId ?? '')
+  }, [initialSelectedTemplateId])
+
+  const handleTemplateChange = (nextTemplateId: string) => {
+    setTemplateId(nextTemplateId)
+    onSelectedTemplateChange?.(nextTemplateId)
+    setMessage(null)
+  }
 
   const exportPdf = async () => {
     setMessage(null)
@@ -70,30 +99,45 @@ export const LabelPreviewBatchTab = ({ companyId }: { companyId: string }) => {
         quantity,
       })
 
-      await createPrintJobMutation.mutateAsync({
-        templateId,
-        format: 'pdf',
-        quantity,
-        payload,
+      let historySaved = true
+
+      try {
+        await createPrintJobMutation.mutateAsync({
+          templateId,
+          format: 'pdf',
+          quantity,
+          payload,
+          outputUrl,
+          status: 'completed',
+        })
+      } catch {
+        historySaved = false
+      }
+
+      downloadLabelPdf(
         outputUrl,
-        status: 'completed',
-      })
-      setMessage('PDF exported. Open the Downloads tab to download it.')
+        buildPdfFileName(
+          selectedTemplate?.name,
+          targetType === 'folder' ? selectedFolder?.name : selectedProduct?.sku ?? selectedProduct?.name,
+        ),
+      )
+      setMessage(historySaved ? 'PDF downloaded.' : 'PDF downloaded, but the export history could not be saved.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Failed to export PDF.')
     }
   }
 
   return (
-    <div className="card stack">
-      <h3 className="section-title">Preview & Batch</h3>
-      {loadingTemplates || loadingProducts || loadingFolders ? (
+    <div className="grid" style={{ gridTemplateColumns: 'minmax(320px, 420px) 1fr', gap: 24 }}>
+      <div className="card stack">
+        <h3 className="section-title">Preview & Batch</h3>
+        {loadingTemplates || loadingProducts || loadingFolders ? (
           <div className="empty-state">Loading data...</div>
         ) : (
           <>
             <label className="stack">
               Template
-              <select className="select" value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
+              <select className="select" value={templateId} onChange={(event) => handleTemplateChange(event.target.value)}>
                 <option value="">Select template</option>
                 {templates.map((template) => (
                   <option key={template.id} value={template.id}>
@@ -177,6 +221,13 @@ export const LabelPreviewBatchTab = ({ companyId }: { companyId: string }) => {
             {message && <div className="small muted">{message}</div>}
           </>
         )}
+      </div>
+
+      <LabelDownloadsTab
+        companyId={companyId}
+        title="Recent Downloads"
+        emptyStateMessage="No PDF exports yet. Export one here to download it immediately."
+      />
     </div>
   )
 }

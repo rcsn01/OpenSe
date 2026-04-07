@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
 
-export const TemplateLibraryTab = ({ companyId }: { companyId: string }) => {
+type TemplateLibraryTabProps = {
+  companyId: string
+  selectedTemplateId?: string
+  onSelectTemplate?: (templateId: string) => void
+}
+
+export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemplate }: TemplateLibraryTabProps) => {
   const { data: templates = [], isLoading } = useLabelTemplates(companyId)
   const createTemplateMutation = useCreateLabelTemplate(companyId)
   const [name, setName] = useState('')
@@ -23,7 +29,7 @@ export const TemplateLibraryTab = ({ companyId }: { companyId: string }) => {
         variableFields: ['barcode', 'sku', 'name', 'price', 'qr'],
       })
       setName('')
-      setMessage('Template created.')
+      setMessage('Template created. Select it from the library to design it.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Failed to create template.')
     }
@@ -59,13 +65,34 @@ export const TemplateLibraryTab = ({ companyId }: { companyId: string }) => {
         ) : (
           <div className="list">
             {templates.map((template) => (
-              <div key={template.id} className="flex-between" style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <button
+                key={template.id}
+                type="button"
+                className="flex-between"
+                onClick={() => onSelectTemplate?.(template.id)}
+                aria-label={`Edit ${template.name} template`}
+                style={{
+                  width: '100%',
+                  padding: '12px 0',
+                  border: 'none',
+                  borderBottom: '1px solid var(--border)',
+                  background: 'transparent',
+                  textAlign: 'left',
+                  gap: 12,
+                  cursor: 'pointer',
+                  color: 'inherit',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
-                  <div style={{ fontWeight: 'var(--type-weight-bold)' }}>{template.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 'var(--type-weight-bold)' }}>
+                    <span>{template.name}</span>
+                    {selectedTemplateId === template.id ? <span className="pill">Editing</span> : null}
+                  </div>
                   <div className="small muted">{template.template_type} · {template.is_system ? 'System' : 'Custom'}</div>
                 </div>
                 <span className="pill">{template.variable_fields.length} vars</span>
-              </div>
+              </button>
             ))}
           </div>
         )}

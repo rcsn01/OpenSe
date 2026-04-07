@@ -69,8 +69,14 @@ test.describe('Stoqr Route Coverage', () => {
     test(`nested tab route ${route} resolves`, async ({ authenticatedPage }) => {
       await safeGoto(authenticatedPage, route);
       const url = authenticatedPage.url();
+      const expectedRoute =
+        route === '/tools/labels/design'
+          ? '/tools/labels/templates'
+          : route === '/tools/labels/downloads'
+            ? '/tools/labels/preview-batch'
+            : route;
       const isExpectedResolvedUrl =
-        url.includes(route) ||
+        url.includes(expectedRoute) ||
         url.includes('/auth') ||
         url.includes('/login') ||
         url.includes('/dashboard') ||

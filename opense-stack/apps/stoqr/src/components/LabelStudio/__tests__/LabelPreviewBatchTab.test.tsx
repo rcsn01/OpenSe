@@ -5,10 +5,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LabelPreviewBatchTab } from '../LabelPreviewBatchTab'
 
 const mockCreatePdfDataUrl = vi.fn(async () => 'data:application/pdf;base64,ZmFrZQ==')
+const mockDownloadLabelPdf = vi.fn()
 const mockMutateAsync = vi.fn(async () => undefined)
 
 vi.mock('../pdfExport', () => ({
   createLabelPdfDataUrl: (...args: unknown[]) => mockCreatePdfDataUrl(...args),
+}))
+
+vi.mock('../downloadLabelPdf', () => ({
+  downloadLabelPdf: (...args: unknown[]) => mockDownloadLabelPdf(...args),
 }))
 
 vi.mock('../../../hooks/queries/useLabelStudio', () => ({
@@ -44,11 +49,22 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
     mutateAsync: (...args: unknown[]) => mockMutateAsync(...args),
     isPending: false,
   }),
+  useLabelPrintJobs: () => ({
+    data: [],
+    isLoading: false,
+  }),
 }))
 
 describe('LabelPreviewBatchTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('shows recent downloads inline with the export form', () => {
+    render(<LabelPreviewBatchTab companyId="company-1" />)
+
+    expect(screen.getByText('Recent Downloads')).toBeInTheDocument()
+    expect(screen.getByText('No PDF exports yet. Export one here to download it immediately.')).toBeInTheDocument()
   })
 
   it('exports pdf with generated output url for selected product', async () => {
@@ -82,7 +98,12 @@ describe('LabelPreviewBatchTab', () => {
       )
     })
 
-    expect(screen.getByText('PDF exported. Open the Downloads tab to download it.')).toBeInTheDocument()
+    expect(mockDownloadLabelPdf).toHaveBeenCalledWith(
+      'data:application/pdf;base64,ZmFrZQ==',
+      expect.stringMatching(/\.pdf$/),
+    )
+
+    expect(screen.getByText('PDF downloaded.')).toBeInTheDocument()
   })
 
   it('shows validation error when exporting without template', async () => {
