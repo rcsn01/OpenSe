@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useLabelPrintJobs } from '../../hooks/queries/useLabelStudio'
+import { downloadLabelPdf } from './downloadLabelPdf'
 
 const formatRequestedBy = (job: {
   requested_by: string | null
@@ -11,7 +12,17 @@ const formatRequestedBy = (job: {
   return 'System'
 }
 
-export const LabelDownloadsTab = ({ companyId }: { companyId: string }) => {
+type LabelDownloadsTabProps = {
+  companyId: string
+  title?: string
+  emptyStateMessage?: string
+}
+
+export const LabelDownloadsTab = ({
+  companyId,
+  title = 'Downloads',
+  emptyStateMessage = 'No PDF exports yet.',
+}: LabelDownloadsTabProps) => {
   const { data: jobs = [], isLoading } = useLabelPrintJobs(companyId)
 
   const downloads = useMemo(
@@ -19,23 +30,13 @@ export const LabelDownloadsTab = ({ companyId }: { companyId: string }) => {
     [jobs],
   )
 
-  const downloadFile = (url: string, fileName: string) => {
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = fileName
-    anchor.rel = 'noopener'
-    document.body.appendChild(anchor)
-    anchor.click()
-    anchor.remove()
-  }
-
   return (
     <div className="card stack">
-      <h3 className="section-title">Downloads</h3>
+      <h3 className="section-title">{title}</h3>
       {isLoading ? (
         <div className="empty-state">Loading downloads...</div>
       ) : downloads.length === 0 ? (
-        <div className="empty-state">No PDF exports yet.</div>
+        <div className="empty-state">{emptyStateMessage}</div>
       ) : (
         <div className="list">
           {downloads.map((job) => (
@@ -48,7 +49,7 @@ export const LabelDownloadsTab = ({ companyId }: { companyId: string }) => {
               </div>
               <button
                 className="button"
-                onClick={() => downloadFile(job.output_url as string, `label-export-${job.id}.pdf`)}
+                onClick={() => downloadLabelPdf(job.output_url as string, `label-export-${job.id}.pdf`)}
               >
                 Download
               </button>
