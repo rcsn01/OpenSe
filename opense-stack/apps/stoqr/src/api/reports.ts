@@ -20,6 +20,24 @@ type ReportTransaction = {
   profiles: { id: string | null; full_name: string | null; username: string | null } | null
 }
 
+export type AuditShrinkageDiscrepancy = {
+  id: string
+  transaction_type: string
+  source: string | null
+  quantity_change: number
+  stock_after: number
+  created_at: string
+  notes: string | null
+  products: { id: string; name: string; sku: string; cost_price: number | null; selling_price: number | null } | null
+}
+
+export type AuditShrinkageSale = {
+  id: string
+  quantity_change: number
+  created_at: string
+  products: { selling_price: number | null } | null
+}
+
 type ReportValuationRpcRow = {
   product_id: string
   sku: string
@@ -42,6 +60,30 @@ type ReportStockMovementRpcRow = {
   product_name: string | null
 }
 
+type AuditShrinkageDiscrepancyRow = {
+  id: string
+  transaction_type: string
+  source: string | null
+  quantity_change: number | string
+  stock_after: number | string | null
+  created_at: string
+  notes: string | null
+  products:
+    | { id: string; name: string; sku: string; cost_price: number | string | null; selling_price: number | string | null }
+    | Array<{ id: string; name: string; sku: string; cost_price: number | string | null; selling_price: number | string | null }>
+    | null
+}
+
+type AuditShrinkageSaleRow = {
+  id: string
+  quantity_change: number | string
+  created_at: string
+  products:
+    | { selling_price: number | string | null }
+    | Array<{ selling_price: number | string | null }>
+    | null
+}
+
 const DAYS = 30
 const formatDay = (date: Date) => date.toISOString().split('T')[0]
 
@@ -52,6 +94,11 @@ const toNumber = (value: unknown, fallback = 0) => {
     if (Number.isFinite(parsed)) return parsed
   }
   return fallback
+}
+
+const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
+  if (!value) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
 }
 
 const buildSeries = (currentValue: number, deltasByDay: Record<string, number>) => {
@@ -153,5 +200,89 @@ export const fetchReportsData = async (companyId: string) => {
     transactions,
     schedules: schedulesData ?? [],
     series: buildSeries(currentValue, deltasByDay),
+  }
+}
+
+export const fetchAuditShrinkageData = async (companyId: string) => {
+  const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString()
+
+  const [
+    { data: discrepancyData, error: discrepancyError },
+    { data: salesData, error: salesError },
+  ] = await Promise.all([
+    db
+      .from('inventory_transactions')
+      .select(`
+        id,
+        transaction_type,
+        source,
+        quantity_change,
+        stock_after,
+        created_at,
+        notes,
+        products(id, name, sku, cost_price, selling_price)
+      `)
+      .eq('company_id', companyId)
+      .in('transaction_type', ['adjustment', 'loss'])
+      .gte('created_at', yearStart)
+      .order('created_at', { ascending: false }),
+    db
+      .from('inventory_transactions')
+      .select(`
+        id,
+        quantity_change,
+        created_at,
+        products(selling_price)
+      `)
+      .eq('company_id', companyId)
+      .eq('transaction_type', 'sale')
+      .gte('created_at', yearStart)
+      .order('created_at', { ascending: false }),
+  ])
+
+  if (discrepancyError) throw discrepancyError
+  if (salesError) throw salesError
+
+  const discrepancies = ((discrepancyData as AuditShrinkageDiscrepancyRow[] | null) ?? []).map((row) => {
+    const product = normalizeSingle(row.products)
+
+    return {
+      id: row.id,
+      transaction_type: row.transaction_type,
+      source: row.source,
+      quantity_change: toNumber(row.quantity_change, 0),
+      stock_after: toNumber(row.stock_after, 0),
+      created_at: row.created_at,
+      notes: row.notes,
+      products: product
+        ? {
+            id: product.id,
+            name: product.name,
+            sku: product.sku,
+            cost_price: toNumber(product.cost_price, 0),
+            selling_price: toNumber(product.selling_price, 0),
+          }
+        : null,
+    }
+  }) satisfies AuditShrinkageDiscrepancy[]
+
+  const sales = ((salesData as AuditShrinkageSaleRow[] | null) ?? []).map((row) => {
+    const product = normalizeSingle(row.products)
+
+    return {
+      id: row.id,
+      quantity_change: toNumber(row.quantity_change, 0),
+      created_at: row.created_at,
+      products: product
+        ? {
+            selling_price: toNumber(product.selling_price, 0),
+          }
+        : null,
+    }
+  }) satisfies AuditShrinkageSale[]
+
+  return {
+    discrepancies,
+    sales,
   }
 }

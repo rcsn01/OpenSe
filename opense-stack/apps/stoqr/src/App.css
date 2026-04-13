@@ -456,10 +456,17 @@
   .grid-2 { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: 1fr; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .audit-layout { grid-template-columns: 1fr; }
   .export-layout { grid-template-columns: 1fr; }
 }
 
 /* --- Export Configuration (LabelPreviewBatchTab) --- */
+.audit-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  gap: 20px;
+}
+
 .export-layout {
   display: grid;
   grid-template-columns: minmax(320px, 420px) 1fr;
