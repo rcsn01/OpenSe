@@ -34,12 +34,12 @@ export const ReportsPage = () => {
           {
             id: 'procurement-suppliers',
             label: 'Procurement & Suppliers',
-            content: <ProcurementSuppliersTab />,
+            content: <ProcurementSuppliersTab companyId={companyId} />,
           },
           {
             id: 'audits-shrinkage',
             label: 'Audits & Shrinkage',
-            content: <AuditsShrinkageTab />,
+            content: <AuditsShrinkageTab companyId={companyId} />,
           },
           {
             id: 'custom-saved',
