@@ -89,7 +89,7 @@ function App() {
               <Route path="/settings/team/:tab" element={<LegacyTeamSettingsRedirect />} />
               <Route path="/settings/organisations" element={<Navigate to="/settings/organisations/teams" replace />} />
               <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
-              <Route path="/reports" element={<Navigate to="/reports/valuation" replace />} />
+              <Route path="/reports" element={<Navigate to="/reports/stock-health" replace />} />
               <Route path="/reports/:tab" element={<ReportsPage />} />
               <Route path="/procurement" element={<Navigate to="/procurement/purchase-orders" replace />} />
               <Route path="/procurement/:tab" element={<ProcurementPage />} />

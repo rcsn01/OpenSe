@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLabelTemplates, useUpdateLabelTemplateLayout } from '../../hooks/queries/useLabelStudio'
 import { LabelPreviewCard } from './LabelPreviewCard'
-import { controlsToLayout, getEnabledLabelFields, resolveLabelLayout, type LabelLayoutControls } from './labelLayout'
+import { controlsToLayout, getLabelLayoutSummary, resolveLabelLayout, type LabelLayoutControls } from './labelLayout'
 
 type ToggleField = 'showName' | 'showSku' | 'showPrice' | 'showBarcode' | 'showQr' | 'showBorder'
 
@@ -54,14 +54,17 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
     setMessage(null)
   }, [selectedTemplateId, selectedTemplateLayoutKey])
 
-  const enabledFields = useMemo(() => getEnabledLabelFields(controls), [controls])
   const previewSummaryItems = useMemo(
-    () => [
-      { label: 'Size', value: `${controls.width}mm x ${controls.height}mm` },
-      { label: 'Type', value: `${controls.fontSize}pt / ${controls.textAlign}` },
-      { label: 'Fields', value: enabledFields.join(', ') || 'None' },
-    ],
-    [controls.fontSize, controls.height, controls.textAlign, controls.width, enabledFields],
+    () => {
+      const summary = getLabelLayoutSummary(controls)
+
+      return [
+        { label: 'Size', value: summary.size },
+        { label: 'Type', value: summary.type },
+        { label: 'Fields', value: summary.fields },
+      ]
+    },
+    [controls],
   )
 
   const onTemplateChange = (id: string) => {

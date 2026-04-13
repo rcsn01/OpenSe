@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
+import { getLabelLayoutSummary } from './labelLayout'
 
 type TemplateLibraryTabProps = {
   companyId: string
@@ -96,56 +97,51 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Source</th>
-                <th>Action</th>
+                <th>Size</th>
+                <th>Type</th>
+                <th>Fields</th>
               </tr>
             </thead>
             <tbody>
               {filteredTemplates.map((template) => {
                 const isEditing = selectedTemplateId === template.id
+                const summary = getLabelLayoutSummary(template.layout)
+                const openTemplate = () => onSelectTemplate?.(template.id)
                 return (
-                  <tr key={template.id} style={isEditing ? { background: 'rgba(37, 99, 235, 0.04)' } : undefined}>
+                  <tr
+                    key={template.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${template.name} template`}
+                    onClick={openTemplate}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        openTemplate()
+                      }
+                    }}
+                    style={{
+                      cursor: 'pointer',
+                      ...(isEditing ? { background: 'rgba(37, 99, 235, 0.04)' } : {}),
+                    }}
+                  >
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontWeight: 600 }}>{template.name}</span>
                         {isEditing && <span className="badge warning">Editing</span>}
                       </div>
                       <div className="small muted">
-                        Vars: {template.variable_fields.length} &middot; {formatDate(template.updated_at ?? template.created_at)}
+                        Updated {formatDate(template.updated_at ?? template.created_at)}
                       </div>
                     </td>
                     <td>
-                      <span className={`badge ${template.is_system ? 'neutral' : 'success'}`}>
-                        {template.is_system ? 'SYSTEM' : 'CUSTOM'}
-                      </span>
+                      {summary.size}
                     </td>
                     <td>
-                      {isEditing ? (
-                        <button
-                          className="button ghost small"
-                          onClick={() => onSelectTemplate?.(template.id)}
-                          aria-label={`Open ${template.name} in designer`}
-                        >
-                          Open in Designer
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--primary)',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            fontSize: 'var(--type-size-sm)',
-                            padding: '4px 0',
-                          }}
-                          onClick={() => onSelectTemplate?.(template.id)}
-                          aria-label={`Edit ${template.name} template`}
-                        >
-                          Edit
-                        </button>
-                      )}
+                      {summary.type}
+                    </td>
+                    <td>
+                      {summary.fields}
                     </td>
                   </tr>
                 )

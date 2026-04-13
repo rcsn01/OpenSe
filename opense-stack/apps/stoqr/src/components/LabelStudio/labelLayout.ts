@@ -73,6 +73,17 @@ export const getEnabledLabelFields = (controls: LabelLayoutControls) =>
     controls.showQr ? 'QR' : null,
   ].filter((value): value is string => Boolean(value))
 
+export const getLabelLayoutSummary = (layout: Record<string, unknown> | LabelLayoutControls | null | undefined) => {
+  const controls = resolveLabelLayout(layout)
+  const enabledFields = getEnabledLabelFields(controls)
+
+  return {
+    size: `${controls.width}mm x ${controls.height}mm`,
+    type: `${controls.fontSize}pt / ${controls.textAlign}`,
+    fields: enabledFields.join(', ') || 'None',
+  }
+}
+
 export const formatLabelPrice = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) return null
   return `$${value.toFixed(2)}`
