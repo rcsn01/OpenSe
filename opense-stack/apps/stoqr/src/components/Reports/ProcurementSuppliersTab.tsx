@@ -34,6 +34,15 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
   const allHistory = history ?? []
   const allLogs = receivingLogs ?? []
   const allSuppliers = suppliers ?? []
+  const mergedOrders = useMemo(() => {
+    const byId = new Map<string, (typeof allOrders)[number]>()
+
+    ;[...allOrders, ...allHistory].forEach((order) => {
+      byId.set(order.id, order)
+    })
+
+    return Array.from(byId.values())
+  }, [allOrders, allHistory])
 
   // Pending PO value: sum of total_cost for orders that are draft/sent/partial
   const pendingPoValue = useMemo(() => {
@@ -49,21 +58,21 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
   const completedPoValue = useMemo(() => {
     const cutoff = Date.now() - 30 * 86_400_000
     const closedIds = new Set(
-      [...allOrders, ...allHistory]
+      mergedOrders
         .filter((o) => o.status === 'closed' && new Date(o.created_at).getTime() >= cutoff)
         .map((o) => o.id),
     )
     return allItems
       .filter((item) => closedIds.has(item.po_id))
       .reduce((sum, item) => sum + item.quantity_received * item.unit_cost, 0)
-  }, [allOrders, allHistory, allItems])
+  }, [mergedOrders, allItems])
 
   // Avg Lead Time: days between PO creation and receiving
   const avgLeadTime = useMemo(() => {
     const leadTimes: number[] = []
     for (const log of allLogs) {
       if (!log.po_id) continue
-      const order = [...allOrders, ...allHistory].find((o) => o.id === log.po_id)
+      const order = mergedOrders.find((o) => o.id === log.po_id)
       if (!order) continue
       const created = new Date(order.created_at).getTime()
       const received = new Date(log.received_at).getTime()
@@ -73,7 +82,7 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
     }
     if (leadTimes.length === 0) return 0
     return leadTimes.reduce((s, v) => s + v, 0) / leadTimes.length
-  }, [allOrders, allHistory, allLogs])
+  }, [mergedOrders, allLogs])
 
   // Avg Defect Rate: (ordered - received) / ordered
   const avgDefectRate = useMemo(() => {
@@ -87,7 +96,7 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
   // Supplier scorecard
   const supplierScorecard = useMemo(() => {
     return allSuppliers.map((supplier) => {
-      const supplierOrders = [...allOrders, ...allHistory].filter((o) => o.supplier_id === supplier.id)
+      const supplierOrders = mergedOrders.filter((o) => o.supplier_id === supplier.id)
       const supplierOrderIds = new Set(supplierOrders.map((o) => o.id))
       const supplierItems = allItems.filter((item) => supplierOrderIds.has(item.po_id))
 
@@ -134,7 +143,7 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
         rating,
       }
     })
-  }, [allSuppliers, allOrders, allHistory, allItems, allLogs])
+  }, [allSuppliers, mergedOrders, allItems, allLogs])
 
   // Price Variance: track unit_cost changes for top SKU over time
   const priceVarianceData = useMemo(() => {
@@ -158,7 +167,7 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
       const po = item.purchase_orders
       if (!po) continue
       // Find order date from allOrders
-      const order = [...allOrders, ...allHistory].find((o) => o.id === item.po_id)
+      const order = mergedOrders.find((o) => o.id === item.po_id)
       if (!order) continue
       const date = new Date(order.created_at)
       const monthKey = date.toLocaleDateString('en-US', { month: 'short' })
@@ -173,7 +182,7 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
     }))
 
     return { sku, data }
-  }, [allItems, allOrders, allHistory])
+  }, [allItems, mergedOrders])
 
   // Sparkline data for pending PO
   const pendingSparkline = useMemo(() => {

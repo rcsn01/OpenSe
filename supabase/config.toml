@@ -27,6 +27,7 @@ sql_paths = [
 	"./seeds/30_etl_core.sql",
 	"./seeds/40_stoqr_reference_membership.sql",
 	"./seeds/50_stoqr_catalog_inventory.sql",
+	"./seeds/55_stoqr_reports_demo.sql",
 	"./seeds/60_admin_audit.sql",
 	"./seeds/90_synthetic_volume.sql"
 ]
