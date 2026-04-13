@@ -29,7 +29,7 @@ export const ReportsPage = () => {
           {
             id: 'movement-velocity',
             label: 'Movement & Velocity',
-            content: <MovementVelocityTab />,
+            content: <MovementVelocityTab companyId={companyId} />,
           },
           {
             id: 'procurement-suppliers',
