@@ -44,7 +44,7 @@ export const ReportsPage = () => {
           {
             id: 'custom-saved',
             label: 'Custom & Saved Reports',
-            content: <CustomSavedReportsTab />,
+            content: <CustomSavedReportsTab companyId={companyId} />,
           },
         ]}
       />
