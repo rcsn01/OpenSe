@@ -387,22 +387,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
       ) : null}
 
       <Card className="overflow-hidden" padding="none">
-        <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-              Purchase Orders
-            </p>
-            <h2 className="text-lg font-semibold text-[var(--color-foreground)]">Order queue</h2>
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              Review supplier commitments, expected arrival dates, request approvals, receiving progress, and return handling in one list.
-            </p>
-          </div>
-
-          <div className="rounded-full bg-[var(--color-muted)] px-3 py-1 text-sm font-medium text-[var(--color-muted-foreground)]">
-            {filteredPurchaseOrders.length} of {purchaseOrders.length} orders
-          </div>
-        </div>
-
         {loadingOrders ? (
           <div className="empty-state">Loading purchase orders...</div>
         ) : filteredPurchaseOrders.length === 0 ? (
