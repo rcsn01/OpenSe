@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { DataTable, type DataTableColumn } from '../ui/DataTable'
 
 export type OrganisationMembersTableRow = {
   id: string
@@ -24,59 +25,82 @@ export function OrganisationMembersTable({
   showStatus = false,
   showActions = false,
 }: OrganisationMembersTableProps) {
+  const headerCellClassName = 'bg-slate-50 !px-6 !py-4 text-left text-xs font-semibold uppercase tracking-wider !text-slate-500'
+  const bodyCellClassName = '!px-6 !py-4 whitespace-nowrap'
+
+  const columns: DataTableColumn<OrganisationMembersTableRow>[] = [
+    {
+      id: 'member',
+      header: 'Member',
+      headerClassName: headerCellClassName,
+      cellClassName: bodyCellClassName,
+      renderCell: (row) => {
+        const initials = (row.initials ?? row.displayName.charAt(0)).toUpperCase()
+
+        return (
+          <div className="flex items-center">
+            <div className="h-10 w-10 flex-shrink-0">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
+                {initials}
+              </div>
+            </div>
+            <div className="ml-4">
+              <div className="text-sm font-medium text-slate-900 transition-colors group-hover:text-indigo-600">
+                {row.displayName}
+              </div>
+              <div className="text-sm text-slate-500">{row.subtitle}</div>
+            </div>
+          </div>
+        )
+      },
+    },
+    {
+      id: 'role',
+      header: 'Role',
+      headerClassName: headerCellClassName,
+      cellClassName: bodyCellClassName,
+      renderCell: (row) => row.roleContent,
+    },
+    ...(showPermissionsRole
+      ? [{
+          id: 'permissions-role',
+          header: 'Permissions Role',
+          headerClassName: headerCellClassName,
+          cellClassName: bodyCellClassName,
+          renderCell: (row: OrganisationMembersTableRow) => row.permissionsRoleContent,
+        } satisfies DataTableColumn<OrganisationMembersTableRow>]
+      : []),
+    ...(showStatus
+      ? [{
+          id: 'status',
+          header: 'Status',
+          headerClassName: headerCellClassName,
+          cellClassName: bodyCellClassName,
+          renderCell: (row: OrganisationMembersTableRow) => row.statusContent,
+        } satisfies DataTableColumn<OrganisationMembersTableRow>]
+      : []),
+    ...(showActions
+      ? [{
+          id: 'actions',
+          header: 'Actions',
+          align: 'right' as const,
+          headerClassName: `${headerCellClassName} text-right`,
+          cellClassName: `${bodyCellClassName} text-right text-sm font-medium`,
+          renderCell: (row: OrganisationMembersTableRow) => row.actionsContent,
+        } satisfies DataTableColumn<OrganisationMembersTableRow>]
+      : []),
+  ]
+
   return (
     <div className="overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">
-      <table className="min-w-full divide-y divide-slate-200">
-        <thead className="bg-slate-50">
-          <tr>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Member</th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
-            {showPermissionsRole && (
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Permissions Role</th>
-            )}
-            {showStatus && (
-              <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-            )}
-            {showActions && (
-              <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
-            )}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-200 bg-white">
-          {rows.map((row) => {
-            const initials = (row.initials ?? row.displayName.charAt(0)).toUpperCase()
-            return (
-              <tr key={row.id} className="group hover:bg-slate-50/80 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 flex-shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                        {initials}
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">
-                        {row.displayName}
-                      </div>
-                      <div className="text-sm text-slate-500">{row.subtitle}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">{row.roleContent}</td>
-                {showPermissionsRole && (
-                  <td className="px-6 py-4 whitespace-nowrap">{row.permissionsRoleContent}</td>
-                )}
-                {showStatus && (
-                  <td className="px-6 py-4 whitespace-nowrap">{row.statusContent}</td>
-                )}
-                {showActions && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">{row.actionsContent}</td>
-                )}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        getRowId={(row) => row.id}
+        tableWrapClassName="border-0 rounded-none bg-white"
+        tableClassName="min-w-full bg-white"
+        rowClassName="group hover:!bg-slate-50/80"
+      />
     </div>
   )
 }

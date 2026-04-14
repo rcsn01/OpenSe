@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { DataTable } from '@repo/ui'
 import {
   CartesianGrid,
   Line,
@@ -281,40 +282,54 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
           {supplierScorecard.length === 0 ? (
             <div className="empty-state" style={{ padding: 32 }}>No supplier data available.</div>
           ) : (
-            <div className="table-wrap" style={{ border: 'none' }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Supplier</th>
-                    <th style={{ textAlign: 'center' }}>On-Time %</th>
-                    <th style={{ textAlign: 'center' }}>Defect %</th>
-                    <th style={{ textAlign: 'center' }}>Fulfillment Acc.</th>
-                    <th style={{ textAlign: 'center' }}>Rating</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {supplierScorecard.map((row) => (
-                    <tr key={row.name}>
-                      <td style={{ fontWeight: 'var(--type-weight-semibold)' }}>{row.name}</td>
-                      <td style={{ textAlign: 'center' }}>{row.onTimePct}%</td>
-                      <td style={{ textAlign: 'center' }}>{row.defectPct}%</td>
-                      <td style={{ textAlign: 'center' }}>{row.fulfillmentAcc}%</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span
-                          className="badge"
-                          style={{
-                            background: RATING_STYLES[row.rating]?.bg,
-                            color: RATING_STYLES[row.rating]?.color,
-                          }}
-                        >
-                          {row.rating}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={[
+                {
+                  id: 'supplier',
+                  header: 'Supplier',
+                  renderCell: (row: (typeof supplierScorecard)[number]) => (
+                    <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>{row.name}</span>
+                  ),
+                },
+                {
+                  id: 'on-time',
+                  header: 'On-Time %',
+                  align: 'center',
+                  renderCell: (row: (typeof supplierScorecard)[number]) => `${row.onTimePct}%`,
+                },
+                {
+                  id: 'defect',
+                  header: 'Defect %',
+                  align: 'center',
+                  renderCell: (row: (typeof supplierScorecard)[number]) => `${row.defectPct}%`,
+                },
+                {
+                  id: 'fulfillment',
+                  header: 'Fulfillment Acc.',
+                  align: 'center',
+                  renderCell: (row: (typeof supplierScorecard)[number]) => `${row.fulfillmentAcc}%`,
+                },
+                {
+                  id: 'rating',
+                  header: 'Rating',
+                  align: 'center',
+                  renderCell: (row: (typeof supplierScorecard)[number]) => (
+                    <span
+                      className="badge"
+                      style={{
+                        background: RATING_STYLES[row.rating]?.bg,
+                        color: RATING_STYLES[row.rating]?.color,
+                      }}
+                    >
+                      {row.rating}
+                    </span>
+                  ),
+                },
+              ]}
+              rows={supplierScorecard}
+              getRowId={(row) => row.name}
+              tableWrapClassName="border-0 rounded-none"
+            />
           )}
         </div>
 

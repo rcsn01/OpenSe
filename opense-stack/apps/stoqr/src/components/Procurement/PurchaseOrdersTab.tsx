@@ -7,17 +7,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  DataTable,
   Dropdown,
   DropdownItem,
   EmptyState,
   Input,
   Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@repo/ui'
 import { BellRing, Building2, CheckCircle2, ChevronDown, Filter, Plus, Search, Sparkles } from 'lucide-react'
 import type { PurchaseOrder } from '../../api/procurement'
@@ -394,33 +389,57 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
             <EmptyState title="No purchase orders found" description={emptyStateDescription} />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table className="min-w-[1120px]">
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                    PO Number
-                  </TableHead>
-                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                    Supplier
-                  </TableHead>
-                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                    Created
-                  </TableHead>
-                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                    Expected
-                  </TableHead>
-                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-right text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                    Total
-                  </TableHead>
-                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                    Workflow
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPurchaseOrders.map((order) => {
-                  const totalAmount = order.total_amount ?? totalsByPo[order.id] ?? 0
+          <DataTable
+            columns={[
+              {
+                id: 'po-number',
+                header: 'PO Number',
+                cellClassName: '!py-5',
+                renderCell: (order) => (
+                  <span className="text-sm font-semibold text-[var(--color-primary)]">
+                    {formatPurchaseOrderNumber(order)}
+                  </span>
+                ),
+              },
+              {
+                id: 'supplier',
+                header: 'Supplier',
+                cellClassName: '!py-5',
+                renderCell: (order) => (
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-[var(--color-muted)] p-2 text-[var(--color-muted-foreground)]">
+                      <Building2 size={16} />
+                    </div>
+                    <span className="font-medium text-[var(--color-foreground)]">
+                      {order.suppliers?.name ?? 'Unknown supplier'}
+                    </span>
+                  </div>
+                ),
+              },
+              {
+                id: 'created',
+                header: 'Created',
+                cellClassName: '!py-5 text-[var(--color-muted-foreground)]',
+                renderCell: (order) => formatDateLabel(order.created_at),
+              },
+              {
+                id: 'expected',
+                header: 'Expected',
+                cellClassName: '!py-5 text-[var(--color-muted-foreground)]',
+                renderCell: (order) => formatDateLabel(order.expected_date),
+              },
+              {
+                id: 'total',
+                header: 'Total',
+                align: 'right',
+                cellClassName: '!py-5 font-semibold text-[var(--color-foreground)]',
+                renderCell: (order) => formatCurrency(order.total_amount ?? totalsByPo[order.id] ?? 0),
+              },
+              {
+                id: 'workflow',
+                header: 'Workflow',
+                cellClassName: '!py-5',
+                renderCell: (order) => {
                   const workflow = workflowByPo[order.id] ?? {
                     request: { label: 'Pending Approval', variant: 'warning' as const },
                     order: { label: statusLabels[order.status], variant: statusVariants[order.status] },
@@ -430,74 +449,50 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
                   }
 
                   return (
-                    <TableRow key={order.id}>
-                      <TableCell className="py-5">
-                        <span className="text-sm font-semibold text-[var(--color-primary)]">
-                          {formatPurchaseOrderNumber(order)}
+                    <div className="flex min-w-[280px] flex-col gap-2.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                          Request
                         </span>
-                      </TableCell>
-                      <TableCell className="py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-lg bg-[var(--color-muted)] p-2 text-[var(--color-muted-foreground)]">
-                            <Building2 size={16} />
-                          </div>
-                          <span className="font-medium text-[var(--color-foreground)]">
-                            {order.suppliers?.name ?? 'Unknown supplier'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-5 text-[var(--color-muted-foreground)]">
-                        {formatDateLabel(order.created_at)}
-                      </TableCell>
-                      <TableCell className="py-5 text-[var(--color-muted-foreground)]">
-                        {formatDateLabel(order.expected_date)}
-                      </TableCell>
-                      <TableCell className="py-5 text-right font-semibold text-[var(--color-foreground)]">
-                        {formatCurrency(totalAmount)}
-                      </TableCell>
-                      <TableCell className="py-5">
-                        <div className="flex min-w-[280px] flex-col gap-2.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                              Request
-                            </span>
-                            <Badge variant={workflow.request.variant} size="md">
-                              {workflow.request.label}
-                            </Badge>
-                          </div>
+                        <Badge variant={workflow.request.variant} size="md">
+                          {workflow.request.label}
+                        </Badge>
+                      </div>
 
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                              Order
-                            </span>
-                            <Badge variant={workflow.order.variant} size="md">
-                              {workflow.order.label}
-                            </Badge>
-                            <span className="text-xs text-[var(--color-muted-foreground)]">
-                              {workflow.receivedUnits}/{workflow.orderedUnits} units received
-                            </span>
-                          </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                          Order
+                        </span>
+                        <Badge variant={workflow.order.variant} size="md">
+                          {workflow.order.label}
+                        </Badge>
+                        <span className="text-xs text-[var(--color-muted-foreground)]">
+                          {workflow.receivedUnits}/{workflow.orderedUnits} units received
+                        </span>
+                      </div>
 
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                              Return
-                            </span>
-                            {workflow.returnStatus ? (
-                              <Badge variant={workflow.returnStatus.variant} size="md">
-                                {workflow.returnStatus.label}
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-[var(--color-muted-foreground)]">No return</span>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                          Return
+                        </span>
+                        {workflow.returnStatus ? (
+                          <Badge variant={workflow.returnStatus.variant} size="md">
+                            {workflow.returnStatus.label}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-[var(--color-muted-foreground)]">No return</span>
+                        )}
+                      </div>
+                    </div>
                   )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                },
+              },
+            ]}
+            rows={filteredPurchaseOrders}
+            getRowId={(order) => order.id}
+            minTableWidth={1120}
+            tableWrapClassName="border-0 rounded-none"
+          />
         )}
       </Card>
     </div>

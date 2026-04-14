@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { DataTable } from '@repo/ui'
 import {
   Cell,
   Pie,
@@ -274,42 +275,59 @@ export const AuditsShrinkageTab = ({ companyId }: { companyId: string | null }) 
           {logRows.length === 0 ? (
             <div className="empty-state" style={{ padding: 32 }}>No discrepancy records for the selected filter.</div>
           ) : (
-            <div className="table-wrap" style={{ border: 'none' }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>SKU</th>
-                    <th style={{ textAlign: 'right' }}>Expected</th>
-                    <th style={{ textAlign: 'right' }}>Actual</th>
-                    <th style={{ textAlign: 'right' }}>Variance</th>
-                    <th>Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logRows.map((row) => (
-                    <tr key={row.id}>
-                      <td className="small muted">{formatAuditDate(row.date)}</td>
-                      <td style={{ fontWeight: 'var(--type-weight-semibold)' }}>{row.sku}</td>
-                      <td style={{ textAlign: 'right' }}>{row.expected}</td>
-                      <td style={{ textAlign: 'right' }}>{row.actual}</td>
-                      <td
-                        style={{
-                          textAlign: 'right',
-                          fontWeight: 'var(--type-weight-semibold)',
-                          color: row.variance < 0 ? '#e11d48' : '#059669',
-                        }}
-                      >
-                        {row.variance > 0 ? '+' : ''}{row.variance}
-                      </td>
-                      <td>
-                        <span className="pill" style={{ color: 'var(--color-muted-foreground)' }}>{row.reason}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={[
+                {
+                  id: 'date',
+                  header: 'Date',
+                  renderCell: (row: (typeof logRows)[number]) => <span className="small muted">{formatAuditDate(row.date)}</span>,
+                },
+                {
+                  id: 'sku',
+                  header: 'SKU',
+                  renderCell: (row: (typeof logRows)[number]) => (
+                    <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>{row.sku}</span>
+                  ),
+                },
+                {
+                  id: 'expected',
+                  header: 'Expected',
+                  align: 'right',
+                  renderCell: (row: (typeof logRows)[number]) => row.expected,
+                },
+                {
+                  id: 'actual',
+                  header: 'Actual',
+                  align: 'right',
+                  renderCell: (row: (typeof logRows)[number]) => row.actual,
+                },
+                {
+                  id: 'variance',
+                  header: 'Variance',
+                  align: 'right',
+                  renderCell: (row: (typeof logRows)[number]) => (
+                    <span
+                      style={{
+                        fontWeight: 'var(--type-weight-semibold)',
+                        color: row.variance < 0 ? '#e11d48' : '#059669',
+                      }}
+                    >
+                      {row.variance > 0 ? '+' : ''}{row.variance}
+                    </span>
+                  ),
+                },
+                {
+                  id: 'reason',
+                  header: 'Reason',
+                  renderCell: (row: (typeof logRows)[number]) => (
+                    <span className="pill" style={{ color: 'var(--color-muted-foreground)' }}>{row.reason}</span>
+                  ),
+                },
+              ]}
+              rows={logRows}
+              getRowId={(row) => row.id}
+              tableWrapClassName="border-0 rounded-none"
+            />
           )}
         </div>
       </div>

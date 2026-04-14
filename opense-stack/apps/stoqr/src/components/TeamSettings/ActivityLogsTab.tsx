@@ -1,3 +1,4 @@
+import { DataTable } from '@repo/ui'
 import { formatDateTime } from '../../utils'
 
 type ActivityEvent = {
@@ -23,40 +24,44 @@ export const ActivityLogsTab = ({ logs }: { logs: ActivityEvent[] }) => {
           Global feed of system access, permission changes, and administrative actions.
         </p>
       </div>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>User</th>
-              <th>Action</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="small muted" style={{ textAlign: 'center', padding: 24 }}>
-                  No activity events found.
-                </td>
-              </tr>
-            ) : logs.map((log) => (
-              <tr key={log.id}>
-                <td className="small muted" style={{ whiteSpace: 'nowrap' }}>
-                  {formatDateTime(log.created_at)}
-                </td>
-                <td style={{ fontWeight: 'var(--type-weight-medium)' }}>{log.profiles?.full_name ?? log.profiles?.username ?? 'System'}</td>
-                <td>
-                  <span className="pill">
-                    {log.event_type}
-                  </span>
-                </td>
-                <td className="small">{log.message ?? '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={[
+          {
+            id: 'timestamp',
+            header: 'Timestamp',
+            renderCell: (log: ActivityEvent) => (
+              <span className="small muted" style={{ whiteSpace: 'nowrap' }}>
+                {formatDateTime(log.created_at)}
+              </span>
+            ),
+          },
+          {
+            id: 'user',
+            header: 'User',
+            renderCell: (log: ActivityEvent) => (
+              <span style={{ fontWeight: 'var(--type-weight-medium)' }}>
+                {log.profiles?.full_name ?? log.profiles?.username ?? 'System'}
+              </span>
+            ),
+          },
+          {
+            id: 'action',
+            header: 'Action',
+            renderCell: (log: ActivityEvent) => (
+              <span className="pill">{log.event_type}</span>
+            ),
+          },
+          {
+            id: 'details',
+            header: 'Details',
+            renderCell: (log: ActivityEvent) => <span className="small">{log.message ?? '—'}</span>,
+          },
+        ]}
+        rows={logs}
+        getRowId={(log) => log.id}
+        emptyState="No activity events found."
+        tableWrapClassName="border-0 rounded-none"
+      />
     </div>
   )
 }

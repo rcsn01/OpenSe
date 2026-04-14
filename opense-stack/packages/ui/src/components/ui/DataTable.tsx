@@ -1,0 +1,223 @@
+import { ArrowDown, ArrowUp } from 'lucide-react'
+import { type CSSProperties, type ReactNode } from 'react'
+import { cn } from '../../lib/cn'
+import { Pagination } from './Pagination'
+
+type DataTableAlign = 'left' | 'center' | 'right'
+
+const alignmentClassNames: Record<DataTableAlign, string> = {
+  left: 'text-left',
+  center: 'text-center',
+  right: 'text-right',
+}
+
+const alignmentStyles: Record<DataTableAlign, CSSProperties> = {
+  left: { textAlign: 'left' },
+  center: { textAlign: 'center' },
+  right: { textAlign: 'right' },
+}
+
+export type DataTableColumn<Row, SortKey extends string = string> = {
+  id: string
+  header: ReactNode
+  renderCell: (row: Row, index: number) => ReactNode
+  sortKey?: SortKey
+  sortable?: boolean
+  width?: CSSProperties['width']
+  align?: DataTableAlign
+  headerClassName?: string
+  cellClassName?: string
+  headerStyle?: CSSProperties
+  cellStyle?: CSSProperties | ((row: Row, index: number) => CSSProperties | undefined)
+}
+
+type DataTablePaginationProps = {
+  currentPage: number
+  totalPages?: number
+  totalItems?: number
+  itemsPerPage?: number
+  onPageChange: (page: number) => void
+  onItemsPerPageChange?: (pageSize: number) => void
+  pageSizeOptions?: number[]
+  className?: string
+}
+
+type DataTableProps<Row, SortKey extends string = string> = {
+  columns: Array<DataTableColumn<Row, SortKey>>
+  rows: Row[]
+  getRowId: (row: Row, index: number) => string
+  emptyState?: ReactNode
+  className?: string
+  tableWrapClassName?: string
+  tableClassName?: string
+  theadClassName?: string
+  tbodyClassName?: string
+  footerClassName?: string
+  minTableWidth?: CSSProperties['minWidth']
+  tableLayout?: CSSProperties['tableLayout']
+  sortField?: SortKey | null
+  sortDirection?: 'asc' | 'desc'
+  onSortChange?: (sortKey: SortKey) => void
+  rowClassName?: string | ((row: Row, index: number) => string | undefined)
+  getRowStyle?: (row: Row, index: number) => CSSProperties | undefined
+  onRowClick?: (row: Row, index: number) => void
+  pagination?: DataTablePaginationProps
+}
+
+export function DataTable<Row, SortKey extends string = string>({
+  columns,
+  rows,
+  getRowId,
+  emptyState,
+  className,
+  tableWrapClassName,
+  tableClassName,
+  theadClassName,
+  tbodyClassName,
+  footerClassName,
+  minTableWidth,
+  tableLayout,
+  sortField,
+  sortDirection = 'asc',
+  onSortChange,
+  rowClassName,
+  getRowStyle,
+  onRowClick,
+  pagination,
+}: DataTableProps<Row, SortKey>) {
+  const totalPages = pagination?.totalPages
+    ?? (typeof pagination?.totalItems === 'number' && typeof pagination?.itemsPerPage === 'number'
+      ? Math.max(1, Math.ceil(pagination.totalItems / pagination.itemsPerPage))
+      : 1)
+
+  return (
+    <div className={cn('flex min-h-0 flex-col', className)}>
+      <div
+        className={cn(
+          'table-wrap w-full overflow-auto border border-[var(--color-border)] bg-[var(--color-card)]',
+          tableWrapClassName,
+        )}
+      >
+        <table
+          className={cn(
+            'table w-full border-collapse bg-[var(--color-card)] text-sm',
+            tableClassName,
+          )}
+          style={{ minWidth: minTableWidth, tableLayout }}
+        >
+          {columns.some((column) => typeof column.width !== 'undefined') ? (
+            <colgroup>
+              {columns.map((column) => (
+                <col key={column.id} style={{ width: column.width }} />
+              ))}
+            </colgroup>
+          ) : null}
+
+          <thead className={theadClassName}>
+            <tr>
+              {columns.map((column) => {
+                const align = column.align ?? 'left'
+                const isSortable = Boolean(onSortChange && (column.sortable ?? column.sortKey))
+                const columnSortKey = (column.sortKey ?? column.id) as SortKey
+                const isActiveSort = isSortable && sortField === columnSortKey
+                const ariaSort = !isSortable
+                  ? undefined
+                  : isActiveSort
+                    ? (sortDirection === 'asc' ? 'ascending' : 'descending')
+                    : 'none'
+
+                return (
+                  <th
+                    key={column.id}
+                    aria-sort={ariaSort}
+                    className={cn(
+                      'sticky top-0 z-[1] bg-[var(--color-muted)]/50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]',
+                      alignmentClassNames[align],
+                      isSortable && 'sortable-th cursor-pointer select-none',
+                      column.headerClassName,
+                    )}
+                    onClick={isSortable ? () => onSortChange?.(columnSortKey) : undefined}
+                    style={{
+                      ...alignmentStyles[align],
+                      ...column.headerStyle,
+                    }}
+                  >
+                    <span className={cn('inline-flex items-center gap-1', align === 'right' && 'justify-end', align === 'center' && 'justify-center')}>
+                      {column.header}
+                      {isActiveSort ? (
+                        sortDirection === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                      ) : null}
+                    </span>
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+
+          <tbody className={tbodyClassName}>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-6 text-center text-sm text-[var(--color-muted-foreground)]">
+                  {emptyState ?? 'No rows available.'}
+                </td>
+              </tr>
+            ) : (
+              rows.map((row, index) => {
+                const computedRowClassName = typeof rowClassName === 'function' ? rowClassName(row, index) : rowClassName
+
+                return (
+                  <tr
+                    key={getRowId(row, index)}
+                    className={cn(onRowClick && 'cursor-pointer', computedRowClassName)}
+                    onClick={onRowClick ? () => onRowClick(row, index) : undefined}
+                    style={getRowStyle?.(row, index)}
+                  >
+                    {columns.map((column) => {
+                      const align = column.align ?? 'left'
+                      const computedCellStyle = typeof column.cellStyle === 'function'
+                        ? column.cellStyle(row, index)
+                        : column.cellStyle
+
+                      return (
+                        <td
+                          key={column.id}
+                          className={cn(
+                            'border-b border-[var(--color-border)] px-4 py-3 align-middle text-[var(--color-foreground)]',
+                            index === rows.length - 1 && 'border-b-0',
+                            alignmentClassNames[align],
+                            column.cellClassName,
+                          )}
+                          style={{
+                            ...alignmentStyles[align],
+                            ...computedCellStyle,
+                          }}
+                        >
+                          {column.renderCell(row, index)}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {pagination ? (
+        <div className={cn('table-footer border-t border-[var(--color-border)] px-4 py-3', footerClassName)}>
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={totalPages}
+            onPageChange={pagination.onPageChange}
+            totalItems={pagination.totalItems}
+            itemsPerPage={pagination.itemsPerPage}
+            onItemsPerPageChange={pagination.onItemsPerPageChange}
+            pageSizeOptions={pagination.pageSizeOptions}
+            className={pagination.className}
+          />
+        </div>
+      ) : null}
+    </div>
+  )
+}

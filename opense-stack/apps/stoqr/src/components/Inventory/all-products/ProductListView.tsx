@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowDown, ArrowUp } from 'lucide-react'
-import { Heading, Label } from '@repo/ui'
+import { DataTable, Heading, Label } from '@repo/ui'
 import { EmptyState } from '../../EmptyState'
 import { Pagination } from '../../Pagination'
 import { Badge } from '../../Badge'
@@ -38,13 +37,6 @@ export const ProductListView = ({
       setSortField(field)
       setSortDir('asc')
     }
-  }
-
-  const SortIndicator = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return null
-    return sortDir === 'asc'
-      ? <ArrowUp size={12} style={{ marginLeft: 4, display: 'inline' }} />
-      : <ArrowDown size={12} style={{ marginLeft: 4, display: 'inline' }} />
   }
 
   return (
@@ -135,117 +127,117 @@ export const ProductListView = ({
           </div>
         </>
       ) : (
-        <>
-          <div className="table-wrap" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-            <table className="table" style={{ tableLayout: 'fixed', width: '100%', minWidth: 900 }}>
-              <colgroup>
-                <col style={{ width: 40 }} />
-                <col />
-                <col style={{ width: 140 }} />
-                <col style={{ width: 110 }} />
-                <col style={{ width: 120 }} />
-              </colgroup>
-              <thead className={selectedRowIds.size > 0 ? 'table-header-selected' : undefined}>
-                <tr>
-                  <th style={{ width: 40, textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={products.length > 0 && selectedRowIds.size === products.length}
-                      disabled={isSaving}
-                      onChange={toggleAll}
-                    />
-                  </th>
-                  <th className="sortable-th" onClick={() => handleColumnSort('name')}>
-                    Name / SKU <SortIndicator field="name" />
-                  </th>
-                  <th className="sortable-th" onClick={() => handleColumnSort('folder_id')}>
-                    Folder <SortIndicator field="folder_id" />
-                  </th>
-                  <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('selling_price')}>
-                    Price <SortIndicator field="selling_price" />
-                  </th>
-                  <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('quantity_on_hand')}>
-                    Available <SortIndicator field="quantity_on_hand" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => {
-                  const isEditingPrice = editingCell?.id === product.id && editingCell.field === 'selling_price'
+        <DataTable
+          className="flex-1"
+          tableWrapClassName="flex-1 min-h-0"
+          columns={[
+            {
+              id: 'name',
+              header: 'Name / SKU',
+              sortKey: 'name',
+              renderCell: (product) => (
+                <Link
+                  to={`/inventory/${product.id}/overview`}
+                  style={{ display: 'block', minWidth: 0 }}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-normal text-[var(--color-foreground)]">
+                    {product.name}
+                  </span>
+                </Link>
+              ),
+            },
+            {
+              id: 'folder_id',
+              header: 'Folder',
+              sortKey: 'folder_id',
+              width: 140,
+              renderCell: (product) => <span className="muted small">{folderName(product.folder_id)}</span>,
+            },
+            {
+              id: 'selling_price',
+              header: 'Price',
+              sortKey: 'selling_price',
+              width: 110,
+              align: 'right',
+              renderCell: (product) => {
+                const isEditingPrice = editingCell?.id === product.id && editingCell.field === 'selling_price'
 
-                  return (
-                    <tr key={product.id} style={{ background: selectedRowIds.has(product.id) ? 'var(--primary-soft)' : undefined }}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedRowIds.has(product.id)}
-                          disabled={isSaving}
-                          onChange={() => toggleSelection(product.id)}
-                        />
-                      </td>
-                      <td>
-                        <Link to={`/inventory/${product.id}/overview`} style={{ display: 'block', minWidth: 0 }}>
-                          <span
-                            className="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-normal text-[var(--color-foreground)]"
-                          >
-                            {product.name}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="muted small">{folderName(product.folder_id)}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        {isEditingPrice ? (
-                          <input
-                            className="input small"
-                            autoFocus
-                            type="number"
-                            step="0.01"
-                            value={editingValue}
-                            disabled={isSaving}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => {
-                              void commitEdit()
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault()
-                                void commitEdit()
-                              }
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            style={{ width: 120, textAlign: 'right' }}
-                          />
-                        ) : (
-                          <span
-                            className="editable-cell"
-                            onClick={() => startEdit(product, 'selling_price')}
-                            aria-disabled={isSaving}
-                            style={{ cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}
-                          >
-                            {formatCurrency(product.selling_price)}
-                            <span className="edit-icon">✎</span>
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)', color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}>
-                        {product.quantity_on_hand} / {product.reorder_point}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div style={{ padding: '0 20px 16px' }}>
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              totalItems={totalCount}
-              onPageChange={setPage}
-            />
-          </div>
-        </>
+                return isEditingPrice ? (
+                  <input
+                    className="input small"
+                    autoFocus
+                    type="number"
+                    step="0.01"
+                    value={editingValue}
+                    disabled={isSaving}
+                    onChange={(event) => setEditingValue(event.target.value)}
+                    onClick={(event) => event.stopPropagation()}
+                    onBlur={() => {
+                      void commitEdit()
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void commitEdit()
+                      }
+                      if (event.key === 'Escape') cancelEdit()
+                    }}
+                    style={{ width: 120, textAlign: 'right' }}
+                  />
+                ) : (
+                  <span
+                    className="editable-cell"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      startEdit(product, 'selling_price')
+                    }}
+                    aria-disabled={isSaving}
+                    style={{ cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}
+                  >
+                    {formatCurrency(product.selling_price)}
+                    <span className="edit-icon">✎</span>
+                  </span>
+                )
+              },
+            },
+            {
+              id: 'quantity_on_hand',
+              header: 'Available',
+              sortKey: 'quantity_on_hand',
+              width: 120,
+              align: 'right',
+              renderCell: (product) => (
+                <span
+                  style={{
+                    fontWeight: 'var(--type-weight-semibold)',
+                    color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)',
+                  }}
+                >
+                  {product.quantity_on_hand} / {product.reorder_point}
+                </span>
+              ),
+            },
+          ]}
+          rows={products}
+          getRowId={(product) => product.id}
+          minTableWidth={900}
+          tableLayout="fixed"
+          theadClassName={selectedRowIds.size > 0 ? 'table-header-selected' : undefined}
+          sortField={sortField}
+          sortDirection={sortDir}
+          onSortChange={handleColumnSort}
+          onRowClick={(product) => toggleSelection(product.id)}
+          rowClassName={(product) => selectedRowIds.has(product.id) ? 'row-selected' : undefined}
+          getRowStyle={(product) => ({ background: selectedRowIds.has(product.id) ? 'var(--primary-soft)' : undefined })}
+          footerClassName="border-t-0 px-5 pb-4 pt-0"
+          pagination={{
+            currentPage: page,
+            totalItems: totalCount,
+            itemsPerPage: pageSize,
+            onPageChange: setPage,
+          }}
+        />
       )}
     </div>
   )
