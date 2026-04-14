@@ -7,6 +7,7 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 export { Badge, type BadgeProps } from './ui/Badge'
 export { StatusBadge } from './ui/StatusBadge'
 export { Alert, type AlertProps } from './ui/Alert'
+export { DataTable, type DataTableColumn } from './ui/DataTable'
 export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, useDialog } from './ui/Dialog'
 export {
   SideSheet,

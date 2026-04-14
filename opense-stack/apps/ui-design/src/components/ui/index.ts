@@ -12,6 +12,7 @@ export {
   Badge,
   StatusBadge,
   Avatar, AvatarGroup,
+  DataTable,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption, TableContainer,
   // Feedback
   Alert,
@@ -56,6 +57,7 @@ export type {
   BadgeProps,
   AlertProps,
   AvatarProps,
+  DataTableColumn,
   BreadcrumbItem,
   TabItem,
   DropdownArrayItem,

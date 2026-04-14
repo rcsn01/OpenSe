@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
+  DataTable,
   Button,
   Tooltip,
   Badge,
@@ -7,11 +8,6 @@ import {
   Avatar,
   AvatarGroup,
   Card,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
   Container,
   VStack,
   HStack,
@@ -44,6 +40,47 @@ export function DataDisplayPage() {
   const [combinedStockStatus, setCombinedStockStatus] = useState(stockStatusOptions[0].value)
   const [combinedNextFilterField, setCombinedNextFilterField] = useState(addFilterItems[0].label)
   const [combinedView, setCombinedView] = useState<'list' | 'grid'>('list')
+  const [tablePage, setTablePage] = useState(1)
+  const [tableSortField, setTableSortField] = useState<'name' | 'status' | 'role' | 'email'>('name')
+  const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  const tableRows = useMemo(
+    () => [
+      { name: 'Alice Johnson', status: 'Active', role: 'Admin', email: 'alice@example.com' },
+      { name: 'Bob Smith', status: 'Inactive', role: 'Editor', email: 'bob@example.com' },
+      { name: 'Carol Williams', status: 'Active', role: 'Viewer', email: 'carol@example.com' },
+      { name: 'Danielle Brooks', status: 'Active', role: 'Manager', email: 'danielle@example.com' },
+      { name: 'Elliot Cruz', status: 'Pending', role: 'Contributor', email: 'elliot@example.com' },
+      { name: 'Farah Khan', status: 'Active', role: 'Viewer', email: 'farah@example.com' },
+    ],
+    [],
+  )
+
+  const sortedTableRows = useMemo(() => {
+    return [...tableRows].sort((left, right) => {
+      const leftValue = left[tableSortField]
+      const rightValue = right[tableSortField]
+      const comparison = leftValue.localeCompare(rightValue)
+      return tableSortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [tableRows, tableSortDirection, tableSortField])
+
+  const pageSize = 3
+  const pagedTableRows = useMemo(() => {
+    const startIndex = (tablePage - 1) * pageSize
+    return sortedTableRows.slice(startIndex, startIndex + pageSize)
+  }, [sortedTableRows, tablePage])
+
+  const handleTableSort = (field: 'name' | 'status' | 'role' | 'email') => {
+    if (tableSortField === field) {
+      setTableSortDirection((current) => current === 'asc' ? 'desc' : 'asc')
+      return
+    }
+
+    setTableSortField(field)
+    setTableSortDirection('asc')
+    setTablePage(1)
+  }
 
   return (
     <Container size="lg" className="py-8">
@@ -69,56 +106,57 @@ export function DataDisplayPage() {
 
         <SubSection title="Table">
           <Card padding="none">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableCell header>Name</TableCell>
-                  <TableCell header>Status</TableCell>
-                  <TableCell header>Role</TableCell>
-                  <TableCell header>Email</TableCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[
-                  {
-                    name: 'Alice Johnson',
-                    status: 'Active',
-                    role: 'Admin',
-                    email: 'alice@example.com',
-                  },
-                  {
-                    name: 'Bob Smith',
-                    status: 'Inactive',
-                    role: 'Editor',
-                    email: 'bob@example.com',
-                  },
-                  {
-                    name: 'Carol Williams',
-                    status: 'Active',
-                    role: 'Viewer',
-                    email: 'carol@example.com',
-                  },
-                ].map((row) => (
-                  <TableRow key={row.name}>
-                    <TableCell>{row.name}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={row.status === 'Active' ? 'success' : 'secondary'}
-                        size="sm"
-                      >
-                        {row.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{row.role}</TableCell>
-                    <TableCell>
-                      <Body size="body4" muted>
-                        {row.email}
-                      </Body>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              columns={[
+                {
+                  id: 'name',
+                  header: 'Name',
+                  sortKey: 'name',
+                  renderCell: (row: (typeof pagedTableRows)[number]) => row.name,
+                },
+                {
+                  id: 'status',
+                  header: 'Status',
+                  sortKey: 'status',
+                  renderCell: (row: (typeof pagedTableRows)[number]) => (
+                    <Badge
+                      variant={row.status === 'Active' ? 'success' : row.status === 'Pending' ? 'warning' : 'secondary'}
+                      size="sm"
+                    >
+                      {row.status}
+                    </Badge>
+                  ),
+                },
+                {
+                  id: 'role',
+                  header: 'Role',
+                  sortKey: 'role',
+                  renderCell: (row: (typeof pagedTableRows)[number]) => row.role,
+                },
+                {
+                  id: 'email',
+                  header: 'Email',
+                  sortKey: 'email',
+                  renderCell: (row: (typeof pagedTableRows)[number]) => (
+                    <Body size="body4" muted>
+                      {row.email}
+                    </Body>
+                  ),
+                },
+              ]}
+              rows={pagedTableRows}
+              getRowId={(row) => row.email}
+              sortField={tableSortField}
+              sortDirection={tableSortDirection}
+              onSortChange={handleTableSort}
+              pagination={{
+                currentPage: tablePage,
+                totalItems: tableRows.length,
+                itemsPerPage: pageSize,
+                onPageChange: setTablePage,
+              }}
+              footerClassName="px-4 pb-4 pt-0"
+            />
           </Card>
         </SubSection>
 

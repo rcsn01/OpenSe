@@ -14,6 +14,7 @@ import {
 } from '../ui/SideSheet'
 import { Input, Textarea } from '../ui/Input'
 import { StackLayout } from '../layout/StackLayout'
+import { DataTable, type DataTableColumn } from '../ui/DataTable'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table'
 
 export type OrganisationRole = {
@@ -48,6 +49,14 @@ type OrganisationPermissionsPanelProps = {
   onCreateRole: (payload: RolePayload) => Promise<void> | void
   onUpdateRole: (roleId: string, payload: RolePayload) => Promise<void> | void
   onDeleteRole?: (roleId: string) => Promise<void> | void
+}
+
+type RoleTableRow = {
+  id: string
+  name: string
+  description: string | null
+  roleRank?: number
+  editable: boolean
 }
 
 const formatLabel = (value: string) =>
@@ -258,6 +267,69 @@ export function OrganisationPermissionsPanel({
     }
   }
 
+  const roleRows = useMemo<RoleTableRow[]>(() => {
+    return roles.map((role) => ({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      roleRank: role.roleRank,
+      editable: isRoleEditable ? isRoleEditable(role) : true,
+    }))
+  }, [isRoleEditable, roles])
+
+  const roleColumns = useMemo<DataTableColumn<RoleTableRow>[]>(() => [
+    {
+      id: 'name',
+      header: 'Role Name',
+      cellClassName: 'font-medium text-slate-900',
+      renderCell: (row) => row.name,
+    },
+    {
+      id: 'description',
+      header: 'Description',
+      cellClassName: 'text-slate-600',
+      renderCell: (row) => row.description || '—',
+    },
+    {
+      id: 'role-rank',
+      header: 'Role Rank',
+      cellClassName: 'text-slate-600',
+      renderCell: (row) => row.roleRank ?? '—',
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      width: 220,
+      renderCell: (row) => (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => openEditRole(row.id)}
+            disabled={!canManage || saving || !row.editable}
+          >
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
+          {onDeleteRole && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => handleDeleteRole(row.id)}
+              disabled={!canManage || saving || !row.editable}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ], [canManage, onDeleteRole, openEditRole, saving])
+
   return (
     <StackLayout>
       <Card padding="md">
@@ -275,104 +347,47 @@ export function OrganisationPermissionsPanel({
           {loadingRoles ? (
             <div className="py-8 text-center text-slate-500">Loading roles...</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Role Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Role Rank</TableHead>
-                  <TableHead className="w-[220px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roles.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-slate-500">
-                      No roles yet.
-                    </TableCell>
-                  </TableRow>
-                )}
+            <div className="space-y-3">
+              <DataTable
+                columns={roleColumns}
+                rows={roleRows}
+                getRowId={(row) => row.id}
+                emptyState="No roles yet."
+                tableWrapClassName="rounded-lg"
+              />
 
-                {roles.map((role) => {
-                  const editable = isRoleEditable ? isRoleEditable(role) : true
-
-                  return (
-                    <TableRow key={role.id}>
-                      <TableCell className="font-medium text-slate-900">{role.name}</TableCell>
-                      <TableCell className="text-slate-600">{role.description || '—'}</TableCell>
-                      <TableCell className="text-slate-600">{role.roleRank ?? '—'}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditRole(role.id)}
-                            disabled={!canManage || saving || !editable}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </Button>
-                          {onDeleteRole && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDeleteRole(role.id)}
-                              disabled={!canManage || saving || !editable}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-
-                <TableRow>
-                  <TableCell>
-                    <Input
-                      value={addName}
-                      onChange={(event) => setAddName(event.target.value)}
-                      placeholder="New role name"
-                      disabled={!canManage || saving}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      value={addDescription}
-                      onChange={(event) => setAddDescription(event.target.value)}
-                      placeholder="Role description"
-                      disabled={!canManage || saving}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={addRoleRank}
-                      onChange={(event) => setAddRoleRank(event.target.value)}
-                      placeholder="Role rank"
-                      disabled={!canManage || saving}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      onClick={handleAddRole}
-                      disabled={!canManage || saving || !addName.trim()}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Role
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+              <div className="grid gap-3 border-t border-[var(--color-border)] pt-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px_auto] md:items-start">
+                <Input
+                  value={addName}
+                  onChange={(event) => setAddName(event.target.value)}
+                  placeholder="New role name"
+                  disabled={!canManage || saving}
+                />
+                <Input
+                  value={addDescription}
+                  onChange={(event) => setAddDescription(event.target.value)}
+                  placeholder="Role description"
+                  disabled={!canManage || saving}
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={addRoleRank}
+                  onChange={(event) => setAddRoleRank(event.target.value)}
+                  placeholder="Role rank"
+                  disabled={!canManage || saving}
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddRole}
+                  disabled={!canManage || saving || !addName.trim()}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Role
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
