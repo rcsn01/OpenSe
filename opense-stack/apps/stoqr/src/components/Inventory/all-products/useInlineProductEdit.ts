@@ -6,18 +6,18 @@ import type { InventoryProduct } from '../types'
 
 export const useInlineProductEdit = (companyId: string | null, onRefresh: () => void) => {
   const updateProductFieldMutation = useUpdateInventoryProductField(companyId)
-  const [editingCell, setEditingCell] = useState<{ id: string; field: 'quantity_on_hand' | 'selling_price' } | null>(null)
+  const [editingCell, setEditingCell] = useState<{ id: string; field: 'selling_price' } | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  const startEdit = (product: InventoryProduct, field: 'quantity_on_hand' | 'selling_price') => {
+  const startEdit = (product: InventoryProduct, field: 'selling_price') => {
     if (isSaving) return
     setEditingCell({ id: product.id, field })
     setEditingValue(String(product[field] ?? ''))
   }
 
   const commitEdit = async (
-    cellSnapshot: { id: string; field: 'quantity_on_hand' | 'selling_price' } | null = editingCell,
+    cellSnapshot: { id: string; field: 'selling_price' } | null = editingCell,
     valueSnapshot: string = editingValue,
   ) => {
     if (!cellSnapshot || isSaving) return

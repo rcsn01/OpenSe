@@ -60,7 +60,7 @@ describe('ProductListView table sorting', () => {
 
     expect(screen.getByText(/Name \/ SKU/)).toBeInTheDocument()
     expect(screen.getByText(/Price/)).toBeInTheDocument()
-    expect(screen.getByText(/On Hand/)).toBeInTheDocument()
+    expect(screen.getByText(/Available/)).toBeInTheDocument()
   })
 
   it('toggles sort direction when clicking the active sort column header', () => {

@@ -63,6 +63,16 @@ describe('dashboard api', () => {
       .mockResolvedValueOnce({
         data: [
           {
+            transaction_id: 't-0',
+            created_at: '2026-02-20T00:00:00Z',
+            transaction_type: 'purchase',
+            quantity_change: '5',
+            product_id: 'p-1',
+            sku: 'SKU-1',
+            product_name: 'Product 1',
+            performer_name: 'Warehouse Team',
+          },
+          {
             transaction_id: 't-1',
             created_at: '2026-02-21T00:00:00Z',
             transaction_type: 'sale',
@@ -96,6 +106,11 @@ describe('dashboard api', () => {
     expect(data.usageChartData).toEqual([
       { date: '2026-02-20', value: 10 },
       { date: '2026-02-21', value: 12 },
+    ])
+    expect(data.movementChartData).toEqual([
+      { date: '2026-02-20', inbound: 5, outbound: 0 },
+      { date: '2026-02-21', inbound: 0, outbound: 2 },
+      { date: '2026-02-22', inbound: 0, outbound: 1 },
     ])
     expect(data.revenue30Days).toBe(90)
     expect(data.topMovers[0]).toMatchObject({ id: 'p-1', totalSold: 3, revenue: 90 })

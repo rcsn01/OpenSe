@@ -197,7 +197,7 @@ test.describe('Stoqr Inventory — Column Header Sorting', () => {
     const thead = authenticatedPage.locator('table.table thead');
     await expect(thead.getByText(/Name/)).toBeVisible();
     await expect(thead.getByText(/Price/)).toBeVisible();
-    await expect(thead.getByText(/On Hand/)).toBeVisible();
+    await expect(thead.getByText(/Available/)).toBeVisible();
   });
 
   test('clicking a sortable column header changes sort indicator', async ({ authenticatedPage }) => {
