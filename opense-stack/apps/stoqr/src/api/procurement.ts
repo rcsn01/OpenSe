@@ -9,11 +9,16 @@ export type Supplier = {
   phone: string | null
 }
 
+export type PurchaseOrderApprovalStatus = 'pending' | 'approved' | 'denied'
+export type PurchaseOrderReturnStatus = 'none' | 'awaiting_return' | 'shipped' | 'resolved'
+
 export type PurchaseOrder = {
   id: string
   po_number: number
   supplier_id: string | null
   status: 'draft' | 'sent' | 'partial' | 'closed' | 'cancelled'
+  approval_status?: PurchaseOrderApprovalStatus
+  return_status?: PurchaseOrderReturnStatus
   expected_date: string | null
   created_at: string
   suppliers?: { name: string }
@@ -100,6 +105,8 @@ export const createPurchaseOrder = async (
     supplier_id: payload.supplierId,
     expected_date: payload.expectedDate || null,
     status: 'draft',
+    approval_status: 'pending',
+    return_status: 'none',
   })
 
   if (error) throw error

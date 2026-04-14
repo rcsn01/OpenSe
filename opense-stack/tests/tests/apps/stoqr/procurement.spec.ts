@@ -26,7 +26,12 @@ test.describe('Stoqr Procurement', () => {
     await expect(authenticatedPage.getByRole('tab', { name: /purchase requests?/i })).toHaveCount(0);
     await expect(authenticatedPage.getByRole('tab', { name: /vendor returns/i })).toHaveCount(0);
 
-    await expect(authenticatedPage.getByText(/pending approval|approved|denied/i).first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Pending Approval')).toBeVisible();
+    await expect(authenticatedPage.getByText('Approved').first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Denied')).toBeVisible();
+    await expect(authenticatedPage.getByText('Awaiting Return')).toBeVisible();
+    await expect(authenticatedPage.getByText('Resolved')).toBeVisible();
+    await expect(authenticatedPage.getByText('Shipped to Vendor')).toBeVisible();
     await expect(authenticatedPage.getByText(/awaiting supplier|in transit|partial receipt|received/i).first()).toBeVisible();
 
     await authenticatedPage.getByRole('tab', { name: /^suppliers$/i }).click();

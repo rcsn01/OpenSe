@@ -25,13 +25,14 @@ import {
   useCreatePurchaseOrder,
   useProcurementPurchaseOrderItems,
   useProcurementPurchaseOrders,
-  useProcurementReceivingLogs,
   useProcurementSuppliers,
 } from '../../hooks/queries/useProcurementTabs'
 import { useProcurementProducts } from '../../hooks/queries/useProcurement'
 import { formatCurrency } from '../../utils'
 
 type StatusFilter = 'all' | PurchaseOrder['status']
+type ApprovalStatus = NonNullable<PurchaseOrder['approval_status']>
+type ReturnStatus = NonNullable<PurchaseOrder['return_status']>
 
 type WorkflowBadge = {
   label: string
@@ -71,6 +72,30 @@ const statusOptions: Array<{ value: StatusFilter; label: string }> = [
   { value: 'cancelled', label: statusLabels.cancelled },
 ]
 
+const approvalStatusLabels: Record<ApprovalStatus, string> = {
+  pending: 'Pending Approval',
+  approved: 'Approved',
+  denied: 'Denied',
+}
+
+const approvalStatusVariants: Record<ApprovalStatus, WorkflowBadge['variant']> = {
+  pending: 'warning',
+  approved: 'success',
+  denied: 'destructive',
+}
+
+const returnStatusLabels: Record<Exclude<ReturnStatus, 'none'>, string> = {
+  awaiting_return: 'Awaiting Return',
+  shipped: 'Shipped to Vendor',
+  resolved: 'Resolved',
+}
+
+const returnStatusVariants: Record<Exclude<ReturnStatus, 'none'>, WorkflowBadge['variant']> = {
+  awaiting_return: 'warning',
+  shipped: 'info',
+  resolved: 'success',
+}
+
 const formatPurchaseOrderNumber = (order: PurchaseOrder) => {
   const year = new Date(order.created_at).getFullYear()
   return `PO-${year}-${String(order.po_number).padStart(4, '0')}`
@@ -86,14 +111,10 @@ const formatDateLabel = (value: string | null | undefined) => {
   }).format(new Date(value))
 }
 
-const getRequestWorkflow = (status: PurchaseOrder['status']): WorkflowBadge => {
-  switch (status) {
-    case 'draft':
-      return { label: 'Pending Approval', variant: 'warning' }
-    case 'cancelled':
-      return { label: 'Denied', variant: 'destructive' }
-    default:
-      return { label: 'Approved', variant: 'success' }
+const getApprovalWorkflow = (approvalStatus: ApprovalStatus): WorkflowBadge => {
+  return {
+    label: approvalStatusLabels[approvalStatus],
+    variant: approvalStatusVariants[approvalStatus],
   }
 }
 
@@ -104,28 +125,15 @@ const getOrderWorkflow = (status: PurchaseOrder['status']): WorkflowBadge => {
   }
 }
 
-const getReturnWorkflow = (
-  order: PurchaseOrder,
-  orderedUnits: number,
-  receivedUnits: number,
-  hasReceivingActivity: boolean,
-): WorkflowBadge | null => {
-  const hasShortfall = orderedUnits > receivedUnits
-  const hasReceipts = receivedUnits > 0 || hasReceivingActivity
-
-  if (order.status === 'partial' || (hasShortfall && hasReceipts)) {
-    return { label: 'Awaiting Return', variant: 'warning' }
+const getReturnWorkflow = (returnStatus: ReturnStatus): WorkflowBadge | null => {
+  if (returnStatus === 'none') {
+    return null
   }
 
-  if (order.status === 'cancelled') {
-    return { label: 'Shipped to Vendor', variant: 'info' }
+  return {
+    label: returnStatusLabels[returnStatus],
+    variant: returnStatusVariants[returnStatus],
   }
-
-  if (order.status === 'closed' && hasReceipts && order.po_number % 2 === 0) {
-    return { label: 'Resolved', variant: 'success' }
-  }
-
-  return null
 }
 
 export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) => {
@@ -139,7 +147,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
 
   const { data: purchaseOrders = [], isLoading: loadingOrders } = useProcurementPurchaseOrders(companyId)
   const { data: purchaseOrderItems = [] } = useProcurementPurchaseOrderItems(companyId)
-  const { data: receivingLogs = [] } = useProcurementReceivingLogs(companyId)
   const { data: suppliers = [], isLoading: loadingSuppliers } = useProcurementSuppliers(companyId)
   const { data: products = [] } = useProcurementProducts(companyId)
   const createPurchaseOrderMutation = useCreatePurchaseOrder(companyId)
@@ -166,22 +173,21 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
       return acc
     }, {})
 
-    const receivingActivityPoIds = new Set(
-      receivingLogs.map((log) => log.po_id).filter((poId): poId is string => Boolean(poId)),
-    )
-
     return purchaseOrders.reduce<Record<string, OrderWorkflowSummary>>((acc, order) => {
       const totals = unitTotals[order.id] ?? { ordered: 0, received: 0 }
+      const approvalStatus = order.approval_status ?? 'pending'
+      const returnStatus = order.return_status ?? 'none'
+
       acc[order.id] = {
-        request: getRequestWorkflow(order.status),
+        request: getApprovalWorkflow(approvalStatus),
         order: getOrderWorkflow(order.status),
-        returnStatus: getReturnWorkflow(order, totals.ordered, totals.received, receivingActivityPoIds.has(order.id)),
+        returnStatus: getReturnWorkflow(returnStatus),
         orderedUnits: totals.ordered,
         receivedUnits: totals.received,
       }
       return acc
     }, {})
-  }, [purchaseOrderItems, purchaseOrders, receivingLogs])
+  }, [purchaseOrderItems, purchaseOrders])
 
   const filteredPurchaseOrders = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
