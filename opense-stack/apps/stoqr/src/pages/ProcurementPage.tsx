@@ -3,18 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
-import { IncomingReceivingTab } from '../components/Procurement/IncomingReceivingTab'
 import { PurchaseOrdersTab } from '../components/Procurement/PurchaseOrdersTab'
-import { PurchaseRequestsTab } from '../components/Procurement/PurchaseRequestsTab'
 import { SuppliersTab } from '../components/Procurement/SuppliersTab'
-import { VendorReturnsTab } from '../components/Procurement/VendorReturnsTab'
 
 const procurementTabs = [
   'purchase-orders',
   'suppliers',
-  'incoming-receiving',
-  'purchase-requests',
-  'vendor-returns',
 ] as const
 
 type ProcurementTabId = (typeof procurementTabs)[number]
@@ -44,21 +38,6 @@ export const ProcurementPage = () => {
         label: 'Suppliers',
         content: <SuppliersTab companyId={companyId} />,
       },
-      {
-        id: 'incoming-receiving',
-        label: 'Incoming / Receiving',
-        content: <IncomingReceivingTab companyId={companyId} />,
-      },
-      {
-        id: 'purchase-requests',
-        label: 'Purchase Requests',
-        content: <PurchaseRequestsTab companyId={companyId} />,
-      },
-      {
-        id: 'vendor-returns',
-        label: 'Vendor Returns',
-        content: <VendorReturnsTab companyId={companyId} />,
-      },
     ]
   }, [companyId])
 
@@ -72,7 +51,7 @@ export const ProcurementPage = () => {
         <div className="flex flex-col gap-2">
           <h1 className="page-title">Procurement</h1>
           <p className="max-w-3xl text-sm text-[var(--color-muted-foreground)]">
-            Manage purchase orders, supplier intake, incoming receiving, and return workflows from a single queue.
+            Manage purchase orders and suppliers from a single queue. Request approval, receiving progress, and return status now surface directly on each purchase order.
           </p>
         </div>
 
