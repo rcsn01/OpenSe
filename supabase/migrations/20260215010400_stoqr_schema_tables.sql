@@ -209,6 +209,8 @@ CREATE TABLE IF NOT EXISTS stoqr.purchase_orders (
   supplier_id UUID REFERENCES stoqr.suppliers(id) ON DELETE SET NULL,
   po_number SERIAL,
   status TEXT CHECK (status IN ('draft', 'sent', 'partial', 'closed', 'cancelled')) DEFAULT 'draft',
+  approval_status TEXT CHECK (approval_status IN ('pending', 'approved', 'denied')) DEFAULT 'pending',
+  return_status TEXT CHECK (return_status IN ('none', 'awaiting_return', 'shipped', 'resolved')) DEFAULT 'none',
   expected_date DATE,
   notes TEXT,
   created_by UUID REFERENCES public.profiles(id),

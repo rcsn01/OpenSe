@@ -9,7 +9,9 @@ vi.mock('../../supabaseClient', () => ({
 }))
 
 import {
+  createPurchaseOrder,
   createPurchaseOrderItem,
+  fetchPurchaseOrders,
   fetchPurchaseOrderHistory,
   fetchPurchaseOrderItems,
   recordPurchaseOrderReceipt,
@@ -20,6 +22,73 @@ beforeEach(() => {
 })
 
 describe('procurement api', () => {
+  it('fetches purchase orders with approval and return statuses', async () => {
+    const order = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'po-1',
+          po_number: 1001,
+          supplier_id: 'sup-1',
+          status: 'closed',
+          approval_status: 'approved',
+          return_status: 'resolved',
+          expected_date: '2026-03-01',
+          created_at: '2026-02-20T00:00:00Z',
+          suppliers: { name: 'TechGlobal Inc.' },
+        },
+      ],
+      error: null,
+    })
+
+    const eq = vi.fn(() => ({ order }))
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'purchase_orders') {
+        return {
+          select: vi.fn(() => ({ eq })),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const rows = await fetchPurchaseOrders('company-1')
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      id: 'po-1',
+      approval_status: 'approved',
+      return_status: 'resolved',
+    })
+    expect(eq).toHaveBeenCalledWith('company_id', 'company-1')
+  })
+
+  it('creates purchase orders with default approval and return statuses', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null })
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'purchase_orders') {
+        return { insert }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await createPurchaseOrder('company-1', {
+      supplierId: 'sup-1',
+      expectedDate: '2026-04-20',
+    })
+
+    expect(insert).toHaveBeenCalledWith({
+      company_id: 'company-1',
+      supplier_id: 'sup-1',
+      expected_date: '2026-04-20',
+      status: 'draft',
+      approval_status: 'pending',
+      return_status: 'none',
+    })
+  })
+
   it('fetches purchase order items with related order and product data', async () => {
     const order = vi.fn().mockResolvedValue({
       data: [
