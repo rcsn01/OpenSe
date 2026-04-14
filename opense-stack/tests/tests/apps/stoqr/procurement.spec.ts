@@ -29,6 +29,10 @@ test.describe('Stoqr Procurement', () => {
     await expect(authenticatedPage.getByRole('button', { name: /add supplier/i })).toBeVisible();
     await expect(authenticatedPage.getByPlaceholder(/search suppliers or skus/i)).toBeVisible();
 
+    await authenticatedPage.getByRole('tab', { name: /purchase requests?/i }).click();
+    await expect(authenticatedPage.getByText(/internal requisitions/i).first()).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /new request/i })).toBeVisible();
+
     await authenticatedPage.getByRole('tab', { name: /incoming \/ receiving/i }).click();
     await expect(authenticatedPage.getByRole('button', { name: /open scanner app/i })).toBeVisible();
     await expect(authenticatedPage.getByText(/incoming shipments/i).first()).toBeVisible();
