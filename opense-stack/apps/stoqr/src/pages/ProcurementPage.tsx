@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState } from '@repo/ui'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
@@ -8,6 +7,7 @@ import { IncomingReceivingTab } from '../components/Procurement/IncomingReceivin
 import { PurchaseOrdersTab } from '../components/Procurement/PurchaseOrdersTab'
 import { PurchaseRequestsTab } from '../components/Procurement/PurchaseRequestsTab'
 import { SuppliersTab } from '../components/Procurement/SuppliersTab'
+import { VendorReturnsTab } from '../components/Procurement/VendorReturnsTab'
 
 const procurementTabs = [
   'purchase-orders',
@@ -18,28 +18,6 @@ const procurementTabs = [
 ] as const
 
 type ProcurementTabId = (typeof procurementTabs)[number]
-
-const placeholderCopy: Record<Exclude<ProcurementTabId, 'purchase-orders' | 'suppliers' | 'incoming-receiving' | 'purchase-requests'>, { title: string; description: string }> = {
-  'vendor-returns': {
-    title: 'Vendor Returns',
-    description: 'RMA tracking and vendor return workflows will be added here.',
-  },
-}
-
-const ProcurementPlaceholderTab = ({ title, description }: { title: string; description: string }) => (
-  <Card className="mt-6 overflow-hidden" padding="none">
-    <CardHeader className="border-b border-[var(--color-border)] px-6 py-5">
-      <CardTitle className="text-lg">{title}</CardTitle>
-      <CardDescription>{description}</CardDescription>
-    </CardHeader>
-    <CardContent className="px-6 py-10">
-      <EmptyState
-        title="Coming soon"
-        description="This procurement surface is intentionally empty for now while the new workflow is being wired in."
-      />
-    </CardContent>
-  </Card>
-)
 
 export const ProcurementPage = () => {
   const { companyId } = useCompany()
@@ -79,7 +57,7 @@ export const ProcurementPage = () => {
       {
         id: 'vendor-returns',
         label: 'Vendor Returns',
-        content: <ProcurementPlaceholderTab {...placeholderCopy['vendor-returns']} />,
+        content: <VendorReturnsTab companyId={companyId} />,
       },
     ]
   }, [companyId])
