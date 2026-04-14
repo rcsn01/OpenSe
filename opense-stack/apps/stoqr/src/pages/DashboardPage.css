@@ -468,10 +468,6 @@
   min-width: 100%;
 }
 
-.stoqr-dashboard__table-row--header:hover {
-  background: transparent;
-}
-
 .stoqr-dashboard__table-head--right {
   text-align: right;
 }

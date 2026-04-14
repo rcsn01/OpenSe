@@ -7,14 +7,9 @@ import {
   CardTitle,
   Badge,
   Button,
+  DataTable,
   EmptyState,
   Tooltip,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
   HStack,
   VStack,
   StackLayout,
@@ -231,38 +226,45 @@ export const ProductOverviewTab = ({
               {recentTransactions.length === 0 ? (
                 <EmptyState title="No activity" description="Transactions for this product appear here." />
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Change</TableHead>
-                        <TableHead>After</TableHead>
-                        <TableHead>By</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentTransactions.map((tx) => (
-                        <TableRow key={tx.id}>
-                          <TableCell className="font-medium">{tx.transaction_type}</TableCell>
-                          <TableCell>
-                            <Badge variant={tx.quantity_change > 0 ? 'success' : 'destructive'} size="sm">
-                              {tx.quantity_change > 0 ? '+' : ''}{tx.quantity_change}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{tx.stock_after ?? '—'}</TableCell>
-                          <TableCell className="text-[var(--color-muted-foreground)]">
-                            {tx.profiles?.full_name ?? tx.profiles?.username ?? 'Unknown'}
-                          </TableCell>
-                          <TableCell className="text-[var(--color-muted-foreground)]">
-                            {formatDateTime(tx.created_at)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <DataTable
+                  columns={[
+                    {
+                      id: 'type',
+                      header: 'Type',
+                      cellClassName: 'font-medium',
+                      renderCell: (tx: InventoryTransaction) => tx.transaction_type,
+                    },
+                    {
+                      id: 'change',
+                      header: 'Change',
+                      renderCell: (tx: InventoryTransaction) => (
+                        <Badge variant={tx.quantity_change > 0 ? 'success' : 'destructive'} size="sm">
+                          {tx.quantity_change > 0 ? '+' : ''}{tx.quantity_change}
+                        </Badge>
+                      ),
+                    },
+                    {
+                      id: 'after',
+                      header: 'After',
+                      renderCell: (tx: InventoryTransaction) => tx.stock_after ?? '—',
+                    },
+                    {
+                      id: 'by',
+                      header: 'By',
+                      cellClassName: 'text-[var(--color-muted-foreground)]',
+                      renderCell: (tx: InventoryTransaction) => tx.profiles?.full_name ?? tx.profiles?.username ?? 'Unknown',
+                    },
+                    {
+                      id: 'date',
+                      header: 'Date',
+                      cellClassName: 'text-[var(--color-muted-foreground)]',
+                      renderCell: (tx: InventoryTransaction) => formatDateTime(tx.created_at),
+                    },
+                  ]}
+                  rows={recentTransactions}
+                  getRowId={(tx) => tx.id}
+                  tableWrapClassName="border-0 rounded-none"
+                />
               )}
             </CardContent>
           </Card>

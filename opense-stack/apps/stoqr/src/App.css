@@ -114,19 +114,6 @@
 .badge.neutral { background: var(--color-muted); color: var(--color-secondary); }
 
 /* --- Components: Tables --- */
-.table-wrap {
-  width: 100%; overflow: auto;
-  border-radius: 0; border: 1px solid var(--border);
-}
-
-.table { width: 100%; border-collapse: collapse; background: var(--color-card); }
-.table th, .table td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: var(--type-size-sm); }
-.table th { background: var(--color-muted); color: var(--color-muted-foreground); font-weight: var(--type-weight-semibold); font-size: var(--type-size-xs); text-transform: uppercase; letter-spacing: 0.03em; position: sticky; top: 0; z-index: 1; }
-.table tr:last-child td { border-bottom: none; }
-
-.sortable-th { cursor: pointer; user-select: none; }
-.sortable-th:hover { color: var(--text); }
-
 /* --- Components: Stats --- */
 .stat h3 { margin: 0; font-size: var(--type-size-sm); color: var(--muted); font-weight: var(--type-weight-medium); }
 .stat .value { font-size: var(--type-size-3xl); font-weight: var(--type-weight-bold); color: var(--text); }
@@ -349,18 +336,6 @@
 }
 
 /* --- Inventory: Table Info Bar --- */
-.table-info-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: var(--color-muted);
-  border-bottom: 1px solid var(--border);
-  font-size: var(--type-size-xs);
-  color: var(--muted);
-  font-weight: var(--type-weight-semibold);
-}
-
 /* --- Inventory: Editable Cells --- */
 .editable-cell {
   display: inline-flex;
@@ -390,32 +365,6 @@
 }
 
 /* --- Inventory: Table Enhancements --- */
-.table th.sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: color 0.15s;
-}
-
-.table th.sortable:hover {
-  color: var(--text);
-}
-
-.table th.sortable.active {
-  color: var(--text);
-}
-
-.table-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-}
-
-.table tr.row-selected {
-  background: rgba(59, 130, 246, 0.04);
-}
-
 /* --- Inventory: Bulk Operations --- */
 .bulk-ops-row {
   display: flex;

@@ -1,3 +1,4 @@
+import { DataTable } from '@repo/ui'
 import { formatDateTime } from '../../utils'
 
 type MovementRow = {
@@ -48,42 +49,49 @@ export const StockMovementUsageTab = ({ transactions }: { transactions: Movement
           <h3 className="section-title" style={{ margin: 0 }}>Stock Movement History</h3>
           <div className="small muted">Filtered by selected date range.</div>
         </div>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>Type</th>
-                <th>Product</th>
-                <th>SKU</th>
-                <th style={{ textAlign: 'right' }}>Qty</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="small muted" style={{ textAlign: 'center', padding: 24 }}>
-                    No movement records in this range.
-                  </td>
-                </tr>
-              ) : (
-                transactions.map((row) => (
-                  <tr key={row.id}>
-                    <td className="small muted">{formatDateTime(row.created_at)}</td>
-                    <td><span className="pill">{row.transaction_type}</span></td>
-                    <td>{row.products?.name ?? 'Unknown'}</td>
-                    <td className="small muted">{row.products?.sku ?? '—'}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)' }}>
-                      {row.quantity_change > 0 ? '+' : ''}{row.quantity_change}
-                    </td>
-                    <td className="small muted">{row.notes ?? '—'}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            {
+              id: 'timestamp',
+              header: 'Timestamp',
+              renderCell: (row: MovementRow) => <span className="small muted">{formatDateTime(row.created_at)}</span>,
+            },
+            {
+              id: 'type',
+              header: 'Type',
+              renderCell: (row: MovementRow) => <span className="pill">{row.transaction_type}</span>,
+            },
+            {
+              id: 'product',
+              header: 'Product',
+              renderCell: (row: MovementRow) => row.products?.name ?? 'Unknown',
+            },
+            {
+              id: 'sku',
+              header: 'SKU',
+              renderCell: (row: MovementRow) => <span className="small muted">{row.products?.sku ?? '—'}</span>,
+            },
+            {
+              id: 'qty',
+              header: 'Qty',
+              align: 'right',
+              renderCell: (row: MovementRow) => (
+                <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>
+                  {row.quantity_change > 0 ? '+' : ''}{row.quantity_change}
+                </span>
+              ),
+            },
+            {
+              id: 'notes',
+              header: 'Notes',
+              renderCell: (row: MovementRow) => <span className="small muted">{row.notes ?? '—'}</span>,
+            },
+          ]}
+          rows={transactions}
+          getRowId={(row) => row.id}
+          emptyState="No movement records in this range."
+          tableWrapClassName="border-0 rounded-none"
+        />
       </div>
     </div>
   )

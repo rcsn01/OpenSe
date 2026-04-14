@@ -1,3 +1,4 @@
+import { DataTable } from '@repo/ui'
 import { EmptyState } from '../EmptyState'
 import { formatDateTime } from '../../utils'
 import { useProductBatchHistory } from '../../hooks/queries/useProductDetailTabs'
@@ -15,30 +16,36 @@ export const ProductBatchHistoryTab = ({ productId, companyId }: { productId: st
         ) : batches.length === 0 ? (
           <EmptyState title="No distribution history" description="Sales transactions will appear here for traceability." />
         ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Batch / Serial #</th>
-                  <th>Customer</th>
-                  <th>Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {batches.map((b, i) => (
-                  <tr key={i}>
-                    <td className="small muted">{formatDateTime(b.created_at)}</td>
-                    <td className="small">
-                      {b.notes && b.notes.length > 5 ? b.notes : `BATCH-${new Date(b.created_at).getTime().toString().slice(-6)}`}
-                    </td>
-                    <td>{b.profiles?.full_name ?? 'Unknown / Retail Sale'}</td>
-                    <td><span className="badge">{Math.abs(b.quantity_change)}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={[
+              {
+                id: 'date',
+                header: 'Date',
+                renderCell: (batch) => <span className="small muted">{formatDateTime(batch.created_at)}</span>,
+              },
+              {
+                id: 'batch',
+                header: 'Batch / Serial #',
+                renderCell: (batch) => (
+                  <span className="small">
+                    {batch.notes && batch.notes.length > 5 ? batch.notes : `BATCH-${new Date(batch.created_at).getTime().toString().slice(-6)}`}
+                  </span>
+                ),
+              },
+              {
+                id: 'customer',
+                header: 'Customer',
+                renderCell: (batch) => batch.profiles?.full_name ?? 'Unknown / Retail Sale',
+              },
+              {
+                id: 'quantity',
+                header: 'Quantity',
+                renderCell: (batch) => <span className="badge">{Math.abs(batch.quantity_change)}</span>,
+              },
+            ]}
+            rows={batches}
+            getRowId={(batch, index) => `${batch.created_at}-${index}`}
+          />
         )}
       </div>
     </div>

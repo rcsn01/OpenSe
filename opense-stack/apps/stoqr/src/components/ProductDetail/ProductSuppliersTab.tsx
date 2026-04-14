@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { DataTable } from '@repo/ui'
 import { EmptyState } from '../EmptyState'
 import { formatCurrency } from '../../utils'
 import { useProductSuppliers } from '../../hooks/queries/useProductDetailTabs'
@@ -25,29 +26,42 @@ export const ProductSuppliersTab = ({ productId, companyId }: { productId: strin
         {sortedSuppliers.length === 0 ? (
           <EmptyState title="No suppliers found" description="Create a Purchase Order to link suppliers." />
         ) : (
-          <div className="table-wrap" style={{ marginTop: 12 }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Vendor Name</th>
-                  <th>Vendor SKU</th>
-                  <th style={{ textAlign: 'right' }}>Last Cost</th>
-                  <th style={{ textAlign: 'right' }}>Total Purchased</th>
-                  <th>Last Order</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedSuppliers.map((supplier) => (
-                  <tr key={supplier.supplier_id}>
-                    <td style={{ fontWeight: 'var(--type-weight-semibold)' }}>{supplier.supplier_name}</td>
-                    <td className="muted small">Same as SKU</td>
-                    <td style={{ textAlign: 'right' }}>{formatCurrency(supplier.last_unit_cost)}</td>
-                    <td style={{ textAlign: 'right' }}>{supplier.total_quantity}</td>
-                    <td className="small muted">{new Date(supplier.last_po_date).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ marginTop: 12 }}>
+            <DataTable
+              columns={[
+                {
+                  id: 'vendor-name',
+                  header: 'Vendor Name',
+                  renderCell: (supplier) => (
+                    <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>{supplier.supplier_name}</span>
+                  ),
+                },
+                {
+                  id: 'vendor-sku',
+                  header: 'Vendor SKU',
+                  renderCell: () => <span className="muted small">Same as SKU</span>,
+                },
+                {
+                  id: 'last-cost',
+                  header: 'Last Cost',
+                  align: 'right',
+                  renderCell: (supplier) => formatCurrency(supplier.last_unit_cost),
+                },
+                {
+                  id: 'total-purchased',
+                  header: 'Total Purchased',
+                  align: 'right',
+                  renderCell: (supplier) => supplier.total_quantity,
+                },
+                {
+                  id: 'last-order',
+                  header: 'Last Order',
+                  renderCell: (supplier) => <span className="small muted">{new Date(supplier.last_po_date).toLocaleDateString()}</span>,
+                },
+              ]}
+              rows={sortedSuppliers}
+              getRowId={(supplier) => supplier.supplier_id}
+            />
           </div>
         )}
       </div>

@@ -14,13 +14,8 @@ import {
   Badge,
   Button,
   Card,
+  DataTable,
   TabBar,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@repo/ui'
 import type { DashboardData } from '../api/dashboard'
 import type { AlertEvent } from '../api/alerts'
@@ -713,32 +708,43 @@ export const DashboardPage = () => {
               </div>
 
               {pageModel.deliveryRows.length > 0 ? (
-                <div className="stoqr-dashboard__table-scroll">
-                  <Table className="stoqr-dashboard__deliveries-table">
-                    <TableHeader>
-                      <TableRow className="stoqr-dashboard__table-row stoqr-dashboard__table-row--header">
-                        <TableHead>Vendor / PO</TableHead>
-                        <TableHead>Items</TableHead>
-                        <TableHead className="stoqr-dashboard__table-head--right">Expected</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pageModel.deliveryRows.map((row) => (
-                        <TableRow key={row.id} className="stoqr-dashboard__table-row">
-                          <TableCell>
-                            <div className="stoqr-dashboard__delivery-vendor">{row.vendor}</div>
-                            <div className="stoqr-dashboard__delivery-po">{row.poLabel}</div>
-                          </TableCell>
-                          <TableCell className="stoqr-dashboard__delivery-items">{row.itemsLabel}</TableCell>
-                          <TableCell className="stoqr-dashboard__delivery-expected">
-                            <span>{row.expectedLabel}</span>
-                            <Badge variant={row.statusVariant} size="sm">{row.statusLabel}</Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <DataTable
+                  columns={[
+                    {
+                      id: 'vendor-po',
+                      header: 'Vendor / PO',
+                      renderCell: (row: DeliveryRow) => (
+                        <>
+                          <div className="stoqr-dashboard__delivery-vendor">{row.vendor}</div>
+                          <div className="stoqr-dashboard__delivery-po">{row.poLabel}</div>
+                        </>
+                      ),
+                    },
+                    {
+                      id: 'items',
+                      header: 'Items',
+                      cellClassName: 'stoqr-dashboard__delivery-items',
+                      renderCell: (row: DeliveryRow) => row.itemsLabel,
+                    },
+                    {
+                      id: 'expected',
+                      header: 'Expected',
+                      align: 'right',
+                      headerClassName: 'stoqr-dashboard__table-head--right',
+                      cellClassName: 'stoqr-dashboard__delivery-expected',
+                      renderCell: (row: DeliveryRow) => (
+                        <>
+                          <span>{row.expectedLabel}</span>
+                          <Badge variant={row.statusVariant} size="sm">{row.statusLabel}</Badge>
+                        </>
+                      ),
+                    },
+                  ]}
+                  rows={pageModel.deliveryRows}
+                  getRowId={(row) => row.id}
+                  tableWrapClassName="stoqr-dashboard__table-scroll border-0 rounded-none"
+                  tableClassName="stoqr-dashboard__deliveries-table"
+                />
               ) : (
                 <div className="stoqr-dashboard__empty-panel">No deliveries scheduled.</div>
               )}
