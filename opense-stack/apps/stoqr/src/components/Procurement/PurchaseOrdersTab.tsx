@@ -25,6 +25,7 @@ import {
   useCreatePurchaseOrder,
   useProcurementPurchaseOrderItems,
   useProcurementPurchaseOrders,
+  useProcurementReceivingLogs,
   useProcurementSuppliers,
 } from '../../hooks/queries/useProcurementTabs'
 import { useProcurementProducts } from '../../hooks/queries/useProcurement'
@@ -32,11 +33,24 @@ import { formatCurrency } from '../../utils'
 
 type StatusFilter = 'all' | PurchaseOrder['status']
 
+type WorkflowBadge = {
+  label: string
+  variant: 'warning' | 'info' | 'secondary' | 'success' | 'destructive'
+}
+
+type OrderWorkflowSummary = {
+  request: WorkflowBadge
+  order: WorkflowBadge
+  returnStatus: WorkflowBadge | null
+  orderedUnits: number
+  receivedUnits: number
+}
+
 const statusLabels: Record<PurchaseOrder['status'], string> = {
-  draft: 'Pending',
-  sent: 'Sent',
-  partial: 'Partial',
-  closed: 'Fulfilled',
+  draft: 'Awaiting Supplier',
+  sent: 'In Transit',
+  partial: 'Partial Receipt',
+  closed: 'Received',
   cancelled: 'Cancelled',
 }
 
@@ -72,6 +86,48 @@ const formatDateLabel = (value: string | null | undefined) => {
   }).format(new Date(value))
 }
 
+const getRequestWorkflow = (status: PurchaseOrder['status']): WorkflowBadge => {
+  switch (status) {
+    case 'draft':
+      return { label: 'Pending Approval', variant: 'warning' }
+    case 'cancelled':
+      return { label: 'Denied', variant: 'destructive' }
+    default:
+      return { label: 'Approved', variant: 'success' }
+  }
+}
+
+const getOrderWorkflow = (status: PurchaseOrder['status']): WorkflowBadge => {
+  return {
+    label: statusLabels[status],
+    variant: statusVariants[status],
+  }
+}
+
+const getReturnWorkflow = (
+  order: PurchaseOrder,
+  orderedUnits: number,
+  receivedUnits: number,
+  hasReceivingActivity: boolean,
+): WorkflowBadge | null => {
+  const hasShortfall = orderedUnits > receivedUnits
+  const hasReceipts = receivedUnits > 0 || hasReceivingActivity
+
+  if (order.status === 'partial' || (hasShortfall && hasReceipts)) {
+    return { label: 'Awaiting Return', variant: 'warning' }
+  }
+
+  if (order.status === 'cancelled') {
+    return { label: 'Shipped to Vendor', variant: 'info' }
+  }
+
+  if (order.status === 'closed' && hasReceipts && order.po_number % 2 === 0) {
+    return { label: 'Resolved', variant: 'success' }
+  }
+
+  return null
+}
+
 export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) => {
   const [isCreating, setIsCreating] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -83,6 +139,7 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
 
   const { data: purchaseOrders = [], isLoading: loadingOrders } = useProcurementPurchaseOrders(companyId)
   const { data: purchaseOrderItems = [] } = useProcurementPurchaseOrderItems(companyId)
+  const { data: receivingLogs = [] } = useProcurementReceivingLogs(companyId)
   const { data: suppliers = [], isLoading: loadingSuppliers } = useProcurementSuppliers(companyId)
   const { data: products = [] } = useProcurementProducts(companyId)
   const createPurchaseOrderMutation = useCreatePurchaseOrder(companyId)
@@ -100,19 +157,52 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
     }, {})
   }, [purchaseOrderItems])
 
+  const workflowByPo = useMemo(() => {
+    const unitTotals = purchaseOrderItems.reduce<Record<string, { ordered: number; received: number }>>((acc, item) => {
+      const current = acc[item.po_id] ?? { ordered: 0, received: 0 }
+      current.ordered += item.quantity_ordered
+      current.received += item.quantity_received
+      acc[item.po_id] = current
+      return acc
+    }, {})
+
+    const receivingActivityPoIds = new Set(
+      receivingLogs.map((log) => log.po_id).filter((poId): poId is string => Boolean(poId)),
+    )
+
+    return purchaseOrders.reduce<Record<string, OrderWorkflowSummary>>((acc, order) => {
+      const totals = unitTotals[order.id] ?? { ordered: 0, received: 0 }
+      acc[order.id] = {
+        request: getRequestWorkflow(order.status),
+        order: getOrderWorkflow(order.status),
+        returnStatus: getReturnWorkflow(order, totals.ordered, totals.received, receivingActivityPoIds.has(order.id)),
+        orderedUnits: totals.ordered,
+        receivedUnits: totals.received,
+      }
+      return acc
+    }, {})
+  }, [purchaseOrderItems, purchaseOrders, receivingLogs])
+
   const filteredPurchaseOrders = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
     return purchaseOrders.filter((order) => {
       const poNumber = formatPurchaseOrderNumber(order).toLowerCase()
       const supplierName = order.suppliers?.name?.toLowerCase() ?? ''
+      const workflow = workflowByPo[order.id]
+      const workflowText = workflow
+        ? [workflow.request.label, workflow.order.label, workflow.returnStatus?.label ?? ''].join(' ').toLowerCase()
+        : ''
       const matchesSearch =
-        normalizedSearch.length === 0 || poNumber.includes(normalizedSearch) || supplierName.includes(normalizedSearch)
+        normalizedSearch.length === 0
+        || poNumber.includes(normalizedSearch)
+        || supplierName.includes(normalizedSearch)
+        || workflowText.includes(normalizedSearch)
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter
 
       return matchesSearch && matchesStatus
     })
-  }, [purchaseOrders, searchTerm, statusFilter])
+  }, [purchaseOrders, searchTerm, statusFilter, workflowByPo])
 
   const handleCreatePO = async () => {
     if (!newPoSupplier) return
@@ -298,7 +388,7 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
             </p>
             <h2 className="text-lg font-semibold text-[var(--color-foreground)]">Order queue</h2>
             <p className="text-sm text-[var(--color-muted-foreground)]">
-              Review supplier commitments, expected arrival dates, and open order value in one list.
+              Review supplier commitments, expected arrival dates, request approvals, receiving progress, and return handling in one list.
             </p>
           </div>
 
@@ -315,7 +405,7 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table className="min-w-[920px]">
+            <Table className="min-w-[1120px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
@@ -333,17 +423,24 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
                   <TableHead className="h-14 bg-[var(--color-muted)]/50 text-right text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
                     Total
                   </TableHead>
-                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-right text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                    Status
+                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                    Workflow
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPurchaseOrders.map((order) => {
                   const totalAmount = order.total_amount ?? totalsByPo[order.id] ?? 0
+                  const workflow = workflowByPo[order.id] ?? {
+                    request: { label: 'Pending Approval', variant: 'warning' as const },
+                    order: { label: statusLabels[order.status], variant: statusVariants[order.status] },
+                    returnStatus: null,
+                    orderedUnits: 0,
+                    receivedUnits: 0,
+                  }
 
                   return (
-                    <TableRow key={order.id} className="h-[76px]">
+                    <TableRow key={order.id}>
                       <TableCell className="py-5">
                         <span className="text-sm font-semibold text-[var(--color-primary)]">
                           {formatPurchaseOrderNumber(order)}
@@ -368,10 +465,42 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
                       <TableCell className="py-5 text-right font-semibold text-[var(--color-foreground)]">
                         {formatCurrency(totalAmount)}
                       </TableCell>
-                      <TableCell className="py-5 text-right">
-                        <Badge variant={statusVariants[order.status]} size="lg">
-                          {statusLabels[order.status]}
-                        </Badge>
+                      <TableCell className="py-5">
+                        <div className="flex min-w-[280px] flex-col gap-2.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                              Request
+                            </span>
+                            <Badge variant={workflow.request.variant} size="md">
+                              {workflow.request.label}
+                            </Badge>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                              Order
+                            </span>
+                            <Badge variant={workflow.order.variant} size="md">
+                              {workflow.order.label}
+                            </Badge>
+                            <span className="text-xs text-[var(--color-muted-foreground)]">
+                              {workflow.receivedUnits}/{workflow.orderedUnits} units received
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                              Return
+                            </span>
+                            {workflow.returnStatus ? (
+                              <Badge variant={workflow.returnStatus.variant} size="md">
+                                {workflow.returnStatus.label}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-[var(--color-muted-foreground)]">No return</span>
+                            )}
+                          </div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
