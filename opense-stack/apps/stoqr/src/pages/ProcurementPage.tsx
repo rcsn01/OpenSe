@@ -6,6 +6,7 @@ import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { IncomingReceivingTab } from '../components/Procurement/IncomingReceivingTab'
 import { PurchaseOrdersTab } from '../components/Procurement/PurchaseOrdersTab'
+import { PurchaseRequestsTab } from '../components/Procurement/PurchaseRequestsTab'
 import { SuppliersTab } from '../components/Procurement/SuppliersTab'
 
 const procurementTabs = [
@@ -18,11 +19,7 @@ const procurementTabs = [
 
 type ProcurementTabId = (typeof procurementTabs)[number]
 
-const placeholderCopy: Record<Exclude<ProcurementTabId, 'purchase-orders' | 'suppliers' | 'incoming-receiving'>, { title: string; description: string }> = {
-  'purchase-requests': {
-    title: 'Purchase Requests',
-    description: 'Internal request intake and approval routing will be added here.',
-  },
+const placeholderCopy: Record<Exclude<ProcurementTabId, 'purchase-orders' | 'suppliers' | 'incoming-receiving' | 'purchase-requests'>, { title: string; description: string }> = {
   'vendor-returns': {
     title: 'Vendor Returns',
     description: 'RMA tracking and vendor return workflows will be added here.',
@@ -77,7 +74,7 @@ export const ProcurementPage = () => {
       {
         id: 'purchase-requests',
         label: 'Purchase Requests',
-        content: <ProcurementPlaceholderTab {...placeholderCopy['purchase-requests']} />,
+        content: <PurchaseRequestsTab companyId={companyId} />,
       },
       {
         id: 'vendor-returns',
