@@ -1,38 +1,122 @@
-import { useState } from 'react'
-import { EmptyState } from '../EmptyState'
-import { formatDateTime } from '../../utils'
+import { useMemo, useState } from 'react'
 import {
-  useCreatePurchaseOrderItem,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Dropdown,
+  DropdownItem,
+  EmptyState,
+  Input,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@repo/ui'
+import { BellRing, Building2, CheckCircle2, ChevronDown, Filter, Plus, Search, Sparkles } from 'lucide-react'
+import type { PurchaseOrder } from '../../api/procurement'
+import {
   useCreatePurchaseOrder,
   useProcurementPurchaseOrderItems,
   useProcurementPurchaseOrders,
   useProcurementSuppliers,
 } from '../../hooks/queries/useProcurementTabs'
+import { useProcurementProducts } from '../../hooks/queries/useProcurement'
+import { formatCurrency } from '../../utils'
 
-export const PurchaseOrdersTab = ({
-  companyId,
-  products,
-}: {
-  companyId: string
-  products: Array<{ id: string; name: string; sku: string }>
-}) => {
+type StatusFilter = 'all' | PurchaseOrder['status']
+
+const statusLabels: Record<PurchaseOrder['status'], string> = {
+  draft: 'Pending',
+  sent: 'Sent',
+  partial: 'Partial',
+  closed: 'Fulfilled',
+  cancelled: 'Cancelled',
+}
+
+const statusVariants: Record<PurchaseOrder['status'], 'warning' | 'info' | 'secondary' | 'success' | 'destructive'> = {
+  draft: 'warning',
+  sent: 'info',
+  partial: 'secondary',
+  closed: 'success',
+  cancelled: 'destructive',
+}
+
+const statusOptions: Array<{ value: StatusFilter; label: string }> = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'draft', label: statusLabels.draft },
+  { value: 'sent', label: statusLabels.sent },
+  { value: 'partial', label: statusLabels.partial },
+  { value: 'closed', label: statusLabels.closed },
+  { value: 'cancelled', label: statusLabels.cancelled },
+]
+
+const formatPurchaseOrderNumber = (order: PurchaseOrder) => {
+  const year = new Date(order.created_at).getFullYear()
+  return `PO-${year}-${String(order.po_number).padStart(4, '0')}`
+}
+
+const formatDateLabel = (value: string | null | undefined) => {
+  if (!value) return 'TBD'
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(value))
+}
+
+export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) => {
   const [isCreating, setIsCreating] = useState(false)
-  const { data: pos = [], isLoading: loading } = useProcurementPurchaseOrders(companyId)
-  const { data: items = [] } = useProcurementPurchaseOrderItems(companyId)
-  const { data: suppliers = [] } = useProcurementSuppliers(companyId)
-  const createPurchaseOrderMutation = useCreatePurchaseOrder(companyId)
-  const createPurchaseOrderItemMutation = useCreatePurchaseOrderItem(companyId)
-
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [showAlertsHint, setShowAlertsHint] = useState(false)
   const [newPoSupplier, setNewPoSupplier] = useState('')
   const [newPoDate, setNewPoDate] = useState('')
-  const [linePoId, setLinePoId] = useState('')
-  const [lineProductId, setLineProductId] = useState('')
-  const [lineQty, setLineQty] = useState(1)
-  const [lineCost, setLineCost] = useState(0)
-  const [message, setMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+
+  const { data: purchaseOrders = [], isLoading: loadingOrders } = useProcurementPurchaseOrders(companyId)
+  const { data: purchaseOrderItems = [] } = useProcurementPurchaseOrderItems(companyId)
+  const { data: suppliers = [], isLoading: loadingSuppliers } = useProcurementSuppliers(companyId)
+  const { data: products = [] } = useProcurementProducts(companyId)
+  const createPurchaseOrderMutation = useCreatePurchaseOrder(companyId)
+
+  const suppliersAvailable = suppliers.length > 0
+  const lowStockProducts = useMemo(
+    () => products.filter((product) => product.reorder_point > 0 && product.quantity_on_hand <= product.reorder_point),
+    [products],
+  )
+
+  const totalsByPo = useMemo(() => {
+    return purchaseOrderItems.reduce<Record<string, number>>((acc, item) => {
+      acc[item.po_id] = (acc[item.po_id] ?? 0) + item.quantity_ordered * item.unit_cost
+      return acc
+    }, {})
+  }, [purchaseOrderItems])
+
+  const filteredPurchaseOrders = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+
+    return purchaseOrders.filter((order) => {
+      const poNumber = formatPurchaseOrderNumber(order).toLowerCase()
+      const supplierName = order.suppliers?.name?.toLowerCase() ?? ''
+      const matchesSearch =
+        normalizedSearch.length === 0 || poNumber.includes(normalizedSearch) || supplierName.includes(normalizedSearch)
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter
+
+      return matchesSearch && matchesStatus
+    })
+  }, [purchaseOrders, searchTerm, statusFilter])
 
   const handleCreatePO = async () => {
     if (!newPoSupplier) return
+
     try {
       setMessage(null)
       await createPurchaseOrderMutation.mutateAsync({
@@ -42,174 +126,261 @@ export const PurchaseOrdersTab = ({
       setIsCreating(false)
       setNewPoSupplier('')
       setNewPoDate('')
-      setMessage('Purchase order draft created.')
-    } catch {
-      setMessage('Failed to create purchase order.')
-    }
-  }
-
-  const handleAddLineItem = async () => {
-    if (!linePoId || !lineProductId || lineQty <= 0) return
-
-    try {
-      setMessage(null)
-      await createPurchaseOrderItemMutation.mutateAsync({
-        poId: linePoId,
-        productId: lineProductId,
-        quantityOrdered: lineQty,
-        unitCost: lineCost,
+      setMessage({ tone: 'success', text: 'Purchase order draft created.' })
+    } catch (error) {
+      setMessage({
+        tone: 'error',
+        text: error instanceof Error ? error.message : 'Failed to create purchase order.',
       })
-      setLineProductId('')
-      setLineQty(1)
-      setLineCost(0)
-      setMessage('Line item added.')
-    } catch {
-      setMessage('Failed to add line item.')
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return <span className="pill">Draft</span>
-      case 'sent':
-        return <span className="badge warning">On Order</span>
-      case 'partial':
-        return <span className="badge warning">Partial</span>
-      case 'closed':
-        return <span className="badge success">Received</span>
-      default:
-        return <span className="pill">{status}</span>
-    }
-  }
+  const emptyStateDescription =
+    purchaseOrders.length === 0
+      ? 'Create your first purchase order to start tracking supplier commitments and incoming stock.'
+      : 'Try adjusting your search or status filter to find a matching purchase order.'
 
   return (
-    <div className="stack">
+    <div className="flex flex-col gap-6 pt-6">
+      <Card className="overflow-hidden" padding="md">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" className="min-w-[140px]" onClick={() => setIsCreating((current) => !current)}>
+              <Plus size={16} />
+              Create PO
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="min-w-[220px] justify-between"
+              onClick={() => setShowAlertsHint((current) => !current)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <BellRing size={16} />
+                Auto-Generate from Alerts
+              </span>
+              <Badge variant={lowStockProducts.length > 0 ? 'warning' : 'secondary'} size="sm">
+                {lowStockProducts.length}
+              </Badge>
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center xl:min-w-[420px] xl:justify-end">
+            <div className="w-full sm:max-w-[320px]">
+              <Input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search POs..."
+                prefix={<Search size={16} />}
+              />
+            </div>
+
+            <Dropdown
+              align="right"
+              trigger={
+                <Button type="button" variant="outline" className="min-w-[132px] justify-between">
+                  <span className="inline-flex items-center gap-2">
+                    <Filter size={16} />
+                    Filter
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    {statusFilter !== 'all' ? (
+                      <Badge variant="secondary" size="sm">
+                        {statusLabels[statusFilter]}
+                      </Badge>
+                    ) : null}
+                    <ChevronDown size={16} />
+                  </span>
+                </Button>
+              }
+            >
+              {statusOptions.map((option) => (
+                <DropdownItem
+                  key={option.value}
+                  onClick={() => setStatusFilter(option.value)}
+                  className={statusFilter === option.value ? 'bg-[var(--color-muted)]' : undefined}
+                >
+                  {option.label}
+                </DropdownItem>
+              ))}
+            </Dropdown>
+          </div>
+        </div>
+      </Card>
+
+      {showAlertsHint ? (
+        <Card className="border-dashed border-[var(--color-border-hover)] bg-[var(--color-muted)]/40" padding="md">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 rounded-full bg-[var(--color-warning-light)] p-2 text-[var(--color-warning)]">
+                <Sparkles size={16} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Alert automation staging area</h3>
+                <p className="text-sm text-[var(--color-muted-foreground)]">
+                  {lowStockProducts.length > 0
+                    ? `${lowStockProducts.length} low-stock products are ready to seed future purchase-order automation.`
+                    : 'No low-stock products are currently queued for purchase-order automation.'}
+                </p>
+              </div>
+            </div>
+
+            <Button type="button" variant="ghost" size="sm" onClick={() => setShowAlertsHint(false)}>
+              Dismiss
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
       {isCreating ? (
-        <div className="card stack" style={{ maxWidth: 500 }}>
-          <h3 className="section-title">New Purchase Order</h3>
-          <label className="stack">
-            Supplier
-            <select className="select" value={newPoSupplier} onChange={(e) => setNewPoSupplier(e.target.value)}>
-              <option value="">Select a supplier...</option>
-              {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </label>
-          <label className="stack">
-            Expected Date
-            <input type="date" className="input" value={newPoDate} onChange={(e) => setNewPoDate(e.target.value)} />
-          </label>
-          <div className="row">
-            <button className="button" onClick={handleCreatePO}>Create Draft</button>
-            <button className="button ghost" onClick={() => setIsCreating(false)}>Cancel</button>
-          </div>
-          {message && <div className="small muted">{message}</div>}
-        </div>
-      ) : (
-        <div className="flex-between">
-          <h3 className="section-title">Active Orders</h3>
-          <button className="button" onClick={() => setIsCreating(true)}>+ New Purchase Order</button>
-        </div>
-      )}
+        <Card className="border-dashed border-[var(--color-border-hover)]" padding="none">
+          <CardHeader className="border-b border-[var(--color-border)] px-6 py-5">
+            <CardTitle className="text-lg">Create Purchase Order</CardTitle>
+            <CardDescription>Start a new draft order and assign the expected receiving date.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-5 px-6 py-5">
+            {loadingSuppliers ? (
+              <div className="empty-state">Loading suppliers...</div>
+            ) : !suppliersAvailable ? (
+              <EmptyState
+                title="No suppliers available"
+                description="Suppliers will be managed in the dedicated Suppliers tab once that workflow is wired in."
+              />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-foreground)]">
+                  Supplier
+                  <Select
+                    value={newPoSupplier}
+                    onChange={(event) => setNewPoSupplier(event.target.value)}
+                    placeholder="Select a supplier"
+                    options={suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name }))}
+                  />
+                </label>
 
-      {pos.length > 0 && (
-        <div className="card stack" style={{ maxWidth: 700 }}>
-          <h3 className="section-title">Add PO Line Item</h3>
-          <div className="grid grid-2">
-            <label className="stack">
-              Purchase Order
-              <select className="select" value={linePoId} onChange={(e) => setLinePoId(e.target.value)}>
-                <option value="">Select PO...</option>
-                {pos.map((po) => (
-                  <option key={po.id} value={po.id}>#{po.po_number} · {po.suppliers?.name ?? 'Unknown Supplier'}</option>
-                ))}
-              </select>
-            </label>
-            <label className="stack">
-              Product
-              <select className="select" value={lineProductId} onChange={(e) => setLineProductId(e.target.value)}>
-                <option value="">Select product...</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>{product.name} ({product.sku})</option>
-                ))}
-              </select>
-            </label>
-            <label className="stack">
-              Quantity Ordered
-              <input className="input" type="number" min={1} value={lineQty} onChange={(e) => setLineQty(Number(e.target.value) || 1)} />
-            </label>
-            <label className="stack">
-              Unit Cost
-              <input className="input" type="number" min={0} step="0.01" value={lineCost} onChange={(e) => setLineCost(Number(e.target.value) || 0)} />
-            </label>
-          </div>
-          <button className="button" onClick={handleAddLineItem}>Add Line Item</button>
-          {message && <div className="small muted">{message}</div>}
-        </div>
-      )}
+                <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-foreground)]">
+                  Expected
+                  <Input type="date" value={newPoDate} onChange={(event) => setNewPoDate(event.target.value)} />
+                </label>
+              </div>
+            )}
 
-      {items.length > 0 && (
-        <div className="card stack">
-          <h3 className="section-title">Current PO Items</h3>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>PO</th>
-                  <th>Item</th>
-                  <th style={{ textAlign: 'right' }}>Ordered</th>
-                  <th style={{ textAlign: 'right' }}>Received</th>
-                  <th style={{ textAlign: 'right' }}>Remaining</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.slice(0, 15).map((item) => (
-                  <tr key={item.id}>
-                    <td>#{item.purchase_orders?.po_number ?? '—'}</td>
-                    <td>{item.products?.name ?? 'Unknown'} <span className="small muted">{item.products?.sku}</span></td>
-                    <td style={{ textAlign: 'right' }}>{item.quantity_ordered}</td>
-                    <td style={{ textAlign: 'right' }}>{item.quantity_received}</td>
-                    <td style={{ textAlign: 'right' }}>{Math.max(item.quantity_ordered - item.quantity_received, 0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[var(--color-border)] pt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsCreating(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                loading={createPurchaseOrderMutation.isPending}
+                disabled={!suppliersAvailable || !newPoSupplier}
+                onClick={handleCreatePO}
+              >
+                <CheckCircle2 size={16} />
+                Create Draft
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
-      {loading ? (
-        <div className="empty-state">Loading orders...</div>
-      ) : pos.length === 0 ? (
-        <EmptyState title="No Purchase Orders" description="Create a PO to track incoming stock." />
-      ) : (
-        <div className="card" style={{ padding: 0 }}>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>PO #</th>
-                  <th>Supplier</th>
-                  <th>Status</th>
-                  <th>Expected</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pos.map((po) => (
-                  <tr key={po.id}>
-                    <td style={{ fontWeight: 'var(--type-weight-semibold)' }}>#{po.po_number}</td>
-                    <td>{po.suppliers?.name ?? 'Unknown'}</td>
-                    <td>{getStatusBadge(po.status)}</td>
-                    <td>{po.expected_date ?? '—'}</td>
-                    <td className="muted small">{formatDateTime(po.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {message ? (
+        <p className={message.tone === 'error' ? 'text-sm text-[var(--color-destructive)]' : 'text-sm text-[var(--color-success)]'}>
+          {message.text}
+        </p>
+      ) : null}
+
+      <Card className="overflow-hidden" padding="none">
+        <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+              Purchase Orders
+            </p>
+            <h2 className="text-lg font-semibold text-[var(--color-foreground)]">Order queue</h2>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Review supplier commitments, expected arrival dates, and open order value in one list.
+            </p>
+          </div>
+
+          <div className="rounded-full bg-[var(--color-muted)] px-3 py-1 text-sm font-medium text-[var(--color-muted-foreground)]">
+            {filteredPurchaseOrders.length} of {purchaseOrders.length} orders
           </div>
         </div>
-      )}
+
+        {loadingOrders ? (
+          <div className="empty-state">Loading purchase orders...</div>
+        ) : filteredPurchaseOrders.length === 0 ? (
+          <div className="px-6 py-10">
+            <EmptyState title="No purchase orders found" description={emptyStateDescription} />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table className="min-w-[920px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                    PO Number
+                  </TableHead>
+                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                    Supplier
+                  </TableHead>
+                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                    Created
+                  </TableHead>
+                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                    Expected
+                  </TableHead>
+                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-right text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                    Total
+                  </TableHead>
+                  <TableHead className="h-14 bg-[var(--color-muted)]/50 text-right text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                    Status
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPurchaseOrders.map((order) => {
+                  const totalAmount = order.total_amount ?? totalsByPo[order.id] ?? 0
+
+                  return (
+                    <TableRow key={order.id} className="h-[76px]">
+                      <TableCell className="py-5">
+                        <span className="text-sm font-semibold text-[var(--color-primary)]">
+                          {formatPurchaseOrderNumber(order)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="rounded-lg bg-[var(--color-muted)] p-2 text-[var(--color-muted-foreground)]">
+                            <Building2 size={16} />
+                          </div>
+                          <span className="font-medium text-[var(--color-foreground)]">
+                            {order.suppliers?.name ?? 'Unknown supplier'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-5 text-[var(--color-muted-foreground)]">
+                        {formatDateLabel(order.created_at)}
+                      </TableCell>
+                      <TableCell className="py-5 text-[var(--color-muted-foreground)]">
+                        {formatDateLabel(order.expected_date)}
+                      </TableCell>
+                      <TableCell className="py-5 text-right font-semibold text-[var(--color-foreground)]">
+                        {formatCurrency(totalAmount)}
+                      </TableCell>
+                      <TableCell className="py-5 text-right">
+                        <Badge variant={statusVariants[order.status]} size="lg">
+                          {statusLabels[order.status]}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Card>
     </div>
   )
 }
