@@ -9,12 +9,14 @@ test.describe('Inventory table columns', () => {
     test.skip(!hasTable, 'Inventory table not visible — skipping column tests.');
   });
 
-  test('STATUS column is not present in table', async ({ authenticatedPage }) => {
+  test('deprecated stock headers are not present in table', async ({ authenticatedPage }) => {
     const headers = authenticatedPage.locator('table.table thead th');
     const count = await headers.count();
     for (let i = 0; i < count; i++) {
       const text = (await headers.nth(i).innerText()).trim();
       expect(text.toUpperCase()).not.toBe('STATUS');
+      expect(text.toUpperCase()).not.toBe('ON HAND');
+      expect(text.toUpperCase()).not.toBe('ALLOCATED');
     }
   });
 
@@ -55,7 +57,7 @@ test.describe('Inventory table columns', () => {
   });
 
   test('all expected column headers are sortable', async ({ authenticatedPage }) => {
-    const sortableHeaders = ['Name / SKU', 'Folder', 'Price', 'On Hand', 'Allocated', 'Available'];
+    const sortableHeaders = ['Name / SKU', 'Folder', 'Price', 'Available'];
 
     for (const headerText of sortableHeaders) {
       const th = authenticatedPage.locator('table.table thead th.sortable-th', { hasText: new RegExp(headerText, 'i') });

@@ -49,9 +49,11 @@ const renderWithRouter = (props: ProductListViewProps) =>
   )
 
 describe('ProductListView – STATUS column removed', () => {
-  it('does not render a Status column header', () => {
+  it('does not render Status, On Hand, or Allocated column headers in list view', () => {
     renderWithRouter(createProps())
     expect(screen.queryByText('Status')).not.toBeInTheDocument()
+    expect(screen.queryByText('On Hand')).not.toBeInTheDocument()
+    expect(screen.queryByText('Allocated')).not.toBeInTheDocument()
   })
 
   it('does not render stock status badges in list view rows', () => {
@@ -94,7 +96,7 @@ describe('ProductListView – AVAILABLE column shows stock/min format', () => {
 describe('ProductListView – all columns are sortable', () => {
   it('renders all column headers with sortable-th class', () => {
     renderWithRouter(createProps())
-    const headers = ['Name / SKU', 'Folder', 'Price', 'On Hand', 'Allocated', 'Available']
+    const headers = ['Name / SKU', 'Folder', 'Price', 'Available']
     for (const text of headers) {
       const th = screen.getByText(new RegExp(text)).closest('th')!
       expect(th).toHaveClass('sortable-th')
@@ -109,18 +111,10 @@ describe('ProductListView – all columns are sortable', () => {
     expect(props.setSortDir).toHaveBeenCalledWith('asc')
   })
 
-  it('clicking Available header sorts by reorder_point', () => {
+  it('clicking Available header sorts by quantity_on_hand', () => {
     const props = createProps({ sortField: 'name', sortDir: 'asc' })
     renderWithRouter(props)
     fireEvent.click(screen.getByText('Available').closest('th')!)
-    expect(props.setSortField).toHaveBeenCalledWith('reorder_point')
-    expect(props.setSortDir).toHaveBeenCalledWith('asc')
-  })
-
-  it('clicking Allocated header sorts by quantity_on_hand', () => {
-    const props = createProps({ sortField: 'name', sortDir: 'asc' })
-    renderWithRouter(props)
-    fireEvent.click(screen.getByText('Allocated').closest('th')!)
     expect(props.setSortField).toHaveBeenCalledWith('quantity_on_hand')
     expect(props.setSortDir).toHaveBeenCalledWith('asc')
   })

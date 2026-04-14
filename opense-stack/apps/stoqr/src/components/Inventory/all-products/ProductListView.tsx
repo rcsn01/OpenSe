@@ -143,8 +143,6 @@ export const ProductListView = ({
                 <col />
                 <col style={{ width: 140 }} />
                 <col style={{ width: 110 }} />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 100 }} />
                 <col style={{ width: 120 }} />
               </colgroup>
               <thead className={selectedRowIds.size > 0 ? 'table-header-selected' : undefined}>
@@ -167,23 +165,12 @@ export const ProductListView = ({
                     Price <SortIndicator field="selling_price" />
                   </th>
                   <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('quantity_on_hand')}>
-                    On Hand <SortIndicator field="quantity_on_hand" />
-                  </th>
-                  <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('quantity_on_hand')}>
-                    Allocated <SortIndicator field="quantity_on_hand" />
-                  </th>
-                  <th className="sortable-th" style={{ textAlign: 'right' }} onClick={() => handleColumnSort('reorder_point')}>
-                    Available <SortIndicator field="reorder_point" />
+                    Available <SortIndicator field="quantity_on_hand" />
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((product) => {
-                  const isLow = product.quantity_on_hand <= product.reorder_point
-                  const isOut = product.quantity_on_hand === 0
-                  const allocated = 0
-                  const available = product.quantity_on_hand - allocated
-                  const isEditingQty = editingCell?.id === product.id && editingCell.field === 'quantity_on_hand'
                   const isEditingPrice = editingCell?.id === product.id && editingCell.field === 'selling_price'
 
                   return (
@@ -240,43 +227,8 @@ export const ProductListView = ({
                           </span>
                         )}
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-medium)' }}>
-                        {isEditingQty ? (
-                          <input
-                            className="input small"
-                            autoFocus
-                            type="number"
-                            step="1"
-                            value={editingValue}
-                            disabled={isSaving}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => {
-                              void commitEdit()
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault()
-                                void commitEdit()
-                              }
-                              if (e.key === 'Escape') cancelEdit()
-                            }}
-                            style={{ width: 100, textAlign: 'right' }}
-                          />
-                        ) : (
-                          <span
-                            className="editable-cell"
-                            onClick={() => startEdit(product, 'quantity_on_hand')}
-                            aria-disabled={isSaving}
-                            style={{ cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}
-                          >
-                            {product.quantity_on_hand}
-                            <span className="edit-icon">✎</span>
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{allocated}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)', color: available >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}>
-                        {available} / {product.reorder_point}
+                      <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)', color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}>
+                        {product.quantity_on_hand} / {product.reorder_point}
                       </td>
                     </tr>
                   )

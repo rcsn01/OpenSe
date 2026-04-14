@@ -101,6 +101,7 @@ export type DashboardData = {
   topMovers: TopMover[]
   chartData: { date: string; value: number }[]
   usageChartData: { date: string; value: number }[]
+  movementChartData: { date: string; inbound: number; outbound: number }[]
   alertsSummary: {
     openAlerts: number
     criticalAlerts: number
@@ -218,6 +219,27 @@ export const fetchDashboardData = async (companyId: string): Promise<DashboardDa
       value: toNumber(point.usage, 0),
     }))
 
+  const movementChartData = Array.from(
+    movementRows.reduce((acc, row) => {
+      const date = String(row.created_at).slice(0, 10)
+      const entry = acc.get(date) ?? { date, inbound: 0, outbound: 0 }
+      const quantityChange = toNumber(row.quantity_change, 0)
+      const quantity = Math.abs(quantityChange)
+      const normalizedType = normalizeTransactionType(row.transaction_type)
+
+      if (normalizedType === 'purchase' || normalizedType === 'return' || quantityChange > 0) {
+        entry.inbound += quantity
+      } else {
+        entry.outbound += quantity
+      }
+
+      acc.set(date, entry)
+      return acc
+    }, new Map<string, { date: string; inbound: number; outbound: number }>()).values(),
+  )
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .slice(-30)
+
   return {
     products,
     transactions,
@@ -230,6 +252,7 @@ export const fetchDashboardData = async (companyId: string): Promise<DashboardDa
     topMovers,
     chartData,
     usageChartData,
+    movementChartData,
     alertsSummary: {
       openAlerts: toNumber(snapshot.alerts_summary?.open_alerts, 0),
       criticalAlerts: toNumber(snapshot.alerts_summary?.critical_alerts, 0),
