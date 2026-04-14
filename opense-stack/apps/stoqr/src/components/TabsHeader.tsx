@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 export interface TabsHeaderItem {
   id: string
   label: string | ReactNode
+  count?: number
 }
 
 export interface TabsHeaderProps {
@@ -14,6 +15,10 @@ export interface TabsHeaderProps {
 }
 
 export const TabsHeader = ({ tabs, activeTabId, onTabChange }: TabsHeaderProps) => {
-  const tabItems = tabs.map((t) => ({ id: t.id, label: typeof t.label === 'string' ? t.label : String(t.label) }))
+  const tabItems = tabs.map((t) => ({
+    id: t.id,
+    label: typeof t.label === 'string' ? t.label : String(t.label),
+    count: t.count,
+  }))
   return <TabBar tabs={tabItems} activeTab={activeTabId} onTabChange={onTabChange} />
 }

@@ -47,16 +47,7 @@ export const ProcurementPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
     >
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="page-title">Procurement</h1>
-          <p className="max-w-3xl text-sm text-[var(--color-muted-foreground)]">
-            Manage purchase orders and suppliers from a single queue. Request approval, receiving progress, and return status now surface directly on each purchase order.
-          </p>
-        </div>
-
-        <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/procurement/${nextTab}`)} />
-      </div>
+      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/procurement/${nextTab}`)} />
     </BasePage>
   )
 }

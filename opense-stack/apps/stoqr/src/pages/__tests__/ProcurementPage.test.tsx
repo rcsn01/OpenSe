@@ -45,7 +45,7 @@ describe('ProcurementPage', () => {
     expect(screen.queryByText('Incoming / Receiving')).not.toBeInTheDocument()
     expect(screen.queryByText('Purchase Requests')).not.toBeInTheDocument()
     expect(screen.queryByText('Vendor Returns')).not.toBeInTheDocument()
-    expect(screen.getByText(/request approval, receiving progress, and return status now surface directly on each purchase order/i)).toBeInTheDocument()
+    expect(screen.queryByText('Procurement')).not.toBeInTheDocument()
     expect(screen.getByText('Purchase Orders Content')).toBeInTheDocument()
   })
 })
