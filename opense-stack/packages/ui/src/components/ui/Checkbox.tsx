@@ -64,13 +64,34 @@ export interface ToggleProps extends Omit<InputHTMLAttributes<HTMLInputElement>,
 }
 
 export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(
-  ({ className, label, id: idProp, checked, onChange, disabled, ...props }, ref) => {
+  ({
+    className,
+    label,
+    id: idProp,
+    checked,
+    onChange,
+    disabled,
+    'aria-label': ariaLabel,
+    'aria-labelledby': ariaLabelledBy,
+    'aria-describedby': ariaDescribedBy,
+    ...props
+  }, ref) => {
     const autoId = useId()
     const id = idProp ?? autoId
+    const labelId = label ? `${id}-label` : undefined
+    const resolvedAriaLabel = label ? undefined : ariaLabel
+    const resolvedAriaLabelledBy = labelId ?? ariaLabelledBy
+
     return (
       <div className="flex items-center gap-2">
         <button
-          type="button" role="switch" aria-checked={!!checked} disabled={disabled}
+          type="button"
+          role="switch"
+          aria-checked={!!checked}
+          aria-label={resolvedAriaLabel}
+          aria-labelledby={resolvedAriaLabelledBy}
+          aria-describedby={ariaDescribedBy}
+          disabled={disabled}
           onClick={() => {
             if (onChange && !disabled) {
               const syntheticEvent = { target: { checked: !checked } } as React.ChangeEvent<HTMLInputElement>
@@ -89,8 +110,23 @@ export const Toggle = forwardRef<HTMLInputElement, ToggleProps>(
             checked ? 'translate-x-4' : 'translate-x-0',
           )} />
         </button>
-        <input ref={ref} type="checkbox" id={id} className="sr-only" checked={checked} onChange={onChange} {...props} />
-        {label && <label htmlFor={id} className="text-sm cursor-pointer select-none">{label}</label>}
+        <input
+          ref={ref}
+          type="checkbox"
+          id={id}
+          className="sr-only"
+          checked={checked}
+          onChange={onChange}
+          aria-label={resolvedAriaLabel}
+          aria-labelledby={resolvedAriaLabelledBy}
+          aria-describedby={ariaDescribedBy}
+          {...props}
+        />
+        {label && (
+          <label id={labelId} htmlFor={id} className="text-sm cursor-pointer select-none">
+            {label}
+          </label>
+        )}
       </div>
     )
   },

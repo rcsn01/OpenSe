@@ -4,6 +4,7 @@ import { TabsHeader } from './TabsHeader'
 type Tab = {
   id: string
   label: string
+  count?: number
   content: React.ReactNode
 }
 

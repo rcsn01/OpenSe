@@ -93,7 +93,7 @@ function App() {
               <Route path="/reports/:tab" element={<ReportsPage />} />
               <Route path="/procurement" element={<Navigate to="/procurement/purchase-orders" replace />} />
               <Route path="/procurement/:tab" element={<ProcurementPage />} />
-              <Route path="/alerts" element={<Navigate to="/alerts/notifications" replace />} />
+              <Route path="/alerts" element={<Navigate to="/alerts/feed" replace />} />
               <Route path="/alerts/:tab" element={<AlertsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

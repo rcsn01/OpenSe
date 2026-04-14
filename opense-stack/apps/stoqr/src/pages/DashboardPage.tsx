@@ -650,7 +650,7 @@ export const DashboardPage = () => {
               )}
 
               <div className="stoqr-dashboard__panel-footer">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/alerts/notifications')}>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/alerts/feed')}>
                   View all alerts
                 </Button>
               </div>
