@@ -1,3 +1,4 @@
+import { DataTable } from '@repo/ui'
 import { useScanHistory } from '../../hooks/queries/useQuickScan'
 
 export const ScanHistoryTab = ({ companyId }: { companyId: string }) => {
@@ -17,35 +18,51 @@ export const ScanHistoryTab = ({ companyId }: { companyId: string }) => {
         <h3 className="section-title" style={{ margin: 0 }}>Scan History Log</h3>
         <div className="small muted">Recent scanner events across manual and camera modes.</div>
       </div>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Type</th>
-              <th>Item</th>
-              <th style={{ textAlign: 'right' }}>Qty</th>
-              <th>Method</th>
-              <th>User</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((event) => (
-              <tr key={event.id}>
-                <td className="small muted">{new Date(event.created_at).toLocaleString()}</td>
-                <td><span className="pill">{event.scan_type.replace('_', ' ')}</span></td>
-                <td>
-                  <div>{event.product?.name ?? 'Unknown item'}</div>
-                  <div className="small muted">{event.product?.sku ?? event.barcode ?? '—'}</div>
-                </td>
-                <td style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)' }}>{event.quantity ?? 0}</td>
-                <td className="small muted">{event.entry_method}</td>
-                <td className="small muted">{event.actorName}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={[
+          {
+            id: 'timestamp',
+            header: 'Timestamp',
+            renderCell: (event) => <span className="small muted">{new Date(event.created_at).toLocaleString()}</span>,
+          },
+          {
+            id: 'type',
+            header: 'Type',
+            renderCell: (event) => <span className="pill">{event.scan_type.replace('_', ' ')}</span>,
+          },
+          {
+            id: 'item',
+            header: 'Item',
+            renderCell: (event) => (
+              <div>
+                <div>{event.product?.name ?? 'Unknown item'}</div>
+                <div className="small muted">{event.product?.sku ?? event.barcode ?? '—'}</div>
+              </div>
+            ),
+          },
+          {
+            id: 'qty',
+            header: 'Qty',
+            align: 'right',
+            renderCell: (event) => (
+              <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>{event.quantity ?? 0}</span>
+            ),
+          },
+          {
+            id: 'method',
+            header: 'Method',
+            renderCell: (event) => <span className="small muted">{event.entry_method}</span>,
+          },
+          {
+            id: 'user',
+            header: 'User',
+            renderCell: (event) => <span className="small muted">{event.actorName}</span>,
+          },
+        ]}
+        rows={data}
+        getRowId={(event) => event.id}
+        tableWrapClassName="border-0 rounded-none"
+      />
     </div>
   )
 }

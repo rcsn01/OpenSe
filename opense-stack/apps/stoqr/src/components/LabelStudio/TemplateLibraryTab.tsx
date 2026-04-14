@@ -1,3 +1,4 @@
+import { DataTable } from '@repo/ui'
 import { useState } from 'react'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
 import { getLabelLayoutSummary } from './labelLayout'
@@ -92,63 +93,61 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       ) : filteredTemplates.length === 0 ? (
         <div className="empty-state">No templates found.</div>
       ) : (
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Size</th>
-                <th>Type</th>
-                <th>Fields</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTemplates.map((template) => {
+        <DataTable
+          columns={[
+            {
+              id: 'name',
+              header: 'Name',
+              renderCell: (template) => {
                 const isEditing = selectedTemplateId === template.id
-                const summary = getLabelLayoutSummary(template.layout)
-                const openTemplate = () => onSelectTemplate?.(template.id)
+
                 return (
-                  <tr
-                    key={template.id}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Open ${template.name} template`}
-                    onClick={openTemplate}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        openTemplate()
-                      }
-                    }}
-                    style={{
-                      cursor: 'pointer',
-                      ...(isEditing ? { background: 'rgba(37, 99, 235, 0.04)' } : {}),
-                    }}
-                  >
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontWeight: 600 }}>{template.name}</span>
-                        {isEditing && <span className="badge warning">Editing</span>}
-                      </div>
-                      <div className="small muted">
-                        Updated {formatDate(template.updated_at ?? template.created_at)}
-                      </div>
-                    </td>
-                    <td>
-                      {summary.size}
-                    </td>
-                    <td>
-                      {summary.type}
-                    </td>
-                    <td>
-                      {summary.fields}
-                    </td>
-                  </tr>
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600 }}>{template.name}</span>
+                      {isEditing && <span className="badge warning">Editing</span>}
+                    </div>
+                    <div className="small muted">
+                      Updated {formatDate(template.updated_at ?? template.created_at)}
+                    </div>
+                  </>
                 )
-              })}
-            </tbody>
-          </table>
-        </div>
+              },
+            },
+            {
+              id: 'size',
+              header: 'Size',
+              renderCell: (template) => getLabelLayoutSummary(template.layout).size,
+            },
+            {
+              id: 'type',
+              header: 'Type',
+              renderCell: (template) => getLabelLayoutSummary(template.layout).type,
+            },
+            {
+              id: 'fields',
+              header: 'Fields',
+              renderCell: (template) => getLabelLayoutSummary(template.layout).fields,
+            },
+          ]}
+          rows={filteredTemplates}
+          getRowId={(template) => template.id}
+          onRowClick={(template) => onSelectTemplate?.(template.id)}
+          getRowProps={(template) => ({
+            role: 'button',
+            tabIndex: 0,
+            'aria-label': `Open ${template.name} template`,
+            onKeyDown: (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onSelectTemplate?.(template.id)
+              }
+            },
+          })}
+          getRowStyle={(template) => (
+            selectedTemplateId === template.id ? { background: 'rgba(37, 99, 235, 0.04)' } : undefined
+          )}
+        />
       )}
     </div>
   )

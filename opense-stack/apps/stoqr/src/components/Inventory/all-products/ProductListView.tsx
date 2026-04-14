@@ -228,7 +228,6 @@ export const ProductListView = ({
           sortDirection={sortDir}
           onSortChange={handleColumnSort}
           onRowClick={(product) => toggleSelection(product.id)}
-          rowClassName={(product) => selectedRowIds.has(product.id) ? 'row-selected' : undefined}
           getRowStyle={(product) => ({ background: selectedRowIds.has(product.id) ? 'var(--primary-soft)' : undefined })}
           footerClassName="border-t-0 px-5 pb-4 pt-0"
           pagination={{

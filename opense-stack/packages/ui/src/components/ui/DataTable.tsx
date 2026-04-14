@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp } from 'lucide-react'
-import { type CSSProperties, type ReactNode } from 'react'
+import { type CSSProperties, type HTMLAttributes, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import { Pagination } from './Pagination'
 
@@ -60,6 +60,7 @@ type DataTableProps<Row, SortKey extends string = string> = {
   onSortChange?: (sortKey: SortKey) => void
   rowClassName?: string | ((row: Row, index: number) => string | undefined)
   getRowStyle?: (row: Row, index: number) => CSSProperties | undefined
+  getRowProps?: (row: Row, index: number) => HTMLAttributes<HTMLTableRowElement>
   onRowClick?: (row: Row, index: number) => void
   pagination?: DataTablePaginationProps
 }
@@ -82,6 +83,7 @@ export function DataTable<Row, SortKey extends string = string>({
   onSortChange,
   rowClassName,
   getRowStyle,
+  getRowProps,
   onRowClick,
   pagination,
 }: DataTableProps<Row, SortKey>) {
@@ -133,7 +135,7 @@ export function DataTable<Row, SortKey extends string = string>({
                     className={cn(
                       'sticky top-0 z-[1] bg-[var(--color-muted)]/50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]',
                       alignmentClassNames[align],
-                      isSortable && 'sortable-th cursor-pointer select-none',
+                      isSortable && 'sortable-th cursor-pointer select-none transition-colors hover:text-[var(--color-foreground)]',
                       column.headerClassName,
                     )}
                     onClick={isSortable ? () => onSortChange?.(columnSortKey) : undefined}
@@ -164,13 +166,31 @@ export function DataTable<Row, SortKey extends string = string>({
             ) : (
               rows.map((row, index) => {
                 const computedRowClassName = typeof rowClassName === 'function' ? rowClassName(row, index) : rowClassName
+                const rowProps = getRowProps?.(row, index) ?? {}
+                const {
+                  className: rowPropsClassName,
+                  style: rowPropsStyle,
+                  onClick: rowPropsOnClick,
+                  ...restRowProps
+                } = rowProps
 
                 return (
                   <tr
                     key={getRowId(row, index)}
-                    className={cn(onRowClick && 'cursor-pointer', computedRowClassName)}
-                    onClick={onRowClick ? () => onRowClick(row, index) : undefined}
-                    style={getRowStyle?.(row, index)}
+                    {...restRowProps}
+                    className={cn('transition-colors', onRowClick && 'cursor-pointer', rowPropsClassName, computedRowClassName)}
+                    onClick={rowPropsOnClick || onRowClick
+                      ? (event) => {
+                          rowPropsOnClick?.(event)
+                          if (!event.defaultPrevented) {
+                            onRowClick?.(row, index)
+                          }
+                        }
+                      : undefined}
+                    style={{
+                      ...rowPropsStyle,
+                      ...getRowStyle?.(row, index),
+                    }}
                   >
                     {columns.map((column) => {
                       const align = column.align ?? 'left'

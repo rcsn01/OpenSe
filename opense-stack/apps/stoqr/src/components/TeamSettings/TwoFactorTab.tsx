@@ -1,3 +1,4 @@
+import { DataTable } from '@repo/ui'
 import { useTwoFactorStatus } from '../../hooks/queries/useTeamSettings'
 
 export const TwoFactorTab = () => {
@@ -27,26 +28,27 @@ export const TwoFactorTab = () => {
         ) : error ? (
           <div className="empty-state">Unable to read MFA status for this user session.</div>
         ) : data && data.factors.length > 0 ? (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Factor</th>
-                  <th>Status</th>
-                  <th>Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.factors.map((factor) => (
-                  <tr key={factor.id}>
-                    <td>{factor.friendly_name ?? factor.id}</td>
-                    <td>{factor.status}</td>
-                    <td>{factor.factor_type}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={[
+              {
+                id: 'factor',
+                header: 'Factor',
+                renderCell: (factor) => factor.friendly_name ?? factor.id,
+              },
+              {
+                id: 'status',
+                header: 'Status',
+                renderCell: (factor) => factor.status,
+              },
+              {
+                id: 'type',
+                header: 'Type',
+                renderCell: (factor) => factor.factor_type,
+              },
+            ]}
+            rows={data.factors}
+            getRowId={(factor) => factor.id}
+          />
         ) : (
           <div className="empty-state">No enrolled 2FA factors. Configure MFA from your account security flow.</div>
         )}
