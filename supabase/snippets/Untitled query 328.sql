@@ -1,13 +1,14 @@
-CREATE TABLE IF NOT EXISTS logs (
+CREATE TABLE IF NOT EXISTS etl.logs (
   id            uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   event_type    text NOT NULL,        
-  description   text,                 
+  description   text,                
   status        text DEFAULT 'success',
-  created_at    timestamp DEFAULT now(),
+  created_at    timestamptz DEFAULT now(),
   error_message text,
-  metadata      jsonb                 
+  metadata      jsonb                
 );
-CREATE OR REPLACE FUNCTION log_event(
+ 
+CREATE OR REPLACE FUNCTION etl.log_event(
     p_event_type    text,
     p_description   text DEFAULT NULL,
     p_status        text DEFAULT 'success',
@@ -35,9 +36,13 @@ BEGIN
         p_metadata
     )
     RETURNING id INTO v_log_id;
-
+ 
     RETURN v_log_id;
 END;
 $$;
 
+-- Only errors
+SELECT * FROM logs WHERE status = 'error' ORDER BY created_at DESC;
 
+-- Only success
+SELECT * FROM logs WHERE status = 'success' ORDER BY created_at DESC;
