@@ -7,6 +7,18 @@ import { useGSAP } from '@gsap/react'
 
 gsap.registerPlugin(ScrollTrigger)
 
+const C = {
+  navSurface: 'var(--opense-stoqr-nav-surface, color-mix(in srgb, var(--color-card) 86%, transparent))',
+  navBorder: 'var(--opense-stoqr-nav-border, color-mix(in srgb, var(--color-border) 82%, transparent))',
+  navText: 'var(--opense-stoqr-nav-text, var(--color-foreground))',
+  scannerBorder: 'var(--opense-stoqr-scanner-border, var(--color-presetAccent))',
+  scannerGlow: 'var(--opense-stoqr-scanner-glow, 0 0 20px color-mix(in srgb, var(--color-presetAccent) 34%, transparent))',
+  panel: 'var(--opense-stoqr-panel, color-mix(in srgb, var(--color-foreground) 92%, black))',
+  panelStrong: 'var(--opense-stoqr-panel-strong, color-mix(in srgb, var(--color-foreground) 95%, black))',
+  terminalStrip: 'var(--opense-stoqr-terminal-strip, color-mix(in srgb, var(--color-foreground) 88%, black))',
+  accentGlow: 'var(--opense-stoqr-accent-glow, 0 0 40px color-mix(in srgb, var(--color-presetAccent) 16%, transparent))',
+} as const
+
 // --- OVERLAYS & EFFECTS ---
 const NoiseOverlay = () => (
   <div className="pointer-events-none fixed inset-0 z-50 h-full w-full opacity-5">
@@ -72,12 +84,12 @@ const Navbar = () => {
     if (!navRef.current) return
 
     gsap.to(navRef.current, {
-      backgroundColor: 'rgba(247, 246, 242, 0.8)',
+      backgroundColor: C.navSurface,
       backdropFilter: 'blur(20px)',
-      borderColor: 'rgba(0, 44, 52, 0.1)',
+      borderColor: C.navBorder,
       borderWidth: 1,
       borderStyle: 'solid',
-      color: 'rgb(0, 44, 52)',
+      color: C.navText,
       ease: 'none',
       scrollTrigger: {
         start: 'top -100',
@@ -167,7 +179,7 @@ const Features = () => {
     width: '60px',
     height: '60px',
     transform: 'translate(-50%, -50%)',
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'color-mix(in srgb, var(--color-background) 20%, transparent)',
     boxShadow: 'none'
   }
 
@@ -206,8 +218,8 @@ const Features = () => {
           width: `${t.width + 16}px`,
           height: `${t.height + 16}px`,
           transform: 'translate(-8px, -8px)',
-          borderColor: '#f97316', // Using presetAccent hex manually here to ensure it applies via style
-          boxShadow: '0 0 20px rgba(249,115,22,0.3)'
+          borderColor: C.scannerBorder,
+          boxShadow: C.scannerGlow
         })
         snapped = true
         break
@@ -222,8 +234,8 @@ const Features = () => {
         width: '60px',
         height: '60px',
         transform: 'translate(-50%, -50%)',
-        borderColor: 'rgba(255,255,255,0.6)',
-        boxShadow: '0 0 10px rgba(255,255,255,0.1)'
+        borderColor: 'color-mix(in srgb, var(--color-background) 60%, transparent)',
+        boxShadow: '0 0 10px color-mix(in srgb, var(--color-background) 12%, transparent)'
       })
     }
   }
@@ -315,7 +327,10 @@ const Features = () => {
                  className="absolute border-2 rounded-xl transition-all duration-200 ease-out flex flex-col overflow-hidden pointer-events-none z-20"
                  style={scannerStyle}
                >
-                 <div className="w-full h-[2px] bg-presetAccent opacity-80 shadow-[0_0_10px_rgba(249,115,22,1)] absolute left-0 animate-[scan-line_2s_linear_infinite]" />
+                 <div
+                   className="w-full h-[2px] bg-presetAccent opacity-80 absolute left-0 animate-[scan-line_2s_linear_infinite]"
+                   style={{ boxShadow: '0 0 10px color-mix(in srgb, var(--color-presetAccent) 90%, transparent)' }}
+                 />
                </div>
             </div>
             <div>
@@ -508,7 +523,7 @@ const Protocol = () => {
       </div>
 
       {/* Card 3 */}
-      <div className="pin-card h-screen w-full bg-[#1E293B] flex items-center justify-center sticky top-0 text-white rounded-t-[2rem] overflow-hidden">
+      <div className="pin-card h-screen w-full bg-[var(--opense-stoqr-panel,var(--color-presetPrimary))] flex items-center justify-center sticky top-0 text-white rounded-t-[2rem] overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
           <div className="order-2 md:order-1">
             <h2 className="text-5xl lg:text-7xl font-bold text-white mb-6">03. Deploy</h2>
@@ -519,7 +534,7 @@ const Protocol = () => {
                 <div className="absolute inset-0 flex items-center justify-center opacity-20">
                      <Network className="w-full h-full text-presetAccent" />
                 </div>
-                <div className="z-10 bg-[#0F172A] border border-presetAccent/30 p-6 rounded-2xl shadow-[0_0_40px_rgba(249,115,22,0.15)] backdrop-blur-md">
+                <div className="z-10 bg-[var(--opense-stoqr-panel-strong,var(--color-presetPrimary))] border border-presetAccent/30 p-6 rounded-2xl backdrop-blur-md" style={{ boxShadow: C.accentGlow }}>
                     <DatabaseIcon className="w-12 h-12 text-presetAccent mx-auto mb-4" />
                     <p className="text-center font-bold">MAIN_DB_SYNC</p>
                     <div className="mt-4 h-2 bg-black rounded-full overflow-hidden">
@@ -546,7 +561,7 @@ const TerminalCTA = () => {
   return (
     <section className="bg-presetBackground py-32 px-6">
       <div className="mx-auto max-w-5xl bg-presetTextDark rounded-[2rem] overflow-hidden shadow-2xl">
-        <div className="bg-[#1e1e1e] px-4 py-3 flex items-center gap-2 border-b border-white/5">
+        <div className="bg-[var(--opense-stoqr-terminal-strip,var(--color-presetPrimary))] px-4 py-3 flex items-center gap-2 border-b border-white/5">
           <div className="flex gap-2">
             <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
             <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
@@ -608,7 +623,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
          <p className="text-sm text-presetBackground/40">(c) {new Date().getFullYear()} StoQR. Open Source Logistics.</p>
          <div className="flex items-center gap-3 text-sm text-presetAccent bg-presetAccent/10 px-4 py-2 rounded-full border border-presetAccent/20">
-            <div className="w-2 h-2 rounded-full bg-presetAccent animate-pulse shadow-[0_0_8px_rgba(249,115,22,1)]" />
+          <div className="w-2 h-2 rounded-full bg-presetAccent animate-pulse" style={{ boxShadow: '0 0 8px color-mix(in srgb, var(--color-presetAccent) 90%, transparent)' }} />
             System Operational
          </div>
       </div>
