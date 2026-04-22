@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { LandingPage as EtlLandingPage } from '../../../etl/src/pages/LandingPage'
+import { OpenSeLandingNavbar } from '../components/OpenSeLandingNavbar'
 import { setActiveLandingContext } from '../lib/authRedirect'
 
 export const OpenEtlLandingPage = () => {
@@ -10,7 +11,7 @@ export const OpenEtlLandingPage = () => {
 
   return (
     <div className="opense-theme-etl">
-      <EtlLandingPage />
+      <EtlLandingPage navbar={<OpenSeLandingNavbar />} />
     </div>
   )
 }

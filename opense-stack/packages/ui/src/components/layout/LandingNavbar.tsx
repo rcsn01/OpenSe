@@ -91,7 +91,9 @@ export const LandingNavbar = forwardRef<HTMLElement, LandingNavbarProps>(functio
     WebkitBackdropFilter: isScrolled ? 'blur(20px)' : 'none',
     border: isScrolled ? '1px solid color-mix(in srgb, var(--color-border) 82%, transparent)' : '1px solid transparent',
     boxShadow: isScrolled ? '0 14px 40px color-mix(in srgb, var(--color-foreground) 10%, transparent)' : 'none',
-    color: isScrolled ? 'var(--color-foreground)' : 'var(--color-background)',
+    color: isScrolled
+      ? 'var(--color-foreground)'
+      : 'var(--landing-navbar-transparent-foreground, var(--color-background))',
   }
 
   const segmentedGroupClassName = [

@@ -1,8 +1,4 @@
-import {
-  LANDING_NAVBAR_OFFSET,
-  LandingNavbar,
-  type LandingNavbarLink,
-} from '@repo/ui'
+import { LANDING_NAVBAR_OFFSET } from '@repo/ui'
 import {
   ArrowRight,
   Boxes,
@@ -17,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { OpenSeLandingNavbar } from '../components/OpenSeLandingNavbar'
 import { setActiveLandingContext } from '../lib/authRedirect'
 
 const etlLandingPath = '/etl'
@@ -95,63 +92,19 @@ const proofPoints = [
   { label: 'Platform surfaces', value: 'Accounts · Admin' },
 ]
 
-const productPageLinks: LandingNavbarLink[] = [
-  { label: 'OpenSe', href: '/', testId: 'nav-opense-product' },
-  { label: 'Open-ETL', href: etlLandingPath, testId: 'nav-open-etl-product' },
-  { label: 'Open-StoQR', href: stoqrLandingPath, testId: 'nav-open-stoqr-product' },
-]
-
-const sectionLinks: LandingNavbarLink[] = [
-  { label: 'Products', href: '#products' },
-  { label: 'Platform', href: '#platform' },
-  { label: 'How it works', href: '#flow' },
-]
-
-const mobileMenuLinks: LandingNavbarLink[] = [...productPageLinks, ...sectionLinks]
-
 const primaryLinkClass =
   'inline-flex items-center gap-2 rounded-full bg-[var(--color-foreground)] px-5 py-3 text-sm font-medium text-[var(--color-background)] transition-transform duration-200 hover:-translate-y-0.5 hover:bg-[var(--color-heading)]'
 
 const secondaryLinkClass =
   'inline-flex items-center gap-2 rounded-full border border-[var(--opense-shell-border-strong)] bg-[var(--opense-shell-surface)] px-5 py-3 text-sm font-medium text-[var(--color-foreground)] backdrop-blur transition-colors duration-200 hover:border-[var(--color-border-hover)] hover:bg-[var(--opense-shell-surface-strong)]'
 
-const renderOpenSeNavLink = (link: LandingNavbarLink, options: { className?: string; onClick?: () => void }) => {
-  if (link.href.startsWith('/')) {
-    return (
-      <Link
-        key={`${link.label}-${link.href}`}
-        to={link.href}
-        data-testid={link.testId}
-        className={options.className}
-        onClick={options.onClick}
-      >
-        {link.label}
-      </Link>
-    )
-  }
-
-  return (
-    <a
-      key={`${link.label}-${link.href}`}
-      href={link.href}
-      data-testid={link.testId}
-      className={options.className}
-      onClick={options.onClick}
-    >
-      {link.label}
-    </a>
-  )
-}
-
 export const LandingPage = () => {
-  const [mobileOpen, setMobileOpen] = useState(false)
-
   useEffect(() => {
     setActiveLandingContext('opense')
   }, [])
 
   return (
-    <div className="min-h-screen text-[var(--color-foreground)]">
+    <div className="min-h-screen text-[var(--color-foreground)] [--landing-navbar-transparent-foreground:var(--color-foreground)]">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div
           className="absolute inset-x-0 top-0 h-56"
@@ -171,52 +124,7 @@ export const LandingPage = () => {
         />
       </div>
 
-      <LandingNavbar
-        as="nav"
-        brand={(
-          <Link to="/" className="flex items-center gap-2 text-xl font-bold tracking-tight">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10">
-              <Network className="h-5 w-5" />
-            </span>
-            <span>OpenSe</span>
-          </Link>
-        )}
-        segmentedLinks={productPageLinks}
-        segmentedLinksAriaLabel="Product pages"
-        links={sectionLinks}
-        actions={(
-          <div className="hidden items-center gap-3 md:flex">
-            <Link to="/login" className="text-sm font-medium transition-transform duration-200 hover:-translate-y-px">
-              Sign in
-            </Link>
-            <Link to="/register" className={primaryLinkClass}>
-              Create account
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        )}
-        renderLink={renderOpenSeNavLink}
-        mobileMenu={{
-          open: mobileOpen,
-          onToggle: () => setMobileOpen((open) => !open),
-          items: mobileMenuLinks,
-          action: (
-            <div className="flex flex-col gap-3 pt-1">
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-5 py-3 text-sm font-medium text-[var(--color-foreground)]"
-                onClick={() => setMobileOpen(false)}
-              >
-                Sign in
-              </Link>
-              <Link to="/register" className={`${primaryLinkClass} justify-center`} onClick={() => setMobileOpen(false)}>
-                Create account
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-          ),
-        }}
-      />
+      <OpenSeLandingNavbar />
 
       <main id="top">
         <section
@@ -412,10 +320,10 @@ export const LandingPage = () => {
           </div>
         </section>
 
-        <section id="flow" className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-16">
+        <section id="architecture" className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-16">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <div>
-              <div className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--color-muted-foreground)]">How it works</div>
+              <div className="text-sm font-semibold uppercase tracking-[0.22em] text-[var(--color-muted-foreground)]">Architecture</div>
               <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-[var(--color-suiteNavy)] md:text-5xl">
                 Redirects are part of the product flow, not incidental plumbing.
               </h2>

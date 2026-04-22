@@ -145,6 +145,10 @@ const Navbar = () => {
   );
 };
 
+export interface LandingPageProps {
+  navbar?: React.ReactNode
+}
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    B. HERO — "The System Initialisation"
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -995,7 +999,7 @@ const Footer = () => {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    PAGE EXPORT
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-export const LandingPage = () => {
+export const LandingPage = ({ navbar }: LandingPageProps) => {
   useEffect(() => {
     ScrollTrigger.refresh();
   }, []);
@@ -1003,7 +1007,7 @@ export const LandingPage = () => {
   return (
     <div className="relative" style={{ backgroundColor: T.bg, color: T.dark }}>
       <NoiseOverlay />
-      <Navbar />
+      {navbar ?? <Navbar />}
       <Hero />
       <Features />
       <Philosophy />
