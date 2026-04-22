@@ -52,6 +52,13 @@ const webServers = [
     gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
   },
   {
+    command: 'pnpm dev:opense',
+    url: process.env.BASE_URL_OPENSE || 'http://localhost:5994',
+    reuseExistingServer,
+    timeout: 120000,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
+  },
+  {
     command: 'pnpm dev:stoqr',
     url: process.env.BASE_URL_STOQR || 'http://localhost:5993',
     reuseExistingServer,
@@ -106,6 +113,14 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         baseURL: process.env.BASE_URL_ETL || 'http://localhost:5992',
+      },
+    },
+    {
+      name: 'opense-chromium',
+      testMatch: 'apps/opense/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.BASE_URL_OPENSE || 'http://localhost:5994',
       },
     },
     {

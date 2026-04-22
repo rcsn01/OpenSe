@@ -61,6 +61,14 @@ Status legend:
 | `/alerts` | covered-existing | `apps/stoqr/alerts.spec.ts` |
 | `*` | covered-new | `apps/stoqr/route-coverage.spec.ts` |
 
+## OpenSe (`apps/opense/src/App.tsx`)
+
+| Route | Status | Spec |
+|---|---|---|
+| `/`, `/etl`, `/stoqr` | covered-new | `apps/opense/landing.spec.ts`, `apps/opense/redirects.spec.ts` |
+| `/login`, `/register`, `/auth`, `/signup` | covered-new | `apps/opense/redirects.spec.ts` |
+| `*` | covered-new | `apps/opense/redirects.spec.ts` |
+
 ## UI Design (`apps/ui-design/src/App.tsx`)
 
 | Route | Status | Spec |

@@ -33,8 +33,6 @@ const DashboardIndexRedirect = () => {
 };
 
 function AppContent() {
-  const { user } = useAuth();
-
   return (
     <ThemeProvider
       defaultTheme="light"

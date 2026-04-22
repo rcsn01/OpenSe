@@ -14,9 +14,23 @@ const T = {
   bg: 'var(--color-muted)',
   accent: 'var(--etl-accent)',
   accentHover: 'var(--etl-accent-hover)',
+  accentSoft: 'var(--color-info)',
   dark: 'var(--color-heading)',
   surface: 'var(--color-card)',
   surfaceBorder: 'var(--color-border)',
+  textMuted: 'var(--color-muted-foreground)',
+  inverse: 'var(--color-background)',
+  inverseStrong: 'color-mix(in srgb, var(--color-background) 84%, transparent)',
+  inverseMuted: 'color-mix(in srgb, var(--color-background) 65%, transparent)',
+  inverseSoft: 'color-mix(in srgb, var(--color-background) 42%, transparent)',
+  borderMuted: 'var(--color-border-hover)',
+  danger: 'var(--color-destructive)',
+  warning: 'var(--color-warning)',
+  success: 'var(--color-success)',
+  darkSurface: 'var(--color-foreground)',
+  darkSurfaceAlt: 'color-mix(in srgb, var(--color-foreground) 92%, black)',
+  darkBorder: 'color-mix(in srgb, var(--color-background) 8%, transparent)',
+  darkOverlay: 'color-mix(in srgb, var(--color-background) 3%, var(--color-foreground))',
   heading: 'var(--font-family)',
   drama: 'var(--font-family)',
   data: 'var(--font-family)',
@@ -117,12 +131,12 @@ const Navbar = () => {
         borderRadius: '9999px',
         maxWidth: 860,
         width: 'calc(100% - 2rem)',
-        backgroundColor: scrolled ? 'rgba(238,242,247,0.6)' : 'transparent',
+        backgroundColor: scrolled ? 'color-mix(in srgb, var(--color-muted) 68%, transparent)' : 'transparent',
         backdropFilter: scrolled ? 'blur(24px) saturate(1.8)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(24px) saturate(1.8)' : 'none',
-        border: scrolled ? '1px solid rgba(30,41,59,0.08)' : '1px solid transparent',
-        boxShadow: scrolled ? '0 4px 30px rgba(0,0,0,0.04)' : 'none',
-        color: scrolled ? T.dark : '#fff',
+        border: scrolled ? '1px solid color-mix(in srgb, var(--color-border) 80%, transparent)' : '1px solid transparent',
+        boxShadow: scrolled ? '0 4px 30px color-mix(in srgb, var(--color-foreground) 6%, transparent)' : 'none',
+        color: scrolled ? T.dark : T.inverse,
       }}
     >
       <a href="#hero" className="text-lg font-bold tracking-tight" style={{ fontFamily: T.heading }}>
@@ -159,9 +173,9 @@ const Navbar = () => {
         <div
           className="absolute top-full left-0 right-0 mt-2 p-4 flex flex-col gap-3 rounded-[1.5rem]"
           style={{
-            backgroundColor: 'rgba(238,242,247,0.95)',
+            backgroundColor: 'color-mix(in srgb, var(--color-muted) 92%, transparent)',
             backdropFilter: 'blur(24px)',
-            border: '1px solid rgba(30,41,59,0.08)',
+            border: '1px solid color-mix(in srgb, var(--color-border) 80%, transparent)',
             color: T.dark,
           }}
         >
@@ -228,12 +242,12 @@ const Hero = () => {
           className="hero-anim inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full text-xs tracking-widest"
           style={{
             fontFamily: T.data,
-            backgroundColor: 'rgba(29,78,216,0.12)',
-            color: '#93B4F8',
-            border: '1px solid rgba(29,78,216,0.2)',
+            backgroundColor: 'color-mix(in srgb, var(--etl-accent) 12%, var(--color-background))',
+            color: T.accentSoft,
+            border: '1px solid color-mix(in srgb, var(--etl-accent) 24%, transparent)',
           }}
         >
-          <PulsingDot color="#93B4F8" size={6} />
+          <PulsingDot color={T.accentSoft} size={6} />
           CLIENT-SIDE EXECUTION — NO DATA EGRESS
         </div>
 
@@ -247,7 +261,7 @@ const Hero = () => {
           </span>
           <span
             className="block text-5xl md:text-7xl lg:text-[5.5rem] italic mt-1"
-            style={{ fontFamily: T.drama, color: '#93B4F8' }}
+            style={{ fontFamily: T.drama, color: T.accentSoft }}
           >
             Data.
           </span>
@@ -256,7 +270,7 @@ const Hero = () => {
         {/* Subline */}
         <p
           className="hero-anim text-base md:text-lg max-w-lg mt-6"
-          style={{ fontFamily: T.heading, color: 'rgba(255,255,255,0.65)', lineHeight: 1.7 }}
+          style={{ fontFamily: T.heading, color: T.inverseMuted, lineHeight: 1.7 }}
         >
           Your data never leaves your browser.<br />
           Your pipeline never leaves your control.
@@ -325,7 +339,7 @@ const InBrowserCard = () => {
     <div className="rounded-[2rem] p-6 md:p-8 flex flex-col gap-6 border shadow-sm" style={{ backgroundColor: T.surface, borderColor: T.surfaceBorder }}>
       <div>
         <h3 className="text-xl font-bold mb-2" style={{ fontFamily: T.heading, color: T.dark }}>In-browser execution</h3>
-        <p className="text-sm" style={{ fontFamily: T.heading, color: '#64748B' }}>
+        <p className="text-sm" style={{ fontFamily: T.heading, color: T.textMuted }}>
           Your files are parsed and transformed locally. Nothing is uploaded to process your data — only your workflow definitions live in the cloud.
         </p>
       </div>
@@ -345,9 +359,9 @@ const InBrowserCard = () => {
           {/* Browser icon */}
           <rect x="60" y="65" width="80" height="52" rx="6" fill="none" stroke={T.dark} strokeWidth="1.5" />
           <line x1="60" y1="77" x2="140" y2="77" stroke={T.dark} strokeWidth="1" opacity="0.3" />
-          <circle cx="69" cy="71" r="2" fill="#EF4444" />
-          <circle cx="76" cy="71" r="2" fill="#F59E0B" />
-          <circle cx="83" cy="71" r="2" fill="#22C55E" />
+          <circle cx="69" cy="71" r="2" fill={T.danger} />
+          <circle cx="76" cy="71" r="2" fill={T.warning} />
+          <circle cx="83" cy="71" r="2" fill={T.success} />
 
           {/* Monitor stand */}
           <line x1="100" y1="117" x2="100" y2="126" stroke={T.dark} strokeWidth="1.5" />
@@ -355,13 +369,13 @@ const InBrowserCard = () => {
 
           {/* Blocked cloud arrow */}
           <g ref={blockedRef} opacity={0}>
-            <path d="M 160 95 L 160 60" stroke="#CBD5E1" strokeWidth="1.5" strokeDasharray="3 3" />
+            <path d="M 160 95 L 160 60" stroke={T.borderMuted} strokeWidth="1.5" strokeDasharray="3 3" />
             <path
               d="M 150 50 a6 6 0 0 1 6-6 a8 8 0 0 1 15 2 a5 5 0 0 1 2 10 h-19 a6 6 0 0 1-4-6z"
-              fill="none" stroke="#CBD5E1" strokeWidth="1.5"
+              fill="none" stroke={T.borderMuted} strokeWidth="1.5"
             />
-            <line x1="152" y1="70" x2="168" y2="56" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" />
-            <line x1="168" y1="70" x2="152" y2="56" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" />
+            <line x1="152" y1="70" x2="168" y2="56" stroke={T.danger} strokeWidth="2" strokeLinecap="round" />
+            <line x1="168" y1="70" x2="152" y2="56" stroke={T.danger} strokeWidth="2" strokeLinecap="round" />
           </g>
         </svg>
       </div>
@@ -438,7 +452,7 @@ const PipelineBuilderCard = () => {
     <div className="rounded-[2rem] p-6 md:p-8 flex flex-col gap-6 border shadow-sm" style={{ backgroundColor: T.surface, borderColor: T.surfaceBorder }}>
       <div>
         <h3 className="text-xl font-bold mb-2" style={{ fontFamily: T.heading, color: T.dark }}>Visual pipeline builder</h3>
-        <p className="text-sm" style={{ fontFamily: T.heading, color: '#64748B' }}>
+        <p className="text-sm" style={{ fontFamily: T.heading, color: T.textMuted }}>
           Drag-and-drop ETL for everyone on your team — not just engineers. Chain filters, joins, and transforms visually.
         </p>
       </div>
@@ -525,13 +539,13 @@ const VersionedWorkflowCard = () => {
     <div className="rounded-[2rem] p-6 md:p-8 flex flex-col gap-6 border shadow-sm" style={{ backgroundColor: T.surface, borderColor: T.surfaceBorder }}>
       <div>
         <h3 className="text-xl font-bold mb-2" style={{ fontFamily: T.heading, color: T.dark }}>Version-controlled workflows</h3>
-        <p className="text-sm" style={{ fontFamily: T.heading, color: '#64748B' }}>
+        <p className="text-sm" style={{ fontFamily: T.heading, color: T.textMuted }}>
           Export any pipeline as JSON. Full version history with one-click restore. No lock-in.
         </p>
       </div>
 
       <div className="rounded-[1.5rem] p-4 overflow-hidden" style={{ backgroundColor: T.dark }}>
-        <pre className="text-xs leading-relaxed" style={{ fontFamily: T.data, color: '#93B4F8', minHeight: '7.5rem' }}>
+        <pre className="text-xs leading-relaxed" style={{ fontFamily: T.data, color: T.accentSoft, minHeight: '7.5rem' }}>
           {jsonLines.slice(0, visibleLines).map((line, i) => (
             <div key={i} className="transition-opacity duration-300" style={{ opacity: 1 }}>
               {line}
@@ -550,11 +564,11 @@ const VersionedWorkflowCard = () => {
                 className="flex items-center gap-2 text-xs animate-[fadeSlideIn_0.3s_ease-out]"
                 style={{ fontFamily: T.data }}
               >
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: 'rgba(29,78,216,0.15)', color: T.accent }}>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: 'color-mix(in srgb, var(--etl-accent) 15%, transparent)', color: T.accent }}>
                   {v.v}
                 </span>
-                <span style={{ color: 'rgba(255,255,255,0.3)' }}>{v.hash}</span>
-                <span style={{ color: 'rgba(255,255,255,0.55)' }}>{v.msg}</span>
+                <span style={{ color: T.inverseSoft }}>{v.hash}</span>
+                <span style={{ color: T.inverseMuted }}>{v.msg}</span>
               </div>
             ))}
           </div>
@@ -646,23 +660,23 @@ const Philosophy = () => {
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto">
-        <p className="flex flex-wrap gap-x-2 gap-y-1 text-lg md:text-xl mb-8" style={{ fontFamily: T.heading, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
+        <p className="flex flex-wrap gap-x-2 gap-y-1 text-lg md:text-xl mb-8" style={{ fontFamily: T.heading, color: T.inverseMuted, lineHeight: 1.6 }}>
           {smallWords.map((w, i) => (
             <span key={i} className="word-reveal">{w}</span>
           ))}
           {highlightWords.map((w, i) => (
-            <span key={`h-${i}`} className="word-reveal italic" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: T.drama }}>{w}</span>
+            <span key={`h-${i}`} className="word-reveal italic" style={{ color: T.inverseSoft, fontFamily: T.drama }}>{w}</span>
           ))}
         </p>
 
-        <p className="flex flex-wrap gap-x-3 gap-y-1 text-3xl md:text-5xl lg:text-6xl font-bold" style={{ fontFamily: T.heading, color: '#fff', lineHeight: 1.15 }}>
+        <p className="flex flex-wrap gap-x-3 gap-y-1 text-3xl md:text-5xl lg:text-6xl font-bold" style={{ fontFamily: T.heading, color: T.inverse, lineHeight: 1.15 }}>
           {bigWords1.map((w, i) => (
             <span key={i} className="word-reveal">{w}</span>
           ))}
         </p>
         <p className="flex flex-wrap gap-x-3 gap-y-1 text-3xl md:text-5xl lg:text-6xl mt-2" style={{ fontFamily: T.drama, lineHeight: 1.15 }}>
           {bigWords2.map((w, i) => (
-            <span key={i} className="word-reveal italic" style={{ color: w.includes('sovereignty') || w.includes('egress') ? T.accent : 'rgba(255,255,255,0.85)' }}>
+            <span key={i} className="word-reveal italic" style={{ color: w.includes('sovereignty') || w.includes('egress') ? T.accent : T.inverseStrong }}>
               {w}
             </span>
           ))}
@@ -706,7 +720,7 @@ const IngestVisual = () => {
         <line x1="26" y1="63" x2="50" y2="63" stroke={T.accent} strokeWidth="0.8" opacity="0.4" />
         <line x1="26" y1="70" x2="52" y2="70" stroke={T.accent} strokeWidth="0.8" opacity="0.4" />
         <line x1="26" y1="77" x2="46" y2="77" stroke={T.accent} strokeWidth="0.8" opacity="0.4" />
-        <text x="40" y="108" textAnchor="middle" fontSize="8" fontFamily={T.data} fill="#64748B">Upload</text>
+        <text x="40" y="108" textAnchor="middle" fontSize="8" fontFamily={T.data} fill={T.textMuted}>Upload</text>
 
         {/* Data dots flowing to browser */}
         {[80, 96, 112].map((cx, i) => (
@@ -720,9 +734,9 @@ const IngestVisual = () => {
         {/* Browser window */}
         <rect x="150" y="22" width="125" height="86" rx="8" fill={T.surface} stroke={T.dark} strokeWidth="1.5" />
         <line x1="150" y1="38" x2="275" y2="38" stroke={T.dark} strokeWidth="0.5" opacity="0.2" />
-        <circle cx="162" cy="30" r="2.5" fill="#EF4444" />
-        <circle cx="171" cy="30" r="2.5" fill="#F59E0B" />
-        <circle cx="180" cy="30" r="2.5" fill="#22C55E" />
+        <circle cx="162" cy="30" r="2.5" fill={T.danger} />
+        <circle cx="171" cy="30" r="2.5" fill={T.warning} />
+        <circle cx="180" cy="30" r="2.5" fill={T.success} />
         <text x="212" y="62" textAnchor="middle" fontSize="10" fontFamily={T.heading} fontWeight="600" fill={T.dark}>Your Browser</text>
         <text x="212" y="78" textAnchor="middle" fontSize="7.5" fontFamily={T.data} fill={T.accent}>data stays here ✓</text>
 
@@ -731,22 +745,22 @@ const IngestVisual = () => {
         <text x="212" y="130" textAnchor="middle" fontSize="7" fontFamily={T.data} fill={T.accent} opacity="0.5">sandboxed</text>
 
         {/* Blocked path to LAN */}
-        <line x1="282" y1="50" x2="335" y2="42" stroke="#CBD5E1" strokeWidth="1.5" strokeDasharray="3 3" />
+        <line x1="282" y1="50" x2="335" y2="42" stroke={T.borderMuted} strokeWidth="1.5" strokeDasharray="3 3" />
         <g className="blocked-x">
-          <line x1="303" y1="38" x2="313" y2="52" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="313" y1="38" x2="303" y2="52" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="303" y1="38" x2="313" y2="52" stroke={T.danger} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="313" y1="38" x2="303" y2="52" stroke={T.danger} strokeWidth="2.5" strokeLinecap="round" />
         </g>
-        <rect x="340" y="28" width="52" height="28" rx="5" fill="none" stroke="#CBD5E1" strokeWidth="1.5" />
-        <text x="366" y="46" textAnchor="middle" fontSize="8" fontFamily={T.data} fill="#CBD5E1">LAN</text>
+        <rect x="340" y="28" width="52" height="28" rx="5" fill="none" stroke={T.borderMuted} strokeWidth="1.5" />
+        <text x="366" y="46" textAnchor="middle" fontSize="8" fontFamily={T.data} fill={T.borderMuted}>LAN</text>
 
         {/* Blocked path to WAN */}
-        <line x1="282" y1="82" x2="335" y2="92" stroke="#CBD5E1" strokeWidth="1.5" strokeDasharray="3 3" />
+        <line x1="282" y1="82" x2="335" y2="92" stroke={T.borderMuted} strokeWidth="1.5" strokeDasharray="3 3" />
         <g className="blocked-x">
-          <line x1="303" y1="79" x2="313" y2="93" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="313" y1="79" x2="303" y2="93" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="303" y1="79" x2="313" y2="93" stroke={T.danger} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="313" y1="79" x2="303" y2="93" stroke={T.danger} strokeWidth="2.5" strokeLinecap="round" />
         </g>
-        <path d="M345 97 a7 7 0 0 1 7-7 a9 9 0 0 1 17 2 a6 6 0 0 1 2 12 h-22 a7 7 0 0 1-4-7z" fill="none" stroke="#CBD5E1" strokeWidth="1.5" />
-        <text x="365" y="116" textAnchor="middle" fontSize="8" fontFamily={T.data} fill="#CBD5E1">WAN</text>
+        <path d="M345 97 a7 7 0 0 1 7-7 a9 9 0 0 1 17 2 a6 6 0 0 1 2 12 h-22 a7 7 0 0 1-4-7z" fill="none" stroke={T.borderMuted} strokeWidth="1.5" />
+        <text x="365" y="116" textAnchor="middle" fontSize="8" fontFamily={T.data} fill={T.borderMuted}>WAN</text>
       </svg>
     </div>
   );
@@ -866,7 +880,7 @@ const Protocol = () => {
           <div className="max-w-4xl mx-auto w-full rounded-[2rem] p-8 md:p-12 border shadow-sm" style={{ backgroundColor: T.surface, borderColor: T.surfaceBorder }}>
             <span className="text-xs tracking-widest mb-4 block" style={{ fontFamily: T.data, color: T.accent }}>STEP {card.step}</span>
             <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ fontFamily: T.heading, color: T.dark }}>{card.title}</h3>
-            <p className="text-base md:text-lg mb-8 max-w-xl" style={{ fontFamily: T.heading, color: '#64748B', lineHeight: 1.7 }}>{card.desc}</p>
+            <p className="text-base md:text-lg mb-8 max-w-xl" style={{ fontFamily: T.heading, color: T.textMuted, lineHeight: 1.7 }}>{card.desc}</p>
             {card.visual}
           </div>
         </div>
@@ -899,28 +913,28 @@ const TerminalCTA = () => {
   return (
     <section id="terminal" ref={sectionRef} className="py-24 md:py-36 px-6 md:px-16 lg:px-24" style={{ backgroundColor: T.dark }}>
       <div className="max-w-3xl mx-auto">
-        <div className="rounded-[1.5rem] overflow-hidden border" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center gap-2 px-5 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#EF4444' }} />
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#F59E0B' }} />
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22C55E' }} />
-            <span className="ml-3 text-xs" style={{ fontFamily: T.data, color: 'rgba(255,255,255,0.3)' }}>terminal</span>
+        <div className="rounded-[1.5rem] overflow-hidden border" style={{ borderColor: T.darkBorder }}>
+          <div className="flex items-center gap-2 px-5 py-3" style={{ backgroundColor: T.darkOverlay }}>
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: T.danger }} />
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: T.warning }} />
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: T.success }} />
+            <span className="ml-3 text-xs" style={{ fontFamily: T.data, color: T.inverseSoft }}>terminal</span>
           </div>
-          <div className="p-5 md:p-6 flex flex-col gap-3" style={{ backgroundColor: '#0F172A' }}>
+          <div className="p-5 md:p-6 flex flex-col gap-3" style={{ backgroundColor: T.darkSurfaceAlt }}>
             {lines.map((l, i) => (
               <div key={i} className="terminal-line flex items-center gap-2 text-sm" style={{ fontFamily: T.data }}>
                 <span style={{ color: T.accent }}>{l.prompt} $</span>
-                <span style={{ color: 'rgba(255,255,255,0.8)' }}>{l.cmd}</span>
+                <span style={{ color: T.inverseStrong }}>{l.cmd}</span>
               </div>
             ))}
             <div className="terminal-line flex items-center gap-1.5 mt-1 text-sm" style={{ fontFamily: T.data }}>
-              <span style={{ color: '#22C55E' }}>✔</span>
-              <span style={{ color: 'rgba(255,255,255,0.4)' }}>Open-ETL running on http://localhost:3000</span>
+              <span style={{ color: T.success }}>✔</span>
+              <span style={{ color: T.inverseSoft }}>Open-ETL running on http://localhost:3000</span>
             </div>
           </div>
         </div>
 
-        <p className="text-center mt-10 text-sm" style={{ fontFamily: T.heading, color: 'rgba(255,255,255,0.45)' }}>
+        <p className="text-center mt-10 text-sm" style={{ fontFamily: T.heading, color: T.inverseMuted }}>
           Or deploy to your own infrastructure in minutes.
         </p>
 
@@ -950,12 +964,12 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="pt-16 pb-10 px-6 md:px-16 lg:px-24" style={{ backgroundColor: '#0F172A' }}>
+    <footer className="pt-16 pb-10 px-6 md:px-16 lg:px-24" style={{ backgroundColor: T.darkSurfaceAlt }}>
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-12 mb-16">
           <div className="md:col-span-2">
             <h4 className="text-xl font-bold text-white mb-3" style={{ fontFamily: T.heading }}>Open-ETL</h4>
-            <p className="text-sm leading-relaxed" style={{ fontFamily: T.heading, color: 'rgba(255,255,255,0.4)' }}>
+            <p className="text-sm leading-relaxed" style={{ fontFamily: T.heading, color: T.inverseSoft }}>
               Data transformation.<br />Locally executed.<br />Openly governed.
             </p>
             <a
@@ -963,7 +977,7 @@ const Footer = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 mt-5 text-sm transition-transform duration-200 hover:-translate-y-px"
-              style={{ color: 'rgba(255,255,255,0.5)' }}
+              style={{ color: T.inverseMuted }}
             >
               <Github size={16} />
               GitHub
@@ -972,7 +986,7 @@ const Footer = () => {
 
           {columns.map(col => (
             <div key={col.title}>
-              <h5 className="text-xs tracking-widest font-semibold mb-4" style={{ fontFamily: T.data, color: 'rgba(255,255,255,0.25)' }}>
+              <h5 className="text-xs tracking-widest font-semibold mb-4" style={{ fontFamily: T.data, color: T.inverseSoft }}>
                 {col.title.toUpperCase()}
               </h5>
               <ul className="flex flex-col gap-2.5">
@@ -981,7 +995,7 @@ const Footer = () => {
                     <a
                       href={l.href}
                       className="text-sm transition-all duration-200 hover:-translate-y-px"
-                      style={{ fontFamily: T.heading, color: 'rgba(255,255,255,0.5)' }}
+                      style={{ fontFamily: T.heading, color: T.inverseMuted }}
                       target={l.href.startsWith('http') ? '_blank' : undefined}
                       rel={l.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                     >
@@ -994,13 +1008,13 @@ const Footer = () => {
           ))}
         </div>
 
-        <div className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          <span className="text-xs" style={{ fontFamily: T.heading, color: 'rgba(255,255,255,0.25)' }}>
+        <div className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4" style={{ borderColor: T.darkBorder }}>
+          <span className="text-xs" style={{ fontFamily: T.heading, color: T.inverseSoft }}>
             &copy; {new Date().getFullYear()} Open-ETL Project. MIT License.
           </span>
           <div className="flex items-center gap-2">
-            <PulsingDot color="#22C55E" size={6} />
-            <span className="text-xs tracking-wider" style={{ fontFamily: T.data, color: 'rgba(255,255,255,0.35)' }}>
+            <PulsingDot color={T.success} size={6} />
+            <span className="text-xs tracking-wider" style={{ fontFamily: T.data, color: T.inverseMuted }}>
               CLIENT_RUNTIME: ACTIVE
             </span>
           </div>

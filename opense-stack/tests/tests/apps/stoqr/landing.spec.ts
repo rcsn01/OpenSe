@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 test.describe('Stoqr Landing', () => {
   test('landing page shows features and CTAs', async ({ page }) => {
