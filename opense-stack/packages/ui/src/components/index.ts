@@ -54,6 +54,15 @@ export { Container, VStack, HStack, Grid } from './layout/Layout'
 export { StackLayout } from './layout/StackLayout'
 export { AppLayout, type AppLayoutProps } from './layout/AppLayout'
 export { BasePage, type BasePageProps } from './layout/BasePage'
+export {
+  LANDING_NAVBAR_OFFSET,
+  LANDING_NAVBAR_SCROLL_OFFSET,
+  LandingNavbar,
+  type LandingNavbarProps,
+  type LandingNavbarLink,
+  type LandingNavbarMobileMenu,
+  type LandingNavbarRenderLinkOptions,
+} from './layout/LandingNavbar'
 export { TopBar, type TopBarProps } from './layout/TopBar'
 export { SwitchAppTopBar, type SwitchAppTopBarProps } from './layout/SwitchAppTopBar'
 export { SwitchAppPopover, type SwitchAppPopoverProps } from './layout/SwitchAppPopover'

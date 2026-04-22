@@ -32,9 +32,6 @@
   --opense-shell-glow: color-mix(in srgb, var(--color-primary) 22%, transparent);
   --opense-shell-glow-secondary: color-mix(in srgb, var(--color-secondary) 24%, transparent);
   --opense-theme-grid: color-mix(in srgb, var(--color-foreground) 6%, transparent);
-  --opense-stoqr-nav-surface: color-mix(in srgb, var(--color-card) 86%, transparent);
-  --opense-stoqr-nav-border: color-mix(in srgb, var(--color-border) 82%, transparent);
-  --opense-stoqr-nav-text: var(--color-foreground);
   --opense-stoqr-scanner-border: var(--color-secondary);
   --opense-stoqr-scanner-glow: 0 0 20px color-mix(in srgb, var(--color-secondary) 34%, transparent);
   --opense-stoqr-panel: color-mix(in srgb, var(--color-foreground) 92%, black);

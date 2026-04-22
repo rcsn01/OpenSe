@@ -1,4 +1,9 @@
 import {
+  LANDING_NAVBAR_OFFSET,
+  LandingNavbar,
+  type LandingNavbarLink,
+} from '@repo/ui'
+import {
   ArrowRight,
   Boxes,
   Building2,
@@ -10,7 +15,7 @@ import {
   Users,
   Workflow,
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { setActiveLandingContext } from '../lib/authRedirect'
 
@@ -90,11 +95,19 @@ const proofPoints = [
   { label: 'Platform surfaces', value: 'Accounts · Admin' },
 ]
 
-const productPageLinks = [
+const productPageLinks: LandingNavbarLink[] = [
   { label: 'OpenSe', href: '/', testId: 'nav-opense-product' },
   { label: 'Open-ETL', href: etlLandingPath, testId: 'nav-open-etl-product' },
   { label: 'Open-StoQR', href: stoqrLandingPath, testId: 'nav-open-stoqr-product' },
 ]
+
+const sectionLinks: LandingNavbarLink[] = [
+  { label: 'Products', href: '#products' },
+  { label: 'Platform', href: '#platform' },
+  { label: 'How it works', href: '#flow' },
+]
+
+const mobileMenuLinks: LandingNavbarLink[] = [...productPageLinks, ...sectionLinks]
 
 const primaryLinkClass =
   'inline-flex items-center gap-2 rounded-full bg-[var(--color-foreground)] px-5 py-3 text-sm font-medium text-[var(--color-background)] transition-transform duration-200 hover:-translate-y-0.5 hover:bg-[var(--color-heading)]'
@@ -102,7 +115,37 @@ const primaryLinkClass =
 const secondaryLinkClass =
   'inline-flex items-center gap-2 rounded-full border border-[var(--opense-shell-border-strong)] bg-[var(--opense-shell-surface)] px-5 py-3 text-sm font-medium text-[var(--color-foreground)] backdrop-blur transition-colors duration-200 hover:border-[var(--color-border-hover)] hover:bg-[var(--opense-shell-surface-strong)]'
 
+const renderOpenSeNavLink = (link: LandingNavbarLink, options: { className?: string; onClick?: () => void }) => {
+  if (link.href.startsWith('/')) {
+    return (
+      <Link
+        key={`${link.label}-${link.href}`}
+        to={link.href}
+        data-testid={link.testId}
+        className={options.className}
+        onClick={options.onClick}
+      >
+        {link.label}
+      </Link>
+    )
+  }
+
+  return (
+    <a
+      key={`${link.label}-${link.href}`}
+      href={link.href}
+      data-testid={link.testId}
+      className={options.className}
+      onClick={options.onClick}
+    >
+      {link.label}
+    </a>
+  )
+}
+
 export const LandingPage = () => {
+  const [mobileOpen, setMobileOpen] = useState(false)
+
   useEffect(() => {
     setActiveLandingContext('opense')
   }, [])
@@ -110,6 +153,13 @@ export const LandingPage = () => {
   return (
     <div className="min-h-screen text-[var(--color-foreground)]">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div
+          className="absolute inset-x-0 top-0 h-56"
+          style={{
+            background:
+              'linear-gradient(180deg, color-mix(in srgb, var(--color-foreground) 54%, transparent), transparent)',
+          }}
+        />
         <div className="absolute left-[-8rem] top-16 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'var(--opense-shell-glow)' }} />
         <div className="absolute right-[-4rem] top-20 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: 'var(--opense-shell-glow-secondary)' }} />
         <div
@@ -121,38 +171,22 @@ export const LandingPage = () => {
         />
       </div>
 
-      <header className="sticky top-0 z-30 border-b border-[var(--opense-shell-border)] bg-[var(--opense-shell-surface)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
-          <Link to="/" className="flex items-center gap-3 text-sm font-semibold tracking-[0.2em] text-[var(--color-suiteNavy)] uppercase">
-            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[var(--color-suiteNavy)] text-[var(--color-background)] shadow-lg">
+      <LandingNavbar
+        as="nav"
+        brand={(
+          <Link to="/" className="flex items-center gap-2 text-xl font-bold tracking-tight">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10">
               <Network className="h-5 w-5" />
             </span>
-            OpenSe
+            <span>OpenSe</span>
           </Link>
-
-          <nav className="hidden items-center gap-5 text-sm text-[var(--color-body)] md:flex">
-            <div
-              aria-label="Product pages"
-              className="flex items-center gap-1 rounded-full border border-[var(--opense-shell-border)] bg-[var(--opense-shell-surface-strong)] p-1 text-xs font-medium text-[var(--color-muted-foreground)] shadow-sm backdrop-blur"
-            >
-              {productPageLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  to={link.href}
-                  data-testid={link.testId}
-                  className="rounded-full px-3 py-1.5 transition-colors hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)]"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-            <a href="#products" className="transition-colors hover:text-[var(--color-foreground)]">Products</a>
-            <a href="#platform" className="transition-colors hover:text-[var(--color-foreground)]">Platform</a>
-            <a href="#flow" className="transition-colors hover:text-[var(--color-foreground)]">How it works</a>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="hidden text-sm font-medium text-[var(--color-body)] transition-colors hover:text-[var(--color-foreground)] sm:inline-flex">
+        )}
+        segmentedLinks={productPageLinks}
+        segmentedLinksAriaLabel="Product pages"
+        links={sectionLinks}
+        actions={(
+          <div className="hidden items-center gap-3 md:flex">
+            <Link to="/login" className="text-sm font-medium transition-transform duration-200 hover:-translate-y-px">
               Sign in
             </Link>
             <Link to="/register" className={primaryLinkClass}>
@@ -160,11 +194,35 @@ export const LandingPage = () => {
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
-        </div>
-      </header>
+        )}
+        renderLink={renderOpenSeNavLink}
+        mobileMenu={{
+          open: mobileOpen,
+          onToggle: () => setMobileOpen((open) => !open),
+          items: mobileMenuLinks,
+          action: (
+            <div className="flex flex-col gap-3 pt-1">
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-5 py-3 text-sm font-medium text-[var(--color-foreground)]"
+                onClick={() => setMobileOpen(false)}
+              >
+                Sign in
+              </Link>
+              <Link to="/register" className={`${primaryLinkClass} justify-center`} onClick={() => setMobileOpen(false)}>
+                Create account
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          ),
+        }}
+      />
 
       <main id="top">
-        <section className="mx-auto grid max-w-7xl gap-12 px-6 pb-20 pt-16 lg:grid-cols-[minmax(0,1.1fr)_24rem] lg:px-10 lg:pb-28 lg:pt-20">
+        <section
+          className="mx-auto grid max-w-7xl gap-12 px-6 pb-20 lg:grid-cols-[minmax(0,1.1fr)_24rem] lg:px-10 lg:pb-28"
+          style={{ paddingTop: `calc(${LANDING_NAVBAR_OFFSET} + 2rem)` }}
+        >
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--opense-shell-border)] bg-[var(--opense-shell-surface)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--color-body)] shadow-sm backdrop-blur">
               <span className="h-2 w-2 rounded-full bg-[var(--color-suiteOrange)]" />

@@ -1,4 +1,10 @@
 import React, { useRef, useState } from 'react'
+import {
+  LANDING_NAVBAR_OFFSET,
+  LANDING_NAVBAR_SCROLL_OFFSET,
+  LandingNavbar,
+  type LandingNavbarLink,
+} from '@repo/ui'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ScanLine, Box, FileJson, Network, CheckCircle2, ChevronRight, Github, Cloud, Server, ArrowRightLeft, QrCode, Barcode } from 'lucide-react'
 import gsap from 'gsap'
@@ -8,9 +14,6 @@ import { useGSAP } from '@gsap/react'
 gsap.registerPlugin(ScrollTrigger)
 
 const C = {
-  navSurface: 'var(--opense-stoqr-nav-surface, color-mix(in srgb, var(--color-card) 86%, transparent))',
-  navBorder: 'var(--opense-stoqr-nav-border, color-mix(in srgb, var(--color-border) 82%, transparent))',
-  navText: 'var(--opense-stoqr-nav-text, var(--color-foreground))',
   scannerBorder: 'var(--opense-stoqr-scanner-border, var(--color-presetAccent))',
   scannerGlow: 'var(--opense-stoqr-scanner-glow, 0 0 20px color-mix(in srgb, var(--color-presetAccent) 34%, transparent))',
   panel: 'var(--opense-stoqr-panel, color-mix(in srgb, var(--color-foreground) 92%, black))',
@@ -18,6 +21,12 @@ const C = {
   terminalStrip: 'var(--opense-stoqr-terminal-strip, color-mix(in srgb, var(--color-foreground) 88%, black))',
   accentGlow: 'var(--opense-stoqr-accent-glow, 0 0 40px color-mix(in srgb, var(--color-presetAccent) 16%, transparent))',
 } as const
+
+const navLinks: LandingNavbarLink[] = [
+  { label: 'Architecture', href: '#features' },
+  { label: 'Protocol', href: '#protocol' },
+  { label: 'Manifesto', href: '#manifesto' },
+]
 
 // --- OVERLAYS & EFFECTS ---
 const NoiseOverlay = () => (
@@ -78,42 +87,36 @@ const MagneticButton = ({ children, className = '', href, onClick }: { children:
 
 // A. NAVBAR
 const Navbar = () => {
-  const navRef = useRef<HTMLElement>(null)
-
-  useGSAP(() => {
-    if (!navRef.current) return
-
-    gsap.to(navRef.current, {
-      backgroundColor: C.navSurface,
-      backdropFilter: 'blur(20px)',
-      borderColor: C.navBorder,
-      borderWidth: 1,
-      borderStyle: 'solid',
-      color: C.navText,
-      ease: 'none',
-      scrollTrigger: {
-        start: 'top -100',
-        end: 99999,
-        toggleActions: 'play reverse play reverse',
-      },
-    })
-  })
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <nav ref={navRef} className="fixed left-1/2 top-6 z-40 flex -translate-x-1/2 items-center justify-between rounded-full bg-transparent px-6 py-3 text-white transition-all duration-300 w-[90%] max-w-5xl">
-      <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-        <Box className="h-6 w-6 text-presetAccent" />
-        <span>StoQR</span>
-      </div>
-      <div className="hidden md:flex items-center gap-8 text-sm font-medium">
-        <a href="#features" className="hover:-translate-y-px transition-transform">Architecture</a>
-        <a href="#protocol" className="hover:-translate-y-px transition-transform">Protocol</a>
-        <a href="#manifesto" className="hover:-translate-y-px transition-transform">Manifesto</a>
-      </div>
-      <MagneticButton href="/auth" className="bg-presetAccent text-white! py-2 px-5 text-sm">
-        Get Started
-      </MagneticButton>
-    </nav>
+    <LandingNavbar
+      as="nav"
+      brand={(
+        <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
+          <Box className="h-6 w-6 text-presetAccent" />
+          <span>StoQR</span>
+        </div>
+      )}
+      links={navLinks}
+      actions={(
+        <div className="hidden md:flex items-center">
+          <MagneticButton href="/auth" className="bg-presetAccent text-white! py-2 px-5 text-sm">
+            Get Started
+          </MagneticButton>
+        </div>
+      )}
+      mobileMenu={{
+        open: mobileOpen,
+        onToggle: () => setMobileOpen((open) => !open),
+        items: navLinks,
+        action: (
+          <MagneticButton href="/auth" className="!justify-center bg-presetAccent text-white!" onClick={() => setMobileOpen(false)}>
+            Get Started
+          </MagneticButton>
+        ),
+      }}
+    />
   )
 }
 
@@ -134,7 +137,15 @@ const Hero = () => {
   }, { scope: containerRef })
 
   return (
-    <section ref={containerRef} className="relative h-[100dvh] w-full overflow-hidden bg-presetPrimary flex items-end">
+    <section
+      ref={containerRef}
+      className="relative flex min-h-[100dvh] w-full items-end overflow-hidden bg-presetPrimary"
+      style={{
+        boxSizing: 'border-box',
+        minHeight: '100dvh',
+        paddingTop: LANDING_NAVBAR_OFFSET,
+      }}
+    >
       <div className="absolute inset-0 z-0">
         <img 
           src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2940&auto=format&fit=crop"
@@ -261,7 +272,7 @@ const Features = () => {
   }, { scope: containerRef })
 
   return (
-    <section id="features" ref={containerRef} className="bg-presetBackground py-32 px-6">
+    <section id="features" ref={containerRef} className="bg-presetBackground py-32 px-6" style={{ scrollMarginTop: LANDING_NAVBAR_SCROLL_OFFSET }}>
       <div className="mx-auto max-w-7xl">
         <div className="mb-20 text-center">
           <h2 className="text-4xl tracking-tight text-presetPrimary md:text-5xl lg:text-6xl font-bold">
@@ -430,7 +441,7 @@ const Philosophy = () => {
   }, { scope: triggerRef })
 
   return (
-    <section id="manifesto" ref={triggerRef} className="relative py-40 bg-presetTextDark overflow-hidden flex items-center justify-center mix-blend-multiply">
+    <section id="manifesto" ref={triggerRef} className="relative py-40 bg-presetTextDark overflow-hidden flex items-center justify-center mix-blend-multiply" style={{ scrollMarginTop: LANDING_NAVBAR_SCROLL_OFFSET }}>
       <div className="absolute inset-0 z-0">
         <img 
           src="https://images.unsplash.com/photo-1566843972142-a7fcb70de55a?q=80&w=2938&auto=format&fit=crop" 
@@ -477,7 +488,7 @@ const Protocol = () => {
   }, { scope: containerRef })
 
   return (
-    <section id="protocol" ref={containerRef} className="bg-presetBackground relative z-10 w-full">
+    <section id="protocol" ref={containerRef} className="bg-presetBackground relative z-10 w-full" style={{ scrollMarginTop: LANDING_NAVBAR_SCROLL_OFFSET }}>
       {/* Card 1 */}
       <div className="pin-card h-screen w-full bg-white flex items-center justify-center sticky top-0 border-b border-presetPrimary/10 shadow-[0_10px_30px_rgba(0,0,0,0.05)] rounded-t-[2rem]">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">

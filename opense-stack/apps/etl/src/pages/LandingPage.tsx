@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import {
+  LANDING_NAVBAR_OFFSET,
+  LANDING_NAVBAR_SCROLL_OFFSET,
+  LandingNavbar,
+  type LandingNavbarLink,
+} from '@repo/ui';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
-  Github, Menu, X, ArrowDown,
+  Github, ArrowDown,
   MonitorDown, HardDrive,
   FileSpreadsheet, Filter, Combine, ArrowRightLeft, Download,
 } from 'lucide-react';
@@ -35,6 +41,13 @@ const T = {
   drama: 'var(--font-family)',
   data: 'var(--font-family)',
 } as const;
+
+const navLinks: LandingNavbarLink[] = [
+  { label: 'Features', href: '#features' },
+  { label: 'How It Works', href: '#protocol' },
+  { label: 'Templates', href: '#terminal' },
+  { label: 'GitHub', href: 'https://github.com/open-etl/open-etl', external: true },
+]
 
 /* ─── Noise Overlay ─── */
 const NoiseOverlay = () => (
@@ -100,101 +113,35 @@ const PulsingDot = ({ color = T.accent, size = 8 }: { color?: string; size?: num
    A. NAVBAR — "The Floating Command"
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const Navbar = () => {
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const navRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const hero = document.getElementById('hero');
-    if (!hero) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setScrolled(!entry.isIntersecting),
-      { threshold: 0.05 },
-    );
-    observer.observe(hero);
-    return () => observer.disconnect();
-  }, []);
-
-  const links = [
-    { label: 'Features', href: '#features' },
-    { label: 'How It Works', href: '#protocol' },
-    { label: 'Templates', href: '#terminal' },
-    { label: 'GitHub', href: 'https://github.com/open-etl/open-etl' },
-  ];
 
   return (
-    <nav
-      ref={navRef}
-      className="fixed top-4 left-1/2 z-50 -translate-x-1/2 flex items-center justify-between px-4 md:px-6 py-3 transition-all duration-500"
-      style={{
-        fontFamily: T.heading,
-        borderRadius: '9999px',
-        maxWidth: 860,
-        width: 'calc(100% - 2rem)',
-        backgroundColor: scrolled ? 'color-mix(in srgb, var(--color-muted) 68%, transparent)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(24px) saturate(1.8)' : 'none',
-        WebkitBackdropFilter: scrolled ? 'blur(24px) saturate(1.8)' : 'none',
-        border: scrolled ? '1px solid color-mix(in srgb, var(--color-border) 80%, transparent)' : '1px solid transparent',
-        boxShadow: scrolled ? '0 4px 30px color-mix(in srgb, var(--color-foreground) 6%, transparent)' : 'none',
-        color: scrolled ? T.dark : T.inverse,
-      }}
-    >
-      <a href="#hero" className="text-lg font-bold tracking-tight" style={{ fontFamily: T.heading }}>
-        Open-ETL
-      </a>
-
-      {/* Desktop */}
-      <div className="hidden md:flex items-center gap-6">
-        {links.map(l => (
-          <a
-            key={l.label}
-            href={l.href}
-            className="text-sm font-medium transition-transform duration-200 hover:-translate-y-px"
-            target={l.href.startsWith('http') ? '_blank' : undefined}
-            rel={l.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-          >{l.label}</a>
-        ))}
-        <MagneticButton href="/login" className="!py-2 !px-5 !text-xs">
-          Get Started
-        </MagneticButton>
-      </div>
-
-      {/* Mobile toggle */}
-      <button
-        className="md:hidden p-1"
-        onClick={() => setMobileOpen(!mobileOpen)}
-        aria-label="Toggle menu"
-      >
-        {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-      </button>
-
-      {/* Mobile dropdown */}
-      {mobileOpen && (
-        <div
-          className="absolute top-full left-0 right-0 mt-2 p-4 flex flex-col gap-3 rounded-[1.5rem]"
-          style={{
-            backgroundColor: 'color-mix(in srgb, var(--color-muted) 92%, transparent)',
-            backdropFilter: 'blur(24px)',
-            border: '1px solid color-mix(in srgb, var(--color-border) 80%, transparent)',
-            color: T.dark,
-          }}
-        >
-          {links.map(l => (
-            <a
-              key={l.label}
-              href={l.href}
-              className="text-sm font-medium py-2 px-3"
-              onClick={() => setMobileOpen(false)}
-              target={l.href.startsWith('http') ? '_blank' : undefined}
-              rel={l.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-            >{l.label}</a>
-          ))}
-          <MagneticButton href="/login" className="!justify-center" onClick={() => setMobileOpen(false)}>
+    <LandingNavbar
+      as="nav"
+      brand={(
+        <a href="#hero" className="text-xl font-bold tracking-tight">
+          Open-ETL
+        </a>
+      )}
+      links={navLinks}
+      actions={(
+        <div className="hidden md:flex items-center">
+          <MagneticButton href="/login" className="!py-2 !px-5 !text-xs">
             Get Started
           </MagneticButton>
         </div>
       )}
-    </nav>
+      mobileMenu={{
+        open: mobileOpen,
+        onToggle: () => setMobileOpen((open) => !open),
+        items: navLinks,
+        action: (
+          <MagneticButton href="/login" className="!justify-center" onClick={() => setMobileOpen(false)}>
+            Get Started
+          </MagneticButton>
+        ),
+      }}
+    />
   );
 };
 
@@ -218,6 +165,12 @@ const Hero = () => {
       id="hero"
       ref={sectionRef}
       className="relative flex flex-col justify-end min-h-[100dvh] overflow-hidden"
+      style={{
+        boxSizing: 'border-box',
+        minHeight: '100dvh',
+        paddingTop: LANDING_NAVBAR_OFFSET,
+        scrollMarginTop: LANDING_NAVBAR_SCROLL_OFFSET,
+      }}
     >
       {/* Background image */}
       <div className="absolute inset-0">
@@ -599,7 +552,12 @@ const Features = () => {
   }, []);
 
   return (
-    <section id="features" ref={sectionRef} className="py-24 md:py-36 px-6 md:px-16 lg:px-24" style={{ backgroundColor: T.bg }}>
+    <section
+      id="features"
+      ref={sectionRef}
+      className="py-24 md:py-36 px-6 md:px-16 lg:px-24"
+      style={{ backgroundColor: T.bg, scrollMarginTop: LANDING_NAVBAR_SCROLL_OFFSET }}
+    >
       <div className="max-w-6xl mx-auto">
         <div className="mb-16">
           <span className="text-xs tracking-widest font-medium" style={{ fontFamily: T.data, color: T.accent }}>
@@ -867,7 +825,12 @@ const Protocol = () => {
   }, []);
 
   return (
-    <section id="protocol" ref={containerRef} className="relative" style={{ backgroundColor: T.bg }}>
+    <section
+      id="protocol"
+      ref={containerRef}
+      className="relative"
+      style={{ backgroundColor: T.bg, scrollMarginTop: LANDING_NAVBAR_SCROLL_OFFSET }}
+    >
       <div className="px-6 md:px-16 lg:px-24 pt-24 pb-8 max-w-6xl mx-auto">
         <span className="text-xs tracking-widest font-medium" style={{ fontFamily: T.data, color: T.accent }}>PROTOCOL</span>
         <h2 className="text-3xl md:text-4xl font-bold mt-3" style={{ fontFamily: T.heading, color: T.dark }}>
@@ -911,7 +874,12 @@ const TerminalCTA = () => {
   }, []);
 
   return (
-    <section id="terminal" ref={sectionRef} className="py-24 md:py-36 px-6 md:px-16 lg:px-24" style={{ backgroundColor: T.dark }}>
+    <section
+      id="terminal"
+      ref={sectionRef}
+      className="py-24 md:py-36 px-6 md:px-16 lg:px-24"
+      style={{ backgroundColor: T.dark, scrollMarginTop: LANDING_NAVBAR_SCROLL_OFFSET }}
+    >
       <div className="max-w-3xl mx-auto">
         <div className="rounded-[1.5rem] overflow-hidden border" style={{ borderColor: T.darkBorder }}>
           <div className="flex items-center gap-2 px-5 py-3" style={{ backgroundColor: T.darkOverlay }}>
