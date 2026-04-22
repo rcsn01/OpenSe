@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { LandingPage as StoqrLandingPage } from '../../../stoqr/src/pages/LandingPage'
+import { OpenSeLandingNavbar } from '../components/OpenSeLandingNavbar'
 import { setActiveLandingContext } from '../lib/authRedirect'
 
 export const OpenStoqrLandingPage = () => {
@@ -10,7 +11,7 @@ export const OpenStoqrLandingPage = () => {
 
   return (
     <div className="opense-theme-stoqr">
-      <StoqrLandingPage />
+      <StoqrLandingPage navbar={<OpenSeLandingNavbar />} />
     </div>
   )
 }

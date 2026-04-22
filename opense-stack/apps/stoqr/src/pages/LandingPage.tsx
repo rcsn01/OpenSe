@@ -120,6 +120,10 @@ const Navbar = () => {
   )
 }
 
+export interface LandingPageProps {
+  navbar?: React.ReactNode
+}
+
 // B. HERO
 const Hero = () => {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -642,7 +646,7 @@ const Footer = () => {
   )
 }
 
-export const LandingPage = () => {
+export const LandingPage = ({ navbar }: LandingPageProps) => {
   return (
     <div className="bg-presetBackground min-h-screen text-presetTextDark selection:bg-presetAccent selection:text-white">
       <NoiseOverlay />
@@ -670,7 +674,7 @@ export const LandingPage = () => {
           50% { top: 100%; }
         }
       `}</style>
-      <Navbar />
+      {navbar ?? <Navbar />}
       <Hero />
       <Features />
       <Philosophy />
