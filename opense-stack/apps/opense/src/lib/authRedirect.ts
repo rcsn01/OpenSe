@@ -9,6 +9,28 @@ const STOQR_PUBLIC_URL = (import.meta.env.VITE_STOQR_PUBLIC_URL as string | unde
 
 const LANDING_CONTEXT_KEY = 'opense-active-landing-context'
 
+const normalizeBaseUrl = (value: string) => value.replace(/\/$/, '')
+
+export const normalizeLandingContext = (value: string | null | undefined): LandingContext => {
+  if (value === 'etl' || value === 'stoqr') {
+    return value
+  }
+
+  return 'opense'
+}
+
+export const getLandingContextFromPathname = (pathname: string): LandingContext => {
+  if (pathname.startsWith('/etl')) {
+    return 'etl'
+  }
+
+  if (pathname.startsWith('/stoqr')) {
+    return 'stoqr'
+  }
+
+  return 'opense'
+}
+
 export const setActiveLandingContext = (context: LandingContext) => {
   if (typeof window === 'undefined') {
     return
@@ -22,13 +44,19 @@ const getActiveLandingContext = (): LandingContext => {
     return 'opense'
   }
 
-  const value = window.sessionStorage.getItem(LANDING_CONTEXT_KEY)
-  if (value === 'etl' || value === 'stoqr') {
-    return value
-  }
-
-  return 'opense'
+  return normalizeLandingContext(window.sessionStorage.getItem(LANDING_CONTEXT_KEY))
 }
+
+export const buildNavbarGetStartedPath = (context: LandingContext) => {
+  const params = new URLSearchParams({ context })
+  return `/get-started?${params.toString()}`
+}
+
+export const buildAccountsAppUrl = () => `${normalizeBaseUrl(ACCOUNTS_URL)}/account/general`
+
+export const buildEtlDashboardUrl = () => `${normalizeBaseUrl(ETL_PUBLIC_URL)}/dashboard`
+
+export const buildStoqrDashboardUrl = () => `${normalizeBaseUrl(STOQR_PUBLIC_URL)}/dashboard`
 
 export const buildOpenSeAccountsAuthUrl = (mode: AuthMode) => {
   return buildSharedAccountsAuthUrl({
@@ -59,9 +87,39 @@ export const buildStoqrAccountsAuthUrl = (mode: AuthMode) => {
 }
 
 export const buildAccountsAuthUrl = (mode: AuthMode) => {
-  if (getActiveLandingContext() === 'etl') {
+  const context = getActiveLandingContext()
+
+  if (context === 'etl') {
     return buildEtlAccountsAuthUrl(mode)
   }
 
+  if (context === 'stoqr') {
+    return buildStoqrAccountsAuthUrl(mode)
+  }
+
   return buildOpenSeAccountsAuthUrl(mode)
+}
+
+export const buildGetStartedGuestUrl = (context: LandingContext) => {
+  if (context === 'etl') {
+    return buildEtlAccountsAuthUrl('signin')
+  }
+
+  if (context === 'stoqr') {
+    return buildStoqrAccountsAuthUrl('signin')
+  }
+
+  return `${normalizeBaseUrl(ACCOUNTS_URL)}/login`
+}
+
+export const buildGetStartedAuthenticatedUrl = (context: LandingContext) => {
+  if (context === 'etl') {
+    return buildEtlDashboardUrl()
+  }
+
+  if (context === 'stoqr') {
+    return buildStoqrDashboardUrl()
+  }
+
+  return buildAccountsAppUrl()
 }

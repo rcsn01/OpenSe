@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@repo/ui'
 import { AuthRedirectPage } from '@repo/shared/auth'
 import { LandingPage } from './pages/LandingPage'
+import { GetStartedRedirectPage } from './pages/GetStartedRedirectPage'
 import { OpenEtlLandingPage } from './pages/OpenEtlLandingPage'
 import { OpenStoqrLandingPage } from './pages/OpenStoqrLandingPage'
 import {
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/etl" element={<OpenEtlLandingPage />} />
         <Route path="/stoqr" element={<OpenStoqrLandingPage />} />
+        <Route path="/get-started" element={<GetStartedRedirectPage />} />
         <Route path="/login" element={<AuthRedirectPage mode="signin" buildAuthUrl={buildAccountsAuthUrl} />} />
         <Route path="/register" element={<AuthRedirectPage mode="signup" buildAuthUrl={buildOpenSeAccountsAuthUrl} />} />
         <Route path="/auth" element={<AuthRedirectPage mode="signin" buildAuthUrl={buildStoqrAccountsAuthUrl} />} />
