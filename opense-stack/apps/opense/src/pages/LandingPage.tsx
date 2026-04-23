@@ -2,7 +2,8 @@ import { LANDING_NAVBAR_OFFSET } from '@repo/ui'
 import { ArrowRight, Boxes, CheckCircle2, Command, Database, Network, Workflow } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { OpenSeLandingNavbar } from '../components/OpenSeLandingNavbar'
+import { MarketingFooter } from '../components/MarketingFooter'
+import { MarketingPageFrame } from '../components/MarketingPageFrame'
 import { setActiveLandingContext } from '../lib/authRedirect'
 
 const etlLandingPath = '/etl'
@@ -62,24 +63,6 @@ const infrastructureHighlights = [
   },
 ] as const
 
-const footerColumns = [
-  {
-    title: 'Products',
-    items: [
-      { label: 'Open-ETL', href: etlLandingPath },
-      { label: 'Open-StoQr', href: stoqrLandingPath },
-    ],
-  },
-  {
-    title: 'Resources',
-    items: [{ label: 'Documentation' }, { label: 'GitHub Repository' }, { label: 'API Reference' }],
-  },
-  {
-    title: 'Legal',
-    items: [{ label: 'Privacy Policy' }, { label: 'Terms of Service' }, { label: 'License' }],
-  },
-] as const
-
 const primaryLinkClass =
   'inline-flex items-center justify-center rounded-xl border border-transparent px-6 py-3 text-sm font-semibold transition-colors duration-200'
 
@@ -93,8 +76,8 @@ export const LandingPage = () => {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)] [--landing-navbar-transparent-foreground:var(--color-foreground)]">
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <MarketingPageFrame background={(
+      <>
         <div className="absolute inset-0 bg-[var(--color-background)]" />
         <div
           className="absolute left-[-10rem] top-[-4rem] h-[26rem] w-[26rem] rounded-full blur-3xl"
@@ -111,11 +94,8 @@ export const LandingPage = () => {
               'linear-gradient(180deg, color-mix(in srgb, var(--color-primary-light) 42%, var(--color-background)) 0%, transparent 100%)',
           }}
         />
-      </div>
-
-      <OpenSeLandingNavbar />
-
-      <main>
+      </>
+    )}>
         <section
           className="mx-auto max-w-5xl px-6 pb-8 text-center"
           style={{ paddingTop: `calc(${LANDING_NAVBAR_OFFSET} + 4.5rem)` }}
@@ -299,45 +279,7 @@ export const LandingPage = () => {
           </div>
         </section>
 
-        <footer className="mt-16 border-t" style={{ borderColor: 'var(--opense-shell-border)', backgroundColor: 'rgba(255,255,255,0.62)' }}>
-          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-10 md:grid-cols-[1.2fr_repeat(3,minmax(0,0.72fr))]">
-            <div>
-              <div className="flex items-center gap-3 text-xl font-semibold text-[var(--color-heading)]">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[color:color-mix(in_srgb,var(--color-primary-hover)_18%,white)] text-xs font-bold uppercase text-[var(--color-primary-hover)]">
-                  OS
-                </span>
-                <span>OpenSe</span>
-              </div>
-              <p className="mt-4 max-w-xs text-sm leading-6 text-[var(--color-body)]">
-                The open source SaaS stack for modern organizations. Built by Chu-Cheng Yu for Studio Project.
-              </p>
-            </div>
-
-            {footerColumns.map((column) => (
-              <div key={column.title}>
-                <h3 className="text-sm font-semibold text-[var(--color-heading)]">{column.title}</h3>
-                <ul className="mt-4 space-y-3 text-sm text-[var(--color-body)]">
-                  {column.items.map((item) => (
-                    <li key={item.label}>
-                      {'href' in item ? (
-                        <Link to={item.href} className="transition-colors duration-200 hover:text-[var(--color-heading)]">
-                          {item.label}
-                        </Link>
-                      ) : (
-                        <span>{item.label}</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t px-6 py-4 text-center text-sm text-[var(--color-muted-foreground)]" style={{ borderColor: 'var(--opense-shell-border)' }}>
-            © 2026 OpenSe Project. All rights reserved. UTS Studio.
-          </div>
-        </footer>
-      </main>
-    </div>
+        <MarketingFooter className="mt-16" />
+    </MarketingPageFrame>
   )
 }
