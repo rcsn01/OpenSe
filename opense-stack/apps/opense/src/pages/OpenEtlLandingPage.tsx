@@ -1,30 +1,78 @@
-import { useEffect } from 'react'
-import { LANDING_NAVBAR_OFFSET } from '@repo/ui'
-import { OpenSeLandingNavbar } from '../components/OpenSeLandingNavbar'
-import { setActiveLandingContext } from '../lib/authRedirect'
+import { Activity, Code2, Database, LockKeyhole, ShieldCheck, UsersRound, Workflow } from 'lucide-react'
+import { ProductLandingPage, type ProductLandingFeature } from '../components/ProductLandingPage'
+
+const featureCards: ProductLandingFeature[] = [
+  {
+    title: 'Privacy-First Processing',
+    description:
+      'Source datasets are processed entirely in your browser using IndexedDB. Raw records are never sent to a third-party backend, ensuring compliance for biomedical and fintech workloads.',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Visual Workflow Builder',
+    description:
+      'No-code and low-code pipeline authoring using React Flow. Drag, drop, and connect nodes to filter, sort, join, pivot, and transform your CSV data effortlessly.',
+    icon: Workflow,
+  },
+  {
+    title: 'Local Browser Persistence',
+    description:
+      'Efficient local chunking and storage for large datasets during execution. Supabase is only used for saving workflow definitions and lightweight execution logs.',
+    icon: Database,
+  },
+  {
+    title: 'Team & Governance',
+    description:
+      'Multi-organization workspaces with role-aware collaboration. Keep personal workflows separate and enforce read-only protection for vital organization templates.',
+    icon: UsersRound,
+  },
+  {
+    title: 'Monitoring & Logs',
+    description:
+      'Detailed execution run logging with status, timing, and errors. Get workflow-level failure notifications pushed via Email, Slack, or webhooks.',
+    icon: Activity,
+  },
+  {
+    title: 'Code Node Overrides',
+    description:
+      'Need something complex? Use the optional Code Node for controlled, custom JavaScript transformations right in the middle of your visual pipeline.',
+    icon: Code2,
+  },
+]
+
+const featureIconClass =
+  'inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-primary-hover)_12%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary-light)_40%,white)] text-[var(--color-primary-hover)]'
 
 export const OpenEtlLandingPage = () => {
-  useEffect(() => {
-    setActiveLandingContext('etl')
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-  }, [])
-
   return (
-    <div className="min-h-screen bg-black text-white [--landing-navbar-transparent-foreground:var(--color-background)]">
-      <OpenSeLandingNavbar />
-
-      <main
-        className="mx-auto flex min-h-screen max-w-6xl items-center px-6 pb-16"
-        style={{ paddingTop: `calc(${LANDING_NAVBAR_OFFSET} + 2rem)` }}
-      >
-        <section className="w-full rounded-[2rem] border border-white/10 bg-white/5 p-10 shadow-2xl backdrop-blur">
-          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-white/45">Holding Page</p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white md:text-6xl">Open-ETL</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-white/70">
-            This route is intentionally black for now while the OpenSe landing surface is being rebuilt.
-          </p>
-        </section>
-      </main>
-    </div>
+    <ProductLandingPage
+      landingContext="etl"
+      background={(
+        <>
+          <div className="absolute inset-0 bg-[var(--color-background)]" />
+          <div
+            className="absolute left-[-10rem] top-[-4rem] h-[24rem] w-[24rem] rounded-full blur-3xl"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary-light) 78%, white)' }}
+          />
+          <div
+            className="absolute right-[-8rem] top-[16rem] h-[20rem] w-[20rem] rounded-full blur-3xl"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary-light) 45%, white)' }}
+          />
+        </>
+      )}
+      heroIcon={Database}
+      iconClassName={featureIconClass}
+      title="Open-ETL"
+      subtitle="Centralized data workflows. Decentralized execution."
+      subtitleStyle={{ color: 'var(--color-primary-hover)' }}
+      description="Import, process, visualize, and export data with a powerful drag-and-drop interface. Designed specifically for privacy-sensitive sectors requiring strict data-minimization practices."
+      features={featureCards}
+      ctaPanelStyle={{ backgroundColor: 'color-mix(in srgb, var(--color-heading) 86%, #202610)' }}
+      ctaIcon={LockKeyhole}
+      ctaTitle="The Hybrid Data Model"
+      ctaDescription="Workflow definitions, metadata, and analytics go to the cloud. Your actual CSV files and data transformations stay securely inside your browser's IndexedDB. Secure by design."
+      ctaLabel="Start Building Workflows"
+      ctaTestId="etl-start-building-workflows"
+    />
   )
 }
