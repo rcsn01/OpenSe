@@ -11,7 +11,7 @@ import {
   Users,
   Workflow,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { OpenSeLandingNavbar } from '../components/OpenSeLandingNavbar'
 import { setActiveLandingContext } from '../lib/authRedirect'

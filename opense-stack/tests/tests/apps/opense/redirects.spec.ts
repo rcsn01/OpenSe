@@ -6,6 +6,9 @@ const etlUrl = process.env.BASE_URL_ETL || 'http://localhost:5992';
 const stoqrUrl = process.env.BASE_URL_STOQR || 'http://localhost:5993';
 const accountsOrigin = new URL(accountsUrl).origin;
 const hasRealUser = Boolean(process.env.E2E_TEST_EMAIL && !process.env.E2E_TEST_EMAIL.includes('example.com'));
+const accountsAuthPathnames = ['/login', '/signin', '/register', '/signup'];
+
+const getNavbarGetStarted = (page: Page) => page.getByTestId('nav-get-started');
 
 const safeGoto = async (page: Page, url: string) => {
   try {
@@ -32,6 +35,24 @@ const expectAccountsRedirect = async (page: Page, pathname: '/login' | '/registe
   expect(current.searchParams.get('returnTo')).toBe(returnTo);
 };
 
+const expectAccountsLoginWithoutReturnTo = async (page: Page) => {
+  await page.waitForURL(
+    (url) => url.origin === accountsOrigin && url.pathname === '/login',
+    { timeout: 15000 },
+  );
+
+  const current = new URL(page.url());
+  expect(current.searchParams.get('app')).toBeNull();
+  expect(current.searchParams.get('returnTo')).toBeNull();
+};
+
+const expectAuthenticatedAccountsDestination = async (page: Page) => {
+  await page.waitForURL(
+    (url) => url.origin === accountsOrigin && !accountsAuthPathnames.includes(url.pathname),
+    { timeout: 15000 },
+  );
+};
+
 const loginThroughOpenSe = async (page: Page) => {
   await safeGoto(page, '/login');
   await page.waitForURL(
@@ -51,7 +72,7 @@ const loginThroughOpenSe = async (page: Page) => {
   await page.waitForURL(
     (url) => {
       const isAccountsAuthRoute =
-        url.origin === accountsOrigin && ['/login', '/signin', '/register', '/signup'].includes(url.pathname);
+        url.origin === accountsOrigin && accountsAuthPathnames.includes(url.pathname);
       return !isAccountsAuthRoute;
     },
     { timeout: 15000 },
@@ -74,6 +95,13 @@ test.describe('OpenSe Cross-App Redirects', () => {
     await expectAccountsRedirect(page, '/register', 'OpenSe', `${openseUrl}/`);
   });
 
+  test('guest root navbar CTA redirects to Accounts login without bouncing back to OpenSe', async ({ page }) => {
+    await page.goto('/');
+    await getNavbarGetStarted(page).click();
+
+    await expectAccountsLoginWithoutReturnTo(page);
+  });
+
   test('guest clicking ETL stays inside OpenSe and reaches the ETL landing page', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('launch-etl')).toHaveAttribute('href', '/etl');
@@ -92,18 +120,18 @@ test.describe('OpenSe Cross-App Redirects', () => {
     await expect(page.getByText(/Inventory Control|Inventory Engine|Control your/i).first()).toBeVisible();
   });
 
-  test('guest ETL landing CTA redirects through Accounts sign-in', async ({ page }) => {
+  test('guest ETL landing navbar CTA redirects through Accounts sign-in', async ({ page }) => {
     await page.goto('/etl');
     await expect(page.getByText(/Open-ETL/i).first()).toBeVisible();
-    await page.getByRole('link', { name: /Get Started/i }).first().click();
+    await getNavbarGetStarted(page).click();
 
     await expectAccountsRedirect(page, '/login', 'Open-ETL', `${etlUrl}/dashboard`);
   });
 
-  test('guest StoQR landing CTA redirects through Accounts sign-in', async ({ page }) => {
+  test('guest StoQR landing navbar CTA redirects through Accounts sign-in', async ({ page }) => {
     await page.goto('/stoqr');
     await expect(page.getByText(/Inventory Control|Inventory Engine|Control your/i).first()).toBeVisible();
-    await page.getByRole('link', { name: /Get Started|Initialize System/i }).first().click();
+    await getNavbarGetStarted(page).click();
 
     await expectAccountsRedirect(page, '/login', 'Open-StoQR', `${stoqrUrl}/dashboard`);
   });
@@ -114,13 +142,22 @@ test.describe('OpenSe Cross-App Redirects', () => {
     await expectAccountsRedirect(page, '/login', 'Open-StoQR', `${stoqrUrl}/dashboard`);
   });
 
-  test('authenticated user can move to the ETL landing page inside OpenSe and then reach the dashboard', async ({ page }) => {
+  test('authenticated root navbar CTA goes straight to the Accounts app', async ({ page }) => {
     test.skip(!hasRealUser, 'Set real E2E_TEST_EMAIL/PASSWORD to run authenticated redirect assertions.');
 
     await loginThroughOpenSe(page);
-    await page.getByTestId('launch-etl').click();
+    await getNavbarGetStarted(page).click();
+
+    await expectAuthenticatedAccountsDestination(page);
+  });
+
+  test('authenticated user can move to the ETL landing page inside OpenSe and then reach the dashboard from the navbar CTA', async ({ page }) => {
+    test.skip(!hasRealUser, 'Set real E2E_TEST_EMAIL/PASSWORD to run authenticated redirect assertions.');
+
+    await loginThroughOpenSe(page);
+    await page.goto(`${openseUrl}/etl`);
     await expect(page).toHaveURL(`${openseUrl}/etl`);
-    await page.getByRole('link', { name: /Get Started/i }).first().click();
+    await getNavbarGetStarted(page).click();
 
     await page.waitForURL(
       (url) => url.origin === new URL(etlUrl).origin && url.pathname.startsWith('/dashboard'),
@@ -128,13 +165,13 @@ test.describe('OpenSe Cross-App Redirects', () => {
     );
   });
 
-  test('authenticated user can move to the StoQR landing page inside OpenSe and then reach the dashboard', async ({ page }) => {
+  test('authenticated user can move to the StoQR landing page inside OpenSe and then reach the dashboard from the navbar CTA', async ({ page }) => {
     test.skip(!hasRealUser, 'Set real E2E_TEST_EMAIL/PASSWORD to run authenticated redirect assertions.');
 
     await loginThroughOpenSe(page);
-    await page.getByTestId('launch-stoqr').click();
+    await page.goto(`${openseUrl}/stoqr`);
     await expect(page).toHaveURL(`${openseUrl}/stoqr`);
-    await page.getByRole('link', { name: /Get Started|Initialize System/i }).first().click();
+    await getNavbarGetStarted(page).click();
 
     await page.waitForURL(
       (url) => url.origin === new URL(stoqrUrl).origin && url.pathname.startsWith('/dashboard'),

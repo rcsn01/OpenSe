@@ -1,7 +1,8 @@
 import { LandingNavbar, type LandingNavbarLink } from '@repo/ui'
 import { Network } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { buildNavbarGetStartedPath, getLandingContextFromPathname } from '../lib/authRedirect'
 
 const suiteLinks: LandingNavbarLink[] = [
   { label: 'Open-ETL', href: '/etl', testId: 'nav-open-etl-product' },
@@ -11,9 +12,9 @@ const suiteLinks: LandingNavbarLink[] = [
 const navActionClass =
   'group relative inline-flex items-center justify-center overflow-hidden rounded-full px-5 py-2 text-sm font-medium transition-transform duration-200 hover:-translate-y-px'
 
-const renderGetStartedLink = (options?: { className?: string; onClick?: () => void }) => (
+const renderGetStartedLink = (href: string, options?: { className?: string; onClick?: () => void }) => (
   <Link
-    to="/login"
+    to={href}
     data-testid="nav-get-started"
     className={[navActionClass, options?.className].filter(Boolean).join(' ')}
     onClick={options?.onClick}
@@ -44,6 +45,9 @@ const renderSuiteLink = (link: LandingNavbarLink, options: { className?: string;
 
 export const OpenSeLandingNavbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const location = useLocation()
+  const landingContext = getLandingContextFromPathname(location.pathname)
+  const getStartedHref = buildNavbarGetStartedPath(landingContext)
 
   return (
     <LandingNavbar
@@ -59,7 +63,7 @@ export const OpenSeLandingNavbar = () => {
       links={suiteLinks}
       actions={(
         <div className="hidden items-center md:flex">
-          {renderGetStartedLink()}
+          {renderGetStartedLink(getStartedHref)}
         </div>
       )}
       renderLink={renderSuiteLink}
@@ -67,7 +71,7 @@ export const OpenSeLandingNavbar = () => {
         open: mobileOpen,
         onToggle: () => setMobileOpen((open) => !open),
         items: suiteLinks,
-        action: renderGetStartedLink({
+        action: renderGetStartedLink(getStartedHref, {
           className: 'w-full justify-center',
           onClick: () => setMobileOpen(false),
         }),
