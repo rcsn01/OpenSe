@@ -2,6 +2,7 @@ import { LANDING_NAVBAR_OFFSET } from '@repo/ui'
 import { ArrowRight, Boxes, CheckCircle2, Command, Database, Network, Workflow } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { ArchitectureDiagramCarousel } from '../components/ArchitectureDiagramCarousel'
 import { MarketingFooter } from '../components/MarketingFooter'
 import { MarketingPageFrame } from '../components/MarketingPageFrame'
 import { setActiveLandingContext } from '../lib/authRedirect'
@@ -245,18 +246,7 @@ export const LandingPage = () => {
                 backgroundColor: 'rgba(255,255,255,0.58)',
               }}
             >
-              <div
-                className="rounded-[1.25rem] border border-dashed px-6 py-10"
-                style={{ borderColor: 'color-mix(in srgb, var(--color-border) 92%, transparent)' }}
-              >
-                <div className="mx-auto grid max-w-[10rem] place-items-center gap-1 text-center text-sm leading-6 text-[var(--color-muted-foreground)]">
-                  <span>System</span>
-                  <span>Design</span>
-                  <span>Architecture</span>
-                  <span>Diagram</span>
-                  <span>(System Design.svg)</span>
-                </div>
-              </div>
+              <ArchitectureDiagramCarousel />
             </div>
 
             <div className="mt-10 grid gap-8 md:grid-cols-3">
