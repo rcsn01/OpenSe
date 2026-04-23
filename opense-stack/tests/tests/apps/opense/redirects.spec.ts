@@ -108,7 +108,7 @@ test.describe('OpenSe Cross-App Redirects', () => {
     await page.getByTestId('launch-etl').click();
 
     await expect(page).toHaveURL(`${openseUrl}/etl`);
-    await expect(page.getByText(/Open-ETL/i).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /open-etl/i })).toBeVisible();
   });
 
   test('guest clicking StoQR stays inside OpenSe and reaches the StoQR landing page', async ({ page }) => {
@@ -117,12 +117,12 @@ test.describe('OpenSe Cross-App Redirects', () => {
     await page.getByTestId('launch-stoqr').click();
 
     await expect(page).toHaveURL(`${openseUrl}/stoqr`);
-    await expect(page.getByText(/Inventory Control|Inventory Engine|Control your/i).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /open-stoqr/i })).toBeVisible();
   });
 
   test('guest ETL landing navbar CTA redirects through Accounts sign-in', async ({ page }) => {
     await page.goto('/etl');
-    await expect(page.getByText(/Open-ETL/i).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /open-etl/i })).toBeVisible();
     await getNavbarGetStarted(page).click();
 
     await expectAccountsRedirect(page, '/login', 'Open-ETL', `${etlUrl}/dashboard`);
@@ -130,7 +130,7 @@ test.describe('OpenSe Cross-App Redirects', () => {
 
   test('guest StoQR landing navbar CTA redirects through Accounts sign-in', async ({ page }) => {
     await page.goto('/stoqr');
-    await expect(page.getByText(/Inventory Control|Inventory Engine|Control your/i).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /open-stoqr/i })).toBeVisible();
     await getNavbarGetStarted(page).click();
 
     await expectAccountsRedirect(page, '/login', 'Open-StoQR', `${stoqrUrl}/dashboard`);
