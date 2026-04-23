@@ -6,7 +6,8 @@ test.describe('OpenSe Landing', () => {
   test('landing page explains the suite and exposes product entry points', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: /data pipelines and inventory operations, assembled into one suite/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /the open source\s+saas stack\s+for modern teams/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /own your infrastructure/i })).toBeVisible();
     await expect(page.getByTestId('nav-opense-product')).toBeVisible();
     await expect(page.getByTestId('nav-open-etl-product')).toBeVisible();
     await expect(page.getByTestId('nav-open-stoqr-product')).toBeVisible();
@@ -22,11 +23,11 @@ test.describe('OpenSe Landing', () => {
 
     await page.getByTestId('nav-open-etl-product').click();
     await expect(page).toHaveURL(`${openseUrl}/etl`);
-    await expect(page.getByText(/Open-ETL/i).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /open-etl/i })).toBeVisible();
 
     await page.goto('/');
     await page.getByTestId('nav-open-stoqr-product').click();
     await expect(page).toHaveURL(`${openseUrl}/stoqr`);
-    await expect(page.getByText(/Inventory Control|Inventory Engine|Control your/i).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /open-stoqr/i })).toBeVisible();
   });
 });
