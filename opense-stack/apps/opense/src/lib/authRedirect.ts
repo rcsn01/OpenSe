@@ -31,6 +31,22 @@ export const getLandingContextFromPathname = (pathname: string): LandingContext 
   return 'opense'
 }
 
+const buildAccountsLoginUrl = () => {
+  const params = new URLSearchParams({ app: 'Accounts' })
+  return `${normalizeBaseUrl(ACCOUNTS_URL)}/login?${params.toString()}`
+}
+
+export const buildNavbarGetStartedPath = (context: LandingContext) => {
+  const params = new URLSearchParams({ context })
+  return `/get-started?${params.toString()}`
+}
+
+export const buildAccountsAppUrl = () => `${normalizeBaseUrl(ACCOUNTS_URL)}/account/general`
+
+export const buildEtlDashboardUrl = () => `${normalizeBaseUrl(ETL_PUBLIC_URL)}/dashboard`
+
+export const buildStoqrDashboardUrl = () => `${normalizeBaseUrl(STOQR_PUBLIC_URL)}/dashboard`
+
 export const setActiveLandingContext = (context: LandingContext) => {
   if (typeof window === 'undefined') {
     return
@@ -44,19 +60,13 @@ const getActiveLandingContext = (): LandingContext => {
     return 'opense'
   }
 
-  return normalizeLandingContext(window.sessionStorage.getItem(LANDING_CONTEXT_KEY))
+  const value = window.sessionStorage.getItem(LANDING_CONTEXT_KEY)
+  if (value === 'etl' || value === 'stoqr') {
+    return value
+  }
+
+  return 'opense'
 }
-
-export const buildNavbarGetStartedPath = (context: LandingContext) => {
-  const params = new URLSearchParams({ context })
-  return `/get-started?${params.toString()}`
-}
-
-export const buildAccountsAppUrl = () => `${normalizeBaseUrl(ACCOUNTS_URL)}/account/general`
-
-export const buildEtlDashboardUrl = () => `${normalizeBaseUrl(ETL_PUBLIC_URL)}/dashboard`
-
-export const buildStoqrDashboardUrl = () => `${normalizeBaseUrl(STOQR_PUBLIC_URL)}/dashboard`
 
 export const buildOpenSeAccountsAuthUrl = (mode: AuthMode) => {
   return buildSharedAccountsAuthUrl({
@@ -87,14 +97,8 @@ export const buildStoqrAccountsAuthUrl = (mode: AuthMode) => {
 }
 
 export const buildAccountsAuthUrl = (mode: AuthMode) => {
-  const context = getActiveLandingContext()
-
-  if (context === 'etl') {
+  if (getActiveLandingContext() === 'etl') {
     return buildEtlAccountsAuthUrl(mode)
-  }
-
-  if (context === 'stoqr') {
-    return buildStoqrAccountsAuthUrl(mode)
   }
 
   return buildOpenSeAccountsAuthUrl(mode)
@@ -109,7 +113,7 @@ export const buildGetStartedGuestUrl = (context: LandingContext) => {
     return buildStoqrAccountsAuthUrl('signin')
   }
 
-  return `${normalizeBaseUrl(ACCOUNTS_URL)}/login`
+  return buildAccountsLoginUrl()
 }
 
 export const buildGetStartedAuthenticatedUrl = (context: LandingContext) => {
