@@ -12,6 +12,7 @@ export interface ProductLandingFeature {
   title: string
   description: string
   icon: LucideIcon
+  preview?: ReactNode
 }
 
 interface ProductLandingPageProps {
@@ -83,6 +84,7 @@ export const ProductLandingPage = ({
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {features.map((card) => {
             const Icon = card.icon
+            const hasPreview = Boolean(card.preview)
 
             return (
               <article
@@ -94,11 +96,27 @@ export const ProductLandingPage = ({
                   boxShadow: 'var(--opense-shell-shadow-card)',
                 }}
               >
-                <span className={iconClassName}>
-                  <Icon className="h-5 w-5" />
-                </span>
+                {card.preview ? (
+                  <div
+                    className="mb-8 h-64 overflow-hidden rounded-[1.1rem] border p-4"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--color-secondary, var(--color-heading)) 10%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-background) 82%, white)',
+                    }}
+                  >
+                    <div className="h-full w-full">{card.preview}</div>
+                  </div>
+                ) : null}
 
-                <h2 className="mt-8 text-3xl font-semibold tracking-[-0.05em] text-[var(--color-heading)]">{card.title}</h2>
+                {hasPreview ? null : (
+                  <span className={iconClassName}>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                )}
+
+                <h2 className={`${hasPreview ? '' : 'mt-8 '}text-3xl font-semibold tracking-[-0.05em] text-[var(--color-heading)]`}>
+                  {card.title}
+                </h2>
 
                 <p className="mt-4 text-base leading-8 text-[var(--color-body)]">{card.description}</p>
               </article>
