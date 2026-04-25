@@ -15,6 +15,17 @@ import {
   useInventoryRefresh,
 } from '../hooks/queries/useInventory'
 
+export const getNextSelectedRowIdsForVisibleToggle = (current: Set<string>, visibleProductIds: string[]) => {
+  const visibleProductIdSet = new Set(visibleProductIds)
+  const allVisibleSelected = visibleProductIds.length > 0 && visibleProductIds.every((id) => current.has(id))
+
+  if (allVisibleSelected) {
+    return new Set(Array.from(current).filter((id) => !visibleProductIdSet.has(id)))
+  }
+
+  return new Set([...Array.from(current), ...visibleProductIds])
+}
+
 export const InventoryListPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
@@ -126,13 +137,8 @@ export const InventoryListPage = () => {
 
   const toggleAll = () => {
     const visibleProductIds = products.map((p) => p.id)
-    const visibleProductIdSet = new Set(visibleProductIds)
     setSelectedRowIds((current) => {
-      const allVisibleSelected = visibleProductIds.length > 0 && visibleProductIds.every((id) => current.has(id))
-      if (allVisibleSelected) {
-        return new Set(Array.from(current).filter((id) => !visibleProductIdSet.has(id)))
-      }
-      return new Set([...Array.from(current), ...visibleProductIds])
+      return getNextSelectedRowIdsForVisibleToggle(current, visibleProductIds)
     })
   }
 

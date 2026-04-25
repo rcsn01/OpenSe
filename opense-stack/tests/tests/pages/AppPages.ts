@@ -33,22 +33,32 @@ export class InventoryPage {
   constructor(page: Page) {
     this.page = page;
     this.heading = page.getByRole('heading', { name: /inventory/i });
-    this.addProductButton = page.getByRole('link', { name: /add product|new product/i });
+    this.addProductButton = page.getByRole('button', { name: /add product|new product/i });
     this.productRows = page.locator('tbody tr');
   }
 
   async goto() {
-    try {
-      await this.page.goto('/inventory', { waitUntil: 'commit' });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const isExpectedRedirectAbort =
-        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+    const inventoryNavLink = this.page.getByRole('link', { name: /^inventory$/i }).first();
 
-      if (!isExpectedRedirectAbort) {
-        throw error;
+    if (await inventoryNavLink.isVisible().catch(() => false)) {
+      await inventoryNavLink.click();
+    } else {
+      try {
+        await this.page.goto('/inventory/all', { waitUntil: 'domcontentloaded' });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const isExpectedRedirectAbort =
+          message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+        if (!isExpectedRedirectAbort) {
+          throw error;
+        }
       }
     }
+
+    await this.page.waitForURL(/\/(inventory(\/all)?|auth|login)(\?|$)/, { timeout: 10000 }).catch(() => undefined);
+    await this.page.waitForLoadState('networkidle').catch(() => undefined);
+    await this.page.locator('.explorer-sidebar').waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
   }
 
   async expectLoaded() {
@@ -77,7 +87,7 @@ export class CreateProductPage {
     this.heading = page.getByRole('heading', { name: /add new product|new product|create product/i });
     this.nameInput = page.getByLabel(/name/i);
     this.skuInput = page.getByLabel(/sku/i);
-    this.quantityInput = page.getByLabel(/quantity|qty/i);
+    this.quantityInput = page.getByLabel(/initial stock|quantity|qty/i);
     this.saveButton = page.getByRole('button', { name: /save|create/i });
   }
 

@@ -125,6 +125,18 @@ describe('ProductListView table sorting', () => {
     expect(props.toggleAll).toHaveBeenCalled()
   })
 
+  it('checks the select-all checkbox when every visible product is selected', () => {
+    renderWithRouter(createProps({ selectedRowIds: new Set(['p-1', 'p-2']) }))
+
+    expect(screen.getByLabelText('Select all visible products')).toBeChecked()
+  })
+
+  it('marks the select-all checkbox indeterminate when only some visible products are selected', () => {
+    renderWithRouter(createProps({ selectedRowIds: new Set(['p-1']) }))
+
+    expect(screen.getByLabelText('Select all visible products')).toBePartiallyChecked()
+  })
+
   it('renders sticky table header (has correct class)', () => {
     renderWithRouter(createProps())
 

@@ -28,7 +28,6 @@ function getAuthCookieDomain(hostname: string): string | undefined {
   if (accountsUrl) {
     try {
       const host = new URL(accountsUrl).hostname
-      if (host === 'localhost') return 'localhost'
       if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return undefined
       const parts = host.split('.')
       if (parts.length >= 2) return `.${parts.slice(-2).join('.')}`
@@ -72,17 +71,19 @@ const crossSubdomainStorage = {
     if (typeof window === 'undefined') return null
 
     const cookieValue = readCookie(key)
-    if (cookieValue !== null) return cookieValue
-
-    // Cookie is the cross-domain authority for shared auth.
-    // If no cookie exists but localStorage still holds a value, the session
-    // was signed-out from another app — clean up the stale remnant to
-    // prevent redirect loops between apps.
     const lsValue = window.localStorage.getItem(key)
-    if (lsValue !== null) {
-      window.localStorage.removeItem(key)
+
+    if (cookieValue !== null) {
+      if (lsValue !== cookieValue) {
+        window.localStorage.setItem(key, cookieValue)
+      }
+      return cookieValue
     }
-    return null
+
+    // Some browsers and local dev setups do not reliably persist large auth
+    // session cookies. Fall back to localStorage so direct navigations can
+    // still hydrate the signed-in session.
+    return lsValue
   },
   setItem: (key: string, value: string) => {
     if (typeof window === 'undefined') return
