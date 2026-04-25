@@ -8,6 +8,7 @@ export interface BasePageProps {
   /** When true, renders loading message instead of children */
   isLoading?: boolean
   loadingMessage?: string
+  contentStyle?: CSSProperties
   containerClassName?: string
   containerStyle?: CSSProperties
 }
@@ -22,6 +23,7 @@ export const BasePage = ({
   emptyState,
   isLoading = false,
   loadingMessage = 'Loading...',
+  contentStyle,
   containerClassName = 'stack',
   containerStyle,
 }: BasePageProps) => {
@@ -34,7 +36,7 @@ export const BasePage = ({
   }
 
   return (
-    <div className="base-page-content">
+    <div className="base-page-content" style={contentStyle}>
       <div className={containerClassName} style={containerStyle}>
         {children}
       </div>

@@ -93,7 +93,7 @@ export function DataTable<Row, SortKey extends string = string>({
       : 1)
 
   return (
-    <div className={cn('flex min-h-0 flex-col', className)}>
+    <div className={cn('flex min-h-0 flex-col overflow-hidden', className)}>
       <div
         className={cn(
           'table-wrap w-full overflow-auto border border-[var(--color-border)] bg-[var(--color-card)]',

@@ -16,6 +16,7 @@ export const BasePage = ({
   loadingMessage = 'Loading...',
   emptyStateTitle = 'No company selected',
   emptyStateDescription = 'Select a company to continue.',
+  contentStyle,
   containerClassName = 'stack',
   containerStyle,
 }: StoqrBasePageProps) => {
@@ -29,6 +30,7 @@ export const BasePage = ({
       isLoading={isLoading}
       loadingMessage={loadingMessage}
       emptyState={emptyState}
+      contentStyle={contentStyle}
       containerClassName={containerClassName}
       containerStyle={containerStyle}
     >
