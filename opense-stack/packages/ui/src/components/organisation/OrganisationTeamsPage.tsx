@@ -28,26 +28,28 @@ export function OrganisationTeamsPage({
 }: OrganisationTeamsPageProps) {
   return (
     <StackLayout>
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Select
-            value={filterValue}
-            onChange={(event) => onFilterChange(event.target.value)}
-            options={filterOptions}
-            className="min-w-36"
-          />
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:flex-row">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <Select
+              value={filterValue}
+              onChange={(event) => onFilterChange(event.target.value)}
+              options={filterOptions}
+              className="min-w-36"
+            />
+          </div>
+
+          {canManageTeam && onInviteClick && (
+            <Button onClick={onInviteClick} className="w-full shadow-md shadow-blue-500/20 sm:w-auto">
+              {inviteIcon}
+              {inviteLabel}
+            </Button>
+          )}
         </div>
 
-        {canManageTeam && onInviteClick && (
-          <Button onClick={onInviteClick} className="w-full sm:w-auto shadow-md shadow-blue-500/20">
-            {inviteIcon}
-            {inviteLabel}
-          </Button>
-        )}
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        {tableContent}
+        <div>
+          {tableContent}
+        </div>
       </div>
 
       {secondaryContent}

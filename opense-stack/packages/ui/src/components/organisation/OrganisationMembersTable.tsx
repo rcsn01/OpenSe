@@ -17,6 +17,7 @@ type OrganisationMembersTableProps = {
   showPermissionsRole?: boolean
   showStatus?: boolean
   showActions?: boolean
+  containerClassName?: string
 }
 
 export function OrganisationMembersTable({
@@ -24,6 +25,7 @@ export function OrganisationMembersTable({
   showPermissionsRole = false,
   showStatus = false,
   showActions = false,
+  containerClassName = 'overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm',
 }: OrganisationMembersTableProps) {
   const headerCellClassName = 'bg-slate-50 !px-6 !py-4 text-left text-xs font-semibold uppercase tracking-wider !text-slate-500'
   const bodyCellClassName = '!px-6 !py-4 whitespace-nowrap'
@@ -92,7 +94,7 @@ export function OrganisationMembersTable({
   ]
 
   return (
-    <div className="overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">
+    <div className={containerClassName}>
       <DataTable
         columns={columns}
         rows={rows}
