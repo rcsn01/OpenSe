@@ -29,6 +29,8 @@ export const ProductListView = ({
 }: ProductListViewProps) => {
   const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name ?? '—'
   const { editingCell, editingValue, isSaving, setEditingValue, startEdit, commitEdit, cancelEdit } = useInlineProductEdit(companyId, onRefresh)
+  const allVisibleSelected = products.length > 0 && products.every((product) => selectedRowIds.has(product.id))
+  const someVisibleSelected = products.some((product) => selectedRowIds.has(product.id))
 
   const handleColumnSort = (field: SortField) => {
     if (sortField === field) {
@@ -131,6 +133,33 @@ export const ProductListView = ({
           className="flex-1"
           tableWrapClassName="flex-1 min-h-0"
           columns={[
+            {
+              id: 'selection',
+              header: (
+                <input
+                  type="checkbox"
+                  aria-label="Select all visible products"
+                  checked={allVisibleSelected}
+                  ref={(input) => {
+                    if (input) input.indeterminate = someVisibleSelected && !allVisibleSelected
+                  }}
+                  onChange={toggleAll}
+                  onClick={(event) => event.stopPropagation()}
+                />
+              ),
+              width: 44,
+              align: 'center',
+              renderCell: (product) => (
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${product.name}`}
+                  checked={selectedRowIds.has(product.id)}
+                  disabled={isSaving}
+                  onChange={() => toggleSelection(product.id)}
+                  onClick={(event) => event.stopPropagation()}
+                />
+              ),
+            },
             {
               id: 'name',
               header: 'Name / SKU',

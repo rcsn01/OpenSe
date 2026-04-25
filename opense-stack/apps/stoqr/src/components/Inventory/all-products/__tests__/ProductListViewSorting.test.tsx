@@ -107,6 +107,24 @@ describe('ProductListView table sorting', () => {
     expect(screen.getByText('Gadget')).toBeInTheDocument()
   })
 
+  it('toggles a product from the row checkbox', () => {
+    const props = createProps()
+    renderWithRouter(props)
+
+    fireEvent.click(screen.getByLabelText('Select Widget'))
+
+    expect(props.toggleSelection).toHaveBeenCalledWith('p-1')
+  })
+
+  it('toggles all visible products from the header checkbox', () => {
+    const props = createProps()
+    renderWithRouter(props)
+
+    fireEvent.click(screen.getByLabelText('Select all visible products'))
+
+    expect(props.toggleAll).toHaveBeenCalled()
+  })
+
   it('renders sticky table header (has correct class)', () => {
     renderWithRouter(createProps())
 

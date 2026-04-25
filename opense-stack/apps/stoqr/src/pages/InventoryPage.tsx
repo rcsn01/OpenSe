@@ -116,18 +116,24 @@ export const InventoryListPage = () => {
   }, [])
 
   const toggleSelection = (id: string) => {
-    const next = new Set(selectedRowIds)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    setSelectedRowIds(next)
+    setSelectedRowIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   const toggleAll = () => {
-    if (selectedRowIds.size === products.length) {
-      setSelectedRowIds(new Set())
-    } else {
-      setSelectedRowIds(new Set(products.map((p) => p.id)))
-    }
+    const visibleProductIds = products.map((p) => p.id)
+    const visibleProductIdSet = new Set(visibleProductIds)
+    setSelectedRowIds((current) => {
+      const allVisibleSelected = visibleProductIds.length > 0 && visibleProductIds.every((id) => current.has(id))
+      if (allVisibleSelected) {
+        return new Set(Array.from(current).filter((id) => !visibleProductIdSet.has(id)))
+      }
+      return new Set([...Array.from(current), ...visibleProductIds])
+    })
   }
 
   const handleBulkDelete = async () => {
