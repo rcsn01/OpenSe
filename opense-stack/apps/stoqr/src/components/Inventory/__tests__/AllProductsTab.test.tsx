@@ -86,6 +86,7 @@ const createProps = () => ({
   setSortDir: vi.fn(),
   page: 1,
   pageSize: 10,
+  setPageSize: vi.fn(),
   totalCount: 1,
   setPage: vi.fn(),
   folders: [

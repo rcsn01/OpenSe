@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Badge, Button, Card, Checkbox, DataTable, type DataTableColumn, Input, Select, Toggle } from '@repo/ui'
+import { useEffect, useState } from 'react'
+import { AddFilterDropdown, Badge, Button, Card, Checkbox, DataTable, type DataTableColumn, Input, Select, Toggle } from '@repo/ui'
 import {
   AlertCircle,
   AlertTriangle,
@@ -8,13 +8,14 @@ import {
   Info,
   Mail,
   MessageSquareText,
-  Search,
   Trash2,
+  X,
 } from 'lucide-react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { useCompany } from '../contexts/CompanyContext'
+import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 type AlertsTab = 'feed' | 'rules'
 type FeedCategory = 'all' | 'stock' | 'procurement' | 'system'
@@ -208,17 +209,24 @@ const renderSeverityIcon = (severity: FeedSeverity) => {
 export const AlertsPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const [alerts, setAlerts] = useState(initialAlerts)
   const [activeFilter, setActiveFilter] = useState<FeedCategory>('all')
   const [selectedAlertIds, setSelectedAlertIds] = useState<string[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
+  const [fallbackSearchTerm, setFallbackSearchTerm] = useState('')
   const [tablePage, setTablePage] = useState(1)
   const [tableSortField, setTableSortField] = useState<AlertSortKey>('title')
   const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('asc')
   const [thresholds, setThresholds] = useState(initialThresholds)
   const [routing, setRouting] = useState(initialRouting)
   const [subscriptions, setSubscriptions] = useState(initialSubscriptions)
+  const searchTerm = layoutContext?.topBarSearchValue ?? fallbackSearchTerm
+  const hasSelectedAlerts = selectedAlertIds.length > 0
+
+  useEffect(() => {
+    setTablePage(1)
+  }, [searchTerm])
 
   const legacyTabRedirect = tab ? legacyTabRedirects[tab] : undefined
 
@@ -247,6 +255,7 @@ export const AlertsPage = () => {
   const pagedAlerts = sortedAlerts.slice((currentTablePage - 1) * feedPageSize, currentTablePage * feedPageSize)
   const allVisibleSelected = visibleAlerts.length > 0 && visibleAlerts.every((alert) => selectedAlertIds.includes(alert.id))
   const unreadCount = alerts.filter((alert) => !alert.isRead).length
+  const alertFilterItems = alertFilterOptions.filter((filter) => filter.value !== activeFilter)
 
   const alertColumns: Array<DataTableColumn<FeedAlert, AlertSortKey>> = [
     {
@@ -373,11 +382,6 @@ export const AlertsPage = () => {
     setTablePage(1)
   }
 
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value)
-    setTablePage(1)
-  }
-
   const handleTableSort = (field: AlertSortKey) => {
     if (tableSortField === field) {
       setTableSortDirection((current) => current === 'asc' ? 'desc' : 'asc')
@@ -392,30 +396,6 @@ export const AlertsPage = () => {
   const feedContent = (
     <Card className="overflow-hidden" padding="none">
       <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex w-full items-center gap-2 sm:w-auto">
-            <Select
-              value={activeFilter}
-              onChange={(event) => handleFilterChange(event.target.value)}
-              options={alertFilterOptions}
-              className="min-w-48"
-              aria-label="Alert category filter"
-            />
-          </div>
-
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <div className="w-full min-w-[260px] sm:w-[300px]">
-              <Input
-                value={searchTerm}
-                onChange={(event) => handleSearchChange(event.target.value)}
-                placeholder="Search alerts..."
-                prefix={<Search size={15} aria-hidden="true" />}
-                aria-label="Search alerts"
-              />
-            </div>
-          </div>
-        </div>
-
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-1 sm:gap-3">
             <Checkbox
@@ -424,15 +404,45 @@ export const AlertsPage = () => {
               label="Select All"
               aria-label="Select all visible alerts"
             />
-            <div className="hidden h-5 w-px bg-[var(--color-border)] sm:block" aria-hidden="true" />
-            <Button type="button" variant="ghost" size="sm" disabled={selectedAlertIds.length === 0} onClick={markSelectedAsRead}>
-              <CheckCheck size={14} aria-hidden="true" />
-              Mark Read
-            </Button>
-            <Button type="button" variant="ghost" size="sm" disabled={selectedAlertIds.length === 0} onClick={dismissSelectedAlerts}>
-              <Trash2 size={14} aria-hidden="true" />
-              Dismiss
-            </Button>
+
+            {(activeFilter !== 'all' || hasSelectedAlerts) ? (
+              <div className="hidden h-5 w-px bg-[var(--color-border)] sm:block" aria-hidden="true" />
+            ) : null}
+
+            {activeFilter !== 'all' ? (
+              <div className="inline-flex items-center gap-1 rounded-[4px] bg-[rgba(102,193,63,0.06)] px-2 py-1 text-xs font-medium text-[var(--color-foreground)]">
+                <span className="opacity-60">Category:</span>
+                <span>{alertCategoryLabel[activeFilter]}</span>
+                <button
+                  type="button"
+                  aria-label={`Clear ${alertCategoryLabel[activeFilter]} filter`}
+                  onClick={() => handleFilterChange('all')}
+                  className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-[2px] border-none bg-transparent p-0 text-[var(--color-foreground)] opacity-35 transition-opacity hover:opacity-70"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ) : null}
+
+            {hasSelectedAlerts ? (
+              <>
+                <Button type="button" variant="ghost" size="sm" onClick={markSelectedAsRead}>
+                  <CheckCheck size={14} aria-hidden="true" />
+                  Mark Read
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={dismissSelectedAlerts}>
+                  <Trash2 size={14} aria-hidden="true" />
+                  Dismiss
+                </Button>
+              </>
+            ) : (
+              <AddFilterDropdown
+                items={alertFilterItems}
+                onSelect={handleFilterChange}
+                ariaLabel="Alert category filter"
+                label="Filter"
+              />
+            )}
           </div>
 
           <div className="text-sm text-[var(--color-muted-foreground)]">

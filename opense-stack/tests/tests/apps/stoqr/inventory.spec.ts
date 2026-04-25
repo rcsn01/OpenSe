@@ -55,6 +55,33 @@ test.describe('Stoqr Inventory', () => {
     }
   });
 
+  test('inventory table supports choosing page size options', async ({ authenticatedPage }) => {
+    const inventory = new InventoryPage(authenticatedPage);
+    await inventory.goto();
+
+    const productRows = authenticatedPage.locator('tbody tr');
+    if ((await productRows.count()) === 0) {
+      return;
+    }
+
+    const itemsPerPage = authenticatedPage.getByRole('combobox', { name: 'Items per page' });
+    if (!(await itemsPerPage.isVisible().catch(() => false))) {
+      return;
+    }
+
+    const optionValues = await itemsPerPage.locator('option').evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value),
+    );
+
+    expect(optionValues).toEqual(['10', '20', '50']);
+
+    await itemsPerPage.selectOption('20');
+    await expect(itemsPerPage).toHaveValue('20');
+
+    await itemsPerPage.selectOption('50');
+    await expect(itemsPerPage).toHaveValue('50');
+  });
+
   test('inventory custom field filter uses stepped + flow', async ({ authenticatedPage }) => {
     const inventory = new InventoryPage(authenticatedPage);
     await inventory.goto();

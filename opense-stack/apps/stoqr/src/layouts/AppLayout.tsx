@@ -21,6 +21,11 @@ import {
   SideNavBrandSlot,
 } from '@repo/ui'
 
+export interface AppLayoutOutletContext {
+  topBarSearchValue: string
+  setTopBarSearchValue: (value: string) => void
+}
+
 const mainNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
   { href: '/inventory', label: 'Inventory', icon: <Package className="w-5 h-5" /> },
@@ -48,10 +53,17 @@ export const AppLayout = () => {
   })
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
+  const isAlertsRoute = location.pathname === '/alerts' || location.pathname.startsWith('/alerts/')
 
   useEffect(() => {
     setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
   }, [user])
+
+  useEffect(() => {
+    if (!isAlertsRoute) {
+      setSearch('')
+    }
+  }, [isAlertsRoute])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)')
@@ -119,7 +131,7 @@ export const AppLayout = () => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
       }}
       onLogout={handleSignOut}
-      searchPlaceholder="Search items..."
+      searchPlaceholder={isAlertsRoute ? 'Search alerts...' : 'Search items...'}
       searchValue={search}
       onSearchChange={setSearch}
       mobileSidebar={{
@@ -130,7 +142,7 @@ export const AppLayout = () => {
         toggleAriaLabel: 'Toggle side navigation',
       }}
     >
-      <Outlet />
+      <Outlet context={{ topBarSearchValue: search, setTopBarSearchValue: setSearch } satisfies AppLayoutOutletContext} />
     </SharedAppLayout>
   )
 }

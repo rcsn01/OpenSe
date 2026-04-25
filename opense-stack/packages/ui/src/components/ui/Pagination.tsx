@@ -47,21 +47,6 @@ export function Pagination({
 
   return (
     <div className={cn('flex flex-wrap items-center justify-between gap-4', className)}>
-      {/* Page size selector (ETL compat) */}
-      {typeof itemsPerPage === 'number' && onItemsPerPageChange && (
-        <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
-          <span>Show</span>
-          <select
-            value={itemsPerPage}
-            onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] px-2 py-1 text-sm"
-          >
-            {pageSizeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-          {typeof totalItems === 'number' && <span>of {totalItems}</span>}
-        </div>
-      )}
-
       {/* Page buttons */}
       <nav className="flex items-center gap-1">
         <button onClick={() => onPageChange(1)} disabled={currentPage <= 1} className={cn(btnCls, 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-30')}>
@@ -91,6 +76,22 @@ export function Pagination({
           <ChevronsRight className="h-4 w-4" />
         </button>
       </nav>
+
+      {/* Page size selector (ETL compat) */}
+      {typeof itemsPerPage === 'number' && onItemsPerPageChange && (
+        <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
+          <span>Show</span>
+          <select
+            aria-label="Items per page"
+            value={itemsPerPage}
+            onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] px-2 py-1 text-sm"
+          >
+            {pageSizeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+          {typeof totalItems === 'number' && <span>of {totalItems}</span>}
+        </div>
+      )}
     </div>
   )
 }

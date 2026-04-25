@@ -17,6 +17,7 @@ export type ProductListViewProps = {
   setSortDir: (value: SortDirection) => void
   page: number
   pageSize: number
+  setPageSize: (pageSize: number) => void
   totalCount: number
   setPage: (page: number) => void
   folders: Folder[]
@@ -75,6 +76,7 @@ export type AllProductsTabProps = {
   setSortDir: (value: SortDirection) => void
   page: number
   pageSize: number
+  setPageSize: (pageSize: number) => void
   totalCount: number
   setPage: (page: number) => void
   folders: Folder[]

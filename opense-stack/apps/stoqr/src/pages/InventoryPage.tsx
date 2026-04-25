@@ -44,7 +44,7 @@ export const InventoryListPage = () => {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
 
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(10)
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortDir, setSortDir] = useState<SortDirection>('asc')
 
@@ -124,6 +124,11 @@ export const InventoryListPage = () => {
 
   const handleRemoveFilter = useCallback((key: string) => {
     setActiveCustomFieldFilters((prev) => prev.filter((f) => f.key !== key))
+  }, [])
+
+  const handlePageSizeChange = useCallback((nextPageSize: number) => {
+    setPage(1)
+    setPageSize(nextPageSize)
   }, [])
 
   const toggleSelection = (id: string) => {
@@ -214,6 +219,7 @@ export const InventoryListPage = () => {
         setSortDir={setSortDir}
         page={page}
         pageSize={pageSize}
+        setPageSize={handlePageSizeChange}
         totalCount={totalCount}
         setPage={setPage}
         folders={folders}

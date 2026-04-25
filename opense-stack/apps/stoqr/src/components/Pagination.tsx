@@ -6,9 +6,11 @@ type PaginationProps = {
   pageSize: number
   totalItems: number
   onPageChange: (page: number) => void
+  onPageSizeChange?: (pageSize: number) => void
+  pageSizeOptions?: number[]
 }
 
-export const Pagination = ({ page, pageSize, totalItems, onPageChange }: PaginationProps) => {
+export const Pagination = ({ page, pageSize, totalItems, onPageChange, onPageSizeChange, pageSizeOptions }: PaginationProps) => {
   const totalPages = Math.ceil(totalItems / pageSize)
 
   if (totalItems === 0) return null
@@ -20,6 +22,8 @@ export const Pagination = ({ page, pageSize, totalItems, onPageChange }: Paginat
       onPageChange={onPageChange}
       totalItems={totalItems}
       itemsPerPage={pageSize}
+      onItemsPerPageChange={onPageSizeChange}
+      pageSizeOptions={pageSizeOptions}
     />
   )
 }

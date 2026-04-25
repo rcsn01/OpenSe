@@ -8,6 +8,8 @@ import { useInlineProductEdit } from './useInlineProductEdit'
 import type { ProductListViewProps } from './types'
 import type { SortField } from '../types'
 
+const inventoryPageSizeOptions = [10, 20, 50]
+
 export const ProductListView = ({
   companyId,
   view,
@@ -22,6 +24,7 @@ export const ProductListView = ({
   setSortDir,
   page,
   pageSize,
+  setPageSize,
   totalCount,
   setPage,
   folders,
@@ -125,6 +128,8 @@ export const ProductListView = ({
               pageSize={pageSize}
               totalItems={totalCount}
               onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={inventoryPageSizeOptions}
             />
           </div>
         </>
@@ -264,6 +269,8 @@ export const ProductListView = ({
             totalItems: totalCount,
             itemsPerPage: pageSize,
             onPageChange: setPage,
+            onItemsPerPageChange: setPageSize,
+            pageSizeOptions: inventoryPageSizeOptions,
           }}
         />
       )}
