@@ -233,8 +233,8 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
 
   return (
     <div className="flex flex-col gap-6 pt-6">
-      <Card className="overflow-hidden" padding="md">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <Card className="overflow-hidden" padding="none">
+        <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <Button type="button" className="min-w-[140px]" onClick={() => setIsCreating((current) => !current)}>
               <Plus size={16} />
@@ -298,90 +298,90 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
             </Dropdown>
           </div>
         </div>
-      </Card>
 
-      {showAlertsHint ? (
-        <Card className="border-dashed border-[var(--color-border-hover)] bg-[var(--color-muted)]/40" padding="md">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-[var(--color-warning-light)] p-2 text-[var(--color-warning)]">
-                <Sparkles size={16} />
+        {showAlertsHint ? (
+          <div className="border-b border-dashed border-[var(--color-border-hover)] bg-[var(--color-muted)]/40 px-4 py-4 md:px-6">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-full bg-[var(--color-warning-light)] p-2 text-[var(--color-warning)]">
+                  <Sparkles size={16} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Alert automation staging area</h3>
+                  <p className="text-sm text-[var(--color-muted-foreground)]">
+                    {lowStockProducts.length > 0
+                      ? `${lowStockProducts.length} low-stock products are ready to seed future purchase-order automation.`
+                      : 'No low-stock products are currently queued for purchase-order automation.'}
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Alert automation staging area</h3>
-                <p className="text-sm text-[var(--color-muted-foreground)]">
-                  {lowStockProducts.length > 0
-                    ? `${lowStockProducts.length} low-stock products are ready to seed future purchase-order automation.`
-                    : 'No low-stock products are currently queued for purchase-order automation.'}
-                </p>
-              </div>
+
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowAlertsHint(false)}>
+                Dismiss
+              </Button>
             </div>
-
-            <Button type="button" variant="ghost" size="sm" onClick={() => setShowAlertsHint(false)}>
-              Dismiss
-            </Button>
           </div>
-        </Card>
-      ) : null}
+        ) : null}
 
-      {isCreating ? (
-        <Card className="border-dashed border-[var(--color-border-hover)]" padding="none">
-          <CardHeader className="border-b border-[var(--color-border)] px-6 py-5">
-            <CardTitle className="text-lg">Create Purchase Order</CardTitle>
-            <CardDescription>Start a new draft order and assign the expected receiving date.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-5 px-6 py-5">
-            {loadingSuppliers ? (
-              <div className="empty-state">Loading suppliers...</div>
-            ) : !suppliersAvailable ? (
-              <EmptyState
-                title="No suppliers available"
-                description="Suppliers will be managed in the dedicated Suppliers tab once that workflow is wired in."
-              />
-            ) : (
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-                <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-foreground)]">
-                  Supplier
-                  <Select
-                    value={newPoSupplier}
-                    onChange={(event) => setNewPoSupplier(event.target.value)}
-                    placeholder="Select a supplier"
-                    options={suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name }))}
-                  />
-                </label>
+        {isCreating ? (
+          <div className="border-b border-dashed border-[var(--color-border-hover)]">
+            <CardHeader className="border-b border-[var(--color-border)] px-6 py-5">
+              <CardTitle className="text-lg">Create Purchase Order</CardTitle>
+              <CardDescription>Start a new draft order and assign the expected receiving date.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-5 px-6 py-5">
+              {loadingSuppliers ? (
+                <div className="empty-state">Loading suppliers...</div>
+              ) : !suppliersAvailable ? (
+                <EmptyState
+                  title="No suppliers available"
+                  description="Suppliers will be managed in the dedicated Suppliers tab once that workflow is wired in."
+                />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                  <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-foreground)]">
+                    Supplier
+                    <Select
+                      value={newPoSupplier}
+                      onChange={(event) => setNewPoSupplier(event.target.value)}
+                      placeholder="Select a supplier"
+                      options={suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name }))}
+                    />
+                  </label>
 
-                <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-foreground)]">
-                  Expected
-                  <Input type="date" value={newPoDate} onChange={(event) => setNewPoDate(event.target.value)} />
-                </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium text-[var(--color-foreground)]">
+                    Expected
+                    <Input type="date" value={newPoDate} onChange={(event) => setNewPoDate(event.target.value)} />
+                  </label>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[var(--color-border)] pt-4">
+                <Button type="button" variant="ghost" onClick={() => setIsCreating(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  loading={createPurchaseOrderMutation.isPending}
+                  disabled={!suppliersAvailable || !newPoSupplier}
+                  onClick={handleCreatePO}
+                >
+                  <CheckCircle2 size={16} />
+                  Create Draft
+                </Button>
               </div>
-            )}
+            </CardContent>
+          </div>
+        ) : null}
 
-            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[var(--color-border)] pt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsCreating(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                loading={createPurchaseOrderMutation.isPending}
-                disabled={!suppliersAvailable || !newPoSupplier}
-                onClick={handleCreatePO}
-              >
-                <CheckCircle2 size={16} />
-                Create Draft
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+        {message ? (
+          <div className="border-b border-[var(--color-border)] px-4 py-3 md:px-6">
+            <p className={message.tone === 'error' ? 'text-sm text-[var(--color-destructive)]' : 'text-sm text-[var(--color-success)]'}>
+              {message.text}
+            </p>
+          </div>
+        ) : null}
 
-      {message ? (
-        <p className={message.tone === 'error' ? 'text-sm text-[var(--color-destructive)]' : 'text-sm text-[var(--color-success)]'}>
-          {message.text}
-        </p>
-      ) : null}
-
-      <Card className="overflow-hidden" padding="none">
         {loadingOrders ? (
           <div className="empty-state">Loading purchase orders...</div>
         ) : filteredPurchaseOrders.length === 0 ? (

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Badge, Button, Card, Checkbox, Input, Select, Toggle } from '@repo/ui'
+import { Badge, Button, Card, Checkbox, DataTable, type DataTableColumn, Input, Select, Toggle } from '@repo/ui'
 import {
   AlertCircle,
   AlertTriangle,
@@ -9,7 +9,6 @@ import {
   Mail,
   MessageSquareText,
   Search,
-  SlidersHorizontal,
   Trash2,
 } from 'lucide-react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
@@ -20,6 +19,7 @@ import { useCompany } from '../contexts/CompanyContext'
 type AlertsTab = 'feed' | 'rules'
 type FeedCategory = 'all' | 'stock' | 'procurement' | 'system'
 type FeedSeverity = 'critical' | 'warning' | 'info'
+type AlertSortKey = 'title' | 'severity' | 'category' | 'status'
 type NotificationRouteKey = 'inApp' | 'emailDigest' | 'slack'
 
 type FeedAlert = {
@@ -40,6 +40,15 @@ const alertFilters: Array<{ id: FeedCategory; label: string }> = [
   { id: 'procurement', label: 'Procurement & Orders' },
   { id: 'system', label: 'System & Operations' },
 ]
+
+const alertFilterOptions = alertFilters.map((filter) => ({ value: filter.id, label: filter.label }))
+
+const alertCategoryLabel: Record<FeedCategory, string> = {
+  all: 'All Alerts',
+  stock: 'Stock & Inventory',
+  procurement: 'Procurement & Orders',
+  system: 'System & Operations',
+}
 
 const initialAlerts: FeedAlert[] = [
   {
@@ -155,6 +164,8 @@ const severityLabel = {
   info: 'Info',
 } as const
 
+const feedPageSize = 5
+
 const roleSubscriptionOptions = {
   procurement: [
     { value: 'purchasing-managers', label: 'Purchasing Managers only' },
@@ -180,6 +191,14 @@ const matchesAlertSearch = (alert: FeedAlert, searchTerm: string) => {
   return searchable.some((value) => value.toLowerCase().includes(searchTerm))
 }
 
+const getAlertSortValue = (alert: FeedAlert, sortKey: AlertSortKey) => {
+  if (sortKey === 'severity') return severityLabel[alert.severity]
+  if (sortKey === 'category') return alertCategoryLabel[alert.category]
+  if (sortKey === 'status') return alert.isRead ? 'Read' : 'Unread'
+
+  return alert.title
+}
+
 const renderSeverityIcon = (severity: FeedSeverity) => {
   if (severity === 'critical') return <AlertCircle size={12} aria-hidden="true" />
   if (severity === 'warning') return <AlertTriangle size={12} aria-hidden="true" />
@@ -194,6 +213,9 @@ export const AlertsPage = () => {
   const [activeFilter, setActiveFilter] = useState<FeedCategory>('all')
   const [selectedAlertIds, setSelectedAlertIds] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [tablePage, setTablePage] = useState(1)
+  const [tableSortField, setTableSortField] = useState<AlertSortKey>('title')
+  const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('asc')
   const [thresholds, setThresholds] = useState(initialThresholds)
   const [routing, setRouting] = useState(initialRouting)
   const [subscriptions, setSubscriptions] = useState(initialSubscriptions)
@@ -216,8 +238,91 @@ export const AlertsPage = () => {
 
     return matchesFilter && matchesSearch
   })
+  const sortedAlerts = [...visibleAlerts].sort((left, right) => {
+    const comparison = getAlertSortValue(left, tableSortField).localeCompare(getAlertSortValue(right, tableSortField))
+    return tableSortDirection === 'asc' ? comparison : -comparison
+  })
+  const totalAlertPages = Math.max(1, Math.ceil(sortedAlerts.length / feedPageSize))
+  const currentTablePage = Math.min(tablePage, totalAlertPages)
+  const pagedAlerts = sortedAlerts.slice((currentTablePage - 1) * feedPageSize, currentTablePage * feedPageSize)
   const allVisibleSelected = visibleAlerts.length > 0 && visibleAlerts.every((alert) => selectedAlertIds.includes(alert.id))
   const unreadCount = alerts.filter((alert) => !alert.isRead).length
+
+  const alertColumns: Array<DataTableColumn<FeedAlert, AlertSortKey>> = [
+    {
+      id: 'select',
+      header: '',
+      width: 48,
+      renderCell: (alert) => (
+        <Checkbox
+          checked={selectedAlertIds.includes(alert.id)}
+          onChange={(event) => updateSelection(alert.id, event.target.checked)}
+          aria-label={`Select ${alert.code}`}
+        />
+      ),
+    },
+    {
+      id: 'title',
+      header: 'Alert',
+      sortKey: 'title',
+      renderCell: (alert) => (
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
+            <span className="font-semibold uppercase tracking-[0.08em] text-[var(--color-foreground)]">{alert.code}</span>
+            <span aria-hidden="true">•</span>
+            <span>{alert.timeLabel}</span>
+          </div>
+          <div className={`text-base text-[var(--color-foreground)] ${alert.isRead ? 'font-medium' : 'font-semibold'}`}>
+            {alert.title}
+          </div>
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{alert.description}</p>
+        </div>
+      ),
+    },
+    {
+      id: 'severity',
+      header: 'Severity',
+      sortKey: 'severity',
+      renderCell: (alert) => (
+        <Badge variant={severityVariant[alert.severity]} size="md" className="gap-1.5">
+          {renderSeverityIcon(alert.severity)}
+          {severityLabel[alert.severity]}
+        </Badge>
+      ),
+    },
+    {
+      id: 'category',
+      header: 'Category',
+      sortKey: 'category',
+      renderCell: (alert) => alertCategoryLabel[alert.category],
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      sortKey: 'status',
+      renderCell: (alert) => (
+        <Badge variant={alert.isRead ? 'secondary' : 'success'} size="sm">
+          {alert.isRead ? 'Read' : 'Unread'}
+        </Badge>
+      ),
+    },
+    {
+      id: 'action',
+      header: '',
+      align: 'right',
+      renderCell: (alert) => (
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="shadow-none"
+          onClick={() => handleAlertAction(alert.id)}
+        >
+          {alert.actionLabel}
+        </Button>
+      ),
+    },
+  ]
 
   const updateSelection = (alertId: string, checked: boolean) => {
     setSelectedAlertIds((currentIds) => {
@@ -263,118 +368,98 @@ export const AlertsPage = () => {
     )
   }
 
+  const handleFilterChange = (value: string) => {
+    setActiveFilter(value as FeedCategory)
+    setTablePage(1)
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setTablePage(1)
+  }
+
+  const handleTableSort = (field: AlertSortKey) => {
+    if (tableSortField === field) {
+      setTableSortDirection((current) => current === 'asc' ? 'desc' : 'asc')
+      return
+    }
+
+    setTableSortField(field)
+    setTableSortDirection('asc')
+    setTablePage(1)
+  }
+
   const feedContent = (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2" aria-label="Alert categories">
-        {alertFilters.map((filter) => (
-          <Button
-            key={filter.id}
-            type="button"
-            size="sm"
-            variant={activeFilter === filter.id ? 'primary' : 'outline'}
-            className="rounded-full"
-            onClick={() => setActiveFilter(filter.id)}
-          >
-            {filter.label}
-          </Button>
-        ))}
-      </div>
+    <Card className="overflow-hidden" padding="none">
+      <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <Select
+              value={activeFilter}
+              onChange={(event) => handleFilterChange(event.target.value)}
+              options={alertFilterOptions}
+              className="min-w-48"
+              aria-label="Alert category filter"
+            />
+          </div>
 
-      <Card className="overflow-hidden" padding="none">
-        <div className="flex flex-col gap-4 px-4 py-4 md:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-1 sm:gap-3">
-              <Checkbox
-                checked={allVisibleSelected}
-                onChange={(event) => toggleSelectAllVisible(event.target.checked)}
-                label="Select All"
-                aria-label="Select all visible alerts"
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <div className="w-full min-w-[260px] sm:w-[300px]">
+              <Input
+                value={searchTerm}
+                onChange={(event) => handleSearchChange(event.target.value)}
+                placeholder="Search alerts..."
+                prefix={<Search size={15} aria-hidden="true" />}
+                aria-label="Search alerts"
               />
-              <div className="hidden h-5 w-px bg-[var(--color-border)] sm:block" aria-hidden="true" />
-              <Button type="button" variant="ghost" size="sm" disabled={selectedAlertIds.length === 0} onClick={markSelectedAsRead}>
-                <CheckCheck size={14} aria-hidden="true" />
-                Mark Read
-              </Button>
-              <Button type="button" variant="ghost" size="sm" disabled={selectedAlertIds.length === 0} onClick={dismissSelectedAlerts}>
-                <Trash2 size={14} aria-hidden="true" />
-                Dismiss
-              </Button>
-            </div>
-
-            <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-              <div className="w-full min-w-[260px] sm:w-[300px]">
-                <Input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search alerts..."
-                  prefix={<Search size={15} aria-hidden="true" />}
-                  aria-label="Search alerts"
-                />
-              </div>
-              <Button type="button" variant="outline" size="icon" aria-label="Filter alerts">
-                <SlidersHorizontal size={16} aria-hidden="true" />
-              </Button>
             </div>
           </div>
         </div>
-      </Card>
 
-      <Card className="overflow-hidden" padding="none">
-        {visibleAlerts.length === 0 ? (
-          <div className="px-6 py-16 text-center text-sm text-[var(--color-muted-foreground)]">
-            No alerts match the current filters.
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-3">
+            <Checkbox
+              checked={allVisibleSelected}
+              onChange={(event) => toggleSelectAllVisible(event.target.checked)}
+              label="Select All"
+              aria-label="Select all visible alerts"
+            />
+            <div className="hidden h-5 w-px bg-[var(--color-border)] sm:block" aria-hidden="true" />
+            <Button type="button" variant="ghost" size="sm" disabled={selectedAlertIds.length === 0} onClick={markSelectedAsRead}>
+              <CheckCheck size={14} aria-hidden="true" />
+              Mark Read
+            </Button>
+            <Button type="button" variant="ghost" size="sm" disabled={selectedAlertIds.length === 0} onClick={dismissSelectedAlerts}>
+              <Trash2 size={14} aria-hidden="true" />
+              Dismiss
+            </Button>
           </div>
-        ) : (
-          <div className="divide-y divide-[var(--color-border)]">
-            {visibleAlerts.map((alert) => (
-              <div
-                key={alert.id}
-                className="grid gap-4 px-4 py-5 md:px-6 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto] lg:items-start"
-              >
-                <div className="pt-1">
-                  <Checkbox
-                    checked={selectedAlertIds.includes(alert.id)}
-                    onChange={(event) => updateSelection(alert.id, event.target.checked)}
-                    aria-label={`Select ${alert.code}`}
-                  />
-                </div>
 
-                <div className="min-w-0">
-                  <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
-                    <span className="font-semibold uppercase tracking-[0.08em] text-[var(--color-foreground)]">{alert.code}</span>
-                    <span aria-hidden="true">•</span>
-                    <span>{alert.timeLabel}</span>
-                  </div>
-                  <h2 className={`text-base text-[var(--color-foreground)] ${alert.isRead ? 'font-medium' : 'font-semibold'}`}>
-                    {alert.title}
-                  </h2>
-                  <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{alert.description}</p>
-                </div>
-
-                <div className="flex items-start lg:justify-center">
-                  <Badge variant={severityVariant[alert.severity]} size="md" className="gap-1.5">
-                    {renderSeverityIcon(alert.severity)}
-                    {severityLabel[alert.severity]}
-                  </Badge>
-                </div>
-
-                <div className="flex items-start lg:justify-end">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    className="shadow-none"
-                    onClick={() => handleAlertAction(alert.id)}
-                  >
-                    {alert.actionLabel}
-                  </Button>
-                </div>
-              </div>
-            ))}
+          <div className="text-sm text-[var(--color-muted-foreground)]">
+            Showing {visibleAlerts.length} of {alerts.length} alerts
           </div>
-        )}
-      </Card>
-    </div>
+        </div>
+      </div>
+
+      <DataTable
+        columns={alertColumns}
+        rows={pagedAlerts}
+        getRowId={(alert) => alert.id}
+        emptyState="No alerts match the current filters."
+        sortField={tableSortField}
+        sortDirection={tableSortDirection}
+        onSortChange={handleTableSort}
+        minTableWidth={900}
+        tableWrapClassName="border-0"
+        footerClassName="px-4 pb-4 pt-0"
+        pagination={{
+          currentPage: currentTablePage,
+          totalItems: visibleAlerts.length,
+          itemsPerPage: feedPageSize,
+          onPageChange: setTablePage,
+        }}
+      />
+    </Card>
   )
 
   const rulesContent = (
