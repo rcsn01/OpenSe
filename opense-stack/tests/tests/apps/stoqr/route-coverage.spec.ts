@@ -15,6 +15,13 @@ const safeGoto = async (page: Page, url: string) => {
   }
 };
 
+const resolveExpectedRoute = (route: string) =>
+  route === '/tools/labels/design'
+    ? '/tools/labels/templates'
+    : route === '/tools/labels/downloads'
+      ? '/tools/labels/preview-batch'
+      : route;
+
 test.describe('Stoqr Route Coverage', () => {
   const nestedTabRoutes = [
     '/tools/labels/templates',
@@ -65,13 +72,23 @@ test.describe('Stoqr Route Coverage', () => {
   for (const route of nestedTabRoutes) {
     test(`nested tab route ${route} resolves`, async ({ authenticatedPage }) => {
       await safeGoto(authenticatedPage, route);
+      const expectedRoute = resolveExpectedRoute(route);
+
+      if (expectedRoute !== route) {
+        await authenticatedPage
+          .waitForURL(
+            (url) =>
+              url.pathname === expectedRoute ||
+              url.pathname.includes('/auth') ||
+              url.pathname.includes('/login') ||
+              url.pathname.includes('/dashboard') ||
+              url.href === 'http://localhost:5993/',
+            { timeout: 5000 },
+          )
+          .catch(() => undefined);
+      }
+
       const url = authenticatedPage.url();
-      const expectedRoute =
-        route === '/tools/labels/design'
-          ? '/tools/labels/templates'
-          : route === '/tools/labels/downloads'
-            ? '/tools/labels/preview-batch'
-            : route;
       const isExpectedResolvedUrl =
         url.includes(expectedRoute) ||
         url.includes('/auth') ||

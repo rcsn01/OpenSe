@@ -45,7 +45,7 @@ test.describe('Stoqr Inventory — Folder Navigation Panel', () => {
     const sidebarVisible = await sidebar.isVisible().catch(() => false);
     if (!sidebarVisible) return;
 
-    const allProductsItem = sidebar.getByText('All Products').locator('..');
+    const allProductsItem = sidebar.locator('.tree-item').filter({ hasText: 'All Products' }).first();
     await expect(allProductsItem).toHaveClass(/active/);
   });
 
@@ -56,7 +56,7 @@ test.describe('Stoqr Inventory — Folder Navigation Panel', () => {
 
     await sidebar.getByText('Uncategorised').click();
 
-    const uncategorisedItem = sidebar.getByText('Uncategorised').locator('..');
+    const uncategorisedItem = sidebar.locator('.tree-item').filter({ hasText: 'Uncategorised' }).first();
     await expect(uncategorisedItem).toHaveClass(/active/);
   });
 
@@ -70,7 +70,7 @@ test.describe('Stoqr Inventory — Folder Navigation Panel', () => {
     // Then click All Products
     await sidebar.getByText('All Products').click();
 
-    const allProductsItem = sidebar.getByText('All Products').locator('..');
+    const allProductsItem = sidebar.locator('.tree-item').filter({ hasText: 'All Products' }).first();
     await expect(allProductsItem).toHaveClass(/active/);
   });
 
