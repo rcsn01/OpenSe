@@ -82,6 +82,51 @@ test.describe('Stoqr Inventory', () => {
     await expect(itemsPerPage).toHaveValue('50');
   });
 
+  test('inventory keeps vertical scrolling inside the table', async ({ authenticatedPage }) => {
+    await authenticatedPage.setViewportSize({ width: 1280, height: 640 });
+
+    const inventory = new InventoryPage(authenticatedPage);
+    await inventory.goto();
+
+    const productRows = authenticatedPage.locator('tbody tr');
+    if ((await productRows.count()) === 0) {
+      return;
+    }
+
+    const itemsPerPage = authenticatedPage.getByRole('combobox', { name: 'Items per page' });
+    if (await itemsPerPage.isVisible().catch(() => false)) {
+      await itemsPerPage.selectOption('20');
+      await expect(itemsPerPage).toHaveValue('20');
+    }
+
+    const tableWrap = authenticatedPage.locator('.table-wrap').first();
+    await expect(tableWrap).toBeVisible();
+
+    await expect
+      .poll(async () => tableWrap.evaluate((element) => ({
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+      })))
+      .toSatisfy((metrics) => metrics.scrollHeight > metrics.clientHeight);
+
+    const pageScroller = authenticatedPage.locator('main.app-layout-main > div').first();
+    await expect(pageScroller).toBeVisible();
+
+    const pageScrollMetrics = await pageScroller.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    }));
+
+    expect(pageScrollMetrics.scrollHeight).toBeLessThanOrEqual(pageScrollMetrics.clientHeight + 1);
+
+    const tableScrollTop = await tableWrap.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+      return element.scrollTop;
+    });
+
+    expect(tableScrollTop).toBeGreaterThan(0);
+  });
+
   test('inventory custom field filter uses stepped + flow', async ({ authenticatedPage }) => {
     const inventory = new InventoryPage(authenticatedPage);
     await inventory.goto();

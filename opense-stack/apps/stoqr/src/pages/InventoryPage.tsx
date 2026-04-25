@@ -189,8 +189,9 @@ export const InventoryListPage = () => {
       isLoading={isLoading}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage inventory."
+      contentStyle={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}
       containerClassName="stack"
-      containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: 'calc(100vh - 120px)' }}
+      containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
     >
       <AllProductsTab
         companyId={companyId}
