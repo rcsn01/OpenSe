@@ -40,6 +40,7 @@ export const AllProductsTab = ({
   setSortDir,
   page,
   pageSize,
+  setPageSize,
   totalCount,
   setPage,
   folders,
@@ -401,6 +402,7 @@ export const AllProductsTab = ({
             setSortDir={setSortDir}
             page={page}
             pageSize={pageSize}
+            setPageSize={setPageSize}
             totalCount={totalCount}
             setPage={setPage}
             folders={folders}

@@ -33,6 +33,7 @@ const createProps = (overrides: Partial<ProductListViewProps> = {}): ProductList
   setSortDir: vi.fn(),
   page: 1,
   pageSize: 10,
+  setPageSize: vi.fn(),
   totalCount: 2,
   setPage: vi.fn(),
   folders: [{ id: 'f-1', name: 'Electronics', parent_id: null }],
@@ -105,6 +106,20 @@ describe('ProductListView table sorting', () => {
 
     expect(screen.getByText('Widget')).toBeInTheDocument()
     expect(screen.getByText('Gadget')).toBeInTheDocument()
+  })
+
+  it('renders inventory page size options and updates page size from the table footer', () => {
+    const props = createProps()
+    renderWithRouter(props)
+
+    const itemsPerPage = screen.getByRole('combobox', { name: 'Items per page' })
+    const optionValues = Array.from(itemsPerPage.querySelectorAll('option')).map((option) => option.value)
+
+    expect(optionValues).toEqual(['10', '20', '50'])
+
+    fireEvent.change(itemsPerPage, { target: { value: '20' } })
+
+    expect(props.setPageSize).toHaveBeenCalledWith(20)
   })
 
   it('toggles a product from the row checkbox', () => {
