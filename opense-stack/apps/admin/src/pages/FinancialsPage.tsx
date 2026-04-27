@@ -197,7 +197,7 @@ export const FinancialsPage = () => {
           </Card>
         ) : null}
 
-        <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/financials/${nextTab}`)} />
+        <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/financials/${nextTab}`)} bottomSpacing />
 
         {activeTab === 'pricing' ? (
           <Card>

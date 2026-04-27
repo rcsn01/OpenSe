@@ -243,7 +243,7 @@ export const ApplicationManagementPage = () => {
           </Card>
         ) : null}
 
-        <TabBar tabs={settingsTabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/applications/${nextTab}`)} />
+        <TabBar tabs={settingsTabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/applications/${nextTab}`)} bottomSpacing />
 
         <Card>
           <CardHeader>

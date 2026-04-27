@@ -232,7 +232,7 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
       : 'Try adjusting your search or status filter to find a matching purchase order.'
 
   return (
-    <div className="flex flex-col gap-6 pt-6">
+    <div className="flex flex-col gap-6">
       <Card className="overflow-hidden" padding="none">
         <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap items-center gap-3">

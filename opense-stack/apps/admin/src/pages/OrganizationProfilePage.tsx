@@ -175,6 +175,7 @@ export const OrganizationProfilePage = () => {
         <TabBar
           tabs={profileTabs}
           activeTab={activeTab}
+          bottomSpacing
           onTabChange={(nextTab) => {
             if (!orgId) return
             navigate(`/organisations/${orgId}/${nextTab}`)

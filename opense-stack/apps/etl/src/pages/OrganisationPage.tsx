@@ -68,6 +68,7 @@ export const OrganisationPage = () => {
                     ]}
                     activeTab={location.pathname.split('/').pop() || 'team'}
                     onTabChange={(id) => navigate(id)}
+                    bottomSpacing
                 />
 
                 {/* Tab Content */}

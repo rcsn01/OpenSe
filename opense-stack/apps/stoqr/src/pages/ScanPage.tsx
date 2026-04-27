@@ -98,6 +98,7 @@ export const ScanPage = () => {
       <Tabs
         activeTab={activeTab}
         onTabChange={(nextTab) => navigate(`/scan/${nextTab}`)}
+        bottomSpacing
         tabs={[
           { 
             id: 'scan-actions', 

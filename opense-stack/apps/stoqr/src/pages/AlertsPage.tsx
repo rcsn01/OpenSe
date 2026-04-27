@@ -628,6 +628,7 @@ export const AlertsPage = () => {
       <Tabs
         activeTab={activeTab}
         onTabChange={(nextTab) => navigate(`/alerts/${nextTab}`)}
+        bottomSpacing
         tabs={[
           { id: 'feed', label: 'Alerts Feed', count: unreadCount, content: feedContent },
           { id: 'rules', label: 'Alert Rules', content: rulesContent },

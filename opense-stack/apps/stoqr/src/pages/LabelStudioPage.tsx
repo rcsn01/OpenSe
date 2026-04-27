@@ -55,6 +55,7 @@ export const LabelStudioPage = () => {
         <Tabs
           activeTab={activeTab}
           onTabChange={(nextTab) => navigate(`/tools/labels/${nextTab}`)}
+          bottomSpacing
           tabs={[
             {
               id: 'templates',
