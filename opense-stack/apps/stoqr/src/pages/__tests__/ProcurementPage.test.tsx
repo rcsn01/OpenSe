@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { ProcurementPage } from '../ProcurementPage'
 
@@ -23,7 +23,7 @@ vi.mock('../../components/Tabs', () => ({
 }))
 
 vi.mock('../../components/Procurement/PurchaseOrdersTab', () => ({
-  PurchaseOrdersTab: () => <div>Purchase Orders Content</div>,
+  PurchaseOrdersTab: ({ searchTerm }: { searchTerm?: string }) => <div>Purchase Orders Content {searchTerm}</div>,
 }))
 
 vi.mock('../../components/Procurement/SuppliersTab', () => ({
@@ -35,7 +35,9 @@ describe('ProcurementPage', () => {
     render(
       <MemoryRouter initialEntries={['/procurement/purchase-orders']}>
         <Routes>
-          <Route path="/procurement/:tab" element={<ProcurementPage />} />
+          <Route element={<Outlet context={{ topBarSearchValue: 'Denied', setTopBarSearchValue: vi.fn() }} />}>
+            <Route path="/procurement/:tab" element={<ProcurementPage />} />
+          </Route>
         </Routes>
       </MemoryRouter>,
     )
@@ -46,6 +48,6 @@ describe('ProcurementPage', () => {
     expect(screen.queryByText('Purchase Requests')).not.toBeInTheDocument()
     expect(screen.queryByText('Vendor Returns')).not.toBeInTheDocument()
     expect(screen.queryByText('Procurement')).not.toBeInTheDocument()
-    expect(screen.getByText('Purchase Orders Content')).toBeInTheDocument()
+    expect(screen.getByText('Purchase Orders Content Denied')).toBeInTheDocument()
   })
 })

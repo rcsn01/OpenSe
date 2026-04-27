@@ -1,10 +1,11 @@
 import { useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { PurchaseOrdersTab } from '../components/Procurement/PurchaseOrdersTab'
 import { SuppliersTab } from '../components/Procurement/SuppliersTab'
+import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 const procurementTabs = [
   'purchase-orders',
@@ -16,9 +17,11 @@ type ProcurementTabId = (typeof procurementTabs)[number]
 export const ProcurementPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const isValidTab = procurementTabs.includes((tab ?? '') as ProcurementTabId)
   const activeTab: ProcurementTabId = isValidTab ? (tab as ProcurementTabId) : 'purchase-orders'
+  const purchaseOrderSearchTerm = activeTab === 'purchase-orders' ? (layoutContext?.topBarSearchValue ?? '') : ''
 
   useEffect(() => {
     if (tab && !isValidTab) {
@@ -31,7 +34,7 @@ export const ProcurementPage = () => {
       {
         id: 'purchase-orders',
         label: 'Purchase Orders',
-        content: <PurchaseOrdersTab companyId={companyId} />,
+        content: <PurchaseOrdersTab companyId={companyId} searchTerm={purchaseOrderSearchTerm} />,
       },
       {
         id: 'suppliers',
@@ -39,7 +42,7 @@ export const ProcurementPage = () => {
         content: <SuppliersTab companyId={companyId} />,
       },
     ]
-  }, [companyId])
+  }, [companyId, purchaseOrderSearchTerm])
 
   return (
     <BasePage

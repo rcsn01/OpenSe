@@ -36,6 +36,7 @@ const renderRoute = (initialEntry: string) =>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<div>Dashboard</div>} />
           <Route path="/alerts/:tab" element={<div>Alerts</div>} />
+          <Route path="/procurement/:tab" element={<div>Procurement</div>} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -53,6 +54,13 @@ describe('AppLayout', () => {
     renderRoute('/alerts/feed')
 
     expect(screen.getByPlaceholderText('Search alerts...')).toBeInTheDocument()
+  })
+
+  it('uses the purchase order placeholder on procurement purchase order routes', () => {
+    renderRoute('/procurement/purchase-orders')
+
+    expect(screen.getByPlaceholderText('Search POs...')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Search items...')).not.toBeInTheDocument()
   })
 
   it('uses the generic placeholder on non-alert routes', () => {
