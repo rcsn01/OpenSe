@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
+  AddFilterDropdown,
   Badge,
   Button,
   Card,
@@ -8,13 +9,11 @@ import {
   CardHeader,
   CardTitle,
   DataTable,
-  Dropdown,
-  DropdownItem,
   EmptyState,
   Input,
   Select,
 } from '@repo/ui'
-import { BellRing, Building2, CheckCircle2, ChevronDown, Filter, Plus, Search, Sparkles } from 'lucide-react'
+import { BellRing, Building2, CheckCircle2, Plus, Sparkles, X } from 'lucide-react'
 import type { PurchaseOrder } from '../../api/procurement'
 import {
   useCreatePurchaseOrder,
@@ -131,9 +130,8 @@ const getReturnWorkflow = (returnStatus: ReturnStatus): WorkflowBadge | null => 
   }
 }
 
-export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) => {
+export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: string | null; searchTerm?: string }) => {
   const [isCreating, setIsCreating] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [showAlertsHint, setShowAlertsHint] = useState(false)
   const [newPoSupplier, setNewPoSupplier] = useState('')
@@ -205,6 +203,9 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
     })
   }, [purchaseOrders, searchTerm, statusFilter, workflowByPo])
 
+  const statusFilterItems = statusOptions.filter((option) => option.value !== statusFilter)
+  const activeStatusLabel = statusFilter === 'all' ? null : statusLabels[statusFilter]
+
   const handleCreatePO = async () => {
     if (!newPoSupplier) return
 
@@ -234,13 +235,32 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
   return (
     <div className="flex flex-col gap-6">
       <Card className="overflow-hidden" padding="none">
-        <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" className="min-w-[140px]" onClick={() => setIsCreating((current) => !current)}>
-              <Plus size={16} />
-              Create PO
-            </Button>
+        <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2 sm:min-w-[220px]">
+            <AddFilterDropdown
+              items={statusFilterItems}
+              onSelect={(value) => setStatusFilter(value as StatusFilter)}
+              ariaLabel="PO status filter"
+              label="Filter"
+            />
 
+            {activeStatusLabel ? (
+              <div className="inline-flex items-center gap-1 rounded-[4px] bg-[rgba(102,193,63,0.06)] px-2 py-1 text-xs font-medium text-[var(--color-foreground)]">
+                <span className="opacity-60">Status:</span>
+                <span>{activeStatusLabel}</span>
+                <button
+                  type="button"
+                  aria-label={`Clear ${activeStatusLabel} filter`}
+                  onClick={() => setStatusFilter('all')}
+                  className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-[2px] border-none bg-transparent p-0 text-[var(--color-foreground)] opacity-35 transition-opacity hover:opacity-70"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 sm:justify-end">
             <Button
               type="button"
               variant="outline"
@@ -255,47 +275,11 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
                 {lowStockProducts.length}
               </Badge>
             </Button>
-          </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center xl:min-w-[420px] xl:justify-end">
-            <div className="w-full sm:max-w-[320px]">
-              <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search POs..."
-                prefix={<Search size={16} />}
-              />
-            </div>
-
-            <Dropdown
-              align="right"
-              trigger={
-                <Button type="button" variant="outline" className="min-w-[132px] justify-between">
-                  <span className="inline-flex items-center gap-2">
-                    <Filter size={16} />
-                    Filter
-                  </span>
-                  <span className="inline-flex items-center gap-2">
-                    {statusFilter !== 'all' ? (
-                      <Badge variant="secondary" size="sm">
-                        {statusLabels[statusFilter]}
-                      </Badge>
-                    ) : null}
-                    <ChevronDown size={16} />
-                  </span>
-                </Button>
-              }
-            >
-              {statusOptions.map((option) => (
-                <DropdownItem
-                  key={option.value}
-                  onClick={() => setStatusFilter(option.value)}
-                  className={statusFilter === option.value ? 'bg-[var(--color-muted)]' : undefined}
-                >
-                  {option.label}
-                </DropdownItem>
-              ))}
-            </Dropdown>
+            <Button type="button" className="min-w-[140px]" onClick={() => setIsCreating((current) => !current)}>
+              <Plus size={16} />
+              Create PO
+            </Button>
           </div>
         </div>
 

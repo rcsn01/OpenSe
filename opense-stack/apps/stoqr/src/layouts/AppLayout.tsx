@@ -54,16 +54,18 @@ export const AppLayout = () => {
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
   const isAlertsRoute = location.pathname === '/alerts' || location.pathname.startsWith('/alerts/')
+  const isProcurementPurchaseOrdersRoute =
+    location.pathname === '/procurement'
+    || location.pathname === '/procurement/purchase-orders'
+  const searchScope = isAlertsRoute ? 'alerts' : isProcurementPurchaseOrdersRoute ? 'procurement-purchase-orders' : 'default'
 
   useEffect(() => {
     setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
   }, [user])
 
   useEffect(() => {
-    if (!isAlertsRoute) {
-      setSearch('')
-    }
-  }, [isAlertsRoute])
+    setSearch('')
+  }, [searchScope])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)')
@@ -131,7 +133,13 @@ export const AppLayout = () => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
       }}
       onLogout={handleSignOut}
-      searchPlaceholder={isAlertsRoute ? 'Search alerts...' : 'Search items...'}
+      searchPlaceholder={
+        searchScope === 'alerts'
+          ? 'Search alerts...'
+          : searchScope === 'procurement-purchase-orders'
+            ? 'Search POs...'
+            : 'Search items...'
+      }
       searchValue={search}
       onSearchChange={setSearch}
       mobileSidebar={{

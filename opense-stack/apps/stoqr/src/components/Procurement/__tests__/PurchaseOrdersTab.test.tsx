@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PurchaseOrdersTab } from '../PurchaseOrdersTab'
 
@@ -111,15 +112,38 @@ describe('PurchaseOrdersTab', () => {
     expect(screen.getByText('No return')).toBeInTheDocument()
   })
 
-  it('filters rows by workflow search text', () => {
-    render(<PurchaseOrdersTab companyId="company-1" />)
+  it('filters rows from the shared top bar search term', () => {
+    render(<PurchaseOrdersTab companyId="company-1" searchTerm="Shipped to Vendor" />)
 
-    fireEvent.change(screen.getByPlaceholderText('Search POs...'), {
-      target: { value: 'Shipped to Vendor' },
-    })
-
+    expect(screen.queryByPlaceholderText('Search POs...')).not.toBeInTheDocument()
     expect(screen.getByText('PO-2026-1208')).toBeInTheDocument()
     expect(screen.queryByText('PO-2026-1206')).not.toBeInTheDocument()
     expect(screen.queryByText('PO-2026-1204')).not.toBeInTheDocument()
+  })
+
+  it('filters rows using the shared filter dropdown', async () => {
+    const user = userEvent.setup()
+
+    render(<PurchaseOrdersTab companyId="company-1" />)
+
+    await user.click(screen.getByRole('button', { name: 'PO status filter' }))
+    await user.click(screen.getByRole('button', { name: 'Received' }))
+
+    expect(screen.getByRole('button', { name: 'Clear Received filter' })).toBeInTheDocument()
+    expect(screen.getByText('PO-2026-1208')).toBeInTheDocument()
+    expect(screen.queryByText('PO-2026-1206')).not.toBeInTheDocument()
+    expect(screen.queryByText('PO-2026-1204')).not.toBeInTheDocument()
+    expect(screen.queryByText('PO-2026-1207')).not.toBeInTheDocument()
+  })
+
+  it('orders toolbar controls with filter on the left and actions on the right', () => {
+    render(<PurchaseOrdersTab companyId="company-1" />)
+
+    const filterButton = screen.getByRole('button', { name: 'PO status filter' })
+    const autoGenerateButton = screen.getByRole('button', { name: /auto-generate from alerts/i })
+    const createButton = screen.getByRole('button', { name: /create po/i })
+
+    expect(filterButton.compareDocumentPosition(autoGenerateButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(autoGenerateButton.compareDocumentPosition(createButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
