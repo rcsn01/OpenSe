@@ -11,14 +11,15 @@ interface TabBarProps {
   tabs: TabItem[]
   activeTab: string
   onTabChange: (id: string) => void
+  bottomSpacing?: boolean
   className?: string
   itemClassName?: string
   activeItemClassName?: string
   inactiveItemClassName?: string
 }
 
-export function TabBar({ tabs, activeTab, onTabChange, className, itemClassName, activeItemClassName, inactiveItemClassName }: TabBarProps) {
-  const containerCls = className ?? 'flex border-b border-[var(--color-border)] overflow-x-auto gap-4'
+export function TabBar({ tabs, activeTab, onTabChange, bottomSpacing = false, className, itemClassName, activeItemClassName, inactiveItemClassName }: TabBarProps) {
+  const containerCls = cn(className ?? 'flex border-b border-[var(--color-border)] overflow-x-auto gap-4', bottomSpacing && 'mb-[var(--gap-4)]')
   const baseCls = itemClassName ?? 'pb-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-all whitespace-nowrap'
   const activeCls = activeItemClassName ?? 'border-[var(--color-primary)] text-[var(--color-tab-active)]'
   const inactiveCls = inactiveItemClassName ?? 'border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] hover:border-[var(--color-border)]'

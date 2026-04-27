@@ -89,9 +89,12 @@ describe('AlertsPage', () => {
     renderAlertsRoute('/alerts/feed')
 
     const alertsFeedTab = screen.getByRole('button', { name: /alerts feed/i })
+    const alertsTabBar = alertsFeedTab.closest('nav')
 
     expect(alertsFeedTab).toBeInTheDocument()
+    expect(alertsTabBar).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Alert Rules' })).toBeInTheDocument()
+    expect(alertsTabBar).toHaveClass('mb-[var(--gap-4)]')
     expect(screen.queryByRole('button', { name: /notifications/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /email \/ push/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /history/i })).not.toBeInTheDocument()

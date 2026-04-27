@@ -37,6 +37,7 @@ export const DashboardPage = () => {
         ]}
         activeTab={location.pathname.split('/').pop() || 'personal'}
         onTabChange={(id) => navigate(id)}
+        bottomSpacing
       />
 
       <Outlet context={{ currentOrg, dashboardSearch, setDashboardSearch }} />

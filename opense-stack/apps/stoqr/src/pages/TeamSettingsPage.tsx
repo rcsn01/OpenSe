@@ -98,6 +98,7 @@ export const TeamSettingsPage = () => {
       <Tabs
         activeTab={activeTab}
         onTabChange={(nextTab) => navigate(`/settings/organisations/${nextTab}`)}
+        bottomSpacing
         tabs={[
           {
             id: 'teams',

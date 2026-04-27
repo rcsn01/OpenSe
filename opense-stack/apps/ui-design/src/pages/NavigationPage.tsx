@@ -29,7 +29,7 @@ function TabsDemo() {
 
   return (
     <>
-      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/navigation/${nextTab}`)} />
+      <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/navigation/${nextTab}`)} bottomSpacing />
       {activeTab === 'overview' && (
         <Card>
           <Body size="body4">Overview content goes here.</Body>

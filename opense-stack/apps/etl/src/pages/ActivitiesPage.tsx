@@ -29,6 +29,7 @@ export const ActivitiesPage = () => {
         ]}
         activeTab={activeTab}
         onTabChange={(id) => navigate(`/activity/${id}`)}
+        bottomSpacing
       />
 
       {activeTab === 'usage' ? (

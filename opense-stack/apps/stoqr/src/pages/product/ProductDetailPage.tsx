@@ -42,6 +42,7 @@ export const ProductDetailPage = () => {
           <Tabs
             activeTab={activeTab}
             onTabChange={(nextTab) => navigate(`/inventory/${product.id}/${nextTab}`)}
+            bottomSpacing
             tabs={[
               {
                 id: 'overview',

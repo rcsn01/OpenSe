@@ -12,9 +12,10 @@ type TabsProps = {
   tabs: Tab[]
   activeTab?: string
   onTabChange?: (tabId: string) => void
+  bottomSpacing?: boolean
 }
 
-export const Tabs = ({ tabs, activeTab, onTabChange }: TabsProps) => {
+export const Tabs = ({ tabs, activeTab, onTabChange, bottomSpacing = false }: TabsProps) => {
   const [internalTab, setInternalTab] = useState(tabs[0]?.id)
   const resolvedActiveTab = activeTab ?? internalTab
 
@@ -27,7 +28,7 @@ export const Tabs = ({ tabs, activeTab, onTabChange }: TabsProps) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <TabsHeader tabs={tabs} activeTabId={resolvedActiveTab} onTabChange={handleTabChange} />
+      <TabsHeader tabs={tabs} activeTabId={resolvedActiveTab} onTabChange={handleTabChange} bottomSpacing={bottomSpacing} />
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         {tabs.find((t) => t.id === resolvedActiveTab)?.content}
       </div>

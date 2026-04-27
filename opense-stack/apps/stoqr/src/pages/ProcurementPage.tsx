@@ -47,7 +47,7 @@ export const ProcurementPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
     >
-      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/procurement/${nextTab}`)} />
+      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/procurement/${nextTab}`)} bottomSpacing />
     </BasePage>
   )
 }

@@ -20,6 +20,7 @@ export const ReportsPage = () => {
       <Tabs
         activeTab={activeTab}
         onTabChange={(nextTab) => navigate(`/reports/${nextTab}`)}
+        bottomSpacing
         tabs={[
           {
             id: 'stock-health',

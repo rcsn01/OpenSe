@@ -115,7 +115,7 @@ export const PlatformAdministrationPage = () => {
           </Card>
         ) : null}
 
-        <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/platform-admin/${nextTab}`)} />
+        <TabBar tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/platform-admin/${nextTab}`)} bottomSpacing />
 
         {activeTab === 'team' ? (
           <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">
