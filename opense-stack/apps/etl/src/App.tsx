@@ -25,6 +25,7 @@ import { TeamTab } from './components/organisation/TeamTab';
 import { OrgUsageAnalytics } from './components/organisation/UsageAnalytics';
 import { OrgLogsTab } from './components/organisation/OrgLogsTab';
 import { PermissionsTab } from './components/organisation/PermissionsTab';
+import { LogsPage } from './pages/LogsPage'; 
 
 const DashboardIndexRedirect = () => {
   const lastTab = typeof window !== 'undefined' ? window.localStorage.getItem('dashboardLastTab') : null;
@@ -79,13 +80,16 @@ function AppContent() {
                     <Route path="/activity" element={<Navigate to="usage" replace />} />
                     <Route path="/activity/:tab" element={<ActivitiesPage />} />
                     <Route path="/settings/profile" element={<UserSettingsPage />} />
-                  </Route>
+                    <Route path="/logs" element={<LogsPage />} />
+                    </Route>
 
                   {/* Editor (Separate Layout or No Layout) */}
                   <Route path="/editor/:id" element={<WorkflowEditorPage />} />
 
                   {/* Catch all */}
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+              
                 </Routes>
               </SystemCheck>
             </WorkflowProvider>
