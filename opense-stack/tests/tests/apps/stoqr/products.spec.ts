@@ -1,8 +1,7 @@
 import { test, expect } from '../../fixtures/auth';
 import { CreateProductPage, EditProductPage, ProductDetailPage } from '../../pages/AppPages';
 
-const shouldSkipForAuthState = async (currentUrl: string, headingVisible: boolean) => {
-  if (headingVisible) return true;
+const shouldSkipForAuthState = async (currentUrl: string) => {
   if (currentUrl.includes('/login') || currentUrl.includes('/auth') || currentUrl.includes('/signup')) return true;
   return !/\/inventory\/new$/.test(currentUrl);
 };
@@ -19,13 +18,8 @@ test.describe('Stoqr Products', () => {
     await createProduct.goto();
     await authenticatedPage.waitForLoadState('domcontentloaded');
     const currentUrl = authenticatedPage.url();
-    const landingHeadingVisible = await authenticatedPage
-      .getByRole('heading', { name: /inventory control made simple/i })
-      .first()
-      .isVisible()
-      .catch(() => false);
     test.skip(
-      await shouldSkipForAuthState(currentUrl, landingHeadingVisible),
+      await shouldSkipForAuthState(currentUrl),
       'Requires authenticated Stoqr session to run strict create/edit assertions.',
     );
     const createFormVisible = await createProduct.heading.isVisible().catch(() => false);

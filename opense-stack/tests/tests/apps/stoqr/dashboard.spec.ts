@@ -12,19 +12,13 @@ test.describe('Stoqr Dashboard', () => {
         throw error;
       }
     }
-    await expect(authenticatedPage).toHaveURL(/(localhost:5990\/login\?|localhost:5991\/login\?|\/(dashboard|auth)?$|localhost:5993\/login\?|localhost:5993\/$)/);
-
-    const isLanding = /localhost:5993\/$/.test(authenticatedPage.url());
-    if (isLanding) {
-      await expect(authenticatedPage.getByText(/Inventory Control Made Simple|Open-StoQR/i).first()).toBeVisible();
-      return;
-    }
+    await expect(authenticatedPage).toHaveURL(/(localhost:5990\/login\?|localhost:5991\/login\?|\/dashboard$|localhost:5993\/login\?)/);
 
     const dashboardWidget = authenticatedPage.getByText('Total Inventory Value').first();
     const hasDashboardWidgets = await dashboardWidget.isVisible().catch(() => false);
 
     if (!hasDashboardWidgets) {
-      await expect(authenticatedPage).toHaveURL(/(localhost:5991\/login\?|\/|\/auth|\/dashboard|localhost:5993\/$)/);
+      await expect(authenticatedPage).toHaveURL(/(localhost:5991\/login\?|\/auth|\/dashboard|localhost:5993\/login\?)/);
       return;
     }
 

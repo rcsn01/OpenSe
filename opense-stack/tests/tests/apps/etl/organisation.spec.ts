@@ -1,6 +1,20 @@
 import { test, expect } from '../../fixtures/etlAuth';
 import { ETLOrganisationPage } from '../../pages/etl/ETLOrganisationPage';
 
+const safeGoto = async (url: string, page: Parameters<typeof test>[0]['authenticatedEtlPage']) => {
+  try {
+    await page.goto(url);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isExpectedRedirectAbort =
+      message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
+
+    if (!isExpectedRedirectAbort) {
+      throw error;
+    }
+  }
+};
+
 test.describe('ETL Organisation', () => {
   test('organisation page and tabs load', async ({ authenticatedEtlPage }) => {
     const org = new ETLOrganisationPage(authenticatedEtlPage);
@@ -28,7 +42,7 @@ test.describe('ETL Organisation', () => {
   });
 
   test('invite flow controls visible when exposed', async ({ authenticatedEtlPage }) => {
-    await authenticatedEtlPage.goto('/organisation/team');
+    await safeGoto('/organisation/team', authenticatedEtlPage);
     const inviteControl = authenticatedEtlPage.getByRole('button', { name: /invite/i }).first();
 
     if (await inviteControl.isVisible().catch(() => false)) {
@@ -37,7 +51,7 @@ test.describe('ETL Organisation', () => {
   });
 
   test('owner row is not role-editable in team tab', async ({ authenticatedEtlPage }) => {
-    await authenticatedEtlPage.goto('/organisation/team');
+    await safeGoto('/organisation/team', authenticatedEtlPage);
 
     const ownerRow = authenticatedEtlPage.locator('table tbody tr', { hasText: 'Owner' }).first();
     if ((await ownerRow.count()) === 0) {

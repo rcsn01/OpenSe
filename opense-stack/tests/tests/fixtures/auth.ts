@@ -27,6 +27,7 @@ type WorkerFixtures = {
 };
 
 const STOQR_BASE_URL = process.env.BASE_URL_STOQR || process.env.VITE_STOQR_PUBLIC_URL || 'http://localhost:5993';
+const ACCOUNTS_BASE_URL = process.env.BASE_URL_ACCOUNTS || process.env.VITE_ACCOUNTS_URL || 'http://localhost:5991';
 
 export const hasStoqrCredentials = () => Boolean(TEST_USER.email && TEST_USER.password);
 
@@ -251,7 +252,7 @@ const ensureAuthenticatedShell = async (page: Page) => {
 };
 
 const loginWithSupabaseClient = async (page: Page, email: string, password: string) => {
-  await safeGoto(page, '/');
+  await safeGoto(page, `${ACCOUNTS_BASE_URL}/login`);
 
   const hasClient = await page
     .waitForFunction(
@@ -404,7 +405,7 @@ export const test = base.extend<AuthFixtures, WorkerFixtures>({
         rmSync(tempDirectory, { recursive: true, force: true });
       }
     },
-    { scope: 'worker' },
+    { scope: 'worker', timeout: 120000 },
   ],
   authenticatedPage: async ({ browser, stoqrStorageStatePath }, use) => {
     const context = await browser.newContext({

@@ -45,7 +45,10 @@ test.describe('Inventory table columns', () => {
 
       const available = parseInt(match[1]!, 10);
       const minStock = parseInt(match[2]!, 10);
-      const color = await cell.evaluate((el) => el.style.color);
+      const colorTarget = cell.locator('span').first();
+      const color = await (await colorTarget.isVisible().catch(() => false) ? colorTarget : cell).evaluate(
+        (el) => (el as HTMLElement).style.color,
+      );
 
       if (available >= minStock) {
         expect(color).toContain('success');
