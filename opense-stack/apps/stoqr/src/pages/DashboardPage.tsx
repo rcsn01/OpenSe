@@ -120,7 +120,7 @@ const formatCompactNumber = (value: number) =>
     maximumFractionDigits: value >= 1000 ? 1 : 0,
   }).format(value)
 
-const formatTrendPercent = (values: number[]) => {
+const formatTrendPercent = (values: number[]): { text: string; direction: TrendDirection } => {
   if (values.length < 2) return { text: 'stable', direction: 'neutral' as TrendDirection }
 
   const first = values[0] ?? 0
@@ -218,9 +218,9 @@ const buildAttentionItems = (
   purchaseOrders: PurchaseOrder[],
   data: DashboardData,
 ): AttentionItem[] => {
-  const alertRows = alertEvents
+  const alertRows: AttentionItem[] = alertEvents
     .filter((event) => event.status !== 'resolved')
-    .map((event) => ({
+    .map((event): AttentionItem => ({
       id: `alert-${event.id}`,
       severity: event.severity,
       title: event.message,
@@ -231,7 +231,7 @@ const buildAttentionItems = (
       sortValue: new Date(event.triggered_at).getTime(),
     }))
 
-  const overdueOrders = purchaseOrders
+  const overdueOrders: AttentionItem[] = purchaseOrders
     .filter(
       (order) =>
         !!order.expected_date &&
@@ -239,7 +239,7 @@ const buildAttentionItems = (
         order.status !== 'cancelled' &&
         getDaysFromToday(order.expected_date) < 0,
     )
-    .map((order) => {
+    .map((order): AttentionItem => {
       const overdueDays = Math.abs(getDaysFromToday(order.expected_date as string))
       return {
         id: `po-${order.id}`,
@@ -293,7 +293,7 @@ const buildDeliveryRows = (
 
   return purchaseOrders
     .filter((order) => order.status !== 'closed' && order.status !== 'cancelled')
-    .map((order) => {
+    .map((order): DeliveryRow => {
       const lineItems = itemsByOrder.get(order.id) ?? []
       const orderedUnits = lineItems.reduce((sum, item) => sum + item.quantity_ordered, 0)
       const leadItem = lineItems[0]?.products?.name ?? 'Pending line items'
@@ -311,6 +311,13 @@ const buildDeliveryRows = (
           : dueSoon
             ? 'Due Soon'
             : 'Scheduled'
+      const statusVariant: DeliveryRow['statusVariant'] = overdue
+        ? 'destructive'
+        : order.status === 'partial'
+          ? 'warning'
+          : dueSoon
+            ? 'secondary'
+            : 'success'
 
       return {
         id: order.id,
@@ -319,13 +326,7 @@ const buildDeliveryRows = (
         itemsLabel,
         expectedLabel: formatExpectedDate(order.expected_date),
         statusLabel,
-        statusVariant: overdue
-          ? 'destructive'
-          : order.status === 'partial'
-            ? 'warning'
-            : dueSoon
-              ? 'secondary'
-              : 'success',
+        statusVariant,
         sortValue: order.expected_date ? new Date(order.expected_date).getTime() : Number.MAX_SAFE_INTEGER,
       }
     })
@@ -380,8 +381,8 @@ const buildVelocityGroups = (data: DashboardData) => {
 const MiniSparkline = ({ values, tone }: { values: number[]; tone: StatTone }) => {
   const resolvedValues = values.length > 1 ? values : fallbackSparkline
   const width = 240
-  const height = 44
-  const padding = { top: 4, right: 4, bottom: 2, left: 4 }
+  const height = 34
+  const padding = { top: 3, right: 3, bottom: 2, left: 3 }
   const points = buildPoints(resolvedValues, width, height, padding)
   const linePath = buildLinePath(points)
   const areaPath = buildAreaPath(points, height - padding.bottom)
@@ -404,7 +405,7 @@ const StatCard = ({ card }: { card: DashboardStat }) => {
   const Icon = card.icon
 
   return (
-    <Card className={`stoqr-dashboard__stat-card stoqr-dashboard__stat-card--${card.tone}`} padding="md">
+    <Card className={`stoqr-dashboard__stat-card stoqr-dashboard__stat-card--${card.tone}`} padding="sm">
       <div className="stoqr-dashboard__stat-header">
         <div>
           <p className="stoqr-dashboard__stat-label">{card.label}</p>
@@ -432,8 +433,8 @@ const MovementChart = ({ data }: { data: DashboardData['movementChartData'] }) =
   }))
 
   const width = 680
-  const height = 236
-  const padding = { top: 16, right: 18, bottom: 30, left: 12 }
+  const height = 182
+  const padding = { top: 12, right: 16, bottom: 24, left: 10 }
   const baselineY = height - padding.bottom
   const inboundPoints = buildPoints(chartData.map((point) => point.inbound), width, height, padding)
   const outboundPoints = buildPoints(chartData.map((point) => point.outbound), width, height, padding)
@@ -578,7 +579,7 @@ export const DashboardPage = () => {
       emptyStateDescription="Select or create a company to load your inventory dashboard."
       loadingMessage="Loading dashboard..."
       containerClassName="stoqr-dashboard"
-      contentStyle={{ padding: '12px' }}
+      contentStyle={{ padding: '8px' }}
       containerStyle={{ minWidth: 0 }}
     >
       {isError ? (
@@ -594,7 +595,7 @@ export const DashboardPage = () => {
           </section>
 
           <section className="stoqr-dashboard__grid stoqr-dashboard__grid--top">
-            <Card className="stoqr-dashboard__panel" padding="md">
+            <Card className="stoqr-dashboard__panel" padding="sm">
               <div className="stoqr-dashboard__panel-header">
                 <div className="stoqr-dashboard__panel-title-block">
                   <div className="stoqr-dashboard__panel-title">
@@ -608,7 +609,7 @@ export const DashboardPage = () => {
               <MovementChart data={data.movementChartData} />
             </Card>
 
-            <Card className="stoqr-dashboard__panel stoqr-dashboard__panel--attention" padding="md">
+            <Card className="stoqr-dashboard__panel stoqr-dashboard__panel--attention" padding="sm">
               <div className="stoqr-dashboard__panel-header">
                 <div className="stoqr-dashboard__panel-title">
                   <BellRing size={18} />
@@ -655,7 +656,7 @@ export const DashboardPage = () => {
           </section>
 
           <section className="stoqr-dashboard__grid stoqr-dashboard__grid--bottom">
-            <Card className="stoqr-dashboard__panel" padding="md">
+            <Card className="stoqr-dashboard__panel" padding="sm">
               <div className="stoqr-dashboard__panel-header stoqr-dashboard__panel-header--stacked">
                 <div className="stoqr-dashboard__panel-title">
                   <Package size={18} />
@@ -700,7 +701,7 @@ export const DashboardPage = () => {
               </div>
             </Card>
 
-            <Card className="stoqr-dashboard__panel" padding="md">
+            <Card className="stoqr-dashboard__panel" padding="sm">
               <div className="stoqr-dashboard__panel-header">
                 <div className="stoqr-dashboard__panel-title">
                   <Clock3 size={18} />
