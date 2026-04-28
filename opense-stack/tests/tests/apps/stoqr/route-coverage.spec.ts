@@ -50,7 +50,7 @@ test.describe('Stoqr Route Coverage', () => {
 
   test('public auth entry routes resolve', async ({ page }) => {
     await safeGoto(page, '/');
-    await expect(page).toHaveURL(/\/$|\/dashboard$|\/auth$/);
+    await expect(page).toHaveURL(/\/(auth|login|dashboard)(\?|$)/);
 
     await safeGoto(page, '/auth');
     await expect(page).toHaveURL(/\/(auth|dashboard|login)/);
@@ -81,8 +81,7 @@ test.describe('Stoqr Route Coverage', () => {
               url.pathname === expectedRoute ||
               url.pathname.includes('/auth') ||
               url.pathname.includes('/login') ||
-              url.pathname.includes('/dashboard') ||
-              url.href === 'http://localhost:5993/',
+              url.pathname.includes('/dashboard'),
             { timeout: 5000 },
           )
           .catch(() => undefined);
@@ -94,7 +93,6 @@ test.describe('Stoqr Route Coverage', () => {
         url.includes('/auth') ||
         url.includes('/login') ||
         url.includes('/dashboard') ||
-        url === 'http://localhost:5993/' ||
         url.includes('/tools/labels/templates');
       expect(isExpectedResolvedUrl).toBeTruthy();
     });
@@ -102,6 +100,6 @@ test.describe('Stoqr Route Coverage', () => {
 
   test('wildcard route redirects to dashboard flow', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/does-not-exist');
-    await expect(authenticatedPage).toHaveURL(/\/(dashboard|auth|login|does-not-exist|$)/);
+    await expect(authenticatedPage).toHaveURL(/\/(dashboard|auth|login|does-not-exist)(\?|$)/);
   });
 });

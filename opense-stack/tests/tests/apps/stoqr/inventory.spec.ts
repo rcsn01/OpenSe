@@ -103,11 +103,8 @@ test.describe('Stoqr Inventory', () => {
     await expect(tableWrap).toBeVisible();
 
     await expect
-      .poll(async () => tableWrap.evaluate((element) => ({
-        clientHeight: element.clientHeight,
-        scrollHeight: element.scrollHeight,
-      })))
-      .toSatisfy((metrics) => metrics.scrollHeight > metrics.clientHeight);
+      .poll(async () => tableWrap.evaluate((element) => element.scrollHeight - element.clientHeight))
+      .toBeGreaterThan(0);
 
     const pageScroller = authenticatedPage.locator('main.app-layout-main > div').first();
     await expect(pageScroller).toBeVisible();

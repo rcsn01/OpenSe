@@ -5,7 +5,6 @@ import './App.css'
 import { AppLayout } from './layouts/AppLayout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
 import { buildAccountsAuthUrl } from './lib/authRedirect'
-import { LandingPage } from './pages/LandingPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { InventoryListPage } from './pages/InventoryPage'
 import { CreateProductPage } from './pages/product/CreateProductPage'
@@ -35,7 +34,17 @@ const LegacyTeamSettingsRedirect = () => {
   return <Navigate to={`/settings/organisations/${tab ?? 'teams'}`} replace />
 }
 
-function App() {
+export const RootRedirect = () => {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <div className="empty-state">Loading session...</div>
+  }
+
+  return <Navigate to={user ? '/dashboard' : '/auth'} replace />
+}
+
+export function App() {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -52,10 +61,10 @@ function App() {
       >
         <Toaster position="top-right" richColors />
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="/auth" element={<AuthRedirectPage mode="signin" buildAuthUrl={buildAccountsAuthUrl} />} />
           <Route path="/signup" element={<AuthRedirectPage mode="signup" buildAuthUrl={buildAccountsAuthUrl} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/auth" replace />} />
         </Routes>
       </ThemeProvider>
     )
@@ -73,7 +82,7 @@ function App() {
         <Routes>
           <Route element={<AppLayout />}>
             <Route element={<CompanyGate />}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route index element={<RootRedirect />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/inventory" element={<Navigate to="/inventory/all" replace />} />
               <Route path="/inventory/:tab" element={<InventoryListPage />} />

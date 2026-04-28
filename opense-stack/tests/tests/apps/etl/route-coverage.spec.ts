@@ -28,9 +28,9 @@ const safeGoto = async (page: Page, url: string) => {
 };
 
 baseTest.describe('ETL Public Route Coverage', () => {
-  baseTest('landing and auth routes resolve', async ({ page }) => {
+  baseTest('root and auth routes resolve', async ({ page }) => {
     await safeGoto(page, '/');
-    await baseExpect(page).toHaveURL(/\/$/);
+    await baseExpect(page).toHaveURL(/\/(login|dashboard(?:\/(?:personal|org))?)(\?|$)/);
 
     await safeGoto(page, '/login');
     await baseExpect(page).toHaveURL(/\/(login|dashboard)/);
@@ -41,6 +41,11 @@ baseTest.describe('ETL Public Route Coverage', () => {
 });
 
 authTest.describe('ETL Protected Route Coverage', () => {
+  authTest('root redirects to dashboard flow', async ({ authenticatedEtlPage }) => {
+    await safeGoto(authenticatedEtlPage, '/');
+    await authExpect(authenticatedEtlPage).toHaveURL(/\/dashboard(?:\/(?:personal|org))?|\/login(\?|$)/);
+  });
+
   for (const route of authenticatedRoutes) {
     authTest(`route ${route} resolves`, async ({ authenticatedEtlPage }) => {
       await safeGoto(authenticatedEtlPage, route);

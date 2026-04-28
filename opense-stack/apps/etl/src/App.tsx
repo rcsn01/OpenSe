@@ -19,7 +19,6 @@ import { UserSettingsPage } from './pages/UserSettingsPage';
 import { SystemCheck } from './components/guards/SystemCheck';
 import { GalleryPage } from './pages/GalleryPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
-import { LandingPage } from './pages/LandingPage';
 import { WorkflowList } from './components/dashboard/WorkflowList';
 import { TeamTab } from './components/organisation/TeamTab';
 import { OrgUsageAnalytics } from './components/organisation/UsageAnalytics';
@@ -30,6 +29,20 @@ const DashboardIndexRedirect = () => {
   const lastTab = typeof window !== 'undefined' ? window.localStorage.getItem('dashboardLastTab') : null;
   const target = lastTab === 'org' ? 'org' : 'personal';
   return <Navigate to={target} replace />;
+};
+
+export const RootRedirect = () => {
+  const { loading, session, user, isDemoUser } = useAuth();
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-100 text-slate-500">Loading...</div>;
+  }
+
+  if (session || user || isDemoUser) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Navigate to="/login" replace />;
 };
 
 function AppContent() {
@@ -46,8 +59,7 @@ function AppContent() {
             <WorkflowProvider>
               <SystemCheck>
                 <Routes>
-                  {/* Public Landing Page */}
-                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/" element={<RootRedirect />} />
                   <Route path="/login" element={<AuthRedirectPage mode="signin" buildAuthUrl={buildAccountsAuthUrl} />} />
 
                   {/* Auth Routes */}
