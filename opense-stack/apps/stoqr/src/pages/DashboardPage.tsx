@@ -380,8 +380,8 @@ const buildVelocityGroups = (data: DashboardData) => {
 const MiniSparkline = ({ values, tone }: { values: number[]; tone: StatTone }) => {
   const resolvedValues = values.length > 1 ? values : fallbackSparkline
   const width = 240
-  const height = 54
-  const padding = { top: 6, right: 4, bottom: 4, left: 4 }
+  const height = 44
+  const padding = { top: 4, right: 4, bottom: 2, left: 4 }
   const points = buildPoints(resolvedValues, width, height, padding)
   const linePath = buildLinePath(points)
   const areaPath = buildAreaPath(points, height - padding.bottom)
@@ -404,7 +404,7 @@ const StatCard = ({ card }: { card: DashboardStat }) => {
   const Icon = card.icon
 
   return (
-    <Card className={`stoqr-dashboard__stat-card stoqr-dashboard__stat-card--${card.tone}`} padding="lg">
+    <Card className={`stoqr-dashboard__stat-card stoqr-dashboard__stat-card--${card.tone}`} padding="md">
       <div className="stoqr-dashboard__stat-header">
         <div>
           <p className="stoqr-dashboard__stat-label">{card.label}</p>
@@ -432,8 +432,8 @@ const MovementChart = ({ data }: { data: DashboardData['movementChartData'] }) =
   }))
 
   const width = 680
-  const height = 280
-  const padding = { top: 20, right: 20, bottom: 34, left: 12 }
+  const height = 236
+  const padding = { top: 16, right: 18, bottom: 30, left: 12 }
   const baselineY = height - padding.bottom
   const inboundPoints = buildPoints(chartData.map((point) => point.inbound), width, height, padding)
   const outboundPoints = buildPoints(chartData.map((point) => point.outbound), width, height, padding)
@@ -578,6 +578,8 @@ export const DashboardPage = () => {
       emptyStateDescription="Select or create a company to load your inventory dashboard."
       loadingMessage="Loading dashboard..."
       containerClassName="stoqr-dashboard"
+      contentStyle={{ padding: '12px' }}
+      containerStyle={{ minWidth: 0 }}
     >
       {isError ? (
         <div className="empty-state">
@@ -592,7 +594,7 @@ export const DashboardPage = () => {
           </section>
 
           <section className="stoqr-dashboard__grid stoqr-dashboard__grid--top">
-            <Card className="stoqr-dashboard__panel" padding="lg">
+            <Card className="stoqr-dashboard__panel" padding="md">
               <div className="stoqr-dashboard__panel-header">
                 <div className="stoqr-dashboard__panel-title-block">
                   <div className="stoqr-dashboard__panel-title">
@@ -606,7 +608,7 @@ export const DashboardPage = () => {
               <MovementChart data={data.movementChartData} />
             </Card>
 
-            <Card className="stoqr-dashboard__panel stoqr-dashboard__panel--attention" padding="lg">
+            <Card className="stoqr-dashboard__panel stoqr-dashboard__panel--attention" padding="md">
               <div className="stoqr-dashboard__panel-header">
                 <div className="stoqr-dashboard__panel-title">
                   <BellRing size={18} />
@@ -653,7 +655,7 @@ export const DashboardPage = () => {
           </section>
 
           <section className="stoqr-dashboard__grid stoqr-dashboard__grid--bottom">
-            <Card className="stoqr-dashboard__panel" padding="lg">
+            <Card className="stoqr-dashboard__panel" padding="md">
               <div className="stoqr-dashboard__panel-header stoqr-dashboard__panel-header--stacked">
                 <div className="stoqr-dashboard__panel-title">
                   <Package size={18} />
@@ -698,7 +700,7 @@ export const DashboardPage = () => {
               </div>
             </Card>
 
-            <Card className="stoqr-dashboard__panel" padding="lg">
+            <Card className="stoqr-dashboard__panel" padding="md">
               <div className="stoqr-dashboard__panel-header">
                 <div className="stoqr-dashboard__panel-title">
                   <Clock3 size={18} />
