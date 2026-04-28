@@ -19,9 +19,8 @@ export const ProductListView = ({
   toggleSelection,
   toggleAll,
   sortField,
-  setSortField,
   sortDir,
-  setSortDir,
+  onSortChange,
   page,
   pageSize,
   setPageSize,
@@ -36,12 +35,7 @@ export const ProductListView = ({
   const someVisibleSelected = products.some((product) => selectedRowIds.has(product.id))
 
   const handleColumnSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDir('asc')
-    }
+    onSortChange(field)
   }
 
   return (

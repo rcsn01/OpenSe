@@ -29,11 +29,11 @@ const createProps = (overrides: Partial<ProductListViewProps> = {}): ProductList
   toggleSelection: vi.fn(),
   toggleAll: vi.fn(),
   sortField: 'name',
-  setSortField: vi.fn(),
   sortDir: 'asc',
-  setSortDir: vi.fn(),
+  onSortChange: vi.fn(),
   page: 1,
   pageSize: 10,
+  setPageSize: vi.fn(),
   totalCount: 3,
   setPage: vi.fn(),
   folders: [{ id: 'f-1', name: 'Electronics', parent_id: null }],
@@ -107,24 +107,21 @@ describe('ProductListView – all columns are sortable', () => {
     const props = createProps({ sortField: 'name', sortDir: 'asc' })
     renderWithRouter(props)
     fireEvent.click(screen.getByText('Folder').closest('th')!)
-    expect(props.setSortField).toHaveBeenCalledWith('folder_id')
-    expect(props.setSortDir).toHaveBeenCalledWith('asc')
+    expect(props.onSortChange).toHaveBeenCalledWith('folder_id')
   })
 
   it('clicking Available header sorts by quantity_on_hand', () => {
     const props = createProps({ sortField: 'name', sortDir: 'asc' })
     renderWithRouter(props)
     fireEvent.click(screen.getByText('Available').closest('th')!)
-    expect(props.setSortField).toHaveBeenCalledWith('quantity_on_hand')
-    expect(props.setSortDir).toHaveBeenCalledWith('asc')
+    expect(props.onSortChange).toHaveBeenCalledWith('quantity_on_hand')
   })
 
   it('toggling the active sort column flips direction', () => {
     const props = createProps({ sortField: 'folder_id', sortDir: 'asc' })
     renderWithRouter(props)
     fireEvent.click(screen.getByText('Folder').closest('th')!)
-    expect(props.setSortDir).toHaveBeenCalledWith('desc')
-    expect(props.setSortField).not.toHaveBeenCalled()
+    expect(props.onSortChange).toHaveBeenCalledWith('folder_id')
   })
 })
 

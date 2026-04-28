@@ -28,16 +28,14 @@ const createProps = (overrides: Partial<ProductListViewProps> = {}): ProductList
   toggleSelection: vi.fn(),
   toggleAll: vi.fn(),
   sortField: 'name',
-  setSortField: vi.fn(),
   sortDir: 'asc',
-  setSortDir: vi.fn(),
+  onSortChange: vi.fn(),
   page: 1,
   pageSize: 10,
   setPageSize: vi.fn(),
   totalCount: 2,
   setPage: vi.fn(),
   folders: [{ id: 'f-1', name: 'Electronics', parent_id: null }],
-  handleBulkDelete: vi.fn(),
   onRefresh: vi.fn(),
   ...overrides,
 })
@@ -71,7 +69,7 @@ describe('ProductListView table sorting', () => {
     const nameHeader = screen.getByText(/Name \/ SKU/).closest('th')!
     fireEvent.click(nameHeader)
 
-    expect(props.setSortDir).toHaveBeenCalledWith('desc')
+    expect(props.onSortChange).toHaveBeenCalledWith('name')
   })
 
   it('switches sort field when clicking a different column header', () => {
@@ -81,8 +79,7 @@ describe('ProductListView table sorting', () => {
     const priceHeader = screen.getByText(/Price/).closest('th')!
     fireEvent.click(priceHeader)
 
-    expect(props.setSortField).toHaveBeenCalledWith('selling_price')
-    expect(props.setSortDir).toHaveBeenCalledWith('asc')
+    expect(props.onSortChange).toHaveBeenCalledWith('selling_price')
   })
 
   it('marks the table header when items are selected', () => {

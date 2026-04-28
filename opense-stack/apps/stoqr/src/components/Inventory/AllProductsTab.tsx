@@ -35,9 +35,8 @@ export const AllProductsTab = ({
   toggleSelection,
   toggleAll,
   sortField,
-  setSortField,
   sortDir,
-  setSortDir,
+  onSortChange,
   page,
   pageSize,
   setPageSize,
@@ -397,9 +396,8 @@ export const AllProductsTab = ({
             toggleSelection={toggleSelection}
             toggleAll={toggleAll}
             sortField={sortField}
-            setSortField={setSortField}
             sortDir={sortDir}
-            setSortDir={setSortDir}
+            onSortChange={onSortChange}
             page={page}
             pageSize={pageSize}
             setPageSize={setPageSize}

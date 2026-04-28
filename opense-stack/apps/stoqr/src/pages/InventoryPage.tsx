@@ -2,11 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
-import type { CustomFieldActiveFilter, CustomFieldPrimitive, Folder } from '../types'
+import type { CustomFieldPrimitive, Folder } from '../types'
 import { parseCsv } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
-import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
+import type { InventoryProduct, SortField } from '../components/Inventory/types'
 import type { FolderView } from '../components/Inventory/all-products/types'
+import {
+  createInventorySearchParams,
+  defaultInventoryUrlState,
+  hasInventoryCustomFieldSearchParams,
+  parseInventoryCustomFieldFilters,
+  parseInventoryUrlState,
+  type InventoryUrlState,
+} from './inventoryUrlState'
 import {
   useDeleteInventoryProducts,
   useImportInventoryProducts,
@@ -30,25 +38,24 @@ export const InventoryListPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
   const { tab } = useParams<{ tab?: string }>()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   // Removed isCreateOpen state
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [importRows, setImportRows] = useState<Record<string, string>[]>([])
   const [importMessage, setImportMessage] = useState<string | null>(null)
 
-  const [activeCustomFieldFilters, setActiveCustomFieldFilters] = useState<CustomFieldActiveFilter[]>([])
   const [pendingFilterKey, setPendingFilterKey] = useState<string | null>(null)
-  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
   const [folderView, setFolderView] = useState<FolderView>('all')
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
 
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [sortField, setSortField] = useState<SortField>('name')
-  const [sortDir, setSortDir] = useState<SortDirection>('asc')
-
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set())
+
+  const inventoryUrlState = useMemo(() => parseInventoryUrlState(searchParams), [searchParams])
+  const hasCustomFieldSearchParams = useMemo(
+    () => hasInventoryCustomFieldSearchParams(searchParams),
+    [searchParams],
+  )
 
   const computedFolderId = folderView === 'uncategorised'
     ? '__uncategorised__'
@@ -56,19 +63,90 @@ export const InventoryListPage = () => {
       ? selectedFolderId
       : undefined
 
+  const filtersQuery = useInventoryFilters(companyId)
+  const customFieldFilters = filtersQuery.data?.customFieldFilters ?? []
+  const canResolveCustomFieldSearchParams = !hasCustomFieldSearchParams || !!filtersQuery.data || filtersQuery.isError
+  const canCanonicalizeInventoryUrl = !hasCustomFieldSearchParams || !!filtersQuery.data
+  const activeCustomFieldFilters = useMemo(
+    () => parseInventoryCustomFieldFilters(searchParams, customFieldFilters),
+    [customFieldFilters, searchParams],
+  )
+  const currentInventoryUrlState = useMemo<InventoryUrlState>(() => ({
+    ...inventoryUrlState,
+    activeCustomFieldFilters: canResolveCustomFieldSearchParams ? activeCustomFieldFilters : [],
+  }), [activeCustomFieldFilters, canResolveCustomFieldSearchParams, inventoryUrlState])
+
+  const syncInventoryUrlState = useCallback((update: (current: InventoryUrlState) => InventoryUrlState) => {
+    const nextSearchParams = createInventorySearchParams(searchParams, update(currentInventoryUrlState))
+
+    if (nextSearchParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextSearchParams)
+    }
+  }, [currentInventoryUrlState, searchParams, setSearchParams])
+
+  const handleStockFilterChange = useCallback((nextStockFilter: 'all' | 'low' | 'out') => {
+    syncInventoryUrlState((current) => ({
+      ...current,
+      stockFilter: nextStockFilter,
+      page: defaultInventoryUrlState.page,
+    }))
+  }, [syncInventoryUrlState])
+
+  const handleAddFilter = useCallback((key: string, value: CustomFieldPrimitive) => {
+    syncInventoryUrlState((current) => ({
+      ...current,
+      activeCustomFieldFilters: [...current.activeCustomFieldFilters.filter((filter) => filter.key !== key), { key, value }],
+      page: defaultInventoryUrlState.page,
+    }))
+    setPendingFilterKey(null)
+  }, [syncInventoryUrlState])
+
+  const handleRemoveFilter = useCallback((key: string) => {
+    syncInventoryUrlState((current) => ({
+      ...current,
+      activeCustomFieldFilters: current.activeCustomFieldFilters.filter((filter) => filter.key !== key),
+      page: defaultInventoryUrlState.page,
+    }))
+  }, [syncInventoryUrlState])
+
+  const handlePageChange = useCallback((nextPage: number) => {
+    syncInventoryUrlState((current) => ({
+      ...current,
+      page: nextPage,
+    }))
+  }, [syncInventoryUrlState])
+
+  const handlePageSizeChange = useCallback((nextPageSize: number) => {
+    syncInventoryUrlState((current) => ({
+      ...current,
+      page: defaultInventoryUrlState.page,
+      pageSize: nextPageSize,
+    }))
+  }, [syncInventoryUrlState])
+
+  const handleSortChange = useCallback((nextSortField: SortField) => {
+    syncInventoryUrlState((current) => ({
+      ...current,
+      page: defaultInventoryUrlState.page,
+      sortField: nextSortField,
+      sortDir: current.sortField === nextSortField
+        ? (current.sortDir === 'asc' ? 'desc' : 'asc')
+        : 'asc',
+    }))
+  }, [syncInventoryUrlState])
+
   const productsQuery = useInventoryProducts({
-    companyId,
+    companyId: canResolveCustomFieldSearchParams ? companyId : null,
     search: '',
     folderId: computedFolderId,
-    stockFilter,
-    customFieldFilters: activeCustomFieldFilters.length > 0 ? activeCustomFieldFilters : undefined,
-    page,
-    pageSize,
-    sortField,
-    sortDir,
+    stockFilter: inventoryUrlState.stockFilter,
+    customFieldFilters: currentInventoryUrlState.activeCustomFieldFilters.length > 0 ? currentInventoryUrlState.activeCustomFieldFilters : undefined,
+    page: inventoryUrlState.page,
+    pageSize: inventoryUrlState.pageSize,
+    sortField: inventoryUrlState.sortField,
+    sortDir: inventoryUrlState.sortDir,
   })
 
-  const filtersQuery = useInventoryFilters(companyId)
   const deleteProductsMutation = useDeleteInventoryProducts(companyId)
   const importProductsMutation = useImportInventoryProducts(companyId)
   const refreshInventory = useInventoryRefresh()
@@ -76,7 +154,6 @@ export const InventoryListPage = () => {
   const products = productsQuery.data?.products ?? ([] as InventoryProduct[])
   const totalCount = productsQuery.data?.totalCount ?? 0
   const folders = filtersQuery.data?.folders ?? ([] as Folder[])
-  const customFieldFilters = filtersQuery.data?.customFieldFilters ?? []
   const isLoading = useMemo(
     () => productsQuery.isLoading || filtersQuery.isLoading,
     [productsQuery.isLoading, filtersQuery.isLoading],
@@ -84,52 +161,30 @@ export const InventoryListPage = () => {
 
   useEffect(() => {
     if (tab === 'barcode-sku') {
-      navigate('/inventory/all', { replace: true })
+      const nextSearch = searchParams.toString()
+      navigate({ pathname: '/inventory/all', search: nextSearch ? `?${nextSearch}` : '' }, { replace: true })
     }
-  }, [navigate, tab])
+  }, [navigate, searchParams, tab])
 
   useEffect(() => {
-    const stockParam = searchParams.get('stock')
-    if (stockParam === 'low' || stockParam === 'out' || stockParam === 'all') {
-      setStockFilter(stockParam)
+    if (!canCanonicalizeInventoryUrl) return
+
+    const nextSearchParams = createInventorySearchParams(searchParams, currentInventoryUrlState)
+
+    if (nextSearchParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextSearchParams, { replace: true })
     }
-  }, [searchParams])
+  }, [canCanonicalizeInventoryUrl, currentInventoryUrlState, searchParams, setSearchParams])
 
   useEffect(() => {
-    if (activeCustomFieldFilters.length === 0 && pendingFilterKey === null) return
+    if (pendingFilterKey === null) return
 
     const availableKeys = new Set(customFieldFilters.map((f) => f.key))
-
-    const validFilters = activeCustomFieldFilters.filter((f) => {
-      const option = customFieldFilters.find((o) => o.key === f.key)
-      return option && option.values.some((v) => v === f.value)
-    })
-
-    if (validFilters.length !== activeCustomFieldFilters.length) {
-      setActiveCustomFieldFilters(validFilters)
-    }
 
     if (pendingFilterKey !== null && !availableKeys.has(pendingFilterKey)) {
       setPendingFilterKey(null)
     }
-  }, [customFieldFilters, activeCustomFieldFilters, pendingFilterKey])
-
-  const handleAddFilter = useCallback((key: string, value: CustomFieldPrimitive) => {
-    setActiveCustomFieldFilters((prev) => {
-      const filtered = prev.filter((f) => f.key !== key)
-      return [...filtered, { key, value }]
-    })
-    setPendingFilterKey(null)
-  }, [])
-
-  const handleRemoveFilter = useCallback((key: string) => {
-    setActiveCustomFieldFilters((prev) => prev.filter((f) => f.key !== key))
-  }, [])
-
-  const handlePageSizeChange = useCallback((nextPageSize: number) => {
-    setPage(1)
-    setPageSize(nextPageSize)
-  }, [])
+  }, [customFieldFilters, pendingFilterKey])
 
   const toggleSelection = (id: string) => {
     setSelectedRowIds((current) => {
@@ -199,9 +254,9 @@ export const InventoryListPage = () => {
         setFolderView={setFolderView}
         selectedFolderId={selectedFolderId}
         setSelectedFolderId={setSelectedFolderId}
-        stockFilter={stockFilter}
-        setStockFilter={setStockFilter}
-        activeCustomFieldFilters={activeCustomFieldFilters}
+        stockFilter={inventoryUrlState.stockFilter}
+        setStockFilter={handleStockFilterChange}
+        activeCustomFieldFilters={currentInventoryUrlState.activeCustomFieldFilters}
         onAddFilter={handleAddFilter}
         onRemoveFilter={handleRemoveFilter}
         pendingFilterKey={pendingFilterKey}
@@ -214,15 +269,14 @@ export const InventoryListPage = () => {
         selectedRowIds={selectedRowIds}
         toggleSelection={toggleSelection}
         toggleAll={toggleAll}
-        sortField={sortField}
-        setSortField={setSortField}
-        sortDir={sortDir}
-        setSortDir={setSortDir}
-        page={page}
-        pageSize={pageSize}
+        sortField={inventoryUrlState.sortField}
+        sortDir={inventoryUrlState.sortDir}
+        onSortChange={handleSortChange}
+        page={inventoryUrlState.page}
+        pageSize={inventoryUrlState.pageSize}
         setPageSize={handlePageSizeChange}
         totalCount={totalCount}
-        setPage={setPage}
+        setPage={handlePageChange}
         folders={folders}
         handleBulkDelete={handleBulkDelete}
         onClearSelection={() => setSelectedRowIds(new Set())}
