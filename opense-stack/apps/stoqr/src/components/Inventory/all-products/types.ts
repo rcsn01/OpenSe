@@ -12,9 +12,8 @@ export type ProductListViewProps = {
   toggleSelection: (id: string) => void
   toggleAll: () => void
   sortField: SortField
-  setSortField: (value: SortField) => void
   sortDir: SortDirection
-  setSortDir: (value: SortDirection) => void
+  onSortChange: (field: SortField) => void
   page: number
   pageSize: number
   setPageSize: (pageSize: number) => void
@@ -71,9 +70,8 @@ export type AllProductsTabProps = {
   toggleSelection: (id: string) => void
   toggleAll: () => void
   sortField: SortField
-  setSortField: (value: SortField) => void
   sortDir: SortDirection
-  setSortDir: (value: SortDirection) => void
+  onSortChange: (field: SortField) => void
   page: number
   pageSize: number
   setPageSize: (pageSize: number) => void
