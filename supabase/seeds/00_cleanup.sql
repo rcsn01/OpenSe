@@ -36,6 +36,7 @@ TRUNCATE TABLE
   etl.workflows,
   stoqr.role_permissions,
   stoqr.organisation_member_roles,
+  stoqr.organisation_page_settings,
   stoqr.roles,
   stoqr.product_tags,
   stoqr.product_barcodes,

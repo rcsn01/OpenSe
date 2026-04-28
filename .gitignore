@@ -1,3 +1,4 @@
 /.pnpm-store
 .DS_Store
 opense-stack/pnpm-lock.yaml
+supabase/migrations/.temp/

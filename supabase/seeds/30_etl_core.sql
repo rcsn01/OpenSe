@@ -1,6 +1,16 @@
 -- 2) ETL tables
 -- ------------------------------------------------------------
 
+INSERT INTO etl.app_permissions (code, description)
+VALUES
+  ('workflows.view', 'View ETL workflows'),
+  ('workflows.manage', 'Create and edit ETL workflows'),
+  ('executions.view', 'View workflow execution history'),
+  ('executions.run', 'Run workflows'),
+  ('notifications.manage', 'Manage workflow notifications'),
+  ('roles.manage', 'Manage ETL custom roles')
+ON CONFLICT (code) DO NOTHING;
+
 INSERT INTO public.organisation_invites (id, org_id, email, invited_by, token)
 VALUES
   ('c1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'newjoiner@acme.test', '33333333-3333-3333-3333-333333333333', 'token-org-acme-newjoiner'),

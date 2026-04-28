@@ -5,6 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AlertsPage } from '../AlertsPage'
 import { AppLayout } from '../../layouts/AppLayout'
 
+let mockOrganisationPageSettings = {
+  reportsEnabled: true,
+  procurementEnabled: true,
+  alertsEnabled: true,
+}
+
 vi.mock('@repo/shared/auth/context', () => ({
   useAuth: () => ({
     user: {
@@ -21,6 +27,13 @@ vi.mock('@repo/shared/utils', () => ({
 
 vi.mock('../../contexts/CompanyContext', () => ({
   useCompany: () => ({ companyId: 'company-1' }),
+}))
+
+vi.mock('../../hooks/queries/useOrganisationPageSettings', () => ({
+  useOrganisationPageSettings: () => ({
+    data: mockOrganisationPageSettings,
+    isLoading: false,
+  }),
 }))
 
 vi.mock('../../components/BasePage', () => ({
@@ -77,6 +90,12 @@ const renderAlertsRoute = (initialEntry: string, withAppLayout = false) =>
 
 describe('AlertsPage', () => {
   beforeEach(() => {
+    mockOrganisationPageSettings = {
+      reportsEnabled: true,
+      procurementEnabled: true,
+      alertsEnabled: true,
+    }
+
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: mockMatchMedia(false),
@@ -167,5 +186,18 @@ describe('AlertsPage', () => {
     expect(screen.getByLabelText('Expiry Warning Window')).toHaveValue(14)
     expect(screen.getByRole('combobox', { name: 'Procurement Alerts subscription' })).toHaveValue('purchasing-managers')
     expect(screen.getByRole('switch', { name: 'Toggle In-App Notifications' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('renders the unavailable message when alerts are disabled', () => {
+    mockOrganisationPageSettings = {
+      reportsEnabled: true,
+      procurementEnabled: true,
+      alertsEnabled: false,
+    }
+
+    renderAlertsRoute('/alerts/feed')
+
+    expect(screen.getByText('Feature unavailable, please contact your admin for assistance.')).toBeInTheDocument()
+    expect(screen.queryByText('Out of Stock: Premium Widget')).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
+import { PageAvailabilityGuard } from '../components/PageAvailabilityGuard'
 import { Tabs } from '../components/Tabs'
 import { StockHealthValuationTab } from '../components/Reports/StockHealthValuationTab'
 import { MovementVelocityTab } from '../components/Reports/MovementVelocityTab'
@@ -17,38 +18,40 @@ export const ReportsPage = () => {
 
   return (
     <BasePage companyId={companyId}>
-      <Tabs
-        activeTab={activeTab}
-        onTabChange={(nextTab) => navigate(`/reports/${nextTab}`)}
-        bottomSpacing
-        tabs={[
-          {
-            id: 'stock-health',
-            label: 'Stock Health & Valuation',
-            content: <StockHealthValuationTab companyId={companyId} />,
-          },
-          {
-            id: 'movement-velocity',
-            label: 'Movement & Velocity',
-            content: <MovementVelocityTab companyId={companyId} />,
-          },
-          {
-            id: 'procurement-suppliers',
-            label: 'Procurement & Suppliers',
-            content: <ProcurementSuppliersTab companyId={companyId} />,
-          },
-          {
-            id: 'audits-shrinkage',
-            label: 'Audits & Shrinkage',
-            content: <AuditsShrinkageTab companyId={companyId} />,
-          },
-          {
-            id: 'custom-saved',
-            label: 'Custom & Saved Reports',
-            content: <CustomSavedReportsTab companyId={companyId} />,
-          },
-        ]}
-      />
+      <PageAvailabilityGuard companyId={companyId} feature="reports">
+        <Tabs
+          activeTab={activeTab}
+          onTabChange={(nextTab) => navigate(`/reports/${nextTab}`)}
+          bottomSpacing
+          tabs={[
+            {
+              id: 'stock-health',
+              label: 'Stock Health & Valuation',
+              content: <StockHealthValuationTab companyId={companyId} />,
+            },
+            {
+              id: 'movement-velocity',
+              label: 'Movement & Velocity',
+              content: <MovementVelocityTab companyId={companyId} />,
+            },
+            {
+              id: 'procurement-suppliers',
+              label: 'Procurement & Suppliers',
+              content: <ProcurementSuppliersTab companyId={companyId} />,
+            },
+            {
+              id: 'audits-shrinkage',
+              label: 'Audits & Shrinkage',
+              content: <AuditsShrinkageTab companyId={companyId} />,
+            },
+            {
+              id: 'custom-saved',
+              label: 'Custom & Saved Reports',
+              content: <CustomSavedReportsTab companyId={companyId} />,
+            },
+          ]}
+        />
+      </PageAvailabilityGuard>
     </BasePage>
   )
 }

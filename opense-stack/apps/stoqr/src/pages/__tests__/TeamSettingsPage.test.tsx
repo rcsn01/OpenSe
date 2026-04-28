@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { TeamSettingsPage } from '../TeamSettingsPage'
@@ -50,8 +51,27 @@ vi.mock('../../components/TeamSettings/ActivityLogsTab', () => ({
   ActivityLogsTab: () => <div>Activity tab</div>,
 }))
 
+vi.mock('../../components/TeamSettings/PagesTab', () => ({
+  PagesTab: () => <div>Pages tab</div>,
+}))
+
 vi.mock('../../components/TeamSettings/TwoFactorTab', () => ({
   TwoFactorTab: () => <div>2FA tab</div>,
+}))
+
+vi.mock('../../hooks/queries/useOrganisationPageSettings', () => ({
+  useOrganisationPageSettings: () => ({
+    data: {
+      reportsEnabled: true,
+      procurementEnabled: true,
+      alertsEnabled: true,
+    },
+    isLoading: false,
+  }),
+  useUpdateOrganisationPageSettings: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }))
 
 vi.mock('../../hooks/queries/useTeamSettings', () => ({
@@ -86,12 +106,14 @@ describe('TeamSettingsPage', () => {
 
     expect(screen.getByText('Teams')).toBeInTheDocument()
     expect(screen.getByText('Permissions')).toBeInTheDocument()
+    expect(screen.getByText('Pages')).toBeInTheDocument()
     expect(screen.queryByText('User Management')).not.toBeInTheDocument()
     expect(screen.queryByText('RBAC')).not.toBeInTheDocument()
   })
 
   it('updates member role from teams tab action', async () => {
     mockUpdateCompanyMemberRole.mockResolvedValue(undefined)
+    const user = userEvent.setup()
 
     render(
       <MemoryRouter initialEntries={['/settings/organisations/teams']}>
@@ -101,7 +123,7 @@ describe('TeamSettingsPage', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Trigger role change' }))
+    await user.click(screen.getByRole('button', { name: 'Trigger role change' }))
 
     expect(mockUpdateCompanyMemberRole).toHaveBeenCalledWith({ memberId: 'member-1', roleId: 'role-2' })
   })
