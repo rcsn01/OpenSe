@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useAuth } from '@repo/shared/auth/context'
 import { useCompany } from '../contexts/CompanyContext'
+import {
+  defaultOrganisationPageSettings,
+  organisationPageFeatureLabels,
+  setOrganisationPageFeatureEnabled,
+  type OrganisationPageFeature,
+} from '../api/organisationPageSettings'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { ActivityLogsTab } from '../components/TeamSettings/ActivityLogsTab'
 import { MembersTab } from '../components/TeamSettings/MembersTab'
+import { PagesTab } from '../components/TeamSettings/PagesTab'
 import { RolesTab } from '../components/TeamSettings/RolesTab'
 import { TwoFactorTab } from '../components/TeamSettings/TwoFactorTab'
+import { useOrganisationPageSettings, useUpdateOrganisationPageSettings } from '../hooks/queries/useOrganisationPageSettings'
 import {
   useCreateRoleWithPermissions,
   useInviteCompanyMember,
@@ -27,14 +36,16 @@ export const TeamSettingsPage = () => {
     rbac: 'permissions',
   }
   const normalizedTab = tab ? (tabAliasMap[tab] ?? tab) : 'teams'
-  const validTabs = ['teams', 'permissions', 'activity', 'two-factor'] as const
+  const validTabs = ['teams', 'permissions', 'activity', 'pages', 'two-factor'] as const
   const activeTab = validTabs.includes(normalizedTab as (typeof validTabs)[number]) ? normalizedTab : 'teams'
   const { data, isLoading } = useTeamSettingsData(companyId)
+  const { data: pageSettings = defaultOrganisationPageSettings, isLoading: loadingPageSettings } = useOrganisationPageSettings(companyId)
   const { data: activity = [], isLoading: loadingActivity } = useTeamActivityEvents(companyId)
   const inviteMutation = useInviteCompanyMember(companyId)
   const updateMemberRoleMutation = useUpdateCompanyMemberRole(companyId)
   const updateRoleMutation = useUpdateRoleWithPermissions(companyId)
   const createRoleMutation = useCreateRoleWithPermissions(companyId)
+  const updatePageSettingsMutation = useUpdateOrganisationPageSettings(companyId)
 
   const [inviteMessage, setInviteMessage] = useState<string | null>(null)
   const [roleChangeMessage, setRoleChangeMessage] = useState<string | null>(null)
@@ -79,6 +90,16 @@ export const TeamSettingsPage = () => {
     { name, description, roleRank, permissionCodes }: { name: string; description: string; roleRank: number; permissionCodes: string[] },
   ) => {
     await updateRoleMutation.mutateAsync({ roleId, name, description, roleRank, permissionCodes })
+  }
+
+  const handlePageToggle = async (feature: OrganisationPageFeature, enabled: boolean) => {
+    try {
+      await updatePageSettingsMutation.mutateAsync(setOrganisationPageFeatureEnabled(pageSettings, feature, enabled))
+      toast.success(`${organisationPageFeatureLabels[feature]} page ${enabled ? 'enabled' : 'disabled'} for the organisation.`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update page access.')
+      throw error
+    }
   }
 
   useEffect(() => {
@@ -134,6 +155,18 @@ export const TeamSettingsPage = () => {
             id: 'activity',
             label: 'Activity Logs',
             content: loadingActivity ? <div className="empty-state">Loading activity logs...</div> : <ActivityLogsTab logs={activity} />,
+          },
+          {
+            id: 'pages',
+            label: 'Pages',
+            content: (
+              <PagesTab
+                settings={pageSettings}
+                isLoading={loadingPageSettings}
+                isUpdating={updatePageSettingsMutation.isPending}
+                onToggle={handlePageToggle}
+              />
+            ),
           },
           {
             id: 'two-factor',

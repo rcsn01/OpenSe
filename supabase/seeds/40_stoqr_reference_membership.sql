@@ -1,6 +1,29 @@
 -- 3) StoQR reference + membership
 -- ------------------------------------------------------------
 
+INSERT INTO stoqr.app_permissions (code, description)
+VALUES
+  ('company.manage', 'Manage company details and settings'),
+  ('billing.manage', 'Manage subscription and billing'),
+  ('members.view', 'View company members'),
+  ('members.manage', 'Invite and manage members'),
+  ('roles.manage', 'Create and edit custom roles'),
+  ('dashboard.view', 'View dashboard KPIs, trends, and alerts summary'),
+  ('products.view', 'View inventory and products'),
+  ('products.manage', 'Create, edit, and delete products'),
+  ('inventory.bulk_manage', 'Import, export, and bulk update inventory records'),
+  ('scanner.use', 'Use scanner workflows and scan history'),
+  ('labels.manage', 'Manage label templates and print jobs'),
+  ('reports.view', 'View reports and analytics data'),
+  ('reports.export', 'Export reports to CSV/PDF/PNG'),
+  ('procurement.manage', 'Manage suppliers, purchase orders, and receiving'),
+  ('alerts.view', 'View inventory and system alerts'),
+  ('alerts.manage', 'Manage alert rules and delivery settings'),
+  ('activity.view', 'View company activity logs'),
+  ('transactions.view', 'View stock history'),
+  ('transactions.create', 'Create stock in/out transactions')
+ON CONFLICT (code) DO NOTHING;
+
 INSERT INTO stoqr.roles (id, company_id, name, description, role_rank)
 VALUES
   ('20202020-2020-2020-2020-202020202020', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Manager', 'Operational manager role for Acme', 800),
@@ -92,6 +115,28 @@ JOIN stoqr.roles sr
  AND lower(sr.name) = 'owner'
 ON CONFLICT (user_id, company_id) DO UPDATE
 SET role_id = EXCLUDED.role_id;
+
+INSERT INTO stoqr.organisation_page_settings (
+  company_id,
+  reports_enabled,
+  procurement_enabled,
+  alerts_enabled
+)
+VALUES
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', true, true, true),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', true, true, true)
+ON CONFLICT (company_id) DO UPDATE
+SET
+  reports_enabled = EXCLUDED.reports_enabled,
+  procurement_enabled = EXCLUDED.procurement_enabled,
+  alerts_enabled = EXCLUDED.alerts_enabled;
+
+INSERT INTO stoqr.label_templates (company_id, name, is_system, layout, variable_fields)
+VALUES
+  (NULL, 'Standard Product Barcode', true, '{}'::jsonb, '{barcode,sku,name,price,qr}'::text[]),
+  (NULL, 'Warehouse Bin Locator', true, '{}'::jsonb, '{barcode,name,qr}'::text[]),
+  (NULL, 'B2B Shipping Label (4x6)', true, '{}'::jsonb, '{barcode,sku,name,qr}'::text[])
+ON CONFLICT DO NOTHING;
 
 INSERT INTO public.subscriptions (
   id,

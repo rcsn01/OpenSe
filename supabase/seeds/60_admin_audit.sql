@@ -139,11 +139,40 @@ VALUES
   ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b102', 'stoqr', 'stoqr.smart-reorder-assistant', 'enabled', 'All organisations')
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO public.admin_feature_flags (id, app_code, flag_key, rollout_status, audience)
+VALUES
+  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b103', 'etl', 'etl.ai-assisted-transformations', 'beta', 'Beta cohort'),
+  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b104', 'etl', 'etl.bulk-template-publish', 'enabled', 'All organisations'),
+  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b105', 'stoqr', 'stoqr.inventory-anomaly-alerts', 'disabled', 'Disabled globally')
+ON CONFLICT (flag_key) DO UPDATE
+SET
+  app_code = EXCLUDED.app_code,
+  rollout_status = EXCLUDED.rollout_status,
+  audience = EXCLUDED.audience;
+
 INSERT INTO public.admin_default_configurations (id, app_code, config_key, config_value)
 VALUES
   ('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b201', 'etl', 'default_workflow_timeout_seconds', '900'),
   ('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b202', 'stoqr', 'default_alert_severity', 'medium')
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.admin_default_configurations (app_code, config_key, config_value)
+SELECT NULL, 'default_sso_provider', 'google-workspace'
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.admin_default_configurations
+  WHERE app_code IS NULL
+    AND config_key = 'default_sso_provider'
+);
+
+INSERT INTO public.admin_default_configurations (app_code, config_key, config_value)
+SELECT NULL, 'default_data_retention_days', '365'
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.admin_default_configurations
+  WHERE app_code IS NULL
+    AND config_key = 'default_data_retention_days'
+);
 
 INSERT INTO public.admin_release_notes (id, app_code, version, summary, published_at)
 VALUES
@@ -162,5 +191,24 @@ VALUES
     timezone('utc'::text, now()) - interval '4 days'
   )
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.admin_release_notes (id, app_code, version, summary, published_at)
+VALUES
+  (
+    'b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b303',
+    'etl',
+    'ETL 1.14.0',
+    'Template guardrails, workflow audit enrichment, and bug fixes.',
+    '2026-02-15T10:00:00.000Z'::timestamptz
+  ),
+  (
+    'b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b304',
+    'stoqr',
+    'StoQR 1.9.2',
+    'Inventory report query performance improvements and pagination tuning.',
+    '2026-02-12T08:30:00.000Z'::timestamptz
+  )
+ON CONFLICT (id) DO NOTHING;
+
 
 -- ------------------------------------------------------------

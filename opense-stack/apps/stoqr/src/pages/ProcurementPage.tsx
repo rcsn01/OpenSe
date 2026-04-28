@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
+import { PageAvailabilityGuard } from '../components/PageAvailabilityGuard'
 import { Tabs } from '../components/Tabs'
 import { PurchaseOrdersTab } from '../components/Procurement/PurchaseOrdersTab'
 import { SuppliersTab } from '../components/Procurement/SuppliersTab'
@@ -50,7 +51,9 @@ export const ProcurementPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
     >
-      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/procurement/${nextTab}`)} bottomSpacing />
+      <PageAvailabilityGuard companyId={companyId} feature="procurement">
+        <Tabs tabs={tabs} activeTab={activeTab} onTabChange={(nextTab) => navigate(`/procurement/${nextTab}`)} bottomSpacing />
+      </PageAvailabilityGuard>
     </BasePage>
   )
 }

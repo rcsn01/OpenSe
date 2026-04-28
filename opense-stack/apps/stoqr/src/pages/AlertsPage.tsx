@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { Navigate, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { BasePage } from '../components/BasePage'
+import { PageAvailabilityGuard } from '../components/PageAvailabilityGuard'
 import { Tabs } from '../components/Tabs'
 import { useCompany } from '../contexts/CompanyContext'
 import type { AppLayoutOutletContext } from '../layouts/AppLayout'
@@ -624,16 +625,18 @@ export const AlertsPage = () => {
       emptyStateDescription="Choose a company to view alerts."
       containerClassName="flex flex-col gap-4"
     >
-      <h1 className="sr-only">Alerts</h1>
-      <Tabs
-        activeTab={activeTab}
-        onTabChange={(nextTab) => navigate(`/alerts/${nextTab}`)}
-        bottomSpacing
-        tabs={[
-          { id: 'feed', label: 'Alerts Feed', count: unreadCount, content: feedContent },
-          { id: 'rules', label: 'Alert Rules', content: rulesContent },
-        ]}
-      />
+      <PageAvailabilityGuard companyId={companyId} feature="alerts">
+        <h1 className="sr-only">Alerts</h1>
+        <Tabs
+          activeTab={activeTab}
+          onTabChange={(nextTab) => navigate(`/alerts/${nextTab}`)}
+          bottomSpacing
+          tabs={[
+            { id: 'feed', label: 'Alerts Feed', count: unreadCount, content: feedContent },
+            { id: 'rules', label: 'Alert Rules', content: rulesContent },
+          ]}
+        />
+      </PageAvailabilityGuard>
     </BasePage>
   )
 }
