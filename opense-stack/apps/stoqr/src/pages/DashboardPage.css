@@ -1,32 +1,36 @@
 .stoqr-dashboard {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: clamp(12px, 1.8vh, 18px);
+  width: 100%;
+  min-width: 0;
 }
 
 .stoqr-dashboard__stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: clamp(10px, 1.4vh, 14px);
+  min-width: 0;
 }
 
 .stoqr-dashboard__grid {
   display: grid;
-  gap: 18px;
+  gap: clamp(12px, 1.6vh, 16px);
+  min-width: 0;
 }
 
 .stoqr-dashboard__grid--top {
-  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.92fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
 }
 
 .stoqr-dashboard__grid--bottom {
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .stoqr-dashboard__panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: clamp(10px, 1.4vh, 14px);
   min-width: 0;
 }
 
@@ -38,7 +42,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .stoqr-dashboard__panel-header--stacked {
@@ -49,7 +53,7 @@
 .stoqr-dashboard__panel-title-block {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .stoqr-dashboard__panel-title {
@@ -58,7 +62,7 @@
 
 .stoqr-dashboard__panel-heading {
   margin: 0;
-  font-size: var(--type-size-lg);
+  font-size: var(--type-size-base);
   font-weight: var(--type-weight-semibold);
   letter-spacing: -0.01em;
 }
@@ -71,18 +75,18 @@
 
 .stoqr-dashboard__panel-footer {
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
 }
 
 .stoqr-dashboard__empty-panel {
   display: grid;
   place-items: center;
-  min-height: 220px;
-  padding: 20px;
+  min-height: clamp(150px, 20vh, 180px);
+  padding: 16px;
   text-align: center;
   color: var(--color-muted-foreground);
-  font-size: var(--type-size-sm);
+  font-size: var(--type-size-xs);
 }
 
 .stoqr-dashboard__stat-card {
@@ -90,8 +94,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-height: 164px;
+  gap: 10px;
+  min-height: clamp(122px, 16vh, 142px);
   overflow: hidden;
   border-color: color-mix(in srgb, var(--dashboard-accent) 28%, var(--color-border));
   background:
@@ -125,7 +129,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .stoqr-dashboard__stat-label {
@@ -141,15 +145,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
   background: color-mix(in srgb, var(--dashboard-accent) 10%, var(--color-card));
   color: var(--dashboard-accent);
 }
 
 .stoqr-dashboard__stat-value {
-  font-size: clamp(1.8rem, 2.8vw, 2.2rem);
+  font-size: clamp(1.45rem, 2.2vw, 1.95rem);
   line-height: 1;
   font-weight: var(--type-weight-bold);
   font-variant-numeric: tabular-nums;
@@ -185,13 +189,13 @@
 
 .stoqr-dashboard__sparkline {
   width: 100%;
-  height: 56px;
+  height: 44px;
   margin-top: auto;
 }
 
 .stoqr-dashboard__spark-line {
   fill: none;
-  stroke-width: 3;
+  stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -223,12 +227,13 @@
 .stoqr-dashboard__chart-area {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .stoqr-dashboard__chart-svg {
   width: 100%;
-  min-height: 280px;
+  height: auto;
 }
 
 .stoqr-dashboard__chart-grid {
@@ -238,7 +243,7 @@
 
 .stoqr-dashboard__chart-line {
   fill: none;
-  stroke-width: 3;
+  stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -253,7 +258,7 @@
 
 .stoqr-dashboard__chart-dot {
   stroke: var(--color-card);
-  stroke-width: 2;
+  stroke-width: 1.5;
 }
 
 .stoqr-dashboard__chart-dot--inbound {
@@ -266,14 +271,14 @@
 
 .stoqr-dashboard__chart-axis-label {
   fill: var(--color-muted-foreground);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .stoqr-dashboard__chart-legend {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 14px;
   color: var(--color-muted-foreground);
   font-size: var(--type-size-xs);
 }
@@ -308,8 +313,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 0;
+  gap: 10px;
+  padding: 10px 0;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
 }
 
@@ -320,7 +325,7 @@
 .stoqr-dashboard__attention-main {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -328,7 +333,7 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  margin-top: 7px;
+  margin-top: 6px;
   flex-shrink: 0;
 }
 
@@ -347,6 +352,7 @@
 
 .stoqr-dashboard__attention-copy {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .stoqr-dashboard__attention-title,
@@ -378,13 +384,13 @@
 .stoqr-dashboard__velocity-tabbar {
   display: flex;
   width: 100%;
-  gap: 20px;
+  gap: 16px;
   border-bottom: 1px solid var(--color-border);
   overflow-x: auto;
 }
 
 .stoqr-dashboard__velocity-tab {
-  padding: 0 0 10px;
+  padding: 0 0 8px;
   border-bottom: 2px solid transparent;
   font-size: var(--type-size-xs);
   font-weight: var(--type-weight-medium);
@@ -406,10 +412,10 @@
 
 .stoqr-dashboard__velocity-item {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(120px, 1fr) auto;
+  grid-template-columns: minmax(0, 1.1fr) minmax(96px, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  padding: 14px 0;
+  gap: 10px;
+  padding: 10px 0;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
 }
 
@@ -468,6 +474,11 @@
   min-width: 100%;
 }
 
+.stoqr-dashboard__deliveries-table th,
+.stoqr-dashboard__deliveries-table td {
+  padding: 10px 12px;
+}
+
 .stoqr-dashboard__table-head--right {
   text-align: right;
 }
@@ -482,13 +493,14 @@
 .stoqr-dashboard__delivery-items {
   color: var(--color-muted-foreground);
   font-size: var(--type-size-xs);
+  overflow-wrap: anywhere;
 }
 
 .stoqr-dashboard__delivery-expected {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: 6px;
   text-align: right;
   font-size: var(--type-size-xs);
   color: var(--color-foreground);
