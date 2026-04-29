@@ -24,7 +24,7 @@ This guide covers three workflows for running the OpenSe webapps with Docker.
 pnpm setup:local
 ```
 
-`pnpm setup:local` starts local Supabase, resets/seeds the database, reads the local keys, and writes `opense-stack/.env` for every app.
+`pnpm setup:local` is the beginner-friendly path: it starts local Supabase, resets/seeds the database, reads the local keys, and writes `opense-stack/.env` for every app. You do not need to install the Supabase CLI globally.
 
 ---
 
