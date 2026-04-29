@@ -1,37 +1,60 @@
-## Prerequisites to Download/Install
+# Development Setup
+
+This guide is written for a fresh machine or a teammate/reviewer who has not run OpenSe before.
+
+## Prerequisites
 
 1. Node.js (LTS version)
 2. pnpm v9.15.0 (Corepack is supported)
-3. Docker (required for local Supabase - must be running)
-4. Supabase CLI (installed through this workspace's dev dependencies)
+3. Docker Desktop or Docker Engine
 
-## Step-by-Step Setup
+You do not need to install the Supabase CLI globally. The project installs and runs it through `pnpm`.
 
-# 1. Install Dependencies
+## Quick Start
+
+Open Docker Desktop first and wait until it says Docker is running.
 
 ```bash
 cd opense-stack
-pnpm install
-```
-
-# 2. Bootstrap Local Supabase and Environment
-
-For a fresh local development environment, run:
-
-```bash
+corepack enable
 pnpm setup:local
+pnpm dev
 ```
 
-This command:
+That is the beginner path. It installs dependencies, starts local Supabase, resets/seeds the database, writes `.env`, and then you can run the apps.
 
-- starts Supabase from the repository root;
+## What `pnpm setup:local` Does
+
+`pnpm setup:local` is the safe first-run command. It:
+
+- checks that Docker is running;
+- installs workspace dependencies;
+- starts local Supabase from the repository root;
 - resets the local database and runs the configured SQL seed files;
 - reads the local Supabase anon and service-role keys;
 - writes `opense-stack/.env` with the correct local app URLs and Supabase keys.
 
 Use this when a reviewer, team member, or endpoint user needs the stack ready quickly.
 
-# 3. Local Supabase Backend Dev
+To see setup options:
+
+```bash
+pnpm setup:local -- --help
+```
+
+To start Supabase without deleting your existing local data:
+
+```bash
+pnpm setup:local -- --no-reset
+```
+
+To bootstrap Supabase and start all apps without resetting the database:
+
+```bash
+pnpm dev:local
+```
+
+## Local Supabase Commands
 
 The package scripts wrap the Supabase CLI. Run them from `opense-stack/`:
 
@@ -41,13 +64,13 @@ pnpm db:stop    # Stop DB
 pnpm db:status  # Check local URLs and keys
 ```
 
-# 3.1 Apply Migrations
+### Apply Migrations
 
 ```bash
 pnpm db:migrate
 ```
 
-# 3.2 Reset Migrations and Seeds
+### Reset Migrations and Seeds
 
 ```bash
 pnpm db:reset
@@ -55,13 +78,13 @@ pnpm db:reset
 
 Seeding is SQL-driven through `supabase/config.toml` and the files in `supabase/seeds/`.
 
-# 3.3 Push to Supabase Server
+### Push to Supabase Server
 
 ```bash
-npx supabase db push
+pnpm exec supabase db push
 ```
 
-# 4. Start Development
+## Start Development
 
 ```bash
 pnpm dev
@@ -78,13 +101,7 @@ pnpm dev:opense     # OpenSe shell app
 pnpm dev:ui-design  # UI design app
 ```
 
-To bootstrap Supabase and start all apps without resetting the database:
-
-```bash
-pnpm dev:local
-```
-
-# 5. Ports
+## Ports
 
 | App             | Port  | URL                    |
 | --------------- | ----- | ---------------------- |
@@ -96,3 +113,12 @@ pnpm dev:local
 | UI-Design       | 5999  | http://localhost:5999  |
 | Supabase API    | 54321 | http://127.0.0.1:54321 |
 | Supabase Studio | 54323 | http://127.0.0.1:54323 |
+
+## Beginner Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| `Docker is not running` | Open Docker Desktop and wait until it finishes starting. |
+| `pnpm is not available` | Run `corepack enable`, then try `pnpm setup:local` again. |
+| Supabase keys are missing | Run `pnpm db:status`. If Supabase is not started, run `pnpm setup:local`. |
+| Login redirects to the wrong app | Rerun `pnpm setup:local` so `.env` and local auth redirect URLs are regenerated. |
