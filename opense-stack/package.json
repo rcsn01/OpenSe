@@ -22,11 +22,13 @@
     "test:e2e:stop": "kill-port 5990 5991 5992 5993 5994 || true",
     "security:check-secrets": "node scripts/check-secret-leaks.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "db:start": "supabase start",
-    "db:stop": "supabase stop",
-    "db:reset": "supabase db reset",
-    "db:migrate": "supabase migration up",
-    "db:status": "supabase status"
+    "setup:local": "node scripts/dev-start.mjs",
+    "dev:local": "node scripts/dev-start.mjs --no-reset --dev",
+    "db:start": "pnpm exec supabase start",
+    "db:stop": "pnpm exec supabase stop",
+    "db:reset": "pnpm exec supabase db reset",
+    "db:migrate": "pnpm exec supabase migration up",
+    "db:status": "pnpm exec supabase status"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
