@@ -1,3 +1,6 @@
 /.pnpm-store
 .DS_Store
 opense-stack/pnpm-lock.yaml
+opense-stack/.env
+supabase/.temp/
+supabase/migrations/.temp/
