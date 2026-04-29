@@ -57,8 +57,21 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:5173"
-additional_redirect_urls = ["http://127.0.0.1:5174", "http://127.0.0.1:5175"]
+site_url = "http://localhost:5991"
+additional_redirect_urls = [
+	"http://localhost:5990",
+	"http://localhost:5991",
+	"http://localhost:5992",
+	"http://localhost:5993",
+	"http://localhost:5994",
+	"http://localhost:5999",
+	"http://127.0.0.1:5990",
+	"http://127.0.0.1:5991",
+	"http://127.0.0.1:5992",
+	"http://127.0.0.1:5993",
+	"http://127.0.0.1:5994",
+	"http://127.0.0.1:5999"
+]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

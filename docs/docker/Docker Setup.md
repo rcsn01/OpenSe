@@ -18,12 +18,13 @@ This guide covers three workflows for running the OpenSe webapps with Docker.
 
 - [Docker Engine](https://docs.docker.com/engine/install/) ≥ 24
 - [Docker Compose](https://docs.docker.com/compose/install/) v2 (ships with Docker Desktop)
-- A valid `.env` file in `opense-stack/` (copy from `.env.example`)
+- A valid `.env` file in `opense-stack/`
 
 ```bash
-cp .env.example .env
-# Fill in the Supabase keys and other values
+pnpm setup:local
 ```
+
+`pnpm setup:local` starts local Supabase, resets/seeds the database, reads the local keys, and writes `opense-stack/.env` for every app.
 
 ---
 

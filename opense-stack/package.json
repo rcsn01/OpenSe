@@ -22,6 +22,8 @@
     "test:e2e:stop": "kill-port 5990 5991 5992 5993 5994 || true",
     "security:check-secrets": "node scripts/check-secret-leaks.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "setup:local": "node scripts/dev-start.mjs",
+    "dev:local": "node scripts/dev-start.mjs --no-reset --dev",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
