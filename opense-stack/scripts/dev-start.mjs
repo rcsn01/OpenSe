@@ -13,16 +13,29 @@ const args = new Set(process.argv.slice(2))
 const shouldReset = !args.has('--no-reset')
 const shouldRunDev = args.has('--dev')
 const shouldSkipInstall = args.has('--skip-install')
+const shouldPrintOnly = args.has('--print-only')
 
 if (args.has('--help') || args.has('-h')) {
   console.log(`
 OpenSe local Supabase setup
 
 Usage:
-  pnpm setup:local              Install deps, start Supabase, reset/seed DB, write .env
-  pnpm dev:local                Start Supabase, keep existing DB data, write .env, run all apps
-  pnpm setup:local -- --no-reset     Start Supabase and write .env without resetting data
-  pnpm setup:local -- --skip-install Skip dependency install when node_modules is already ready
+  pnpm setup:local
+    First-time setup. Installs dependencies, starts Supabase, resets/seeds the database,
+    and writes the local .env file for the apps.
+
+  pnpm dev:local
+    Everyday shortcut. Starts Supabase, keeps existing local data, writes .env,
+    then starts all web apps.
+
+  pnpm setup:local -- --no-reset
+    Start Supabase and update .env without deleting local database data.
+
+  pnpm setup:local -- --skip-install
+    Skip dependency install when node_modules is already ready.
+
+  pnpm setup:local -- --print-only
+    Show what the setup will do without changing anything.
 
 Before running:
   1. Open Docker Desktop and wait until it says Docker is running.
@@ -40,8 +53,25 @@ const appUrls = {
   VITE_UI_PUBLIC_URL: 'http://localhost:5999',
 }
 
+const setupSteps = [
+  'Check Node.js, Corepack, pnpm, and Docker.',
+  'Install project dependencies with pnpm.',
+  'Start the local Supabase services.',
+  'Reset and seed the local database, unless --no-reset is used.',
+  'Read the local Supabase URL and keys.',
+  'Write opense-stack/.env so the apps can connect to Supabase.',
+]
+
+function printPlan() {
+  console.log('\nOpenSe local setup will:')
+  setupSteps.forEach((step, index) => console.log(`  ${index + 1}. ${step}`))
+  console.log('\nThis only affects your local machine.')
+  console.log('It does not push data to a hosted Supabase project.')
+}
+
 function run(command, commandArgs, options = {}) {
-  console.log(`> ${command} ${commandArgs.join(' ')}`)
+  const label = options.label ? `${options.label}\n` : ''
+  console.log(`${label}> ${command} ${commandArgs.join(' ')}`)
   execFileSync(command, commandArgs, {
     cwd: options.cwd ?? repoRoot,
     stdio: options.stdio ?? 'inherit',
@@ -74,6 +104,11 @@ function checkCommand(command, commandArgs, message) {
   })
 
   if (result.status !== 0) throw new Error(message)
+}
+
+function step(number, title, detail) {
+  console.log(`\nStep ${number}: ${title}`)
+  if (detail) console.log(detail)
 }
 
 function checkDocker() {
@@ -155,41 +190,58 @@ function writeLocalEnv(supabaseEnv) {
 
   const existing = existsSync(envPath) ? readFileSync(envPath, 'utf8') : readFileSync(resolve(stackRoot, '.env.example'), 'utf8')
   writeFileSync(envPath, upsertEnv(existing, updates))
-  console.log(`Updated ${envPath}`)
+  console.log(`Wrote local app settings to ${envPath}`)
 }
 
 function main() {
-  console.log('Preparing OpenSe local development environment...')
-  console.log('This will start a local Supabase database, seed demo data, and write opense-stack/.env.')
+  console.log('OpenSe local development setup')
+  printPlan()
 
+  if (shouldPrintOnly) {
+    console.log('\nPrint-only mode selected. No commands were run.')
+    return
+  }
+
+  step(1, 'Checking required tools', 'This makes sure the basic programs are available before setup starts.')
   checkCommand('node', ['--version'], 'Node.js is required. Install the current LTS version from https://nodejs.org/.')
   checkCommand('corepack', ['--version'], 'Corepack is required with Node.js. Reinstall/update Node LTS if this is missing.')
   checkDocker()
 
+  step(2, 'Enabling pnpm through Corepack')
   run('corepack', ['enable'], { cwd: stackRoot })
   checkCommand('pnpm', ['--version'], 'pnpm is not available yet. Run `corepack enable`, then rerun `pnpm setup:local`.')
 
   if (!shouldSkipInstall) {
+    step(3, 'Installing project dependencies', 'This can take a few minutes the first time.')
     run('pnpm', ['install'], { cwd: stackRoot })
+  } else {
+    step(3, 'Skipping dependency install', 'Using existing node_modules because --skip-install was provided.')
   }
 
+  step(4, 'Starting local Supabase', 'Docker will run the database, auth, storage, and Supabase Studio containers.')
   runSupabase(['start'], { cwd: repoRoot })
 
   if (shouldReset) {
-    console.log('Resetting and seeding the local database. Use `pnpm setup:local -- --no-reset` to keep existing local data.')
+    step(5, 'Resetting and seeding the local database', 'This creates a clean demo database. Use `pnpm setup:local -- --no-reset` to keep existing local data.')
     runSupabase(['db', 'reset'], { cwd: repoRoot })
+  } else {
+    step(5, 'Keeping existing local database data', '--no-reset was provided, so the database was not reset.')
   }
 
+  step(6, 'Writing app environment settings', 'The script reads the local Supabase keys and writes opense-stack/.env.')
   writeLocalEnv(readSupabaseEnv())
 
-  console.log('\nLocal Supabase is ready.')
-  console.log('- Supabase API: http://127.0.0.1:54321')
-  console.log('- Supabase Studio: http://127.0.0.1:54323')
-  console.log('- Accounts app: http://localhost:5991')
-  console.log('- StoQR app: http://localhost:5993')
-  console.log('Run `pnpm dev` for every app, or `pnpm dev:stoqr` / `pnpm dev:accounts` for focused work.')
+  console.log('\nSetup complete.')
+  console.log('Next command:')
+  console.log('  pnpm dev')
+  console.log('\nUseful local URLs:')
+  console.log('  Supabase API:    http://127.0.0.1:54321')
+  console.log('  Supabase Studio: http://127.0.0.1:54323')
+  console.log('  Accounts app:    http://localhost:5991')
+  console.log('  StoQR app:       http://localhost:5993')
 
   if (shouldRunDev) {
+    step(7, 'Starting all web apps')
     run('pnpm', ['dev'], { cwd: stackRoot })
   }
 }

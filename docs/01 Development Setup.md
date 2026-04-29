@@ -42,6 +42,12 @@ To see setup options:
 pnpm setup:local -- --help
 ```
 
+To preview what setup will do without changing anything:
+
+```bash
+pnpm setup:local -- --print-only
+```
+
 To start Supabase without deleting your existing local data:
 
 ```bash
