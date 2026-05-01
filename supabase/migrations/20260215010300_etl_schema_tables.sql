@@ -70,6 +70,16 @@ CREATE TABLE IF NOT EXISTS etl.workflow_executions (
   error_message TEXT
 );
 
+CREATE TABLE IF NOT EXISTS etl.logs (
+  id            uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  event_type    text NOT NULL,        
+  description   text,                
+  status        text DEFAULT 'success',
+  created_at    timestamptz DEFAULT now(),
+  error_message text,
+  metadata      jsonb                
+);
+
 CREATE INDEX IF NOT EXISTS workflow_executions_org_idx ON etl.workflow_executions(org_id);
 CREATE INDEX IF NOT EXISTS workflow_executions_user_idx ON etl.workflow_executions(user_id);
 CREATE INDEX IF NOT EXISTS workflow_executions_workflow_idx ON etl.workflow_executions(workflow_id);
@@ -107,6 +117,7 @@ ALTER TABLE etl.workflows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE etl.workflow_executions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE etl.workflow_versions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE etl.notification_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE etl.logs ENABLE ROW LEVEL SECURITY;
 
 GRANT SELECT ON etl.app_permissions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON etl.roles TO authenticated;
@@ -116,3 +127,4 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON etl.workflows TO authenticated;
 GRANT SELECT ON etl.workflow_executions TO authenticated;
 GRANT SELECT, INSERT ON etl.workflow_versions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON etl.notification_settings TO authenticated;
+GRANT SELECT, INSERT ON etl.logs TO authenticated;
