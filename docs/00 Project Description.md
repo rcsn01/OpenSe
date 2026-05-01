@@ -8,7 +8,7 @@ Open-SE is a web-based B2B suite built to solve niche business problems. It's a 
 ## Tech Stack
 ### Frontend
 - React 19 - UI framework
-- Vite 7 - Build tool and dev server
+- Vite 7 - Build tool and dev server      
 - TypeScript - Type safety across all apps
 - Tailwind CSS 4 - Utility-first CSS framework
 - React Router 7 - Client-side routing

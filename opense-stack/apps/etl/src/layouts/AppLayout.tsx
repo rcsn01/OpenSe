@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Outlet, useLocation, Navigate, NavLink } from 'react-router-dom'
-import { LayoutDashboard, LayoutTemplate, Building2, Activity, Search } from 'lucide-react'
+import { LayoutDashboard, LayoutTemplate, Building2, Activity, Search, ScrollText } from 'lucide-react'
 import {
   AppLayout as SharedAppLayout,
   SideNav,
@@ -20,6 +20,7 @@ const mainNavItems = [
   { href: '/gallery', label: 'Workflow Gallery', icon: <LayoutTemplate className="w-5 h-5" /> },
   { href: '/organisation', label: 'Organisation', icon: <Building2 className="w-5 h-5" /> },
   { href: '/activity', label: 'Activity', icon: <Activity className="w-5 h-5" /> },
+  { href: '/logs', label: 'Logs', icon: <ScrollText className="w-5 h-5" /> },
 ]
 
 export const AppLayout = () => {
