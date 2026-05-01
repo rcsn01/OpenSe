@@ -54,7 +54,7 @@ export const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({ data, on
           <p className="mt-0.5 text-amber-700">
             Code runs in a restricted scope with no access to browser APIs (window, fetch, DOM, etc.).
             The <code className="bg-amber-100 px-0.5 rounded">rows</code> variable contains input data.
-            You must <code className="bg-amber-100 px-0.5 rounded">return</code> an array. 10s timeout.
+            You must <code className="bg-amber-100 px-0.5 rounded">return</code> an array of row objects.
           </p>
         </div>
       </div>

@@ -1,6 +1,11 @@
 // @ts-ignore Deno edge runtime resolves remote module at deploy/runtime.
 import Stripe from 'https://esm.sh/stripe@18.4.0?target=deno'
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
+import {
+  parseNonEmptyString,
+  parseNonNegativeInteger,
+  parsePositivePercent,
+} from '../_shared/request-validation.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void
@@ -77,12 +82,8 @@ Deno.serve(async (req: Request) => {
     const stripe = new Stripe(stripeSecretKey)
 
     if (action === 'sync_coupon') {
-      const code = String(body.code ?? '').trim().toUpperCase()
-      const discountPercent = Number(body.discountPercent)
-
-      if (!code || Number.isNaN(discountPercent) || discountPercent <= 0 || discountPercent > 100) {
-        return json(req, 400, { error: 'Invalid coupon payload' })
-      }
+      const code = parseNonEmptyString(body.code, 'code').toUpperCase()
+      const discountPercent = parsePositivePercent(body.discountPercent, 'discountPercent')
 
       const coupon = await stripe.coupons.create({
         name: code,
@@ -97,13 +98,9 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'sync_pricing_plan') {
-      const productName = String(body.productName ?? '').trim()
-      const seatPriceCents = Number(body.seatPriceCents)
+      const productName = parseNonEmptyString(body.productName, 'productName')
+      const seatPriceCents = parseNonNegativeInteger(body.seatPriceCents, 'seatPriceCents')
       const existingProductId = typeof body.existingProductId === 'string' ? body.existingProductId : null
-
-      if (!productName || Number.isNaN(seatPriceCents) || seatPriceCents < 0) {
-        return json(req, 400, { error: 'Invalid pricing payload' })
-      }
 
       const product = existingProductId
         ? await stripe.products.retrieve(existingProductId)

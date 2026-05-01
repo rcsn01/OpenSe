@@ -1,6 +1,7 @@
 // @ts-ignore Deno edge runtime resolves remote module at deploy/runtime.
 import Stripe from 'https://esm.sh/stripe@18.4.0?target=deno'
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
+import { parseAllowedRedirectUrl, parseAppCode, parseSeatLimit } from '../_shared/request-validation.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void
@@ -24,13 +25,6 @@ const parseBody = async (req: Request): Promise<Record<string, unknown>> => {
   } catch {
     return {}
   }
-}
-
-const tierToSeatLimit = (tier: string | null | undefined): number => {
-  if (tier === 'tier-1') return 5
-  if (tier === 'tier-2') return 15
-  if (tier === 'tier-3') return 50
-  return 0
 }
 
 const getCurrentUser = async (supabaseUrl: string, supabaseAnonKey: string, authHeader: string) => {
@@ -133,28 +127,12 @@ Deno.serve(async (req: Request) => {
     const currentUser = await getCurrentUser(supabaseUrl, supabaseAnonKey, authHeader)
 
     const body = await parseBody(req)
-    const appCode = String(body.appCode ?? 'etl')
-    const explicitSeatLimit = Number(body.seatLimit)
-    const tierSeatLimit = typeof body.tier === 'string' ? tierToSeatLimit(body.tier) : null
-    const seatLimit = Number.isInteger(explicitSeatLimit) && explicitSeatLimit >= 0
-      ? explicitSeatLimit
-      : tierSeatLimit ?? 0
-    const successUrl = String(body.successUrl ?? '')
-    const cancelUrl = String(body.cancelUrl ?? '')
+    const appCode = parseAppCode(body.appCode)
+    const seatLimit = parseSeatLimit(body.seatLimit, body.tier, { allowDefaultZero: true })
+    const successUrl = parseAllowedRedirectUrl(body.successUrl, 'successUrl')
+    const cancelUrl = parseAllowedRedirectUrl(body.cancelUrl, 'cancelUrl')
     const requestedOrgId = typeof body.orgId === 'string' ? body.orgId : null
     const requestedOrgName = typeof body.orgName === 'string' ? body.orgName.trim() : ''
-
-    if (!['etl', 'stoqr'].includes(appCode)) {
-      return json(req, 400, { error: 'appCode must be etl or stoqr' })
-    }
-
-    if (!Number.isInteger(seatLimit) || seatLimit < 0) {
-      return json(req, 400, { error: 'seatLimit must be a non-negative integer' })
-    }
-
-    if (!successUrl || !cancelUrl) {
-      return json(req, 400, { error: 'successUrl and cancelUrl are required' })
-    }
 
     let metadata: Record<string, string> = {
       app_code: appCode,

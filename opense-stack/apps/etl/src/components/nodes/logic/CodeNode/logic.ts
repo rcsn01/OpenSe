@@ -5,17 +5,15 @@ import { CodeNodeData, Row } from '../../types';
  * Sandboxed JavaScript execution for the Code Node.
  *
  * Security strategy:
- * 1. Uses `new Function()` (NOT eval) to compile user code into a callable.
+ * 1. Rejects common escape hatches before compiling user code.
  * 2. The function receives only `rows` and a safe `console` proxy — no access
  *    to window, document, fetch, localStorage, globalThis, process, require, etc.
- * 3. A timeout wrapper aborts execution after 10 seconds to prevent infinite loops.
- * 4. All execution is wrapped in try/catch so errors are reported, not swallowed.
+ * 3. All execution is wrapped in try/catch so errors are reported, not swallowed.
  *
- * Limitation: This runs in the main thread. For true production sandboxing,
- * you would move this into a Web Worker or a server-side container.
+ * Limitation: This still runs in the main thread. It is a restricted convenience
+ * feature, not a hardened isolation boundary. Worker/server isolation is the
+ * right next step for untrusted or shared workflow execution.
  */
-
-const TIMEOUT_MS = 10_000;
 
 const BLOCKED_GLOBALS = [
   'window', 'self', 'globalThis', 'document', 'location', 'navigator',
@@ -24,10 +22,37 @@ const BLOCKED_GLOBALS = [
   'eval', 'Function', 'importScripts', 'require', 'process', 'module', 'exports',
 ];
 
-const runSandboxed = (code: string, rows: Row[]): Row[] => {
+const SHADOWED_GLOBALS = BLOCKED_GLOBALS.filter((name) => name !== 'eval');
+
+const BLOCKED_SOURCE_PATTERNS = [
+  /\b(?:constructor|__proto__|prototype)\s*(?:\.|\[)/,
+  /\bimport\s*\(/,
+  /\bwhile\s*\(\s*true\s*\)/,
+  /\bfor\s*\(\s*;\s*;\s*\)/,
+];
+
+const validateCodeSource = (code: string) => {
+  for (const globalName of BLOCKED_GLOBALS) {
+    const pattern = new RegExp(`\\b${globalName}\\b`);
+    if (pattern.test(code)) {
+      throw new Error(`Code cannot reference ${globalName}`);
+    }
+  }
+
+  if (BLOCKED_SOURCE_PATTERNS.some((pattern) => pattern.test(code))) {
+    throw new Error('Code contains a blocked sandbox escape or non-terminating loop pattern');
+  }
+};
+
+const isRowObject = (value: unknown): value is Row =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+export const runSandboxed = (code: string, rows: Row[]): Row[] => {
+  validateCodeSource(code);
+
   // Build a scope that shadows dangerous globals with undefined
-  const shadowParams = BLOCKED_GLOBALS.join(', ');
-  const shadowArgs = BLOCKED_GLOBALS.map(() => 'undefined').join(', ');
+  const shadowParams = SHADOWED_GLOBALS.join(', ');
+  const shadowArgs = SHADOWED_GLOBALS.map(() => 'undefined').join(', ');
 
   // Safe console that captures logs but prevents side effects
   const logs: string[] = [];
@@ -47,32 +72,21 @@ const runSandboxed = (code: string, rows: Row[]): Row[] => {
 
   const fn = new Function('rows', 'console', wrappedCode);
 
-  // Execute with timeout
   let result: any;
-  let completed = false;
-  let error: Error | null = null;
-
-  const timer = setTimeout(() => {
-    if (!completed) {
-      error = new Error(`Code execution timed out after ${TIMEOUT_MS}ms`);
-    }
-  }, TIMEOUT_MS);
 
   try {
     result = fn(structuredClone(rows), safeConsole);
-    completed = true;
   } catch (e: any) {
-    completed = true;
     throw new Error(`Code execution error: ${e.message}`);
-  } finally {
-    clearTimeout(timer);
   }
-
-  if (error) throw error;
 
   // Validate output
   if (!Array.isArray(result)) {
     throw new Error('Code must return an array of row objects. Got: ' + typeof result);
+  }
+
+  if (!result.every(isRowObject)) {
+    throw new Error('Code must return an array containing only row objects.');
   }
 
   return result;

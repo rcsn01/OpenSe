@@ -1,4 +1,5 @@
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
+import { parseEmail, parseNonEmptyString, parsePassword } from '../_shared/request-validation.ts'
 
 type Action = 'create' | 'reset-password' | 'delete'
 
@@ -104,95 +105,96 @@ Deno.serve(async (req: Request) => {
     Authorization: `Bearer ${serviceRoleKey}`,
   }
 
-  if (payload.action === 'create') {
-    if (!payload.email || !payload.password) {
-      return json(req, 400, { error: 'email and password are required' })
-    }
+  try {
+    if (payload.action === 'create') {
+      const email = parseEmail(payload.email)
+      const password = parsePassword(payload.password, 'password')
 
-    const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...adminHeaders,
-      },
-      body: JSON.stringify({
-        email: payload.email,
-        password: payload.password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: payload.fullName ?? null,
+      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...adminHeaders,
         },
-      }),
-    })
+        body: JSON.stringify({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: payload.fullName ?? null,
+          },
+        }),
+      })
 
-    const createData = await createRes.json().catch(() => ({}))
+      const createData = await createRes.json().catch(() => ({}))
 
-    if (!createRes.ok || !createData?.id) {
-      return json(req, 400, { error: createData?.msg ?? createData?.error_description ?? 'Failed to create user' })
-    }
+      if (!createRes.ok || !createData?.id) {
+        return json(req, 400, { error: createData?.msg ?? createData?.error_description ?? 'Failed to create user' })
+      }
 
-    await fetch(`${supabaseUrl}/rest/v1/profiles?on_conflict=id`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates',
-        ...adminHeaders,
-      },
-      body: JSON.stringify([
-        {
-          id: createData.id,
-          email: payload.email,
-          full_name: payload.fullName ?? null,
+      await fetch(`${supabaseUrl}/rest/v1/profiles?on_conflict=id`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates',
+          ...adminHeaders,
         },
-      ]),
-    })
+        body: JSON.stringify([
+          {
+            id: createData.id,
+            email,
+            full_name: payload.fullName ?? null,
+          },
+        ]),
+      })
 
-    return json(req, 200, { userId: createData.id })
+      return json(req, 200, { userId: createData.id })
+    }
+
+    if (payload.action === 'reset-password') {
+      const targetUserId = parseNonEmptyString(payload.targetUserId, 'targetUserId')
+      const newPassword = parsePassword(payload.newPassword, 'newPassword')
+
+      const resetRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${targetUserId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...adminHeaders,
+        },
+        body: JSON.stringify({
+          password: newPassword,
+        }),
+      })
+
+      const resetData = await resetRes.json().catch(() => ({}))
+
+      if (!resetRes.ok) {
+        return json(req, 400, { error: resetData?.msg ?? resetData?.error_description ?? 'Failed to reset password' })
+      }
+
+      return json(req, 200, { success: true })
+    }
+
+    if (payload.action === 'delete') {
+      const targetUserId = parseNonEmptyString(payload.targetUserId, 'targetUserId')
+
+      const deleteRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${targetUserId}`, {
+        method: 'DELETE',
+        headers: adminHeaders,
+      })
+
+      const deleteData = await deleteRes.json().catch(() => ({}))
+
+      if (!deleteRes.ok) {
+        return json(req, 400, { error: deleteData?.msg ?? deleteData?.error_description ?? 'Failed to delete user' })
+      }
+
+      return json(req, 200, { success: true })
+    }
+
+    return json(req, 400, { error: 'Unknown action' })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return json(req, 400, { error: message })
   }
-
-  if (payload.action === 'reset-password') {
-    if (!payload.targetUserId || !payload.newPassword) {
-      return json(req, 400, { error: 'targetUserId and newPassword are required' })
-    }
-
-    const resetRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${payload.targetUserId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...adminHeaders,
-      },
-      body: JSON.stringify({
-        password: payload.newPassword,
-      }),
-    })
-
-    const resetData = await resetRes.json().catch(() => ({}))
-
-    if (!resetRes.ok) {
-      return json(req, 400, { error: resetData?.msg ?? resetData?.error_description ?? 'Failed to reset password' })
-    }
-
-    return json(req, 200, { success: true })
-  }
-
-  if (payload.action === 'delete') {
-    if (!payload.targetUserId) {
-      return json(req, 400, { error: 'targetUserId is required' })
-    }
-
-    const deleteRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${payload.targetUserId}`, {
-      method: 'DELETE',
-      headers: adminHeaders,
-    })
-
-    const deleteData = await deleteRes.json().catch(() => ({}))
-
-    if (!deleteRes.ok) {
-      return json(req, 400, { error: deleteData?.msg ?? deleteData?.error_description ?? 'Failed to delete user' })
-    }
-
-    return json(req, 200, { success: true })
-  }
-
-  return json(req, 400, { error: 'Unknown action' })
 })

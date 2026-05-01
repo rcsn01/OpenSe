@@ -1,6 +1,7 @@
 // @ts-ignore Deno edge runtime resolves remote module at deploy/runtime.
 import Stripe from 'https://esm.sh/stripe@18.4.0?target=deno'
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
+import { parseAppCode, parseSeatLimit } from '../_shared/request-validation.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void
@@ -51,13 +52,6 @@ const rpc = async (
   return data
 }
 
-const parseSubscriptionSeatLimit = (tier: string | null | undefined): number => {
-  if (tier === 'tier-1') return 5
-  if (tier === 'tier-2') return 15
-  if (tier === 'tier-3') return 50
-  return 0
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflight(req)
@@ -83,22 +77,8 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await parseBody(req)
 
-    const appCode = typeof body.appCode === 'string' ? body.appCode : 'etl'
-    const explicitSeatLimit = Number(body.seatLimit)
-    const tierSeatLimit = typeof body.tier === 'string' ? parseSubscriptionSeatLimit(body.tier) : null
-    const seatLimitCandidate = Number.isInteger(explicitSeatLimit) && explicitSeatLimit >= 0
-      ? explicitSeatLimit
-      : tierSeatLimit
-
-    const seatLimit = seatLimitCandidate ?? -1
-
-    if (!['etl', 'stoqr'].includes(appCode)) {
-      return json(req, 400, { error: 'appCode must be etl or stoqr' })
-    }
-
-    if (!Number.isInteger(seatLimit) || seatLimit < 0) {
-      return json(req, 400, { error: 'seatLimit must be provided as non-negative integer or tier' })
-    }
+    const appCode = parseAppCode(body.appCode)
+    const seatLimit = parseSeatLimit(body.seatLimit, body.tier)
 
     const contextRows = await rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_get_my_org_context')
     const context = Array.isArray(contextRows) ? contextRows[0] : null
