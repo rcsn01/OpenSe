@@ -9,10 +9,20 @@ import {
   DialogTitle,
 } from './Dialog'
 
+export type SideSheetSize = 'default' | 'page'
+
+const sideSheetSizeStyles: Record<SideSheetSize, CSSProperties | undefined> = {
+  default: undefined,
+  page: {
+    width: 'min(100vw, clamp(64rem, 84vw, 110rem))',
+  },
+}
+
 interface SideSheetProps {
   children: ReactNode
   open: boolean
   onClose: () => void
+  size?: SideSheetSize
   panelStyle?: CSSProperties
 }
 
@@ -21,9 +31,14 @@ interface SideSheetSectionProps {
   className?: string
 }
 
-export function SideSheet({ children, open, onClose, panelStyle }: SideSheetProps) {
+export function SideSheet({ children, open, onClose, size = 'default', panelStyle }: SideSheetProps) {
+  const resolvedPanelStyle = {
+    ...sideSheetSizeStyles[size],
+    ...panelStyle,
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} layout="right-sheet" panelStyle={panelStyle}>
+    <Dialog open={open} onClose={onClose} layout="right-sheet" panelStyle={resolvedPanelStyle}>
       {children}
     </Dialog>
   )

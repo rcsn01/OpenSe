@@ -70,6 +70,9 @@ describe('OrganisationPermissionsPanel', () => {
 
     await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0])
     expect(screen.getByRole('heading', { name: /edit role permissions/i })).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toHaveStyle({
+      width: 'min(100vw, clamp(64rem, 84vw, 110rem))',
+    })
 
     const checkboxes = screen.getAllByRole('checkbox')
     await user.click(checkboxes[0])

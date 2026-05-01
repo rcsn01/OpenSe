@@ -14,9 +14,6 @@ const labelStudioTabAliases = {
 } as const
 
 const validTabs = ['templates', 'preview-batch'] as const
-const labelDesignerPanelStyle = {
-  width: 'min(100vw, clamp(64rem, 84vw, 110rem))',
-} as const
 
 type LabelStudioTab = (typeof validTabs)[number]
 
@@ -85,7 +82,7 @@ export const LabelStudioPage = () => {
           ]}
         />
 
-        <SideSheet open={isDesignerOpen} onClose={() => setIsDesignerOpen(false)} panelStyle={labelDesignerPanelStyle}>
+        <SideSheet open={isDesignerOpen} onClose={() => setIsDesignerOpen(false)} size="page">
           <SideSheetContent>
             <SideSheetHeader>
               <SideSheetTitle>Label Designer</SideSheetTitle>

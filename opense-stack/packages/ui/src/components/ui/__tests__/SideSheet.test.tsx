@@ -9,19 +9,22 @@ import {
   SideSheetDescription,
   SideSheetFooter,
   SideSheetHeader,
+  type SideSheetSize,
   SideSheetTitle,
 } from '../SideSheet'
 
 const SideSheetHarness = ({
   open,
   onClose,
+  size,
   panelStyle,
 }: {
   open: boolean
   onClose: () => void
+  size?: SideSheetSize
   panelStyle?: CSSProperties
 }) => (
-  <SideSheet open={open} onClose={onClose} panelStyle={panelStyle}>
+  <SideSheet open={open} onClose={onClose} size={size} panelStyle={panelStyle}>
     <SideSheetContent>
       <SideSheetHeader>
         <SideSheetTitle>Workspace Settings</SideSheetTitle>
@@ -65,9 +68,18 @@ describe('SideSheet', () => {
       <SideSheetHarness
         open={true}
         onClose={() => {}}
+        size="page"
         panelStyle={{ width: 'min(100vw, clamp(64rem, 84vw, 110rem))' }}
       />,
     )
+
+    expect(screen.getByRole('dialog')).toHaveStyle({
+      width: 'min(100vw, clamp(64rem, 84vw, 110rem))',
+    })
+  })
+
+  it('applies the shared page-sized sheet preset', () => {
+    render(<SideSheetHarness open={true} onClose={() => {}} size="page" />)
 
     expect(screen.getByRole('dialog')).toHaveStyle({
       width: 'min(100vw, clamp(64rem, 84vw, 110rem))',
