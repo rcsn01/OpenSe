@@ -1,4 +1,4 @@
-import { type ReactNode, useState, createContext, useContext, useCallback, useEffect, useRef } from 'react'
+import { type CSSProperties, type ReactNode, useState, createContext, useContext, useCallback, useEffect, useRef } from 'react'
 import { cn } from '../../lib/cn'
 import { X } from 'lucide-react'
 
@@ -12,6 +12,7 @@ interface DialogProps {
   open: boolean
   onClose: () => void
   layout?: 'center' | 'right-sheet'
+  panelStyle?: CSSProperties
 }
 
 const getFocusableElements = (container: HTMLElement): HTMLElement[] => {
@@ -23,7 +24,7 @@ const getFocusableElements = (container: HTMLElement): HTMLElement[] => {
   )
 }
 
-export function Dialog({ children, open, onClose, layout = 'center' }: DialogProps) {
+export function Dialog({ children, open, onClose, layout = 'center', panelStyle }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeTimerRef = useRef<number | null>(null)
   const frameRef = useRef<number | null>(null)
@@ -166,6 +167,7 @@ export function Dialog({ children, open, onClose, layout = 'center' }: DialogPro
           role="dialog"
           aria-modal="true"
           tabIndex={-1}
+          style={panelStyle}
           className={panelClassName}
         >
           {children}

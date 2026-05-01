@@ -2,6 +2,10 @@ import type { LabelProduct } from '../../api/labelStudio'
 import {
   defaultLabelLayout,
   formatLabelPrice,
+  getLabelContentPaddingPt,
+  getQrSizePt,
+  MIN_LABEL_FONT_SIZE_PT,
+  MIN_LABEL_SIZE_MM,
   resolveLabelLayout,
   type LabelLayoutControls,
   type LabelLayoutTextAlign,
@@ -19,7 +23,6 @@ export const A4_PAGE = {
 export const PAGE_MARGIN = 24
 
 const CELL_GAP = 12
-const LABEL_PADDING = 8
 const QR_TEXT_GAP = 6
 
 type LabelPageMetrics = {
@@ -70,8 +73,8 @@ export type LabelExportPlacement = {
 }
 
 const getPageMetrics = (layout: LabelLayoutControls): LabelPageMetrics => {
-  const labelWidthPt = Math.max(mmToPt(20), mmToPt(layout.width))
-  const labelHeightPt = Math.max(mmToPt(20), mmToPt(layout.height))
+  const labelWidthPt = Math.max(mmToPt(MIN_LABEL_SIZE_MM), mmToPt(layout.width))
+  const labelHeightPt = Math.max(mmToPt(MIN_LABEL_SIZE_MM), mmToPt(layout.height))
   const printableWidth = A4_PAGE.width - PAGE_MARGIN * 2
   const printableHeight = A4_PAGE.height - PAGE_MARGIN * 2
   const columns = Math.max(1, Math.floor((printableWidth + CELL_GAP) / (labelWidthPt + CELL_GAP)))
@@ -114,17 +117,15 @@ export const buildLabelRenderPlan = (
   layoutInput: Record<string, unknown> | LabelLayoutControls | null | undefined,
 ): LabelRenderPlan => {
   const layout = resolveLabelLayout(layoutInput as Record<string, unknown> | null | undefined)
-  const width = Math.max(mmToPt(20), mmToPt(layout.width))
-  const height = Math.max(mmToPt(20), mmToPt(layout.height))
-  const fontSize = Math.max(8, layout.fontSize)
-  const secondaryFontSize = Math.max(8, fontSize - 1)
+  const width = Math.max(mmToPt(MIN_LABEL_SIZE_MM), mmToPt(layout.width))
+  const height = Math.max(mmToPt(MIN_LABEL_SIZE_MM), mmToPt(layout.height))
+  const fontSize = Math.max(MIN_LABEL_FONT_SIZE_PT, layout.fontSize)
+  const secondaryFontSize = Math.max(MIN_LABEL_FONT_SIZE_PT, fontSize - 1)
   const lineHeight = fontSize + 2
-  const contentPadding = Math.max(LABEL_PADDING, layout.padding)
+  const contentPadding = getLabelContentPaddingPt(layout)
   const contentLeft = contentPadding
   const contentWidth = width - contentPadding * 2
-  const qrSize = layout.showQr
-    ? Math.min(44 * (layout.qrScale / 100), height * 0.4, contentWidth * 0.35)
-    : 0
+  const qrSize = getQrSizePt(layout)
   const barcodeHeight = layout.showBarcode
     ? Math.min(34 * (layout.barcodeScale / 100), height * 0.35)
     : 0

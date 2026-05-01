@@ -1,0 +1,11 @@
+[mcp_servers.plane]
+args = [
+    "plane-mcp-server",
+    "stdio",
+]
+command = "uvx"
+
+[mcp_servers.plane.env]
+PLANE_API_KEY = "plane_api_b2369c67763a4c8b962493731f032c86"
+PLANE_BASE_URL = "https://plane.rcsn01.com"
+PLANE_WORKSPACE_SLUG = "open-se"

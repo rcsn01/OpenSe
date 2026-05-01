@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { CSSProperties } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import {
   SideSheet,
@@ -11,8 +12,16 @@ import {
   SideSheetTitle,
 } from '../SideSheet'
 
-const SideSheetHarness = ({ open, onClose }: { open: boolean; onClose: () => void }) => (
-  <SideSheet open={open} onClose={onClose}>
+const SideSheetHarness = ({
+  open,
+  onClose,
+  panelStyle,
+}: {
+  open: boolean
+  onClose: () => void
+  panelStyle?: CSSProperties
+}) => (
+  <SideSheet open={open} onClose={onClose} panelStyle={panelStyle}>
     <SideSheetContent>
       <SideSheetHeader>
         <SideSheetTitle>Workspace Settings</SideSheetTitle>
@@ -49,5 +58,19 @@ describe('SideSheet', () => {
     await user.click(screen.getByTestId('dialog-backdrop'))
 
     expect(onClose).toHaveBeenCalledTimes(2)
+  })
+
+  it('forwards custom panel sizing styles to the right sheet dialog', () => {
+    render(
+      <SideSheetHarness
+        open={true}
+        onClose={() => {}}
+        panelStyle={{ width: 'min(100vw, clamp(64rem, 84vw, 110rem))' }}
+      />,
+    )
+
+    expect(screen.getByRole('dialog')).toHaveStyle({
+      width: 'min(100vw, clamp(64rem, 84vw, 110rem))',
+    })
   })
 })
