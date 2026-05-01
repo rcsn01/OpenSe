@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLabelTemplates, useUpdateLabelTemplateLayout } from '../../hooks/queries/useLabelStudio'
 import { LabelPreviewCard } from './LabelPreviewCard'
-import { controlsToLayout, getLabelLayoutSummary, resolveLabelLayout, type LabelLayoutControls } from './labelLayout'
+import {
+  controlsToLayout,
+  getLabelLayoutSummary,
+  getMaxQrScale,
+  QR_SCALE_MIN,
+  resolveLabelLayout,
+  type LabelLayoutControls,
+} from './labelLayout'
 
 type ToggleField = 'showName' | 'showSku' | 'showPrice' | 'showBarcode' | 'showQr' | 'showBorder'
 
@@ -66,6 +73,7 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
     },
     [controls],
   )
+  const maxQrScale = useMemo(() => getMaxQrScale(controls), [controls])
 
   const onTemplateChange = (id: string) => {
     setSelectedTemplateId(id)
@@ -259,14 +267,26 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
 
                 <label className="stack">
                   QR Scale (%)
-                  <input
-                    className="input"
-                    type="number"
-                    min={50}
-                    max={160}
-                    value={controls.qrScale}
-                    onChange={(event) => updateControl('qrScale', Number(event.target.value) || 50)}
-                  />
+                  <div className="label-designer-slider-shell">
+                    <div className="label-designer-slider-header">
+                      <span className="small muted">Current</span>
+                      <span className="small muted">{controls.qrScale}%</span>
+                    </div>
+                    <input
+                      className="label-designer-slider"
+                      type="range"
+                      aria-label="QR Scale (%)"
+                      min={QR_SCALE_MIN}
+                      max={maxQrScale}
+                      step={1}
+                      value={controls.qrScale}
+                      onChange={(event) => updateControl('qrScale', Number(event.target.value) || QR_SCALE_MIN)}
+                    />
+                    <div className="label-designer-slider-values small muted">
+                      <span>{QR_SCALE_MIN}%</span>
+                      <span>{maxQrScale}%</span>
+                    </div>
+                  </div>
                 </label>
               </div>
             </section>

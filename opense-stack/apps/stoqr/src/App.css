@@ -999,6 +999,27 @@
   font-weight: var(--type-weight-semibold);
 }
 
+.label-designer-slider-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label-designer-slider-header,
+.label-designer-slider-values {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label-designer-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
 .label-designer-field-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

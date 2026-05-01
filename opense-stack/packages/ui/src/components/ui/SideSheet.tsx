@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type CSSProperties, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import {
   Dialog,
@@ -13,6 +13,7 @@ interface SideSheetProps {
   children: ReactNode
   open: boolean
   onClose: () => void
+  panelStyle?: CSSProperties
 }
 
 interface SideSheetSectionProps {
@@ -20,9 +21,9 @@ interface SideSheetSectionProps {
   className?: string
 }
 
-export function SideSheet({ children, open, onClose }: SideSheetProps) {
+export function SideSheet({ children, open, onClose, panelStyle }: SideSheetProps) {
   return (
-    <Dialog open={open} onClose={onClose} layout="right-sheet">
+    <Dialog open={open} onClose={onClose} layout="right-sheet" panelStyle={panelStyle}>
       {children}
     </Dialog>
   )

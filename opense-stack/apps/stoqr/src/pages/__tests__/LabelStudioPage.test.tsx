@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { CSSProperties } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { LabelStudioPage } from '../LabelStudioPage'
@@ -13,8 +14,16 @@ vi.mock('../../components/BasePage', () => ({
 }))
 
 vi.mock('@repo/ui', () => ({
-  SideSheet: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
-    open ? <div data-testid="designer-sheet">{children}</div> : null,
+  SideSheet: ({
+    open,
+    children,
+    panelStyle,
+  }: {
+    open: boolean
+    children: React.ReactNode
+    panelStyle?: CSSProperties
+  }) =>
+    open ? <div data-testid="designer-sheet" data-panel-width={panelStyle?.width}>{children}</div> : null,
   SideSheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SideSheetHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SideSheetTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
@@ -114,6 +123,10 @@ describe('LabelStudioPage', () => {
     await user.click(screen.getByRole('button', { name: 'Open template designer' }))
 
     expect(screen.getByTestId('designer-sheet')).toBeInTheDocument()
+    expect(screen.getByTestId('designer-sheet')).toHaveAttribute(
+      'data-panel-width',
+      'min(100vw, clamp(64rem, 84vw, 110rem))',
+    )
     expect(screen.getByText('Designer template: template-1')).toBeInTheDocument()
   })
 

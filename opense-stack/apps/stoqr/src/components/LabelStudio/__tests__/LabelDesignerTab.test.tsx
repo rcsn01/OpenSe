@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LabelDesignerTab } from '../LabelDesignerTab'
+import { getMaxQrScale } from '../labelLayout'
 
 const mockMutateAsync = vi.fn(async (_args?: unknown) => undefined)
 
@@ -52,6 +53,10 @@ describe('LabelDesignerTab', () => {
 
     expect(screen.getByText('Live Design Preview')).toBeInTheDocument()
     expect(screen.queryByText('Price: $24.00')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('QR Scale (%)')).toHaveAttribute(
+      'max',
+      String(getMaxQrScale({ width: 100, height: 50, padding: 8 })),
+    )
 
     fireEvent.change(screen.getByLabelText('Content Padding (pt)'), { target: { value: '12' } })
     fireEvent.change(screen.getByLabelText('Text Alignment'), { target: { value: 'center' } })
