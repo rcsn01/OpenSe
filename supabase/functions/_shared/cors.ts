@@ -19,12 +19,14 @@ const parseOrigins = (value: string | undefined) =>
     .map((origin) => origin.trim())
     .filter(Boolean)
 
-const getAllowedOrigins = () =>
+export const getAllowedOrigins = () =>
   new Set([
     ...DEFAULT_ALLOWED_ORIGINS,
     ...parseOrigins(Deno.env.get('EDGE_ALLOWED_ORIGINS')),
     ...parseOrigins(Deno.env.get('ALLOWED_ORIGINS')),
   ])
+
+export const isAllowedOrigin = (origin: string) => getAllowedOrigins().has(origin)
 
 export const getCorsHeaders = (req: Request): Record<string, string> => {
   const origin = req.headers.get('Origin')
