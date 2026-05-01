@@ -12,11 +12,13 @@ type SupabaseClientType = SupabaseClient<Database>
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const authCookieDomainOverride = import.meta.env.VITE_AUTH_COOKIE_DOMAIN as string | undefined
+const authCookieDomainOverride = import.meta.env.VITE_AUTH_COOKIE_DOMAIN as
+  | string
+  | undefined
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    'Missing Supabase environment variables. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.'
+    'Missing Supabase environment variables. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.',
   )
 }
 
@@ -34,7 +36,8 @@ function getAuthCookieDomain(hostname: string): string | undefined {
     } catch {}
   }
 
-  if (hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return undefined
+  if (hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname))
+    return undefined
   const parts = hostname.split('.')
   if (parts.length < 2) return undefined
   return `.${parts.slice(-2).join('.')}`
@@ -44,7 +47,11 @@ function readCookie(key: string): string | null {
   if (typeof document === 'undefined') return null
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`))
-  return match ? decodeURIComponent(match[1]) : null
+  try {
+    return match ? decodeURIComponent(match[1]) : null
+  } catch {
+    return null
+  }
 }
 
 function writeCookie(key: string, value: string) {
@@ -66,16 +73,48 @@ function deleteCookie(key: string) {
   document.cookie = `${key}=; Path=/; Max-Age=0; SameSite=Lax${secure}${domainPart}`
 }
 
+const readLocalStorage = (key: string): string | null => {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const storage = window.localStorage
+    if (!storage || typeof storage.getItem !== 'function') return null
+    return storage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+const writeLocalStorage = (key: string, value: string) => {
+  if (typeof window === 'undefined') return
+
+  try {
+    const storage = window.localStorage
+    if (!storage || typeof storage.setItem !== 'function') return
+    storage.setItem(key, value)
+  } catch {}
+}
+
+const removeLocalStorage = (key: string) => {
+  if (typeof window === 'undefined') return
+
+  try {
+    const storage = window.localStorage
+    if (!storage || typeof storage.removeItem !== 'function') return
+    storage.removeItem(key)
+  } catch {}
+}
+
 const crossSubdomainStorage = {
   getItem: (key: string): string | null => {
     if (typeof window === 'undefined') return null
 
     const cookieValue = readCookie(key)
-    const lsValue = window.localStorage.getItem(key)
+    const lsValue = readLocalStorage(key)
 
     if (cookieValue !== null) {
       if (lsValue !== cookieValue) {
-        window.localStorage.setItem(key, cookieValue)
+        writeLocalStorage(key, cookieValue)
       }
       return cookieValue
     }
@@ -88,12 +127,12 @@ const crossSubdomainStorage = {
   setItem: (key: string, value: string) => {
     if (typeof window === 'undefined') return
     writeCookie(key, value)
-    window.localStorage.setItem(key, value)
+    writeLocalStorage(key, value)
   },
   removeItem: (key: string) => {
     if (typeof window === 'undefined') return
     deleteCookie(key)
-    window.localStorage.removeItem(key)
+    removeLocalStorage(key)
   },
 }
 

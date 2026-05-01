@@ -7,11 +7,12 @@ import { activityKeys } from './queryKeys'
 
 export const useExecutionLogs = (userId: string | undefined, orgId: string | null | undefined) => {
   const { isDemoUser } = useAuth()
+  const isDemo = Boolean(isDemoUser)
 
   return useQuery<ExecutionLog[]>({
-    queryKey: activityKeys.executionLogs(userId, orgId, isDemoUser),
+    queryKey: activityKeys.executionLogs(userId, orgId, isDemo),
     queryFn: () => {
-      if (isDemoUser) {
+      if (isDemo) {
         // Return mock execution logs for demo user
         // Filter by orgId if specified
         if (orgId) {

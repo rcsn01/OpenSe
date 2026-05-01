@@ -215,7 +215,7 @@ export const AlertsPage = () => {
   const [alerts, setAlerts] = useState(initialAlerts)
   const [activeFilter, setActiveFilter] = useState<FeedCategory>('all')
   const [selectedAlertIds, setSelectedAlertIds] = useState<string[]>([])
-  const [fallbackSearchTerm, setFallbackSearchTerm] = useState('')
+  const [fallbackSearchTerm] = useState('')
   const [tablePage, setTablePage] = useState(1)
   const [tableSortField, setTableSortField] = useState<AlertSortKey>('title')
   const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('asc')

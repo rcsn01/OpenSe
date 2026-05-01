@@ -27,14 +27,22 @@ type WorkflowDetail = {
   is_template: boolean
 }
 
+const normalizeWorkflowDetail = (
+  workflow: Omit<WorkflowDetail, 'is_template'> & { is_template?: boolean },
+): WorkflowDetail => ({
+  ...workflow,
+  is_template: Boolean(workflow.is_template),
+})
+
 export const useWorkflows = ({ userId, orgId, mode }: UseWorkflowsParams) => {
   const { isDemoUser } = useAuth()
   const { listDemoWorkflows } = useDemoContext()
+  const isDemo = Boolean(isDemoUser)
 
   return useQuery<WorkflowRow[]>({
-    queryKey: workflowKeys.list(userId, orgId, mode, isDemoUser),
+    queryKey: workflowKeys.list(userId, orgId, mode, isDemo),
     queryFn: () => {
-      if (isDemoUser) {
+      if (isDemo) {
         return listDemoWorkflows(mode)
       }
       return userId ? listWorkflows({ userId, orgId, mode }) : []
@@ -47,14 +55,16 @@ export const useWorkflows = ({ userId, orgId, mode }: UseWorkflowsParams) => {
 export const useWorkflow = (id: string | null) => {
   const { isDemoUser } = useAuth()
   const { getDemoWorkflow } = useDemoContext()
+  const isDemo = Boolean(isDemoUser)
 
   return useQuery<WorkflowDetail | null>({
-    queryKey: workflowKeys.detail(id, isDemoUser),
+    queryKey: workflowKeys.detail(id, isDemo),
     queryFn: () => {
-      if (isDemoUser && id) {
-        return getDemoWorkflow(id)
+      if (isDemo && id) {
+        const workflow = getDemoWorkflow(id)
+        return workflow ? normalizeWorkflowDetail(workflow) : null
       }
-      return id ? getWorkflow(id) : null
+      return id ? getWorkflow(id).then((workflow) => normalizeWorkflowDetail(workflow)) : null
     },
     enabled: !!id && id !== 'new',
     staleTime: 1000 * 60 * 5,

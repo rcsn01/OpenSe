@@ -217,7 +217,6 @@ export const FolderNavigationPanel = ({
   onSelectView,
   onCreateFolder,
   onRenameFolder,
-  onDeleteFolder,
   onMoveFolder,
   deletingFolderId,
   deleteStep,
@@ -304,7 +303,7 @@ export const FolderNavigationPanel = ({
     if (!draggedFolder || !overFolder) return
 
     // Move the dragged folder to the same parent as the over folder, at its sort_order
-    onMoveFolder(draggedId, overFolder.parent_id, overFolder.sort_order)
+    onMoveFolder(draggedId, overFolder.parent_id, overFolder.sort_order ?? 0)
   }, [folders, onMoveFolder])
 
   const deletingFolderName = deletingFolderId

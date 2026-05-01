@@ -263,7 +263,8 @@ describe('scan api', () => {
     expect(result.product?.name).toBe('0.5mL Eppendorf Safe-Lock Tubes')
     expect(result.notFoundSku).toBeNull()
 
-    const orArg = productsQuery.or.mock.calls[0]?.[0] as string
+    const orArg = (productsQuery.or.mock.calls as unknown[][])[0]?.[0]
+    if (typeof orArg !== 'string') throw new Error('Expected string OR filter')
     expect(orArg).not.toContain('id.eq')
     expect(orArg).toContain('sku.eq."30123301"')
     expect(orArg).toContain('primary_barcode.eq."30123301"')
@@ -312,7 +313,8 @@ describe('scan api', () => {
     const result = await lookupProductByScanValue('company-1', testUuid)
 
     expect(result.product?.id).toBe(testUuid)
-    const orArg = productsQuery.or.mock.calls[0]?.[0] as string
+    const orArg = (productsQuery.or.mock.calls as unknown[][])[0]?.[0]
+    if (typeof orArg !== 'string') throw new Error('Expected string OR filter')
     expect(orArg).toContain(`id.eq."${testUuid}"`)
   })
 

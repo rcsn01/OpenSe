@@ -1,17 +1,31 @@
-import { buildAccountsAuthUrl as buildSharedAccountsAuthUrl, type AuthMode } from '@repo/shared/utils'
+import {
+  buildAccountsAuthUrl as buildSharedAccountsAuthUrl,
+  type AuthMode,
+} from '@repo/shared/utils'
 
 export type LandingContext = 'opense' | 'etl' | 'stoqr'
 
-const ACCOUNTS_URL = (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'http://localhost:5991'
-const OPENSE_PUBLIC_URL = (import.meta.env.VITE_OPENSE_PUBLIC_URL as string | undefined) ?? 'http://localhost:5994'
-const ETL_PUBLIC_URL = (import.meta.env.VITE_ETL_PUBLIC_URL as string | undefined) ?? 'http://localhost:5992'
-const STOQR_PUBLIC_URL = (import.meta.env.VITE_STOQR_PUBLIC_URL as string | undefined) ?? 'http://localhost:5993'
+const ACCOUNTS_URL =
+  (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ??
+  'http://localhost:5991'
+const OPENSE_PUBLIC_URL =
+  (import.meta.env.VITE_OPENSE_PUBLIC_URL as string | undefined) ??
+  (import.meta.env.VITE_UI_PUBLIC_URL as string | undefined) ??
+  'http://localhost:5994'
+const ETL_PUBLIC_URL =
+  (import.meta.env.VITE_ETL_PUBLIC_URL as string | undefined) ??
+  'http://localhost:5992'
+const STOQR_PUBLIC_URL =
+  (import.meta.env.VITE_STOQR_PUBLIC_URL as string | undefined) ??
+  'http://localhost:5993'
 
 const LANDING_CONTEXT_KEY = 'opense-active-landing-context'
 
 const normalizeBaseUrl = (value: string) => value.replace(/\/$/, '')
 
-export const normalizeLandingContext = (value: string | null | undefined): LandingContext => {
+export const normalizeLandingContext = (
+  value: string | null | undefined,
+): LandingContext => {
   if (value === 'etl' || value === 'stoqr') {
     return value
   }
@@ -19,7 +33,9 @@ export const normalizeLandingContext = (value: string | null | undefined): Landi
   return 'opense'
 }
 
-export const getLandingContextFromPathname = (pathname: string): LandingContext => {
+export const getLandingContextFromPathname = (
+  pathname: string,
+): LandingContext => {
   if (pathname.startsWith('/etl')) {
     return 'etl'
   }
@@ -41,11 +57,14 @@ export const buildNavbarGetStartedPath = (context: LandingContext) => {
   return `/get-started?${params.toString()}`
 }
 
-export const buildAccountsAppUrl = () => `${normalizeBaseUrl(ACCOUNTS_URL)}/account/general`
+export const buildAccountsAppUrl = () =>
+  `${normalizeBaseUrl(ACCOUNTS_URL)}/account/general`
 
-export const buildEtlDashboardUrl = () => `${normalizeBaseUrl(ETL_PUBLIC_URL)}/dashboard`
+export const buildEtlDashboardUrl = () =>
+  `${normalizeBaseUrl(ETL_PUBLIC_URL)}/dashboard`
 
-export const buildStoqrDashboardUrl = () => `${normalizeBaseUrl(STOQR_PUBLIC_URL)}/dashboard`
+export const buildStoqrDashboardUrl = () =>
+  `${normalizeBaseUrl(STOQR_PUBLIC_URL)}/dashboard`
 
 export const setActiveLandingContext = (context: LandingContext) => {
   if (typeof window === 'undefined') {

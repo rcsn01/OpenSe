@@ -1,5 +1,6 @@
 // @ts-ignore Deno edge runtime resolves remote module at deploy/runtime.
 import Stripe from 'https://esm.sh/stripe@18.4.0?target=deno'
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void
@@ -8,17 +9,11 @@ declare const Deno: {
   }
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-const json = (status: number, body: Record<string, unknown>) =>
+const json = (req: Request, status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       'Content-Type': 'application/json',
     },
   })
@@ -50,11 +45,11 @@ const ensureSuperAdmin = async (supabaseUrl: string, anonKey: string, authHeader
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return handleCorsPreflight(req)
   }
 
   if (req.method !== 'POST') {
-    return json(405, { error: 'Method not allowed' })
+    return json(req, 405, { error: 'Method not allowed' })
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -62,16 +57,16 @@ Deno.serve(async (req: Request) => {
   const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return json(500, { error: 'Supabase environment is not configured' })
+    return json(req, 500, { error: 'Supabase environment is not configured' })
   }
 
   if (!stripeSecretKey) {
-    return json(500, { error: 'STRIPE_SECRET_KEY is not configured' })
+    return json(req, 500, { error: 'STRIPE_SECRET_KEY is not configured' })
   }
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
-    return json(401, { error: 'Missing authorization header' })
+    return json(req, 401, { error: 'Missing authorization header' })
   }
 
   try {
@@ -86,7 +81,7 @@ Deno.serve(async (req: Request) => {
       const discountPercent = Number(body.discountPercent)
 
       if (!code || Number.isNaN(discountPercent) || discountPercent <= 0 || discountPercent > 100) {
-        return json(400, { error: 'Invalid coupon payload' })
+        return json(req, 400, { error: 'Invalid coupon payload' })
       }
 
       const coupon = await stripe.coupons.create({
@@ -95,7 +90,7 @@ Deno.serve(async (req: Request) => {
         duration: 'once',
       })
 
-      return json(200, {
+      return json(req, 200, {
         success: true,
         stripeCouponId: coupon.id,
       })
@@ -107,7 +102,7 @@ Deno.serve(async (req: Request) => {
       const existingProductId = typeof body.existingProductId === 'string' ? body.existingProductId : null
 
       if (!productName || Number.isNaN(seatPriceCents) || seatPriceCents < 0) {
-        return json(400, { error: 'Invalid pricing payload' })
+        return json(req, 400, { error: 'Invalid pricing payload' })
       }
 
       const product = existingProductId
@@ -125,16 +120,16 @@ Deno.serve(async (req: Request) => {
         product: productId,
       })
 
-      return json(200, {
+      return json(req, 200, {
         success: true,
         stripeProductId: productId,
         stripePriceId: price.id,
       })
     }
 
-    return json(400, { error: 'Unsupported action' })
+    return json(req, 400, { error: 'Unsupported action' })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    return json(400, { error: message })
+    return json(req, 400, { error: message })
   }
 })

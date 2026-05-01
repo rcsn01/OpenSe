@@ -1,15 +1,32 @@
 import { execSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
-const repoRoot = process.cwd()
+const repoRoot = execSync('git rev-parse --show-toplevel', {
+  cwd: process.cwd(),
+  encoding: 'utf8',
+}).trim()
 
-const trackedFiles = execSync('git ls-files', { cwd: repoRoot, encoding: 'utf8' })
+const trackedFiles = execSync('git ls-files', {
+  cwd: repoRoot,
+  encoding: 'utf8',
+})
   .split('\n')
   .map((line) => line.trim())
   .filter(Boolean)
 
-const ignoredDirectories = ['node_modules/', 'dist/', 'playwright-report/', 'test-results/']
+const ignoredDirectories = [
+  'node_modules/',
+  'dist/',
+  'playwright-report/',
+  'test-results/',
+]
+const blockedTrackedPaths = [
+  {
+    name: 'Supabase CLI temp metadata',
+    regex: /^supabase\/\.temp\//,
+  },
+]
 const textFileExtensions = new Set([
   '.ts',
   '.tsx',
@@ -55,10 +72,30 @@ const allowedTokenValues = new Set([
   'pk_test_...',
 ])
 
+const maskSample = (value) => {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= 12) return '[redacted]'
+  return `${normalized.slice(0, 6)}...[redacted]...${normalized.slice(-4)}`
+}
+
 const violations = []
 
 for (const relativeFilePath of trackedFiles) {
   if (ignoredDirectories.some((dir) => relativeFilePath.includes(dir))) continue
+
+  const absolutePath = path.resolve(repoRoot, relativeFilePath)
+
+  if (existsSync(absolutePath)) {
+    for (const { name, regex } of blockedTrackedPaths) {
+      if (regex.test(relativeFilePath)) {
+        violations.push({
+          file: relativeFilePath,
+          rule: name,
+          sample: '[tracked generated file]',
+        })
+      }
+    }
+  }
 
   const extension = path.extname(relativeFilePath)
   const basename = path.basename(relativeFilePath)
@@ -66,7 +103,6 @@ for (const relativeFilePath of trackedFiles) {
 
   if (!isEnvLike && !textFileExtensions.has(extension)) continue
 
-  const absolutePath = path.resolve(repoRoot, relativeFilePath)
   let content
   try {
     content = readFileSync(absolutePath, 'utf8')
@@ -97,7 +133,7 @@ for (const relativeFilePath of trackedFiles) {
       violations.push({
         file: relativeFilePath,
         rule: name,
-        sample: match.length > 80 ? `${match.slice(0, 77)}...` : match,
+        sample: maskSample(match),
       })
     }
   }
@@ -106,9 +142,13 @@ for (const relativeFilePath of trackedFiles) {
 if (violations.length > 0) {
   console.error('Potential secrets found in tracked files:')
   for (const violation of violations) {
-    console.error(`- ${violation.file} | ${violation.rule} | ${violation.sample}`)
+    console.error(
+      `- ${violation.file} | ${violation.rule} | ${violation.sample}`,
+    )
   }
-  console.error('\nUse placeholders in tracked files and keep real secrets in untracked local env files.')
+  console.error(
+    '\nUse placeholders in tracked files and keep real secrets in untracked local env files.',
+  )
   process.exit(1)
 }
 

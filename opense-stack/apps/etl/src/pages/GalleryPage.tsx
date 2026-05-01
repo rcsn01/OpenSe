@@ -28,7 +28,7 @@ export const GalleryPage = () => {
   const error = queryError instanceof Error ? queryError.message : null;
   const { user, isDemoUser } = useAuth();
   const navigate = useNavigate();
-  const { currentOrg, gallerySearch = '', setGallerySearch } = useOutletContext<AppContextType>() || {};
+  const { currentOrg, gallerySearch = '' } = useOutletContext<AppContextType>() || {};
   const [cloningId, setCloningId] = useState<string | null>(null);
 
   const filteredTemplates = templates.filter(

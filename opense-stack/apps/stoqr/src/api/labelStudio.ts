@@ -158,9 +158,12 @@ export const fetchLabelPrintJobs = async (companyId: string): Promise<LabelPrint
 
   if (error) throw error
 
-  const rows = (data as Array<Omit<LabelPrintJob, 'requester'> | null> | null)?.filter(Boolean) ?? []
+  const rows =
+    (data as Array<Omit<LabelPrintJob, 'requester'> | null> | null)?.filter(
+      (job): job is Omit<LabelPrintJob, 'requester'> => Boolean(job),
+    ) ?? []
   const requesterIds = Array.from(
-    new Set(rows.map((job) => job?.requested_by).filter((value): value is string => !!value)),
+    new Set(rows.map((job) => job.requested_by).filter((value): value is string => !!value)),
   )
 
   let requesterById = new Map<string, { full_name: string | null; username: string | null }>()
