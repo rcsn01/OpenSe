@@ -18,6 +18,7 @@ import {
   onlineManager,
   useQueryClient,
 } from '@tanstack/react-query'
+import { ErrorBoundary } from '@repo/ui'
 import './index.css'
 import App from './App'
 
@@ -95,7 +96,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BfcacheResumer />
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </QueryClientProvider>
   </StrictMode>,
 )

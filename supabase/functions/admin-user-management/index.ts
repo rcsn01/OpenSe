@@ -1,3 +1,5 @@
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
+
 type Action = 'create' | 'reset-password' | 'delete'
 
 interface ActionRequest {
@@ -9,17 +11,11 @@ interface ActionRequest {
   newPassword?: string
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-const json = (status: number, body: Record<string, unknown>) =>
+const json = (req: Request, status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       'Content-Type': 'application/json',
     },
   })
@@ -51,11 +47,11 @@ const postJson = async (
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return handleCorsPreflight(req)
   }
 
   if (req.method !== 'POST') {
-    return json(405, { error: 'Method not allowed' })
+    return json(req, 405, { error: 'Method not allowed' })
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -63,12 +59,12 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
   if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
-    return json(500, { error: 'Supabase environment is not configured' })
+    return json(req, 500, { error: 'Supabase environment is not configured' })
   }
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
-    return json(401, { error: 'Missing authorization header' })
+    return json(req, 401, { error: 'Missing authorization header' })
   }
 
   const callerHeaders = {
@@ -83,7 +79,7 @@ Deno.serve(async (req: Request) => {
   const userData = await userRes.json().catch(() => ({}))
 
   if (!userRes.ok || !userData?.id) {
-    return json(401, { error: 'Unauthorized' })
+    return json(req, 401, { error: 'Unauthorized' })
   }
 
   const { response: adminRes, data: adminData } = await postJson(
@@ -93,14 +89,14 @@ Deno.serve(async (req: Request) => {
   )
 
   if (!adminRes.ok || !adminData) {
-    return json(403, { error: 'Access denied: Super Admin only' })
+    return json(req, 403, { error: 'Access denied: Super Admin only' })
   }
 
   let payload: ActionRequest
   try {
     payload = (await req.json()) as ActionRequest
   } catch {
-    return json(400, { error: 'Invalid JSON body' })
+    return json(req, 400, { error: 'Invalid JSON body' })
   }
 
   const adminHeaders = {
@@ -110,7 +106,7 @@ Deno.serve(async (req: Request) => {
 
   if (payload.action === 'create') {
     if (!payload.email || !payload.password) {
-      return json(400, { error: 'email and password are required' })
+      return json(req, 400, { error: 'email and password are required' })
     }
 
     const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
@@ -132,7 +128,7 @@ Deno.serve(async (req: Request) => {
     const createData = await createRes.json().catch(() => ({}))
 
     if (!createRes.ok || !createData?.id) {
-      return json(400, { error: createData?.msg ?? createData?.error_description ?? 'Failed to create user' })
+      return json(req, 400, { error: createData?.msg ?? createData?.error_description ?? 'Failed to create user' })
     }
 
     await fetch(`${supabaseUrl}/rest/v1/profiles?on_conflict=id`, {
@@ -151,12 +147,12 @@ Deno.serve(async (req: Request) => {
       ]),
     })
 
-    return json(200, { userId: createData.id })
+    return json(req, 200, { userId: createData.id })
   }
 
   if (payload.action === 'reset-password') {
     if (!payload.targetUserId || !payload.newPassword) {
-      return json(400, { error: 'targetUserId and newPassword are required' })
+      return json(req, 400, { error: 'targetUserId and newPassword are required' })
     }
 
     const resetRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${payload.targetUserId}`, {
@@ -173,15 +169,15 @@ Deno.serve(async (req: Request) => {
     const resetData = await resetRes.json().catch(() => ({}))
 
     if (!resetRes.ok) {
-      return json(400, { error: resetData?.msg ?? resetData?.error_description ?? 'Failed to reset password' })
+      return json(req, 400, { error: resetData?.msg ?? resetData?.error_description ?? 'Failed to reset password' })
     }
 
-    return json(200, { success: true })
+    return json(req, 200, { success: true })
   }
 
   if (payload.action === 'delete') {
     if (!payload.targetUserId) {
-      return json(400, { error: 'targetUserId is required' })
+      return json(req, 400, { error: 'targetUserId is required' })
     }
 
     const deleteRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${payload.targetUserId}`, {
@@ -192,11 +188,11 @@ Deno.serve(async (req: Request) => {
     const deleteData = await deleteRes.json().catch(() => ({}))
 
     if (!deleteRes.ok) {
-      return json(400, { error: deleteData?.msg ?? deleteData?.error_description ?? 'Failed to delete user' })
+      return json(req, 400, { error: deleteData?.msg ?? deleteData?.error_description ?? 'Failed to delete user' })
     }
 
-    return json(200, { success: true })
+    return json(req, 200, { success: true })
   }
 
-  return json(400, { error: 'Unknown action' })
+  return json(req, 400, { error: 'Unknown action' })
 })

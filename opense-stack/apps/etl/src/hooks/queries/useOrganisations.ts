@@ -10,11 +10,12 @@ export type { OrgSimple }
 
 export const useUserOrganisations = (userId: string | undefined) => {
   const { isDemoUser } = useAuth()
+  const isDemo = Boolean(isDemoUser)
 
   return useQuery<OrgSimple[]>({
-    queryKey: organisationKeys.userOrganisations(userId, isDemoUser),
+    queryKey: organisationKeys.userOrganisations(userId, isDemo),
     queryFn: () => {
-      if (isDemoUser) {
+      if (isDemo) {
         // Return mock organisation for demo user
         return [mockOrganisation]
       }
@@ -27,11 +28,12 @@ export const useUserOrganisations = (userId: string | undefined) => {
 
 export const useOrganisationMembers = (orgId: string | undefined) => {
   const { isDemoUser } = useAuth()
+  const isDemo = Boolean(isDemoUser)
 
   return useQuery<Member[]>({
-    queryKey: organisationKeys.members(orgId, isDemoUser),
+    queryKey: organisationKeys.members(orgId, isDemo),
     queryFn: () => {
-      if (isDemoUser && orgId === DEMO_ORG_ID) {
+      if (isDemo && orgId === DEMO_ORG_ID) {
         return mockOrgMembers.map((m) => ({
           id: m.user_id,
           user_id: m.user_id,

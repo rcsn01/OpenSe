@@ -9,9 +9,7 @@ import { ProductBatchHistoryTab } from '../../components/ProductDetail/ProductBa
 import { ProductOverviewTab } from '../../components/ProductDetail/ProductOverviewTab'
 import { ProductSuppliersTab } from '../../components/ProductDetail/ProductSuppliersTab'
 import { useProductDetail } from '../../hooks/queries/useProducts'
-import {
-  EmptyState,
-} from '@repo/ui'
+import { EmptyState } from '@repo/ui'
 
 export const ProductDetailPage = () => {
   const { id, tab } = useParams<{ id?: string; tab?: string }>()
@@ -23,6 +21,7 @@ export const ProductDetailPage = () => {
   const { data, isLoading } = useProductDetail(companyId, id ?? null)
   const product = data?.product ?? null
   const transactions = data?.transactions ?? []
+  const selectedCompanyId = companyId ?? ''
 
   const images = useMemo(() => {
     if (!product?.image_urls?.length) return []
@@ -59,17 +58,17 @@ export const ProductDetailPage = () => {
               {
                 id: 'suppliers',
                 label: 'Suppliers & POs',
-                content: <ProductSuppliersTab productId={product.id} companyId={companyId} />,
+                content: <ProductSuppliersTab productId={product.id} companyId={selectedCompanyId} />,
               },
               {
                 id: 'batch',
                 label: 'Batch History',
-                content: <ProductBatchHistoryTab productId={product.id} companyId={companyId} />,
+                content: <ProductBatchHistoryTab productId={product.id} companyId={selectedCompanyId} />,
               },
               {
                 id: 'attachments',
                 label: 'Files',
-                content: <ProductAttachmentsTab productId={product.id} companyId={companyId} />,
+                content: <ProductAttachmentsTab productId={product.id} companyId={selectedCompanyId} />,
               },
             ]}
           />

@@ -7,7 +7,24 @@ const isSafeHttpUrl = (value: string) => {
   }
 }
 
-const accountsUrl = (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? ''
+const LOCAL_APP_RETURN_URLS = [
+  'http://localhost:5990',
+  'http://localhost:5992',
+  'http://localhost:5993',
+  'http://localhost:5994',
+  'http://localhost:5999',
+]
+
+const APP_PUBLIC_URL_KEYS = [
+  'VITE_ADMIN_PUBLIC_URL',
+  'VITE_ETL_PUBLIC_URL',
+  'VITE_OPENSE_PUBLIC_URL',
+  'VITE_STOQR_PUBLIC_URL',
+  'VITE_UI_PUBLIC_URL',
+] as const
+
+const getAccountsUrl = () =>
+  (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? ''
 
 const getOriginIfSafe = (value: string): string | null => {
   if (!isSafeHttpUrl(value)) {
@@ -19,6 +36,7 @@ const getOriginIfSafe = (value: string): string | null => {
 
 const getAccountsOrigins = () => {
   const origins = new Set<string>([window.location.origin])
+  const accountsUrl = getAccountsUrl()
 
   if (accountsUrl) {
     const accountsOrigin = getOriginIfSafe(accountsUrl)
@@ -32,6 +50,36 @@ const getAccountsOrigins = () => {
 
 const isAccountsOrigin = (origin: string) => getAccountsOrigins().has(origin)
 
+const getAllowedReturnOrigins = () => {
+  const origins = new Set<string>()
+
+  for (const key of APP_PUBLIC_URL_KEYS) {
+    const value = import.meta.env[key] as string | undefined
+    const origin = value ? getOriginIfSafe(value) : null
+    if (origin && !isAccountsOrigin(origin)) {
+      origins.add(origin)
+    }
+  }
+
+  if (
+    import.meta.env.DEV ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  ) {
+    for (const value of LOCAL_APP_RETURN_URLS) {
+      const origin = getOriginIfSafe(value)
+      if (origin && !isAccountsOrigin(origin)) {
+        origins.add(origin)
+      }
+    }
+  }
+
+  return origins
+}
+
+const isAllowedReturnOrigin = (origin: string) =>
+  getAllowedReturnOrigins().has(origin)
+
 export const getAppNameFromQuery = () => {
   const params = new URLSearchParams(window.location.search)
   return params.get('app') ?? 'OpenSe'
@@ -42,12 +90,16 @@ export const getReturnToFromQuery = () => {
   const returnTo = params.get('returnTo')
 
   if (returnTo && isSafeHttpUrl(returnTo)) {
-    // Don't redirect back to accounts app - that causes a login loop
+    // Only return to known first-party app origins. This prevents Accounts from
+    // becoming an open redirect after login.
     const returnOrigin = getOriginIfSafe(returnTo)
-    if (returnOrigin && isAccountsOrigin(returnOrigin)) {
-      return ''
+    if (
+      returnOrigin &&
+      !isAccountsOrigin(returnOrigin) &&
+      isAllowedReturnOrigin(returnOrigin)
+    ) {
+      return returnTo
     }
-    return returnTo
   }
 
   return ''

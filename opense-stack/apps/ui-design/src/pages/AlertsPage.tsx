@@ -20,7 +20,7 @@ function ToastDemo() {
       <Button
         size="sm"
         variant="outline"
-        onClick={() => toast({ title: 'Default toast', variant: 'default' })}
+        onClick={() => toast({ title: 'Default toast', message: 'A neutral notification.', variant: 'default' })}
       >
         Default
       </Button>
@@ -28,7 +28,7 @@ function ToastDemo() {
         size="sm"
         variant="outline"
         onClick={() =>
-          toast({ title: 'Success!', description: 'File saved.', variant: 'success' })
+          toast({ title: 'Success!', message: 'File saved.', variant: 'success' })
         }
       >
         Success
@@ -37,7 +37,7 @@ function ToastDemo() {
         size="sm"
         variant="outline"
         onClick={() =>
-          toast({ title: 'Warning', description: 'Disk almost full.', variant: 'warning' })
+          toast({ title: 'Warning', message: 'Disk almost full.', variant: 'warning' })
         }
       >
         Warning
@@ -46,7 +46,7 @@ function ToastDemo() {
         size="sm"
         variant="outline"
         onClick={() =>
-          toast({ title: 'Error', description: 'Failed to connect.', variant: 'destructive' })
+          toast({ title: 'Error', message: 'Failed to connect.', variant: 'destructive' })
         }
       >
         Error

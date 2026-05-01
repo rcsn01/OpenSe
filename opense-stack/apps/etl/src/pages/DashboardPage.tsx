@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@repo/shared/auth/context';
 import { BasePage } from '@repo/ui';
 import { OrgSimple } from '../types/organisation';
 import { User, Building2 } from 'lucide-react';
@@ -13,7 +12,6 @@ type DashboardContextType = {
 };
 
 export const DashboardPage = () => {
-  const { user } = useAuth();
   const { currentOrg, dashboardSearch, setDashboardSearch } = useOutletContext<DashboardContextType>();
   const location = useLocation();
   const navigate = useNavigate();

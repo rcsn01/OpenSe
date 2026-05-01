@@ -19,7 +19,6 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
   loading,
   error,
   search,
-  onSearchChange,
   onEdit,
   onDelete,
 }) => {

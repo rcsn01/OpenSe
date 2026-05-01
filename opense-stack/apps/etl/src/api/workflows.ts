@@ -11,23 +11,18 @@ type ListWorkflowsParams = {
 }
 
 export const listWorkflows = async ({ userId, orgId, mode }: ListWorkflowsParams) => {
-  const applyFilters = <T extends { eq: (...args: any[]) => T; is: (...args: any[]) => T }>(query: T): T | null => {
-    if (mode === 'org') {
-      if (!orgId) return null
-      return query.eq('org_id', orgId)
-    }
-    return query.eq('owner_id', userId).is('org_id', null)
+  let query = db
+    .from('workflows')
+    .select('id, name, created_at, owner_id, org_id')
+    .not('is_template', 'is', true)
+    .order('created_at', { ascending: false })
+
+  if (mode === 'org') {
+    if (!orgId) return []
+    query = query.eq('org_id', orgId)
+  } else {
+    query = query.eq('owner_id', userId).is('org_id', null)
   }
-
-  const query = applyFilters(
-    db
-      .from('workflows')
-      .select('id, name, created_at, owner_id, org_id')
-      .not('is_template', 'is', true)
-      .order('created_at', { ascending: false })
-  )
-
-  if (!query) return []
 
   const { data, error } = await query
   if (error) throw error

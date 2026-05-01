@@ -61,7 +61,7 @@ export function NavigationPage() {
               items={[
                 { label: 'Home', href: '#' },
                 { label: 'Projects', href: '#' },
-                { label: 'UI Design Kit', active: true },
+                { label: 'UI Design Kit' },
               ]}
             />
           </VStack>

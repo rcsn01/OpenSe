@@ -86,7 +86,7 @@ function AppLayoutContent() {
   }, [])
 
   const handleLogout = () =>
-    toast({ title: 'Log out', description: 'Demo: no auth in UI Design Kit', variant: 'default' })
+    toast({ title: 'Log out', message: 'Demo: no auth in UI Design Kit', variant: 'default' })
 
   const sidebar = (
     <>

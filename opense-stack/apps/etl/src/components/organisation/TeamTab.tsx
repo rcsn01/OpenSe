@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@repo/shared/auth/context';
@@ -8,7 +8,6 @@ import { OrgSimple } from '../../types/organisation';
 import {
     addOrganisationMember,
     findProfileByEmail,
-    removeOrganisationMember,
     updateOrganisationMemberRole,
     userHasAnyMembership,
 } from '../../api/organisations';
@@ -34,9 +33,6 @@ export const TeamTab = () => {
 
     // Invite State
     const [inviteError, setInviteError] = useState<string | null>(null);
-
-    // Member Action State
-    const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
 
     const canManageTeam = userRole === 'owner' || userRole === 'admin';
     const handleInvite = async (email: string, role: 'admin' | 'editor' | 'member') => {
@@ -71,14 +67,11 @@ export const TeamTab = () => {
 
     const handleUpdateRole = async (memberId: string, newRole: 'admin' | 'editor' | 'member') => {
         try {
-            setUpdatingMemberId(memberId);
             await updateOrganisationMemberRole(memberId, newRole);
             await refetchMembers();
             queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
         } catch (err: any) {
             alert(err?.message ?? 'Failed to update member role.');
-        } finally {
-            setUpdatingMemberId(null);
         }
     };
 
@@ -90,7 +83,6 @@ export const TeamTab = () => {
             members={members}
             currentUserId={user?.id}
             canManageTeam={canManageTeam}
-            updatingMemberId={updatingMemberId}
             inviteError={inviteError}
             onInvite={handleInvite}
             onUpdateRole={handleUpdateRole}

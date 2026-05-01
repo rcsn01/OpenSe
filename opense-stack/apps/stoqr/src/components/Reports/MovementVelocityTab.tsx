@@ -9,7 +9,6 @@ import {
   YAxis,
 } from 'recharts'
 import { useReportsData } from '../../hooks/queries/useReports'
-import { formatDateTime } from '../../utils'
 
 type RangeKey = '7d' | '30d' | 'quarter' | 'custom'
 

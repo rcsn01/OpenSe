@@ -43,6 +43,7 @@ export {
 export { ProfileDropdown, type ProfileDropdownProps } from './ui/ProfileDropdown'
 export { Pagination } from './ui/Pagination'
 export { ToastProvider, useToast } from './ui/Toast'
+export { ErrorBoundary } from './ui/ErrorBoundary'
 export { Sidebar, SidebarItem, SidebarSection } from './ui/Sidebar'
 export { ColorPalette } from './ui/ColorPalette'
 export { Shades } from './ui/Shades'

@@ -6,11 +6,12 @@ import { galleryKeys } from '../queries/queryKeys'
 
 export const useGalleryTemplates = () => {
   const { isDemoUser } = useAuth()
+  const isDemo = Boolean(isDemoUser)
 
   return useQuery<GalleryWorkflow[]>({
-    queryKey: galleryKeys.templates(isDemoUser),
+    queryKey: galleryKeys.templates(isDemo),
     queryFn: () => {
-      if (isDemoUser) {
+      if (isDemo) {
         return mockGalleryTemplates as GalleryWorkflow[]
       }
       return listGalleryTemplates()

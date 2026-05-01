@@ -1,5 +1,6 @@
 // @ts-ignore Deno edge runtime resolves remote module at deploy/runtime.
 import Stripe from 'https://esm.sh/stripe@18.4.0?target=deno'
+import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void
@@ -8,17 +9,11 @@ declare const Deno: {
   }
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-const json = (status: number, body: Record<string, unknown>) =>
+const json = (req: Request, status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       'Content-Type': 'application/json',
     },
   })
@@ -109,11 +104,11 @@ const serviceUpdateOrgStripe = async (
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return handleCorsPreflight(req)
   }
 
   if (req.method !== 'POST') {
-    return json(405, { error: 'Method not allowed' })
+    return json(req, 405, { error: 'Method not allowed' })
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -122,16 +117,16 @@ Deno.serve(async (req: Request) => {
   const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
 
   if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
-    return json(500, { error: 'Supabase environment is not configured' })
+    return json(req, 500, { error: 'Supabase environment is not configured' })
   }
 
   if (!stripeSecretKey) {
-    return json(500, { error: 'STRIPE_SECRET_KEY is not configured' })
+    return json(req, 500, { error: 'STRIPE_SECRET_KEY is not configured' })
   }
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
-    return json(401, { error: 'Missing authorization header' })
+    return json(req, 401, { error: 'Missing authorization header' })
   }
 
   try {
@@ -150,15 +145,15 @@ Deno.serve(async (req: Request) => {
     const requestedOrgName = typeof body.orgName === 'string' ? body.orgName.trim() : ''
 
     if (!['etl', 'stoqr'].includes(appCode)) {
-      return json(400, { error: 'appCode must be etl or stoqr' })
+      return json(req, 400, { error: 'appCode must be etl or stoqr' })
     }
 
     if (!Number.isInteger(seatLimit) || seatLimit < 0) {
-      return json(400, { error: 'seatLimit must be a non-negative integer' })
+      return json(req, 400, { error: 'seatLimit must be a non-negative integer' })
     }
 
     if (!successUrl || !cancelUrl) {
-      return json(400, { error: 'successUrl and cancelUrl are required' })
+      return json(req, 400, { error: 'successUrl and cancelUrl are required' })
     }
 
     let metadata: Record<string, string> = {
@@ -181,11 +176,11 @@ Deno.serve(async (req: Request) => {
       const context = Array.isArray(contextRows) ? contextRows[0] : null
 
       if (!context?.org_id || context.org_id !== requestedOrgId) {
-        return json(403, { error: 'Org context mismatch for checkout' })
+        return json(req, 403, { error: 'Org context mismatch for checkout' })
       }
 
       if (context.member_role !== 'owner') {
-        return json(403, { error: 'Only organisation owners can manage subscription checkout' })
+        return json(req, 403, { error: 'Only organisation owners can manage subscription checkout' })
       }
 
       customerName = context.org_name
@@ -240,7 +235,7 @@ Deno.serve(async (req: Request) => {
       await serviceUpdateOrgStripe(supabaseUrl, serviceRoleKey, requestedOrgId, customerId, session.subscription)
     }
 
-    return json(200, {
+    return json(req, 200, {
       url: session.url,
       checkoutId: session.id,
       orgId: requestedOrgId,
@@ -250,6 +245,6 @@ Deno.serve(async (req: Request) => {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     const status = message === 'Unauthorized' ? 401 : 400
-    return json(status, { error: message })
+    return json(req, status, { error: message })
   }
 })

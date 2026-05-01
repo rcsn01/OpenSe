@@ -286,7 +286,6 @@ describe('inventory api', () => {
     const query = makeProductsQuery({ data: [], count: 0, error: null })
     ;(query as Record<string, unknown>).is = vi.fn(() => query)
     isCall.mockImplementation(() => query)
-    const origEq = query.eq
     ;(query as Record<string, unknown>).is = isCall
 
     mockFrom.mockReturnValue(query)
@@ -419,11 +418,6 @@ describe('inventory api', () => {
   })
 
   it('deleteFolderInInventory with move-uncategorised nullifies folder_id before deleting', async () => {
-    const updateEqCompany = vi.fn().mockResolvedValue({ error: null })
-    const updateIn = vi.fn(() => ({ then: (fn: (v: unknown) => unknown) => Promise.resolve({ error: null }).then(fn) }))
-    const updateEqCompanyProducts = vi.fn(() => ({ in: vi.fn().mockResolvedValue({ error: null }) }))
-    const updateEqCompanyForProducts = vi.fn(() => ({ in: vi.fn().mockResolvedValue({ error: null }) }))
-
     // Track calls to distinguish tables
     const calls: string[] = []
     mockFrom.mockImplementation((table: string) => {
