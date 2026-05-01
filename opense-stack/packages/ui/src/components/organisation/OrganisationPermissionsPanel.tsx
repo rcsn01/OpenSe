@@ -392,7 +392,7 @@ export function OrganisationPermissionsPanel({
         </CardContent>
       </Card>
 
-      <SideSheet open={Boolean(editingRoleId)} onClose={closeEditRole}>
+      <SideSheet open={Boolean(editingRoleId)} onClose={closeEditRole} size="page">
         <SideSheetContent>
           <SideSheetHeader>
             <SideSheetTitle>Edit Role Permissions</SideSheetTitle>
