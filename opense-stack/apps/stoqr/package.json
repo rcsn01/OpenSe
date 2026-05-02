@@ -29,6 +29,7 @@
     "html5-qrcode": "^2.3.8",
     "jsbarcode": "^3.12.3",
     "lucide-react": "^0.563.0",
+    "match-sorter": "^8.3.0",
     "pdf-lib": "^1.17.1",
     "postcss": "^8.5.6",
     "qrcode": "^1.5.4",

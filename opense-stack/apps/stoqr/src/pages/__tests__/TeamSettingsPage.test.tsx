@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { TeamSettingsPage } from '../TeamSettingsPage'
 
@@ -48,7 +48,7 @@ vi.mock('../../components/TeamSettings/RolesTab', () => ({
 }))
 
 vi.mock('../../components/TeamSettings/ActivityLogsTab', () => ({
-  ActivityLogsTab: () => <div>Activity tab</div>,
+  ActivityLogsTab: ({ searchTerm }: { searchTerm?: string }) => <div>Activity tab {searchTerm}</div>,
 }))
 
 vi.mock('../../components/TeamSettings/PagesTab', () => ({
@@ -126,5 +126,21 @@ describe('TeamSettingsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Trigger role change' }))
 
     expect(mockUpdateCompanyMemberRole).toHaveBeenCalledWith({ memberId: 'member-1', roleId: 'role-2' })
+  })
+
+  it('passes the shared top-bar search term into activity logs', () => {
+    mockUpdateCompanyMemberRole.mockResolvedValue(undefined)
+
+    render(
+      <MemoryRouter initialEntries={['/settings/organisations/activity']}>
+        <Routes>
+          <Route element={<Outlet context={{ topBarSearchValue: 'permission change', setTopBarSearchValue: vi.fn() }} />}>
+            <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Activity tab permission change')).toBeInTheDocument()
   })
 })

@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import { DataTable } from '@repo/ui'
+import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
 import { formatDateTime } from '../../utils'
 
 type ActivityEvent = {
@@ -11,7 +13,25 @@ type ActivityEvent = {
   profiles?: { id: string; full_name: string | null; username: string | null } | null
 }
 
-export const ActivityLogsTab = ({ logs }: { logs: ActivityEvent[] }) => {
+export const ActivityLogsTab = ({ logs, searchTerm = '' }: { logs: ActivityEvent[]; searchTerm?: string }) => {
+  const normalizedSearchTerm = normalizePageSearchTerm(searchTerm)
+  const filteredLogs = useMemo(
+    () => fuzzySearchItems(logs, normalizedSearchTerm, [
+      {
+        key: (log) => log.event_type,
+        maxRanking: fuzzyRankings.STARTS_WITH,
+      },
+      {
+        key: (log) => log.message ?? '',
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+      {
+        key: (log) => [log.profiles?.full_name ?? '', log.profiles?.username ?? ''],
+        maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+      },
+    ]),
+    [logs, normalizedSearchTerm],
+  )
 
   return (
     <div className="card stack" style={{ padding: 0, overflow: 'hidden' }}>
@@ -22,6 +42,9 @@ export const ActivityLogsTab = ({ logs }: { logs: ActivityEvent[] }) => {
         </div>
         <p className="muted small" style={{ margin: '4px 0 0' }}>
           Global feed of system access, permission changes, and administrative actions.
+        </p>
+        <p className="muted small" style={{ margin: '4px 0 0' }}>
+          Showing {filteredLogs.length} of {logs.length} events.
         </p>
       </div>
       <DataTable
@@ -57,9 +80,9 @@ export const ActivityLogsTab = ({ logs }: { logs: ActivityEvent[] }) => {
             renderCell: (log: ActivityEvent) => <span className="small">{log.message ?? '—'}</span>,
           },
         ]}
-        rows={logs}
+        rows={filteredLogs}
         getRowId={(log) => log.id}
-        emptyState="No activity events found."
+        emptyState={normalizedSearchTerm.length > 0 ? `No activity events matched "${normalizedSearchTerm}".` : 'No activity events found.'}
         tableWrapClassName="border-0 rounded-none"
       />
     </div>

@@ -140,6 +140,12 @@
   border-radius: 20px; padding: 32px; box-shadow: var(--shadow); border: 1px solid var(--border);
 }
 
+/* Informational toasts should not block page controls beneath them. */
+[data-sonner-toaster],
+[data-sonner-toast] {
+  pointer-events: none;
+}
+
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(2px); display: grid; place-items: center;

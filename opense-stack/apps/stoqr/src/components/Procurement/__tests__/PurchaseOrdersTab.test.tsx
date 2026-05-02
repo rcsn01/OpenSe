@@ -121,6 +121,14 @@ describe('PurchaseOrdersTab', () => {
     expect(screen.queryByText('PO-2026-1204')).not.toBeInTheDocument()
   })
 
+  it('supports fuzzy search matches from the shared top bar', () => {
+    render(<PurchaseOrdersTab companyId="company-1" searchTerm="ship vendor" />)
+
+    expect(screen.getByText('PO-2026-1208')).toBeInTheDocument()
+    expect(screen.queryByText('PO-2026-1206')).not.toBeInTheDocument()
+    expect(screen.queryByText('PO-2026-1204')).not.toBeInTheDocument()
+  })
+
   it('filters rows using the shared filter dropdown', async () => {
     const user = userEvent.setup()
 

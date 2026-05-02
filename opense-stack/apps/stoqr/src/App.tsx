@@ -1,8 +1,8 @@
-import { Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useOutletContext, useParams } from 'react-router-dom'
 import { ThemeProvider } from '@repo/ui'
 import { AuthRedirectPage } from '@repo/shared/auth'
 import './App.css'
-import { AppLayout } from './layouts/AppLayout'
+import { AppLayout, type AppLayoutOutletContext } from './layouts/AppLayout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
 import { buildAccountsAuthUrl } from './lib/authRedirect'
 import { DashboardPage } from './pages/DashboardPage'
@@ -21,12 +21,13 @@ import { Toaster } from 'sonner'
 
 const CompanyGate = () => {
   const { isLoading } = useCompany()
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
 
   if (isLoading) {
     return <div className="empty-state">Loading workspace...</div>
   }
 
-  return <Outlet />
+  return <Outlet context={layoutContext} />
 }
 
 const LegacyTeamSettingsRedirect = () => {
@@ -85,8 +86,8 @@ export function App() {
               <Route index element={<RootRedirect />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/inventory" element={<Navigate to="/inventory/all" replace />} />
-              <Route path="/inventory/:tab" element={<InventoryListPage />} />
               <Route path="/inventory/new" element={<CreateProductPage />} />
+              <Route path="/inventory/:tab" element={<InventoryListPage />} />
               <Route path="/inventory/:id/edit" element={<EditProductPage />} />
               <Route path="/inventory/:id" element={<Navigate to="overview" replace />} />
               <Route path="/inventory/:id/:tab" element={<ProductDetailPage />} />

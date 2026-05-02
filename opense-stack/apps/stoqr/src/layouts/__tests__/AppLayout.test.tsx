@@ -35,6 +35,7 @@ const renderRoute = (initialEntry: string) =>
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<div>Dashboard</div>} />
+          <Route path="/inventory/:tab" element={<div>Inventory</div>} />
           <Route path="/alerts/:tab" element={<div>Alerts</div>} />
           <Route path="/procurement/:tab" element={<div>Procurement</div>} />
         </Route>
@@ -63,9 +64,15 @@ describe('AppLayout', () => {
     expect(screen.queryByPlaceholderText('Search items...')).not.toBeInTheDocument()
   })
 
-  it('uses the generic placeholder on non-alert routes', () => {
-    renderRoute('/dashboard')
+  it('uses the generic placeholder on inventory list routes', () => {
+    renderRoute('/inventory/all')
 
     expect(screen.getByPlaceholderText('Search items...')).toBeInTheDocument()
+  })
+
+  it('does not render page search on non-searchable routes', () => {
+    renderRoute('/dashboard')
+
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
   })
 })

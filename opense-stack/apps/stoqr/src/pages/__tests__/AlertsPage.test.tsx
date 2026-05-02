@@ -152,6 +152,18 @@ describe('AlertsPage', () => {
     expect(screen.queryByText('Out of Stock: Premium Widget')).not.toBeInTheDocument()
   })
 
+  it('supports fuzzy matches from the top bar search on alerts routes', async () => {
+    const user = userEvent.setup()
+
+    renderAlertsRoute('/alerts/feed', true)
+
+    await user.type(screen.getByPlaceholderText('Search alerts...'), 'po alpha')
+
+    expect(screen.getByText('Showing 1 of 7 alerts')).toBeInTheDocument()
+    expect(screen.getByText('PO Delayed: Alpha Supplies')).toBeInTheDocument()
+    expect(screen.queryByText('Out of Stock: Premium Widget')).not.toBeInTheDocument()
+  })
+
   it('filters the feed using the shared filter dropdown', async () => {
     const user = userEvent.setup()
 

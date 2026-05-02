@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { Camera, CameraOff, ScanBarcode } from 'lucide-react'
 import { useCompany } from '../contexts/CompanyContext'
@@ -7,14 +7,17 @@ import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { QuickScanTab } from '../components/Scan/QuickScanTab'
 import { ScanHistoryTab } from '../components/Scan/ScanHistoryTab'
+import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 import { toast } from 'sonner'
 
 export const ScanPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const validTabs = ['scan-actions', 'scan-history'] as const
   const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'scan-actions'
+  const scanHistorySearchTerm = activeTab === 'scan-history' ? (layoutContext?.topBarSearchValue ?? '') : ''
   const [scanValue, setScanValue] = useState('')
   const [isScanning, setIsScanning] = useState(false)
   const [entryMethod, setEntryMethod] = useState<'camera' | 'manual'>('manual')
@@ -144,7 +147,7 @@ export const ScanPage = () => {
           {
             id: 'scan-history',
             label: 'History',
-            content: <ScanHistoryTab companyId={companyId || ''} />,
+            content: <ScanHistoryTab companyId={companyId || ''} searchTerm={scanHistorySearchTerm} />,
           },
         ]}
       />

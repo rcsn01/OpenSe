@@ -5,10 +5,12 @@ import type {
   CustomFieldValueType,
 } from '../types'
 import type { SortDirection, SortField } from '../components/Inventory/types'
+import { normalizePageSearchTerm, topBarSearchParamKey } from '../lib/pageSearch'
 
 export type InventoryStockFilter = 'all' | 'low' | 'out'
 
 export type InventoryUrlState = {
+  searchTerm: string
   stockFilter: InventoryStockFilter
   page: number
   pageSize: number
@@ -22,6 +24,7 @@ const inventorySortFields: SortField[] = ['name', 'sku', 'quantity_on_hand', 'se
 const inventorySortDirections: SortDirection[] = ['asc', 'desc']
 
 export const defaultInventoryUrlState = {
+  searchTerm: '',
   stockFilter: 'all' as InventoryStockFilter,
   page: 1,
   pageSize: 10,
@@ -93,6 +96,7 @@ export const hasInventoryCustomFieldSearchParams = (searchParams: URLSearchParam
 )
 
 export const parseInventoryUrlState = (searchParams: URLSearchParams) => ({
+  searchTerm: normalizePageSearchTerm(searchParams.get(topBarSearchParamKey) ?? ''),
   stockFilter: parseInventoryStockFilter(searchParams.get('stock')),
   page: parsePositiveInteger(searchParams.get('page'), defaultInventoryUrlState.page),
   pageSize: parseInventoryPageSize(searchParams.get('pageSize')),
@@ -134,10 +138,15 @@ export const createInventorySearchParams = (
   nextSearchParams.delete('pageSize')
   nextSearchParams.delete('sortField')
   nextSearchParams.delete('sortDir')
+  nextSearchParams.delete(topBarSearchParamKey)
 
   Array.from(nextSearchParams.keys())
     .filter((key) => key.startsWith(customFieldParamPrefix))
     .forEach((key) => nextSearchParams.delete(key))
+
+  if (state.searchTerm.length > 0) {
+    nextSearchParams.set(topBarSearchParamKey, state.searchTerm)
+  }
 
   if (state.stockFilter !== defaultInventoryUrlState.stockFilter) {
     nextSearchParams.set('stock', state.stockFilter)
