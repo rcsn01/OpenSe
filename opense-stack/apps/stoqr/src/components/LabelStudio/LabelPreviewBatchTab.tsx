@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { useCreateLabelPrintJob, useLabelProductFolders, useLabelProducts, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
 import { LabelDownloadsTab } from './LabelDownloadsTab'
 import { LabelPreviewCard } from './LabelPreviewCard'
@@ -6,6 +7,8 @@ import { downloadLabelPdf } from './downloadLabelPdf'
 import { getEnabledLabelFields, resolveLabelLayout } from './labelLayout'
 import { buildLabelPlacements, getPlacementPageCount } from './labelRenderPlan'
 import { createLabelPdfDataUrl } from './pdfExport'
+import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
+import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
 
 type BatchTarget = 'product' | 'folder'
 
@@ -13,6 +16,7 @@ type LabelPreviewBatchTabProps = {
   companyId: string
   selectedTemplateId?: string
   onSelectedTemplateChange?: (templateId: string) => void
+  searchTerm?: string
 }
 
 const sanitizeFileNamePart = (value: string | null | undefined) =>
@@ -26,7 +30,8 @@ const buildPdfFileName = (templateName: string | null | undefined, targetName: s
   return `${sanitizeFileNamePart(templateName)}-${sanitizeFileNamePart(targetName)}-${timestamp}.pdf`
 }
 
-export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange }: LabelPreviewBatchTabProps) => {
+export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange, searchTerm = '' }: LabelPreviewBatchTabProps) => {
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { data: templates = [], isLoading: loadingTemplates } = useLabelTemplates(companyId)
   const [targetType, setTargetType] = useState<BatchTarget>('product')
   const [folderId, setFolderId] = useState('')
@@ -39,6 +44,23 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [message, setMessage] = useState<string | null>(null)
+  const normalizedSearchTerm = normalizePageSearchTerm(searchTerm)
+  const filteredTemplates = useMemo(() => fuzzySearchItems(templates, normalizedSearchTerm, [
+    {
+      key: (template) => template.name,
+      maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+    },
+  ]), [normalizedSearchTerm, templates])
+  const filteredProducts = useMemo(() => fuzzySearchItems(products, normalizedSearchTerm, [
+    {
+      key: (product) => product.sku,
+      maxRanking: fuzzyRankings.STARTS_WITH,
+    },
+    {
+      key: (product) => product.name,
+      maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+    },
+  ]), [normalizedSearchTerm, products])
 
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === templateId) ?? null, [templates, templateId])
   const selectedProduct = useMemo(() => products.find((product) => product.id === productId) ?? null, [products, productId])
@@ -91,6 +113,27 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   useEffect(() => {
     setTemplateId(initialSelectedTemplateId ?? '')
   }, [initialSelectedTemplateId])
+
+  useEffect(() => {
+    layoutContext?.setTopBarSearchConfig({
+      suggestions: [
+        ...filteredTemplates.slice(0, 4).map((template) => ({
+          id: `preview-template-${template.id}`,
+          title: template.name,
+          subtitle: 'Label template',
+          value: template.name,
+          badge: 'Template',
+        })),
+        ...filteredProducts.slice(0, 4).map((product) => ({
+          id: `preview-product-${product.id}`,
+          title: product.name,
+          subtitle: product.sku,
+          value: product.sku || product.name,
+          badge: 'Product',
+        })),
+      ],
+    })
+  }, [filteredProducts, filteredTemplates, layoutContext])
 
   const handleTemplateChange = (nextTemplateId: string) => {
     setTemplateId(nextTemplateId)
@@ -191,7 +234,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
                 <span className="export-step-label">Select Template</span>
                 <select className="select" aria-label="Template" value={templateId} onChange={(event) => handleTemplateChange(event.target.value)}>
                   <option value="">Select template</option>
-                  {templates.map((template) => (
+                  {filteredTemplates.map((template) => (
                     <option key={template.id} value={template.id}>
                       {template.name}
                     </option>
@@ -253,7 +296,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
                 ) : (
                   <select className="select" aria-label="Product" value={productId} onChange={(event) => setProductId(event.target.value)}>
                     <option value="">Select product</option>
-                    {products.map((product) => (
+                    {filteredProducts.map((product) => (
                       <option key={product.id} value={product.id}>
                         {product.name} ({product.sku})
                       </option>

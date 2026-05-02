@@ -9,6 +9,11 @@ import { QuickScanTab } from '../components/Scan/QuickScanTab'
 import { ScanHistoryTab } from '../components/Scan/ScanHistoryTab'
 import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 import { toast } from 'sonner'
+import { useInventoryProducts } from '../hooks/queries/useInventory'
+import { useScanHistory } from '../hooks/queries/useQuickScan'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { defaultInventoryUrlState } from './inventoryUrlState'
+import { normalizePageSearchTerm } from '../lib/pageSearch'
 
 export const ScanPage = () => {
   const { companyId } = useCompany()
@@ -17,11 +22,23 @@ export const ScanPage = () => {
   const { tab } = useParams<{ tab?: string }>()
   const validTabs = ['scan-actions', 'scan-history'] as const
   const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'scan-actions'
-  const scanHistorySearchTerm = activeTab === 'scan-history' ? (layoutContext?.topBarSearchValue ?? '') : ''
+  const topBarSearchValue = layoutContext?.topBarSearchValue ?? ''
+  const debouncedSearchValue = useDebouncedValue(topBarSearchValue, 250)
+  const scanHistorySearchTerm = activeTab === 'scan-history' ? topBarSearchValue : ''
   const [scanValue, setScanValue] = useState('')
   const [isScanning, setIsScanning] = useState(false)
   const [entryMethod, setEntryMethod] = useState<'camera' | 'manual'>('manual')
   const scannerRef = useRef<Html5Qrcode | null>(null)
+  const productSuggestionsQuery = useInventoryProducts({
+    companyId: activeTab === 'scan-actions' ? companyId : null,
+    search: activeTab === 'scan-actions' ? debouncedSearchValue : '',
+    stockFilter: defaultInventoryUrlState.stockFilter,
+    page: defaultInventoryUrlState.page,
+    pageSize: 8,
+    sortField: defaultInventoryUrlState.sortField,
+    sortDir: defaultInventoryUrlState.sortDir,
+  })
+  const scanHistoryQuery = useScanHistory(activeTab === 'scan-history' && companyId ? companyId : '')
 
   const handleManualScanValue = (value: string) => {
     if (value.trim()) {
@@ -32,6 +49,49 @@ export const ScanPage = () => {
   }
 
   // Cleanup scanner on unmount
+  useEffect(() => {
+    if (activeTab !== 'scan-actions') {
+      return
+    }
+
+    const normalizedSearchValue = normalizePageSearchTerm(topBarSearchValue)
+    setScanValue(normalizedSearchValue)
+    setEntryMethod('manual')
+  }, [activeTab, topBarSearchValue])
+
+  useEffect(() => {
+    if (activeTab === 'scan-actions') {
+      const suggestedProducts = (productSuggestionsQuery.data?.products ?? []).slice(0, 8).map((product) => ({
+        id: `scan-product-${product.id}`,
+        title: product.name,
+        subtitle: `${product.sku} · ${product.quantity_on_hand} on hand`,
+        value: product.sku || product.name,
+        badge: 'Product',
+      }))
+
+      layoutContext?.setTopBarSearchConfig({
+        suggestions: suggestedProducts,
+        onSuggestionSelect: (suggestion) => {
+          setScanValue(suggestion.value)
+          setEntryMethod('manual')
+        },
+      })
+      return
+    }
+
+    const historySuggestions = (scanHistoryQuery.data ?? []).slice(0, 8).map((event) => ({
+      id: `scan-history-${event.id}`,
+      title: event.product?.name ?? 'Unknown item',
+      subtitle: `${event.product?.sku ?? event.barcode ?? '—'} · ${event.actorName}`,
+      value: event.product?.sku ?? event.barcode ?? event.product?.name ?? '',
+      badge: event.entry_method,
+    }))
+
+    layoutContext?.setTopBarSearchConfig({
+      suggestions: historySuggestions,
+    })
+  }, [activeTab, layoutContext, productSuggestionsQuery.data?.products, scanHistoryQuery.data])
+
   useEffect(() => {
     return () => {
       if (scannerRef.current && scannerRef.current.isScanning) {

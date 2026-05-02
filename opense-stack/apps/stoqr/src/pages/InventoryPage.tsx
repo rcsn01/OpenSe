@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
+import { useSearchParams, useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import type { CustomFieldPrimitive, Folder } from '../types'
@@ -23,6 +23,7 @@ import {
   useInventoryRefresh,
 } from '../hooks/queries/useInventory'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 export const getNextSelectedRowIdsForVisibleToggle = (current: Set<string>, visibleProductIds: string[]) => {
   const visibleProductIdSet = new Set(visibleProductIds)
@@ -38,6 +39,7 @@ export const getNextSelectedRowIdsForVisibleToggle = (current: Set<string>, visi
 export const InventoryListPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -161,6 +163,18 @@ export const InventoryListPage = () => {
     () => productsQuery.isLoading || filtersQuery.isLoading,
     [productsQuery.isLoading, filtersQuery.isLoading],
   )
+
+  useEffect(() => {
+    layoutContext?.setTopBarSearchConfig({
+      suggestions: products.slice(0, 8).map((product) => ({
+        id: `inventory-product-${product.id}`,
+        title: product.name,
+        subtitle: `${product.sku} · ${product.quantity_on_hand} on hand`,
+        value: product.sku || product.name,
+        badge: 'Product',
+      })),
+    })
+  }, [layoutContext, products])
 
   useEffect(() => {
     if (tab === 'barcode-sku') {

@@ -30,6 +30,14 @@ vi.mock('../../components/Scan/ScanHistoryTab', () => ({
   ScanHistoryTab: ({ searchTerm }: { searchTerm?: string }) => <div>Scan history {searchTerm}</div>,
 }))
 
+vi.mock('../../hooks/queries/useInventory', () => ({
+  useInventoryProducts: () => ({ data: { products: [] } }),
+}))
+
+vi.mock('../../hooks/queries/useQuickScan', () => ({
+  useScanHistory: () => ({ data: [] }),
+}))
+
 vi.mock('html5-qrcode', () => ({
   Html5Qrcode: vi.fn().mockImplementation(() => ({
     isScanning: false,
@@ -57,7 +65,7 @@ describe('ScanPage', () => {
     render(
       <MemoryRouter initialEntries={['/scan/scan-history']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: 'dock scanner', setTopBarSearchValue: vi.fn() }} />}>
+          <Route element={<Outlet context={{ topBarSearchValue: 'dock scanner', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
             <Route path="/scan/:tab" element={<ScanPage />} />
           </Route>
         </Routes>

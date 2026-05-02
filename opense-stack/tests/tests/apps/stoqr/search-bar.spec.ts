@@ -16,6 +16,25 @@ const safeGoto = async (page: Page, url: string) => {
 };
 
 test.describe('Stoqr Top-Bar Search', () => {
+  test('top-bar combobox accepts typing and shows fuzzy suggestions', async ({ authenticatedPage }) => {
+    await safeGoto(authenticatedPage, '/inventory/all');
+
+    const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search items...' });
+    await expect(searchInput).toBeVisible();
+
+    await searchInput.click();
+    await searchInput.pressSequentially('30123301');
+
+    await expect(searchInput).toHaveValue('30123301');
+    await expect.poll(() => new URL(authenticatedPage.url()).searchParams.get('q')).toBe('30123301');
+
+    await searchInput.clear();
+    await searchInput.pressSequentially('low st');
+
+    await expect(searchInput).toHaveValue('low st');
+    await expect(authenticatedPage.getByRole('option', { name: /Low Stock/i })).toBeVisible();
+  });
+
   test('inventory search persists in the URL and can be cleared from the top bar', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/inventory/all');
 
@@ -52,7 +71,7 @@ test.describe('Stoqr Top-Bar Search', () => {
 
     await expect.poll(() => new URL(authenticatedPage.url()).searchParams.get('q')).toBe('scanner');
     await expect(authenticatedPage.getByText('Showing 1 of 7 alerts')).toBeVisible();
-    await expect(authenticatedPage.getByText('Hardware Offline: Main Dock Scanner')).toBeVisible();
+    await expect(authenticatedPage.getByRole('table').getByText('Hardware Offline: Main Dock Scanner')).toBeVisible();
     await expect(authenticatedPage.getByText('Out of Stock: Premium Widget')).toHaveCount(0);
 
     await authenticatedPage.getByRole('button', { name: 'Clear search' }).click();

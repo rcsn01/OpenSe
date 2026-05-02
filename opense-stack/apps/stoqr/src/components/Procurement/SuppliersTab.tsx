@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Button,
@@ -15,7 +15,8 @@ import {
   EmptyState,
   Input,
 } from '@repo/ui'
-import { Building2, Mail, MoreVertical, Phone, Plus, Search, UserRound } from 'lucide-react'
+import { Building2, Mail, MoreVertical, Phone, Plus, UserRound } from 'lucide-react'
+import { useOutletContext } from 'react-router-dom'
 import type { Supplier } from '../../api/procurement'
 import {
   useCreateProcurementSupplier,
@@ -24,6 +25,8 @@ import {
   useProcurementReceivingLogs,
   useProcurementSuppliers,
 } from '../../hooks/queries/useProcurementTabs'
+import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
+import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
 
 type SupplierDialogMode = 'profile' | 'catalog'
 
@@ -112,13 +115,13 @@ const getSupplierPerformance = (
   }
 }
 
-export const SuppliersTab = ({ companyId }: { companyId: string | null }) => {
+export const SuppliersTab = ({ companyId, searchTerm = '' }: { companyId: string | null; searchTerm?: string }) => {
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { data: suppliers = [], isLoading: loading } = useProcurementSuppliers(companyId)
   const { data: purchaseOrders = [] } = useProcurementPurchaseOrders(companyId)
   const { data: purchaseOrderItems = [] } = useProcurementPurchaseOrderItems(companyId)
   const { data: receivingLogs = [] } = useProcurementReceivingLogs(companyId)
   const createSupplierMutation = useCreateProcurementSupplier(companyId)
-  const [searchTerm, setSearchTerm] = useState('')
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<SupplierDialogMode>('profile')
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null)
@@ -149,25 +152,34 @@ export const SuppliersTab = ({ companyId }: { companyId: string | null }) => {
   }, [purchaseOrderItems, purchaseOrders, receivingLogs, suppliers])
 
   const filteredSuppliers = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
-
-    if (!normalizedSearch) return supplierCards
-
-    return supplierCards.filter((card) => {
-      const haystack = [
-        card.supplier.name,
-        card.supplier.contact_name ?? '',
-        card.supplier.email ?? '',
-        card.supplier.phone ?? '',
-        card.code,
-        card.trackedSkus.join(' '),
-      ]
-        .join(' ')
-        .toLowerCase()
-
-      return haystack.includes(normalizedSearch)
-    })
+    return fuzzySearchItems(supplierCards, normalizePageSearchTerm(searchTerm), [
+      {
+        key: (card) => card.supplier.name,
+        maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+      },
+      {
+        key: (card) => [card.supplier.contact_name ?? '', card.supplier.email ?? '', card.supplier.phone ?? ''],
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+      {
+        key: (card) => [card.code, ...card.trackedSkus],
+        maxRanking: fuzzyRankings.STARTS_WITH,
+      },
+    ])
   }, [searchTerm, supplierCards])
+
+  useEffect(() => {
+    layoutContext?.setTopBarSearchConfig({
+      suggestions: filteredSuppliers.slice(0, 8).map((card) => ({
+        id: `supplier-${card.supplier.id}`,
+        title: card.supplier.name,
+        subtitle: `${formatContactValue(card.supplier.contact_name, 'No contact')} · ${card.code}`,
+        value: card.supplier.name,
+        keywords: card.trackedSkus,
+        badge: 'Vendor',
+      })),
+    })
+  }, [filteredSuppliers, layoutContext])
 
   const selectedSupplier = supplierCards.find((card) => card.supplier.id === selectedSupplierId) ?? null
 
@@ -202,15 +214,6 @@ export const SuppliersTab = ({ companyId }: { companyId: string | null }) => {
               <Plus size={16} />
               Add Supplier
             </Button>
-
-            <div className="w-full lg:max-w-[320px]">
-              <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search suppliers or SKUs..."
-                prefix={<Search size={16} />}
-              />
-            </div>
           </div>
         </Card>
 

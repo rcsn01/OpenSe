@@ -20,17 +20,25 @@ import {
   SideNavGroupList,
   SideNavBrandSlot,
 } from '@repo/ui'
-import { topBarSearchParamKey } from '../lib/pageSearch'
+import { SearchCombobox } from '../components/Search/SearchCombobox'
+import { topBarSearchParamKey, type SearchSuggestion } from '../lib/pageSearch'
 
 export interface AppLayoutOutletContext {
   topBarSearchValue: string
   setTopBarSearchValue: (value: string) => void
+  setTopBarSearchConfig: (config: TopBarSearchConfig | null) => void
 }
 
 type SearchRouteConfig = {
   id: string
   placeholder: string
   match: (pathname: string) => boolean
+  defaultSuggestions?: SearchSuggestion[]
+}
+
+export type TopBarSearchConfig = {
+  suggestions?: SearchSuggestion[]
+  onSuggestionSelect?: (suggestion: SearchSuggestion) => void
 }
 
 const searchRouteConfigs: SearchRouteConfig[] = [
@@ -38,11 +46,56 @@ const searchRouteConfigs: SearchRouteConfig[] = [
     id: 'inventory',
     placeholder: 'Search items...',
     match: (pathname) => pathname === '/inventory/all',
+    defaultSuggestions: [
+      { id: 'inventory-all-products', title: 'All Products', subtitle: 'Browse catalog items and stock', value: 'products', badge: 'Inventory' },
+      { id: 'inventory-low-stock', title: 'Low Stock', subtitle: 'Find products near reorder point', value: 'low stock', badge: 'Filter' },
+      { id: 'inventory-out-of-stock', title: 'Out of Stock', subtitle: 'Find products at zero quantity', value: 'out of stock', badge: 'Filter' },
+    ],
   },
   {
-    id: 'scan-history',
-    placeholder: 'Search scans...',
+    id: 'scanner-scan-actions',
+    placeholder: 'Search products...',
+    match: (pathname) => pathname === '/scan' || pathname === '/scan/scan-actions',
+    defaultSuggestions: [
+      { id: 'scanner-scan', title: 'Search by Barcode or SKU', subtitle: 'Look up a product before adjusting stock', value: 'sku', badge: 'Scanner' },
+    ],
+  },
+  {
+    id: 'scanner-history',
+    placeholder: 'Search history...',
     match: (pathname) => pathname === '/scan/scan-history',
+    defaultSuggestions: [
+      { id: 'scan-history-camera', title: 'Camera Scans', subtitle: 'Recent barcode scans captured by camera', value: 'camera', badge: 'History' },
+      { id: 'scan-history-manual', title: 'Manual Entries', subtitle: 'Recent scans entered manually', value: 'manual', badge: 'History' },
+    ],
+  },
+  {
+    id: 'label-studio-templates',
+    placeholder: 'Search templates...',
+    match: (pathname) => pathname === '/tools/labels' || pathname === '/tools/labels/templates',
+    defaultSuggestions: [
+      { id: 'labels-templates', title: 'Label Templates', subtitle: 'Open and manage saved label templates', value: 'template', badge: 'Labels' },
+    ],
+  },
+  {
+    id: 'label-studio-preview',
+    placeholder: 'Search label products...',
+    match: (pathname) => pathname === '/tools/labels/preview-batch',
+    defaultSuggestions: [
+      { id: 'labels-preview', title: 'Preview Batch', subtitle: 'Queue products and preview print output', value: 'preview batch', badge: 'Labels' },
+    ],
+  },
+  {
+    id: 'reports',
+    placeholder: 'Search reports...',
+    match: (pathname) => pathname === '/reports' || pathname.startsWith('/reports/'),
+    defaultSuggestions: [
+      { id: 'reports-stock-health', title: 'Stock Health & Valuation', subtitle: 'Inventory value, aging, and folder mix', value: 'stock health', badge: 'Report' },
+      { id: 'reports-movement', title: 'Movement & Velocity', subtitle: 'Inbound, outbound, and top-moving SKUs', value: 'movement velocity', badge: 'Report' },
+      { id: 'reports-procurement', title: 'Procurement & Suppliers', subtitle: 'Supplier and purchasing insights', value: 'procurement suppliers', badge: 'Report' },
+      { id: 'reports-audits', title: 'Audits & Shrinkage', subtitle: 'Audit findings and shrink trends', value: 'audits shrinkage', badge: 'Report' },
+      { id: 'reports-custom', title: 'Custom & Saved Reports', subtitle: 'Templates and scheduled delivery', value: 'custom saved reports', badge: 'Report' },
+    ],
   },
   {
     id: 'activity-logs',
@@ -53,11 +106,29 @@ const searchRouteConfigs: SearchRouteConfig[] = [
     id: 'procurement-purchase-orders',
     placeholder: 'Search POs...',
     match: (pathname) => pathname === '/procurement/purchase-orders',
+    defaultSuggestions: [
+      { id: 'procurement-po-drafts', title: 'Draft Purchase Orders', subtitle: 'POs awaiting supplier confirmation', value: 'draft', badge: 'PO' },
+      { id: 'procurement-po-transit', title: 'In Transit', subtitle: 'Open orders currently on the way', value: 'in transit', badge: 'PO' },
+      { id: 'procurement-po-returns', title: 'Vendor Returns', subtitle: 'Orders with return workflows', value: 'return', badge: 'PO' },
+    ],
+  },
+  {
+    id: 'procurement-suppliers',
+    placeholder: 'Search suppliers...',
+    match: (pathname) => pathname === '/procurement/suppliers',
+    defaultSuggestions: [
+      { id: 'procurement-suppliers-name', title: 'Supplier Profiles', subtitle: 'Search vendors, contacts, and catalog SKUs', value: 'supplier', badge: 'Vendor' },
+    ],
   },
   {
     id: 'alerts-feed',
     placeholder: 'Search alerts...',
     match: (pathname) => pathname === '/alerts/feed',
+    defaultSuggestions: [
+      { id: 'alerts-critical', title: 'Critical Alerts', subtitle: 'Immediate operational issues', value: 'critical', badge: 'Alert' },
+      { id: 'alerts-stock', title: 'Stock Alerts', subtitle: 'Inventory and replenishment issues', value: 'stock', badge: 'Alert' },
+      { id: 'alerts-system', title: 'System Alerts', subtitle: 'Platform and device notifications', value: 'system', badge: 'Alert' },
+    ],
   },
 ]
 
@@ -92,11 +163,21 @@ export const AppLayout = () => {
     () => searchRouteConfigs.find((config) => config.match(location.pathname)) ?? null,
     [location.pathname],
   )
-  const searchValue = activeSearchRoute ? searchParams.get(topBarSearchParamKey) ?? '' : ''
+  const urlSearchValue = activeSearchRoute ? searchParams.get(topBarSearchParamKey) ?? '' : ''
+  const [topBarSearchConfig, setTopBarSearchConfig] = useState<TopBarSearchConfig | null>(null)
+  const [searchDraft, setSearchDraft] = useState(urlSearchValue)
 
   useEffect(() => {
     setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
   }, [user])
+
+  useEffect(() => {
+    setTopBarSearchConfig(null)
+  }, [location.pathname])
+
+  useEffect(() => {
+    setSearchDraft(urlSearchValue)
+  }, [urlSearchValue, activeSearchRoute?.id])
 
   useEffect(() => {
     if (activeSearchRoute !== null) return
@@ -139,6 +220,8 @@ export const AppLayout = () => {
       return
     }
 
+    setSearchDraft(value)
+
     const nextSearchParams = new URLSearchParams(searchParams)
     const normalizedValue = value.trim()
 
@@ -150,6 +233,20 @@ export const AppLayout = () => {
 
     setSearchParams(nextSearchParams, { replace: true })
   }, [activeSearchRoute, searchParams, setSearchParams])
+
+  const mergedSearchSuggestions = useMemo(() => {
+    const suggestions = [
+      ...(activeSearchRoute?.defaultSuggestions ?? []),
+      ...(topBarSearchConfig?.suggestions ?? []),
+    ]
+
+    const seenIds = new Set<string>()
+    return suggestions.filter((suggestion) => {
+      if (seenIds.has(suggestion.id)) return false
+      seenIds.add(suggestion.id)
+      return true
+    })
+  }, [activeSearchRoute?.defaultSuggestions, topBarSearchConfig?.suggestions])
 
   const renderNavItem = (item: (typeof mainNavItems)[0]) => {
     const isActive =
@@ -190,9 +287,18 @@ export const AppLayout = () => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
       }}
       onLogout={handleSignOut}
-      searchPlaceholder={activeSearchRoute?.placeholder}
-      searchValue={activeSearchRoute ? searchValue : undefined}
-      onSearchChange={activeSearchRoute ? handleSearchChange : undefined}
+      searchContent={activeSearchRoute ? (
+        <div className="min-w-0 flex-1 max-w-xl">
+          <SearchCombobox
+            value={searchDraft}
+            onValueChange={handleSearchChange}
+            placeholder={activeSearchRoute.placeholder}
+            suggestions={mergedSearchSuggestions}
+            onSuggestionSelect={topBarSearchConfig?.onSuggestionSelect}
+            emptyMessage={`No ${activeSearchRoute.placeholder.toLowerCase().replace(/^search\s+/, '')} found.`}
+          />
+        </div>
+      ) : undefined}
       mobileSidebar={{
         enabled: isMobileViewport,
         isOpen: isMobileNavOpen,
@@ -201,7 +307,13 @@ export const AppLayout = () => {
         toggleAriaLabel: 'Toggle side navigation',
       }}
     >
-      <Outlet context={{ topBarSearchValue: searchValue, setTopBarSearchValue: handleSearchChange } satisfies AppLayoutOutletContext} />
+      <Outlet
+        context={{
+          topBarSearchValue: searchDraft,
+          setTopBarSearchValue: handleSearchChange,
+          setTopBarSearchConfig,
+        } satisfies AppLayoutOutletContext}
+      />
     </SharedAppLayout>
   )
 }

@@ -23,6 +23,8 @@ export interface AppLayoutProps {
   onLogout?: () => void
   /** Search placeholder (enables search bar when provided with searchValue and onSearchChange) */
   searchPlaceholder?: string
+  /** Optional custom search content rendered in the top bar search slot */
+  searchContent?: ReactNode
   /** Search input value */
   searchValue?: string
   /** Search input change handler */
@@ -49,6 +51,7 @@ export function AppLayout({
   onSettingsClick,
   onLogout,
   searchPlaceholder,
+  searchContent,
   searchValue,
   onSearchChange,
   className,
@@ -114,6 +117,7 @@ export function AppLayout({
         profileFallback={profileFallback}
         onSettingsClick={onSettingsClick}
         onLogout={onLogout}
+        searchContent={searchContent}
         searchPlaceholder={searchPlaceholder}
         searchValue={searchValue}
         onSearchChange={onSearchChange}

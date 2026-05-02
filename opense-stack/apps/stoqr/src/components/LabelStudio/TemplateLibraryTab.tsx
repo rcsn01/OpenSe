@@ -1,12 +1,16 @@
 import { DataTable } from '@repo/ui'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
 import { getLabelLayoutSummary } from './labelLayout'
+import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
+import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
 
 type TemplateLibraryTabProps = {
   companyId: string
   selectedTemplateId?: string
   onSelectTemplate?: (templateId: string) => void
+  searchTerm?: string
 }
 
 const formatDate = (dateString: string | null | undefined): string => {
@@ -23,17 +27,48 @@ const formatDate = (dateString: string | null | undefined): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemplate }: TemplateLibraryTabProps) => {
+export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemplate, searchTerm = '' }: TemplateLibraryTabProps) => {
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { data: templates = [], isLoading } = useLabelTemplates(companyId)
   const createTemplateMutation = useCreateLabelTemplate(companyId)
-  const [search, setSearch] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [name, setName] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
-  const filteredTemplates = templates.filter((t) =>
-    t.name.toLowerCase().includes(search.toLowerCase()),
-  )
+  const filteredTemplates = useMemo(() => fuzzySearchItems(templates, normalizePageSearchTerm(searchTerm), [
+    {
+      key: (template) => template.name,
+      maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+    },
+    {
+      key: (template) => {
+        const summary = getLabelLayoutSummary(template.layout)
+        return [summary.size, summary.type, summary.fields]
+      },
+      maxRanking: fuzzyRankings.CONTAINS,
+    },
+  ]), [searchTerm, templates])
+
+  useEffect(() => {
+    layoutContext?.setTopBarSearchConfig({
+      suggestions: filteredTemplates.slice(0, 8).map((template) => {
+        const summary = getLabelLayoutSummary(template.layout)
+        return {
+          id: `label-template-${template.id}`,
+          title: template.name,
+          subtitle: `${summary.size} · ${summary.type}`,
+          value: template.name,
+          badge: 'Template',
+        }
+      }),
+      onSuggestionSelect: (suggestion) => {
+        const matchedTemplate = templates.find((template) => template.name === suggestion.value)
+        if (matchedTemplate) {
+          onSelectTemplate?.(matchedTemplate.id)
+        }
+      },
+    })
+  }, [filteredTemplates, layoutContext, onSelectTemplate, templates])
 
   const createTemplate = async () => {
     setMessage(null)
@@ -61,14 +96,6 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       <div className="flex-between" style={{ marginBottom: 8 }}>
         <h3 className="section-title" style={{ margin: 0 }}>Template Library</h3>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <input
-            className="input"
-            placeholder="Search templates..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: 200 }}
-            aria-label="Search templates"
-          />
           <button className="button" onClick={() => setShowCreateForm(!showCreateForm)}>
             + New Template
           </button>
