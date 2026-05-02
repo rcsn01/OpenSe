@@ -41,6 +41,39 @@ export type TopBarSearchConfig = {
   onSuggestionSelect?: (suggestion: SearchSuggestion) => void
 }
 
+const areSearchSuggestionsEqual = (left: SearchSuggestion[] = [], right: SearchSuggestion[] = []) => {
+  if (left.length !== right.length) return false
+
+  return left.every((suggestion, index) => {
+    const other = right[index]
+
+    if (!other) return false
+
+    const leftKeywords = suggestion.keywords ?? []
+    const rightKeywords = other.keywords ?? []
+
+    return (
+      suggestion.id === other.id &&
+      suggestion.title === other.title &&
+      suggestion.value === other.value &&
+      suggestion.subtitle === other.subtitle &&
+      suggestion.badge === other.badge &&
+      leftKeywords.length === rightKeywords.length &&
+      leftKeywords.every((keyword, keywordIndex) => keyword === rightKeywords[keywordIndex])
+    )
+  })
+}
+
+const areTopBarSearchConfigsEqual = (left: TopBarSearchConfig | null, right: TopBarSearchConfig | null) => {
+  if (left === right) return true
+  if (left === null || right === null) return false
+
+  return (
+    left.onSuggestionSelect === right.onSuggestionSelect &&
+    areSearchSuggestionsEqual(left.suggestions, right.suggestions)
+  )
+}
+
 const searchRouteConfigs: SearchRouteConfig[] = [
   {
     id: 'inventory',
@@ -164,8 +197,11 @@ export const AppLayout = () => {
     [location.pathname],
   )
   const urlSearchValue = activeSearchRoute ? searchParams.get(topBarSearchParamKey) ?? '' : ''
-  const [topBarSearchConfig, setTopBarSearchConfig] = useState<TopBarSearchConfig | null>(null)
+  const [topBarSearchConfig, setTopBarSearchConfigState] = useState<TopBarSearchConfig | null>(null)
   const [searchDraft, setSearchDraft] = useState(urlSearchValue)
+  const setTopBarSearchConfig = useCallback((config: TopBarSearchConfig | null) => {
+    setTopBarSearchConfigState((current) => (areTopBarSearchConfigsEqual(current, config) ? current : config))
+  }, [])
 
   useEffect(() => {
     setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
@@ -248,6 +284,12 @@ export const AppLayout = () => {
     })
   }, [activeSearchRoute?.defaultSuggestions, topBarSearchConfig?.suggestions])
 
+  const outletContext = useMemo<AppLayoutOutletContext>(() => ({
+    topBarSearchValue: searchDraft,
+    setTopBarSearchValue: handleSearchChange,
+    setTopBarSearchConfig,
+  }), [handleSearchChange, searchDraft, setTopBarSearchConfig])
+
   const renderNavItem = (item: (typeof mainNavItems)[0]) => {
     const isActive =
       location.pathname === item.href || location.pathname.startsWith(item.href + '/')
@@ -307,13 +349,7 @@ export const AppLayout = () => {
         toggleAriaLabel: 'Toggle side navigation',
       }}
     >
-      <Outlet
-        context={{
-          topBarSearchValue: searchDraft,
-          setTopBarSearchValue: handleSearchChange,
-          setTopBarSearchConfig,
-        } satisfies AppLayoutOutletContext}
-      />
+      <Outlet context={outletContext} />
     </SharedAppLayout>
   )
 }
