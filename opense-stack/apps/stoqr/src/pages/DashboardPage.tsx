@@ -80,17 +80,7 @@ const velocityTabs: Array<{ id: VelocityTabId; label: string }> = [
   { id: 'dead', label: 'Dead Stock' },
 ]
 
-const fallbackSparkline = [12, 16, 14, 18, 22, 24, 28]
-
-const fallbackMovementChart = [
-  { date: '2026-04-07', inbound: 8, outbound: 4 },
-  { date: '2026-04-08', inbound: 11, outbound: 6 },
-  { date: '2026-04-09', inbound: 13, outbound: 8 },
-  { date: '2026-04-10', inbound: 10, outbound: 9 },
-  { date: '2026-04-11', inbound: 12, outbound: 10 },
-  { date: '2026-04-12', inbound: 17, outbound: 13 },
-  { date: '2026-04-13', inbound: 15, outbound: 17 },
-]
+const emptySparkline = Array.from({ length: 7 }, () => 0)
 
 const attentionPriority: Record<AttentionSeverity, number> = {
   critical: 4,
@@ -181,8 +171,21 @@ const formatRelativeTimestamp = (value: string) => {
 
 const padPurchaseOrder = (value: number) => `PO-${String(value).padStart(4, '0')}`
 
-const buildFallbackSeries = (count: number, pattern: number[]) =>
-  pattern.map((multiplier) => Math.max(1, Math.round(Math.max(count, 1) * multiplier)))
+const buildFlatSeries = (value: number, length = 7) =>
+  Array.from({ length }, () => Math.max(value, 0))
+
+const normalizeSparklineValues = (values: number[]) => {
+  if (values.length === 0) return emptySparkline
+  if (values.length === 1) return buildFlatSeries(values[0] ?? 0)
+  return values
+}
+
+const formatIsoDate = (value: Date) => {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 type ChartPoint = { x: number; y: number }
 
@@ -211,6 +214,30 @@ const buildAreaPath = (points: ChartPoint[], baseY: number) => {
   const first = points[0]
   const last = points[points.length - 1]
   return `${buildLinePath(points)} L ${last.x} ${baseY} L ${first.x} ${baseY} Z`
+}
+
+const buildMovementChartWindow = (data: DashboardData['movementChartData']) => {
+  const sorted = data
+    .slice()
+    .sort((left, right) => left.date.localeCompare(right.date))
+    .slice(-7)
+
+  const latestDate = sorted[sorted.length - 1]?.date ?? formatIsoDate(new Date())
+  const latestDateValue = new Date(`${latestDate}T00:00:00`)
+  const pointsByDate = new Map(sorted.map((point) => [point.date, point]))
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const dateValue = new Date(latestDateValue)
+    dateValue.setDate(latestDateValue.getDate() - (6 - index))
+    const date = formatIsoDate(dateValue)
+    const point = pointsByDate.get(date)
+
+    return {
+      date,
+      inbound: point?.inbound ?? 0,
+      outbound: point?.outbound ?? 0,
+    }
+  })
 }
 
 const buildAttentionItems = (
@@ -379,7 +406,7 @@ const buildVelocityGroups = (data: DashboardData) => {
 }
 
 const MiniSparkline = ({ values, tone }: { values: number[]; tone: StatTone }) => {
-  const resolvedValues = values.length > 1 ? values : fallbackSparkline
+  const resolvedValues = normalizeSparklineValues(values)
   const width = 240
   const height = 34
   const padding = { top: 3, right: 3, bottom: 2, left: 3 }
@@ -427,7 +454,8 @@ const StatCard = ({ card }: { card: DashboardStat }) => {
 }
 
 const MovementChart = ({ data }: { data: DashboardData['movementChartData'] }) => {
-  const chartData = (data.length > 0 ? data.slice(-7) : fallbackMovementChart).map((point) => ({
+  const hasMovementHistory = data.some((point) => point.inbound > 0 || point.outbound > 0)
+  const chartData = buildMovementChartWindow(data).map((point) => ({
     ...point,
     label: formatDayLabel(point.date),
   }))
@@ -488,6 +516,9 @@ const MovementChart = ({ data }: { data: DashboardData['movementChartData'] }) =
           Outbound
         </span>
       </div>
+      {!hasMovementHistory ? (
+        <p className="stoqr-dashboard__chart-empty-note">No movement history yet.</p>
+      ) : null}
     </div>
   )
 }
@@ -544,7 +575,7 @@ export const DashboardPage = () => {
         direction: data.outOfStockCount > 0 ? 'up' : 'neutral',
         tone: 'critical',
         icon: AlertTriangle,
-        sparkline: buildFallbackSeries(data.outOfStockCount, [0.25, 0.35, 0.22, 0.4, 0.58, 0.78, 1]),
+        sparkline: buildFlatSeries(data.outOfStockCount),
       },
       {
         label: 'Low Stock Items',
@@ -554,7 +585,7 @@ export const DashboardPage = () => {
         direction: data.lowStockCount > 0 ? 'down' : 'neutral',
         tone: 'warning',
         icon: ClipboardList,
-        sparkline: buildFallbackSeries(data.lowStockCount, [1, 0.9, 0.84, 0.65, 0.48, 0.34, 0.2]),
+        sparkline: buildFlatSeries(data.lowStockCount),
       },
     ]
 
@@ -676,28 +707,34 @@ export const DashboardPage = () => {
               </div>
 
               <div className="stoqr-dashboard__velocity-list">
-                {(pageModel.velocityGroups[velocityTab] as VelocityItem[]).map((item) => {
-                  const maxValue = Math.max(
-                    ...(pageModel.velocityGroups[velocityTab] as VelocityItem[]).map((entry) => entry.barValue),
-                    1,
-                  )
+                {(pageModel.velocityGroups[velocityTab] as VelocityItem[]).length > 0 ? (
+                  (pageModel.velocityGroups[velocityTab] as VelocityItem[]).map((item) => {
+                    const maxValue = Math.max(
+                      ...(pageModel.velocityGroups[velocityTab] as VelocityItem[]).map((entry) => entry.barValue),
+                      1,
+                    )
 
-                  return (
-                    <div key={item.id} className="stoqr-dashboard__velocity-item">
-                      <div className="stoqr-dashboard__velocity-copy">
-                        <p className="stoqr-dashboard__velocity-name">{item.name}</p>
-                        <p className="stoqr-dashboard__velocity-sku">{item.sku}</p>
+                    return (
+                      <div key={item.id} className="stoqr-dashboard__velocity-item">
+                        <div className="stoqr-dashboard__velocity-copy">
+                          <p className="stoqr-dashboard__velocity-name">{item.name}</p>
+                          <p className="stoqr-dashboard__velocity-sku">{item.sku}</p>
+                        </div>
+                        <div className="stoqr-dashboard__velocity-bar-track" aria-hidden="true">
+                          <span
+                            className="stoqr-dashboard__velocity-bar-fill"
+                            style={{ width: `${(item.barValue / maxValue) * 100}%` }}
+                          />
+                        </div>
+                        <span className="stoqr-dashboard__velocity-metric">{item.metricLabel}</span>
                       </div>
-                      <div className="stoqr-dashboard__velocity-bar-track" aria-hidden="true">
-                        <span
-                          className="stoqr-dashboard__velocity-bar-fill"
-                          style={{ width: `${(item.barValue / maxValue) * 100}%` }}
-                        />
-                      </div>
-                      <span className="stoqr-dashboard__velocity-metric">{item.metricLabel}</span>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                ) : (
+                  <div className="stoqr-dashboard__empty-panel">
+                    No inventory movement yet. Add products and transactions to populate velocity insights.
+                  </div>
+                )}
               </div>
             </Card>
 

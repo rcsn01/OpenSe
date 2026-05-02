@@ -287,6 +287,13 @@
   font-size: 0.72rem;
 }
 
+.stoqr-dashboard__chart-empty-note {
+  margin: 0;
+  text-align: center;
+  color: var(--color-muted-foreground);
+  font-size: 0.72rem;
+}
+
 .stoqr-dashboard__legend-item {
   display: inline-flex;
   align-items: center;
