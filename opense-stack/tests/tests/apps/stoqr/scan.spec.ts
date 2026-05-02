@@ -1,98 +1,86 @@
-import { test } from '../../fixtures/auth';
-import { ScanPage } from '../../pages/AppPages';
-import { expect } from '@playwright/test';
+import { test, expect } from '../../fixtures/auth';
+import { CreateProductPage, ScanPage } from '../../pages/AppPages';
+
+const createProductForScan = async (page: import('@playwright/test').Page, name: string, sku: string) => {
+  const createProductPage = new CreateProductPage(page);
+
+  await createProductPage.goto();
+  await createProductPage.expectLoaded();
+  await createProductPage.createProduct(name, sku, 6);
+  await expect(page).toHaveURL(/\/inventory\/[^/]+\/overview$/);
+};
 
 test.describe('Stoqr Scan', () => {
-  test('scan page and scan UI visible', async ({ authenticatedPage }) => {
+  test('scan actions shows camera controls, manual entry, and history navigation', async ({ authenticatedPage }) => {
     const scanPage = new ScanPage(authenticatedPage);
     await scanPage.goto();
     await scanPage.expectLoaded();
 
-    const hasScanTab = await authenticatedPage.getByRole('tab', { name: /^Scan$/i }).first().isVisible().catch(() => false);
-    if (!hasScanTab) {
-      await expect(authenticatedPage).toHaveURL(/\/(scan(\/[^/]+)?|dashboard|auth|login|$)/);
-      return;
-    }
-
-    await expect(authenticatedPage.getByRole('tab', { name: /^Scan$/i })).toBeVisible();
-    await expect(authenticatedPage.getByRole('tab', { name: /history/i })).toBeVisible();
-
-    await expect(authenticatedPage.getByRole('tab', { name: /pick & pack/i })).toHaveCount(0);
-    await expect(authenticatedPage.getByRole('tab', { name: /cycle count/i })).toHaveCount(0);
-    await expect(authenticatedPage.getByRole('tab', { name: /putaway/i })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('button', { name: 'Scan' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: 'History' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /pick & pack/i })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('button', { name: /cycle count/i })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('button', { name: /putaway/i })).toHaveCount(0);
 
     await expect(authenticatedPage.getByRole('button', { name: /start camera/i })).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /stop camera/i })).toHaveCount(0);
     await expect(authenticatedPage.getByText(/manual entry/i)).toBeVisible();
 
-    // Search button should be visible and disabled when empty
     const searchButton = authenticatedPage.getByRole('button', { name: /^search$/i });
     await expect(searchButton).toBeVisible();
     await expect(searchButton).toBeDisabled();
 
-    // Fill input and click search
     await authenticatedPage.getByLabel(/Barcode \/ SKU \/ Product Name/i).fill('TEST-SKU-001');
-    await authenticatedPage.getByRole('button', { name: /^search$/i }).click();
+    await searchButton.click();
 
-    // After search, product lookup area should be visible (either found or not found)
+    await expect(authenticatedPage.getByText('No product found for:')).toBeVisible();
+    await expect(authenticatedPage.getByText('TEST-SKU-001')).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /search again/i })).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /start camera/i })).toHaveCount(0);
 
-    await authenticatedPage.getByRole('tab', { name: /history/i }).click();
-    await expect(authenticatedPage).toHaveURL(/\/scan\/scan-history$/);
-    await expect(authenticatedPage.getByText(/Scan History Log|No scan history yet/i).first()).toBeVisible();
+    await authenticatedPage.getByRole('button', { name: 'History' }).click();
+    await expect(authenticatedPage).toHaveURL(/\/scan\/scan-history(?:\?|$)/);
+    await expect(authenticatedPage.getByText('No scan history yet.')).toBeVisible();
 
-    await authenticatedPage.getByRole('tab', { name: /^Scan$/i }).click();
-    await expect(authenticatedPage).toHaveURL(/\/scan\/scan-actions$/);
+    await authenticatedPage.getByRole('button', { name: 'Scan' }).click();
+    await expect(authenticatedPage).toHaveURL(/\/scan\/scan-actions(?:\?|$)/);
   });
 
-  test('manual SKU entry resolves seeded product with stock management UI', async ({ authenticatedPage }) => {
+  test('manual SKU entry shows stock controls for a seeded product', async ({ authenticatedPage }) => {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const productName = `Scan Product ${uniqueId}`;
+    const productSku = `SCAN-${uniqueId}`;
+
+    await createProductForScan(authenticatedPage, productName, productSku);
+
     const scanPage = new ScanPage(authenticatedPage);
     await scanPage.goto();
     await scanPage.expectLoaded();
 
-    const hasScanTab = await authenticatedPage.getByRole('tab', { name: /^Scan$/i }).first().isVisible().catch(() => false);
-    if (!hasScanTab) {
-      return;
-    }
-
-    // Use the search flow: type then click Search
     const input = authenticatedPage.getByLabel(/Barcode \/ SKU \/ Product Name/i);
-    await input.fill('30123301');
+    await input.fill(productSku);
     await authenticatedPage.getByRole('button', { name: /^search$/i }).click();
 
-    const productFound = await authenticatedPage.getByText('0.5mL Eppendorf Safe-Lock Tubes PCR clean, colorless, 500 tubes').isVisible({ timeout: 5000 }).catch(() => false);
-    const notFound = await authenticatedPage.getByText(/No product found/i).isVisible().catch(() => false);
+    await expect(authenticatedPage.getByRole('heading', { name: productName })).toBeVisible();
+    await expect(authenticatedPage.getByText(`SKU: ${productSku}`)).toBeVisible();
+    await expect(authenticatedPage.getByText(/in stock/i)).toBeVisible();
+    await expect(authenticatedPage.getByRole('radio', { name: /manual/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('radio', { name: /receive/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('radio', { name: /dispatch/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /mark out of stock/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /full restock/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /cancel/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /confirm update/i })).toBeDisabled();
 
-    if (productFound) {
-      // Product details
-      await expect(authenticatedPage.getByText(/SKU: 30123301/i)).toBeVisible();
-      await expect(authenticatedPage.getByText(/in stock/i)).toBeVisible();
-
-      // Stock mode radio buttons
-      await expect(authenticatedPage.getByText('Manual')).toBeVisible();
-      await expect(authenticatedPage.getByText('Receive')).toBeVisible();
-      await expect(authenticatedPage.getByText('Dispatch')).toBeVisible();
-
-      // Quick actions
-      await expect(authenticatedPage.getByRole('button', { name: /mark out of stock/i })).toBeVisible();
-      await expect(authenticatedPage.getByRole('button', { name: /full restock/i })).toBeVisible();
-
-      // Confirm / Cancel
-      await expect(authenticatedPage.getByRole('button', { name: /cancel/i })).toBeVisible();
-      await expect(authenticatedPage.getByRole('button', { name: /confirm update/i })).toBeVisible();
-    }
-
-    expect(productFound || !notFound).toBeTruthy();
+    await authenticatedPage.getByRole('button', { name: /mark out of stock/i }).click();
+    await expect(authenticatedPage.getByText('New stock level:')).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /confirm update/i })).toBeEnabled();
   });
 
   test('search again returns to initial scan view', async ({ authenticatedPage }) => {
     const scanPage = new ScanPage(authenticatedPage);
     await scanPage.goto();
     await scanPage.expectLoaded();
-
-    const hasScanTab = await authenticatedPage.getByRole('tab', { name: /^Scan$/i }).first().isVisible().catch(() => false);
-    if (!hasScanTab) return;
 
     await authenticatedPage.getByLabel(/Barcode \/ SKU \/ Product Name/i).fill('SOME-SKU');
     await authenticatedPage.getByRole('button', { name: /^search$/i }).click();
@@ -101,8 +89,8 @@ test.describe('Stoqr Scan', () => {
 
     await authenticatedPage.getByRole('button', { name: /search again/i }).click();
 
-    // Should return to initial state with search field visible
     await expect(authenticatedPage.getByText(/manual entry/i)).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /^search$/i })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /start camera/i })).toBeVisible();
   });
 });

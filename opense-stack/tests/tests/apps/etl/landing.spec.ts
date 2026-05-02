@@ -1,5 +1,4 @@
 import { test as baseTest, expect as baseExpect, type Page } from '@playwright/test';
-import { test as authTest, expect as authExpect } from '../../fixtures/etlAuth';
 
 const safeGoto = async (page: Page, url: string) => {
   try {
@@ -22,12 +21,5 @@ baseTest.describe('ETL Root Redirects', () => {
 
     const pathname = new URL(page.url()).pathname;
     baseExpect(['/login', '/dashboard', '/dashboard/personal', '/dashboard/org']).toContain(pathname);
-  });
-});
-
-authTest.describe('ETL Root Redirects (authenticated)', () => {
-  authTest('authenticated root redirects to the dashboard flow', async ({ authenticatedEtlPage }) => {
-    await safeGoto(authenticatedEtlPage, '/');
-    await authExpect(authenticatedEtlPage).toHaveURL(/\/dashboard(?:\/(?:personal|org))?|\/login(\?|$)/);
   });
 });

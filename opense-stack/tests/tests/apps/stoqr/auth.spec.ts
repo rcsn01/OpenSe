@@ -1,31 +1,32 @@
 import { test, expect, loginToStoqr } from '../../fixtures/auth';
 import { LoginPage } from '../../pages/LoginPage';
 
-const hasRealUser = !!process.env.E2E_TEST_EMAIL && !process.env.E2E_TEST_EMAIL.includes('example.com');
-
 test.describe('Stoqr Authentication', () => {
-  test('login page visible', async ({ page }) => {
+  test('auth route redirects to the shared sign-in form', async ({ page }) => {
     const loginPage = new LoginPage(page);
+
     await loginPage.goto();
-    await expect(page).toHaveURL(/\/(auth|login|$)/);
+
+    await expect(page).toHaveURL(/\/(auth|login)(\?|$)/);
+    await expect(loginPage.emailInput).toBeVisible();
+    await expect(loginPage.passwordInput).toBeVisible();
+    await expect(loginPage.submitButton).toBeVisible();
   });
 
-  test('invalid credentials show error or remain on auth redirect', async ({ page }) => {
+  test('invalid credentials keep the user on the sign-in flow', async ({ page }) => {
     const loginPage = new LoginPage(page);
+
     await loginPage.goto();
+    await expect(loginPage.emailInput).toBeVisible();
+    await expect(loginPage.passwordInput).toBeVisible();
 
-    if (await loginPage.emailInput.isVisible().catch(() => false)) {
-      await loginPage.login('invalid@example.com', 'wrongpassword');
-      if (await loginPage.errorMessage.isVisible().catch(() => false)) {
-        await expect(loginPage.errorMessage).toBeVisible();
-      }
-    }
+    await loginPage.login('invalid@example.com', 'wrongpassword');
 
-    await expect(page).toHaveURL(/\/(auth|login|dashboard|inventory)/);
+    await expect(page).toHaveURL(/\/(auth|login)(\?|$)/);
+    await expect(loginPage.errorMessage).toBeVisible();
   });
 
   test('successful login reaches authenticated area', async ({ page }) => {
-    test.skip(!hasRealUser, 'Set real E2E_TEST_EMAIL/PASSWORD to run this assertion.');
     await loginToStoqr(page);
     await expect(page).toHaveURL(/\/(dashboard|inventory)/);
   });

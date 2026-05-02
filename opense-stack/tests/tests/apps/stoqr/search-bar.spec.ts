@@ -16,20 +16,18 @@ const safeGoto = async (page: Page, url: string) => {
 };
 
 test.describe('Stoqr Top-Bar Search', () => {
-  test('top-bar combobox accepts typing and shows fuzzy suggestions', async ({ authenticatedPage }) => {
+  test('top-bar search updates the URL and shows fuzzy suggestions', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/inventory/all');
 
     const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search items...' });
     await expect(searchInput).toBeVisible();
 
-    await searchInput.click();
-    await searchInput.pressSequentially('30123301');
+    await searchInput.fill('30123301');
 
     await expect(searchInput).toHaveValue('30123301');
     await expect.poll(() => new URL(authenticatedPage.url()).searchParams.get('q')).toBe('30123301');
 
-    await searchInput.clear();
-    await searchInput.pressSequentially('low st');
+    await searchInput.fill('low st');
 
     await expect(searchInput).toHaveValue('low st');
     await expect(authenticatedPage.getByRole('option', { name: /Low Stock/i })).toBeVisible();

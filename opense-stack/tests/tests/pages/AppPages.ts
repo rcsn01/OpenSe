@@ -38,27 +38,9 @@ export class InventoryPage {
   }
 
   async goto() {
-    const inventoryNavLink = this.page.getByRole('link', { name: /^inventory$/i }).first();
-
-    if (await inventoryNavLink.isVisible().catch(() => false)) {
-      await inventoryNavLink.click();
-    } else {
-      try {
-        await this.page.goto('/inventory/all', { waitUntil: 'domcontentloaded' });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        const isExpectedRedirectAbort =
-          message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
-
-        if (!isExpectedRedirectAbort) {
-          throw error;
-        }
-      }
-    }
-
-    await this.page.waitForURL(/\/(inventory(\/all)?|auth|login)(\?|$)/, { timeout: 10000 }).catch(() => undefined);
-    await this.page.waitForLoadState('networkidle').catch(() => undefined);
-    await this.page.locator('.explorer-sidebar').waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
+    await this.page.goto('/inventory/all');
+    await expect(this.page).toHaveURL(/\/inventory\/all(?:\?|$)/);
+    await expect(this.page.getByRole('complementary', { name: /folder navigation/i })).toBeVisible({ timeout: 20_000 });
   }
 
   async expectLoaded() {
@@ -147,21 +129,12 @@ export class ScanPage {
   }
 
   async goto() {
-    try {
-      await this.page.goto('/scan', { waitUntil: 'commit' });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const isExpectedRedirectAbort =
-        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
-
-      if (!isExpectedRedirectAbort) {
-        throw error;
-      }
-    }
+    await this.page.goto('/scan/scan-actions');
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(scan\/[^/]+|scan|login|auth|dashboard)/);
+    await expect(this.page).toHaveURL(/\/scan\/scan-actions(?:\?|$)/);
+    await expect(this.page.getByRole('button', { name: 'Scan' })).toBeVisible();
   }
 }
 
@@ -203,39 +176,31 @@ export class AlertsPage {
   }
 
   async goto() {
-    try {
-      await this.page.goto('/alerts', { waitUntil: 'commit' });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const isExpectedRedirectAbort =
-        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
-
-      if (!isExpectedRedirectAbort) {
-        throw error;
-      }
-    }
+    await this.page.goto('/alerts');
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(alerts(\/[^/]+)?|auth|login)|localhost:5993\/$/);
+    await expect(this.page).toHaveURL(/\/alerts(?:\?|$)/);
+    await expect(this.heading).toBeVisible();
   }
 }
 
 export class LabelStudioPage {
   readonly page: Page;
-  readonly heading: Locator;
+  readonly templatesButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: /label studio|labels/i }).first();
+    this.templatesButton = page.getByRole('button', { name: 'Templates' });
   }
 
   async goto() {
-    await this.page.goto('/tools/labels', { waitUntil: 'commit' });
+    await this.page.goto('/tools/labels/templates');
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/(tools\/labels(\/[^/]+)?|auth|login)|localhost:5993\/$/);
+    await expect(this.page).toHaveURL(/\/tools\/labels\/templates(?:\?|$)/);
+    await expect(this.templatesButton).toBeVisible();
   }
 }
 
@@ -290,17 +255,8 @@ export class ProcurementPage {
   }
 
   async goto() {
-    try {
-      await this.page.goto('/procurement');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const isExpectedRedirectAbort =
-        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation');
-
-      if (!isExpectedRedirectAbort) {
-        throw error;
-      }
-    }
+    await this.page.goto('/procurement/purchase-orders');
+    await expect(this.page).toHaveURL(/\/procurement\/purchase-orders(?:\?|$)/);
   }
 
   async expectLoaded() {

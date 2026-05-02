@@ -14,7 +14,7 @@ export class LoginPage {
     this.emailInput = page.getByLabel('Email');
     this.passwordInput = page.getByLabel('Password');
     this.submitButton = page.getByRole('button', { name: /sign in/i });
-    this.errorMessage = page.locator('[class*="red-"]');
+    this.errorMessage = page.getByText(/invalid login credentials|invalid|failed|error/i).first();
     this.demoButton = page.getByRole('button', { name: /demo/i });
   }
 

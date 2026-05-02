@@ -3,32 +3,45 @@ import { CreateProductPage, InventoryPage } from '../../pages/AppPages';
 import { test, expect } from '../../fixtures/auth';
 
 const openInventoryList = async (page: Page) => {
-  const inventorySidebar = page.locator('.explorer-sidebar');
-  const inventoryLink = page.getByRole('link', { name: /^Inventory$/i }).first();
+  const inventory = new InventoryPage(page);
+  await inventory.goto();
+};
 
-  if (await inventoryLink.isVisible().catch(() => false)) {
-    await inventoryLink.click();
-  } else {
-    await page.goto('/inventory/all', { waitUntil: 'domcontentloaded' });
-  }
+const createInventoryProduct = async (page: Page, name: string, sku: string, quantity: number) => {
+  const createProductPage = new CreateProductPage(page);
 
-  await expect(page).toHaveURL(/\/inventory\/all(?:\?.*)?$/);
-  await expect(inventorySidebar).toBeVisible();
+  await createProductPage.goto();
+  await createProductPage.expectLoaded();
+  await createProductPage.createProduct(name, sku, quantity);
+  await expect(page).toHaveURL(/\/inventory\/[^/]+\/overview$/);
+};
+
+const createFolder = async (page: Page, folderName: string) => {
+  await openInventoryList(page);
+  await page.getByRole('button', { name: /new folder/i }).click();
+  await page.getByPlaceholder('Folder Name').fill(folderName);
+  await page.getByRole('button', { name: /^save$/i }).click();
+  await expect(page.locator('.explorer-sidebar')).toContainText(folderName);
 };
 
 test.describe('Stoqr Inventory selection actions', () => {
   test('select-all checkbox selects and clears visible products', async ({ authenticatedPage }) => {
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await createInventoryProduct(
+      authenticatedPage,
+      `Selection Product ${uniqueId}`,
+      `SEL-${uniqueId}`,
+      4,
+    );
     await openInventoryList(authenticatedPage);
 
     const productRows = authenticatedPage.locator('tbody tr');
     const visibleProductCount = await productRows.count();
-    if (visibleProductCount === 0) {
-      return;
-    }
-
     const selectAll = authenticatedPage.getByLabel('Select all visible products');
     const selectionToolbar = authenticatedPage.locator('.inventory-toolbar.selection-mode');
+
     await expect(selectAll).toBeVisible();
+    expect(visibleProductCount).toBeGreaterThan(0);
 
     await selectAll.check();
     await expect(selectAll).toBeChecked();
@@ -47,31 +60,13 @@ test.describe('Stoqr Inventory selection actions', () => {
   test('selected products can be moved and deleted from the toolbar', async ({ authenticatedPage }) => {
     test.slow();
 
-    const inventoryPage = new InventoryPage(authenticatedPage);
-    const createProductPage = new CreateProductPage(authenticatedPage);
     const uniqueId = `${Date.now()}`;
     const folderName = `E2E Move Folder ${uniqueId}`;
     const productName = `!!! E2E Move Product ${uniqueId}`;
     const sku = `E2E-${uniqueId}`;
 
-    await openInventoryList(authenticatedPage);
-
-    await authenticatedPage.locator('button[title="New folder"]').click();
-
-    const folderInput = authenticatedPage.locator('input[placeholder="Folder Name"]');
-    await expect(folderInput).toBeVisible();
-    await folderInput.fill(folderName);
-    await authenticatedPage.getByRole('button', { name: 'Save' }).click();
-    await expect(authenticatedPage.locator('.explorer-sidebar')).toContainText(folderName);
-
-    await inventoryPage.addProductButton.click();
-    await createProductPage.expectLoaded();
-    await createProductPage.nameInput.fill(productName);
-    await createProductPage.skuInput.fill(sku);
-    await createProductPage.quantityInput.fill('5');
-    await createProductPage.saveButton.click();
-
-    await expect(authenticatedPage).toHaveURL(/\/inventory\/[^/]+\/overview$/);
+    await createFolder(authenticatedPage, folderName);
+    await createInventoryProduct(authenticatedPage, productName, sku, 5);
 
     await openInventoryList(authenticatedPage);
 
@@ -104,8 +99,10 @@ test.describe('Stoqr Inventory selection actions', () => {
     await productRow.locator('input[type="checkbox"]').check();
     await expect(selectionToolbar.getByRole('button', { name: /^Delete$/ })).toBeVisible();
     await expect(authenticatedPage.locator('[data-sonner-toast]')).toHaveCount(0);
-    await authenticatedPage.evaluate(() => {
-      window.confirm = () => true;
+
+    authenticatedPage.once('dialog', (dialog) => {
+      expect(dialog.message()).toContain('Are you sure you want to delete 1 items?');
+      void dialog.accept();
     });
     await selectionToolbar.getByRole('button', { name: /^Delete$/ }).click();
 
