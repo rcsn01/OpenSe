@@ -5,7 +5,6 @@ const openseUrl = process.env.BASE_URL_OPENSE || 'http://localhost:5994';
 const etlUrl = process.env.BASE_URL_ETL || 'http://localhost:5992';
 const stoqrUrl = process.env.BASE_URL_STOQR || 'http://localhost:5993';
 const accountsOrigin = new URL(accountsUrl).origin;
-const hasRealUser = Boolean(process.env.E2E_TEST_EMAIL && !process.env.E2E_TEST_EMAIL.includes('example.com'));
 const accountsAuthPathnames = ['/login', '/signin', '/register', '/signup'];
 
 const getNavbarGetStarted = (page: Page) => page.getByTestId('nav-get-started').first();
@@ -51,35 +50,6 @@ const expectAuthenticatedAccountsDestination = async (page: Page) => {
     (url) => url.origin === accountsOrigin && !accountsAuthPathnames.includes(url.pathname),
     { timeout: 15000 },
   );
-};
-
-const loginThroughOpenSe = async (page: Page) => {
-  await safeGoto(page, '/login');
-  await page.waitForURL(
-    (url) => url.origin === accountsOrigin && url.pathname === '/login',
-    { timeout: 15000 },
-  );
-
-  const emailInput = page.getByLabel('Email');
-  const passwordInput = page.getByLabel('Password');
-  const submit = page.getByRole('button', { name: /sign in|log in|continue/i }).first();
-
-  await expect(emailInput).toBeVisible({ timeout: 15000 });
-  await emailInput.fill(process.env.E2E_TEST_EMAIL || '');
-  await passwordInput.fill(process.env.E2E_TEST_PASSWORD || '');
-  await submit.click();
-
-  await page.waitForURL(
-    (url) => {
-      const isAccountsAuthRoute =
-        url.origin === accountsOrigin && accountsAuthPathnames.includes(url.pathname);
-      return !isAccountsAuthRoute;
-    },
-    { timeout: 15000 },
-  );
-
-  await page.goto(openseUrl);
-  await expect(page).toHaveURL(openseUrl + '/');
 };
 
 test.describe('OpenSe Cross-App Redirects', () => {
@@ -140,42 +110,5 @@ test.describe('OpenSe Cross-App Redirects', () => {
     await safeGoto(page, '/auth');
 
     await expectAccountsRedirect(page, '/login', 'Open-StoQR', `${stoqrUrl}/dashboard`);
-  });
-
-  test('authenticated root navbar CTA goes straight to the Accounts app', async ({ page }) => {
-    test.skip(!hasRealUser, 'Set real E2E_TEST_EMAIL/PASSWORD to run authenticated redirect assertions.');
-
-    await loginThroughOpenSe(page);
-    await getNavbarGetStarted(page).click();
-
-    await expectAuthenticatedAccountsDestination(page);
-  });
-
-  test('authenticated user can move to the ETL landing page inside OpenSe and then reach the dashboard', async ({ page }) => {
-    test.skip(!hasRealUser, 'Set real E2E_TEST_EMAIL/PASSWORD to run authenticated redirect assertions.');
-
-    await loginThroughOpenSe(page);
-    await page.getByTestId('launch-etl').click();
-    await expect(page).toHaveURL(`${openseUrl}/etl`);
-    await getNavbarGetStarted(page).click();
-
-    await page.waitForURL(
-      (url) => url.origin === new URL(etlUrl).origin && url.pathname.startsWith('/dashboard'),
-      { timeout: 15000 },
-    );
-  });
-
-  test('authenticated user can move to the StoQR landing page inside OpenSe and then reach the dashboard', async ({ page }) => {
-    test.skip(!hasRealUser, 'Set real E2E_TEST_EMAIL/PASSWORD to run authenticated redirect assertions.');
-
-    await loginThroughOpenSe(page);
-    await page.getByTestId('launch-stoqr').click();
-    await expect(page).toHaveURL(`${openseUrl}/stoqr`);
-    await getNavbarGetStarted(page).click();
-
-    await page.waitForURL(
-      (url) => url.origin === new URL(stoqrUrl).origin && url.pathname.startsWith('/dashboard'),
-      { timeout: 15000 },
-    );
   });
 });

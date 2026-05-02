@@ -1,148 +1,75 @@
-import { type Locator, expect } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect } from '@playwright/test'
 import { test } from '../../fixtures/auth'
-import { LabelStudioPage } from '../../pages/AppPages'
+import { CreateProductPage, LabelStudioPage } from '../../pages/AppPages'
 
-const ensureTemplateExists = async (page: import('@playwright/test').Page) => {
-  const templateButtons = page.getByRole('button', { name: /edit .* template/i })
-
-  if (await templateButtons.count()) {
-    return templateButtons.first()
-  }
-
-  await page.getByRole('button', { name: '+ New Template' }).click()
-
-  const templateName = `E2E Template ${Date.now()}`
-  await page.getByLabel('Template Name').fill(templateName)
-  await page.getByRole('button', { name: 'Create Template' }).click()
-  await expect(page.getByText('Template created. Select it from the library to design it.')).toBeVisible()
-
-  const createdTemplateButton = page.getByRole('button', { name: `Edit ${templateName} template` })
-  await expect(createdTemplateButton).toBeVisible()
-  return createdTemplateButton
-}
-
-const createEditableTemplate = async (page: import('@playwright/test').Page) => {
-  const templateName = `E2E Designer ${Date.now()}`
-
+const createTemplate = async (page: Page, templateName: string) => {
   await page.getByRole('button', { name: '+ New Template' }).click()
   await page.getByLabel('Template Name').fill(templateName)
   await page.getByRole('button', { name: 'Create Template' }).click()
   await expect(page.getByText('Template created. Select it from the library to design it.')).toBeVisible()
-
-  const createdTemplateButton = page.getByRole('button', { name: `Edit ${templateName} template` })
-  await expect(createdTemplateButton).toBeVisible()
-
-  return createdTemplateButton
+  await expect(page.getByRole('button', { name: `Open ${templateName} template` })).toBeVisible()
 }
 
-const selectFirstRealOption = async (select: Locator) => {
-  const optionCount = await select.locator('option').count()
-  if (optionCount <= 1) {
-    return false
-  }
+const createProductForLabelExport = async (page: Page, productName: string, sku: string) => {
+  const createProductPage = new CreateProductPage(page)
 
-  await select.selectOption({ index: 1 })
-  return true
+  await createProductPage.goto()
+  await createProductPage.expectLoaded()
+  await createProductPage.createProduct(productName, sku, 4)
+  await expect(page).toHaveURL(/\/inventory\/[^/]+\/overview$/)
 }
 
 test.describe('Stoqr Label Studio', () => {
-  test('label studio uses combined template and preview workflows', async ({ authenticatedPage }) => {
+  test('templates view opens the designer for a created template', async ({ authenticatedPage }) => {
     const labelStudioPage = new LabelStudioPage(authenticatedPage)
+    const templateName = `E2E Template ${Date.now()}`
 
-    try {
-      await labelStudioPage.goto()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      const isExpectedRedirectAbort =
-        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation')
-      if (!isExpectedRedirectAbort) {
-        throw error
-      }
-    }
-
+    await labelStudioPage.goto()
     await labelStudioPage.expectLoaded()
 
-    const canRenderStudio = await authenticatedPage.getByRole('tab', { name: /^Templates$/i }).first().isVisible().catch(() => false)
-    if (!canRenderStudio) {
-      await expect(authenticatedPage).toHaveURL(/\/(tools\/labels(\/[^/]+)?|dashboard|auth|login|$)/)
-      return
-    }
+    await expect(authenticatedPage.getByRole('button', { name: 'Templates' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: 'Preview & Batch' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: 'Design' })).toHaveCount(0)
+    await expect(authenticatedPage.getByRole('button', { name: 'Downloads' })).toHaveCount(0)
+    await expect(authenticatedPage.getByRole('heading', { name: 'Template Library' })).toBeVisible()
 
-    await expect(authenticatedPage.getByRole('heading', { name: /label studio/i })).toBeVisible()
+    await createTemplate(authenticatedPage, templateName)
+    await authenticatedPage.getByRole('button', { name: `Open ${templateName} template` }).click()
 
-    await expect(authenticatedPage.getByRole('tab', { name: /^Templates$/i })).toBeVisible()
-    await expect(authenticatedPage.getByRole('tab', { name: /^Preview & Batch$/i })).toBeVisible()
-    await expect(authenticatedPage.getByRole('tab', { name: /^Design$/i })).toHaveCount(0)
-    await expect(authenticatedPage.getByRole('tab', { name: /^Downloads$/i })).toHaveCount(0)
-
-    await expect(authenticatedPage.getByRole('tab', { name: /item labels/i })).toHaveCount(0)
-    await expect(authenticatedPage.getByRole('tab', { name: /bin \/ shelf/i })).toHaveCount(0)
-    await expect(authenticatedPage.getByRole('tab', { name: /shipping/i })).toHaveCount(0)
-
-    await expect(authenticatedPage.getByRole('button', { name: /\+ New Template/i })).toBeVisible()
-
-    const templateButton = await ensureTemplateExists(authenticatedPage)
-    await templateButton.click()
-
-    await expect(authenticatedPage.getByText(/^Label Designer$/i).last()).toBeVisible()
-    await expect(authenticatedPage.getByText(/Label Width \(mm\)/i)).toBeVisible()
-    await expect(authenticatedPage.getByText(/Content Padding \(pt\)/i)).toBeVisible()
-    await expect(authenticatedPage.getByRole('heading', { name: /Machine-readable/i })).toBeVisible()
-    await expect(authenticatedPage.getByRole('heading', { name: /Live Design Preview/i })).toBeVisible()
-
-    await authenticatedPage.getByRole('tab', { name: /^Preview & Batch$/i }).click()
-    await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/preview-batch$/)
-    await expect(authenticatedPage.getByText(/Preview & Batch/i).first()).toBeVisible()
-    await expect(authenticatedPage.getByRole('radio', { name: /Single Product/i })).toBeVisible()
-    await expect(authenticatedPage.getByRole('radio', { name: /Entire Folder/i })).toBeVisible()
-    await expect(authenticatedPage.getByRole('button', { name: /export pdf batch/i })).toBeVisible()
-    await expect(authenticatedPage.getByText(/Recent Exports/i)).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: 'Label Designer' }).first()).toBeVisible()
+    await expect(authenticatedPage.getByLabel('Label Width (mm)')).toBeVisible()
+    await expect(authenticatedPage.getByLabel('Content Padding (pt)')).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: 'Machine-readable' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: 'Live Design Preview' })).toBeVisible()
   })
 
-  test('preview tab validates export inputs and downloads pdf directly', async ({ authenticatedPage }) => {
+  test('preview and batch validates selections and exports a pdf for a product', async ({ authenticatedPage }) => {
     const labelStudioPage = new LabelStudioPage(authenticatedPage)
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const templateName = `E2E Export ${uniqueId}`
+    const productName = `Label Product ${uniqueId}`
+    const sku = `LBL-${uniqueId}`
 
-    try {
-      await labelStudioPage.goto()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      const isExpectedRedirectAbort =
-        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation')
-      if (!isExpectedRedirectAbort) {
-        throw error
-      }
-    }
-
+    await createProductForLabelExport(authenticatedPage, productName, sku)
+    await labelStudioPage.goto()
     await labelStudioPage.expectLoaded()
+    await createTemplate(authenticatedPage, templateName)
 
-    const canRenderStudio = await authenticatedPage.getByRole('tab', { name: /^Templates$/i }).first().isVisible().catch(() => false)
-    if (!canRenderStudio) {
-      await expect(authenticatedPage).toHaveURL(/\/(tools\/labels(\/[^/]+)?|dashboard|auth|login|$)/)
-      return
-    }
+    await authenticatedPage.getByRole('button', { name: 'Preview & Batch' }).click()
 
-    await authenticatedPage.getByRole('tab', { name: /^Preview & Batch$/i }).click()
-    await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/preview-batch$/)
+    await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/preview-batch(?:\?|$)/)
+    await expect(authenticatedPage.getByRole('heading', { name: 'Export Configuration' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('radio', { name: 'Single Product' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('radio', { name: 'Entire Folder' })).toBeVisible()
     await expect(authenticatedPage.getByRole('button', { name: /export pdf batch/i })).toBeVisible()
-    await expect(authenticatedPage.getByText(/Recent Exports/i)).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: 'Recent Exports' })).toBeVisible()
 
     await authenticatedPage.getByRole('button', { name: /export pdf batch/i }).click()
-    await expect(authenticatedPage.getByText(/Select template and valid quantity\./i)).toBeVisible()
+    await expect(authenticatedPage.getByText('Select template and valid quantity.')).toBeVisible()
 
-    await authenticatedPage.getByRole('tab', { name: /^Templates$/i }).click()
-    await ensureTemplateExists(authenticatedPage)
-
-    await authenticatedPage.getByRole('tab', { name: /^Preview & Batch$/i }).click()
-
-    const selectedTemplate = await selectFirstRealOption(authenticatedPage.getByLabel(/^Template$/i))
-    if (!selectedTemplate) {
-      test.skip(true, 'No label template options available for PDF export.')
-    }
-
-    const selectedProduct = await selectFirstRealOption(authenticatedPage.getByLabel(/^Product$/i))
-    if (!selectedProduct) {
-      test.skip(true, 'No products available for PDF export.')
-    }
+    await authenticatedPage.getByLabel('Template', { exact: true }).selectOption({ label: templateName })
+    await authenticatedPage.getByLabel('Product', { exact: true }).selectOption({ label: `${productName} (${sku})` })
 
     const downloadPromise = authenticatedPage.waitForEvent('download')
     await authenticatedPage.getByRole('button', { name: /export pdf batch/i }).click()
@@ -152,42 +79,31 @@ test.describe('Stoqr Label Studio', () => {
     await expect(authenticatedPage.getByText(/PDF downloaded/i)).toBeVisible()
   })
 
-  test('designer exposes advanced controls and saves a custom layout', async ({ authenticatedPage }) => {
+  test('designer saves updated layout controls for the selected template', async ({ authenticatedPage }) => {
     const labelStudioPage = new LabelStudioPage(authenticatedPage)
+    const templateName = `E2E Designer ${Date.now()}`
 
-    try {
-      await labelStudioPage.goto()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      const isExpectedRedirectAbort =
-        message.includes('ERR_ABORTED') || message.includes('interrupted by another navigation')
-      if (!isExpectedRedirectAbort) {
-        throw error
-      }
-    }
-
+    await labelStudioPage.goto()
     await labelStudioPage.expectLoaded()
+    await createTemplate(authenticatedPage, templateName)
+    await authenticatedPage.getByRole('button', { name: `Open ${templateName} template` }).click()
 
-    const canRenderStudio = await authenticatedPage.getByRole('tab', { name: /^Templates$/i }).first().isVisible().catch(() => false)
-    if (!canRenderStudio) {
-      await expect(authenticatedPage).toHaveURL(/\/(tools\/labels(\/[^/]+)?|dashboard|auth|login|$)/)
-      return
-    }
-
-    const templateButton = await createEditableTemplate(authenticatedPage)
-    await templateButton.click()
-
-    await expect(authenticatedPage.getByRole('heading', { name: /Live Design Preview/i })).toBeVisible()
-    await expect(authenticatedPage.getByRole('heading', { name: /Visible fields/i })).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: 'Live Design Preview' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: 'Visible fields' })).toBeVisible()
 
     await authenticatedPage.getByLabel('Content Padding (pt)').fill('12')
     await authenticatedPage.getByLabel('Barcode Scale (%)').fill('130')
     await authenticatedPage.getByLabel('QR Scale (%)').fill('110')
     await authenticatedPage.getByLabel('Text Alignment').selectOption('center')
-    await authenticatedPage.getByRole('button', { name: /PriceSelling price line/i }).click()
+    await authenticatedPage.getByRole('button', { name: /Price/i }).click()
     await authenticatedPage.getByRole('button', { name: 'Save Design' }).click()
 
-    await expect(authenticatedPage.getByText('Design saved.')).toBeVisible()
-    await expect(authenticatedPage.getByText('Price: $24.00')).toBeVisible()
+    await authenticatedPage.getByRole('button', { name: 'Close dialog' }).click()
+    await authenticatedPage.getByRole('button', { name: `Open ${templateName} template` }).click()
+
+    await expect(authenticatedPage.getByLabel('Content Padding (pt)')).toHaveValue('12')
+    await expect(authenticatedPage.getByLabel('Barcode Scale (%)')).toHaveValue('130')
+    await expect(authenticatedPage.getByLabel('Text Alignment')).toHaveValue('center')
+    await expect(authenticatedPage.getByRole('button', { name: /Price/i })).toHaveAttribute('aria-pressed', 'true')
   })
 })

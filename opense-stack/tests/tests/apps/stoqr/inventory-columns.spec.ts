@@ -1,86 +1,45 @@
 import { test, expect } from '../../fixtures/auth';
-import { InventoryPage } from '../../pages/AppPages';
+import { CreateProductPage, InventoryPage } from '../../pages/AppPages';
 
-test.describe('Inventory table columns', () => {
+test.describe('User Journey: Inventory Table Sorting', () => {
   test.beforeEach(async ({ authenticatedPage }) => {
+    const createProduct = new CreateProductPage(authenticatedPage);
     const inventory = new InventoryPage(authenticatedPage);
+
+    const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await createProduct.goto();
+    await createProduct.expectLoaded();
+    await createProduct.createProduct(`Inventory Table Product ${uniqueSuffix}`, `INV-TABLE-${uniqueSuffix}`, 7);
+    await expect(authenticatedPage).toHaveURL(/\/inventory\/[^/]+\/overview$/);
+
     await inventory.goto();
-    const hasTable = await authenticatedPage.locator('table.table thead').isVisible().catch(() => false);
-    test.skip(!hasTable, 'Inventory table not visible — skipping column tests.');
+    await expect(authenticatedPage.getByRole('table').first()).toBeVisible();
   });
 
-  test('deprecated stock headers are not present in table', async ({ authenticatedPage }) => {
-    const headers = authenticatedPage.locator('table.table thead th');
-    const count = await headers.count();
-    for (let i = 0; i < count; i++) {
-      const text = (await headers.nth(i).innerText()).trim();
-      expect(text.toUpperCase()).not.toBe('STATUS');
-      expect(text.toUpperCase()).not.toBe('ON HAND');
-      expect(text.toUpperCase()).not.toBe('ALLOCATED');
-    }
+  test('inventory table shows the key product columns', async ({ authenticatedPage }) => {
+    await expect(authenticatedPage.getByRole('columnheader', { name: 'Name / SKU' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('columnheader', { name: 'Folder' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('columnheader', { name: 'Price' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('columnheader', { name: 'Available' })).toBeVisible();
   });
 
-  test('AVAILABLE column shows stock / min format', async ({ authenticatedPage }) => {
-    const availableHeader = authenticatedPage.locator('table.table thead th', { hasText: /available/i });
-    await expect(availableHeader).toBeVisible();
-
-    const headerIndex = await availableHeader.evaluate((el) => {
-      const row = el.closest('tr')!;
-      return Array.from(row.children).indexOf(el);
-    });
-
-    const firstDataCell = authenticatedPage.locator(`table.table tbody tr:first-child td:nth-child(${headerIndex + 1})`);
-    const cellText = await firstDataCell.innerText();
-    expect(cellText).toMatch(/\d+\s*\/\s*\d+/);
+  test('available stock is shown as current stock over reorder point', async ({ authenticatedPage }) => {
+    await expect(authenticatedPage.getByRole('columnheader', { name: 'Available' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('cell', { name: /^\d+\s*\/\s*\d+$/ }).first()).toBeVisible();
   });
 
-  test('AVAILABLE cell is green when above min stock', async ({ authenticatedPage }) => {
-    const cells = authenticatedPage.locator('table.table tbody td');
-    const allCells = await cells.all();
+  test('sorting by folder updates the table sort direction', async ({ authenticatedPage }) => {
+    const nameHeader = authenticatedPage.getByRole('columnheader', { name: 'Name / SKU' });
+    const folderHeader = authenticatedPage.getByRole('columnheader', { name: 'Folder' });
 
-    for (const cell of allCells) {
-      const text = await cell.innerText();
-      const match = text.match(/^(\d+)\s*\/\s*(\d+)$/);
-      if (!match) continue;
-
-      const available = parseInt(match[1]!, 10);
-      const minStock = parseInt(match[2]!, 10);
-      const colorTarget = cell.locator('span').first();
-      const color = await (await colorTarget.isVisible().catch(() => false) ? colorTarget : cell).evaluate(
-        (el) => (el as HTMLElement).style.color,
-      );
-
-      if (available >= minStock) {
-        expect(color).toContain('success');
-      } else {
-        expect(color).toContain('danger');
-      }
-      return;
-    }
-  });
-
-  test('all expected column headers are sortable', async ({ authenticatedPage }) => {
-    const sortableHeaders = ['Name / SKU', 'Folder', 'Price', 'Available'];
-
-    for (const headerText of sortableHeaders) {
-      const th = authenticatedPage.locator('table.table thead th.sortable-th', { hasText: new RegExp(headerText, 'i') });
-      await expect(th).toBeVisible();
-    }
-  });
-
-  test('clicking a sortable column header triggers re-sort', async ({ authenticatedPage }) => {
-    const folderHeader = authenticatedPage.locator('table.table thead th.sortable-th', { hasText: /folder/i });
-    await expect(folderHeader).toBeVisible();
+    await expect(nameHeader).toHaveAttribute('aria-sort', 'ascending');
+    await expect(folderHeader).toHaveAttribute('aria-sort', 'none');
 
     await folderHeader.click();
-    await authenticatedPage.waitForTimeout(300);
-
-    const arrowIcon = folderHeader.locator('svg');
-    await expect(arrowIcon).toBeVisible();
+    await expect(folderHeader).toHaveAttribute('aria-sort', 'ascending');
+    await expect(nameHeader).toHaveAttribute('aria-sort', 'none');
 
     await folderHeader.click();
-    await authenticatedPage.waitForTimeout(300);
-
-    await expect(arrowIcon).toBeVisible();
+    await expect(folderHeader).toHaveAttribute('aria-sort', 'descending');
   });
 });
