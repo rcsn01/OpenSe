@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@repo/shared/auth/context'
 import { buildAccountsSettingsUrl } from '@repo/shared/utils'
 import {
@@ -20,11 +20,46 @@ import {
   SideNavGroupList,
   SideNavBrandSlot,
 } from '@repo/ui'
+import { topBarSearchParamKey } from '../lib/pageSearch'
 
 export interface AppLayoutOutletContext {
   topBarSearchValue: string
   setTopBarSearchValue: (value: string) => void
 }
+
+type SearchRouteConfig = {
+  id: string
+  placeholder: string
+  match: (pathname: string) => boolean
+}
+
+const searchRouteConfigs: SearchRouteConfig[] = [
+  {
+    id: 'inventory',
+    placeholder: 'Search items...',
+    match: (pathname) => pathname === '/inventory/all',
+  },
+  {
+    id: 'scan-history',
+    placeholder: 'Search scans...',
+    match: (pathname) => pathname === '/scan/scan-history',
+  },
+  {
+    id: 'activity-logs',
+    placeholder: 'Search activity logs...',
+    match: (pathname) => pathname === '/settings/organisations/activity',
+  },
+  {
+    id: 'procurement-purchase-orders',
+    placeholder: 'Search POs...',
+    match: (pathname) => pathname === '/procurement/purchase-orders',
+  },
+  {
+    id: 'alerts-feed',
+    placeholder: 'Search alerts...',
+    match: (pathname) => pathname === '/alerts/feed',
+  },
+]
 
 const mainNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -43,9 +78,9 @@ const configNavItems = [
 export const AppLayout = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user, logout } = useAuth()
   const [userName, setUserName] = useState<string>('')
-  const [search, setSearch] = useState('')
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -53,19 +88,24 @@ export const AppLayout = () => {
   })
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
-  const isAlertsRoute = location.pathname === '/alerts' || location.pathname.startsWith('/alerts/')
-  const isProcurementPurchaseOrdersRoute =
-    location.pathname === '/procurement'
-    || location.pathname === '/procurement/purchase-orders'
-  const searchScope = isAlertsRoute ? 'alerts' : isProcurementPurchaseOrdersRoute ? 'procurement-purchase-orders' : 'default'
+  const activeSearchRoute = useMemo(
+    () => searchRouteConfigs.find((config) => config.match(location.pathname)) ?? null,
+    [location.pathname],
+  )
+  const searchValue = activeSearchRoute ? searchParams.get(topBarSearchParamKey) ?? '' : ''
 
   useEffect(() => {
     setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
   }, [user])
 
   useEffect(() => {
-    setSearch('')
-  }, [searchScope])
+    if (activeSearchRoute !== null) return
+    if (!searchParams.has(topBarSearchParamKey)) return
+
+    const nextSearchParams = new URLSearchParams(searchParams)
+    nextSearchParams.delete(topBarSearchParamKey)
+    setSearchParams(nextSearchParams, { replace: true })
+  }, [activeSearchRoute, searchParams, setSearchParams])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)')
@@ -93,6 +133,23 @@ export const AppLayout = () => {
     await logout()
     navigate('/')
   }
+
+  const handleSearchChange = useCallback((value: string) => {
+    if (activeSearchRoute === null) {
+      return
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams)
+    const normalizedValue = value.trim()
+
+    if (normalizedValue.length === 0) {
+      nextSearchParams.delete(topBarSearchParamKey)
+    } else {
+      nextSearchParams.set(topBarSearchParamKey, value)
+    }
+
+    setSearchParams(nextSearchParams, { replace: true })
+  }, [activeSearchRoute, searchParams, setSearchParams])
 
   const renderNavItem = (item: (typeof mainNavItems)[0]) => {
     const isActive =
@@ -133,15 +190,9 @@ export const AppLayout = () => {
         window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
       }}
       onLogout={handleSignOut}
-      searchPlaceholder={
-        searchScope === 'alerts'
-          ? 'Search alerts...'
-          : searchScope === 'procurement-purchase-orders'
-            ? 'Search POs...'
-            : 'Search items...'
-      }
-      searchValue={search}
-      onSearchChange={setSearch}
+      searchPlaceholder={activeSearchRoute?.placeholder}
+      searchValue={activeSearchRoute ? searchValue : undefined}
+      onSearchChange={activeSearchRoute ? handleSearchChange : undefined}
       mobileSidebar={{
         enabled: isMobileViewport,
         isOpen: isMobileNavOpen,
@@ -150,7 +201,7 @@ export const AppLayout = () => {
         toggleAriaLabel: 'Toggle side navigation',
       }}
     >
-      <Outlet context={{ topBarSearchValue: search, setTopBarSearchValue: setSearch } satisfies AppLayoutOutletContext} />
+      <Outlet context={{ topBarSearchValue: searchValue, setTopBarSearchValue: handleSearchChange } satisfies AppLayoutOutletContext} />
     </SharedAppLayout>
   )
 }

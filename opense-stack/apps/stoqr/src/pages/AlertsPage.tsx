@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AddFilterDropdown, Badge, Button, Card, Checkbox, DataTable, type DataTableColumn, Input, Select, Toggle } from '@repo/ui'
 import {
   AlertCircle,
@@ -16,6 +16,7 @@ import { BasePage } from '../components/BasePage'
 import { PageAvailabilityGuard } from '../components/PageAvailabilityGuard'
 import { Tabs } from '../components/Tabs'
 import { useCompany } from '../contexts/CompanyContext'
+import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../lib/pageSearch'
 import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 type AlertsTab = 'feed' | 'rules'
@@ -181,18 +182,6 @@ const roleSubscriptionOptions = {
   ],
 } as const
 
-const matchesAlertSearch = (alert: FeedAlert, searchTerm: string) => {
-  const searchable = [
-    alert.code,
-    alert.title,
-    alert.description,
-    severityLabel[alert.severity],
-    alert.timeLabel,
-  ]
-
-  return searchable.some((value) => value.toLowerCase().includes(searchTerm))
-}
-
 const getAlertSortValue = (alert: FeedAlert, sortKey: AlertSortKey) => {
   if (sortKey === 'severity') return severityLabel[alert.severity]
   if (sortKey === 'category') return alertCategoryLabel[alert.category]
@@ -229,6 +218,37 @@ export const AlertsPage = () => {
     setTablePage(1)
   }, [searchTerm])
 
+  const normalizedSearchTerm = normalizePageSearchTerm(searchTerm)
+  const categoryFilteredAlerts = useMemo(
+    () => alerts.filter((alert) => activeFilter === 'all' || alert.category === activeFilter),
+    [activeFilter, alerts],
+  )
+  const visibleAlerts = useMemo(
+    () => fuzzySearchItems(categoryFilteredAlerts, normalizedSearchTerm, [
+      {
+        key: (alert) => alert.code,
+        maxRanking: fuzzyRankings.STARTS_WITH,
+      },
+      {
+        key: (alert) => alert.title,
+        maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+      },
+      {
+        key: (alert) => alert.description,
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+      {
+        key: (alert) => severityLabel[alert.severity],
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+      {
+        key: (alert) => alert.timeLabel,
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+    ]),
+    [categoryFilteredAlerts, normalizedSearchTerm],
+  )
+
   const legacyTabRedirect = tab ? legacyTabRedirects[tab] : undefined
 
   if (legacyTabRedirect) {
@@ -240,14 +260,8 @@ export const AlertsPage = () => {
   }
 
   const activeTab = tab as AlertsTab
-  const normalizedSearchTerm = searchTerm.trim().toLowerCase()
-  const visibleAlerts = alerts.filter((alert) => {
-    const matchesFilter = activeFilter === 'all' || alert.category === activeFilter
-    const matchesSearch = normalizedSearchTerm.length === 0 || matchesAlertSearch(alert, normalizedSearchTerm)
-
-    return matchesFilter && matchesSearch
-  })
-  const sortedAlerts = [...visibleAlerts].sort((left, right) => {
+  const shouldUseSearchRanking = normalizedSearchTerm.length > 0 && tableSortField === 'title' && tableSortDirection === 'asc'
+  const sortedAlerts = shouldUseSearchRanking ? visibleAlerts : [...visibleAlerts].sort((left, right) => {
     const comparison = getAlertSortValue(left, tableSortField).localeCompare(getAlertSortValue(right, tableSortField))
     return tableSortDirection === 'asc' ? comparison : -comparison
   })
@@ -456,7 +470,7 @@ export const AlertsPage = () => {
         columns={alertColumns}
         rows={pagedAlerts}
         getRowId={(alert) => alert.id}
-        emptyState="No alerts match the current filters."
+        emptyState={normalizedSearchTerm.length > 0 ? `No alerts matched "${normalizedSearchTerm}".` : 'No alerts match the current filters.'}
         sortField={tableSortField}
         sortDirection={tableSortDirection}
         onSortChange={handleTableSort}

@@ -22,6 +22,7 @@ import {
   useProcurementSuppliers,
 } from '../../hooks/queries/useProcurementTabs'
 import { useProcurementProducts } from '../../hooks/queries/useProcurement'
+import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
 import { formatCurrency } from '../../utils'
 
 type StatusFilter = 'all' | PurchaseOrder['status']
@@ -183,24 +184,25 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
   }, [purchaseOrderItems, purchaseOrders])
 
   const filteredPurchaseOrders = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
+    const searchedPurchaseOrders = fuzzySearchItems(purchaseOrders, searchTerm, [
+      {
+        key: (order) => formatPurchaseOrderNumber(order),
+        maxRanking: fuzzyRankings.STARTS_WITH,
+      },
+      {
+        key: (order) => order.suppliers?.name ?? '',
+        maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+      },
+      {
+        key: (order) => {
+          const workflow = workflowByPo[order.id]
+          return workflow ? [workflow.request.label, workflow.order.label, workflow.returnStatus?.label ?? ''] : []
+        },
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+    ])
 
-    return purchaseOrders.filter((order) => {
-      const poNumber = formatPurchaseOrderNumber(order).toLowerCase()
-      const supplierName = order.suppliers?.name?.toLowerCase() ?? ''
-      const workflow = workflowByPo[order.id]
-      const workflowText = workflow
-        ? [workflow.request.label, workflow.order.label, workflow.returnStatus?.label ?? ''].join(' ').toLowerCase()
-        : ''
-      const matchesSearch =
-        normalizedSearch.length === 0
-        || poNumber.includes(normalizedSearch)
-        || supplierName.includes(normalizedSearch)
-        || workflowText.includes(normalizedSearch)
-      const matchesStatus = statusFilter === 'all' || order.status === statusFilter
-
-      return matchesSearch && matchesStatus
-    })
+    return searchedPurchaseOrders.filter((order) => statusFilter === 'all' || order.status === statusFilter)
   }, [purchaseOrders, searchTerm, statusFilter, workflowByPo])
 
   const statusFilterItems = statusOptions.filter((option) => option.value !== statusFilter)
@@ -230,7 +232,9 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
   const emptyStateDescription =
     purchaseOrders.length === 0
       ? 'Create your first purchase order to start tracking supplier commitments and incoming stock.'
-      : 'Try adjusting your search or status filter to find a matching purchase order.'
+      : normalizePageSearchTerm(searchTerm).length > 0
+        ? `No purchase orders matched "${normalizePageSearchTerm(searchTerm)}". Try a different term or status filter.`
+        : 'Try adjusting your search or status filter to find a matching purchase order.'
 
   return (
     <div className="flex flex-col gap-6">
@@ -261,6 +265,10 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
           </div>
 
           <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+            <div className="text-sm text-[var(--color-muted-foreground)]">
+              Showing {filteredPurchaseOrders.length} of {purchaseOrders.length} purchase orders
+            </div>
+
             <Button
               type="button"
               variant="outline"

@@ -10,7 +10,6 @@ const ACCOUNTS_URL =
   'http://localhost:5991'
 const OPENSE_PUBLIC_URL =
   (import.meta.env.VITE_OPENSE_PUBLIC_URL as string | undefined) ??
-  (import.meta.env.VITE_UI_PUBLIC_URL as string | undefined) ??
   'http://localhost:5994'
 const ETL_PUBLIC_URL =
   (import.meta.env.VITE_ETL_PUBLIC_URL as string | undefined) ??

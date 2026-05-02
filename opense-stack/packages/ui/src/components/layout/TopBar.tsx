@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { Menu, Search } from 'lucide-react'
+import { Menu, Search, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ProfileDropdown } from '../ui/ProfileDropdown'
 import { Input } from '../ui/Input'
@@ -59,15 +59,41 @@ export function TopBar({
 }: TopBarProps) {
   const hasSearch = searchPlaceholder != null && searchValue != null && onSearchChange != null
   const showMobileSidebarToggle = Boolean(mobileSidebarToggle?.enabled)
+  const hasSearchValue = hasSearch && searchValue.length > 0
   const leftContent = hasSearch ? (
     <div className="min-w-0 flex-1 max-w-xs">
-      <Input
-        placeholder={searchPlaceholder}
-        value={searchValue}
-        onChange={(e) => onSearchChange(e.target.value)}
-        prefix={<Search className="w-4 h-4" />}
-        className="rounded-[var(--radius-lg)]"
-      />
+      <div className="relative">
+        <Input
+          type="search"
+          placeholder={searchPlaceholder}
+          value={searchValue}
+          onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== 'Escape' || searchValue.length === 0) {
+              return
+            }
+
+            event.preventDefault()
+            onSearchChange('')
+          }}
+          prefix={<Search className="w-4 h-4" />}
+          aria-label={searchPlaceholder}
+          autoComplete="off"
+          spellCheck={false}
+          className={cn('rounded-[var(--radius-lg)]', hasSearchValue && 'pr-10')}
+        />
+
+        {hasSearchValue ? (
+          <button
+            type="button"
+            aria-label="Clear search"
+            onClick={() => onSearchChange('')}
+            className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border-none bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+      </div>
     </div>
   ) : left
 

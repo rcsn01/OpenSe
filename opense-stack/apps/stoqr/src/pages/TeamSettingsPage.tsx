@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@repo/shared/auth/context'
 import { useCompany } from '../contexts/CompanyContext'
@@ -25,11 +25,13 @@ import {
   useUpdateRoleWithPermissions,
   useUpdateCompanyMemberRole,
 } from '../hooks/queries/useTeamSettings'
+import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 export const TeamSettingsPage = () => {
   const { companyId } = useCompany()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const tabAliasMap: Record<string, string> = {
     'user-management': 'teams',
@@ -38,6 +40,7 @@ export const TeamSettingsPage = () => {
   const normalizedTab = tab ? (tabAliasMap[tab] ?? tab) : 'teams'
   const validTabs = ['teams', 'permissions', 'activity', 'pages', 'two-factor'] as const
   const activeTab = validTabs.includes(normalizedTab as (typeof validTabs)[number]) ? normalizedTab : 'teams'
+  const activitySearchTerm = activeTab === 'activity' ? (layoutContext?.topBarSearchValue ?? '') : ''
   const { data, isLoading } = useTeamSettingsData(companyId)
   const { data: pageSettings = defaultOrganisationPageSettings, isLoading: loadingPageSettings } = useOrganisationPageSettings(companyId)
   const { data: activity = [], isLoading: loadingActivity } = useTeamActivityEvents(companyId)
@@ -154,7 +157,7 @@ export const TeamSettingsPage = () => {
           {
             id: 'activity',
             label: 'Activity Logs',
-            content: loadingActivity ? <div className="empty-state">Loading activity logs...</div> : <ActivityLogsTab logs={activity} />,
+            content: loadingActivity ? <div className="empty-state">Loading activity logs...</div> : <ActivityLogsTab logs={activity} searchTerm={activitySearchTerm} />,
           },
           {
             id: 'pages',

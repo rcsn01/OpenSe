@@ -1,8 +1,28 @@
+import { useMemo } from 'react'
 import { DataTable } from '@repo/ui'
 import { useScanHistory } from '../../hooks/queries/useQuickScan'
+import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
 
-export const ScanHistoryTab = ({ companyId }: { companyId: string }) => {
+export const ScanHistoryTab = ({ companyId, searchTerm = '' }: { companyId: string; searchTerm?: string }) => {
   const { data = [], isLoading } = useScanHistory(companyId)
+  const normalizedSearchTerm = normalizePageSearchTerm(searchTerm)
+  const filteredData = useMemo(
+    () => fuzzySearchItems(data, normalizedSearchTerm, [
+      {
+        key: (event) => event.product?.name ?? '',
+        maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+      },
+      {
+        key: (event) => event.product?.sku ?? event.barcode ?? '',
+        maxRanking: fuzzyRankings.STARTS_WITH,
+      },
+      {
+        key: (event) => [event.scan_type, event.entry_method, event.actorName],
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+    ]),
+    [data, normalizedSearchTerm],
+  )
 
   if (isLoading) {
     return <div className="empty-state">Loading scan history...</div>
@@ -17,6 +37,9 @@ export const ScanHistoryTab = ({ companyId }: { companyId: string }) => {
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
         <h3 className="section-title" style={{ margin: 0 }}>Scan History Log</h3>
         <div className="small muted">Recent scanner events across manual and camera modes.</div>
+        <div className="small muted" style={{ marginTop: 4 }}>
+          Showing {filteredData.length} of {data.length} events
+        </div>
       </div>
       <DataTable
         columns={[
@@ -59,8 +82,9 @@ export const ScanHistoryTab = ({ companyId }: { companyId: string }) => {
             renderCell: (event) => <span className="small muted">{event.actorName}</span>,
           },
         ]}
-        rows={data}
+        rows={filteredData}
         getRowId={(event) => event.id}
+        emptyState={normalizedSearchTerm.length > 0 ? `No scan history matched "${normalizedSearchTerm}".` : 'No scan history yet.'}
         tableWrapClassName="border-0 rounded-none"
       />
     </div>

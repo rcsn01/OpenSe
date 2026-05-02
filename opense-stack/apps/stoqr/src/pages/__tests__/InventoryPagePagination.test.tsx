@@ -134,6 +134,19 @@ describe('InventoryListPage pagination state', () => {
     expect(screen.getByTestId('location-display')).toHaveTextContent('/inventory/all?stock=out&page=2&pageSize=20&sortField=selling_price&sortDir=desc&cf.batch=acme')
   })
 
+  it('hydrates the top-bar search term from the URL before querying products', async () => {
+    renderInventoryPage('/inventory/all?q=tubes')
+
+    await waitFor(() => {
+      const latestInventoryQueryArgs = mocks.useInventoryProducts.mock.calls.at(-1)?.[0] as {
+        search: string
+      }
+
+      expect(latestInventoryQueryArgs).toMatchObject({ search: 'tubes' })
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/inventory/all?q=tubes')
+    })
+  })
+
   it('resets to the first page when page size changes', async () => {
     renderInventoryPage()
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
@@ -22,6 +22,7 @@ import {
   useInventoryProducts,
   useInventoryRefresh,
 } from '../hooks/queries/useInventory'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 
 export const getNextSelectedRowIdsForVisibleToggle = (current: Set<string>, visibleProductIds: string[]) => {
   const visibleProductIdSet = new Set(visibleProductIds)
@@ -75,6 +76,8 @@ export const InventoryListPage = () => {
     ...inventoryUrlState,
     activeCustomFieldFilters: canResolveCustomFieldSearchParams ? activeCustomFieldFilters : [],
   }), [activeCustomFieldFilters, canResolveCustomFieldSearchParams, inventoryUrlState])
+  const debouncedSearchTerm = useDebouncedValue(currentInventoryUrlState.searchTerm, 250)
+  const previousSearchTermRef = useRef(currentInventoryUrlState.searchTerm)
 
   const syncInventoryUrlState = useCallback((update: (current: InventoryUrlState) => InventoryUrlState) => {
     const nextSearchParams = createInventorySearchParams(searchParams, update(currentInventoryUrlState))
@@ -137,7 +140,7 @@ export const InventoryListPage = () => {
 
   const productsQuery = useInventoryProducts({
     companyId: canResolveCustomFieldSearchParams ? companyId : null,
-    search: '',
+    search: debouncedSearchTerm,
     folderId: computedFolderId,
     stockFilter: inventoryUrlState.stockFilter,
     customFieldFilters: currentInventoryUrlState.activeCustomFieldFilters.length > 0 ? currentInventoryUrlState.activeCustomFieldFilters : undefined,
@@ -175,6 +178,23 @@ export const InventoryListPage = () => {
       setSearchParams(nextSearchParams, { replace: true })
     }
   }, [canCanonicalizeInventoryUrl, currentInventoryUrlState, searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (previousSearchTermRef.current === currentInventoryUrlState.searchTerm) {
+      return
+    }
+
+    previousSearchTermRef.current = currentInventoryUrlState.searchTerm
+
+    if (currentInventoryUrlState.page === defaultInventoryUrlState.page) {
+      return
+    }
+
+    syncInventoryUrlState((current) => ({
+      ...current,
+      page: defaultInventoryUrlState.page,
+    }))
+  }, [currentInventoryUrlState.page, currentInventoryUrlState.searchTerm, syncInventoryUrlState])
 
   useEffect(() => {
     if (pendingFilterKey === null) return
