@@ -1,0 +1,23 @@
+name: opense-mail
+
+services:
+  maddy:
+    image: foxcpp/maddy:0.8.1
+    container_name: opense-maddy
+    restart: unless-stopped
+    hostname: ${MADDY_HOSTNAME:-mail.rcsn01.com}
+    environment:
+      MADDY_HOSTNAME: ${MADDY_HOSTNAME:-mail.rcsn01.com}
+      MADDY_DOMAIN: ${MADDY_DOMAIN:-rcsn01.com}
+    volumes:
+      - ./data:/data
+    ports:
+      - "25:25"
+      - "465:465"
+      - "587:587"
+    networks:
+      - mail
+
+networks:
+  mail:
+    driver: bridge

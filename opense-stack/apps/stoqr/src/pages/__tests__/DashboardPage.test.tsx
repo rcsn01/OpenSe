@@ -217,4 +217,44 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Acrylic Sign Holder')).toBeInTheDocument()
     expect(screen.getByText('43 idle units')).toBeInTheDocument()
   })
+
+  it('shows true empty-state messaging instead of synthetic movement trends for a new org', () => {
+    mockUseDashboard.mockReturnValue({
+      data: {
+        products: [],
+        transactions: [],
+        revenue30Days: 0,
+        totalValue: 0,
+        totalStockUnits: 0,
+        pendingOrders: 0,
+        lowStockCount: 0,
+        outOfStockCount: 0,
+        topMovers: [],
+        chartData: [],
+        usageChartData: [],
+        movementChartData: [],
+        alertsSummary: {
+          openAlerts: 0,
+          criticalAlerts: 0,
+          lowStockAlerts: 0,
+          reorderAlerts: 0,
+          expirationAlerts: 0,
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+    })
+    mockUseAlertEvents.mockReturnValue({ data: [] })
+    mockUseProcurementPurchaseOrders.mockReturnValue({ data: [] })
+    mockUseProcurementPurchaseOrderItems.mockReturnValue({ data: [] })
+
+    renderPage()
+
+    expect(screen.getByText('No movement history yet.')).toBeInTheDocument()
+    expect(
+      screen.getByText('No inventory movement yet. Add products and transactions to populate velocity insights.'),
+    ).toBeInTheDocument()
+  })
 })
