@@ -213,6 +213,7 @@ export const AlertsPage = () => {
   const [subscriptions, setSubscriptions] = useState(initialSubscriptions)
   const searchTerm = layoutContext?.topBarSearchValue ?? fallbackSearchTerm
   const hasSelectedAlerts = selectedAlertIds.length > 0
+  const activeTab = tab === 'rules' ? 'rules' : 'feed'
 
   useEffect(() => {
     setTablePage(1)
@@ -249,6 +250,23 @@ export const AlertsPage = () => {
     [categoryFilteredAlerts, normalizedSearchTerm],
   )
 
+  useEffect(() => {
+    if (activeTab !== 'feed') {
+      return
+    }
+
+    layoutContext?.setTopBarSearchConfig({
+      suggestions: visibleAlerts.slice(0, 8).map((alert) => ({
+        id: alert.id,
+        title: alert.title,
+        subtitle: `${alert.code} · ${severityLabel[alert.severity]}`,
+        value: alert.title,
+        keywords: [alert.description, alert.category, alert.timeLabel],
+        badge: 'Alert',
+      })),
+    })
+  }, [activeTab, layoutContext, visibleAlerts])
+
   const legacyTabRedirect = tab ? legacyTabRedirects[tab] : undefined
 
   if (legacyTabRedirect) {
@@ -258,8 +276,6 @@ export const AlertsPage = () => {
   if (tab !== 'feed' && tab !== 'rules') {
     return <Navigate to="/alerts/feed" replace />
   }
-
-  const activeTab = tab as AlertsTab
   const shouldUseSearchRanking = normalizedSearchTerm.length > 0 && tableSortField === 'title' && tableSortDirection === 'asc'
   const sortedAlerts = shouldUseSearchRanking ? visibleAlerts : [...visibleAlerts].sort((left, right) => {
     const comparison = getAlertSortValue(left, tableSortField).localeCompare(getAlertSortValue(right, tableSortField))

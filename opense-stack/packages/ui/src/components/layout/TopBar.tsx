@@ -15,6 +15,8 @@ export interface MobileSidebarToggleProps {
 export interface TopBarProps {
   /** Optional left slot (empty by default). Ignored when search props are provided. */
   left?: ReactNode
+  /** Optional custom search content rendered in the search slot. */
+  searchContent?: ReactNode
   /** Search placeholder (enables search bar when provided with searchValue and onSearchChange) */
   searchPlaceholder?: string
   /** Search input value */
@@ -52,15 +54,17 @@ export function TopBar({
   className,
   onSettingsClick,
   onLogout,
+  searchContent,
   searchPlaceholder,
   searchValue,
   onSearchChange,
   mobileSidebarToggle,
 }: TopBarProps) {
   const hasSearch = searchPlaceholder != null && searchValue != null && onSearchChange != null
+  const hasCustomSearch = searchContent != null
   const showMobileSidebarToggle = Boolean(mobileSidebarToggle?.enabled)
   const hasSearchValue = hasSearch && searchValue.length > 0
-  const leftContent = hasSearch ? (
+  const leftContent = hasCustomSearch ? searchContent : hasSearch ? (
     <div className="min-w-0 flex-1 max-w-xs">
       <div className="relative">
         <Input
@@ -107,7 +111,7 @@ export function TopBar({
       <div
         className={cn(
           'flex items-center gap-2',
-          hasSearch ? 'min-w-0 flex-1' : 'shrink-0',
+          hasSearch || hasCustomSearch ? 'min-w-0 flex-1' : 'shrink-0',
         )}
       >
         {showMobileSidebarToggle ? (
@@ -126,7 +130,7 @@ export function TopBar({
         {leftContent}
       </div>
 
-      {!hasSearch && <div className="flex-1 min-w-0" />}
+      {!hasSearch && !hasCustomSearch && <div className="flex-1 min-w-0" />}
 
       <div className="flex shrink-0 items-center gap-2">
         {right ?? (

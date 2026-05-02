@@ -36,6 +36,9 @@ const renderRoute = (initialEntry: string) =>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<div>Dashboard</div>} />
           <Route path="/inventory/:tab" element={<div>Inventory</div>} />
+          <Route path="/scan/:tab" element={<div>Scanner</div>} />
+          <Route path="/tools/labels/:tab" element={<div>Label Studio</div>} />
+          <Route path="/reports/:tab" element={<div>Reports</div>} />
           <Route path="/alerts/:tab" element={<div>Alerts</div>} />
           <Route path="/procurement/:tab" element={<div>Procurement</div>} />
         </Route>
@@ -68,6 +71,36 @@ describe('AppLayout', () => {
     renderRoute('/inventory/all')
 
     expect(screen.getByPlaceholderText('Search items...')).toBeInTheDocument()
+  })
+
+  it('uses the product placeholder on the scanner scan tab', () => {
+    renderRoute('/scan/scan-actions')
+
+    expect(screen.getByPlaceholderText('Search products...')).toBeInTheDocument()
+  })
+
+  it('uses the history placeholder on the scanner history tab', () => {
+    renderRoute('/scan/scan-history')
+
+    expect(screen.getByPlaceholderText('Search history...')).toBeInTheDocument()
+  })
+
+  it('uses the reports placeholder on reports routes', () => {
+    renderRoute('/reports/stock-health')
+
+    expect(screen.getByPlaceholderText('Search reports...')).toBeInTheDocument()
+  })
+
+  it('uses the label studio placeholder on label studio routes', () => {
+    renderRoute('/tools/labels/templates')
+
+    expect(screen.getByPlaceholderText('Search templates...')).toBeInTheDocument()
+  })
+
+  it('uses the preview placeholder on the label preview route', () => {
+    renderRoute('/tools/labels/preview-batch')
+
+    expect(screen.getByPlaceholderText('Search label products...')).toBeInTheDocument()
   })
 
   it('does not render page search on non-searchable routes', () => {

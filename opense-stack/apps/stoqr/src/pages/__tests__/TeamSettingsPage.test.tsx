@@ -134,7 +134,7 @@ describe('TeamSettingsPage', () => {
     render(
       <MemoryRouter initialEntries={['/settings/organisations/activity']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: 'permission change', setTopBarSearchValue: vi.fn() }} />}>
+          <Route element={<Outlet context={{ topBarSearchValue: 'permission change', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
             <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
           </Route>
         </Routes>

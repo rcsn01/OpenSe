@@ -106,6 +106,22 @@ export const TeamSettingsPage = () => {
   }
 
   useEffect(() => {
+    if (activeTab !== 'activity') {
+      return
+    }
+
+    layoutContext?.setTopBarSearchConfig({
+      suggestions: activity.slice(0, 8).map((log) => ({
+        id: log.id,
+        title: log.message ?? log.event_type,
+        subtitle: `${log.profiles?.full_name ?? log.profiles?.username ?? 'System'} · ${log.event_type}`,
+        value: log.message ?? log.event_type,
+        badge: 'Log',
+      })),
+    })
+  }, [activeTab, activity, layoutContext])
+
+  useEffect(() => {
     if (tab && tabAliasMap[tab]) {
       navigate(`/settings/organisations/${tabAliasMap[tab]}`, { replace: true })
     }

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { SideSheet, SideSheetBody, SideSheetContent, SideSheetDescription, SideSheetHeader, SideSheetTitle } from '@repo/ui'
 import { useCompany } from '../contexts/CompanyContext'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { TemplateLibraryTab } from '../components/LabelStudio/TemplateLibraryTab'
 import { LabelDesignerTab } from '../components/LabelStudio/LabelDesignerTab'
 import { LabelPreviewBatchTab } from '../components/LabelStudio/LabelPreviewBatchTab'
+import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 const labelStudioTabAliases = {
   design: 'templates',
@@ -28,8 +29,10 @@ const resolveTab = (tab: string | undefined): LabelStudioTab => {
 export const LabelStudioPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const activeTab = resolveTab(tab)
+  const topBarSearchValue = layoutContext?.topBarSearchValue ?? ''
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [isDesignerOpen, setIsDesignerOpen] = useState(false)
 
@@ -65,6 +68,7 @@ export const LabelStudioPage = () => {
                   companyId={companyId || ''}
                   selectedTemplateId={selectedTemplateId}
                   onSelectTemplate={openDesigner}
+                  searchTerm={activeTab === 'templates' ? topBarSearchValue : ''}
                 />
               ),
             },
@@ -76,6 +80,7 @@ export const LabelStudioPage = () => {
                   companyId={companyId || ''}
                   selectedTemplateId={selectedTemplateId}
                   onSelectedTemplateChange={setSelectedTemplateId}
+                  searchTerm={activeTab === 'preview-batch' ? topBarSearchValue : ''}
                 />
               ),
             },

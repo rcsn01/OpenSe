@@ -56,7 +56,7 @@ describe('ProcurementPage', () => {
     render(
       <MemoryRouter initialEntries={['/procurement/purchase-orders']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: 'Denied', setTopBarSearchValue: vi.fn() }} />}>
+          <Route element={<Outlet context={{ topBarSearchValue: 'Denied', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
             <Route path="/procurement/:tab" element={<ProcurementPage />} />
           </Route>
         </Routes>
@@ -82,7 +82,7 @@ describe('ProcurementPage', () => {
     render(
       <MemoryRouter initialEntries={['/procurement/purchase-orders']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: 'Denied', setTopBarSearchValue: vi.fn() }} />}>
+          <Route element={<Outlet context={{ topBarSearchValue: 'Denied', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
             <Route path="/procurement/:tab" element={<ProcurementPage />} />
           </Route>
         </Routes>

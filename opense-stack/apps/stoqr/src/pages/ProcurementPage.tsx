@@ -23,6 +23,7 @@ export const ProcurementPage = () => {
   const isValidTab = procurementTabs.includes((tab ?? '') as ProcurementTabId)
   const activeTab: ProcurementTabId = isValidTab ? (tab as ProcurementTabId) : 'purchase-orders'
   const purchaseOrderSearchTerm = activeTab === 'purchase-orders' ? (layoutContext?.topBarSearchValue ?? '') : ''
+  const supplierSearchTerm = activeTab === 'suppliers' ? (layoutContext?.topBarSearchValue ?? '') : ''
 
   useEffect(() => {
     if (tab && !isValidTab) {
@@ -40,10 +41,10 @@ export const ProcurementPage = () => {
       {
         id: 'suppliers',
         label: 'Suppliers',
-        content: <SuppliersTab companyId={companyId} />,
+        content: <SuppliersTab companyId={companyId} searchTerm={supplierSearchTerm} />,
       },
     ]
-  }, [companyId, purchaseOrderSearchTerm])
+  }, [companyId, purchaseOrderSearchTerm, supplierSearchTerm])
 
   return (
     <BasePage

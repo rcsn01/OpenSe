@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AddFilterDropdown,
   Badge,
@@ -14,6 +14,7 @@ import {
   Select,
 } from '@repo/ui'
 import { BellRing, Building2, CheckCircle2, Plus, Sparkles, X } from 'lucide-react'
+import { useOutletContext } from 'react-router-dom'
 import type { PurchaseOrder } from '../../api/procurement'
 import {
   useCreatePurchaseOrder,
@@ -23,6 +24,7 @@ import {
 } from '../../hooks/queries/useProcurementTabs'
 import { useProcurementProducts } from '../../hooks/queries/useProcurement'
 import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
+import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
 import { formatCurrency } from '../../utils'
 
 type StatusFilter = 'all' | PurchaseOrder['status']
@@ -132,6 +134,7 @@ const getReturnWorkflow = (returnStatus: ReturnStatus): WorkflowBadge | null => 
 }
 
 export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: string | null; searchTerm?: string }) => {
+  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const [isCreating, setIsCreating] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [showAlertsHint, setShowAlertsHint] = useState(false)
@@ -207,6 +210,24 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
 
   const statusFilterItems = statusOptions.filter((option) => option.value !== statusFilter)
   const activeStatusLabel = statusFilter === 'all' ? null : statusLabels[statusFilter]
+
+  useEffect(() => {
+    layoutContext?.setTopBarSearchConfig({
+      suggestions: filteredPurchaseOrders.slice(0, 8).map((order) => ({
+        id: order.id,
+        title: formatPurchaseOrderNumber(order),
+        subtitle: order.suppliers?.name ?? 'No supplier assigned',
+        value: formatPurchaseOrderNumber(order),
+        keywords: [
+          order.suppliers?.name ?? '',
+          workflowByPo[order.id]?.request.label ?? '',
+          workflowByPo[order.id]?.order.label ?? '',
+          workflowByPo[order.id]?.returnStatus?.label ?? '',
+        ],
+        badge: 'PO',
+      })),
+    })
+  }, [filteredPurchaseOrders, layoutContext, workflowByPo])
 
   const handleCreatePO = async () => {
     if (!newPoSupplier) return
