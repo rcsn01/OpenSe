@@ -48,7 +48,7 @@ describe('QuickScanTab', () => {
     })
   })
 
-  it('shows camera content and manual entry with search button when no scan value', () => {
+  it('shows camera content without inline manual entry when no scan value', () => {
     render(
       <QuickScanTab
         scanValue=""
@@ -60,41 +60,9 @@ describe('QuickScanTab', () => {
     )
 
     expect(screen.getByText('Camera Panel')).toBeInTheDocument()
-    expect(screen.getByText('Manual Entry')).toBeInTheDocument()
-    expect(screen.getByLabelText('Barcode / SKU / Product Name')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument()
-  })
-
-  it('search button is disabled when manual input is empty', () => {
-    render(
-      <QuickScanTab
-        scanValue=""
-        setScanValue={vi.fn()}
-        companyId="company-1"
-        entryMethod="manual"
-      />,
-    )
-
-    expect(screen.getByRole('button', { name: /search/i })).toBeDisabled()
-  })
-
-  it('calls setScanValue when search button clicked with input', async () => {
-    const user = userEvent.setup()
-    const setScanValue = vi.fn()
-
-    render(
-      <QuickScanTab
-        scanValue=""
-        setScanValue={setScanValue}
-        companyId="company-1"
-        entryMethod="manual"
-      />,
-    )
-
-    await user.type(screen.getByLabelText('Barcode / SKU / Product Name'), 'TEST-SKU')
-    await user.click(screen.getByRole('button', { name: /search/i }))
-
-    expect(setScanValue).toHaveBeenCalledWith('TEST-SKU')
+    expect(screen.queryByText('Manual Entry')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Barcode / SKU / Product Name')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^search$/i })).not.toBeInTheDocument()
   })
 
   it('shows product not found message after lookup with no match', () => {
@@ -321,6 +289,7 @@ describe('QuickScanTab', () => {
   it('search again resets scan value', async () => {
     const user = userEvent.setup()
     const setScanValue = vi.fn()
+    const onResetSearch = vi.fn()
 
     mockUseQuickScanLookup.mockReturnValue({
       data: { product: defaultProduct, notFoundSku: null, lastHandledBy: '—' },
@@ -334,12 +303,14 @@ describe('QuickScanTab', () => {
         setScanValue={setScanValue}
         companyId="company-1"
         entryMethod="manual"
+        onResetSearch={onResetSearch}
       />,
     )
 
     await user.click(screen.getByRole('button', { name: /search again/i }))
 
     expect(setScanValue).toHaveBeenCalledWith('')
+    expect(onResetSearch).toHaveBeenCalledTimes(1)
   })
 
   it('shows loading state while looking up product', () => {

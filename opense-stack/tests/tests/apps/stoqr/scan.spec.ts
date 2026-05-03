@@ -11,10 +11,12 @@ const createProductForScan = async (page: import('@playwright/test').Page, name:
 };
 
 test.describe('Stoqr Scan', () => {
-  test('scan actions shows camera controls, manual entry, and history navigation', async ({ authenticatedPage }) => {
+  test('scan actions shows camera controls, top-bar search, and history navigation', async ({ authenticatedPage }) => {
     const scanPage = new ScanPage(authenticatedPage);
     await scanPage.goto();
     await scanPage.expectLoaded();
+
+    const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search products...' });
 
     await expect(authenticatedPage.getByRole('button', { name: 'Scan' })).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: 'History' })).toBeVisible();
@@ -22,22 +24,19 @@ test.describe('Stoqr Scan', () => {
     await expect(authenticatedPage.getByRole('button', { name: /cycle count/i })).toHaveCount(0);
     await expect(authenticatedPage.getByRole('button', { name: /putaway/i })).toHaveCount(0);
 
+    await expect(searchInput).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /start camera/i })).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /stop camera/i })).toHaveCount(0);
-    await expect(authenticatedPage.getByText(/manual entry/i)).toBeVisible();
+    await expect(authenticatedPage.getByText(/manual entry/i)).toHaveCount(0);
 
-    const searchButton = authenticatedPage.getByRole('button', { name: /^search$/i });
-    await expect(searchButton).toBeVisible();
-    await expect(searchButton).toBeDisabled();
-
-    await authenticatedPage.getByLabel(/Barcode \/ SKU \/ Product Name/i).fill('TEST-SKU-001');
-    await searchButton.click();
+    await searchInput.fill('TEST-SKU-001');
 
     await expect(authenticatedPage.getByText('No product found for:')).toBeVisible();
     await expect(authenticatedPage.getByText('TEST-SKU-001')).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /search again/i })).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: /start camera/i })).toHaveCount(0);
 
+    await authenticatedPage.keyboard.press('Escape');
     await authenticatedPage.getByRole('button', { name: 'History' }).click();
     await expect(authenticatedPage).toHaveURL(/\/scan\/scan-history(?:\?|$)/);
     await expect(authenticatedPage.getByText('No scan history yet.')).toBeVisible();
@@ -57,9 +56,8 @@ test.describe('Stoqr Scan', () => {
     await scanPage.goto();
     await scanPage.expectLoaded();
 
-    const input = authenticatedPage.getByLabel(/Barcode \/ SKU \/ Product Name/i);
+    const input = authenticatedPage.getByRole('combobox', { name: 'Search products...' });
     await input.fill(productSku);
-    await authenticatedPage.getByRole('button', { name: /^search$/i }).click();
 
     await expect(authenticatedPage.getByRole('heading', { name: productName })).toBeVisible();
     await expect(authenticatedPage.getByText(`SKU: ${productSku}`)).toBeVisible();
@@ -82,15 +80,15 @@ test.describe('Stoqr Scan', () => {
     await scanPage.goto();
     await scanPage.expectLoaded();
 
-    await authenticatedPage.getByLabel(/Barcode \/ SKU \/ Product Name/i).fill('SOME-SKU');
-    await authenticatedPage.getByRole('button', { name: /^search$/i }).click();
+    const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search products...' });
+    await searchInput.fill('SOME-SKU');
 
     await expect(authenticatedPage.getByRole('button', { name: /search again/i })).toBeVisible();
 
     await authenticatedPage.getByRole('button', { name: /search again/i }).click();
 
-    await expect(authenticatedPage.getByText(/manual entry/i)).toBeVisible();
-    await expect(authenticatedPage.getByRole('button', { name: /^search$/i })).toBeVisible();
+    await expect(searchInput).toHaveValue('');
+    await expect(authenticatedPage.getByText(/manual entry/i)).toHaveCount(0);
     await expect(authenticatedPage.getByRole('button', { name: /start camera/i })).toBeVisible();
   });
 });
