@@ -115,6 +115,13 @@ export const ScanPage = () => {
     }
   }, [])
 
+  const handleResetSearch = useCallback(() => {
+    void stopCamera()
+    setEntryMethod('manual')
+    setScanValue('')
+    layoutContext?.setTopBarSearchValue('')
+  }, [layoutContext, stopCamera])
+
   const startCamera = useCallback(async () => {
     if (scannerRef.current?.isScanning) return
 
@@ -157,7 +164,13 @@ export const ScanPage = () => {
   }, [scanValue, stopCamera])
 
   return (
-    <BasePage companyId={companyId} isLoading={false}>
+    <BasePage
+      companyId={companyId}
+      isLoading={false}
+      contentStyle={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}
+      containerClassName="stack"
+      containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
+    >
       <Tabs
         activeTab={activeTab}
         onTabChange={(nextTab) => navigate(`/scan/${nextTab}`)}
@@ -172,15 +185,16 @@ export const ScanPage = () => {
                 setScanValue={handleManualScanValue}
                 companyId={companyId || ''}
                 entryMethod={entryMethod}
+                onResetSearch={handleResetSearch}
                 cameraContent={
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="relative w-full overflow-hidden rounded-lg bg-[var(--color-muted)]">
+                  <div className="flex h-full min-h-0 flex-1 flex-col gap-4">
+                    <div className="relative min-h-[26rem] flex-1 overflow-hidden rounded-lg bg-[var(--color-muted)]">
                       <div
                         id="reader"
-                        style={{ width: '100%', minHeight: isScanning ? 250 : 0 }}
+                        className="h-full w-full"
                       />
                       {!isScanning && (
-                        <div className="flex flex-col items-center justify-center py-10 text-[var(--color-muted-foreground)]">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-[var(--color-muted-foreground)]">
                           <div className="mb-3 rounded-full bg-[var(--color-background)] p-3.5 shadow-sm">
                             <ScanBarcode size={24} className="text-[var(--color-primary)]" />
                           </div>

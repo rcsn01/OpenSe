@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { SearchX, ScanBarcode, Package, ArrowUpCircle, ArrowDownCircle, SlidersHorizontal, Search } from 'lucide-react'
+import { SearchX, ScanBarcode, Package, ArrowUpCircle, ArrowDownCircle, SlidersHorizontal } from 'lucide-react'
 import { StackLayout } from '@repo/ui'
 import {
   useQuickScanLookup,
@@ -15,20 +15,20 @@ export const QuickScanTab = ({
   companyId,
   entryMethod,
   cameraContent,
+  onResetSearch,
 }: {
   scanValue: string
   setScanValue: (value: string) => void
   companyId: string
   entryMethod: 'camera' | 'manual'
   cameraContent?: ReactNode
+  onResetSearch?: () => void
 }) => {
   const [quantity, setQuantity] = useState(1)
   const [manualStock, setManualStock] = useState<number | ''>('')
   const [message, setMessage] = useState<string | null>(null)
   const [stockMode, setStockMode] = useState<StockMode>('receive')
   const [pendingConfirm, setPendingConfirm] = useState(false)
-  const [manualInput, setManualInput] = useState('')
-  const [showSearch, setShowSearch] = useState(true)
   const { data: userId } = useQuickScanUser()
   const lookupQuery = useQuickScanLookup(companyId, scanValue)
   const transactionMutation = useQuickScanTransaction()
@@ -41,7 +41,6 @@ export const QuickScanTab = ({
     if (!scanValue) {
       setMessage(null)
       setPendingConfirm(false)
-      setShowSearch(true)
     }
   }, [scanValue])
 
@@ -110,67 +109,26 @@ export const QuickScanTab = ({
     setPendingConfirm(true)
   }
 
-  const handleSearch = () => {
-    if (manualInput.trim()) {
-      setScanValue(manualInput.trim())
-      setShowSearch(false)
-    }
-  }
-
   const handleSearchAgain = () => {
     setScanValue('')
-    setManualInput('')
-    setShowSearch(true)
+    onResetSearch?.()
   }
 
   const stockDiff = product ? computeNewStock() - product.quantity_on_hand : 0
 
   return (
-    <StackLayout>
-      {(!scanValue || showSearch) && !scanValue ? (
-        <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
-          {/* Camera Area */}
-          <div className="p-5 pb-4">
+    <StackLayout className="flex-1 min-h-0">
+      {!scanValue ? (
+        <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
+          <div className="flex flex-1 min-h-0 flex-col p-5">
             {cameraContent ?? (
-              <div className="flex flex-col items-center justify-center rounded-lg bg-[var(--color-muted)] py-12 text-[var(--color-muted-foreground)]">
+              <div className="flex flex-1 flex-col items-center justify-center rounded-lg bg-[var(--color-muted)] py-12 text-[var(--color-muted-foreground)]">
                 <div className="mb-3 rounded-full bg-[var(--color-background)] p-3.5 shadow-sm">
                   <ScanBarcode size={24} className="text-[var(--color-primary)]" />
                 </div>
                 <p className="text-sm font-medium">Scan a barcode or QR code to begin</p>
               </div>
             )}
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 px-5">
-            <div className="h-px flex-1 bg-[var(--color-border)]" />
-            <span className="text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
-              or
-            </span>
-            <div className="h-px flex-1 bg-[var(--color-border)]" />
-          </div>
-
-          {/* Manual Entry */}
-          <div className="p-5 pt-4">
-            <h3 className="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]">Manual Entry</h3>
-            <div className="flex gap-2">
-              <input
-                className="input flex-1"
-                value={manualInput}
-                onChange={(event) => setManualInput(event.target.value)}
-                onKeyDown={(event) => event.key === 'Enter' && handleSearch()}
-                placeholder="Barcode, SKU, or product name"
-                aria-label="Barcode / SKU / Product Name"
-              />
-              <button
-                className="button inline-flex items-center gap-1.5"
-                onClick={handleSearch}
-                disabled={!manualInput.trim()}
-              >
-                <Search size={16} />
-                Search
-              </button>
-            </div>
           </div>
         </div>
       ) : (
