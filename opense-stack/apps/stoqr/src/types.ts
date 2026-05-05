@@ -49,6 +49,7 @@ export type CustomFieldActiveFilter = {
 export type InventoryTransaction = {
   id: string
   transaction_type: string
+  source?: string | null
   quantity_change: number
   stock_after: number | null
   notes: string | null
