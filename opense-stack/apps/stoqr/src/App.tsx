@@ -6,6 +6,7 @@ import { AppLayout, type AppLayoutOutletContext } from './layouts/AppLayout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
 import { buildAccountsAuthUrl } from './lib/authRedirect'
 import { DashboardPage } from './pages/DashboardPage'
+import { InventoryImportPage } from './pages/InventoryImportPage'
 import { InventoryListPage } from './pages/InventoryPage'
 import { CreateProductPage } from './pages/product/CreateProductPage'
 import { EditProductPage } from './pages/product/EditProductPage'
@@ -86,6 +87,7 @@ export function App() {
               <Route index element={<RootRedirect />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/inventory" element={<Navigate to="/inventory/all" replace />} />
+              <Route path="/inventory/import" element={<InventoryImportPage />} />
               <Route path="/inventory/new" element={<CreateProductPage />} />
               <Route path="/inventory/:tab" element={<InventoryListPage />} />
               <Route path="/inventory/:id/edit" element={<EditProductPage />} />

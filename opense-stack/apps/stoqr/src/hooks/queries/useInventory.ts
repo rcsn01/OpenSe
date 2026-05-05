@@ -15,7 +15,7 @@ import {
   upsertProductBarcode,
   updateInventoryProductField,
   type FetchInventoryProductsParams,
-  type ImportInventoryRow,
+  type ImportInventoryPayload,
 } from '../../api/inventory'
 
 const inventoryKeys = {
@@ -90,9 +90,9 @@ export const useImportInventoryProducts = (companyId: string | null) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (rows: ImportInventoryRow[]) => {
+    mutationFn: async (payload: ImportInventoryPayload) => {
       if (!companyId) throw new Error('No company selected')
-      return importInventoryProducts(companyId, rows)
+      return importInventoryProducts(companyId, payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.root })

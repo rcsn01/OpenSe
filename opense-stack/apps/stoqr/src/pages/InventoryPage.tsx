@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import { useSearchParams, useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import type { CustomFieldPrimitive, Folder } from '../types'
@@ -17,7 +19,6 @@ import {
 } from './inventoryUrlState'
 import {
   useDeleteInventoryProducts,
-  useImportInventoryProducts,
   useInventoryFilters,
   useInventoryProducts,
   useInventoryRefresh,
@@ -42,11 +43,7 @@ export const InventoryListPage = () => {
   const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
-
-  // Removed isCreateOpen state
-  const [isImportOpen, setIsImportOpen] = useState(false)
-  const [importRows, setImportRows] = useState<Record<string, string>[]>([])
-  const [importMessage, setImportMessage] = useState<string | null>(null)
+  const importFileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [pendingFilterKey, setPendingFilterKey] = useState<string | null>(null)
   const [folderView, setFolderView] = useState<FolderView>('all')
@@ -153,7 +150,6 @@ export const InventoryListPage = () => {
   })
 
   const deleteProductsMutation = useDeleteInventoryProducts(companyId)
-  const importProductsMutation = useImportInventoryProducts(companyId)
   const refreshInventory = useInventoryRefresh()
 
   const products = productsQuery.data?.products ?? ([] as InventoryProduct[])
@@ -248,29 +244,42 @@ export const InventoryListPage = () => {
     }
   }
 
-  const handleImportFile = async (file: File) => {
-    const content = await file.text()
-    const { rows } = parseCsv(content)
-    setImportRows(rows)
-    setImportMessage(rows.length ? null : 'No rows found in CSV.')
-  }
+  const handleImportOpen = useCallback(() => {
+    importFileInputRef.current?.click()
+  }, [])
 
-  const handleImport = async () => {
-    if (!companyId || importRows.length === 0) return
+  const handleImportFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      return
+    }
+
     try {
-      const importedCount = await importProductsMutation.mutateAsync(importRows)
-      if (importedCount === 0) {
-        setImportMessage('No valid rows found in CSV.')
+      const content = await file.text()
+      const parsed = parseCsv(content)
+
+      if (parsed.headers.length === 0 || parsed.rows.length === 0) {
+        toast.error('This CSV does not contain any importable rows.')
         return
       }
-      setImportMessage(`Imported ${importedCount} products.`)
-      setImportRows([])
-      setIsImportOpen(false)
-      refreshInventory()
+
+      navigate('/inventory/import', {
+        state: {
+          csvUpload: {
+            fileName: file.name,
+            headers: parsed.headers,
+            rows: parsed.rows,
+            initialFolderId: folderView === 'folder' && selectedFolderId ? selectedFolderId : '__root__',
+          },
+        },
+      })
     } catch (error) {
-      setImportMessage(error instanceof Error ? error.message : 'Import failed.')
+      toast.error(error instanceof Error ? error.message : 'Unable to read this CSV file.')
+    } finally {
+      event.target.value = ''
     }
-  }
+  }, [folderView, navigate, selectedFolderId])
 
   return (
     <BasePage
@@ -296,7 +305,7 @@ export const InventoryListPage = () => {
         pendingFilterKey={pendingFilterKey}
         setPendingFilterKey={setPendingFilterKey}
         customFieldFilters={customFieldFilters}
-        onImportOpen={() => setIsImportOpen(true)}
+        onImportOpen={handleImportOpen}
         onCreateOpen={() => navigate('/inventory/new')}
         products={products}
         isLoading={isLoading}
@@ -319,42 +328,14 @@ export const InventoryListPage = () => {
         }}
       />
 
-      {/* Removed CreateProductModal */}
-
-      {isImportOpen && (
-        <div className="modal-backdrop" role="dialog">
-          <div className="modal">
-            <div className="flex-between" style={{ marginBottom: 16 }}>
-              <h3 className="section-title">Import Inventory (CSV)</h3>
-              <button className="button ghost" onClick={() => setIsImportOpen(false)}>Close</button>
-            </div>
-            <div className="stack">
-              <input
-                className="input"
-                type="file"
-                accept=".csv"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) handleImportFile(file)
-                }}
-              />
-              {importRows.length > 0 && (
-                <div className="card" style={{ boxShadow: 'none', background: '#f8fafc' }}>
-                  <div className="flex-between">
-                    <h4 style={{ margin: 0 }}>Preview</h4>
-                    <span className="small muted">{importRows.length} rows</span>
-                  </div>
-                </div>
-              )}
-              {importMessage && <div className="pill">{importMessage}</div>}
-              <div className="flex-between">
-                <span className="small muted">Required: Name, SKU, Qty</span>
-                <button className="button" type="button" onClick={handleImport} disabled={importRows.length === 0}>Confirm Import</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <input
+        ref={importFileInputRef}
+        aria-label="Upload inventory CSV"
+        type="file"
+        accept=".csv,text/csv"
+        style={{ display: 'none' }}
+        onChange={handleImportFileChange}
+      />
     </BasePage>
   )
 }
