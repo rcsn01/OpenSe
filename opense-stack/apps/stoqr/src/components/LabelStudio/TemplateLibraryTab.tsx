@@ -1,8 +1,8 @@
-import { DataTable } from '@repo/ui'
 import { useEffect, useMemo, useState } from 'react'
+import { MoreHorizontal, Package2, Plus } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
-import { getLabelLayoutSummary } from './labelLayout'
+import { getEnabledLabelFields, getLabelLayoutSummary, resolveLabelLayout } from './labelLayout'
 import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
 import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
 
@@ -20,11 +20,20 @@ const formatDate = (dateString: string | null | undefined): string => {
   const diffMs = now.getTime() - date.getTime()
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const diffWeeks = Math.floor(diffDays / 7)
+  const diffMonths = Math.floor(diffDays / 30)
 
   if (diffHours < 1) return 'Just now'
-  if (diffHours < 24) return `${diffHours} hrs ago`
-  if (diffDays === 1) return 'Yesterday'
+  if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+  if (diffDays < 7) return `${Math.max(diffDays, 1)} ${diffDays === 1 ? 'day' : 'days'} ago`
+  if (diffWeeks < 5) return `${Math.max(diffWeeks, 1)} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`
+  if (diffMonths < 12) return `${Math.max(diffMonths, 1)} ${diffMonths === 1 ? 'month' : 'months'} ago`
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+const formatDimensions = (layout: Record<string, unknown>) => {
+  const controls = resolveLabelLayout(layout)
+  return `${controls.width}x${controls.height}mm`
 }
 
 export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemplate, searchTerm = '' }: TemplateLibraryTabProps) => {
@@ -92,90 +101,150 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
   }
 
   return (
-    <div className="card stack">
-      <div className="flex-between" style={{ marginBottom: 8 }}>
-        <h3 className="section-title" style={{ margin: 0 }}>Template Library</h3>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button className="button" onClick={() => setShowCreateForm(!showCreateForm)}>
-            + New Template
-          </button>
+    <div className="label-template-library">
+      <div className="label-template-table-shell">
+        <table className="label-template-table" aria-label="Template library">
+          <thead>
+            <tr>
+              <th>Template Name</th>
+              <th>Dimensions</th>
+              <th>Active Fields</th>
+              <th>Last Modified</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr>
+                <td colSpan={5}>
+                  <div className="empty-state">Loading templates...</div>
+                </td>
+              </tr>
+            ) : filteredTemplates.length === 0 ? (
+              <tr>
+                <td colSpan={5}>
+                  <div className="empty-state">No templates found.</div>
+                </td>
+              </tr>
+            ) : (
+              filteredTemplates.map((template) => {
+                const controls = resolveLabelLayout(template.layout)
+                const activeFields = getEnabledLabelFields(controls)
+                const isEditing = selectedTemplateId === template.id
+
+                return (
+                  <tr
+                    key={template.id}
+                    className={isEditing ? 'is-editing' : undefined}
+                    onClick={() => onSelectTemplate?.(template.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        onSelectTemplate?.(template.id)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${template.name} template`}
+                  >
+                    <td>
+                      <div className="label-template-name-cell">
+                        <span className="label-template-name-icon" aria-hidden="true">
+                          <Package2 size={14} />
+                        </span>
+                        <div className="label-template-name-copy">
+                          <div className="label-template-name-row">
+                            <span className="label-template-name">{template.name}</span>
+                            {isEditing ? <span className="label-template-editing-pill">Editing</span> : null}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{formatDimensions(template.layout)}</td>
+                    <td>
+                      <div className="label-template-field-list">
+                        {activeFields.map((field) => (
+                          <span key={field} className="label-template-field-pill">{field}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>{formatDate(template.updated_at ?? template.created_at)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="label-template-action"
+                        aria-label={`Open ${template.name} template options`}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          onSelectTemplate?.(template.id)
+                        }}
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+
+        <div className="label-template-mobile-list" aria-label="Template library mobile list">
+          {isLoading ? (
+            <div className="empty-state">Loading templates...</div>
+          ) : filteredTemplates.length === 0 ? (
+            <div className="empty-state">No templates found.</div>
+          ) : (
+            filteredTemplates.map((template) => {
+              const controls = resolveLabelLayout(template.layout)
+              const activeFields = getEnabledLabelFields(controls)
+              const isEditing = selectedTemplateId === template.id
+
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  className={`label-template-mobile-card${isEditing ? ' is-editing' : ''}`}
+                  onClick={() => onSelectTemplate?.(template.id)}
+                >
+                  <div className="label-template-mobile-topline">
+                    <span className="label-template-name">{template.name}</span>
+                    <span className="label-template-mobile-dimensions">{formatDimensions(template.layout)}</span>
+                  </div>
+                  <div className="label-template-mobile-meta">{formatDate(template.updated_at ?? template.created_at)}</div>
+                  <div className="label-template-field-list">
+                    {activeFields.map((field) => (
+                      <span key={field} className="label-template-field-pill">{field}</span>
+                    ))}
+                  </div>
+                </button>
+              )
+            })
+          )}
         </div>
       </div>
 
       {showCreateForm && (
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
-          <label className="stack" style={{ flex: 1 }}>
+        <div className="label-template-create-panel">
+          <label className="stack label-template-create-field">
             Template Name
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Retail Shelf Tag" />
           </label>
-          <button className="button" onClick={createTemplate} disabled={createTemplateMutation.isPending}>Create Template</button>
-          <button className="button ghost" onClick={() => { setShowCreateForm(false); setName(''); setMessage(null) }}>Cancel</button>
+          <div className="label-template-create-actions">
+            <button className="button" onClick={createTemplate} disabled={createTemplateMutation.isPending}>Create Template</button>
+            <button className="button ghost" onClick={() => { setShowCreateForm(false); setName(''); setMessage(null) }}>Cancel</button>
+          </div>
         </div>
       )}
 
-      {message && <div className="small muted" style={{ padding: '8px 0' }}>{message}</div>}
+      {message ? <div className="small muted label-template-message">{message}</div> : null}
 
-      {isLoading ? (
-        <div className="empty-state">Loading templates...</div>
-      ) : filteredTemplates.length === 0 ? (
-        <div className="empty-state">No templates found.</div>
-      ) : (
-        <DataTable
-          columns={[
-            {
-              id: 'name',
-              header: 'Name',
-              renderCell: (template) => {
-                const isEditing = selectedTemplateId === template.id
-
-                return (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontWeight: 600 }}>{template.name}</span>
-                      {isEditing && <span className="badge warning">Editing</span>}
-                    </div>
-                    <div className="small muted">
-                      Updated {formatDate(template.updated_at ?? template.created_at)}
-                    </div>
-                  </>
-                )
-              },
-            },
-            {
-              id: 'size',
-              header: 'Size',
-              renderCell: (template) => getLabelLayoutSummary(template.layout).size,
-            },
-            {
-              id: 'type',
-              header: 'Type',
-              renderCell: (template) => getLabelLayoutSummary(template.layout).type,
-            },
-            {
-              id: 'fields',
-              header: 'Fields',
-              renderCell: (template) => getLabelLayoutSummary(template.layout).fields,
-            },
-          ]}
-          rows={filteredTemplates}
-          getRowId={(template) => template.id}
-          onRowClick={(template) => onSelectTemplate?.(template.id)}
-          getRowProps={(template) => ({
-            role: 'button',
-            tabIndex: 0,
-            'aria-label': `Open ${template.name} template`,
-            onKeyDown: (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                onSelectTemplate?.(template.id)
-              }
-            },
-          })}
-          getRowStyle={(template) => (
-            selectedTemplateId === template.id ? { background: 'rgba(37, 99, 235, 0.04)' } : undefined
-          )}
-        />
-      )}
+      <div className="label-template-create-cta-wrap">
+        <button className="label-template-create-cta" type="button" onClick={() => setShowCreateForm((current) => !current)}>
+          <Plus size={16} />
+          {showCreateForm ? 'Hide new template' : 'Create new template'}
+        </button>
+      </div>
     </div>
   )
 }

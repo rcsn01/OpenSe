@@ -187,27 +187,25 @@ export const ScanPage = () => {
                 entryMethod={entryMethod}
                 onResetSearch={handleResetSearch}
                 cameraContent={
-                  <div className="flex h-full min-h-0 flex-1 flex-col gap-4">
-                    <div className="relative min-h-[26rem] flex-1 overflow-hidden rounded-lg bg-[var(--color-muted)]">
+                  <div className="scan-camera-panel">
+                    <div className={`scan-camera-frame${isScanning ? ' is-active' : ''}`}>
                       <div
                         id="reader"
-                        className="h-full w-full"
+                        className="scan-camera-reader"
                       />
                       {!isScanning && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-[var(--color-muted-foreground)]">
-                          <div className="mb-3 rounded-full bg-[var(--color-background)] p-3.5 shadow-sm">
-                            <ScanBarcode size={24} className="text-[var(--color-primary)]" />
+                        <div className="scan-camera-placeholder">
+                          <div className="scan-camera-placeholder-icon">
+                            <ScanBarcode size={22} />
                           </div>
-                          <p className="text-sm font-medium">Point your camera at a barcode</p>
+                          <h2 className="scan-camera-placeholder-title">Camera is off</h2>
+                          <p className="scan-camera-placeholder-copy">Tap below to activate your camera and scan a product.</p>
                         </div>
                       )}
                     </div>
                     <button
-                      className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-                        isScanning
-                          ? 'border border-[var(--color-border)] text-[var(--color-destructive)] hover:bg-[var(--color-muted)]'
-                          : 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-sm hover:opacity-90'
-                      }`}
+                      type="button"
+                      className={`scan-camera-toggle${isScanning ? ' is-active' : ''}`}
                       onClick={isScanning ? stopCamera : startCamera}
                     >
                       {isScanning ? <CameraOff size={16} /> : <Camera size={16} />}
