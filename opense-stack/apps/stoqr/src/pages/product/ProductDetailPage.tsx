@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, MapPin } from 'lucide-react'
 import { EmptyState } from '@repo/ui'
 
 import { useCompany } from '../../contexts/CompanyContext'
@@ -14,8 +14,8 @@ import { useProductDetail, useProductFolders } from '../../hooks/queries/useProd
 
 const PRODUCT_DETAIL_TABS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'suppliers', label: 'Suppliers & POs' },
-  { id: 'batch', label: 'Batch History' },
+  { id: 'suppliers', label: 'Suppliers' },
+  { id: 'history', label: 'History' },
   { id: 'attachments', label: 'Files' },
 ] as const
 
@@ -40,7 +40,8 @@ export const ProductDetailPage = () => {
   const { companyId } = useCompany()
   const { data: folders = [] } = useProductFolders(companyId)
   const validTabs = PRODUCT_DETAIL_TABS.map((item) => item.id)
-  const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'overview'
+  const requestedTab = tab === 'batch' ? 'history' : tab
+  const activeTab = validTabs.includes((requestedTab ?? '') as (typeof validTabs)[number]) ? requestedTab! : 'overview'
 
   const { data, isLoading } = useProductDetail(companyId, id ?? null)
   const product = data?.product ?? null
@@ -74,11 +75,11 @@ export const ProductDetailPage = () => {
     }
 
     if (activeTab === 'suppliers') {
-      return <ProductSuppliersTab productId={product.id} companyId={selectedCompanyId} />
+      return <ProductSuppliersTab productId={product.id} companyId={selectedCompanyId} productSku={product.sku} />
     }
 
-    if (activeTab === 'batch') {
-      return <ProductBatchHistoryTab productId={product.id} companyId={selectedCompanyId} />
+    if (activeTab === 'history') {
+      return <ProductBatchHistoryTab transactions={transactions} />
     }
 
     return <ProductAttachmentsTab productId={product.id} companyId={selectedCompanyId} />
@@ -117,8 +118,12 @@ export const ProductDetailPage = () => {
             <header className="product-detail-heading">
               <h1 className="product-detail-title">{product.name}</h1>
               <div className="product-detail-meta">
-                <span>{product.sku || 'No SKU assigned'}</span>
-                <span>{locationLabel}</span>
+                <span className="product-detail-meta-item">{product.sku || 'No SKU assigned'}</span>
+                <span className="product-detail-meta-separator" aria-hidden="true" />
+                <span className="product-detail-meta-item product-detail-meta-item--location">
+                  <MapPin size={13} />
+                  {locationLabel}
+                </span>
               </div>
             </header>
 

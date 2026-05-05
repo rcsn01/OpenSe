@@ -11,12 +11,13 @@ INSERT INTO stoqr.folders (
   sort_order
 )
 VALUES
-  ('71717171-7171-7171-7171-717171717171', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'Main Warehouse', 'Primary distribution centre', timezone('utc'::text, now()) - interval '90 days', 1),
-  ('72727272-7272-7272-7272-727272727272', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'East Coast Hub', 'Secondary regional warehouse', timezone('utc'::text, now()) - interval '90 days', 2),
-  ('73737373-7373-7373-7373-737373737373', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'West Coast Hub', 'Western fulfilment centre', timezone('utc'::text, now()) - interval '90 days', 3),
-  ('74747474-7474-7474-7474-747474747474', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'Retail Store 1', 'Retail-facing stock room', timezone('utc'::text, now()) - interval '90 days', 4)
+  ('71717171-7171-7171-7171-717171717171', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'Warehouse Network', 'Main storage hierarchy for shared StoQR inventory.', timezone('utc'::text, now()) - interval '90 days', 1),
+  ('72727272-7272-7272-7272-727272727272', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'Dispatch & Returns', 'Outbound staging, finished goods, and returns triage.', timezone('utc'::text, now()) - interval '90 days', 2),
+  ('73737373-7373-7373-7373-737373737373', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '71717171-7171-7171-7171-717171717171', 'PCR Consumables', 'Tips, plates, and core assay consumables.', timezone('utc'::text, now()) - interval '90 days', 1),
+  ('74747474-7474-7474-7474-747474747474', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '71717171-7171-7171-7171-717171717171', 'Safety & Sanitation', 'PPE, disinfectants, and facility support stock.', timezone('utc'::text, now()) - interval '90 days', 2)
 ON CONFLICT (id) DO UPDATE
 SET
+  parent_id = EXCLUDED.parent_id,
   name = EXCLUDED.name,
   description = EXCLUDED.description,
   sort_order = EXCLUDED.sort_order;
@@ -261,6 +262,472 @@ SET
   stock_after = EXCLUDED.stock_after,
   notes = EXCLUDED.notes,
   created_at = EXCLUDED.created_at;
+
+WITH ranked_products AS (
+  SELECT
+    p.id,
+    p.custom_fields,
+    CAST(row_number() OVER (ORDER BY p.id) AS integer) AS product_number,
+    18 + ((CAST(row_number() OVER (ORDER BY p.id) AS integer) - 1) % 7) * 7 AS received_quantity,
+    2 + ((CAST(row_number() OVER (ORDER BY p.id) AS integer) - 1) % 5) * 2 AS sale_quantity,
+    round((5.50 + CAST(row_number() OVER (ORDER BY p.id) AS integer) * 1.35)::numeric, 2) AS seeded_cost_price
+  FROM stoqr.products p
+  WHERE p.company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+)
+UPDATE stoqr.products p
+SET
+  folder_id = CASE
+    WHEN ranked_products.product_number % 6 = 0 THEN '72727272-7272-7272-7272-727272727272'::uuid
+    WHEN lower(COALESCE(ranked_products.custom_fields->>'SUPPLIER', '')) IN (
+      'eppendorf',
+      'thermofisher',
+      'roche',
+      'bio-rad',
+      'idt',
+      'qiagen',
+      'millennium science',
+      'mektronics'
+    ) THEN '73737373-7373-7373-7373-737373737373'::uuid
+    ELSE '74747474-7474-7474-7474-747474747474'::uuid
+  END,
+  quantity_on_hand = ranked_products.received_quantity - ranked_products.sale_quantity,
+  min_stock_level = 4 + (ranked_products.product_number % 6),
+  max_stock_level = GREATEST(30, ranked_products.received_quantity + 18),
+  reorder_point = 6 + (ranked_products.product_number % 8),
+  cost_price = ranked_products.seeded_cost_price,
+  selling_price = round((ranked_products.seeded_cost_price * 1.82)::numeric, 2),
+  updated_at = timezone('utc'::text, now())
+FROM ranked_products
+WHERE p.id = ranked_products.id;
+
+WITH supplier_names AS (
+  SELECT DISTINCT
+    NULLIF(btrim(COALESCE(p.custom_fields->>'SUPPLIER', '')), '') AS supplier_name
+  FROM stoqr.products p
+  WHERE p.company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+),
+supplier_seed AS (
+  SELECT
+    (
+      substr(hash, 1, 8) || '-' ||
+      substr(hash, 9, 4) || '-' ||
+      substr(hash, 13, 4) || '-' ||
+      substr(hash, 17, 4) || '-' ||
+      substr(hash, 21, 12)
+    )::uuid AS id,
+    supplier_name,
+    lower(regexp_replace(supplier_name, '[^a-zA-Z0-9]+', '', 'g')) AS supplier_slug,
+    CAST(row_number() OVER (ORDER BY supplier_name) AS integer) AS supplier_number
+  FROM (
+    SELECT supplier_name, md5('stoqr-supplier:' || supplier_name) AS hash
+    FROM supplier_names
+    WHERE supplier_name IS NOT NULL
+  ) seeded_names
+)
+INSERT INTO stoqr.suppliers (
+  id,
+  company_id,
+  name,
+  contact_name,
+  email,
+  phone,
+  address,
+  website,
+  created_at
+)
+SELECT
+  supplier_seed.id,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  supplier_seed.supplier_name,
+  supplier_seed.supplier_name || ' Account Desk',
+  supplier_seed.supplier_slug || '@example.com',
+  '+61 2 91' || lpad((supplier_seed.supplier_number + 40)::text, 2, '0') || ' ' || lpad((supplier_seed.supplier_number + 1000)::text, 4, '0'),
+  supplier_seed.supplier_name || ' Distribution Centre',
+  'https://' || supplier_seed.supplier_slug || '.example',
+  timezone('utc'::text, now()) - interval '150 days' + make_interval(days => supplier_seed.supplier_number)
+FROM supplier_seed
+ON CONFLICT (id) DO UPDATE
+SET
+  name = EXCLUDED.name,
+  contact_name = EXCLUDED.contact_name,
+  email = EXCLUDED.email,
+  phone = EXCLUDED.phone,
+  address = EXCLUDED.address,
+  website = EXCLUDED.website,
+  created_at = EXCLUDED.created_at;
+
+WITH product_seed AS (
+  SELECT
+    p.id AS product_id,
+    p.name AS product_name,
+    NULLIF(btrim(COALESCE(p.custom_fields->>'SUPPLIER', '')), '') AS supplier_name,
+    CAST(row_number() OVER (ORDER BY p.id) AS integer) AS product_number
+  FROM stoqr.products p
+  WHERE p.company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+),
+po_seed AS (
+  SELECT
+    product_seed.product_id,
+    product_seed.product_name,
+    product_seed.product_number,
+    (
+      substr(po_hash, 1, 8) || '-' ||
+      substr(po_hash, 9, 4) || '-' ||
+      substr(po_hash, 13, 4) || '-' ||
+      substr(po_hash, 17, 4) || '-' ||
+      substr(po_hash, 21, 12)
+    )::uuid AS po_id,
+    (
+      substr(supplier_hash, 1, 8) || '-' ||
+      substr(supplier_hash, 9, 4) || '-' ||
+      substr(supplier_hash, 13, 4) || '-' ||
+      substr(supplier_hash, 17, 4) || '-' ||
+      substr(supplier_hash, 21, 12)
+    )::uuid AS supplier_id,
+    timezone('utc'::text, now()) - make_interval(days => 75 - product_seed.product_number) AS po_created_at
+  FROM (
+    SELECT
+      product_seed.*,
+      md5('stoqr-generated-po:' || product_seed.product_id::text) AS po_hash,
+      md5('stoqr-supplier:' || product_seed.supplier_name) AS supplier_hash
+    FROM product_seed
+    WHERE product_seed.supplier_name IS NOT NULL
+  ) product_seed
+)
+INSERT INTO stoqr.purchase_orders (
+  id,
+  company_id,
+  supplier_id,
+  po_number,
+  status,
+  approval_status,
+  return_status,
+  expected_date,
+  notes,
+  created_by,
+  created_at,
+  updated_at
+)
+SELECT
+  po_seed.po_id,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  po_seed.supplier_id,
+  3000 + po_seed.product_number,
+  CASE WHEN po_seed.product_number % 9 = 0 THEN 'partial' ELSE 'closed' END,
+  'approved',
+  'none',
+  (po_seed.po_created_at + interval '5 days')::date,
+  'Seeded replenishment for ' || po_seed.product_name,
+  CASE WHEN po_seed.product_number % 2 = 0 THEN '11111111-1111-1111-1111-111111111111'::uuid ELSE '33333333-3333-3333-3333-333333333333'::uuid END,
+  po_seed.po_created_at,
+  po_seed.po_created_at + interval '6 days'
+FROM po_seed
+ON CONFLICT (id) DO UPDATE
+SET
+  supplier_id = EXCLUDED.supplier_id,
+  po_number = EXCLUDED.po_number,
+  status = EXCLUDED.status,
+  approval_status = EXCLUDED.approval_status,
+  return_status = EXCLUDED.return_status,
+  expected_date = EXCLUDED.expected_date,
+  notes = EXCLUDED.notes,
+  created_by = EXCLUDED.created_by,
+  created_at = EXCLUDED.created_at,
+  updated_at = EXCLUDED.updated_at;
+
+WITH product_seed AS (
+  SELECT
+    p.id AS product_id,
+    CAST(row_number() OVER (ORDER BY p.id) AS integer) AS product_number,
+    18 + ((CAST(row_number() OVER (ORDER BY p.id) AS integer) - 1) % 7) * 7 AS received_quantity,
+    round((5.50 + CAST(row_number() OVER (ORDER BY p.id) AS integer) * 1.35)::numeric, 2) AS seeded_cost_price
+  FROM stoqr.products p
+  WHERE p.company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+),
+item_seed AS (
+  SELECT
+    product_seed.product_id,
+    product_seed.product_number,
+    product_seed.received_quantity,
+    product_seed.seeded_cost_price,
+    (
+      substr(item_hash, 1, 8) || '-' ||
+      substr(item_hash, 9, 4) || '-' ||
+      substr(item_hash, 13, 4) || '-' ||
+      substr(item_hash, 17, 4) || '-' ||
+      substr(item_hash, 21, 12)
+    )::uuid AS item_id,
+    (
+      substr(po_hash, 1, 8) || '-' ||
+      substr(po_hash, 9, 4) || '-' ||
+      substr(po_hash, 13, 4) || '-' ||
+      substr(po_hash, 17, 4) || '-' ||
+      substr(po_hash, 21, 12)
+    )::uuid AS po_id
+  FROM (
+    SELECT
+      product_seed.*,
+      md5('stoqr-generated-po-item:' || product_seed.product_id::text) AS item_hash,
+      md5('stoqr-generated-po:' || product_seed.product_id::text) AS po_hash
+    FROM product_seed
+  ) product_seed
+)
+INSERT INTO stoqr.purchase_order_items (
+  id,
+  po_id,
+  product_id,
+  quantity_ordered,
+  quantity_received,
+  unit_cost
+)
+SELECT
+  item_seed.item_id,
+  item_seed.po_id,
+  item_seed.product_id,
+  item_seed.received_quantity + CASE WHEN item_seed.product_number % 9 = 0 THEN 6 ELSE 0 END,
+  item_seed.received_quantity,
+  item_seed.seeded_cost_price
+FROM item_seed
+ON CONFLICT (id) DO UPDATE
+SET
+  po_id = EXCLUDED.po_id,
+  product_id = EXCLUDED.product_id,
+  quantity_ordered = EXCLUDED.quantity_ordered,
+  quantity_received = EXCLUDED.quantity_received,
+  unit_cost = EXCLUDED.unit_cost;
+
+WITH product_seed AS (
+  SELECT
+    p.id AS product_id,
+    CAST(row_number() OVER (ORDER BY p.id) AS integer) AS product_number,
+    18 + ((CAST(row_number() OVER (ORDER BY p.id) AS integer) - 1) % 7) * 7 AS received_quantity
+  FROM stoqr.products p
+  WHERE p.company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+),
+receiving_seed AS (
+  SELECT
+    product_seed.product_id,
+    product_seed.product_number,
+    product_seed.received_quantity,
+    (
+      substr(log_hash, 1, 8) || '-' ||
+      substr(log_hash, 9, 4) || '-' ||
+      substr(log_hash, 13, 4) || '-' ||
+      substr(log_hash, 17, 4) || '-' ||
+      substr(log_hash, 21, 12)
+    )::uuid AS log_id,
+    (
+      substr(po_hash, 1, 8) || '-' ||
+      substr(po_hash, 9, 4) || '-' ||
+      substr(po_hash, 13, 4) || '-' ||
+      substr(po_hash, 17, 4) || '-' ||
+      substr(po_hash, 21, 12)
+    )::uuid AS po_id,
+    timezone('utc'::text, now()) - make_interval(days => 28 - ((product_seed.product_number - 1) % 14)) AS received_at
+  FROM (
+    SELECT
+      product_seed.*,
+      md5('stoqr-generated-receiving:' || product_seed.product_id::text) AS log_hash,
+      md5('stoqr-generated-po:' || product_seed.product_id::text) AS po_hash
+    FROM product_seed
+  ) product_seed
+)
+INSERT INTO stoqr.receiving_logs (
+  id,
+  company_id,
+  po_id,
+  product_id,
+  quantity_received,
+  received_by,
+  received_at,
+  notes
+)
+SELECT
+  receiving_seed.log_id,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  receiving_seed.po_id,
+  receiving_seed.product_id,
+  receiving_seed.received_quantity,
+  CASE WHEN receiving_seed.product_number % 2 = 0 THEN '11111111-1111-1111-1111-111111111111'::uuid ELSE '33333333-3333-3333-3333-333333333333'::uuid END,
+  receiving_seed.received_at,
+  'Received seeded lot LOT-' || lpad(receiving_seed.product_number::text, 4, '0')
+FROM receiving_seed
+ON CONFLICT (id) DO UPDATE
+SET
+  company_id = EXCLUDED.company_id,
+  po_id = EXCLUDED.po_id,
+  product_id = EXCLUDED.product_id,
+  quantity_received = EXCLUDED.quantity_received,
+  received_by = EXCLUDED.received_by,
+  received_at = EXCLUDED.received_at,
+  notes = EXCLUDED.notes;
+
+WITH product_seed AS (
+  SELECT
+    p.id AS product_id,
+    CAST(row_number() OVER (ORDER BY p.id) AS integer) AS product_number,
+    18 + ((CAST(row_number() OVER (ORDER BY p.id) AS integer) - 1) % 7) * 7 AS received_quantity,
+    2 + ((CAST(row_number() OVER (ORDER BY p.id) AS integer) - 1) % 5) * 2 AS sale_quantity
+  FROM stoqr.products p
+  WHERE p.company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+),
+transaction_seed AS (
+  SELECT
+    product_seed.product_id,
+    product_seed.product_number,
+    product_seed.received_quantity,
+    product_seed.sale_quantity,
+    product_seed.received_quantity - product_seed.sale_quantity AS stock_after_sale,
+    (
+      substr(purchase_hash, 1, 8) || '-' ||
+      substr(purchase_hash, 9, 4) || '-' ||
+      substr(purchase_hash, 13, 4) || '-' ||
+      substr(purchase_hash, 17, 4) || '-' ||
+      substr(purchase_hash, 21, 12)
+    )::uuid AS purchase_tx_id,
+    (
+      substr(sale_hash, 1, 8) || '-' ||
+      substr(sale_hash, 9, 4) || '-' ||
+      substr(sale_hash, 13, 4) || '-' ||
+      substr(sale_hash, 17, 4) || '-' ||
+      substr(sale_hash, 21, 12)
+    )::uuid AS sale_tx_id,
+    timezone('utc'::text, now()) - make_interval(days => 12 - ((product_seed.product_number - 1) % 5)) AS purchase_at,
+    timezone('utc'::text, now()) - make_interval(mins => product_seed.product_number * 11) AS sale_at
+  FROM (
+    SELECT
+      product_seed.*,
+      md5('stoqr-generated-purchase-tx:' || product_seed.product_id::text) AS purchase_hash,
+      md5('stoqr-generated-sale-tx:' || product_seed.product_id::text) AS sale_hash
+    FROM product_seed
+  ) product_seed
+)
+INSERT INTO stoqr.inventory_transactions (
+  id,
+  company_id,
+  product_id,
+  performed_by,
+  transaction_type,
+  source,
+  quantity_change,
+  stock_after,
+  notes,
+  created_at
+)
+SELECT
+  transaction_seed.purchase_tx_id,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  transaction_seed.product_id,
+  CASE WHEN transaction_seed.product_number % 2 = 0 THEN '11111111-1111-1111-1111-111111111111'::uuid ELSE '33333333-3333-3333-3333-333333333333'::uuid END,
+  'purchase',
+  'receiving',
+  transaction_seed.received_quantity,
+  transaction_seed.received_quantity,
+  'LOT-' || lpad(transaction_seed.product_number::text, 4, '0') || ' inbound replenishment',
+  transaction_seed.purchase_at
+FROM transaction_seed
+UNION ALL
+SELECT
+  transaction_seed.sale_tx_id,
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+  transaction_seed.product_id,
+  CASE WHEN transaction_seed.product_number % 2 = 0 THEN '33333333-3333-3333-3333-333333333333'::uuid ELSE '11111111-1111-1111-1111-111111111111'::uuid END,
+  'sale',
+  'manual',
+  -transaction_seed.sale_quantity,
+  transaction_seed.stock_after_sale,
+  'LOT-' || lpad(transaction_seed.product_number::text, 4, '0') || ' released to customer order',
+  transaction_seed.sale_at
+FROM transaction_seed
+ON CONFLICT (id) DO UPDATE
+SET
+  company_id = EXCLUDED.company_id,
+  product_id = EXCLUDED.product_id,
+  performed_by = EXCLUDED.performed_by,
+  transaction_type = EXCLUDED.transaction_type,
+  source = EXCLUDED.source,
+  quantity_change = EXCLUDED.quantity_change,
+  stock_after = EXCLUDED.stock_after,
+  notes = EXCLUDED.notes,
+  created_at = EXCLUDED.created_at;
+
+WITH product_seed AS (
+  SELECT
+    p.id AS product_id,
+    CAST(row_number() OVER (ORDER BY p.id) AS integer) AS product_number
+  FROM stoqr.products p
+  WHERE p.company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+),
+attachment_seed AS (
+  SELECT
+    product_seed.product_id,
+    product_seed.product_number,
+    (
+      substr(object_hash, 1, 8) || '-' ||
+      substr(object_hash, 9, 4) || '-' ||
+      substr(object_hash, 13, 4) || '-' ||
+      substr(object_hash, 17, 4) || '-' ||
+      substr(object_hash, 21, 12)
+    )::uuid AS object_id,
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/' || product_seed.product_id::text || '/' ||
+      CASE product_seed.product_number % 3
+        WHEN 0 THEN 'sds-' || lpad(product_seed.product_number::text, 3, '0') || '.pdf'
+        WHEN 1 THEN 'coa-' || lpad(product_seed.product_number::text, 3, '0') || '.pdf'
+        ELSE 'manual-' || lpad(product_seed.product_number::text, 3, '0') || '.pdf'
+      END AS object_name,
+    md5('stoqr-attachment-version:' || product_seed.product_id::text) AS object_version
+  FROM (
+    SELECT
+      product_seed.*,
+      md5('stoqr-attachment:' || product_seed.product_id::text) AS object_hash
+    FROM product_seed
+  ) product_seed
+)
+INSERT INTO storage.objects (
+  id,
+  bucket_id,
+  name,
+  owner,
+  owner_id,
+  metadata,
+  user_metadata,
+  version,
+  created_at,
+  updated_at,
+  last_accessed_at
+)
+SELECT
+  attachment_seed.object_id,
+  'product-images',
+  attachment_seed.object_name,
+  '11111111-1111-1111-1111-111111111111',
+  '11111111-1111-1111-1111-111111111111',
+  jsonb_build_object(
+    'size', 15360 + attachment_seed.product_number * 512,
+    'mimetype', 'application/pdf',
+    'cacheControl', '3600'
+  ),
+  jsonb_build_object(
+    'seeded', true,
+    'label', 'Mock product attachment'
+  ),
+  attachment_seed.object_version,
+  timezone('utc'::text, now()) - make_interval(days => attachment_seed.product_number),
+  timezone('utc'::text, now()) - make_interval(days => attachment_seed.product_number),
+  timezone('utc'::text, now()) - make_interval(days => attachment_seed.product_number)
+FROM attachment_seed
+ON CONFLICT (id) DO UPDATE
+SET
+  bucket_id = EXCLUDED.bucket_id,
+  name = EXCLUDED.name,
+  owner = EXCLUDED.owner,
+  owner_id = EXCLUDED.owner_id,
+  metadata = EXCLUDED.metadata,
+  user_metadata = EXCLUDED.user_metadata,
+  version = EXCLUDED.version,
+  created_at = EXCLUDED.created_at,
+  updated_at = EXCLUDED.updated_at,
+  last_accessed_at = EXCLUDED.last_accessed_at;
 
 INSERT INTO stoqr.report_schedules (
   id,

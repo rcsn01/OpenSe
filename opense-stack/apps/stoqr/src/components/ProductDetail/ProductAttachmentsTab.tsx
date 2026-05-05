@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { FileText } from 'lucide-react'
 import { EmptyState } from '../EmptyState'
 import {
   getProductAttachmentPublicUrl,
@@ -11,8 +12,24 @@ import {
 
 export const ProductAttachmentsTab = ({ productId, companyId }: { productId: string; companyId: string }) => {
   const [uploading, setUploading] = useState(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const { data: files = [], isLoading } = useProductAttachments(companyId, productId)
   const uploadMutation = useUploadProductAttachment(companyId, productId)
+
+  const formatFileSize = (size: number) => {
+    if (size >= 1024 * 1024) {
+      const mb = size / (1024 * 1024)
+      return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`
+    }
+
+    if (size >= 1024) {
+      return `${(size / 1024).toFixed(1)} KB`
+    }
+
+    return `${size} B`
+  }
+
+  const formatDateLabel = (value: string) => new Date(value).toISOString().slice(0, 10)
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -34,60 +51,45 @@ export const ProductAttachmentsTab = ({ productId, companyId }: { productId: str
   }
 
   return (
-    <div className="stack">
-      <div className="card stack">
-        <div className="flex-between">
-          <div>
-            <h3 className="section-title">Files & Compliance</h3>
-            <p className="muted small">SDS, Manuals, Warranty Info, etc.</p>
-          </div>
-          <label className={`button small ${uploading ? 'secondary' : ''}`}>
-            {uploading ? 'Uploading...' : 'Upload File'}
-            <input type="file" hidden onChange={handleUpload} accept=".pdf,.doc,.docx,.xls,.xlsx" />
-          </label>
+    <section className="product-tab-shell" aria-label="Files">
+      <div className="product-tab-header">
+        <div>
+          <h3 className="product-tab-title">Uploaded Documents</h3>
         </div>
-
-        {isLoading ? (
-          <div className="empty-state">Loading files...</div>
-        ) : files.length === 0 ? (
-          <EmptyState title="No attachments" description="Upload PDFs or documents for this product." />
-        ) : (
-          <div className="list">
-            {files.map((f: ProductAttachment) => (
-              <div key={f.id} className="card" style={{ boxShadow: 'none', background: '#f8fafc', padding: 12 }}>
-                <div className="flex-between">
-                  <div className="row">
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        background: '#cbd5e1',
-                        borderRadius: 6,
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontSize: 'var(--type-size-2xs)',
-                        fontWeight: 'var(--type-weight-bold)',
-                        color: '#475569',
-                      }}
-                    >
-                      {f.name.split('.').pop()?.toUpperCase().slice(0, 3)}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 'var(--type-weight-medium)', fontSize: 'var(--type-size-sm)' }}>{f.name}</div>
-                      <div className="small muted">
-                        {(f.size / 1024).toFixed(1)} KB &middot; {new Date(f.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
-                  <button className="button ghost small" onClick={() => handleDownload(f.name)}>
-                    View
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <button
+          type="button"
+          className="product-section-link"
+          onClick={() => inputRef.current?.click()}
+        >
+          {uploading ? 'Uploading…' : '+ Upload File'}
+        </button>
+        <input ref={inputRef} type="file" hidden onChange={handleUpload} accept=".pdf,.doc,.docx,.xls,.xlsx" />
       </div>
-    </div>
+
+      {isLoading ? (
+        <div className="empty-state">Loading files...</div>
+      ) : files.length === 0 ? (
+        <EmptyState title="No attachments" description="Upload PDFs or documents for this product." />
+      ) : (
+        <div className="product-file-list">
+          {files.map((file: ProductAttachment) => (
+            <button
+              key={file.id}
+              type="button"
+              className="product-file-row"
+              onClick={() => handleDownload(file.name)}
+            >
+              <span className="product-file-icon" aria-hidden="true">
+                <FileText size={18} />
+              </span>
+              <span className="product-file-copy">
+                <span className="product-file-name">{file.name}</span>
+                <span className="product-file-meta">{formatFileSize(file.size)} • Added {formatDateLabel(file.created_at)}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
