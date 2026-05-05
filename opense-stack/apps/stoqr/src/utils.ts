@@ -1,3 +1,5 @@
+import Papa from 'papaparse'
+
 import { getProductImagePublicUrl } from './api/storage'
 
 export const formatCurrency = (value: number | null | undefined) => {
@@ -22,21 +24,18 @@ export const getPublicImageUrl = (pathOrUrl: string) => {
 }
 
 export const parseCsv = (content: string) => {
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-
-  if (lines.length < 2) return { headers: [], rows: [] }
-
-  const headers = lines[0].split(',').map((header) => header.trim())
-  const rows = lines.slice(1).map((line) => {
-    const values = line.split(',').map((value) => value.trim())
-    return headers.reduce<Record<string, string>>((acc, header, index) => {
-      acc[header] = values[index] ?? ''
-      return acc
-    }, {})
+  const parsed = Papa.parse<Record<string, string | undefined>>(content, {
+    header: true,
+    skipEmptyLines: 'greedy',
+    transformHeader: (header) => header.trim(),
+    transform: (value) => value.trim(),
   })
+
+  const headers = (parsed.meta.fields ?? []).filter(Boolean)
+  const rows = parsed.data.map((row) => headers.reduce<Record<string, string>>((acc, header) => {
+    acc[header] = row[header] ?? ''
+    return acc
+  }, {}))
 
   return { headers, rows }
 }

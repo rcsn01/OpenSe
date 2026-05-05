@@ -63,14 +63,122 @@ describe('inventory api', () => {
   })
 
   it('returns 0 and avoids insert when import rows are empty/invalid', async () => {
-    const inserted = await importInventoryProducts('company-1', [
-      { name: '', sku: '' },
-      { Name: 'No SKU' },
-      { SKU: 'NO-NAME' },
-    ])
+    const inserted = await importInventoryProducts('company-1', {
+      rows: [
+        { name: '', sku: '' },
+        { Name: 'No SKU' },
+        { SKU: 'NO-NAME' },
+      ],
+      folderId: 'folder-1',
+      columnMappings: {
+        name: 'name',
+        sku: 'sku',
+        description: null,
+        cost_price: null,
+        selling_price: null,
+        quantity_on_hand: null,
+        reorder_point: null,
+      },
+      attributeColumns: [],
+    })
 
-    expect(inserted).toBe(0)
+    expect(inserted).toEqual({
+      importedCount: 0,
+      duplicateCount: 0,
+      invalidCount: 3,
+      duplicateSkus: [],
+    })
     expect(mockFrom).not.toHaveBeenCalled()
+  })
+
+  it('imports mapped fields, assigns folder, and skips duplicate skus', async () => {
+    const existingIn = vi.fn().mockResolvedValue({
+      data: [{ sku: 'SKU-2' }],
+      error: null,
+    })
+    const existingEq = vi.fn(() => ({ in: existingIn }))
+    const existingSelect = vi.fn(() => ({ eq: existingEq }))
+    const insert = vi.fn().mockResolvedValue({ error: null })
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'products') {
+        return {
+          select: existingSelect,
+          insert,
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const result = await importInventoryProducts('company-1', {
+      rows: [
+        {
+          Product: 'Widget',
+          SKU: 'SKU-1',
+          Description: 'Main widget',
+          Cost: '12.50',
+          Price: '21.99',
+          Stock: '8',
+          Alert: '3',
+          Color: 'Blue',
+        },
+        {
+          Product: 'Existing widget',
+          SKU: 'SKU-2',
+          Description: 'Duplicate in db',
+          Cost: '4',
+          Price: '9',
+          Stock: '5',
+          Alert: '2',
+          Color: 'Green',
+        },
+        {
+          Product: 'Repeated widget',
+          SKU: 'SKU-1',
+          Description: 'Duplicate in csv',
+          Cost: '4',
+          Price: '9',
+          Stock: '5',
+          Alert: '2',
+          Color: 'Green',
+        },
+      ],
+      folderId: 'folder-9',
+      columnMappings: {
+        name: 'Product',
+        sku: 'SKU',
+        description: 'Description',
+        cost_price: 'Cost',
+        selling_price: 'Price',
+        quantity_on_hand: 'Stock',
+        reorder_point: 'Alert',
+      },
+      attributeColumns: ['Color'],
+    })
+
+    expect(existingEq).toHaveBeenCalledWith('company_id', 'company-1')
+    expect(existingIn).toHaveBeenCalledWith('sku', ['SKU-1', 'SKU-2'])
+    expect(insert).toHaveBeenCalledWith([
+      {
+        company_id: 'company-1',
+        folder_id: 'folder-9',
+        name: 'Widget',
+        sku: 'SKU-1',
+        description: 'Main widget',
+        quantity_on_hand: 8,
+        reorder_point: 3,
+        cost_price: 12.5,
+        selling_price: 21.99,
+        custom_fields: { Color: 'Blue' },
+      },
+    ])
+    expect(result).toEqual({
+      importedCount: 1,
+      duplicateCount: 2,
+      invalidCount: 0,
+      duplicateSkus: ['SKU-1', 'SKU-2'],
+    })
   })
 
   it('applies pagination boundaries and low-stock filtering', async () => {
