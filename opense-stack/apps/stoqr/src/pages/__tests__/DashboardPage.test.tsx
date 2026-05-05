@@ -195,14 +195,15 @@ describe('DashboardPage', () => {
   it('renders the redesigned dashboard sections with live data', () => {
     renderPage()
 
-    expect(screen.getByText('Total Inventory Value')).toBeInTheDocument()
-    expect(screen.getByText('Total Items / SKUs')).toBeInTheDocument()
-    expect(screen.getByText('Items Out of Stock')).toBeInTheDocument()
-    expect(screen.getByText('Low Stock Items')).toBeInTheDocument()
-    expect(screen.getByText('Inbound vs. Outbound Volume')).toBeInTheDocument()
-    expect(screen.getByText('Needs Attention')).toBeInTheDocument()
+    expect(screen.getByText('Total Value')).toBeInTheDocument()
+    expect(screen.getByText('Total Items')).toBeInTheDocument()
+    expect(screen.getByText('Pending POs')).toBeInTheDocument()
+    expect(screen.getByText('Out of Stock')).toBeInTheDocument()
+    expect(screen.getByText('Low Stock')).toBeInTheDocument()
+    expect(screen.getByText('Inbound vs Outbound Volume')).toBeInTheDocument()
+    expect(screen.getByText('Actionable Alerts')).toBeInTheDocument()
     expect(screen.getByText('Expected Deliveries')).toBeInTheDocument()
-    expect(screen.getByText('TechSupply Inc.')).toBeInTheDocument()
+    expect(screen.getAllByText('TechSupply Inc.').length).toBeGreaterThan(0)
     expect(screen.getByText('Stockout: Lithium Batteries')).toBeInTheDocument()
   })
 

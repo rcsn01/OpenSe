@@ -8,14 +8,14 @@ test.describe('Stoqr Dashboard', () => {
     await dashboard.goto();
     await expect(authenticatedPage).toHaveURL(/\/dashboard(?:\?|$)/);
 
-    await expect(authenticatedPage.getByText('Total Inventory Value').first()).toBeVisible();
-    await expect(authenticatedPage.getByText('Total Items / SKUs').first()).toBeVisible();
-    await expect(authenticatedPage.getByText('Items Out of Stock').first()).toBeVisible();
-    await expect(authenticatedPage.getByText('Low Stock Items').first()).toBeVisible();
-    await expect(authenticatedPage.getByText('Inbound vs. Outbound Volume').first()).toBeVisible();
-    await expect(authenticatedPage.getByText('Needs Attention').first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Total Value').first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Total Items').first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Pending POs').first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Out of Stock').first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Low Stock').first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Inbound vs Outbound Volume').first()).toBeVisible();
+    await expect(authenticatedPage.getByText('Actionable Alerts').first()).toBeVisible();
     await expect(authenticatedPage.getByText('Item Velocity').first()).toBeVisible();
     await expect(authenticatedPage.getByText('Expected Deliveries').first()).toBeVisible();
-    await expect(authenticatedPage.getByRole('button', { name: /view all alerts/i })).toBeVisible();
   });
 });

@@ -1,297 +1,120 @@
 .stoqr-dashboard {
   display: flex;
   flex-direction: column;
-  gap: clamp(8px, 1.1vh, 12px);
+  gap: 28px;
   width: 100%;
   min-width: 0;
+  color: #0f172a;
 }
 
-.stoqr-dashboard__stats {
+.stoqr-dashboard__summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(8px, 1vh, 10px);
-  min-width: 0;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(223, 227, 236, 0.92);
 }
 
-.stoqr-dashboard__grid {
-  display: grid;
-  gap: clamp(8px, 1.1vh, 12px);
-  min-width: 0;
-}
-
-.stoqr-dashboard__grid--top {
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-}
-
-.stoqr-dashboard__grid--bottom {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-}
-
-.stoqr-dashboard__panel {
+.stoqr-dashboard__metric {
   display: flex;
   flex-direction: column;
-  gap: clamp(8px, 1vh, 10px);
+  gap: 8px;
   min-width: 0;
 }
 
-.stoqr-dashboard__panel--attention {
-  min-height: 100%;
-}
-
-.stoqr-dashboard__panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.stoqr-dashboard__panel-header--stacked {
-  align-items: flex-start;
-}
-
-.stoqr-dashboard__panel-title,
-.stoqr-dashboard__panel-title-block {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.stoqr-dashboard__panel-title {
-  color: var(--color-foreground);
-}
-
-.stoqr-dashboard__panel-heading {
+.stoqr-dashboard__metric-label {
   margin: 0;
-  font-size: var(--type-size-sm);
-  font-weight: var(--type-weight-semibold);
-  letter-spacing: -0.01em;
-  line-height: 1.15;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.stoqr-dashboard__panel-meta {
-  color: var(--color-muted-foreground);
-  font-size: var(--type-size-xs);
-  font-weight: var(--type-weight-medium);
-}
-
-.stoqr-dashboard__panel-footer {
-  margin-top: auto;
-  padding-top: 4px;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
-}
-
-.stoqr-dashboard__empty-panel {
-  display: grid;
-  place-items: center;
-  min-height: clamp(120px, 16vh, 148px);
-  padding: 12px;
-  text-align: center;
-  color: var(--color-muted-foreground);
-  font-size: var(--type-size-xs);
-}
-
-.stoqr-dashboard__stat-card {
-  --dashboard-accent: var(--color-primary);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: clamp(92px, 12vh, 108px);
-  overflow: hidden;
-  border-color: color-mix(in srgb, var(--dashboard-accent) 28%, var(--color-border));
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--dashboard-accent) 5%, var(--color-card)) 0%, var(--color-card) 72%),
-    var(--color-card);
-}
-
-.stoqr-dashboard__stat-card > * {
-  position: relative;
-  z-index: 1;
-}
-
-.stoqr-dashboard__stat-card--value {
-  --dashboard-accent: var(--color-success);
-}
-
-.stoqr-dashboard__stat-card--catalog {
-  --dashboard-accent: #3b82f6;
-}
-
-.stoqr-dashboard__stat-card--critical {
-  --dashboard-accent: var(--color-destructive);
-}
-
-.stoqr-dashboard__stat-card--warning {
-  --dashboard-accent: var(--color-warning);
-}
-
-.stoqr-dashboard__stat-header,
-.stoqr-dashboard__stat-value-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.stoqr-dashboard__stat-label {
-  margin: 0;
-  color: var(--color-muted-foreground);
-  font-size: 0.65rem;
-  font-weight: var(--type-weight-semibold);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  line-height: 1.15;
-}
-
-.stoqr-dashboard__stat-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--dashboard-accent) 10%, var(--color-card));
-  color: var(--dashboard-accent);
-}
-
-.stoqr-dashboard__stat-value {
-  font-size: clamp(1.2rem, 1.7vw, 1.55rem);
+.stoqr-dashboard__metric-value {
+  font-size: clamp(1.5rem, 2.1vw, 2rem);
+  font-weight: 500;
   line-height: 1;
-  font-weight: var(--type-weight-bold);
-  font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
-.stoqr-dashboard__stat-trend {
+.stoqr-dashboard__metric-accent {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.7rem;
-  font-weight: var(--type-weight-semibold);
-  white-space: nowrap;
-  line-height: 1.1;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.stoqr-dashboard__stat-trend.is-up {
-  color: var(--color-success);
+.stoqr-dashboard__metric-accent.is-up {
+  color: #059669;
 }
 
-.stoqr-dashboard__stat-trend.is-down {
-  color: var(--color-warning);
+.stoqr-dashboard__metric-accent.is-down {
+  color: #059669;
 }
 
-.stoqr-dashboard__stat-trend.is-neutral {
-  color: var(--color-muted-foreground);
+.stoqr-dashboard__metric-accent.is-neutral {
+  color: #64748b;
 }
 
-.stoqr-dashboard__stat-footnote {
+.stoqr-dashboard__metric--warning .stoqr-dashboard__metric-accent,
+.stoqr-dashboard__metric--danger .stoqr-dashboard__metric-accent {
+  color: #ef4444;
+}
+
+.stoqr-dashboard__metric-detail {
   margin: 0;
-  color: var(--color-muted-foreground);
-  font-size: 0.72rem;
-  line-height: 1.15;
+  color: #94a3b8;
+  font-size: 12px;
 }
 
-.stoqr-dashboard__sparkline {
-  width: 100%;
-  height: 34px;
-  margin-top: auto;
-}
-
-.stoqr-dashboard__spark-line {
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.stoqr-dashboard__spark-line--value,
-.stoqr-dashboard__spark-stop--value {
-  stroke: var(--color-success);
-  stop-color: var(--color-success);
-}
-
-.stoqr-dashboard__spark-line--catalog,
-.stoqr-dashboard__spark-stop--catalog {
-  stroke: #3b82f6;
-  stop-color: #3b82f6;
-}
-
-.stoqr-dashboard__spark-line--critical,
-.stoqr-dashboard__spark-stop--critical {
-  stroke: var(--color-destructive);
-  stop-color: var(--color-destructive);
-}
-
-.stoqr-dashboard__spark-line--warning,
-.stoqr-dashboard__spark-stop--warning {
-  stroke: var(--color-warning);
-  stop-color: var(--color-warning);
-}
-
-.stoqr-dashboard__chart-area {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.stoqr-dashboard__layout {
+  display: grid;
+  gap: 28px;
   min-width: 0;
 }
 
-.stoqr-dashboard__chart-svg {
-  width: 100%;
-  height: auto;
+.stoqr-dashboard__layout--primary,
+.stoqr-dashboard__layout--secondary {
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.95fr);
 }
 
-.stoqr-dashboard__chart-grid {
-  stroke: color-mix(in srgb, var(--color-border) 90%, transparent);
-  stroke-width: 1;
+.stoqr-dashboard__section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
 }
 
-.stoqr-dashboard__chart-line {
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.stoqr-dashboard__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.stoqr-dashboard__chart-line--inbound {
-  stroke: #3b82f6;
+.stoqr-dashboard__section-header--compact {
+  align-items: flex-start;
 }
 
-.stoqr-dashboard__chart-line--outbound {
-  stroke: #6366f1;
+.stoqr-dashboard__section-title {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.stoqr-dashboard__chart-dot {
-  stroke: var(--color-card);
-  stroke-width: 1.25;
-}
-
-.stoqr-dashboard__chart-dot--inbound {
-  fill: #3b82f6;
-}
-
-.stoqr-dashboard__chart-dot--outbound {
-  fill: #6366f1;
-}
-
-.stoqr-dashboard__chart-axis-label {
-  fill: var(--color-muted-foreground);
-  font-size: 10px;
-}
-
-.stoqr-dashboard__chart-legend {
+.stoqr-dashboard__legend {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  color: var(--color-muted-foreground);
-  font-size: 0.72rem;
-}
-
-.stoqr-dashboard__chart-empty-note {
-  margin: 0;
-  text-align: center;
-  color: var(--color-muted-foreground);
-  font-size: 0.72rem;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .stoqr-dashboard__legend-item {
@@ -300,122 +123,234 @@
   gap: 6px;
 }
 
-.stoqr-dashboard__legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-}
-
-.stoqr-dashboard__legend-dot--inbound {
-  background: #3b82f6;
-}
-
-.stoqr-dashboard__legend-dot--outbound {
-  background: #6366f1;
-}
-
-.stoqr-dashboard__attention-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.stoqr-dashboard__attention-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
-}
-
-.stoqr-dashboard__attention-item:last-child {
-  border-bottom: none;
-}
-
-.stoqr-dashboard__attention-main {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-}
-
-.stoqr-dashboard__attention-dot {
+.stoqr-dashboard__legend-swatch {
   width: 7px;
   height: 7px;
+  border-radius: 2px;
+}
+
+.stoqr-dashboard__legend-swatch--inbound {
+  background: #e2e8f0;
+}
+
+.stoqr-dashboard__legend-swatch--outbound {
+  background: #1e293b;
+}
+
+.stoqr-dashboard__movement {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 18px;
+  align-items: end;
+  min-height: 180px;
+  padding-top: 6px;
+}
+
+.stoqr-dashboard__movement-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.stoqr-dashboard__movement-bars {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: 116px;
+}
+
+.stoqr-dashboard__movement-bar {
+  width: 13px;
+  border-radius: 0;
+}
+
+.stoqr-dashboard__movement-bar--inbound {
+  background: #e2e8f0;
+}
+
+.stoqr-dashboard__movement-bar--outbound {
+  background: #1e293b;
+}
+
+.stoqr-dashboard__movement-label {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.stoqr-dashboard__alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stoqr-dashboard__alert-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.stoqr-dashboard__alert-dot {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid currentColor;
   border-radius: 999px;
   margin-top: 5px;
-  flex-shrink: 0;
 }
 
-.stoqr-dashboard__attention-dot.is-critical {
-  background: var(--color-destructive);
+.stoqr-dashboard__alert-dot.is-critical {
+  color: #ef4444;
 }
 
-.stoqr-dashboard__attention-dot.is-high,
-.stoqr-dashboard__attention-dot.is-medium {
-  background: var(--color-warning);
+.stoqr-dashboard__alert-dot.is-high,
+.stoqr-dashboard__alert-dot.is-medium {
+  color: #f59e0b;
 }
 
-.stoqr-dashboard__attention-dot.is-low {
-  background: var(--color-secondary);
+.stoqr-dashboard__alert-dot.is-low {
+  color: #3b82f6;
 }
 
-.stoqr-dashboard__attention-copy {
+.stoqr-dashboard__alert-copy {
   min-width: 0;
-  overflow-wrap: anywhere;
 }
 
-.stoqr-dashboard__attention-title,
-.stoqr-dashboard__attention-subtitle,
-.stoqr-dashboard__attention-detail {
+.stoqr-dashboard__alert-title,
+.stoqr-dashboard__alert-detail,
+.stoqr-dashboard__alert-time {
   margin: 0;
 }
 
-.stoqr-dashboard__attention-title {
-  font-size: 0.82rem;
-  font-weight: var(--type-weight-semibold);
-  color: var(--color-foreground);
-  line-height: 1.2;
+.stoqr-dashboard__alert-title {
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.stoqr-dashboard__attention-subtitle,
-.stoqr-dashboard__attention-detail {
-  font-size: 0.72rem;
-  color: var(--color-muted-foreground);
-  line-height: 1.15;
+.stoqr-dashboard__alert-detail,
+.stoqr-dashboard__alert-time {
+  color: #94a3b8;
+  font-size: 11px;
 }
 
-.stoqr-dashboard__attention-detail {
-  margin-top: 2px;
+.stoqr-dashboard__alert-time {
+  white-space: nowrap;
 }
 
-.stoqr-dashboard__velocity-tabs {
-  width: 100%;
-}
-
-.stoqr-dashboard__velocity-tabbar {
-  display: flex;
-  width: 100%;
-  gap: 12px;
-  border-bottom: 1px solid var(--color-border);
+.stoqr-dashboard__deliveries-desktop {
   overflow-x: auto;
 }
 
-.stoqr-dashboard__velocity-tab {
-  padding: 0 0 6px;
-  border-bottom: 2px solid transparent;
-  font-size: 0.72rem;
-  font-weight: var(--type-weight-medium);
+.stoqr-dashboard__deliveries-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
 }
 
-.stoqr-dashboard__velocity-tab.is-active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+.stoqr-dashboard__deliveries-table th,
+.stoqr-dashboard__deliveries-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(223, 227, 236, 0.92);
+  text-align: left;
+  font-size: 13px;
 }
 
-.stoqr-dashboard__velocity-tab.is-inactive {
-  color: var(--color-muted-foreground);
+.stoqr-dashboard__deliveries-table th {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stoqr-dashboard__deliveries-table td {
+  color: #334155;
+}
+
+.stoqr-dashboard__status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stoqr-dashboard__status-pill.is-on-time {
+  color: #059669;
+}
+
+.stoqr-dashboard__status-pill.is-delayed {
+  color: #ef4444;
+}
+
+.stoqr-dashboard__status-pill.is-pending {
+  color: #f59e0b;
+}
+
+.stoqr-dashboard__deliveries-mobile {
+  display: none;
+}
+
+.stoqr-dashboard__delivery-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(223, 227, 236, 0.92);
+}
+
+.stoqr-dashboard__delivery-card:last-child {
+  border-bottom: 0;
+}
+
+.stoqr-dashboard__delivery-card-row,
+.stoqr-dashboard__delivery-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stoqr-dashboard__delivery-card-po,
+.stoqr-dashboard__delivery-card-vendor,
+.stoqr-dashboard__velocity-name,
+.stoqr-dashboard__velocity-rate {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stoqr-dashboard__delivery-card-vendor,
+.stoqr-dashboard__delivery-card-meta,
+.stoqr-dashboard__velocity-sku {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.stoqr-dashboard__velocity-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stoqr-dashboard__velocity-toggle-button {
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stoqr-dashboard__velocity-toggle-button.is-active {
+  color: #0f172a;
 }
 
 .stoqr-dashboard__velocity-list {
@@ -423,17 +358,24 @@
   flex-direction: column;
 }
 
-.stoqr-dashboard__velocity-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(84px, 1fr) auto;
+.stoqr-dashboard__velocity-row {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(223, 227, 236, 0.92);
 }
 
-.stoqr-dashboard__velocity-item:last-child {
-  border-bottom: none;
+.stoqr-dashboard__velocity-row:last-child {
+  border-bottom: 0;
+}
+
+.stoqr-dashboard__velocity-copy,
+.stoqr-dashboard__velocity-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .stoqr-dashboard__velocity-copy {
@@ -442,130 +384,114 @@
 
 .stoqr-dashboard__velocity-name,
 .stoqr-dashboard__velocity-sku,
-.stoqr-dashboard__velocity-metric {
+.stoqr-dashboard__velocity-rate,
+.stoqr-dashboard__velocity-status {
   margin: 0;
 }
 
-.stoqr-dashboard__velocity-name {
-  font-size: 0.82rem;
-  font-weight: var(--type-weight-semibold);
-  color: var(--color-foreground);
-  line-height: 1.15;
-}
-
-.stoqr-dashboard__velocity-sku {
-  font-size: 0.72rem;
-  color: var(--color-muted-foreground);
-  line-height: 1.1;
-}
-
-.stoqr-dashboard__velocity-bar-track {
-  position: relative;
-  height: 3px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-success) 12%, var(--color-card));
-  overflow: hidden;
-}
-
-.stoqr-dashboard__velocity-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #34d399 0%, #22c55e 100%);
-}
-
-.stoqr-dashboard__velocity-metric {
-  font-size: 0.72rem;
-  font-weight: var(--type-weight-semibold);
-  color: var(--color-foreground);
-  white-space: nowrap;
-  line-height: 1.1;
-}
-
-.stoqr-dashboard__table-scroll {
-  overflow: auto;
-}
-
-.stoqr-dashboard__deliveries-table {
-  min-width: 100%;
-}
-
-.stoqr-dashboard__deliveries-table th,
-.stoqr-dashboard__deliveries-table td {
-  padding: 8px 10px;
-}
-
-.stoqr-dashboard__table-head--right {
-  text-align: right;
-}
-
-.stoqr-dashboard__delivery-vendor {
-  font-size: 0.82rem;
-  font-weight: var(--type-weight-semibold);
-  color: var(--color-foreground);
-  line-height: 1.15;
-}
-
-.stoqr-dashboard__delivery-po,
-.stoqr-dashboard__delivery-items {
-  color: var(--color-muted-foreground);
-  font-size: 0.72rem;
-  overflow-wrap: anywhere;
-  line-height: 1.15;
-}
-
-.stoqr-dashboard__delivery-expected {
-  display: flex;
-  flex-direction: column;
+.stoqr-dashboard__velocity-meta {
   align-items: flex-end;
-  gap: 4px;
   text-align: right;
-  font-size: 0.72rem;
-  color: var(--color-foreground);
-  line-height: 1.1;
 }
 
-@media (max-height: 860px) and (min-width: 1024px) {
+.stoqr-dashboard__velocity-status {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.stoqr-dashboard__velocity-status.is-high {
+  color: #059669;
+}
+
+.stoqr-dashboard__velocity-status.is-medium {
+  color: #f59e0b;
+}
+
+.stoqr-dashboard__velocity-status.is-low {
+  color: #ef4444;
+}
+
+.stoqr-dashboard__empty-panel {
+  display: grid;
+  place-items: center;
+  min-height: 148px;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 1240px) {
+  .stoqr-dashboard__summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .stoqr-dashboard__layout--primary,
+  .stoqr-dashboard__layout--secondary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
   .stoqr-dashboard {
-    --dashboard-scale: 0.88;
-    zoom: var(--dashboard-scale);
-    width: calc(100% / var(--dashboard-scale));
-  }
-}
-
-@media (max-width: 1220px) {
-  .stoqr-dashboard__stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
   }
 
-  .stoqr-dashboard__grid--top,
-  .stoqr-dashboard__grid--bottom {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 720px) {
-  .stoqr-dashboard__stats {
-    grid-template-columns: 1fr;
+  .stoqr-dashboard__summary {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 14px;
   }
 
-  .stoqr-dashboard__panel-header,
-  .stoqr-dashboard__stat-header,
-  .stoqr-dashboard__stat-value-row {
+  .stoqr-dashboard__section-header,
+  .stoqr-dashboard__delivery-card-row,
+  .stoqr-dashboard__delivery-card-meta,
+  .stoqr-dashboard__velocity-row {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .stoqr-dashboard__velocity-item {
-    grid-template-columns: 1fr;
+  .stoqr-dashboard__alert-row {
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .stoqr-dashboard__delivery-expected {
+  .stoqr-dashboard__alert-time {
+    grid-column: 2;
+  }
+
+  .stoqr-dashboard__deliveries-desktop {
+    display: none;
+  }
+
+  .stoqr-dashboard__deliveries-mobile {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stoqr-dashboard__velocity-meta {
     align-items: flex-start;
     text-align: left;
   }
+}
 
-  .stoqr-dashboard__attention-item {
-    flex-direction: column;
+@media (max-width: 560px) {
+  .stoqr-dashboard__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .stoqr-dashboard__movement {
+    gap: 10px;
+  }
+
+  .stoqr-dashboard__movement-bars {
+    height: 92px;
+    gap: 5px;
+  }
+
+  .stoqr-dashboard__movement-bar {
+    width: 11px;
+  }
+
+  .stoqr-dashboard__legend,
+  .stoqr-dashboard__velocity-toggle {
+    flex-wrap: wrap;
   }
 }
