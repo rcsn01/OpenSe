@@ -58,7 +58,10 @@ export const fetchLabelProducts = async (
 
   if (error) throw error
 
-  return (data as LabelProduct[] | null) ?? []
+  return (((data as LabelProduct[] | null) ?? []).map((product) => ({
+    ...product,
+    sku: product.sku ?? '',
+  })))
 }
 
 export const fetchLabelProductFolders = async (companyId: string): Promise<LabelProductFolder[]> => {

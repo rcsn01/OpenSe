@@ -51,7 +51,7 @@ export const ProductDetailPage = () => {
                     product={product}
                     transactions={transactions}
                     images={images}
-                    qrValue={product.sku || product.id}
+                    qrValue={product.id}
                   />
                 ),
               },

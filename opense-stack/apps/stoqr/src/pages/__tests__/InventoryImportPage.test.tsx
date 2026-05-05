@@ -143,4 +143,45 @@ describe('InventoryImportPage', () => {
     const nameOption = within(secondSelect).getByRole('option', { name: 'Product Name *' })
     expect(nameOption).toBeDisabled()
   })
+
+  it('allows importing when only Product Name is mapped', async () => {
+    render(
+      <MemoryRouter initialEntries={[
+        {
+          pathname: '/inventory/import',
+          state: {
+            csvUpload: {
+              fileName: 'no-sku.csv',
+              headers: ['Product Name', 'Description'],
+              rows: [{ 'Product Name': 'Widget', Description: 'No sku needed' }],
+              initialFolderId: null,
+            },
+          },
+        },
+      ]}>
+        <Routes>
+          <Route path="/inventory/import" element={<InventoryImportPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const importButton = await screen.findByRole('button', { name: 'Import Products' })
+    expect(importButton).toBeEnabled()
+
+    fireEvent.click(importButton)
+
+    await waitFor(() => {
+      expect(mocks.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+        columnMappings: {
+          name: 'Product Name',
+          sku: null,
+          description: 'Description',
+          cost_price: null,
+          selling_price: null,
+          quantity_on_hand: null,
+          reorder_point: null,
+        },
+      }))
+    })
+  })
 })

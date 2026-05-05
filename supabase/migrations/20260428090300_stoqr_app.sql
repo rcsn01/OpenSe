@@ -70,7 +70,7 @@ CREATE TABLE stoqr.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   folder_id UUID REFERENCES stoqr.folders(id) ON DELETE SET NULL,
-  sku TEXT NOT NULL,
+  sku TEXT,
   primary_barcode TEXT,
   name TEXT NOT NULL,
   description TEXT,
@@ -87,8 +87,7 @@ CREATE TABLE stoqr.products (
   updated_at TIMESTAMPTZ,
   deleted_at TIMESTAMPTZ,
   CONSTRAINT products_max_images CHECK (COALESCE(array_length(image_urls, 1), 0) <= 4),
-  CONSTRAINT products_max_stock_gte_min CHECK (max_stock_level IS NULL OR max_stock_level >= min_stock_level),
-  UNIQUE (company_id, sku)
+  CONSTRAINT products_max_stock_gte_min CHECK (max_stock_level IS NULL OR max_stock_level >= min_stock_level)
 );
 
 CREATE TABLE stoqr.product_barcodes (
@@ -318,6 +317,96 @@ CREATE TRIGGER handle_products_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION moddatetime(updated_at);
 
+CREATE FUNCTION stoqr.normalize_product_identity_fields()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = stoqr, public
+AS $$
+BEGIN
+  IF NEW.id IS NULL THEN
+    NEW.id := gen_random_uuid();
+  END IF;
+
+  NEW.sku := NULLIF(btrim(COALESCE(NEW.sku, '')), '');
+  NEW.primary_barcode := NULLIF(btrim(COALESCE(NEW.primary_barcode, '')), '');
+
+  IF NEW.primary_barcode IS NULL THEN
+    NEW.primary_barcode := NEW.id::text;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION stoqr.sync_product_barcode_identities()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = stoqr, public
+AS $$
+BEGIN
+  UPDATE stoqr.product_barcodes
+  SET is_primary = false
+  WHERE company_id = NEW.company_id
+    AND product_id = NEW.id;
+
+  INSERT INTO stoqr.product_barcodes (
+    company_id,
+    product_id,
+    barcode,
+    barcode_type,
+    is_primary
+  )
+  VALUES (
+    NEW.company_id,
+    NEW.id,
+    NEW.id::text,
+    'barcode',
+    NEW.primary_barcode = NEW.id::text
+  )
+  ON CONFLICT (company_id, barcode) DO UPDATE
+  SET
+    product_id = EXCLUDED.product_id,
+    barcode_type = EXCLUDED.barcode_type,
+    is_primary = EXCLUDED.is_primary;
+
+  IF NEW.primary_barcode <> NEW.id::text THEN
+    INSERT INTO stoqr.product_barcodes (
+      company_id,
+      product_id,
+      barcode,
+      barcode_type,
+      is_primary
+    )
+    VALUES (
+      NEW.company_id,
+      NEW.id,
+      NEW.primary_barcode,
+      'barcode',
+      true
+    )
+    ON CONFLICT (company_id, barcode) DO UPDATE
+    SET
+      product_id = EXCLUDED.product_id,
+      barcode_type = EXCLUDED.barcode_type,
+      is_primary = EXCLUDED.is_primary;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER handle_products_identity_fields
+  BEFORE INSERT OR UPDATE ON stoqr.products
+  FOR EACH ROW
+  EXECUTE FUNCTION stoqr.normalize_product_identity_fields();
+
+CREATE TRIGGER handle_products_barcode_identity_sync
+  AFTER INSERT OR UPDATE OF primary_barcode ON stoqr.products
+  FOR EACH ROW
+  EXECUTE FUNCTION stoqr.sync_product_barcode_identities();
+
 CREATE TRIGGER handle_alert_rules_updated_at
   BEFORE UPDATE ON stoqr.alert_rules
   FOR EACH ROW
@@ -329,6 +418,9 @@ CREATE TRIGGER handle_label_templates_updated_at
   EXECUTE FUNCTION moddatetime(updated_at);
 
 CREATE INDEX idx_products_custom_fields ON stoqr.products USING gin (custom_fields);
+CREATE UNIQUE INDEX idx_products_company_sku_unique
+  ON stoqr.products (company_id, sku)
+  WHERE sku IS NOT NULL;
 CREATE UNIQUE INDEX idx_products_company_primary_barcode_unique
   ON stoqr.products (company_id, primary_barcode)
   WHERE primary_barcode IS NOT NULL;

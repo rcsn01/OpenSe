@@ -107,7 +107,6 @@ export const InventoryImportPage = () => {
     [columnAssignments, headers],
   )
   const productNameMapped = Boolean(assignedCoreFields.name)
-  const skuMapped = Boolean(assignedCoreFields.sku)
   const canImport = rows.length > 0 && productNameMapped && !importProductsMutation.isPending
 
   const columnStats = useMemo(
@@ -186,11 +185,6 @@ export const InventoryImportPage = () => {
 
     if (!productNameMapped) {
       setMessage('Map the Product Name column before importing.')
-      return
-    }
-
-    if (!skuMapped) {
-      setMessage('SKU mapping is still required before products can be imported.')
       return
     }
 

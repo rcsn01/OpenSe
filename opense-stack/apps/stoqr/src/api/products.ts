@@ -24,7 +24,7 @@ type ProfileLookup = {
 
 export type CreateProductPayload = {
   name: string
-  sku: string
+  sku?: string | null
   description: string
   quantity: string
   reorderPoint: string
@@ -61,6 +61,24 @@ const normalizeCustomFieldValue = (value: CustomFieldPrimitive): CustomFieldPrim
   }
 
   return value
+}
+
+const normalizeOptionalText = (value: string | null | undefined): string | null => {
+  if (typeof value !== 'string') return null
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+const normalizeFetchedProduct = (row: Product | null): Product | null => {
+  if (!row || typeof row !== 'object' || !('sku' in row)) {
+    return row
+  }
+
+  return {
+    ...row,
+    sku: row.sku ?? '',
+  }
 }
 
 const uploadProductImages = async (companyId: string, productId: string, images: File[]) => {
@@ -154,7 +172,7 @@ export const createProduct = async (
     .insert({
       company_id: companyId,
       name: payload.name,
-      sku: payload.sku,
+      sku: normalizeOptionalText(payload.sku),
       description: payload.description || null,
       quantity_on_hand: toNumber(payload.quantity),
       reorder_point: toNumber(payload.reorderPoint),
@@ -195,7 +213,7 @@ export const updateProduct = async (
     .from('products')
     .update({
       name: payload.name,
-      sku: payload.sku,
+      sku: normalizeOptionalText(payload.sku),
       description: payload.description || null,
       quantity_on_hand: toNumber(payload.quantity),
       reorder_point: toNumber(payload.reorderPoint),
@@ -252,7 +270,7 @@ export const fetchProductDetail = async (
   if (transactionsError) {
     console.warn('Product detail transactions query failed', transactionsError)
     return {
-      product: (productData as Product | null) ?? null,
+      product: normalizeFetchedProduct((productData as Product | null) ?? null),
       transactions: [],
     }
   }
@@ -288,7 +306,7 @@ export const fetchProductDetail = async (
   })) as InventoryTransaction[]
 
   return {
-    product: (productData as Product | null) ?? null,
+    product: normalizeFetchedProduct((productData as Product | null) ?? null),
     transactions: normalizedTransactions,
   }
 }

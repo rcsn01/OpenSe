@@ -181,6 +181,80 @@ describe('inventory api', () => {
     })
   })
 
+  it('imports rows without sku values while still deduplicating provided skus', async () => {
+    const existingIn = vi.fn().mockResolvedValue({
+      data: [{ sku: 'SKU-2' }],
+      error: null,
+    })
+    const existingEq = vi.fn(() => ({ in: existingIn }))
+    const existingSelect = vi.fn(() => ({ eq: existingEq }))
+    const insert = vi.fn().mockResolvedValue({ error: null })
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'products') {
+        return {
+          select: existingSelect,
+          insert,
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const result = await importInventoryProducts('company-1', {
+      rows: [
+        { Product: 'Nameless SKU', Description: 'No sku row' },
+        { Product: 'Has sku', SKU: 'SKU-2' },
+        { Product: 'Has unique sku', SKU: 'SKU-3' },
+      ],
+      folderId: null,
+      columnMappings: {
+        name: 'Product',
+        sku: 'SKU',
+        description: 'Description',
+        cost_price: null,
+        selling_price: null,
+        quantity_on_hand: null,
+        reorder_point: null,
+      },
+      attributeColumns: [],
+    })
+
+    expect(existingIn).toHaveBeenCalledWith('sku', ['SKU-2', 'SKU-3'])
+    expect(insert).toHaveBeenCalledWith([
+      {
+        company_id: 'company-1',
+        folder_id: null,
+        name: 'Nameless SKU',
+        sku: null,
+        description: 'No sku row',
+        quantity_on_hand: 0,
+        reorder_point: 10,
+        cost_price: 0,
+        selling_price: 0,
+        custom_fields: {},
+      },
+      {
+        company_id: 'company-1',
+        folder_id: null,
+        name: 'Has unique sku',
+        sku: 'SKU-3',
+        description: null,
+        quantity_on_hand: 0,
+        reorder_point: 10,
+        cost_price: 0,
+        selling_price: 0,
+        custom_fields: {},
+      },
+    ])
+    expect(result).toEqual({
+      importedCount: 2,
+      duplicateCount: 1,
+      invalidCount: 0,
+      duplicateSkus: ['SKU-2'],
+    })
+  })
+
   it('applies pagination boundaries and low-stock filtering', async () => {
     const query = makeProductsQuery({
       data: [

@@ -163,7 +163,7 @@ export const buildLabelRenderPlan = (
     })
   }
 
-  if (layout.showSku) {
+  if (layout.showSku && product.sku) {
     addTextItem('sku', `SKU: ${product.sku}`, secondaryFontSize, 'regular')
   }
 
