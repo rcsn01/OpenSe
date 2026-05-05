@@ -259,7 +259,7 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
 
   return (
     <div className="flex flex-col gap-6">
-      <Card className="overflow-hidden" padding="none">
+      <Card variant="plain" className="overflow-hidden" padding="none">
         <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2 sm:min-w-[220px]">
             <AddFilterDropdown
@@ -407,9 +407,8 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
               {
                 id: 'po-number',
                 header: 'PO Number',
-                cellClassName: '!py-5',
                 renderCell: (order) => (
-                  <span className="text-sm font-semibold text-[var(--color-primary)]">
+                  <span className="font-semibold text-[var(--color-primary)]">
                     {formatPurchaseOrderNumber(order)}
                   </span>
                 ),
@@ -417,13 +416,12 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
               {
                 id: 'supplier',
                 header: 'Supplier',
-                cellClassName: '!py-5',
                 renderCell: (order) => (
                   <div className="flex items-center gap-3">
                     <div className="rounded-lg bg-[var(--color-muted)] p-2 text-[var(--color-muted-foreground)]">
                       <Building2 size={16} />
                     </div>
-                    <span className="font-medium text-[var(--color-foreground)]">
+                    <span className="font-medium">
                       {order.suppliers?.name ?? 'Unknown supplier'}
                     </span>
                   </div>
@@ -432,26 +430,22 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
               {
                 id: 'created',
                 header: 'Created',
-                cellClassName: '!py-5 text-[var(--color-muted-foreground)]',
                 renderCell: (order) => formatDateLabel(order.created_at),
               },
               {
                 id: 'expected',
                 header: 'Expected',
-                cellClassName: '!py-5 text-[var(--color-muted-foreground)]',
                 renderCell: (order) => formatDateLabel(order.expected_date),
               },
               {
                 id: 'total',
                 header: 'Total',
                 align: 'right',
-                cellClassName: '!py-5 font-semibold text-[var(--color-foreground)]',
                 renderCell: (order) => formatCurrency(order.total_amount ?? totalsByPo[order.id] ?? 0),
               },
               {
                 id: 'workflow',
                 header: 'Workflow',
-                cellClassName: '!py-5',
                 renderCell: (order) => {
                   const workflow = workflowByPo[order.id] ?? {
                     request: { label: 'Pending Approval', variant: 'warning' as const },
@@ -504,7 +498,6 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
             rows={filteredPurchaseOrders}
             getRowId={(order) => order.id}
             minTableWidth={1120}
-            tableWrapClassName="border-0 rounded-none"
           />
         )}
       </Card>

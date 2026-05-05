@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { MoreHorizontal, Package2, Plus } from 'lucide-react'
+import { DataTable, type DataTableColumn } from '@repo/ui'
 import { useOutletContext } from 'react-router-dom'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
 import { getEnabledLabelFields, getLabelLayoutSummary, resolveLabelLayout } from './labelLayout'
@@ -11,6 +12,15 @@ type TemplateLibraryTabProps = {
   selectedTemplateId?: string
   onSelectTemplate?: (templateId: string) => void
   searchTerm?: string
+}
+
+type TemplateTableRow = {
+  id: string
+  name: string
+  dimensionsLabel: string
+  activeFields: string[]
+  lastModifiedLabel: string
+  isSelected: boolean
 }
 
 const formatDate = (dateString: string | null | undefined): string => {
@@ -57,6 +67,78 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       maxRanking: fuzzyRankings.CONTAINS,
     },
   ]), [searchTerm, templates])
+  const tableRows = useMemo<TemplateTableRow[]>(() => filteredTemplates.map((template) => {
+    const controls = resolveLabelLayout(template.layout)
+
+    return {
+      id: template.id,
+      name: template.name,
+      dimensionsLabel: formatDimensions(template.layout),
+      activeFields: getEnabledLabelFields(controls),
+      lastModifiedLabel: formatDate(template.updated_at ?? template.created_at),
+      isSelected: selectedTemplateId === template.id,
+    }
+  }), [filteredTemplates, selectedTemplateId])
+  const columns = useMemo<DataTableColumn<TemplateTableRow>[]>(() => [
+    {
+      id: 'templateName',
+      header: 'Template Name',
+      renderCell: (row) => (
+        <div className="label-template-name-cell">
+          <span className="label-template-name-icon" aria-hidden="true">
+            <Package2 size={14} />
+          </span>
+          <div className="label-template-name-copy">
+            <div className="label-template-name-row">
+              <button
+                type="button"
+                className="label-template-name-button"
+                onClick={() => onSelectTemplate?.(row.id)}
+                aria-label={`Edit ${row.name} template`}
+              >
+                <span className="label-template-name">{row.name}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'dimensions',
+      header: 'Dimensions',
+      renderCell: (row) => row.dimensionsLabel,
+    },
+    {
+      id: 'activeFields',
+      header: 'Active Fields',
+      renderCell: (row) => (
+        <div className="label-template-field-list">
+          {row.activeFields.map((field) => (
+            <span key={field} className="label-template-field-pill">{field}</span>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'lastModified',
+      header: 'Last Modified',
+      renderCell: (row) => row.lastModifiedLabel,
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      renderCell: (row) => (
+        <button
+          type="button"
+          className="label-template-action"
+          aria-label={`Template actions for ${row.name}`}
+          onClick={() => onSelectTemplate?.(row.id)}
+        >
+          <MoreHorizontal size={16} />
+        </button>
+      ),
+    },
+  ], [onSelectTemplate])
 
   useEffect(() => {
     layoutContext?.setTopBarSearchConfig({
@@ -103,81 +185,13 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
   return (
     <div className="label-template-library">
       <div className="label-template-table-shell">
-        <table className="label-template-table" aria-label="Template library">
-          <thead>
-            <tr>
-              <th>Template Name</th>
-              <th>Dimensions</th>
-              <th>Active Fields</th>
-              <th>Last Modified</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={5}>
-                  <div className="empty-state">Loading templates...</div>
-                </td>
-              </tr>
-            ) : filteredTemplates.length === 0 ? (
-              <tr>
-                <td colSpan={5}>
-                  <div className="empty-state">No templates found.</div>
-                </td>
-              </tr>
-            ) : (
-              filteredTemplates.map((template) => {
-                const controls = resolveLabelLayout(template.layout)
-                const activeFields = getEnabledLabelFields(controls)
-                const isSelected = selectedTemplateId === template.id
-
-                return (
-                  <tr key={template.id} className={isSelected ? 'is-selected' : undefined}>
-                    <td>
-                      <div className="label-template-name-cell">
-                        <span className="label-template-name-icon" aria-hidden="true">
-                          <Package2 size={14} />
-                        </span>
-                        <div className="label-template-name-copy">
-                          <div className="label-template-name-row">
-                            <button
-                              type="button"
-                              className="label-template-name-button"
-                              onClick={() => onSelectTemplate?.(template.id)}
-                              aria-label={`Edit ${template.name} template`}
-                            >
-                              <span className="label-template-name">{template.name}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{formatDimensions(template.layout)}</td>
-                    <td>
-                      <div className="label-template-field-list">
-                        {activeFields.map((field) => (
-                          <span key={field} className="label-template-field-pill">{field}</span>
-                        ))}
-                      </div>
-                    </td>
-                    <td>{formatDate(template.updated_at ?? template.created_at)}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="label-template-action"
-                        aria-label={`Template actions for ${template.name}`}
-                        onClick={() => onSelectTemplate?.(template.id)}
-                      >
-                        <MoreHorizontal size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          columns={columns}
+          rows={tableRows}
+          getRowId={(row) => row.id}
+          emptyState={<div className="empty-state">{isLoading ? 'Loading templates...' : 'No templates found.'}</div>}
+          rowClassName={(row) => row.isSelected ? 'label-template-table-row is-editing' : 'label-template-table-row'}
+        />
 
         <div className="label-template-mobile-list" aria-label="Template library mobile list">
           {isLoading ? (
@@ -194,7 +208,7 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
                 <button
                   key={template.id}
                   type="button"
-                  className={`label-template-mobile-card${isSelected ? ' is-selected' : ''}`}
+                  className={`label-template-mobile-card${isSelected ? ' is-editing' : ''}`}
                   aria-label={`Edit ${template.name} template`}
                   onClick={() => onSelectTemplate?.(template.id)}
                 >

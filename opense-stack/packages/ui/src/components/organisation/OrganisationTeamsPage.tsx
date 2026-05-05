@@ -28,8 +28,8 @@ export function OrganisationTeamsPage({
 }: OrganisationTeamsPageProps) {
   return (
     <StackLayout>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:flex-row">
+      <div className="overflow-hidden">
+        <div className="flex flex-col items-center justify-between gap-4 border-b border-[var(--color-border)] px-4 py-4 sm:flex-row">
           <div className="flex w-full items-center gap-2 sm:w-auto">
             <Select
               value={filterValue}

@@ -254,7 +254,7 @@ export const AuditsShrinkageTab = ({ companyId }: { companyId: string | null }) 
           )}
         </div>
 
-        <div className="card stack" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-surface">
           <div style={{ padding: '20px 24px 0' }} className="flex-between">
             <h3 className="section-title" style={{ marginBottom: 0 }}>Recent Discrepancy Log</h3>
             <label className="row small muted" style={{ gap: 8 }}>
@@ -326,7 +326,6 @@ export const AuditsShrinkageTab = ({ companyId }: { companyId: string | null }) 
               ]}
               rows={logRows}
               getRowId={(row) => row.id}
-              tableWrapClassName="border-0 rounded-none"
             />
           )}
         </div>

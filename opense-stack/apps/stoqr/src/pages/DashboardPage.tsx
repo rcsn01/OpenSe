@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { type CSSProperties, useMemo, useState } from 'react'
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import { DataTable, type DataTableColumn } from '@repo/ui'
 import type { DashboardData } from '../api/dashboard'
 import type { AlertEvent } from '../api/alerts'
 import type { PurchaseOrder, PurchaseOrderItem } from '../api/procurement'
@@ -404,6 +405,7 @@ export const DashboardPage = () => {
   const [velocityTab, setVelocityTab] = useState<VelocityTabId>('fast')
 
   const shouldShowLoading = isLoading || (isFetching && !data)
+  const deliveriesTableMinWidth: CSSProperties['minWidth'] = 640
 
   const pageModel = useMemo(() => {
     if (!data) return null
@@ -471,6 +473,99 @@ export const DashboardPage = () => {
     }
   }, [alertEvents, data, purchaseOrderItems, purchaseOrders])
 
+  const deliveryColumns = useMemo<DataTableColumn<DeliveryRow>[]>(() => [
+    {
+      id: 'poNumber',
+      header: 'PO Number',
+      renderCell: (row) => row.poLabel,
+    },
+    {
+      id: 'vendor',
+      header: 'Vendor',
+      renderCell: (row) => row.vendor,
+    },
+    {
+      id: 'items',
+      header: 'Items',
+      renderCell: (row) => row.itemsCountLabel,
+    },
+    {
+      id: 'value',
+      header: 'Value',
+      renderCell: (row) => row.valueLabel,
+    },
+    {
+      id: 'expected',
+      header: 'Expected',
+      renderCell: (row) => row.expectedLabel,
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      renderCell: (row) => (
+        <span className={`stoqr-dashboard__status-pill is-${row.statusTone}`}>{row.statusLabel}</span>
+      ),
+    },
+  ], [])
+
+  const attentionColumns = useMemo<DataTableColumn<AttentionItem>[]>(() => [
+    {
+      id: 'alert',
+      header: 'Alert',
+      width: '76%',
+      headerClassName: 'px-0',
+      cellClassName: 'px-0',
+      renderCell: (item) => (
+        <div className="stoqr-dashboard__alert-table-cell">
+          <span className={`stoqr-dashboard__alert-dot is-${item.severity}`} aria-hidden="true" />
+          <div className="stoqr-dashboard__alert-copy">
+            <p className="stoqr-dashboard__alert-title">{item.title}</p>
+            <p className="stoqr-dashboard__alert-detail">{item.detail}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'when',
+      header: 'When',
+      width: '24%',
+      align: 'right',
+      headerClassName: 'pl-4 pr-0',
+      cellClassName: 'pl-4 pr-0',
+      renderCell: (item) => <span className="stoqr-dashboard__alert-time">{item.timeLabel}</span>,
+    },
+  ], [])
+
+  const velocityColumns = useMemo<DataTableColumn<VelocityItem>[]>(() => [
+    {
+      id: 'item',
+      header: 'Item',
+      width: '68%',
+      headerClassName: 'px-0',
+      cellClassName: 'px-0',
+      renderCell: (item) => (
+        <div className="stoqr-dashboard__velocity-copy">
+          <p className="stoqr-dashboard__velocity-name">{item.name}</p>
+          <p className="stoqr-dashboard__velocity-sku">{item.sku}</p>
+        </div>
+      ),
+    },
+    {
+      id: 'velocity',
+      header: 'Velocity',
+      width: '32%',
+      align: 'right',
+      headerClassName: 'pl-4 pr-0',
+      cellClassName: 'pl-4 pr-0',
+      renderCell: (item) => (
+        <div className="stoqr-dashboard__velocity-meta">
+          <span className="stoqr-dashboard__velocity-rate">{item.metricLabel}</span>
+          <span className={`stoqr-dashboard__velocity-status is-${item.statusTone}`}>{item.statusLabel}</span>
+        </div>
+      ),
+    },
+  ], [])
+
   return (
     <BasePage
       companyId={companyId}
@@ -519,18 +614,13 @@ export const DashboardPage = () => {
               </header>
 
               {pageModel.attentionItems.length > 0 ? (
-                <div className="stoqr-dashboard__alerts-list">
-                  {pageModel.attentionItems.map((item) => (
-                    <div key={item.id} className="stoqr-dashboard__alert-row">
-                      <span className={`stoqr-dashboard__alert-dot is-${item.severity}`} aria-hidden="true" />
-                      <div className="stoqr-dashboard__alert-copy">
-                        <p className="stoqr-dashboard__alert-title">{item.title}</p>
-                        <p className="stoqr-dashboard__alert-detail">{item.detail}</p>
-                      </div>
-                      <span className="stoqr-dashboard__alert-time">{item.timeLabel}</span>
-                    </div>
-                  ))}
-                </div>
+                <DataTable
+                  variant="dashboard"
+                  columns={attentionColumns}
+                  rows={pageModel.attentionItems}
+                  getRowId={(item) => item.id}
+                  tableLayout="fixed"
+                />
               ) : (
                 <div className="stoqr-dashboard__empty-panel">No actionable alerts right now.</div>
               )}
@@ -546,32 +636,13 @@ export const DashboardPage = () => {
               {pageModel.deliveryRows.length > 0 ? (
                 <>
                   <div className="stoqr-dashboard__deliveries-desktop">
-                    <table className="stoqr-dashboard__deliveries-table">
-                      <thead>
-                        <tr>
-                          <th>PO Number</th>
-                          <th>Vendor</th>
-                          <th>Items</th>
-                          <th>Value</th>
-                          <th>Expected</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pageModel.deliveryRows.map((row) => (
-                          <tr key={row.id}>
-                            <td>{row.poLabel}</td>
-                            <td>{row.vendor}</td>
-                            <td>{row.itemsCountLabel}</td>
-                            <td>{row.valueLabel}</td>
-                            <td>{row.expectedLabel}</td>
-                            <td>
-                              <span className={`stoqr-dashboard__status-pill is-${row.statusTone}`}>{row.statusLabel}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <DataTable
+                      variant="dashboard"
+                      columns={deliveryColumns}
+                      rows={pageModel.deliveryRows}
+                      getRowId={(row) => row.id}
+                      minTableWidth={deliveriesTableMinWidth}
+                    />
                   </div>
 
                   <div className="stoqr-dashboard__deliveries-mobile">
@@ -614,20 +685,13 @@ export const DashboardPage = () => {
               </header>
 
               {(pageModel.velocityGroups[velocityTab] as VelocityItem[]).length > 0 ? (
-                <div className="stoqr-dashboard__velocity-list">
-                  {(pageModel.velocityGroups[velocityTab] as VelocityItem[]).map((item) => (
-                    <div key={item.id} className="stoqr-dashboard__velocity-row">
-                      <div className="stoqr-dashboard__velocity-copy">
-                        <p className="stoqr-dashboard__velocity-name">{item.name}</p>
-                        <p className="stoqr-dashboard__velocity-sku">{item.sku}</p>
-                      </div>
-                      <div className="stoqr-dashboard__velocity-meta">
-                        <span className="stoqr-dashboard__velocity-rate">{item.metricLabel}</span>
-                        <span className={`stoqr-dashboard__velocity-status is-${item.statusTone}`}>{item.statusLabel}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <DataTable
+                  variant="dashboard"
+                  columns={velocityColumns}
+                  rows={pageModel.velocityGroups[velocityTab] as VelocityItem[]}
+                  getRowId={(item) => item.id}
+                  tableLayout="fixed"
+                />
               ) : (
                 <div className="stoqr-dashboard__empty-panel">
                   No inventory movement yet. Add products and transactions to populate velocity insights.

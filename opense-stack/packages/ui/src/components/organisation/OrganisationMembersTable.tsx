@@ -25,16 +25,14 @@ export function OrganisationMembersTable({
   showPermissionsRole = false,
   showStatus = false,
   showActions = false,
-  containerClassName = 'overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm',
+  containerClassName = 'overflow-hidden',
 }: OrganisationMembersTableProps) {
-  const headerCellClassName = 'bg-slate-50 !px-6 !py-4 text-left text-xs font-semibold uppercase tracking-wider !text-slate-500'
-  const bodyCellClassName = '!px-6 !py-4 whitespace-nowrap'
+  const bodyCellClassName = 'whitespace-nowrap'
 
   const columns: DataTableColumn<OrganisationMembersTableRow>[] = [
     {
       id: 'member',
       header: 'Member',
-      headerClassName: headerCellClassName,
       cellClassName: bodyCellClassName,
       renderCell: (row) => {
         const initials = (row.initials ?? row.displayName.charAt(0)).toUpperCase()
@@ -47,10 +45,10 @@ export function OrganisationMembersTable({
               </div>
             </div>
             <div className="ml-4">
-              <div className="text-sm font-medium text-slate-900 transition-colors group-hover:text-indigo-600">
+              <div className="text-sm font-medium text-[var(--color-foreground)]">
                 {row.displayName}
               </div>
-              <div className="text-sm text-slate-500">{row.subtitle}</div>
+              <div className="text-sm text-[var(--color-muted-foreground)]">{row.subtitle}</div>
             </div>
           </div>
         )
@@ -59,7 +57,6 @@ export function OrganisationMembersTable({
     {
       id: 'role',
       header: 'Role',
-      headerClassName: headerCellClassName,
       cellClassName: bodyCellClassName,
       renderCell: (row) => row.roleContent,
     },
@@ -67,7 +64,6 @@ export function OrganisationMembersTable({
       ? [{
           id: 'permissions-role',
           header: 'Permissions Role',
-          headerClassName: headerCellClassName,
           cellClassName: bodyCellClassName,
           renderCell: (row: OrganisationMembersTableRow) => row.permissionsRoleContent,
         } satisfies DataTableColumn<OrganisationMembersTableRow>]
@@ -76,7 +72,6 @@ export function OrganisationMembersTable({
       ? [{
           id: 'status',
           header: 'Status',
-          headerClassName: headerCellClassName,
           cellClassName: bodyCellClassName,
           renderCell: (row: OrganisationMembersTableRow) => row.statusContent,
         } satisfies DataTableColumn<OrganisationMembersTableRow>]
@@ -86,8 +81,7 @@ export function OrganisationMembersTable({
           id: 'actions',
           header: 'Actions',
           align: 'right' as const,
-          headerClassName: `${headerCellClassName} text-right`,
-          cellClassName: `${bodyCellClassName} text-right text-sm font-medium`,
+          cellClassName: `${bodyCellClassName} text-right`,
           renderCell: (row: OrganisationMembersTableRow) => row.actionsContent,
         } satisfies DataTableColumn<OrganisationMembersTableRow>]
       : []),
@@ -99,9 +93,7 @@ export function OrganisationMembersTable({
         columns={columns}
         rows={rows}
         getRowId={(row) => row.id}
-        tableWrapClassName="border-0 rounded-none bg-white"
-        tableClassName="min-w-full bg-white"
-        rowClassName="group hover:!bg-slate-50/80"
+        tableClassName="min-w-full"
       />
     </div>
   )

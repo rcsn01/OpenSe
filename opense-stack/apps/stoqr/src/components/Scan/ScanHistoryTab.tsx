@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { DataTable, type DataTableColumn } from '@repo/ui'
 import { useScanHistory } from '../../hooks/queries/useQuickScan'
 import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
 
@@ -26,6 +27,17 @@ const formatSignedChange = (change: number) => {
   return `${change}`
 }
 
+type ScanHistoryRow = {
+  id: string
+  productLabel: string
+  skuLabel: string
+  reasonLabel: string
+  dateLabel: string
+  changeLabel: string
+  changeTone: ReturnType<typeof getChangeTone>
+  stockLabel: number | string
+}
+
 export const ScanHistoryTab = ({ companyId, searchTerm = '' }: { companyId: string; searchTerm?: string }) => {
   const { data = [], isLoading } = useScanHistory(companyId)
   const normalizedSearchTerm = normalizePageSearchTerm(searchTerm)
@@ -46,6 +58,52 @@ export const ScanHistoryTab = ({ companyId, searchTerm = '' }: { companyId: stri
     ]),
     [data, normalizedSearchTerm],
   )
+  const tableRows = useMemo<ScanHistoryRow[]>(() => filteredData.map((event) => ({
+    id: event.id,
+    productLabel: event.product?.name ?? 'Unknown item',
+    skuLabel: event.product?.sku ?? event.barcode ?? '—',
+    reasonLabel: event.reasonLabel,
+    dateLabel: formatHistoryTimestamp(event.created_at),
+    changeLabel: formatSignedChange(event.change),
+    changeTone: getChangeTone(event.change),
+    stockLabel: event.stockAfter ?? '—',
+  })), [filteredData])
+  const columns = useMemo<DataTableColumn<ScanHistoryRow>[]>(() => [
+    {
+      id: 'product',
+      header: 'Product',
+      renderCell: (row) => row.productLabel,
+    },
+    {
+      id: 'sku',
+      header: 'SKU',
+      renderCell: (row) => row.skuLabel,
+    },
+    {
+      id: 'reason',
+      header: 'Reason',
+      renderCell: (row) => row.reasonLabel,
+    },
+    {
+      id: 'date',
+      header: 'Date',
+      renderCell: (row) => row.dateLabel,
+    },
+    {
+      id: 'change',
+      header: 'Change',
+      renderCell: (row) => (
+        <span className={`scan-history-change scan-history-change--${row.changeTone}`}>
+          {row.changeLabel}
+        </span>
+      ),
+    },
+    {
+      id: 'stock',
+      header: 'Stock',
+      renderCell: (row) => row.stockLabel,
+    },
+  ], [])
 
   if (isLoading) {
     return <div className="scan-history-empty">Loading scan history...</div>
@@ -79,32 +137,11 @@ export const ScanHistoryTab = ({ companyId, searchTerm = '' }: { companyId: stri
           </div>
 
           <div className="scan-history-desktop-shell">
-            <table className="scan-history-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>SKU</th>
-                  <th>Reason</th>
-                  <th>Date</th>
-                  <th>Change</th>
-                  <th>Stock</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredData.map((event) => (
-                  <tr key={event.id}>
-                    <td>{event.product?.name ?? 'Unknown item'}</td>
-                    <td>{event.product?.sku ?? event.barcode ?? '—'}</td>
-                    <td>{event.reasonLabel}</td>
-                    <td>{formatHistoryTimestamp(event.created_at)}</td>
-                    <td className={`scan-history-change scan-history-change--${getChangeTone(event.change)}`}>
-                      {formatSignedChange(event.change)}
-                    </td>
-                    <td>{event.stockAfter ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable
+              columns={columns}
+              rows={tableRows}
+              getRowId={(row) => row.id}
+            />
           </div>
         </>
       )}

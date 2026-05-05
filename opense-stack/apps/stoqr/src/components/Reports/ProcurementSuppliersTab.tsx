@@ -275,7 +275,7 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
       {/* Bottom row: Supplier Scorecard & Price Variance */}
       <div className="grid grid-2">
         {/* Supplier Scorecard */}
-        <div className="card stack" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-surface">
           <div style={{ padding: '20px 24px 0' }}>
             <h3 className="section-title">Supplier Scorecard</h3>
           </div>
@@ -328,7 +328,6 @@ export const ProcurementSuppliersTab = ({ companyId }: { companyId: string | nul
               ]}
               rows={supplierScorecard}
               getRowId={(row) => row.name}
-              tableWrapClassName="border-0 rounded-none"
             />
           )}
         </div>
