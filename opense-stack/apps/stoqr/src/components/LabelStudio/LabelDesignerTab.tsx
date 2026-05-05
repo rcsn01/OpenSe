@@ -44,8 +44,8 @@ const previewSample = {
 type LabelDesignerTabProps = {
   companyId: string
   selectedTemplateId?: string
-  onSelectedTemplateChange?: (templateId: string) => void
   onClose?: () => void
+  onSavedTemplateChange?: (templateId: string) => void
 }
 
 type SwitchRowProps = {
@@ -102,7 +102,7 @@ const SliderControl = ({ label, value, min, max, step = 1, ariaLabel, onChange }
   </label>
 )
 
-export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onClose }: LabelDesignerTabProps) => {
+export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onClose, onSavedTemplateChange }: LabelDesignerTabProps) => {
   const { data: templates = [], isLoading } = useLabelTemplates(companyId)
   const selectedTemplateId = initialSelectedTemplateId ?? ''
   const [controls, setControls] = useState<LabelLayoutControls>(resolveLabelLayout(null))
@@ -145,12 +145,13 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
     }
 
     try {
-      await updateLayoutMutation.mutateAsync({
+      const savedTemplate = await updateLayoutMutation.mutateAsync({
         templateId: selectedTemplate.id,
         layout: controlsToLayout(controls),
         variableFields: selectedTemplate.variable_fields,
       })
-      setMessage('Design saved.')
+      onSavedTemplateChange?.(savedTemplate.id)
+      setMessage(savedTemplate.id === selectedTemplate.id ? 'Design saved.' : 'Design saved as a company template.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Failed to save design.')
     }
@@ -174,7 +175,6 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
           </button>
           <div>
             <h2 className="label-studio-editor-title">{selectedTemplate?.name ?? 'Label Studio'}</h2>
-            <p className="label-studio-editor-subtitle">Template Editor</p>
           </div>
         </div>
 

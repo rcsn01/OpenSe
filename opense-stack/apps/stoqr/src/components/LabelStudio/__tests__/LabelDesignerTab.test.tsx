@@ -4,7 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LabelDesignerTab } from '../LabelDesignerTab'
 import { getMaxQrScale } from '../labelLayout'
 
-const mockMutateAsync = vi.fn(async (_args?: unknown) => undefined)
+const mockMutateAsync = vi.fn(async (_args?: unknown) => ({
+  id: 'template-1',
+  company_id: 'company-1',
+  name: 'Product Label',
+  is_system: false,
+  layout: {
+    width: 100,
+    height: 50,
+  },
+  variable_fields: ['name', 'sku', 'price', 'barcode', 'qr'],
+  created_at: '2026-02-20T00:00:00Z',
+  updated_at: '2026-02-21T00:00:00Z',
+}))
 
 vi.mock('../../../hooks/queries/useLabelStudio', () => ({
   useLabelTemplates: () => ({
@@ -51,7 +63,7 @@ describe('LabelDesignerTab', () => {
   it('saves expanded layout controls and updates the live preview', async () => {
     render(<LabelDesignerTab companyId="company-1" selectedTemplateId="template-1" />)
 
-    expect(screen.getByText('Template Editor')).toBeInTheDocument()
+    expect(screen.queryByText('Template Editor')).not.toBeInTheDocument()
     expect(screen.getByText('Live Canvas')).toBeInTheDocument()
     expect(screen.queryByText('Price: $299.00')).not.toBeInTheDocument()
     expect(screen.getByLabelText('QR Scale (%)')).toHaveAttribute(

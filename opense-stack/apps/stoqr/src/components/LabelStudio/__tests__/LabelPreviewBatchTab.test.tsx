@@ -51,10 +51,6 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
-  useLabelPrintJobs: () => ({
-    data: [],
-    isLoading: false,
-  }),
 }))
 
 describe('LabelPreviewBatchTab', () => {
@@ -62,11 +58,12 @@ describe('LabelPreviewBatchTab', () => {
     vi.clearAllMocks()
   })
 
-  it('shows recent exports inline with the export form', () => {
+  it('renders the redesigned export and preview shell', () => {
     render(<LabelPreviewBatchTab companyId="company-1" />)
 
-    expect(screen.getByText('Recent Exports')).toBeInTheDocument()
-    expect(screen.getByText('No PDF exports yet. Export one here to download it immediately.')).toBeInTheDocument()
+    expect(screen.getByText('Export & Batch')).toBeInTheDocument()
+    expect(screen.getByText('A4 Layout Preview')).toBeInTheDocument()
+    expect(screen.queryByText('Recent Exports')).not.toBeInTheDocument()
   })
 
   it('renders the shared PDF page preview for the selected export target', async () => {
@@ -75,7 +72,8 @@ describe('LabelPreviewBatchTab', () => {
     render(<LabelPreviewBatchTab companyId="company-1" />)
 
     await user.selectOptions(screen.getByLabelText('Template'), 'template-1')
-    await user.selectOptions(screen.getByLabelText('Product'), 'product-1')
+    await user.type(screen.getByLabelText('Product Search'), 'Milk')
+    await user.click(screen.getByRole('button', { name: /Milk/i }))
 
     expect(screen.getByLabelText('PDF page preview')).toBeInTheDocument()
     expect(screen.getByText('Page 1 of 1')).toBeInTheDocument()
@@ -88,9 +86,10 @@ describe('LabelPreviewBatchTab', () => {
     render(<LabelPreviewBatchTab companyId="company-1" />)
 
     await user.selectOptions(screen.getByLabelText('Template'), 'template-1')
-    await user.selectOptions(screen.getByLabelText('Product'), 'product-1')
+    await user.type(screen.getByLabelText('Product Search'), 'Milk')
+    await user.click(screen.getByRole('button', { name: /Milk/i }))
 
-    await user.click(screen.getByRole('button', { name: /Export PDF Batch/i }))
+    await user.click(screen.getByRole('button', { name: /Export PDF/i }))
 
     await waitFor(() => {
       expect(mockCreatePdfDataUrl).toHaveBeenCalledTimes(1)
@@ -126,7 +125,7 @@ describe('LabelPreviewBatchTab', () => {
 
     render(<LabelPreviewBatchTab companyId="company-1" />)
 
-    await user.click(screen.getByRole('button', { name: /Export PDF Batch/i }))
+    await user.click(screen.getByRole('button', { name: /Export PDF/i }))
 
     expect(screen.getByText('Select template and valid quantity.')).toBeInTheDocument()
     expect(mockCreatePdfDataUrl).not.toHaveBeenCalled()

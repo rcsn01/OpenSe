@@ -1,16 +1,16 @@
+import { Layers3, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
+import type { LabelProduct } from '../../api/labelStudio'
 import { useCreateLabelPrintJob, useLabelProductFolders, useLabelProducts, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
-import { LabelDownloadsTab } from './LabelDownloadsTab'
 import { LabelPreviewCard } from './LabelPreviewCard'
 import { downloadLabelPdf } from './downloadLabelPdf'
-import { getEnabledLabelFields, resolveLabelLayout } from './labelLayout'
 import { buildLabelPlacements, getPlacementPageCount } from './labelRenderPlan'
 import { createLabelPdfDataUrl } from './pdfExport'
 import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
 import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
 
-type BatchTarget = 'product' | 'folder'
+type BatchTarget = 'single' | 'multiple' | 'folder'
 
 type LabelPreviewBatchTabProps = {
   companyId: string
@@ -33,7 +33,7 @@ const buildPdfFileName = (templateName: string | null | undefined, targetName: s
 export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange, searchTerm = '' }: LabelPreviewBatchTabProps) => {
   const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { data: templates = [], isLoading: loadingTemplates } = useLabelTemplates(companyId)
-  const [targetType, setTargetType] = useState<BatchTarget>('product')
+  const [targetType, setTargetType] = useState<BatchTarget>('single')
   const [folderId, setFolderId] = useState('')
   const activeFolderId = targetType === 'folder' ? folderId : undefined
   const { data: products = [], isLoading: loadingProducts } = useLabelProducts(companyId, '', activeFolderId)
@@ -42,16 +42,19 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
 
   const [templateId, setTemplateId] = useState(initialSelectedTemplateId ?? '')
   const [productId, setProductId] = useState('')
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
+  const [productSearch, setProductSearch] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [message, setMessage] = useState<string | null>(null)
   const normalizedSearchTerm = normalizePageSearchTerm(searchTerm)
+  const normalizedProductSearch = normalizePageSearchTerm(productSearch || searchTerm)
   const filteredTemplates = useMemo(() => fuzzySearchItems(templates, normalizedSearchTerm, [
     {
       key: (template) => template.name,
       maxRanking: fuzzyRankings.WORD_STARTS_WITH,
     },
   ]), [normalizedSearchTerm, templates])
-  const filteredProducts = useMemo(() => fuzzySearchItems(products, normalizedSearchTerm, [
+  const filteredProducts = useMemo(() => fuzzySearchItems(products, normalizedProductSearch, [
     {
       key: (product) => product.sku,
       maxRanking: fuzzyRankings.STARTS_WITH,
@@ -60,50 +63,49 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
       key: (product) => product.name,
       maxRanking: fuzzyRankings.WORD_STARTS_WITH,
     },
-  ]), [normalizedSearchTerm, products])
+  ]), [normalizedProductSearch, products])
 
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === templateId) ?? null, [templates, templateId])
   const selectedProduct = useMemo(() => products.find((product) => product.id === productId) ?? null, [products, productId])
+  const selectedProducts = useMemo<LabelProduct[]>(
+    () => selectedProductIds
+      .map((selectedId) => products.find((product) => product.id === selectedId))
+      .filter((product): product is LabelProduct => Boolean(product)),
+    [products, selectedProductIds],
+  )
   const selectedFolder = useMemo(() => folders.find((folder) => folder.id === folderId) ?? null, [folders, folderId])
   const productsToPreview = useMemo(
-    () => (targetType === 'folder' ? products : selectedProduct ? [selectedProduct] : []),
-    [products, selectedProduct, targetType],
-  )
-  const enabledFieldSummary = useMemo(() => {
-    if (!selectedTemplate) return 'Select a template'
+    () => {
+      if (targetType === 'folder') {
+        return products
+      }
 
-    const enabledFields = getEnabledLabelFields(resolveLabelLayout(selectedTemplate.layout))
-    return enabledFields.join(', ') || 'None'
-  }, [selectedTemplate])
-  const previewSummaryItems = useMemo(
-    () => [
-      {
-        label: 'Target',
-        value:
-          targetType === 'folder'
-            ? selectedFolder
-              ? `${selectedFolder.name} (${products.length} items)`
-              : 'Choose a folder'
-            : selectedProduct
-              ? selectedProduct.name
-              : 'Choose a product',
-      },
-      {
-        label: 'Copies',
-        value: `${quantity} per item`,
-      },
-      {
-        label: 'Fields',
-        value: enabledFieldSummary,
-      },
-    ],
-    [enabledFieldSummary, products.length, quantity, selectedFolder, selectedProduct, targetType],
+      if (targetType === 'multiple') {
+        return selectedProducts
+      }
+
+      return selectedProduct ? [selectedProduct] : []
+    },
+    [products, selectedProduct, selectedProducts, targetType],
+  )
+  const selectedListProducts = useMemo(
+    () => (targetType === 'multiple' ? selectedProducts : selectedProduct ? [selectedProduct] : []),
+    [selectedProduct, selectedProducts, targetType],
+  )
+  const searchableProducts = useMemo(
+    () => filteredProducts.filter((product) => {
+      if (targetType === 'multiple') {
+        return !selectedProductIds.includes(product.id)
+      }
+
+      return true
+    }),
+    [filteredProducts, selectedProductIds, targetType],
   )
 
   const batchCount = useMemo(() => {
-    const items = targetType === 'folder' ? products.length : (productId ? 1 : 0)
-    return items * quantity
-  }, [targetType, products.length, productId, quantity])
+    return productsToPreview.length * quantity
+  }, [productsToPreview.length, quantity])
   const exportPageCount = useMemo(() => {
     if (!selectedTemplate || productsToPreview.length === 0) return 0
 
@@ -135,10 +137,44 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
     })
   }, [filteredProducts, filteredTemplates, layoutContext])
 
+  const switchTargetType = (nextTargetType: BatchTarget) => {
+    setTargetType(nextTargetType)
+    setMessage(null)
+    setFolderId('')
+    setProductId('')
+    setSelectedProductIds([])
+    setProductSearch('')
+  }
+
   const handleTemplateChange = (nextTemplateId: string) => {
     setTemplateId(nextTemplateId)
     onSelectedTemplateChange?.(nextTemplateId)
     setMessage(null)
+  }
+
+  const addProductSelection = (nextProductId: string) => {
+    setMessage(null)
+    setProductSearch('')
+
+    if (targetType === 'multiple') {
+      setSelectedProductIds((currentIds) => currentIds.includes(nextProductId) ? currentIds : [...currentIds, nextProductId])
+      return
+    }
+
+    setProductId(nextProductId)
+  }
+
+  const removeSelectedProduct = (selectedId: string) => {
+    setMessage(null)
+
+    if (targetType === 'multiple') {
+      setSelectedProductIds((currentIds) => currentIds.filter((productId) => productId !== selectedId))
+      return
+    }
+
+    if (productId === selectedId) {
+      setProductId('')
+    }
   }
 
   const exportPdf = async () => {
@@ -148,8 +184,13 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
       return
     }
 
-    if (targetType === 'product' && !productId) {
+    if (targetType === 'single' && !productId) {
       setMessage('Select a product.')
+      return
+    }
+
+    if (targetType === 'multiple' && selectedProductIds.length === 0) {
+      setMessage('Select at least one product.')
       return
     }
 
@@ -173,6 +214,12 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
             productIds: products.map((product) => product.id),
             products: products.map((product) => ({ id: product.id, sku: product.sku, name: product.name })),
           }
+        : targetType === 'multiple'
+          ? {
+              targetType,
+              productIds: selectedProducts.map((product) => product.id),
+              products: selectedProducts.map((product) => ({ id: product.id, sku: product.sku, name: product.name })),
+            }
         : {
             targetType,
             productId,
@@ -181,7 +228,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
           }
 
     try {
-      const productsToExport = targetType === 'folder' ? products : selectedProduct ? [selectedProduct] : []
+      const productsToExport = productsToPreview
       const outputUrl = await createLabelPdfDataUrl({
         templateName: selectedTemplate?.name ?? 'Unknown template',
         layout: selectedTemplate?.layout,
@@ -208,7 +255,11 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
         outputUrl,
         buildPdfFileName(
           selectedTemplate?.name,
-          targetType === 'folder' ? selectedFolder?.name : selectedProduct?.sku ?? selectedProduct?.name,
+          targetType === 'folder'
+            ? selectedFolder?.name
+            : targetType === 'multiple'
+              ? `${selectedProducts.length}-item-batch`
+              : selectedProduct?.sku ?? selectedProduct?.name,
         ),
       )
       setMessage(historySaved ? 'PDF downloaded.' : 'PDF downloaded, but the export history could not be saved.')
@@ -218,20 +269,20 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   }
 
   return (
-    <div className="export-layout">
-      <div className="card stack export-config-card">
-        <div>
-          <h3 className="section-title" style={{ marginBottom: 4 }}>Export Configuration</h3>
-          <p className="small muted" style={{ margin: 0 }}>Set up your batch print job.</p>
+    <div className="label-batch-layout">
+      <div className="label-batch-sidebar">
+        <div className="label-batch-sidebar-header">
+          <h3 className="label-batch-sidebar-title">Export & Batch</h3>
+          <p className="label-batch-sidebar-description">Select target products and print your labels.</p>
         </div>
+
         {loadingTemplates || loadingProducts || loadingFolders ? (
           <div className="empty-state">Loading data...</div>
         ) : (
           <>
-            <div className="export-step">
-              <span className="export-step-number">1</span>
-              <label className="stack" style={{ gap: 8, flex: 1 }}>
-                <span className="export-step-label">Select Template</span>
+            <section className="label-batch-section">
+              <span className="label-batch-section-label">1. Select Template</span>
+              <label className="stack" style={{ gap: 8 }}>
                 <select className="select" aria-label="Template" value={templateId} onChange={(event) => handleTemplateChange(event.target.value)}>
                   <option value="">Select template</option>
                   {filteredTemplates.map((template) => (
@@ -241,39 +292,38 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
                   ))}
                 </select>
               </label>
-            </div>
+            </section>
 
-            <div className="export-step">
-              <span className="export-step-number">2</span>
-              <div className="stack" style={{ gap: 8, flex: 1 }}>
-                <span className="export-step-label">Target Data</span>
-                <div className="export-toggle-group" role="radiogroup" aria-label="Target type">
+            <section className="label-batch-section">
+              <span className="label-batch-section-label">2. Target Selection</span>
+              <div className="stack" style={{ gap: 12 }}>
+                <div className="label-batch-target-toggle" role="radiogroup" aria-label="Target type">
                   <button
                     type="button"
                     role="radio"
-                    aria-checked={targetType === 'product'}
-                    className={`export-toggle-btn${targetType === 'product' ? ' active' : ''}`}
-                    onClick={() => {
-                      setTargetType('product')
-                      setMessage(null)
-                      setProductId('')
-                      setFolderId('')
-                    }}
+                    aria-checked={targetType === 'single'}
+                    className={`label-batch-target-button${targetType === 'single' ? ' is-active' : ''}`}
+                    onClick={() => switchTargetType('single')}
                   >
-                    Single Product
+                    Single
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={targetType === 'multiple'}
+                    className={`label-batch-target-button${targetType === 'multiple' ? ' is-active' : ''}`}
+                    onClick={() => switchTargetType('multiple')}
+                  >
+                    Multiple
                   </button>
                   <button
                     type="button"
                     role="radio"
                     aria-checked={targetType === 'folder'}
-                    className={`export-toggle-btn${targetType === 'folder' ? ' active' : ''}`}
-                    onClick={() => {
-                      setTargetType('folder')
-                      setMessage(null)
-                      setProductId('')
-                    }}
+                    className={`label-batch-target-button${targetType === 'folder' ? ' is-active' : ''}`}
+                    onClick={() => switchTargetType('folder')}
                   >
-                    Entire Folder
+                    Folder
                   </button>
                 </div>
 
@@ -288,77 +338,130 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
                       ))}
                     </select>
                     {selectedFolder && (
-                      <span className="export-folder-chip">
-                        {selectedFolder.name} · {products.length} items 📁
-                      </span>
+                      <div className="label-batch-folder-summary">{selectedFolder.name} · {products.length} items</div>
                     )}
                   </>
                 ) : (
-                  <select className="select" aria-label="Product" value={productId} onChange={(event) => setProductId(event.target.value)}>
-                    <option value="">Select product</option>
-                    {filteredProducts.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name} ({product.sku})
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <label className="label-batch-search-field">
+                      <Search size={15} />
+                      <input
+                        className="label-batch-search-input"
+                        type="search"
+                        aria-label="Product Search"
+                        placeholder="Search products by SKU or Name..."
+                        value={productSearch}
+                        onChange={(event) => setProductSearch(event.target.value)}
+                      />
+                    </label>
+
+                    {productSearch.trim().length > 0 ? (
+                      <div className="label-batch-search-results">
+                        {searchableProducts.slice(0, 6).map((product) => (
+                          <button
+                            key={product.id}
+                            type="button"
+                            className="label-batch-search-result"
+                            onClick={() => addProductSelection(product.id)}
+                          >
+                            <span className="label-batch-search-result-name">{product.name}</span>
+                            <span className="label-batch-search-result-sku">{product.sku || 'No SKU'}</span>
+                          </button>
+                        ))}
+                        {searchableProducts.length === 0 ? <div className="label-batch-search-empty">No matching products.</div> : null}
+                      </div>
+                    ) : null}
+
+                    <div className="label-batch-selected-list">
+                      {selectedListProducts.length === 0 ? (
+                        <div className="label-batch-selected-empty">No products selected.</div>
+                      ) : (
+                        selectedListProducts.map((product) => (
+                          <div key={product.id} className="label-batch-selected-item">
+                            <div className="label-batch-selected-copy">
+                              <span className="label-batch-selected-name">{product.name}</span>
+                              <span className="label-batch-selected-sku">{product.sku || 'No SKU'}</span>
+                            </div>
+                            <button
+                              type="button"
+                              className="label-batch-remove-button"
+                              aria-label={`Remove ${product.name}`}
+                              onClick={() => removeSelectedProduct(product.id)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
-            </div>
+            </section>
 
-            <div className="export-step">
-              <span className="export-step-number">3</span>
-              <div className="stack" style={{ gap: 8, flex: 1 }}>
-                <span className="export-step-label">Copies per item</span>
-                <div className="export-stepper">
-                  <button type="button" className="export-stepper-btn" aria-label="Decrease quantity" onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}>−</button>
-                  <input
-                    className="export-stepper-value"
-                    type="number"
-                    min={1}
-                    aria-label="Quantity"
-                    value={quantity}
-                    onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
-                  />
-                  <button type="button" className="export-stepper-btn" aria-label="Increase quantity" onClick={() => setQuantity((prev) => prev + 1)}>+</button>
-                </div>
+            <section className="label-batch-section">
+              <span className="label-batch-section-label">3. Print Options</span>
+              <div className="label-batch-quantity-row">
+                <span className="label-batch-quantity-label">Copies per item</span>
+                <input
+                  className="label-batch-quantity-input"
+                  type="number"
+                  min={1}
+                  aria-label="Quantity"
+                  value={quantity}
+                  onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
+                />
               </div>
-            </div>
+            </section>
 
-            <button className="button export-batch-btn" onClick={exportPdf} disabled={createPrintJobMutation.isPending}>
-              <span className="export-batch-btn-icon">⬇</span>
-              Export PDF Batch
+            <button className="label-batch-export-button" onClick={exportPdf} disabled={createPrintJobMutation.isPending}>
+              Export PDF
             </button>
             {batchCount > 0 && exportPageCount > 0 && (
-              <p className="small muted" style={{ textAlign: 'center', margin: 0 }}>
+              <p className="label-batch-summary">
                 Generates {exportPageCount} PDF {exportPageCount === 1 ? 'page' : 'pages'} across {batchCount} label{batchCount === 1 ? '' : 's'}.
               </p>
             )}
-            {message && <div className="small muted" style={{ textAlign: 'center' }}>{message}</div>}
+            {message ? <div className="label-batch-message">{message}</div> : null}
           </>
         )}
       </div>
 
-      <div className="stack export-right-panel">
-        <LabelPreviewCard
-          title="Live Export Preview"
-          description="The page preview below uses the same layout, placement, and assets as the exported PDF."
-          templateName={selectedTemplate?.name}
-          layout={selectedTemplate?.layout}
-          variableFields={selectedTemplate?.variable_fields}
-          quantity={quantity}
-          badgeText={batchCount > 0 ? `${batchCount} labels` : undefined}
-          emptyMessage="Select a template and export target to preview the PDF page."
-          previewMode="page"
-          products={productsToPreview}
-          summaryItems={previewSummaryItems}
-        />
+      <div className="label-batch-preview-pane">
+        <section className="label-batch-preview-shell">
+          <div className="label-batch-preview-header">
+            <span className="label-batch-preview-title">
+              <Layers3 size={14} />
+              A4 Layout Preview
+            </span>
+            <span className="label-batch-preview-page">Page 1 of {Math.max(exportPageCount, 1)}</span>
+          </div>
 
-        <LabelDownloadsTab
-          companyId={companyId}
-          title="Recent Exports"
-          emptyStateMessage="No PDF exports yet. Export one here to download it immediately."
-        />
+          <div className="label-batch-preview-canvas">
+            <LabelPreviewCard
+              className="label-batch-preview-card"
+              title="A4 Layout Preview"
+              templateName={selectedTemplate?.name}
+              layout={selectedTemplate?.layout}
+              variableFields={selectedTemplate?.variable_fields}
+              quantity={quantity}
+              emptyMessage="Select a template and target products to preview the PDF page."
+              previewMode="page"
+              products={productsToPreview}
+              hideHeader
+              showTemplateMeta={false}
+              showVariableFields={false}
+              showSummaryItems={false}
+            />
+
+            {selectedTemplate ? (
+              <div className="label-batch-engine-pill">
+                <Layers3 size={14} />
+                Live Layout Engine active
+              </div>
+            ) : null}
+          </div>
+        </section>
       </div>
     </div>
   )
