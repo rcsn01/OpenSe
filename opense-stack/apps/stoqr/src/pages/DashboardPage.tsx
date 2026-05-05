@@ -1,22 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { LucideIcon } from 'lucide-react'
-import {
-  AlertTriangle,
-  ArrowRightLeft,
-  BellRing,
-  ClipboardList,
-  Clock3,
-  Layers3,
-  Package,
-} from 'lucide-react'
-import {
-  Badge,
-  Button,
-  Card,
-  DataTable,
-  TabBar,
-} from '@repo/ui'
+import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import type { DashboardData } from '../api/dashboard'
 import type { AlertEvent } from '../api/alerts'
 import type { PurchaseOrder, PurchaseOrderItem } from '../api/procurement'
@@ -31,38 +14,39 @@ import {
 import './DashboardPage.css'
 
 type VelocityTabId = 'fast' | 'slow' | 'dead'
-type StatTone = 'value' | 'catalog' | 'critical' | 'warning'
 type TrendDirection = 'up' | 'down' | 'neutral'
 type AttentionSeverity = 'critical' | 'high' | 'medium' | 'low'
+type MetricTone = 'positive' | 'warning' | 'danger' | 'neutral'
+type DeliveryStatusTone = 'on-time' | 'delayed' | 'pending'
+type VelocityTone = 'high' | 'medium' | 'low'
 
-type DashboardStat = {
+type DashboardMetric = {
   label: string
   value: string
-  trend: string
-  footnote: string
+  accentLabel: string
+  detail: string
+  tone: MetricTone
   direction: TrendDirection
-  tone: StatTone
-  icon: LucideIcon
-  sparkline: number[]
 }
 
 type AttentionItem = {
   id: string
   severity: AttentionSeverity
   title: string
-  subtitle: string
   detail: string
+  timeLabel: string
   sortValue: number
 }
 
 type DeliveryRow = {
   id: string
-  vendor: string
   poLabel: string
-  itemsLabel: string
+  vendor: string
+  itemsCountLabel: string
+  valueLabel: string
   expectedLabel: string
   statusLabel: string
-  statusVariant: 'success' | 'warning' | 'destructive' | 'secondary'
+  statusTone: DeliveryStatusTone
   sortValue: number
 }
 
@@ -71,29 +55,21 @@ type VelocityItem = {
   name: string
   sku: string
   metricLabel: string
-  barValue: number
+  statusLabel: string
+  statusTone: VelocityTone
 }
 
 const velocityTabs: Array<{ id: VelocityTabId; label: string }> = [
-  { id: 'fast', label: 'Fast Moving' },
-  { id: 'slow', label: 'Slow Moving' },
+  { id: 'fast', label: 'Fast' },
+  { id: 'slow', label: 'Slow' },
   { id: 'dead', label: 'Dead Stock' },
 ]
-
-const emptySparkline = Array.from({ length: 7 }, () => 0)
 
 const attentionPriority: Record<AttentionSeverity, number> = {
   critical: 4,
   high: 3,
   medium: 2,
   low: 1,
-}
-
-const severityBadgeVariant: Record<AttentionSeverity, 'destructive' | 'warning' | 'secondary'> = {
-  critical: 'destructive',
-  high: 'warning',
-  medium: 'warning',
-  low: 'secondary',
 }
 
 const formatCompactCurrency = (value: number) =>
@@ -104,38 +80,33 @@ const formatCompactCurrency = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value)
 
-const formatCompactNumber = (value: number) =>
+const formatCurrency = (value: number) =>
   new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits: value >= 1000 ? 1 : 0,
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
   }).format(value)
 
-const formatTrendPercent = (values: number[]): { text: string; direction: TrendDirection } => {
-  if (values.length < 2) return { text: 'stable', direction: 'neutral' as TrendDirection }
-
-  const first = values[0] ?? 0
-  const last = values[values.length - 1] ?? 0
-
-  if (first === 0) {
-    if (last === 0) return { text: 'stable', direction: 'neutral' as TrendDirection }
-    return { text: `+${formatCompactNumber(last)}`, direction: 'up' as TrendDirection }
-  }
-
-  const percent = ((last - first) / Math.abs(first)) * 100
-  if (Math.abs(percent) < 0.5) return { text: 'stable', direction: 'neutral' as TrendDirection }
-
-  return {
-    text: `${percent > 0 ? '+' : ''}${percent.toFixed(Math.abs(percent) >= 10 ? 0 : 1)}%`,
-    direction: percent > 0 ? 'up' : 'down',
-  }
-}
-
-const formatDayLabel = (value: string) =>
-  new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(value))
+const formatInteger = (value: number) =>
+  new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 0,
+  }).format(value)
 
 const formatShortDate = (value: string | null) => {
   if (!value) return 'TBD'
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value))
+}
+
+const formatRelativeTimestamp = (value: string) => {
+  const diffMs = Date.now() - new Date(value).getTime()
+  const diffMinutes = Math.round(diffMs / (60 * 1000))
+  const diffHours = Math.round(diffMs / (60 * 60 * 1000))
+  const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000))
+
+  if (diffMinutes <= 0) return 'just now'
+  if (diffMinutes < 60) return `${diffMinutes} min ago`
+  if (diffHours < 24) return `${diffHours} hr${diffHours === 1 ? '' : 's'} ago`
+  return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`
 }
 
 const getDaysFromToday = (value: string) => {
@@ -150,70 +121,60 @@ const getDaysFromToday = (value: string) => {
 
 const formatExpectedDate = (value: string | null) => {
   if (!value) return 'TBD'
+
   const dayDelta = getDaysFromToday(value)
   if (dayDelta === 0) return 'Today'
   if (dayDelta === 1) return 'Tomorrow'
   if (dayDelta > 1 && dayDelta <= 6) return `In ${dayDelta} days`
   if (dayDelta === -1) return '1 day overdue'
   if (dayDelta < -1) return `${Math.abs(dayDelta)} days overdue`
+
   return formatShortDate(value)
 }
 
-const formatRelativeTimestamp = (value: string) => {
-  const diffMs = Date.now() - new Date(value).getTime()
-  const diffHours = Math.round(diffMs / (60 * 60 * 1000))
-  const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000))
+const formatTrendPercent = (
+  values: number[],
+  lowerIsBetter = false,
+): { text: string; direction: TrendDirection } => {
+  if (values.length < 2) {
+    return { text: 'Stable', direction: 'neutral' as TrendDirection }
+  }
 
-  if (diffHours <= 0) return 'just now'
-  if (diffHours < 24) return `${diffHours} hr${diffHours === 1 ? '' : 's'} ago`
-  return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`
+  const first = values[0] ?? 0
+  const last = values[values.length - 1] ?? 0
+  if (first === 0 && last === 0) {
+    return { text: 'Stable', direction: 'neutral' as TrendDirection }
+  }
+
+  if (first === 0) {
+    const direction: TrendDirection = lowerIsBetter ? 'down' : 'up'
+    return {
+      text: `${direction === 'up' ? '+' : '-'}${formatInteger(Math.abs(last))}`,
+      direction,
+    }
+  }
+
+  const percent = ((last - first) / Math.abs(first)) * 100
+  if (Math.abs(percent) < 0.5) {
+    return { text: 'Stable', direction: 'neutral' as TrendDirection }
+  }
+
+  const rawDirection = percent > 0 ? 'up' : 'down'
+  return {
+    text: `${percent > 0 ? '+' : ''}${percent.toFixed(Math.abs(percent) >= 10 ? 0 : 1)}%`,
+    direction: lowerIsBetter ? (rawDirection === 'up' ? 'down' : 'up') : rawDirection,
+  }
 }
+
+const formatDayLabel = (value: string) =>
+  new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(value))
 
 const padPurchaseOrder = (value: number) => `PO-${String(value).padStart(4, '0')}`
 
-const buildFlatSeries = (value: number, length = 7) =>
-  Array.from({ length }, () => Math.max(value, 0))
-
-const normalizeSparklineValues = (values: number[]) => {
-  if (values.length === 0) return emptySparkline
-  if (values.length === 1) return buildFlatSeries(values[0] ?? 0)
-  return values
-}
-
-const formatIsoDate = (value: Date) => {
-  const year = value.getFullYear()
-  const month = String(value.getMonth() + 1).padStart(2, '0')
-  const day = String(value.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-type ChartPoint = { x: number; y: number }
-
-const buildPoints = (
-  values: number[],
-  width: number,
-  height: number,
-  padding: { top: number; right: number; bottom: number; left: number },
-) => {
-  const usableWidth = width - padding.left - padding.right
-  const usableHeight = height - padding.top - padding.bottom
-  const maxValue = Math.max(...values, 1)
-  const stepX = values.length > 1 ? usableWidth / (values.length - 1) : usableWidth
-
-  return values.map((value, index) => ({
-    x: padding.left + stepX * index,
-    y: padding.top + usableHeight - (value / maxValue) * usableHeight,
-  }))
-}
-
-const buildLinePath = (points: ChartPoint[]) =>
-  points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
-
-const buildAreaPath = (points: ChartPoint[], baseY: number) => {
-  if (points.length === 0) return ''
-  const first = points[0]
-  const last = points[points.length - 1]
-  return `${buildLinePath(points)} L ${last.x} ${baseY} L ${first.x} ${baseY} Z`
+const classifyVelocityTone = (value: number): VelocityTone => {
+  if (value >= 100) return 'high'
+  if (value >= 40) return 'medium'
+  return 'low'
 }
 
 const buildMovementChartWindow = (data: DashboardData['movementChartData']) => {
@@ -222,43 +183,31 @@ const buildMovementChartWindow = (data: DashboardData['movementChartData']) => {
     .sort((left, right) => left.date.localeCompare(right.date))
     .slice(-7)
 
-  const latestDate = sorted[sorted.length - 1]?.date ?? formatIsoDate(new Date())
-  const latestDateValue = new Date(`${latestDate}T00:00:00`)
-  const pointsByDate = new Map(sorted.map((point) => [point.date, point]))
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const dateValue = new Date(latestDateValue)
-    dateValue.setDate(latestDateValue.getDate() - (6 - index))
-    const date = formatIsoDate(dateValue)
-    const point = pointsByDate.get(date)
-
-    return {
-      date,
-      inbound: point?.inbound ?? 0,
-      outbound: point?.outbound ?? 0,
-    }
-  })
+  return sorted.map((point) => ({
+    ...point,
+    label: formatDayLabel(point.date),
+  }))
 }
 
 const buildAttentionItems = (
   alertEvents: AlertEvent[],
   purchaseOrders: PurchaseOrder[],
   data: DashboardData,
-): AttentionItem[] => {
+) => {
   const alertRows: AttentionItem[] = alertEvents
     .filter((event) => event.status !== 'resolved')
-    .map((event): AttentionItem => ({
+    .map((event) => ({
       id: `alert-${event.id}`,
       severity: event.severity,
       title: event.message,
-      subtitle: event.products?.sku ? `SKU: ${event.products.sku}` : 'System alert',
-      detail: event.products?.name
-        ? `${event.products.name} • ${formatRelativeTimestamp(event.triggered_at)}`
-        : formatRelativeTimestamp(event.triggered_at),
+      detail: event.products?.sku
+        ? `${event.products.sku} · ${event.products.name ?? 'Inventory item'}`
+        : 'System alert',
+      timeLabel: formatRelativeTimestamp(event.triggered_at),
       sortValue: new Date(event.triggered_at).getTime(),
     }))
 
-  const overdueOrders: AttentionItem[] = purchaseOrders
+  const delayedShipments: AttentionItem[] = purchaseOrders
     .filter(
       (order) =>
         !!order.expected_date &&
@@ -266,43 +215,42 @@ const buildAttentionItems = (
         order.status !== 'cancelled' &&
         getDaysFromToday(order.expected_date) < 0,
     )
-    .map((order): AttentionItem => {
+    .map((order) => {
       const overdueDays = Math.abs(getDaysFromToday(order.expected_date as string))
       return {
         id: `po-${order.id}`,
         severity: overdueDays > 2 ? 'high' : 'medium',
-        title: `Delayed Shipment: ${padPurchaseOrder(order.po_number)}`,
-        subtitle: `Vendor: ${order.suppliers?.name ?? 'Unassigned supplier'}`,
-        detail: `${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue`,
+        title: `Shipment ${padPurchaseOrder(order.po_number)} delayed by ${overdueDays} day${overdueDays === 1 ? '' : 's'}`,
+        detail: `Vendor: ${order.suppliers?.name ?? 'Unassigned supplier'}`,
+        timeLabel: formatRelativeTimestamp(order.expected_date as string),
         sortValue: new Date(order.expected_date as string).getTime(),
       }
     })
 
-  const combined = [...alertRows, ...overdueOrders]
+  const combined = [...delayedShipments, ...alertRows]
     .sort((left, right) => {
       const severityDelta = attentionPriority[right.severity] - attentionPriority[left.severity]
       if (severityDelta !== 0) return severityDelta
       return right.sortValue - left.sortValue
     })
-    .slice(0, 4)
+    .slice(0, 6)
 
-  if (combined.length > 0) return combined
+  if (combined.length > 0) {
+    return combined
+  }
 
   return data.products
     .filter((product) => product.quantity_on_hand <= product.reorder_point)
-    .slice(0, 4)
+    .slice(0, 6)
     .map((product) => ({
       id: `fallback-${product.id}`,
       severity: product.quantity_on_hand === 0 ? 'critical' : 'medium',
       title:
         product.quantity_on_hand === 0
-          ? `Stockout: ${product.name}`
-          : `Expiring stock window: ${product.name}`,
-      subtitle: `SKU: ${product.sku}`,
-      detail:
-        product.quantity_on_hand === 0
-          ? 'Inventory is fully depleted.'
-          : `${product.quantity_on_hand} units remaining before reorder point.`,
+          ? `${product.sku} is out of stock`
+          : `${product.sku} is nearing its reorder point`,
+      detail: `${product.name} · ${product.quantity_on_hand} units on hand`,
+      timeLabel: 'Inventory watch',
       sortValue: product.quantity_on_hand,
     }))
 }
@@ -310,12 +258,12 @@ const buildAttentionItems = (
 const buildDeliveryRows = (
   purchaseOrders: PurchaseOrder[],
   purchaseOrderItems: PurchaseOrderItem[],
-): DeliveryRow[] => {
-  const itemsByOrder = purchaseOrderItems.reduce((acc, item) => {
-    const rows = acc.get(item.po_id) ?? []
+) => {
+  const itemsByOrder = purchaseOrderItems.reduce((accumulator, item) => {
+    const rows = accumulator.get(item.po_id) ?? []
     rows.push(item)
-    acc.set(item.po_id, rows)
-    return acc
+    accumulator.set(item.po_id, rows)
+    return accumulator
   }, new Map<string, PurchaseOrderItem[]>())
 
   return purchaseOrders
@@ -323,54 +271,46 @@ const buildDeliveryRows = (
     .map((order): DeliveryRow => {
       const lineItems = itemsByOrder.get(order.id) ?? []
       const orderedUnits = lineItems.reduce((sum, item) => sum + item.quantity_ordered, 0)
-      const leadItem = lineItems[0]?.products?.name ?? 'Pending line items'
-      const itemsLabel =
-        lineItems.length <= 1
-          ? `${leadItem}${orderedUnits > 0 ? ` (${orderedUnits} units)` : ''}`
-          : `${leadItem} +${lineItems.length - 1} more (${orderedUnits} units)`
-
+      const totalValue = lineItems.reduce((sum, item) => sum + item.quantity_ordered * item.unit_cost, 0)
       const overdue = !!order.expected_date && getDaysFromToday(order.expected_date) < 0
-      const dueSoon = !!order.expected_date && getDaysFromToday(order.expected_date) <= 1
-      const statusLabel = overdue
-        ? 'Overdue'
+      const statusLabel = overdue ? 'Delayed' : order.status === 'partial' ? 'Pending' : 'On Time'
+      const statusTone: DeliveryRow['statusTone'] = overdue
+        ? 'delayed'
         : order.status === 'partial'
-          ? 'Partial'
-          : dueSoon
-            ? 'Due Soon'
-            : 'Scheduled'
-      const statusVariant: DeliveryRow['statusVariant'] = overdue
-        ? 'destructive'
-        : order.status === 'partial'
-          ? 'warning'
-          : dueSoon
-            ? 'secondary'
-            : 'success'
+          ? 'pending'
+          : 'on-time'
 
       return {
         id: order.id,
-        vendor: order.suppliers?.name ?? 'Unassigned supplier',
         poLabel: padPurchaseOrder(order.po_number),
-        itemsLabel,
+        vendor: order.suppliers?.name ?? 'Unassigned supplier',
+        itemsCountLabel: formatInteger(orderedUnits),
+        valueLabel: formatCurrency(totalValue),
         expectedLabel: formatExpectedDate(order.expected_date),
         statusLabel,
-        statusVariant,
+        statusTone,
         sortValue: order.expected_date ? new Date(order.expected_date).getTime() : Number.MAX_SAFE_INTEGER,
       }
     })
     .sort((left, right) => left.sortValue - right.sortValue)
-    .slice(0, 5)
+    .slice(0, 6)
 }
 
 const buildVelocityGroups = (data: DashboardData) => {
   const topMoverIds = new Set(data.topMovers.map((item) => item.id))
 
-  const fast = data.topMovers.slice(0, 5).map((item) => ({
-    id: item.id,
-    name: item.name,
-    sku: item.sku,
-    metricLabel: `${item.totalSold.toLocaleString()} units/mo`,
-    barValue: Math.max(item.totalSold, 1),
-  }))
+  const fast = data.topMovers.slice(0, 5).map((item) => {
+    const weeklyVelocity = Math.max(1, Math.round(item.totalSold / 4.3))
+    const statusTone = classifyVelocityTone(weeklyVelocity)
+    return {
+      id: item.id,
+      name: item.name,
+      sku: item.sku,
+      metricLabel: `${formatInteger(weeklyVelocity)} /wk`,
+      statusLabel: statusTone === 'high' ? 'High' : 'Medium',
+      statusTone,
+    }
+  })
 
   const slow = data.products
     .filter((product) => !topMoverIds.has(product.id) && product.quantity_on_hand > 0)
@@ -380,13 +320,15 @@ const buildVelocityGroups = (data: DashboardData) => {
     )
     .slice(0, 5)
     .map((product) => {
-      const estimatedVelocity = Math.max(1, Math.round(Math.max(product.quantity_on_hand - product.reorder_point, 1) / 3))
+      const weeklyVelocity = Math.max(1, Math.round(Math.max(product.quantity_on_hand - product.reorder_point, 1) / 4))
+      const statusTone = classifyVelocityTone(weeklyVelocity)
       return {
         id: product.id,
         name: product.name,
         sku: product.sku,
-        metricLabel: `${estimatedVelocity.toLocaleString()} units/mo`,
-        barValue: estimatedVelocity,
+        metricLabel: `${formatInteger(weeklyVelocity)} /wk`,
+        statusLabel: statusTone === 'high' ? 'High' : statusTone === 'medium' ? 'Medium' : 'Low',
+        statusTone,
       }
     })
 
@@ -398,133 +340,62 @@ const buildVelocityGroups = (data: DashboardData) => {
       id: product.id,
       name: product.name,
       sku: product.sku,
-      metricLabel: `${product.quantity_on_hand.toLocaleString()} idle units`,
-      barValue: Math.max(product.quantity_on_hand, 1),
+      metricLabel: `${formatInteger(product.quantity_on_hand)} idle units`,
+      statusLabel: 'Dormant',
+      statusTone: 'low' as VelocityTone,
     }))
 
   return { fast, slow, dead }
 }
 
-const MiniSparkline = ({ values, tone }: { values: number[]; tone: StatTone }) => {
-  const resolvedValues = normalizeSparklineValues(values)
-  const width = 240
-  const height = 34
-  const padding = { top: 3, right: 3, bottom: 2, left: 3 }
-  const points = buildPoints(resolvedValues, width, height, padding)
-  const linePath = buildLinePath(points)
-  const areaPath = buildAreaPath(points, height - padding.bottom)
+const MetricCard = ({ metric }: { metric: DashboardMetric }) => {
+  const TrendIcon = metric.direction === 'down' ? ArrowDownRight : ArrowUpRight
+  const showIcon = metric.direction !== 'neutral'
 
   return (
-    <svg className="stoqr-dashboard__sparkline" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-      <defs>
-        <linearGradient id={`spark-fill-${tone}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" className={`stoqr-dashboard__spark-stop stoqr-dashboard__spark-stop--${tone}`} stopOpacity="0.32" />
-          <stop offset="100%" className={`stoqr-dashboard__spark-stop stoqr-dashboard__spark-stop--${tone}`} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={areaPath} fill={`url(#spark-fill-${tone})`} />
-      <path d={linePath} fill="none" className={`stoqr-dashboard__spark-line stoqr-dashboard__spark-line--${tone}`} />
-    </svg>
-  )
-}
-
-const StatCard = ({ card }: { card: DashboardStat }) => {
-  const Icon = card.icon
-
-  return (
-    <Card className={`stoqr-dashboard__stat-card stoqr-dashboard__stat-card--${card.tone}`} padding="sm">
-      <div className="stoqr-dashboard__stat-header">
-        <div>
-          <p className="stoqr-dashboard__stat-label">{card.label}</p>
-        </div>
-        <span className="stoqr-dashboard__stat-icon" aria-hidden="true">
-          <Icon size={18} />
-        </span>
+    <article className={`stoqr-dashboard__metric stoqr-dashboard__metric--${metric.tone}`}>
+      <p className="stoqr-dashboard__metric-label">{metric.label}</p>
+      <strong className="stoqr-dashboard__metric-value">{metric.value}</strong>
+      <div className={`stoqr-dashboard__metric-accent is-${metric.direction}`}>
+        {showIcon ? <TrendIcon size={13} /> : null}
+        <span>{metric.accentLabel}</span>
       </div>
-
-      <div className="stoqr-dashboard__stat-value-row">
-        <strong className="stoqr-dashboard__stat-value">{card.value}</strong>
-        <span className={`stoqr-dashboard__stat-trend is-${card.direction}`}>{card.trend}</span>
-      </div>
-
-      <p className="stoqr-dashboard__stat-footnote">{card.footnote}</p>
-      <MiniSparkline values={card.sparkline} tone={card.tone} />
-    </Card>
+      <p className="stoqr-dashboard__metric-detail">{metric.detail}</p>
+    </article>
   )
 }
 
 const MovementChart = ({ data }: { data: DashboardData['movementChartData'] }) => {
-  const hasMovementHistory = data.some((point) => point.inbound > 0 || point.outbound > 0)
-  const chartData = buildMovementChartWindow(data).map((point) => ({
-    ...point,
-    label: formatDayLabel(point.date),
-  }))
+  const chartData = buildMovementChartWindow(data)
+  const maxValue = Math.max(...chartData.flatMap((point) => [point.inbound, point.outbound]), 1)
+  const hasMovementHistory = chartData.some((point) => point.inbound > 0 || point.outbound > 0)
 
-  const width = 680
-  const height = 182
-  const padding = { top: 12, right: 16, bottom: 24, left: 10 }
-  const baselineY = height - padding.bottom
-  const inboundPoints = buildPoints(chartData.map((point) => point.inbound), width, height, padding)
-  const outboundPoints = buildPoints(chartData.map((point) => point.outbound), width, height, padding)
-  const inboundPath = buildLinePath(inboundPoints)
-  const outboundPath = buildLinePath(outboundPoints)
-  const outboundArea = buildAreaPath(outboundPoints, baselineY)
+  if (!hasMovementHistory) {
+    return <div className="stoqr-dashboard__empty-panel">No movement history yet.</div>
+  }
 
   return (
-    <div className="stoqr-dashboard__chart-area">
-      <svg className="stoqr-dashboard__chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Inbound and outbound inventory volume">
-        <defs>
-          <linearGradient id="movement-outbound-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-
-        {Array.from({ length: 4 }).map((_, index) => {
-          const y = padding.top + ((baselineY - padding.top) / 3) * index
-          return <line key={y} x1={padding.left} x2={width - padding.right} y1={y} y2={y} className="stoqr-dashboard__chart-grid" />
-        })}
-
-        <path d={outboundArea} fill="url(#movement-outbound-fill)" />
-        <path d={inboundPath} fill="none" className="stoqr-dashboard__chart-line stoqr-dashboard__chart-line--inbound" />
-        <path d={outboundPath} fill="none" className="stoqr-dashboard__chart-line stoqr-dashboard__chart-line--outbound" />
-
-        {inboundPoints.map((point, index) => (
-          <circle key={`inbound-${index}`} cx={point.x} cy={point.y} r="3.5" className="stoqr-dashboard__chart-dot stoqr-dashboard__chart-dot--inbound" />
-        ))}
-        {outboundPoints.map((point, index) => (
-          <circle key={`outbound-${index}`} cx={point.x} cy={point.y} r="3.5" className="stoqr-dashboard__chart-dot stoqr-dashboard__chart-dot--outbound" />
-        ))}
-
-        {chartData.map((point, index) => {
-          const labelX = inboundPoints[index]?.x ?? padding.left
-          return (
-            <text key={point.date} x={labelX} y={height - 10} textAnchor="middle" className="stoqr-dashboard__chart-axis-label">
-              {point.label}
-            </text>
-          )
-        })}
-      </svg>
-
-      <div className="stoqr-dashboard__chart-legend" aria-hidden="true">
-        <span className="stoqr-dashboard__legend-item">
-          <span className="stoqr-dashboard__legend-dot stoqr-dashboard__legend-dot--inbound" />
-          Inbound
-        </span>
-        <span className="stoqr-dashboard__legend-item">
-          <span className="stoqr-dashboard__legend-dot stoqr-dashboard__legend-dot--outbound" />
-          Outbound
-        </span>
-      </div>
-      {!hasMovementHistory ? (
-        <p className="stoqr-dashboard__chart-empty-note">No movement history yet.</p>
-      ) : null}
+    <div className="stoqr-dashboard__movement" role="img" aria-label="Inbound and outbound inventory volume">
+      {chartData.map((point) => (
+        <div key={point.date} className="stoqr-dashboard__movement-group">
+          <div className="stoqr-dashboard__movement-bars">
+            <span
+              className="stoqr-dashboard__movement-bar stoqr-dashboard__movement-bar--inbound"
+              style={{ height: `${Math.max((point.inbound / maxValue) * 100, point.inbound > 0 ? 8 : 0)}%` }}
+            />
+            <span
+              className="stoqr-dashboard__movement-bar stoqr-dashboard__movement-bar--outbound"
+              style={{ height: `${Math.max((point.outbound / maxValue) * 100, point.outbound > 0 ? 8 : 0)}%` }}
+            />
+          </div>
+          <span className="stoqr-dashboard__movement-label">{point.label}</span>
+        </div>
+      ))}
     </div>
   )
 }
 
 export const DashboardPage = () => {
-  const navigate = useNavigate()
   const { companyId } = useCompany()
   const { data, isLoading, isFetching, isError, error } = useDashboard(companyId)
   const { data: alertEvents = [] } = useAlertEvents(companyId)
@@ -541,64 +412,62 @@ export const DashboardPage = () => {
     const movementTrend = formatTrendPercent(
       data.movementChartData.map((point) => point.inbound + point.outbound),
     )
-    const criticalAlertCount =
+    const criticalAttentionCount =
       alertEvents.filter((event) => event.status !== 'resolved' && event.severity === 'critical').length ||
       data.alertsSummary.criticalAlerts
-    const activeSkuCount = data.products.filter((product) => product.quantity_on_hand > 0).length
 
-    const statCards: DashboardStat[] = [
+    const deliveryRows = buildDeliveryRows(purchaseOrders, purchaseOrderItems)
+    const attentionItems = buildAttentionItems(alertEvents, purchaseOrders, data)
+    const velocityGroups = buildVelocityGroups(data)
+
+    const metrics: DashboardMetric[] = [
       {
-        label: 'Total Inventory Value',
+        label: 'Total Value',
         value: formatCompactCurrency(data.totalValue),
-        trend: inventoryTrend.text,
-        footnote: 'vs last month',
+        accentLabel: inventoryTrend.text,
+        detail: 'Inventory trend',
+        tone: 'positive',
         direction: inventoryTrend.direction,
-        tone: 'value',
-        icon: Package,
-        sparkline: data.chartData.slice(-7).map((point) => point.value),
       },
       {
-        label: 'Total Items / SKUs',
-        value: formatCompactNumber(data.products.length),
-        trend: `${formatCompactNumber(activeSkuCount)} active`,
-        footnote: 'catalog coverage',
+        label: 'Total Items',
+        value: formatInteger(data.totalStockUnits),
+        accentLabel: movementTrend.text,
+        detail: `${formatInteger(data.products.length)} active SKUs`,
+        tone: 'positive',
         direction: movementTrend.direction,
-        tone: 'catalog',
-        icon: Layers3,
-        sparkline: data.movementChartData.slice(-7).map((point) => point.inbound + point.outbound),
       },
       {
-        label: 'Items Out of Stock',
-        value: formatCompactNumber(data.outOfStockCount),
-        trend: `${criticalAlertCount} critical`,
-        footnote: 'needs immediate restock',
+        label: 'Pending POs',
+        value: formatInteger(data.pendingOrders),
+        accentLabel: `${deliveryRows.length} scheduled`,
+        detail: 'Inbound procurement',
+        tone: 'neutral',
+        direction: 'up',
+      },
+      {
+        label: 'Out of Stock',
+        value: formatInteger(data.outOfStockCount),
+        accentLabel: `${criticalAttentionCount} critical`,
+        detail: 'Immediate action',
+        tone: 'danger',
         direction: data.outOfStockCount > 0 ? 'up' : 'neutral',
-        tone: 'critical',
-        icon: AlertTriangle,
-        sparkline: buildFlatSeries(data.outOfStockCount),
       },
       {
-        label: 'Low Stock Items',
-        value: formatCompactNumber(data.lowStockCount),
-        trend: `${data.alertsSummary.reorderAlerts} reorder`,
-        footnote: 'below reorder point',
-        direction: data.lowStockCount > 0 ? 'down' : 'neutral',
+        label: 'Low Stock',
+        value: formatInteger(data.lowStockCount),
+        accentLabel: `${data.alertsSummary.reorderAlerts} reorder`,
+        detail: 'Needs replenishment',
         tone: 'warning',
-        icon: ClipboardList,
-        sparkline: buildFlatSeries(data.lowStockCount),
+        direction: data.lowStockCount > 0 ? 'up' : 'neutral',
       },
     ]
 
-    const attentionItems = buildAttentionItems(alertEvents, purchaseOrders, data)
-    const deliveryRows = buildDeliveryRows(purchaseOrders, purchaseOrderItems)
-    const velocityGroups = buildVelocityGroups(data)
-
     return {
-      statCards,
+      metrics,
       attentionItems,
       deliveryRows,
       velocityGroups,
-      criticalAttentionCount: attentionItems.filter((item) => item.severity === 'critical').length,
     }
   }, [alertEvents, data, purchaseOrderItems, purchaseOrders])
 
@@ -610,7 +479,7 @@ export const DashboardPage = () => {
       emptyStateDescription="Select or create a company to load your inventory dashboard."
       loadingMessage="Loading dashboard..."
       containerClassName="stoqr-dashboard"
-      contentStyle={{ padding: '8px' }}
+      contentStyle={{ padding: '18px 8px 32px' }}
       containerStyle={{ minWidth: 0 }}
     >
       {isError ? (
@@ -619,182 +488,152 @@ export const DashboardPage = () => {
         </div>
       ) : data && pageModel ? (
         <>
-          <section className="stoqr-dashboard__stats" aria-label="Dashboard metrics">
-            {pageModel.statCards.map((card) => (
-              <StatCard key={card.label} card={card} />
+          <section className="stoqr-dashboard__summary" aria-label="Dashboard metrics">
+            {pageModel.metrics.map((metric) => (
+              <MetricCard key={metric.label} metric={metric} />
             ))}
           </section>
 
-          <section className="stoqr-dashboard__grid stoqr-dashboard__grid--top">
-            <Card className="stoqr-dashboard__panel" padding="sm">
-              <div className="stoqr-dashboard__panel-header">
-                <div className="stoqr-dashboard__panel-title-block">
-                  <div className="stoqr-dashboard__panel-title">
-                    <ArrowRightLeft size={18} />
-                    <h2 className="stoqr-dashboard__panel-heading">Inbound vs. Outbound Volume</h2>
-                  </div>
+          <section className="stoqr-dashboard__layout stoqr-dashboard__layout--primary">
+            <article className="stoqr-dashboard__section">
+              <header className="stoqr-dashboard__section-header">
+                <h2 className="stoqr-dashboard__section-title">Inbound vs Outbound Volume</h2>
+                <div className="stoqr-dashboard__legend" aria-hidden="true">
+                  <span className="stoqr-dashboard__legend-item">
+                    <span className="stoqr-dashboard__legend-swatch stoqr-dashboard__legend-swatch--inbound" />
+                    Inbound
+                  </span>
+                  <span className="stoqr-dashboard__legend-item">
+                    <span className="stoqr-dashboard__legend-swatch stoqr-dashboard__legend-swatch--outbound" />
+                    Outbound
+                  </span>
                 </div>
-                <Badge variant="outline" size="sm">Last 30 Days</Badge>
-              </div>
+              </header>
 
               <MovementChart data={data.movementChartData} />
-            </Card>
+            </article>
 
-            <Card className="stoqr-dashboard__panel stoqr-dashboard__panel--attention" padding="sm">
-              <div className="stoqr-dashboard__panel-header">
-                <div className="stoqr-dashboard__panel-title">
-                  <BellRing size={18} />
-                  <h2 className="stoqr-dashboard__panel-heading">Needs Attention</h2>
-                </div>
-                <Badge
-                  variant={pageModel.criticalAttentionCount > 0 ? 'destructive' : 'success'}
-                  size="sm"
-                >
-                  {pageModel.criticalAttentionCount > 0
-                    ? `${pageModel.criticalAttentionCount} Critical`
-                    : 'Stable'}
-                </Badge>
-              </div>
+            <article className="stoqr-dashboard__section stoqr-dashboard__section--alerts">
+              <header className="stoqr-dashboard__section-header">
+                <h2 className="stoqr-dashboard__section-title">Actionable Alerts</h2>
+              </header>
 
               {pageModel.attentionItems.length > 0 ? (
-                <div className="stoqr-dashboard__attention-list">
+                <div className="stoqr-dashboard__alerts-list">
                   {pageModel.attentionItems.map((item) => (
-                    <div key={item.id} className="stoqr-dashboard__attention-item">
-                      <div className="stoqr-dashboard__attention-main">
-                        <span className={`stoqr-dashboard__attention-dot is-${item.severity}`} aria-hidden="true" />
-                        <div className="stoqr-dashboard__attention-copy">
-                          <p className="stoqr-dashboard__attention-title">{item.title}</p>
-                          <p className="stoqr-dashboard__attention-subtitle">{item.subtitle}</p>
-                          <p className="stoqr-dashboard__attention-detail">{item.detail}</p>
-                        </div>
+                    <div key={item.id} className="stoqr-dashboard__alert-row">
+                      <span className={`stoqr-dashboard__alert-dot is-${item.severity}`} aria-hidden="true" />
+                      <div className="stoqr-dashboard__alert-copy">
+                        <p className="stoqr-dashboard__alert-title">{item.title}</p>
+                        <p className="stoqr-dashboard__alert-detail">{item.detail}</p>
                       </div>
-                      <Badge variant={severityBadgeVariant[item.severity]} size="sm">
-                        {item.severity}
-                      </Badge>
+                      <span className="stoqr-dashboard__alert-time">{item.timeLabel}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="stoqr-dashboard__empty-panel">No active alerts or overdue shipments.</div>
+                <div className="stoqr-dashboard__empty-panel">No actionable alerts right now.</div>
               )}
-
-              <div className="stoqr-dashboard__panel-footer">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/alerts/feed')}>
-                  View all alerts
-                </Button>
-              </div>
-            </Card>
+            </article>
           </section>
 
-          <section className="stoqr-dashboard__grid stoqr-dashboard__grid--bottom">
-            <Card className="stoqr-dashboard__panel" padding="sm">
-              <div className="stoqr-dashboard__panel-header stoqr-dashboard__panel-header--stacked">
-                <div className="stoqr-dashboard__panel-title">
-                  <Package size={18} />
-                  <h2 className="stoqr-dashboard__panel-heading">Item Velocity</h2>
-                </div>
-                <div className="stoqr-dashboard__velocity-tabs">
-                  <TabBar
-                    tabs={velocityTabs}
-                    activeTab={velocityTab}
-                    onTabChange={(tabId) => setVelocityTab(tabId as VelocityTabId)}
-                    className="stoqr-dashboard__velocity-tabbar"
-                    itemClassName="stoqr-dashboard__velocity-tab"
-                    activeItemClassName="stoqr-dashboard__velocity-tab is-active"
-                    inactiveItemClassName="stoqr-dashboard__velocity-tab is-inactive"
-                  />
-                </div>
-              </div>
-
-              <div className="stoqr-dashboard__velocity-list">
-                {(pageModel.velocityGroups[velocityTab] as VelocityItem[]).length > 0 ? (
-                  (pageModel.velocityGroups[velocityTab] as VelocityItem[]).map((item) => {
-                    const maxValue = Math.max(
-                      ...(pageModel.velocityGroups[velocityTab] as VelocityItem[]).map((entry) => entry.barValue),
-                      1,
-                    )
-
-                    return (
-                      <div key={item.id} className="stoqr-dashboard__velocity-item">
-                        <div className="stoqr-dashboard__velocity-copy">
-                          <p className="stoqr-dashboard__velocity-name">{item.name}</p>
-                          <p className="stoqr-dashboard__velocity-sku">{item.sku}</p>
-                        </div>
-                        <div className="stoqr-dashboard__velocity-bar-track" aria-hidden="true">
-                          <span
-                            className="stoqr-dashboard__velocity-bar-fill"
-                            style={{ width: `${(item.barValue / maxValue) * 100}%` }}
-                          />
-                        </div>
-                        <span className="stoqr-dashboard__velocity-metric">{item.metricLabel}</span>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <div className="stoqr-dashboard__empty-panel">
-                    No inventory movement yet. Add products and transactions to populate velocity insights.
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            <Card className="stoqr-dashboard__panel" padding="sm">
-              <div className="stoqr-dashboard__panel-header">
-                <div className="stoqr-dashboard__panel-title">
-                  <Clock3 size={18} />
-                  <h2 className="stoqr-dashboard__panel-heading">Expected Deliveries</h2>
-                </div>
-                <span className="stoqr-dashboard__panel-meta">Pending POs: {data.pendingOrders}</span>
-              </div>
+          <section className="stoqr-dashboard__layout stoqr-dashboard__layout--secondary">
+            <article className="stoqr-dashboard__section">
+              <header className="stoqr-dashboard__section-header">
+                <h2 className="stoqr-dashboard__section-title">Expected Deliveries</h2>
+              </header>
 
               {pageModel.deliveryRows.length > 0 ? (
-                <DataTable
-                  columns={[
-                    {
-                      id: 'vendor-po',
-                      header: 'Vendor / PO',
-                      renderCell: (row: DeliveryRow) => (
-                        <>
-                          <div className="stoqr-dashboard__delivery-vendor">{row.vendor}</div>
-                          <div className="stoqr-dashboard__delivery-po">{row.poLabel}</div>
-                        </>
-                      ),
-                    },
-                    {
-                      id: 'items',
-                      header: 'Items',
-                      cellClassName: 'stoqr-dashboard__delivery-items',
-                      renderCell: (row: DeliveryRow) => row.itemsLabel,
-                    },
-                    {
-                      id: 'expected',
-                      header: 'Expected',
-                      align: 'right',
-                      headerClassName: 'stoqr-dashboard__table-head--right',
-                      cellClassName: 'stoqr-dashboard__delivery-expected',
-                      renderCell: (row: DeliveryRow) => (
-                        <>
+                <>
+                  <div className="stoqr-dashboard__deliveries-desktop">
+                    <table className="stoqr-dashboard__deliveries-table">
+                      <thead>
+                        <tr>
+                          <th>PO Number</th>
+                          <th>Vendor</th>
+                          <th>Items</th>
+                          <th>Value</th>
+                          <th>Expected</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageModel.deliveryRows.map((row) => (
+                          <tr key={row.id}>
+                            <td>{row.poLabel}</td>
+                            <td>{row.vendor}</td>
+                            <td>{row.itemsCountLabel}</td>
+                            <td>{row.valueLabel}</td>
+                            <td>{row.expectedLabel}</td>
+                            <td>
+                              <span className={`stoqr-dashboard__status-pill is-${row.statusTone}`}>{row.statusLabel}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="stoqr-dashboard__deliveries-mobile">
+                    {pageModel.deliveryRows.map((row) => (
+                      <div key={row.id} className="stoqr-dashboard__delivery-card">
+                        <div className="stoqr-dashboard__delivery-card-row">
+                          <span className="stoqr-dashboard__delivery-card-po">{row.poLabel}</span>
+                          <span className={`stoqr-dashboard__status-pill is-${row.statusTone}`}>{row.statusLabel}</span>
+                        </div>
+                        <p className="stoqr-dashboard__delivery-card-vendor">{row.vendor}</p>
+                        <div className="stoqr-dashboard__delivery-card-meta">
+                          <span>{row.itemsCountLabel} items</span>
+                          <span>{row.valueLabel}</span>
                           <span>{row.expectedLabel}</span>
-                          <Badge variant={row.statusVariant} size="sm">{row.statusLabel}</Badge>
-                        </>
-                      ),
-                    },
-                  ]}
-                  rows={pageModel.deliveryRows}
-                  getRowId={(row) => row.id}
-                  tableWrapClassName="stoqr-dashboard__table-scroll border-0 rounded-none"
-                  tableClassName="stoqr-dashboard__deliveries-table"
-                />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="stoqr-dashboard__empty-panel">No deliveries scheduled.</div>
               )}
+            </article>
 
-              <div className="stoqr-dashboard__panel-footer">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/procurement/purchase-orders')}>
-                  View purchase orders
-                </Button>
-              </div>
-            </Card>
+            <article className="stoqr-dashboard__section stoqr-dashboard__section--velocity">
+              <header className="stoqr-dashboard__section-header stoqr-dashboard__section-header--compact">
+                <h2 className="stoqr-dashboard__section-title">Item Velocity</h2>
+                <div className="stoqr-dashboard__velocity-toggle" role="tablist" aria-label="Velocity range">
+                  {velocityTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={`stoqr-dashboard__velocity-toggle-button${velocityTab === tab.id ? ' is-active' : ''}`}
+                      onClick={() => setVelocityTab(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </header>
+
+              {(pageModel.velocityGroups[velocityTab] as VelocityItem[]).length > 0 ? (
+                <div className="stoqr-dashboard__velocity-list">
+                  {(pageModel.velocityGroups[velocityTab] as VelocityItem[]).map((item) => (
+                    <div key={item.id} className="stoqr-dashboard__velocity-row">
+                      <div className="stoqr-dashboard__velocity-copy">
+                        <p className="stoqr-dashboard__velocity-name">{item.name}</p>
+                        <p className="stoqr-dashboard__velocity-sku">{item.sku}</p>
+                      </div>
+                      <div className="stoqr-dashboard__velocity-meta">
+                        <span className="stoqr-dashboard__velocity-rate">{item.metricLabel}</span>
+                        <span className={`stoqr-dashboard__velocity-status is-${item.statusTone}`}>{item.statusLabel}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="stoqr-dashboard__empty-panel">
+                  No inventory movement yet. Add products and transactions to populate velocity insights.
+                </div>
+              )}
+            </article>
           </section>
         </>
       ) : (
