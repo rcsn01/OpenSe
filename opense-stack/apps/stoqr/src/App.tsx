@@ -98,6 +98,7 @@ export function App() {
               <Route path="/tools/labels" element={<Navigate to="/tools/labels/templates" replace />} />
               <Route path="/tools/labels/design" element={<Navigate to="/tools/labels/templates" replace />} />
               <Route path="/tools/labels/downloads" element={<Navigate to="/tools/labels/preview-batch" replace />} />
+              <Route path="/tools/labels/:tab/:templateId" element={<LabelStudioPage />} />
               <Route path="/tools/labels/:tab" element={<LabelStudioPage />} />
               <Route path="/settings/team" element={<Navigate to="/settings/organisations/teams" replace />} />
               <Route path="/settings/team/:tab" element={<LegacyTeamSettingsRedirect />} />

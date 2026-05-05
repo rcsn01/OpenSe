@@ -48,7 +48,7 @@ describe('TemplateLibraryTab', () => {
   })
 
   it('shows the redesigned template library columns and field chips', () => {
-    render(<TemplateLibraryTab companyId="company-1" />)
+    render(<TemplateLibraryTab companyId="company-1" selectedTemplateId="template-1" />)
 
     expect(screen.getByRole('columnheader', { name: 'Template Name' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Dimensions' })).toBeInTheDocument()
@@ -57,6 +57,7 @@ describe('TemplateLibraryTab', () => {
     expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Source' })).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Type' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Editing')).not.toBeInTheDocument()
 
     expect(screen.getAllByText('100x50mm').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Name').length).toBeGreaterThan(0)
@@ -64,13 +65,13 @@ describe('TemplateLibraryTab', () => {
     expect(screen.getAllByText('Barcode').length).toBeGreaterThan(0)
   })
 
-  it('opens the designer when the template row is activated', async () => {
+  it('opens the designer when the template name is activated', async () => {
     const user = userEvent.setup()
     const onSelectTemplate = vi.fn()
 
     render(<TemplateLibraryTab companyId="company-1" onSelectTemplate={onSelectTemplate} />)
 
-    await user.click(screen.getByRole('button', { name: 'Open Product Label template' }))
+    await user.click(screen.getAllByRole('button', { name: 'Edit Product Label template' })[0])
 
     expect(onSelectTemplate).toHaveBeenCalledWith('template-1')
   })

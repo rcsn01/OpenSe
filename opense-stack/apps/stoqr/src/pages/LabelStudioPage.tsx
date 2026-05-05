@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
-import { SideSheet, SideSheetBody, SideSheetContent } from '@repo/ui'
+import { useEffect } from 'react'
 import { useCompany } from '../contexts/CompanyContext'
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { TemplateLibraryTab } from '../components/LabelStudio/TemplateLibraryTab'
@@ -29,22 +28,62 @@ const resolveTab = (tab: string | undefined): LabelStudioTab => {
 export const LabelStudioPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
-  const { tab } = useParams<{ tab?: string }>()
+  const { tab, templateId } = useParams<{ tab?: string; templateId?: string }>()
   const activeTab = resolveTab(tab)
   const topBarSearchValue = layoutContext?.topBarSearchValue ?? ''
-  const [selectedTemplateId, setSelectedTemplateId] = useState('')
-  const [isDesignerOpen, setIsDesignerOpen] = useState(false)
+  const rememberedTemplateId = searchParams.get('template') ?? ''
+  const selectedTemplateId = templateId ?? rememberedTemplateId
+  const isDesignerPage = activeTab === 'templates' && Boolean(templateId)
+
+  const buildLabelStudioPath = (
+    nextTab: LabelStudioTab,
+    nextTemplateId = selectedTemplateId,
+    openDesigner = false,
+  ) => {
+    const nextSearchParams = new URLSearchParams(searchParams)
+
+    if (nextTemplateId) {
+      nextSearchParams.set('template', nextTemplateId)
+    } else {
+      nextSearchParams.delete('template')
+    }
+
+    const search = nextSearchParams.toString()
+    const pathname = openDesigner && nextTemplateId
+      ? `/tools/labels/templates/${nextTemplateId}`
+      : `/tools/labels/${nextTab}`
+
+    return `${pathname}${search ? `?${search}` : ''}`
+  }
+
+  const canonicalPath = isDesignerPage
+    ? buildLabelStudioPath('templates', templateId, true)
+    : buildLabelStudioPath(activeTab, selectedTemplateId, false)
 
   useEffect(() => {
-    if (tab !== activeTab) {
-      navigate(`/tools/labels/${activeTab}`, { replace: true })
+    const currentPath = `${location.pathname}${location.search}`
+    if (currentPath !== canonicalPath) {
+      navigate(canonicalPath, { replace: true })
     }
-  }, [activeTab, navigate, tab])
+  }, [canonicalPath, location.pathname, location.search, navigate])
 
   const openDesigner = (templateId: string) => {
-    setSelectedTemplateId(templateId)
-    setIsDesignerOpen(true)
+    navigate(buildLabelStudioPath('templates', templateId, true))
+  }
+
+  const handleTabChange = (nextTab: LabelStudioTab) => {
+    navigate(buildLabelStudioPath(nextTab, selectedTemplateId, false))
+  }
+
+  const handleSelectedTemplateChange = (nextTemplateId: string) => {
+    navigate(buildLabelStudioPath(activeTab, nextTemplateId, false), { replace: true })
+  }
+
+  const closeDesigner = () => {
+    navigate(buildLabelStudioPath('templates', selectedTemplateId, false))
   }
 
   return (
@@ -54,10 +93,19 @@ export const LabelStudioPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to access label tools."
     >
-      <>
+      {isDesignerPage ? (
+        <LabelDesignerTab
+          companyId={companyId || ''}
+          selectedTemplateId={selectedTemplateId}
+          onClose={closeDesigner}
+          onSavedTemplateChange={(nextTemplateId) => {
+            navigate(buildLabelStudioPath('templates', nextTemplateId, true), { replace: true })
+          }}
+        />
+      ) : (
         <Tabs
           activeTab={activeTab}
-          onTabChange={(nextTab) => navigate(`/tools/labels/${nextTab}`)}
+          onTabChange={(nextTab) => handleTabChange(nextTab as LabelStudioTab)}
           bottomSpacing
           tabs={[
             {
@@ -79,27 +127,14 @@ export const LabelStudioPage = () => {
                 <LabelPreviewBatchTab
                   companyId={companyId || ''}
                   selectedTemplateId={selectedTemplateId}
-                  onSelectedTemplateChange={setSelectedTemplateId}
+                  onSelectedTemplateChange={handleSelectedTemplateChange}
                   searchTerm={activeTab === 'preview-batch' ? topBarSearchValue : ''}
                 />
               ),
             },
           ]}
         />
-
-        <SideSheet open={isDesignerOpen} onClose={() => setIsDesignerOpen(false)} size="page">
-          <SideSheetContent className="label-studio-sheet">
-            <SideSheetBody className="label-studio-sheet-body">
-              <LabelDesignerTab
-                companyId={companyId || ''}
-                selectedTemplateId={selectedTemplateId}
-                onSelectedTemplateChange={setSelectedTemplateId}
-                onClose={() => setIsDesignerOpen(false)}
-              />
-            </SideSheetBody>
-          </SideSheetContent>
-        </SideSheet>
-      </>
+      )}
     </BasePage>
   )
 }

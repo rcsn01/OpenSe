@@ -94,7 +94,7 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       })
       setName('')
       setShowCreateForm(false)
-      setMessage('Template created. Select it from the library to design it.')
+      setMessage('Template created. Click its name to edit it.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Failed to create template.')
     }
@@ -130,23 +130,10 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
               filteredTemplates.map((template) => {
                 const controls = resolveLabelLayout(template.layout)
                 const activeFields = getEnabledLabelFields(controls)
-                const isEditing = selectedTemplateId === template.id
+                const isSelected = selectedTemplateId === template.id
 
                 return (
-                  <tr
-                    key={template.id}
-                    className={isEditing ? 'is-editing' : undefined}
-                    onClick={() => onSelectTemplate?.(template.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        onSelectTemplate?.(template.id)
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Open ${template.name} template`}
-                  >
+                  <tr key={template.id} className={isSelected ? 'is-selected' : undefined}>
                     <td>
                       <div className="label-template-name-cell">
                         <span className="label-template-name-icon" aria-hidden="true">
@@ -154,8 +141,14 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
                         </span>
                         <div className="label-template-name-copy">
                           <div className="label-template-name-row">
-                            <span className="label-template-name">{template.name}</span>
-                            {isEditing ? <span className="label-template-editing-pill">Editing</span> : null}
+                            <button
+                              type="button"
+                              className="label-template-name-button"
+                              onClick={() => onSelectTemplate?.(template.id)}
+                              aria-label={`Edit ${template.name} template`}
+                            >
+                              <span className="label-template-name">{template.name}</span>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -173,11 +166,8 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
                       <button
                         type="button"
                         className="label-template-action"
-                        aria-label={`Open ${template.name} template options`}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          onSelectTemplate?.(template.id)
-                        }}
+                        aria-label={`Template actions for ${template.name}`}
+                        onClick={() => onSelectTemplate?.(template.id)}
                       >
                         <MoreHorizontal size={16} />
                       </button>
@@ -198,13 +188,14 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
             filteredTemplates.map((template) => {
               const controls = resolveLabelLayout(template.layout)
               const activeFields = getEnabledLabelFields(controls)
-              const isEditing = selectedTemplateId === template.id
+              const isSelected = selectedTemplateId === template.id
 
               return (
                 <button
                   key={template.id}
                   type="button"
-                  className={`label-template-mobile-card${isEditing ? ' is-editing' : ''}`}
+                  className={`label-template-mobile-card${isSelected ? ' is-selected' : ''}`}
+                  aria-label={`Edit ${template.name} template`}
                   onClick={() => onSelectTemplate?.(template.id)}
                 >
                   <div className="label-template-mobile-topline">

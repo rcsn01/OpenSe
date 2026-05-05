@@ -134,6 +134,16 @@ describe('label studio api', () => {
           created_at: '2026-02-24T00:00:00Z',
           updated_at: null,
         },
+        {
+          id: 'tpl-2',
+          company_id: 'company-1',
+          name: 'System Product',
+          is_system: false,
+          layout: { width: 100 },
+          variable_fields: ['name', 'sku', 'barcode'],
+          created_at: '2026-02-25T00:00:00Z',
+          updated_at: '2026-02-26T00:00:00Z',
+        },
       ],
       error: null,
     })
@@ -154,6 +164,7 @@ describe('label studio api', () => {
     const rows = await fetchLabelTemplates('company-1')
 
     expect(rows).toHaveLength(1)
+    expect(rows[0]?.id).toBe('tpl-2')
     expect(or).toHaveBeenCalledWith('company_id.is.null,company_id.eq.company-1')
     expect(orderBySystem).toHaveBeenCalledWith('is_system', { ascending: false })
     expect(orderByName).toHaveBeenCalledWith('name', { ascending: true })
@@ -186,32 +197,126 @@ describe('label studio api', () => {
     })
   })
 
-  it('updates template layout scoped by template and company', async () => {
-    const eqCompany = vi.fn().mockResolvedValue({ error: null })
-    const eqTemplate = vi.fn(() => ({ eq: eqCompany }))
-    const update = vi.fn(() => ({ eq: eqTemplate }))
+  it('updates company-owned template layout scoped by template and company', async () => {
+    const existingMaybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: 'tpl-1',
+        company_id: 'company-1',
+        name: 'Custom Product',
+        is_system: false,
+      },
+      error: null,
+    })
+    const existingEqId = vi.fn(() => ({ maybeSingle: existingMaybeSingle }))
+    const selectExisting = vi.fn(() => ({ eq: existingEqId }))
+
+    const updateSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: 'tpl-1',
+        company_id: 'company-1',
+        name: 'Custom Product',
+        is_system: false,
+        layout: { elements: [] },
+        variable_fields: ['name', 'barcode'],
+        created_at: '2026-02-24T00:00:00Z',
+        updated_at: '2026-02-25T00:00:00Z',
+      },
+      error: null,
+    })
+    const updateSelect = vi.fn(() => ({ single: updateSingle }))
+    const updateEqCompany = vi.fn(() => ({ select: updateSelect }))
+    const updateEqTemplate = vi.fn(() => ({ eq: updateEqCompany }))
+    const update = vi.fn(() => ({ eq: updateEqTemplate }))
 
     mockDbFrom.mockImplementation((table: string) => {
       if (table === 'label_templates') {
-        return { update }
+        return {
+          select: selectExisting,
+          update,
+        }
       }
 
       throw new Error(`Unexpected table: ${table}`)
     })
 
-    await updateLabelTemplateLayout({
+    const updatedTemplate = await updateLabelTemplateLayout({
       templateId: 'tpl-1',
       companyId: 'company-1',
       layout: { elements: [] },
       variableFields: ['name', 'barcode'],
     })
 
+    expect(updatedTemplate.id).toBe('tpl-1')
+    expect(selectExisting).toHaveBeenCalledWith('id, company_id, name, is_system')
+    expect(existingEqId).toHaveBeenCalledWith('id', 'tpl-1')
     expect(update).toHaveBeenCalledWith({
       layout: { elements: [] },
       variable_fields: ['name', 'barcode'],
     })
-    expect(eqTemplate).toHaveBeenCalledWith('id', 'tpl-1')
-    expect(eqCompany).toHaveBeenCalledWith('company_id', 'company-1')
+    expect(updateEqTemplate).toHaveBeenCalledWith('id', 'tpl-1')
+    expect(updateEqCompany).toHaveBeenCalledWith('company_id', 'company-1')
+  })
+
+  it('creates or updates a company override when saving a system template', async () => {
+    const existingMaybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: 'tpl-system',
+        company_id: null,
+        name: 'Standard Shelf Label',
+        is_system: true,
+      },
+      error: null,
+    })
+    const existingEqId = vi.fn(() => ({ maybeSingle: existingMaybeSingle }))
+    const selectExisting = vi.fn(() => ({ eq: existingEqId }))
+
+    const upsertSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: 'tpl-company',
+        company_id: 'company-1',
+        name: 'Standard Shelf Label',
+        is_system: false,
+        layout: { width: 120 },
+        variable_fields: ['name', 'barcode'],
+        created_at: '2026-02-24T00:00:00Z',
+        updated_at: '2026-02-25T00:00:00Z',
+      },
+      error: null,
+    })
+    const upsertSelect = vi.fn(() => ({ single: upsertSingle }))
+    const upsert = vi.fn(() => ({ select: upsertSelect }))
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'label_templates') {
+        return {
+          select: selectExisting,
+          upsert,
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const updatedTemplate = await updateLabelTemplateLayout({
+      templateId: 'tpl-system',
+      companyId: 'company-1',
+      layout: { width: 120 },
+      variableFields: ['name', 'barcode'],
+    })
+
+    expect(updatedTemplate.id).toBe('tpl-company')
+    expect(upsert).toHaveBeenCalledWith(
+      {
+        company_id: 'company-1',
+        name: 'Standard Shelf Label',
+        is_system: false,
+        layout: { width: 120 },
+        variable_fields: ['name', 'barcode'],
+      },
+      {
+        onConflict: 'company_id,name',
+      },
+    )
   })
 
   it('creates and fetches print jobs', async () => {
