@@ -35,6 +35,11 @@ export type ProductBarcode = {
   products: { id: string; name: string; sku: string } | null
 }
 
+const normalizeDisplaySku = <TRow extends { sku?: string | null }>(row: TRow): TRow & { sku: string } => ({
+  ...row,
+  sku: row.sku ?? '',
+})
+
 const inferCustomFieldType = (value: CustomFieldPrimitive): CustomFieldValueType => {
   if (typeof value === 'boolean') return 'boolean'
   if (typeof value === 'number') return 'number'
@@ -170,6 +175,8 @@ export const fetchInventoryProducts = async ({
 
   let products = (data as InventoryProduct[] | null) ?? []
 
+  products = products.map((product) => normalizeDisplaySku(product))
+
   if (stockFilter === 'low') {
     products = products.filter((product) => product.quantity_on_hand <= product.reorder_point)
   }
@@ -285,7 +292,7 @@ export const importInventoryProducts = async (
     company_id: string
     folder_id: string | null
     name: string
-    sku: string
+    sku: string | null
     description: string | null
     quantity_on_hand: number
     reorder_point: number
@@ -294,21 +301,24 @@ export const importInventoryProducts = async (
     custom_fields: Record<string, string>
   }>>((acc, row) => {
     const name = getMappedImportValue(row, payload.columnMappings, 'name')
-    const sku = getMappedImportValue(row, payload.columnMappings, 'sku')
+    const sku = getMappedImportValue(row, payload.columnMappings, 'sku') || null
 
-    if (!name || !sku) {
+    if (!name) {
       invalidCount += 1
       return acc
     }
 
-    const normalizedSku = sku.toLowerCase()
-    if (seenCsvSkus.has(normalizedSku)) {
-      duplicateCount += 1
-      duplicateSkuSet.add(sku)
-      return acc
-    }
+    if (sku) {
+      const normalizedSku = sku.toLowerCase()
 
-    seenCsvSkus.add(normalizedSku)
+      if (seenCsvSkus.has(normalizedSku)) {
+        duplicateCount += 1
+        duplicateSkuSet.add(sku)
+        return acc
+      }
+
+      seenCsvSkus.add(normalizedSku)
+    }
 
     const customFields = payload.attributeColumns.reduce<Record<string, string>>((fieldAcc, column) => {
       const value = row[column]?.trim() ?? ''
@@ -345,20 +355,30 @@ export const importInventoryProducts = async (
     }
   }
 
-  const { data: existingProducts, error: existingProductsError } = await db
-    .from('products')
-    .select('sku')
-    .eq('company_id', companyId)
-    .in('sku', candidateProducts.map((product) => product.sku))
+  const candidateSkus = candidateProducts
+    .map((product) => product.sku)
+    .filter((sku): sku is string => Boolean(sku))
 
-  if (existingProductsError) throw existingProductsError
+  let existingSkuSet = new Set<string>()
 
-  const existingSkuSet = new Set(
-    ((existingProducts as Array<{ sku: string }> | null) ?? []).map((product) => product.sku),
-  )
+  if (candidateSkus.length > 0) {
+    const { data: existingProducts, error: existingProductsError } = await db
+      .from('products')
+      .select('sku')
+      .eq('company_id', companyId)
+      .in('sku', candidateSkus)
+
+    if (existingProductsError) throw existingProductsError
+
+    existingSkuSet = new Set(
+      ((existingProducts as Array<{ sku: string | null }> | null) ?? [])
+        .map((product) => product.sku)
+        .filter((sku): sku is string => Boolean(sku)),
+    )
+  }
 
   const preparedProducts = candidateProducts.filter((product) => {
-    if (!existingSkuSet.has(product.sku)) {
+    if (!product.sku || !existingSkuSet.has(product.sku)) {
       return true
     }
 
@@ -411,7 +431,11 @@ export const fetchInventoryReferenceData = async (companyId: string): Promise<{
   return {
     barcodes: ((barcodeData as BarcodeRow[] | null) ?? []).map((row) => ({
       ...row,
-      products: normalizeSingle(row.products),
+      products: (() => {
+        const product = normalizeSingle(row.products)
+
+        return product ? normalizeDisplaySku(product) : null
+      })(),
     })),
   }
 }

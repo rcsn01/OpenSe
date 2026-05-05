@@ -143,7 +143,9 @@ export const QuickScanTab = ({
                     {lookupQuery.isLoading ? 'Looking up…' : product?.name ?? 'Product Not Found'}
                   </h2>
                   {product && (
-                    <p className="mt-0.5 text-sm text-[var(--color-muted-foreground)]">SKU: {product.sku}</p>
+                    <p className="mt-0.5 text-sm text-[var(--color-muted-foreground)]">
+                      {product.sku ? `SKU: ${product.sku}` : 'No SKU assigned'}
+                    </p>
                   )}
                 </div>
 

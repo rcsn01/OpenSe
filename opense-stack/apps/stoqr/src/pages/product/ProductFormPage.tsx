@@ -441,14 +441,13 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
               </label>
               <div className="grid grid-2">
                 <label className="stack">
-                  <span className="small font-semibold">SKU (Stock Keeping Unit) *</span>
+                  <span className="small font-semibold">SKU (Stock Keeping Unit)</span>
                   <div className="row" style={{ gap: 8 }}>
                     <input
                       className="input"
-                      required
                       value={sku}
                       onChange={(event) => setSku(event.target.value)}
-                      placeholder="e.g. WM-001"
+                      placeholder="Optional, e.g. WM-001"
                     />
                     <button
                       type="button"

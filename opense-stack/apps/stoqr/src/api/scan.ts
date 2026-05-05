@@ -16,7 +16,7 @@ type ScanHistoryItem = {
 const normalizeProduct = (row: Partial<Product>): Product => ({
   id: String(row.id ?? ''),
   name: row.name ?? 'Unknown Product',
-  sku: row.sku ?? 'N/A',
+  sku: row.sku ?? '',
   description: row.description ?? null,
   quantity_on_hand: Number(row.quantity_on_hand ?? 0),
   reorder_point: Number(row.reorder_point ?? 0),
