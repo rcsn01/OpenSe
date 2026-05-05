@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn'
 import { Pagination } from './Pagination'
 
 type DataTableAlign = 'left' | 'center' | 'right'
+type DataTableVariant = 'default' | 'boxed' | 'dashboard'
 
 const alignmentClassNames: Record<DataTableAlign, string> = {
   left: 'text-left',
@@ -15,6 +16,49 @@ const alignmentStyles: Record<DataTableAlign, CSSProperties> = {
   left: { textAlign: 'left' },
   center: { textAlign: 'center' },
   right: { textAlign: 'right' },
+}
+
+const tableHeaderTextClassName =
+  'text-[length:var(--typography-table-header-text-size)] leading-[var(--typography-table-header-text-line-height)] font-[var(--typography-table-header-text-weight)] tracking-[var(--typography-table-header-text-tracking)] text-[color:var(--typography-table-header-text-color)]'
+
+const tableCellTextClassName =
+  'text-[length:var(--typography-table-cell-text-size)] leading-[var(--typography-table-cell-text-line-height)] font-[var(--typography-table-cell-text-weight)] tracking-[var(--typography-table-cell-text-tracking)] text-[color:var(--typography-table-cell-text-color)]'
+
+const dataTableVariantClassNames: Record<
+  DataTableVariant,
+  {
+    tableWrap: string
+    table: string
+    headerCell: string
+    bodyCell: string
+    emptyStateCell: string
+    footer: string
+  }
+> = {
+  default: {
+    tableWrap: 'border-0 rounded-none bg-transparent',
+    table: 'bg-transparent',
+    headerCell: 'sticky top-0 z-[1] bg-[var(--color-muted)]/50 px-4 py-3 uppercase',
+    bodyCell: 'border-b border-[var(--color-border)] px-4 py-3 align-middle',
+    emptyStateCell: 'px-4 py-6 text-center',
+    footer: 'border-t border-[var(--color-border)] bg-transparent px-4 py-3',
+  },
+  boxed: {
+    tableWrap: 'border border-[var(--color-border)] bg-[var(--color-card)]',
+    table: 'bg-[var(--color-card)]',
+    headerCell: 'sticky top-0 z-[1] bg-[var(--color-muted)]/50 px-4 py-3 uppercase',
+    bodyCell: 'border-b border-[var(--color-border)] px-4 py-3 align-middle',
+    emptyStateCell: 'px-4 py-6 text-center',
+    footer: 'border-t border-[var(--color-border)] px-4 py-3',
+  },
+  dashboard: {
+    tableWrap: 'border-0 bg-transparent',
+    table: 'bg-transparent',
+    headerCell: 'bg-transparent px-3 pt-0 pb-2.5 uppercase',
+    bodyCell: 'border-b border-[var(--color-border)] px-3 py-2.5 align-top',
+    emptyStateCell: 'px-3 py-6 text-center',
+    footer: 'border-t border-[var(--color-border)] px-3 py-3 bg-transparent',
+  },
 }
 
 export type DataTableColumn<Row, SortKey extends string = string> = {
@@ -46,6 +90,7 @@ type DataTableProps<Row, SortKey extends string = string> = {
   columns: Array<DataTableColumn<Row, SortKey>>
   rows: Row[]
   getRowId: (row: Row, index: number) => string
+  variant?: DataTableVariant
   emptyState?: ReactNode
   className?: string
   tableWrapClassName?: string
@@ -69,6 +114,7 @@ export function DataTable<Row, SortKey extends string = string>({
   columns,
   rows,
   getRowId,
+  variant = 'default',
   emptyState,
   className,
   tableWrapClassName,
@@ -91,18 +137,21 @@ export function DataTable<Row, SortKey extends string = string>({
     ?? (typeof pagination?.totalItems === 'number' && typeof pagination?.itemsPerPage === 'number'
       ? Math.max(1, Math.ceil(pagination.totalItems / pagination.itemsPerPage))
       : 1)
+  const variantClassNames = dataTableVariantClassNames[variant]
 
   return (
     <div className={cn('flex min-h-0 flex-col overflow-hidden', className)}>
       <div
         className={cn(
-          'table-wrap w-full overflow-auto border border-[var(--color-border)] bg-[var(--color-card)]',
+          'table-wrap w-full overflow-auto',
+          variantClassNames.tableWrap,
           tableWrapClassName,
         )}
       >
         <table
           className={cn(
-            'table w-full border-collapse bg-[var(--color-card)] text-sm',
+            'table w-full border-collapse',
+            variantClassNames.table,
             tableClassName,
           )}
           style={{ minWidth: minTableWidth, tableLayout }}
@@ -133,9 +182,10 @@ export function DataTable<Row, SortKey extends string = string>({
                     key={column.id}
                     aria-sort={ariaSort}
                     className={cn(
-                      'sticky top-0 z-[1] bg-[var(--color-muted)]/50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]',
+                      variantClassNames.headerCell,
+                      tableHeaderTextClassName,
                       alignmentClassNames[align],
-                      isSortable && 'sortable-th cursor-pointer select-none transition-colors hover:text-[var(--color-foreground)]',
+                      isSortable && 'sortable-th cursor-pointer select-none transition-colors',
                       column.headerClassName,
                     )}
                     onClick={isSortable ? () => onSortChange?.(columnSortKey) : undefined}
@@ -159,7 +209,14 @@ export function DataTable<Row, SortKey extends string = string>({
           <tbody className={tbodyClassName}>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-6 text-center text-sm text-[var(--color-muted-foreground)]">
+                <td
+                  colSpan={columns.length}
+                  className={cn(
+                    variantClassNames.emptyStateCell,
+                    tableCellTextClassName,
+                    'text-[color:var(--color-muted-foreground)]',
+                  )}
+                >
                   {emptyState ?? 'No rows available.'}
                 </td>
               </tr>
@@ -202,7 +259,8 @@ export function DataTable<Row, SortKey extends string = string>({
                         <td
                           key={column.id}
                           className={cn(
-                            'border-b border-[var(--color-border)] px-4 py-3 align-middle text-[var(--color-foreground)]',
+                            variantClassNames.bodyCell,
+                            tableCellTextClassName,
                             index === rows.length - 1 && 'border-b-0',
                             alignmentClassNames[align],
                             column.cellClassName,
@@ -225,7 +283,7 @@ export function DataTable<Row, SortKey extends string = string>({
       </div>
 
       {pagination ? (
-        <div className={cn('table-footer border-t border-[var(--color-border)] px-4 py-3', footerClassName)}>
+        <div className={cn('table-footer', variantClassNames.footer, footerClassName)}>
           <Pagination
             currentPage={pagination.currentPage}
             totalPages={totalPages}

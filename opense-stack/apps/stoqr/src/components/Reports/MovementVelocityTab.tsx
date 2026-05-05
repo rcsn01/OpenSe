@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { DataTable, type DataTableColumn } from '@repo/ui'
 import { useReportsData } from '../../hooks/queries/useReports'
 
 type RangeKey = '7d' | '30d' | 'quarter' | 'custom'
@@ -179,6 +180,79 @@ export const MovementVelocityTab = ({ companyId }: { companyId: string | null })
         .slice(0, 4),
     [filtered],
   )
+  const topSkuColumns = useMemo<DataTableColumn<(typeof topSkus)[number]>[]>(() => [
+    {
+      id: 'product',
+      header: 'Product',
+      renderCell: (sku) => (
+        <div>
+          <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>{sku.name}</div>
+          <div className="small muted">{sku.sku}</div>
+        </div>
+      ),
+    },
+    {
+      id: 'movement',
+      header: 'Movement',
+      align: 'right',
+      renderCell: (sku) => (
+        <div style={{ textAlign: 'right', fontWeight: 'var(--type-weight-semibold)' }}>
+          {sku.total.toLocaleString()} units
+        </div>
+      ),
+    },
+  ], [])
+  const recentTransferColumns = useMemo<DataTableColumn<(typeof recentTransfers)[number]>[]>(() => [
+    {
+      id: 'transfer',
+      header: 'Transfer',
+      renderCell: (transfer) => (
+        <div>
+          <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>
+            {Math.abs(transfer.quantity_change)}x {transfer.products?.sku ?? 'Unknown'}
+          </div>
+          <div className="small muted">
+            {transfer.transaction_type} · {transfer.products?.name ?? 'Unknown'}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      align: 'right',
+      renderCell: (transfer) => (
+        <div style={{ textAlign: 'right' }}>
+          <span
+            className="badge"
+            style={{
+              background:
+                transfer.transaction_type === 'purchase' || transfer.transaction_type === 'scan_in'
+                  ? 'rgba(22, 163, 74, 0.12)'
+                  : transfer.transaction_type === 'return'
+                    ? 'rgba(245, 158, 11, 0.16)'
+                    : 'rgba(37, 99, 235, 0.12)',
+              color:
+                transfer.transaction_type === 'purchase' || transfer.transaction_type === 'scan_in'
+                  ? '#166534'
+                  : transfer.transaction_type === 'return'
+                    ? '#92400e'
+                    : '#1e40af',
+            }}
+          >
+            {transfer.transaction_type === 'purchase' || transfer.transaction_type === 'scan_in'
+              ? 'Completed'
+              : transfer.transaction_type === 'return'
+                ? 'In Transit'
+                : 'Completed'}
+          </span>
+          <div className="small muted" style={{ marginTop: 2 }}>
+            {formatRelative(transfer.created_at)}
+          </div>
+        </div>
+      ),
+    },
+  ], [])
 
   const rangeLabel = range === '7d' ? 'this week' : range === '30d' ? 'this month' : 'this quarter'
 
@@ -341,96 +415,29 @@ export const MovementVelocityTab = ({ companyId }: { companyId: string | null })
       {/* Bottom row: Top SKUs & Recent Transfers */}
       <div className="grid grid-2">
         {/* Top Moving SKUs */}
-        <div className="card stack" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-surface">
           <div style={{ padding: '20px 24px 0' }}>
             <h3 className="section-title">Top Moving SKUs</h3>
           </div>
-          <div>
-            {topSkus.length === 0 ? (
-              <div className="empty-state" style={{ padding: 32 }}>No movement data in this range.</div>
-            ) : (
-              topSkus.map((sku, i) => (
-                <div
-                  key={sku.sku}
-                  className="flex-between"
-                  style={{
-                    padding: '14px 24px',
-                    borderTop: i > 0 ? '1px solid var(--color-border)' : undefined,
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>{sku.name}</div>
-                    <div className="small muted">{sku.sku}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>
-                      {sku.total.toLocaleString()} units
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <DataTable
+            columns={topSkuColumns}
+            rows={topSkus}
+            getRowId={(row) => row.sku}
+            emptyState="No movement data in this range."
+          />
         </div>
 
         {/* Recent Transfers */}
-        <div className="card stack" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-surface">
           <div style={{ padding: '20px 24px 0' }}>
             <h3 className="section-title">Recent Transfers</h3>
           </div>
-          <div>
-            {recentTransfers.length === 0 ? (
-              <div className="empty-state" style={{ padding: 32 }}>No recent transfers.</div>
-            ) : (
-              recentTransfers.map((t, i) => (
-                <div
-                  key={t.id}
-                  className="flex-between"
-                  style={{
-                    padding: '14px 24px',
-                    borderTop: i > 0 ? '1px solid var(--color-border)' : undefined,
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'var(--type-weight-semibold)' }}>
-                      {Math.abs(t.quantity_change)}x {t.products?.sku ?? 'Unknown'}
-                    </div>
-                    <div className="small muted">
-                      {t.transaction_type} · {t.products?.name ?? 'Unknown'}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span
-                      className="badge"
-                      style={{
-                        background:
-                          t.transaction_type === 'purchase' || t.transaction_type === 'scan_in'
-                            ? 'rgba(22, 163, 74, 0.12)'
-                            : t.transaction_type === 'return'
-                              ? 'rgba(245, 158, 11, 0.16)'
-                              : 'rgba(37, 99, 235, 0.12)',
-                        color:
-                          t.transaction_type === 'purchase' || t.transaction_type === 'scan_in'
-                            ? '#166534'
-                            : t.transaction_type === 'return'
-                              ? '#92400e'
-                              : '#1e40af',
-                      }}
-                    >
-                      {t.transaction_type === 'purchase' || t.transaction_type === 'scan_in'
-                        ? 'Completed'
-                        : t.transaction_type === 'return'
-                          ? 'In Transit'
-                          : 'Completed'}
-                    </span>
-                    <div className="small muted" style={{ marginTop: 2 }}>
-                      {formatRelative(t.created_at)}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <DataTable
+            columns={recentTransferColumns}
+            rows={recentTransfers}
+            getRowId={(row) => row.id}
+            emptyState="No recent transfers."
+          />
         </div>
       </div>
     </div>

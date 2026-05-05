@@ -34,7 +34,7 @@ export const ActivityLogsTab = ({ logs, searchTerm = '' }: { logs: ActivityEvent
   )
 
   return (
-    <div className="card stack" style={{ padding: 0, overflow: 'hidden' }}>
+    <div className="table-surface">
       <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--border)' }}>
         <div className="flex-between">
           <h3 className="section-title" style={{ margin: 0 }}>Activity Logs</h3>
@@ -83,7 +83,6 @@ export const ActivityLogsTab = ({ logs, searchTerm = '' }: { logs: ActivityEvent
         rows={filteredLogs}
         getRowId={(log) => log.id}
         emptyState={normalizedSearchTerm.length > 0 ? `No activity events matched "${normalizedSearchTerm}".` : 'No activity events found.'}
-        tableWrapClassName="border-0 rounded-none"
       />
     </div>
   )

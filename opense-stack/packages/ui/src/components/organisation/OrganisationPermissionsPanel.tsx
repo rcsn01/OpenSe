@@ -281,19 +281,19 @@ export function OrganisationPermissionsPanel({
     {
       id: 'name',
       header: 'Role Name',
-      cellClassName: 'font-medium text-slate-900',
+      cellClassName: 'font-medium text-[var(--color-foreground)]',
       renderCell: (row) => row.name,
     },
     {
       id: 'description',
       header: 'Description',
-      cellClassName: 'text-slate-600',
+      cellClassName: 'text-[var(--color-muted-foreground)]',
       renderCell: (row) => row.description || '—',
     },
     {
       id: 'role-rank',
       header: 'Role Rank',
-      cellClassName: 'text-slate-600',
+      cellClassName: 'text-[var(--color-muted-foreground)]',
       renderCell: (row) => row.roleRank ?? '—',
     },
     {
@@ -332,7 +332,7 @@ export function OrganisationPermissionsPanel({
 
   return (
     <StackLayout>
-      <Card padding="md">
+      <Card variant="plain" padding="md">
         <CardHeader>
           <div>
             <CardTitle>{title}</CardTitle>
@@ -353,7 +353,6 @@ export function OrganisationPermissionsPanel({
                 rows={roleRows}
                 getRowId={(row) => row.id}
                 emptyState="No roles yet."
-                tableWrapClassName="rounded-lg"
               />
 
               <div className="grid gap-3 border-t border-[var(--color-border)] pt-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px_auto] md:items-start">
@@ -433,7 +432,7 @@ export function OrganisationPermissionsPanel({
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <div className="overflow-x-auto">
                 {loadingPermissions ? (
                   <div className="py-8 text-center text-sm text-slate-500">Loading permissions...</div>
                 ) : (

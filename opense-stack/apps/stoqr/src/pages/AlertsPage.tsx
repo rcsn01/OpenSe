@@ -425,7 +425,7 @@ export const AlertsPage = () => {
   }
 
   const feedContent = (
-    <Card className="overflow-hidden" padding="none">
+    <Card variant="plain" className="overflow-hidden" padding="none">
       <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-1 sm:gap-3">
@@ -491,8 +491,6 @@ export const AlertsPage = () => {
         sortDirection={tableSortDirection}
         onSortChange={handleTableSort}
         minTableWidth={900}
-        tableWrapClassName="border-0"
-        footerClassName="px-4 pb-4 pt-0"
         pagination={{
           currentPage: currentTablePage,
           totalItems: visibleAlerts.length,

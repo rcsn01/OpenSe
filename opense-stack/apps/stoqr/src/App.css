@@ -80,6 +80,17 @@
   padding: 24px;
 }
 
+.table-surface {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
 .stat-card { border-radius: var(--radius-2xl); box-shadow: var(--shadow); }
 
 .grid { display: grid; gap: 20px; }
@@ -755,38 +766,6 @@
 
 .scan-history-desktop-shell {
   display: none;
-  border: 1px solid #edf1f7;
-  border-radius: 18px;
-  overflow: hidden;
-}
-
-.scan-history-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.scan-history-table th,
-.scan-history-table td {
-  padding: 18px 22px;
-  border-bottom: 1px solid #edf1f7;
-  text-align: left;
-}
-
-.scan-history-table th {
-  color: #a0a9bc;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.scan-history-table td {
-  color: #10223d;
-  font-size: 0.95rem;
-}
-
-.scan-history-table tbody tr:last-child td {
-  border-bottom: none;
 }
 
 @media (min-width: 861px) {
@@ -2016,50 +1995,14 @@
 
 .label-template-table-shell {
   overflow: hidden;
-  border-radius: 22px;
-  border: 1px solid rgba(223, 227, 236, 0.92);
-  background: #ffffff;
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.04);
 }
 
-.label-template-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.label-template-table thead th {
-  padding: 22px 18px;
-  border-bottom: 1px solid rgba(223, 227, 236, 0.92);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(100, 116, 139, 0.88);
-  text-align: left;
-}
-
-.label-template-table tbody td {
-  padding: 18px;
-  border-bottom: 1px solid rgba(237, 241, 247, 0.96);
-  color: #0f172a;
-  vertical-align: middle;
-}
-
-.label-template-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.label-template-table tbody tr {
+.label-template-table-row {
   transition: background 0.16s ease, box-shadow 0.16s ease;
 }
 
-.label-template-table tbody tr[role='button'] {
-  cursor: pointer;
-}
-
-.label-template-table tbody tr[role='button']:hover,
-.label-template-table tbody tr.is-editing {
-  background: rgba(246, 248, 252, 0.92);
+.label-template-table-row.is-editing {
+  background: var(--color-muted);
 }
 
 .label-template-name-cell {
@@ -2143,8 +2086,8 @@
 }
 
 .label-template-action:hover {
-  background: rgba(226, 232, 240, 0.7);
-  color: #0f172a;
+  background: var(--color-muted);
+  color: var(--color-foreground);
 }
 
 .label-template-mobile-list {
@@ -2168,7 +2111,7 @@
 }
 
 .label-template-mobile-card.is-editing {
-  background: rgba(246, 248, 252, 0.92);
+  background: var(--color-muted);
 }
 
 .label-template-mobile-topline {
@@ -2893,7 +2836,7 @@
 }
 
 @media (max-width: 640px) {
-  .label-template-table {
+  .label-template-table-shell > .table-wrap {
     display: none;
   }
 

@@ -4,13 +4,22 @@ import { cn } from '../../lib/cn'
 /* ── Card ─────────────────────────────────────────────── */
 
 interface CardProps { children: ReactNode; className?: string; padding?: 'none' | 'sm' | 'md' | 'lg'; hoverable?: boolean }
+type CardVariant = 'default' | 'plain'
 
 const paddingMap = { none: '', sm: 'p-3', md: 'p-4', lg: 'p-6' }
 
-export function Card({ children, className, padding = 'md', hoverable = false }: CardProps) {
+export function Card({
+  children,
+  className,
+  padding = 'md',
+  hoverable = false,
+  variant = 'default',
+}: CardProps & { variant?: CardVariant }) {
   return (
     <div className={cn(
-      'rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-card-foreground)] shadow-[var(--shadow-sm)]',
+      variant === 'default'
+        ? 'rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-card-foreground)] shadow-[var(--shadow-sm)]'
+        : 'bg-transparent text-[var(--color-card-foreground)] border-0 shadow-none rounded-none',
       paddingMap[padding],
       hoverable && 'transition-shadow duration-[var(--transition-normal)] hover:shadow-[var(--shadow-md)]',
       className,

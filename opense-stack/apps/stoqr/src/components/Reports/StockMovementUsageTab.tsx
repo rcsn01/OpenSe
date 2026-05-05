@@ -44,7 +44,7 @@ export const StockMovementUsageTab = ({ transactions }: { transactions: Movement
         </div>
       </div>
 
-      <div className="card stack" style={{ overflow: 'hidden', padding: 0 }}>
+      <div className="table-surface">
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
           <h3 className="section-title" style={{ margin: 0 }}>Stock Movement History</h3>
           <div className="small muted">Filtered by selected date range.</div>
@@ -90,7 +90,6 @@ export const StockMovementUsageTab = ({ transactions }: { transactions: Movement
           rows={transactions}
           getRowId={(row) => row.id}
           emptyState="No movement records in this range."
-          tableWrapClassName="border-0 rounded-none"
         />
       </div>
     </div>
