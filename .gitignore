@@ -2,3 +2,5 @@
 .DS_Store
 supabase/.temp/
 supabase/migrations/.temp/
+.env
+opencode.jsonc
