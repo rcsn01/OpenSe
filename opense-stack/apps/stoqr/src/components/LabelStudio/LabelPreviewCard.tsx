@@ -14,6 +14,7 @@ type LabelPreviewSummaryItem = {
 type LabelPreviewCardProps = {
   title: string
   description?: string
+  className?: string
   templateName?: string | null
   layout?: Record<string, unknown> | null
   variableFields?: string[]
@@ -25,6 +26,10 @@ type LabelPreviewCardProps = {
   previewMode?: 'label' | 'page'
   renderers?: LabelAssetRenderers
   summaryItems?: LabelPreviewSummaryItem[]
+  hideHeader?: boolean
+  showTemplateMeta?: boolean
+  showVariableFields?: boolean
+  showSummaryItems?: boolean
 }
 
 const defaultSample = {
@@ -47,6 +52,7 @@ const formatFieldName = (value: string) => {
 export const LabelPreviewCard = ({
   title,
   description,
+  className,
   templateName,
   layout,
   variableFields,
@@ -58,6 +64,10 @@ export const LabelPreviewCard = ({
   previewMode = 'label',
   renderers,
   summaryItems,
+  hideHeader = false,
+  showTemplateMeta = true,
+  showVariableFields = true,
+  showSummaryItems = true,
 }: LabelPreviewCardProps) => {
   const layoutKey = JSON.stringify(layout ?? null)
   const resolvedLayout = useMemo(() => resolveLabelLayout(layout), [layoutKey, layout])
@@ -113,16 +123,18 @@ export const LabelPreviewCard = ({
   const showSingleLabelPreview = previewMode === 'label' && templateName && singleLabelPlan
 
   return (
-    <div className="card export-preview-card label-preview-card">
-      <div className="label-preview-card-header">
-        <div>
-          <h3 className="section-title" style={{ marginBottom: description ? 4 : 0 }}>{title}</h3>
-          {description ? <p className="small muted" style={{ margin: 0 }}>{description}</p> : null}
+    <div className={['card export-preview-card label-preview-card', className].filter(Boolean).join(' ')}>
+      {!hideHeader ? (
+        <div className="label-preview-card-header">
+          <div>
+            <h3 className="section-title" style={{ marginBottom: description ? 4 : 0 }}>{title}</h3>
+            {description ? <p className="small muted" style={{ margin: 0 }}>{description}</p> : null}
+          </div>
+          {badgeText ? <span className="badge neutral">{badgeText}</span> : null}
         </div>
-        {badgeText ? <span className="badge neutral">{badgeText}</span> : null}
-      </div>
+      ) : null}
 
-      {templateName ? (
+      {showTemplateMeta && templateName ? (
         <div className="label-preview-template-row">
           <span className="label-preview-template-chip">{templateName}</span>
           {previewMode === 'page' && pageCount > 0 ? (
@@ -171,7 +183,7 @@ export const LabelPreviewCard = ({
         </div>
       ) : null}
 
-      {summaryItems?.length ? (
+      {showSummaryItems && summaryItems?.length ? (
         <div className="label-preview-meta-grid">
           {summaryItems.map((item) => (
             <div key={`${item.label}-${item.value}`} className="label-preview-meta">
@@ -182,7 +194,7 @@ export const LabelPreviewCard = ({
         </div>
       ) : null}
 
-      {variableFields?.length ? (
+      {showVariableFields && variableFields?.length ? (
         <div className="label-preview-variables">
           {variableFields.map((field) => (
             <span key={field} className="label-preview-variable-pill">{formatFieldName(field)}</span>

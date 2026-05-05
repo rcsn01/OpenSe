@@ -51,23 +51,24 @@ describe('LabelDesignerTab', () => {
   it('saves expanded layout controls and updates the live preview', async () => {
     render(<LabelDesignerTab companyId="company-1" selectedTemplateId="template-1" />)
 
-    expect(screen.getByText('Live Design Preview')).toBeInTheDocument()
-    expect(screen.queryByText('Price: $24.00')).not.toBeInTheDocument()
+    expect(screen.getByText('Template Editor')).toBeInTheDocument()
+    expect(screen.getByText('Live Canvas')).toBeInTheDocument()
+    expect(screen.queryByText('Price: $299.00')).not.toBeInTheDocument()
     expect(screen.getByLabelText('QR Scale (%)')).toHaveAttribute(
       'max',
       String(getMaxQrScale({ width: 100, height: 50, padding: 8 })),
     )
 
     fireEvent.change(screen.getByLabelText('Content Padding (pt)'), { target: { value: '12' } })
-    fireEvent.change(screen.getByLabelText('Text Alignment'), { target: { value: 'center' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Center aligned' }))
     fireEvent.change(screen.getByLabelText('Name Lines'), { target: { value: '3' } })
     fireEvent.change(screen.getByLabelText('Barcode Scale (%)'), { target: { value: '130' } })
     fireEvent.change(screen.getByLabelText('QR Scale (%)'), { target: { value: '110' } })
-    fireEvent.click(screen.getByRole('button', { name: /PriceSelling price line/i }))
+    fireEvent.click(screen.getByRole('switch', { name: /Price Field/i }))
 
-    expect(screen.getByText('Price: $24.00')).toBeInTheDocument()
+    expect(screen.getByText('Price: $299.00')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save Design' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith(

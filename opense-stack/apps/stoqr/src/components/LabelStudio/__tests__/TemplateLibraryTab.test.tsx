@@ -47,32 +47,30 @@ describe('TemplateLibraryTab', () => {
     })
   })
 
-  it('shows size, type, and fields columns instead of source and action', () => {
+  it('shows the redesigned template library columns and field chips', () => {
     render(<TemplateLibraryTab companyId="company-1" />)
 
-    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Size' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Fields' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Template Name' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Dimensions' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Active Fields' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Last Modified' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Source' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: 'Action' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Edit Product Label template/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Type' })).not.toBeInTheDocument()
 
-    expect(screen.getByText('100mm x 50mm')).toBeInTheDocument()
-    expect(screen.getByText('12pt / left')).toBeInTheDocument()
-    expect(screen.getByText('Name, SKU, Barcode')).toBeInTheDocument()
+    expect(screen.getAllByText('100x50mm').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Name').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('SKU').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Barcode').length).toBeGreaterThan(0)
   })
 
-  it('opens the designer when the first cell is clicked', async () => {
+  it('opens the designer when the template row is activated', async () => {
     const user = userEvent.setup()
     const onSelectTemplate = vi.fn()
 
     render(<TemplateLibraryTab companyId="company-1" onSelectTemplate={onSelectTemplate} />)
 
-    const nameCell = screen.getByText('Product Label').closest('td')
-    if (!nameCell) throw new Error('Expected template name cell to exist')
-
-    await user.click(nameCell)
+    await user.click(screen.getByRole('button', { name: 'Open Product Label template' }))
 
     expect(onSelectTemplate).toHaveBeenCalledWith('template-1')
   })

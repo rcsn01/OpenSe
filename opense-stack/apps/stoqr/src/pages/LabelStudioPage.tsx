@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SideSheet, SideSheetBody, SideSheetContent, SideSheetDescription, SideSheetHeader, SideSheetTitle } from '@repo/ui'
+import { SideSheet, SideSheetBody, SideSheetContent } from '@repo/ui'
 import { useCompany } from '../contexts/CompanyContext'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { BasePage } from '../components/BasePage'
@@ -88,19 +88,13 @@ export const LabelStudioPage = () => {
         />
 
         <SideSheet open={isDesignerOpen} onClose={() => setIsDesignerOpen(false)} size="page">
-          <SideSheetContent>
-            <SideSheetHeader>
-              <SideSheetTitle>Label Designer</SideSheetTitle>
-              <SideSheetDescription>
-                Adjust label size, typography, and visible fields for the selected template.
-              </SideSheetDescription>
-            </SideSheetHeader>
-
-            <SideSheetBody className="pt-4">
+          <SideSheetContent className="label-studio-sheet">
+            <SideSheetBody className="label-studio-sheet-body">
               <LabelDesignerTab
                 companyId={companyId || ''}
                 selectedTemplateId={selectedTemplateId}
                 onSelectedTemplateChange={setSelectedTemplateId}
+                onClose={() => setIsDesignerOpen(false)}
               />
             </SideSheetBody>
           </SideSheetContent>

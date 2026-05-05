@@ -1,13 +1,62 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { SearchX, ScanBarcode, Package, ArrowUpCircle, ArrowDownCircle, SlidersHorizontal } from 'lucide-react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ArrowLeft, Check, Minus, Plus, SearchX, X } from 'lucide-react'
 import { StackLayout } from '@repo/ui'
+import { useProductFolders } from '../../hooks/queries/useProducts'
 import {
   useQuickScanLookup,
   useQuickScanTransaction,
   useQuickScanUser,
 } from '../../hooks/queries/useQuickScan'
+import { SCAN_REASON_LABELS, type ScanUpdateReason } from '../../lib/scanReason'
 
-export type StockMode = 'manual' | 'receive' | 'dispatch'
+const REASON_OPTIONS: Array<{ value: ScanUpdateReason; label: string }> = [
+  { value: 'new_delivery', label: SCAN_REASON_LABELS.new_delivery },
+  { value: 'consumed', label: SCAN_REASON_LABELS.consumed },
+  { value: 'sold', label: SCAN_REASON_LABELS.sold },
+  { value: 'inventory_audit', label: SCAN_REASON_LABELS.inventory_audit },
+]
+
+const QUICK_ADJUSTMENTS = [5, 10, 25, 50]
+
+const buildFolderPathLabel = (
+  folderId: string | null,
+  folders: Array<{ id: string; name: string; parent_id: string | null }>,
+) => {
+  if (!folderId) return 'Unassigned'
+
+  const labels: string[] = []
+  const folderMap = new Map(folders.map((folder) => [folder.id, folder]))
+  let currentFolder = folderMap.get(folderId)
+
+  while (currentFolder) {
+    labels.unshift(currentFolder.name)
+    currentFolder = currentFolder.parent_id ? folderMap.get(currentFolder.parent_id) : undefined
+  }
+
+  return labels.length ? labels.join(', ') : 'Unassigned'
+}
+
+const formatRelativeTime = (value: string | null) => {
+  if (!value) return 'No recent updates'
+
+  const timestamp = new Date(value).getTime()
+  if (Number.isNaN(timestamp)) return 'No recent updates'
+
+  const diffMinutes = Math.round((Date.now() - timestamp) / 60000)
+
+  if (diffMinutes <= 1) return 'Just now'
+  if (diffMinutes < 60) return `${diffMinutes} min ago`
+
+  const diffHours = Math.round(diffMinutes / 60)
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`
+
+  const diffDays = Math.round(diffHours / 24)
+  if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`
+
+  return new Date(value).toLocaleDateString()
+}
+
+const clampQuantity = (value: number) => Math.max(0, Math.round(Number.isFinite(value) ? value : 0))
 
 export const QuickScanTab = ({
   scanValue,
@@ -24,53 +73,70 @@ export const QuickScanTab = ({
   cameraContent?: ReactNode
   onResetSearch?: () => void
 }) => {
-  const [quantity, setQuantity] = useState(1)
-  const [manualStock, setManualStock] = useState<number | ''>('')
+  const [draftQuantity, setDraftQuantity] = useState(0)
+  const [reason, setReason] = useState<ScanUpdateReason>('new_delivery')
+  const [note, setNote] = useState('')
   const [message, setMessage] = useState<string | null>(null)
-  const [stockMode, setStockMode] = useState<StockMode>('receive')
-  const [pendingConfirm, setPendingConfirm] = useState(false)
   const { data: userId } = useQuickScanUser()
+  const { data: folders = [] } = useProductFolders(companyId || null)
   const lookupQuery = useQuickScanLookup(companyId, scanValue)
   const transactionMutation = useQuickScanTransaction()
 
   const product = lookupQuery.data?.product ?? null
   const notFoundSku = lookupQuery.data?.notFoundSku ?? null
-  const lastHandledBy = lookupQuery.data?.lastHandledBy ?? '—'
+  const lastUpdatedAt = lookupQuery.data?.lastUpdatedAt ?? null
 
   useEffect(() => {
     if (!scanValue) {
       setMessage(null)
-      setPendingConfirm(false)
+      setReason('new_delivery')
+      setNote('')
     }
   }, [scanValue])
 
   useEffect(() => {
     if (product) {
-      setManualStock(product.quantity_on_hand)
+      setDraftQuantity(product.quantity_on_hand)
+      setMessage(null)
     }
   }, [product])
 
-  const computeNewStock = (): number => {
-    if (!product) return 0
-    if (stockMode === 'manual') return Number(manualStock) || 0
-    if (stockMode === 'receive') return product.quantity_on_hand + quantity
-    return Math.max(0, product.quantity_on_hand - quantity)
+  const locationLabel = useMemo(
+    () => buildFolderPathLabel(product?.folder_id ?? null, folders),
+    [folders, product?.folder_id],
+  )
+
+  const hasQuantityChange = product ? draftQuantity !== product.quantity_on_hand : false
+  const canConfirm = !!product && !transactionMutation.isPending && (hasQuantityChange || reason === 'inventory_audit')
+
+  const handleReturnToScanner = () => {
+    setScanValue('')
+    setMessage(null)
+    setReason('new_delivery')
+    setNote('')
+    onResetSearch?.()
+  }
+
+  const handleDraftInput = (value: string) => {
+    setDraftQuantity(clampQuantity(Number(value || 0)))
+    setMessage(null)
+  }
+
+  const handleDraftAdjust = (delta: number) => {
+    setDraftQuantity((current) => clampQuantity(current + delta))
+    setMessage(null)
   }
 
   const handleConfirm = async () => {
     if (!companyId || !product || !userId) return
-    setMessage(null)
 
-    const newStock = computeNewStock()
-    const diff = newStock - product.quantity_on_hand
-
-    if (diff === 0) {
-      setMessage('No stock change to apply.')
-      setPendingConfirm(false)
+    const quantityDiff = draftQuantity - product.quantity_on_hand
+    if (quantityDiff === 0 && reason !== 'inventory_audit') {
+      setMessage('Adjust the quantity or choose Inventory Audit to log a no-change check.')
       return
     }
 
-    const transactionType: 'scan_in' | 'scan_out' = diff > 0 ? 'scan_in' : 'scan_out'
+    const transactionType = quantityDiff > 0 ? 'scan_in' : quantityDiff < 0 ? 'scan_out' : 'lookup'
 
     try {
       await transactionMutation.mutateAsync({
@@ -78,251 +144,190 @@ export const QuickScanTab = ({
         productId: product.id,
         userId,
         transactionType,
-        quantity: Math.abs(diff),
+        quantity: Math.abs(quantityDiff),
         barcode: scanValue,
         entryMethod,
+        reason,
+        note,
+        stockAfter: draftQuantity,
       })
-      setMessage(diff > 0 ? `+${diff} stock added successfully.` : `${diff} stock removed successfully.`)
-      setPendingConfirm(false)
+      setMessage(reason === 'inventory_audit' && quantityDiff === 0 ? 'Inventory audit logged.' : 'Inventory updated.')
+      setNote('')
       await lookupQuery.refetch()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Transaction failed.')
     }
   }
 
-  const handleCancel = () => {
-    setPendingConfirm(false)
-    setQuantity(1)
-    if (product) setManualStock(product.quantity_on_hand)
-  }
-
-  const handleMarkOutOfStock = () => {
-    setStockMode('manual')
-    setManualStock(0)
-    setPendingConfirm(true)
-  }
-
-  const handleFullRestock = () => {
-    if (!product) return
-    setStockMode('manual')
-    setManualStock(product.reorder_point > 0 ? product.reorder_point * 2 : 100)
-    setPendingConfirm(true)
-  }
-
-  const handleSearchAgain = () => {
-    setScanValue('')
-    onResetSearch?.()
-  }
-
-  const stockDiff = product ? computeNewStock() - product.quantity_on_hand : 0
-
   return (
-    <StackLayout className="flex-1 min-h-0">
+    <StackLayout className="scan-tab-view">
       {!scanValue ? (
-        <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
-          <div className="flex flex-1 min-h-0 flex-col p-5">
-            {cameraContent ?? (
-              <div className="flex flex-1 flex-col items-center justify-center rounded-lg bg-[var(--color-muted)] py-12 text-[var(--color-muted-foreground)]">
-                <div className="mb-3 rounded-full bg-[var(--color-background)] p-3.5 shadow-sm">
-                  <ScanBarcode size={24} className="text-[var(--color-primary)]" />
-                </div>
-                <p className="text-sm font-medium">Scan a barcode or QR code to begin</p>
-              </div>
-            )}
+        <section className="scan-idle-view" aria-label="Scan item">
+          <div className="scan-idle-stage">
+            {cameraContent}
           </div>
-        </div>
+        </section>
       ) : (
-        <>
-          {/* Product Card */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
-            {/* Product Header */}
-            <div className="border-b border-[var(--color-border)] p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-lg font-semibold text-[var(--color-card-foreground)]">
-                    {lookupQuery.isLoading ? 'Looking up…' : product?.name ?? 'Product Not Found'}
-                  </h2>
-                  {product && (
-                    <p className="mt-0.5 text-sm text-[var(--color-muted-foreground)]">
-                      {product.sku ? `SKU: ${product.sku}` : 'No SKU assigned'}
-                    </p>
-                  )}
-                </div>
+        <section className="scan-update-view" aria-label="Update inventory">
+          <header className="scan-update-topbar">
+            <button
+              type="button"
+              className="scan-update-back"
+              aria-label="Back to scanner"
+              onClick={handleReturnToScanner}
+            >
+              <span className="scan-update-back-mobile" aria-hidden="true">
+                <X size={18} />
+              </span>
+              <span className="scan-update-back-desktop">
+                <ArrowLeft size={15} />
+                Back to scanner
+              </span>
+            </button>
+            <p className="scan-update-eyebrow">Update Inventory</p>
+          </header>
 
-                {product && (
-                  <div className="flex flex-col items-end gap-1">
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
-                      product.quantity_on_hand === 0
-                        ? 'bg-[var(--color-destructive-light)] text-[var(--color-destructive)]'
-                        : product.quantity_on_hand <= product.reorder_point
-                          ? 'bg-[var(--color-warning-light)] text-[var(--color-warning)]'
-                          : 'bg-[var(--color-success-light)] text-[var(--color-success)]'
-                    }`}>
-                      <Package size={14} />
-                      {product.quantity_on_hand} in stock
-                    </span>
-                    <span className="text-xs text-[var(--color-muted-foreground)]">
-                      Last handled by {lastHandledBy}
-                    </span>
-                  </div>
-                )}
+          {lookupQuery.isLoading ? (
+            <div className="scan-feedback-panel">Looking up product…</div>
+          ) : !product && notFoundSku ? (
+            <div className="scan-feedback-panel scan-feedback-panel--missing">
+              <SearchX size={28} />
+              <div className="scan-feedback-copy">
+                <h2 className="scan-feedback-title">Product not found</h2>
+                <p className="scan-feedback-text">No product matched {notFoundSku}.</p>
               </div>
             </div>
+          ) : product ? (
+            <div className="scan-update-shell">
+              <section className="scan-update-main">
+                <div className="scan-product-summary">
+                  <p className="scan-product-sku">{product.sku || 'No SKU assigned'}</p>
+                  <h2 className="scan-product-name">{product.name}</h2>
+                </div>
 
-            {lookupQuery.isLoading && (
-              <div className="flex items-center justify-center p-8 text-sm text-[var(--color-muted-foreground)]">
-                Looking up product…
-              </div>
-            )}
+                <dl className="scan-product-meta-grid">
+                  <div className="scan-product-meta-row">
+                    <dt>Location</dt>
+                    <dd>{locationLabel}</dd>
+                  </div>
+                  <div className="scan-product-meta-row">
+                    <dt>Last updated</dt>
+                    <dd>{formatRelativeTime(lastUpdatedAt)}</dd>
+                  </div>
+                </dl>
 
-            {!product && notFoundSku && !lookupQuery.isLoading && (
-              <div className="flex flex-col items-center justify-center gap-3 p-8 text-[var(--color-muted-foreground)]">
-                <SearchX size={32} />
-                <p className="text-sm">No product found for: <strong className="text-[var(--color-card-foreground)]">{notFoundSku}</strong></p>
-              </div>
-            )}
+                <div className="scan-update-section">
+                  <p className="scan-update-label">Reason for update</p>
+                  <div className="scan-reason-grid" role="radiogroup" aria-label="Reason for update">
+                    {REASON_OPTIONS.map((option) => (
+                      <label key={option.value} className="scan-reason-option">
+                        <input
+                          type="radio"
+                          name="scan-reason"
+                          checked={reason === option.value}
+                          onChange={() => {
+                            setReason(option.value)
+                            setMessage(null)
+                          }}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-            {product && (
-              <>
-                {/* Stock Mode Selector */}
-                <div className="border-b border-[var(--color-border)] p-5">
-                  <h3 className="mb-3 text-sm font-medium text-[var(--color-muted-foreground)]">Update Mode</h3>
-                  <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Stock update mode">
-                    {([
-                      { mode: 'manual' as StockMode, label: 'Manual', icon: SlidersHorizontal, desc: 'Set exact amount' },
-                      { mode: 'receive' as StockMode, label: 'Receive', icon: ArrowUpCircle, desc: 'Add to stock' },
-                      { mode: 'dispatch' as StockMode, label: 'Dispatch', icon: ArrowDownCircle, desc: 'Remove from stock' },
-                    ]).map(({ mode, label, icon: Icon, desc }) => (
+                <div className="scan-update-section">
+                  <p className="scan-update-label">Optional Notes</p>
+                  <textarea
+                    className="scan-update-notes"
+                    placeholder="Add details about this update..."
+                    value={note}
+                    onChange={(event) => {
+                      setNote(event.target.value)
+                      setMessage(null)
+                    }}
+                    rows={2}
+                  />
+                </div>
+              </section>
+
+              <section className="scan-update-controls">
+                <div className="scan-current-stock-row">
+                  <span className="scan-update-label">Current Stock</span>
+                  <strong className="scan-current-stock-value">{product.quantity_on_hand}</strong>
+                </div>
+
+                <div className="scan-quantity-stage">
+                  <p className="scan-update-label scan-update-label--center">New Quantity</p>
+
+                  <div className="scan-quantity-row">
+                    <button
+                      type="button"
+                      className="scan-quantity-button"
+                      aria-label="Decrease quantity"
+                      onClick={() => handleDraftAdjust(-1)}
+                    >
+                      <Minus size={22} />
+                    </button>
+
+                    <input
+                      className="scan-quantity-input"
+                      type="number"
+                      min={0}
+                      value={draftQuantity}
+                      aria-label="New quantity"
+                      onChange={(event) => handleDraftInput(event.target.value)}
+                    />
+
+                    <button
+                      type="button"
+                      className="scan-quantity-button"
+                      aria-label="Increase quantity"
+                      onClick={() => handleDraftAdjust(1)}
+                    >
+                      <Plus size={22} />
+                    </button>
+                  </div>
+
+                  <div className="scan-quick-adjust-grid">
+                    {QUICK_ADJUSTMENTS.map((adjustment) => (
                       <button
-                        key={mode}
-                        role="radio"
-                        aria-checked={stockMode === mode}
-                        onClick={() => { setStockMode(mode); setPendingConfirm(false); setMessage(null) }}
-                        className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 text-center transition-all ${
-                          stockMode === mode
-                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)]'
-                            : 'border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-border-hover)]'
-                        }`}
+                        key={`plus-${adjustment}`}
+                        type="button"
+                        className="scan-chip-button"
+                        onClick={() => handleDraftAdjust(adjustment)}
                       >
-                        <Icon size={20} />
-                        <span className="text-sm font-medium">{label}</span>
-                        <span className="text-xs opacity-70">{desc}</span>
+                        +{adjustment}
+                      </button>
+                    ))}
+                    {QUICK_ADJUSTMENTS.map((adjustment) => (
+                      <button
+                        key={`minus-${adjustment}`}
+                        type="button"
+                        className="scan-chip-button"
+                        onClick={() => handleDraftAdjust(-adjustment)}
+                      >
+                        -{adjustment}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Quantity Input */}
-                <div className="p-5">
-                  {stockMode === 'manual' ? (
-                    <label className="stack">
-                      <span className="text-sm font-medium text-[var(--color-card-foreground)]">Set stock to</span>
-                      <input
-                        className="input text-center text-lg font-semibold"
-                        type="number"
-                        min={0}
-                        value={manualStock}
-                        onChange={(event) => {
-                          setManualStock(event.target.value === '' ? '' : Number(event.target.value))
-                          setPendingConfirm(true)
-                        }}
-                        aria-label="Set stock amount"
-                      />
-                    </label>
-                  ) : (
-                    <label className="stack">
-                      <span className="text-sm font-medium text-[var(--color-card-foreground)]">
-                        {stockMode === 'receive' ? 'Quantity to receive' : 'Quantity to dispatch'}
-                      </span>
-                      <input
-                        className="input text-center text-lg font-semibold"
-                        type="number"
-                        min={1}
-                        value={quantity}
-                        onChange={(event) => {
-                          setQuantity(Number(event.target.value || 1))
-                          setPendingConfirm(true)
-                        }}
-                        aria-label="Quantity"
-                      />
-                    </label>
-                  )}
+                {message ? <p className="scan-update-message">{message}</p> : null}
 
-                  {/* Stock Preview */}
-                  {pendingConfirm && (
-                    <div className="mt-3 flex items-center justify-between rounded-lg bg-[var(--color-muted)] px-4 py-2.5">
-                      <span className="text-sm text-[var(--color-muted-foreground)]">New stock level:</span>
-                      <span className={`text-base font-bold ${
-                        stockDiff > 0 ? 'text-[var(--color-success)]' : stockDiff < 0 ? 'text-[var(--color-destructive)]' : ''
-                      }`}>
-                        {computeNewStock()}
-                        {stockDiff !== 0 && (
-                          <span className="ml-1, text-sm font-normal">
-                            ({stockDiff > 0 ? '+' : ''}{stockDiff})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Quick Actions */}
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      className="flex-1 rounded-lg border border-[var(--color-destructive)] px-3 py-2 text-sm font-medium text-[var(--color-destructive)] transition-colors hover:bg-[var(--color-destructive-light)]"
-                      onClick={handleMarkOutOfStock}
-                      disabled={transactionMutation.isPending || product.quantity_on_hand === 0}
-                    >
-                      Mark Out of Stock
-                    </button>
-                    <button
-                      className="flex-1 rounded-lg border border-[var(--color-success)] px-3 py-2 text-sm font-medium text-[var(--color-success)] transition-colors hover:bg-[var(--color-success-light)]"
-                      onClick={handleFullRestock}
-                      disabled={transactionMutation.isPending}
-                    >
-                      Full Restock
-                    </button>
-                  </div>
-
-                  {/* Confirm / Cancel */}
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      className="flex-1 rounded-lg border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-                      onClick={handleCancel}
-                      disabled={transactionMutation.isPending}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="button flex-1"
-                      onClick={handleConfirm}
-                      disabled={transactionMutation.isPending || !pendingConfirm}
-                    >
-                      {transactionMutation.isPending ? 'Updating…' : 'Confirm Update'}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {message && (
-              <div className={`mx-5 mb-5 rounded-lg px-4 py-2.5 text-sm font-medium ${
-                message.includes('failed') || message.includes('No stock')
-                  ? 'bg-[var(--color-warning-light)] text-[var(--color-warning)]'
-                  : 'bg-[var(--color-success-light)] text-[var(--color-success)]'
-              }`}>
-                {message}
-              </div>
-            )}
-          </div>
-
-          {/* Search Again */}
-          <button
-            className="mt-2 w-full rounded-lg border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-            onClick={handleSearchAgain}
-          >
-            Search Again
-          </button>
-        </>
+                <button
+                  type="button"
+                  className="scan-confirm-button"
+                  onClick={handleConfirm}
+                  disabled={!canConfirm}
+                >
+                  <Check size={16} />
+                  {transactionMutation.isPending ? 'Updating…' : 'Confirm Update'}
+                </button>
+              </section>
+            </div>
+          ) : null}
+        </section>
       )}
     </StackLayout>
   )
