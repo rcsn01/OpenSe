@@ -8,7 +8,17 @@ const mocks = vi.hoisted(() => ({
   deleteMutateAsync: vi.fn(),
   importMutateAsync: vi.fn(),
   refreshInventory: vi.fn(),
+  parseCsv: vi.fn(),
 }))
+
+vi.mock('../../utils', async () => {
+  const actual = await vi.importActual<typeof import('../../utils')>('../../utils')
+
+  return {
+    ...actual,
+    parseCsv: (...args: unknown[]) => mocks.parseCsv(...args),
+  }
+})
 
 vi.mock('../../contexts/CompanyContext', () => ({
   useCompany: () => ({ companyId: 'company-1' }),
@@ -28,6 +38,7 @@ vi.mock('../../components/Inventory/AllProductsTab', () => ({
     sortField,
     sortDir,
     onSortChange,
+    onImportOpen,
   }: {
     page: number
     pageSize: number
@@ -41,6 +52,7 @@ vi.mock('../../components/Inventory/AllProductsTab', () => ({
     sortField: string
     sortDir: 'asc' | 'desc'
     onSortChange: (field: 'name' | 'selling_price') => void
+    onImportOpen: () => void
   }) => (
     <div>
       <div>Current page: {page}</div>
@@ -54,6 +66,7 @@ vi.mock('../../components/Inventory/AllProductsTab', () => ({
       <button type="button" onClick={() => onAddFilter('batch', 'acme')}>Add batch filter</button>
       <button type="button" onClick={() => onRemoveFilter('batch')}>Remove batch filter</button>
       <button type="button" onClick={() => onSortChange('selling_price')}>Sort by price</button>
+      <button type="button" onClick={onImportOpen}>Import CSV</button>
     </div>
   ),
 }))
@@ -101,6 +114,10 @@ describe('InventoryListPage pagination state', () => {
     vi.clearAllMocks()
     mocks.deleteMutateAsync.mockResolvedValue(undefined)
     mocks.importMutateAsync.mockResolvedValue(0)
+    mocks.parseCsv.mockReturnValue({
+      headers: ['Product Name', 'SKU'],
+      rows: [{ 'Product Name': 'Widget', SKU: 'SKU-1' }],
+    })
   })
 
   it('hydrates stock, custom filters, pagination, and sorting from the URL before querying products', async () => {
@@ -239,6 +256,33 @@ describe('InventoryListPage pagination state', () => {
       page: 1,
       sortField: 'selling_price',
       sortDir: 'desc',
+    })
+  })
+
+  it('prompts for a csv file before navigating to the import mapping page', async () => {
+    render(
+      <MemoryRouter initialEntries={['/inventory/all']}>
+        <Routes>
+          <Route path="/inventory/:tab" element={<InventoryListPage />} />
+          <Route path="/inventory/import" element={<div>Import Mapping Page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import CSV' }))
+
+    const file = new File(['ignored'], 'products.csv', { type: 'text/csv' })
+    Object.defineProperty(file, 'text', {
+      value: vi.fn().mockResolvedValue('Product Name,SKU\nWidget,SKU-1'),
+    })
+
+    fireEvent.change(screen.getByLabelText('Upload inventory CSV'), {
+      target: { files: [file] },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Import Mapping Page')).toBeInTheDocument()
+      expect(mocks.parseCsv).toHaveBeenCalledWith('Product Name,SKU\nWidget,SKU-1')
     })
   })
 })
