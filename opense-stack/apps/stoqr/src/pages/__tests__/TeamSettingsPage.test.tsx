@@ -54,7 +54,7 @@ vi.mock('../../components/TeamSettings/MembersTab', () => ({
 }))
 
 vi.mock('../../components/TeamSettings/RolesTab', () => ({
-  RolesTab: () => <div>Roles tab</div>,
+  RolesTab: ({ searchTerm }: { searchTerm?: string }) => <div>Roles tab {searchTerm}</div>,
 }))
 
 vi.mock('../../components/TeamSettings/ActivityLogsTab', () => ({
@@ -62,11 +62,11 @@ vi.mock('../../components/TeamSettings/ActivityLogsTab', () => ({
 }))
 
 vi.mock('../../components/TeamSettings/PagesTab', () => ({
-  PagesTab: () => <div>Pages tab</div>,
+  PagesTab: ({ searchTerm }: { searchTerm?: string }) => <div>Pages tab {searchTerm}</div>,
 }))
 
 vi.mock('../../components/TeamSettings/TwoFactorTab', () => ({
-  TwoFactorTab: () => <div>2FA tab</div>,
+  TwoFactorTab: ({ searchTerm }: { searchTerm?: string }) => <div>2FA tab {searchTerm}</div>,
 }))
 
 vi.mock('../../hooks/queries/useOrganisationPageSettings', () => ({
@@ -181,5 +181,62 @@ describe('TeamSettingsPage', () => {
     await user.type(screen.getByRole('combobox', { name: 'Search activity logs...' }), 'permission change')
 
     expect(screen.getByText('Activity tab permission change')).toBeInTheDocument()
+  })
+
+  it('passes the shared top-bar search term into permissions', async () => {
+    const user = userEvent.setup()
+    mockUpdateCompanyMemberRole.mockResolvedValue(undefined)
+
+    render(
+      <MemoryRouter initialEntries={['/settings/organisations/permissions']}>
+        <Routes>
+          <Route element={<SearchShell />}>
+            <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByRole('combobox', { name: 'Search roles and permissions...' }), 'approver')
+
+    expect(screen.getByText('Roles tab approver')).toBeInTheDocument()
+  })
+
+  it('passes the shared top-bar search term into page access controls', async () => {
+    const user = userEvent.setup()
+    mockUpdateCompanyMemberRole.mockResolvedValue(undefined)
+
+    render(
+      <MemoryRouter initialEntries={['/settings/organisations/pages']}>
+        <Routes>
+          <Route element={<SearchShell />}>
+            <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByRole('combobox', { name: 'Search page access...' }), 'procurement')
+
+    expect(screen.getByText('Pages tab procurement')).toBeInTheDocument()
+  })
+
+  it('passes the shared top-bar search term into two-factor settings', async () => {
+    const user = userEvent.setup()
+    mockUpdateCompanyMemberRole.mockResolvedValue(undefined)
+
+    render(
+      <MemoryRouter initialEntries={['/settings/organisations/two-factor']}>
+        <Routes>
+          <Route element={<SearchShell />}>
+            <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByRole('combobox', { name: 'Search two-factor...' }), 'verified')
+
+    expect(screen.getByText('2FA tab verified')).toBeInTheDocument()
   })
 })

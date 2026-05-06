@@ -93,6 +93,17 @@ describe('LabelDesignerPage', () => {
     expect(screen.getByText('Returns Label')).toBeInTheDocument()
   })
 
+  it('navigates to another template editor from the shared top-bar search', async () => {
+    const user = userEvent.setup()
+    renderDesignerRoute('/tools/labels/templates/template-1?template=template-1')
+
+    await user.type(screen.getByRole('combobox', { name: 'Search templates...' }), 'Returns')
+    await user.keyboard('{Enter}')
+
+    expect(screen.getByTestId('location-path')).toHaveTextContent('/tools/labels/templates/template-2?template=template-2')
+    expect(screen.getByText('Designer template: template-2')).toBeInTheDocument()
+  })
+
   it('canonicalizes the designer route to the dedicated templates editor path', () => {
     renderDesignerRoute('/tools/labels/design/template-1')
 

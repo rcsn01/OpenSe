@@ -56,9 +56,23 @@ test.describe('Stoqr Reports', () => {
 
     await expectReportTabs(authenticatedPage);
     await expect(authenticatedPage).toHaveURL(/\/reports\/custom-saved/);
-    await expect(authenticatedPage.getByText('Saved Templates')).toBeVisible();
-    await expect(authenticatedPage.getByText('Report Builder')).toBeVisible();
-    await expect(authenticatedPage.getByText('Scheduled Delivery')).toBeVisible();
+    await expect(authenticatedPage.getByRole('heading', { name: 'Saved Templates' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('heading', { name: 'Report Builder' }).first()).toBeVisible();
+    await expect(authenticatedPage.getByRole('heading', { name: 'Scheduled Delivery' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: 'Generate Report' })).toBeVisible();
+  });
+
+  test('report search jumps to the selected report tab', async ({ authenticatedPage }) => {
+    await authenticatedPage.goto('/reports/stock-health');
+
+    const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search reports...' });
+    await expect(searchInput).toBeVisible();
+
+    await searchInput.fill('custom saved');
+    await authenticatedPage.getByRole('option', { name: /Custom & Saved Reports/i }).click();
+
+    await expect(authenticatedPage).toHaveURL(/\/reports\/custom-saved$/);
+    await expect(authenticatedPage.getByRole('heading', { name: 'Saved Templates' })).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: 'Generate Report' })).toBeVisible();
   });
 });

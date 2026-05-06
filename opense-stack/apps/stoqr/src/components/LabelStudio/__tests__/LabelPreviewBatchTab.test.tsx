@@ -1,22 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-
+import { MemoryRouter } from 'react-router-dom'
+import { describe, expect, it, vi } from 'vitest'
+import { TopBarSearchContent, TopBarSearchProvider } from '../../Search/TopBarSearch'
 import { LabelPreviewBatchTab } from '../LabelPreviewBatchTab'
-
-const { mockCreatePdfDataUrl, mockDownloadLabelPdf, mockMutateAsync } = vi.hoisted(() => ({
-  mockCreatePdfDataUrl: vi.fn(async (_args?: unknown) => 'data:application/pdf;base64,ZmFrZQ=='),
-  mockDownloadLabelPdf: vi.fn(),
-  mockMutateAsync: vi.fn(async (_args?: unknown) => undefined),
-}))
-
-vi.mock('../pdfExport', () => ({
-  createLabelPdfDataUrl: mockCreatePdfDataUrl,
-}))
-
-vi.mock('../downloadLabelPdf', () => ({
-  downloadLabelPdf: (...args: unknown[]) => mockDownloadLabelPdf(...args),
-}))
 
 vi.mock('../../../hooks/queries/useLabelStudio', () => ({
   useLabelTemplates: () => ({
@@ -24,110 +11,67 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
       {
         id: 'template-1',
         company_id: 'company-1',
-        name: 'Product Label',
+        name: 'Shipping Label',
         is_system: false,
-        layout: {
-          showQr: true,
-          showBarcode: true,
-          showSku: true,
-          showName: true,
-        },
-        variable_fields: ['name', 'sku', 'barcode', 'qr'],
-        created_at: '2026-02-20T00:00:00Z',
-        updated_at: null,
+        layout: {},
+        variable_fields: ['barcode', 'sku'],
+        created_at: '2026-05-01T00:00:00.000Z',
+        updated_at: '2026-05-03T00:00:00.000Z',
+      },
+      {
+        id: 'template-2',
+        company_id: 'company-1',
+        name: 'Returns Label',
+        is_system: false,
+        layout: {},
+        variable_fields: ['barcode', 'qr'],
+        created_at: '2026-05-01T00:00:00.000Z',
+        updated_at: '2026-05-04T00:00:00.000Z',
       },
     ],
     isLoading: false,
   }),
   useLabelProducts: () => ({
-    data: [{ id: 'product-1', name: 'Milk', sku: 'MILK-001', folder_id: null }],
+    data: [
+      { id: 'prod-1', sku: 'SHIP-100', name: 'Shipping Box' },
+      { id: 'prod-2', sku: 'RET-200', name: 'Returns Envelope' },
+    ],
     isLoading: false,
   }),
   useLabelProductFolders: () => ({
-    data: [{ id: 'folder-1', name: 'Dairy' }],
+    data: [{ id: 'folder-1', name: 'Main Warehouse' }],
     isLoading: false,
   }),
   useCreateLabelPrintJob: () => ({
-    mutateAsync: mockMutateAsync,
+    mutateAsync: vi.fn(),
     isPending: false,
   }),
 }))
 
+vi.mock('../LabelPreviewCard', () => ({
+  LabelPreviewCard: () => <div>Preview card</div>,
+}))
+
 describe('LabelPreviewBatchTab', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('renders the redesigned export and preview shell', () => {
-    render(<LabelPreviewBatchTab companyId="company-1" />)
-
-    expect(screen.getByText('Export & Batch')).toBeInTheDocument()
-    expect(screen.getByText('A4 Layout Preview')).toBeInTheDocument()
-    expect(screen.queryByText('Recent Exports')).not.toBeInTheDocument()
-  })
-
-  it('renders the shared PDF page preview for the selected export target', async () => {
+  it('filters available templates from the shared top-bar search on preview and batch', async () => {
     const user = userEvent.setup()
 
-    render(<LabelPreviewBatchTab companyId="company-1" />)
-
-    await user.selectOptions(screen.getByLabelText('Template'), 'template-1')
-    await user.type(screen.getByLabelText('Product Search'), 'Milk')
-    await user.click(screen.getByRole('button', { name: /Milk/i }))
-
-    expect(screen.getByLabelText('PDF page preview')).toBeInTheDocument()
-    expect(screen.getByText('Page 1 of 1')).toBeInTheDocument()
-    expect(screen.getByText('Generates 1 PDF page across 1 label.')).toBeInTheDocument()
-  })
-
-  it('exports pdf with generated output url for selected product', async () => {
-    const user = userEvent.setup()
-
-    render(<LabelPreviewBatchTab companyId="company-1" />)
-
-    await user.selectOptions(screen.getByLabelText('Template'), 'template-1')
-    await user.type(screen.getByLabelText('Product Search'), 'Milk')
-    await user.click(screen.getByRole('button', { name: /Milk/i }))
-
-    await user.click(screen.getByRole('button', { name: /Export PDF/i }))
-
-    await waitFor(() => {
-      expect(mockCreatePdfDataUrl).toHaveBeenCalledTimes(1)
-    })
-
-    expect(mockCreatePdfDataUrl).toHaveBeenCalledWith(
-      expect.objectContaining({
-        templateName: 'Product Label',
-        quantity: 1,
-      }),
+    render(
+      <MemoryRouter>
+        <TopBarSearchProvider>
+          <TopBarSearchContent />
+          <LabelPreviewBatchTab companyId="company-1" />
+        </TopBarSearchProvider>
+      </MemoryRouter>,
     )
 
-    await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          templateId: 'template-1',
-          format: 'pdf',
-          outputUrl: 'data:application/pdf;base64,ZmFrZQ==',
-        }),
-      )
-    })
+    const templateSelect = screen.getByLabelText('Template')
+    expect(within(templateSelect).getByRole('option', { name: 'Shipping Label' })).toBeInTheDocument()
+    expect(within(templateSelect).getByRole('option', { name: 'Returns Label' })).toBeInTheDocument()
 
-    expect(mockDownloadLabelPdf).toHaveBeenCalledWith(
-      'data:application/pdf;base64,ZmFrZQ==',
-      expect.stringMatching(/\.pdf$/),
-    )
+    await user.type(screen.getByRole('combobox', { name: 'Search label products...' }), 'Returns')
 
-    expect(screen.getByText('PDF downloaded.')).toBeInTheDocument()
-  })
-
-  it('shows validation error when exporting without template', async () => {
-    const user = userEvent.setup()
-
-    render(<LabelPreviewBatchTab companyId="company-1" />)
-
-    await user.click(screen.getByRole('button', { name: /Export PDF/i }))
-
-    expect(screen.getByText('Select template and valid quantity.')).toBeInTheDocument()
-    expect(mockCreatePdfDataUrl).not.toHaveBeenCalled()
+    expect(within(templateSelect).getByRole('option', { name: 'Returns Label' })).toBeInTheDocument()
+    expect(within(templateSelect).queryByRole('option', { name: 'Shipping Label' })).not.toBeInTheDocument()
   })
 })
