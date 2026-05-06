@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui'
 import { toast } from 'sonner'
 import {
   useCreateInventoryFolder,
@@ -12,6 +13,7 @@ import { ProductListView } from './all-products/ProductListView'
 import { BulkAdjustModal } from './all-products/BulkAdjustModal'
 import { FolderNavigationPanel } from './FolderNavigationPanel'
 import type { AllProductsTabProps } from './all-products/types'
+import './InventorySurface.css'
 
 export const AllProductsTab = ({
   companyId,
@@ -284,8 +286,7 @@ export const AllProductsTab = ({
 
   return (
     <div
-      className={`explorer-container ${isMobileViewport ? 'mobile-explorer-enabled' : ''} ${isMobileExplorerOpen ? 'mobile-explorer-open' : ''}`}
-      style={{ flex: 1, minHeight: 0 }}
+      className={`explorer-container flex min-h-0 flex-1 ${isMobileViewport ? 'mobile-explorer-enabled' : ''} ${isMobileExplorerOpen ? 'mobile-explorer-open' : ''}`}
     >
       {isMobileViewport && isMobileExplorerOpen ? (
         <button
@@ -340,7 +341,7 @@ export const AllProductsTab = ({
       </div>
 
       <div className="explorer-main">
-        <div className="card" style={{ padding: 0, overflow: 'hidden', border: 'none', borderRadius: 0, boxShadow: 'none', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <Card padding="none" variant="plain" className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <InventoryFiltersBar
             isSelectionMode={isSelectionMode}
             selectedRowIds={selectedRowIds}
@@ -385,7 +386,7 @@ export const AllProductsTab = ({
             folders={folders}
             onRefresh={onRefresh}
           />
-        </div>
+        </Card>
       </div>
 
       {bulkModalMode && (
@@ -403,18 +404,20 @@ export const AllProductsTab = ({
       )}
 
       {isMoveDialogOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="move-selected-products-title" onClick={handleCloseMoveDialog}>
-          <div className="modal" style={{ maxWidth: 420 }} onClick={(event) => event.stopPropagation()}>
-            <h3 id="move-selected-products-title" className="section-title" style={{ marginBottom: 12 }}>
-              Move {selectedRowIds.size} selected product{selectedRowIds.size === 1 ? '' : 's'}
-            </h3>
-            <p className="small muted" style={{ marginBottom: 16 }}>
-              Choose where the selected products should be moved.
-            </p>
-            <label className="stack" style={{ gap: 6 }}>
-              <span className="small" style={{ fontWeight: 'var(--type-weight-medium)' }}>Destination folder</span>
+        <Dialog open onClose={handleCloseMoveDialog}>
+          <DialogContent className="max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle>
+                Move {selectedRowIds.size} selected product{selectedRowIds.size === 1 ? '' : 's'}
+              </DialogTitle>
+              <DialogDescription>
+                Choose where the selected products should be moved.
+              </DialogDescription>
+            </DialogHeader>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-[var(--color-foreground)]">Destination folder</span>
               <select
-                className="select"
+                className="flex h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-sm transition-colors hover:border-[var(--color-border-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1"
                 value={moveTargetFolderId}
                 onChange={(event) => setMoveTargetFolderId(event.target.value)}
               >
@@ -426,12 +429,12 @@ export const AllProductsTab = ({
                 ))}
               </select>
             </label>
-            <div className="row" style={{ gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
-              <button className="button ghost small" type="button" onClick={handleCloseMoveDialog}>
+            <DialogFooter>
+              <Button variant="ghost" size="sm" type="button" onClick={handleCloseMoveDialog}>
                 Cancel
-              </button>
-              <button
-                className="button small"
+              </Button>
+              <Button
+                size="sm"
                 type="button"
                 onClick={() => void handleMoveSelectedProducts()}
                 disabled={moveProductsMutation.isPending}
@@ -439,10 +442,10 @@ export const AllProductsTab = ({
                 {moveProductsMutation.isPending
                   ? 'Moving...'
                   : `Move ${selectedRowIds.size} Product${selectedRowIds.size === 1 ? '' : 's'}`}
-              </button>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

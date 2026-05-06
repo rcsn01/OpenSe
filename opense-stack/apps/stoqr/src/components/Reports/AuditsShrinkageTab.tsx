@@ -12,10 +12,10 @@ import {
 import { useAuditShrinkageData } from "../../hooks/queries/useReports";
 
 const REASON_COLORS: Record<string, string> = {
-  "Damaged in Transit": "#3b82f6",
-  Expired: "#f59e0b",
-  "Lost/Theft": "#ef4444",
-  "Counting Error": "#64748b",
+  "Damaged in Transit": "var(--color-primary)",
+  Expired: "var(--color-warning)",
+  "Lost/Theft": "var(--color-destructive)",
+  "Counting Error": "var(--color-muted-foreground)",
 };
 
 const reasonOptions = [
@@ -176,17 +176,17 @@ export const AuditsShrinkageTab = ({
   }, [discrepancies, reasonFilter]);
 
   return (
-    <div className="stoqr-analytics-tab">
+    <div className="flex min-w-0 flex-col gap-7">
       <AnalyticsMetricGrid variant="stats-3">
         <AnalyticsMetricCard
           label="Total Shrinkage Value (YTD)"
           value={
-            <span style={{ color: "#e11d48" }}>
+            <span className="text-[var(--color-destructive)]">
               {formatCompactCurrency(totalShrinkageValue)}
             </span>
           }
           valueMeta={
-            <span className="small muted">
+            <span className="text-sm text-[var(--color-muted-foreground)]">
               {shrinkageRate.toFixed(1)}% of revenue
             </span>
           }
@@ -195,9 +195,9 @@ export const AuditsShrinkageTab = ({
               style={{
                 marginTop: 10,
                 height: 30,
-                borderTop: "3px solid #ef4444",
+                borderTop: "3px solid var(--color-destructive)",
                 background:
-                  "linear-gradient(180deg, rgba(148, 163, 184, 0.16), rgba(100, 116, 139, 0.9))",
+                  "linear-gradient(180deg, color-mix(in srgb, var(--color-muted-foreground) 16%, transparent), var(--color-muted-foreground))",
                 borderRadius: "0 0 var(--radius-sm) var(--radius-sm)",
               }}
             />
@@ -206,12 +206,12 @@ export const AuditsShrinkageTab = ({
         <AnalyticsMetricCard
           label="Inventory Accuracy"
           value={
-            <span style={{ color: "#10b981" }}>
+            <span className="text-[var(--color-success)]">
               {inventoryAccuracy.toFixed(1)}%
             </span>
           }
           valueMeta={
-            <span className="small muted">Rolling 30-day average</span>
+            <span className="text-sm text-[var(--color-muted-foreground)]">Rolling 30-day average</span>
           }
           visual={
             <div
@@ -226,7 +226,7 @@ export const AuditsShrinkageTab = ({
                 style={{
                   height: 3,
                   flex: 1,
-                  background: "#10b981",
+                  background: "var(--color-success)",
                   borderRadius: "var(--radius-full)",
                 }}
               />
@@ -237,7 +237,7 @@ export const AuditsShrinkageTab = ({
                     width: 8,
                     height: 8,
                     borderRadius: "50%",
-                    background: "#10b981",
+                    background: "var(--color-success)",
                     margin: "0 12px",
                   }}
                 />
@@ -246,7 +246,7 @@ export const AuditsShrinkageTab = ({
                 style={{
                   height: 3,
                   flex: 1,
-                  background: "#10b981",
+                  background: "var(--color-success)",
                   borderRadius: "var(--radius-full)",
                 }}
               />
@@ -256,10 +256,10 @@ export const AuditsShrinkageTab = ({
         <AnalyticsMetricCard
           label="Pending Discrepancies"
           value={
-            <span style={{ color: "#d97706" }}>{pendingDiscrepancies}</span>
+            <span className="text-[var(--color-warning)]">{pendingDiscrepancies}</span>
           }
           valueMeta={
-            <span className="small muted">Requires manager review</span>
+            <span className="text-sm text-[var(--color-muted-foreground)]">Requires manager review</span>
           }
           visual={
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -272,7 +272,7 @@ export const AuditsShrinkageTab = ({
                     borderRadius: "var(--radius-sm)",
                     background:
                       index < Math.min(pendingDiscrepancies, 5)
-                        ? "#f59e0b"
+                        ? "var(--color-warning)"
                         : "var(--color-muted)",
                   }}
                 />
@@ -282,7 +282,7 @@ export const AuditsShrinkageTab = ({
         />
       </AnalyticsMetricGrid>
 
-      <div className="audit-layout">
+      <div className="grid gap-5 xl:grid-cols-[minmax(280px,320px)_minmax(0,1fr)]">
         <AnalyticsPanel title="Shrinkage Reason Codes">
           {reasonBreakdown.length === 0 ? (
             <AnalyticsEmptyPanel message="No discrepancy data available." />
@@ -317,7 +317,7 @@ export const AuditsShrinkageTab = ({
         <AnalyticsTablePanel
           title="Recent Discrepancy Log"
           headerAside={
-            <label className="row small muted" style={{ gap: 8 }}>
+            <label className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
               <svg
                 width="16"
                 height="16"
@@ -332,7 +332,7 @@ export const AuditsShrinkageTab = ({
               </svg>
               <span>Filter</span>
               <select
-                className="input"
+                className="flex h-9 min-w-[180px] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-sm transition-colors hover:border-[var(--color-border-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1"
                 value={reasonFilter}
                 onChange={(event) =>
                   setReasonFilter(
@@ -358,7 +358,7 @@ export const AuditsShrinkageTab = ({
                   id: "date",
                   header: "Date",
                   renderCell: (row: (typeof logRows)[number]) => (
-                    <span className="small muted">
+                    <span className="text-sm text-[var(--color-muted-foreground)]">
                       {formatAuditDate(row.date)}
                     </span>
                   ),
@@ -367,7 +367,7 @@ export const AuditsShrinkageTab = ({
                   id: "sku",
                   header: "SKU",
                   renderCell: (row: (typeof logRows)[number]) => (
-                    <span style={{ fontWeight: "var(--type-weight-semibold)" }}>
+                    <span className="font-semibold text-[var(--color-foreground)]">
                       {row.sku}
                     </span>
                   ),
@@ -390,10 +390,7 @@ export const AuditsShrinkageTab = ({
                   align: "right",
                   renderCell: (row: (typeof logRows)[number]) => (
                     <span
-                      style={{
-                        fontWeight: "var(--type-weight-semibold)",
-                        color: row.variance < 0 ? "#e11d48" : "#059669",
-                      }}
+                      className={row.variance < 0 ? "font-semibold text-[var(--color-destructive)]" : "font-semibold text-[var(--color-success)]"}
                     >
                       {row.variance > 0 ? "+" : ""}
                       {row.variance}
@@ -404,10 +401,7 @@ export const AuditsShrinkageTab = ({
                   id: "reason",
                   header: "Reason",
                   renderCell: (row: (typeof logRows)[number]) => (
-                    <span
-                      className="pill"
-                      style={{ color: "var(--color-muted-foreground)" }}
-                    >
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)]">
                       {row.reason}
                     </span>
                   ),

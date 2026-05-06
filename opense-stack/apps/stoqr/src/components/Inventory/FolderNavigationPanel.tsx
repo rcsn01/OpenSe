@@ -21,6 +21,7 @@ import {
 } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, cn } from '@repo/ui'
 import type { Folder } from '../../types'
 import type { FolderView } from './all-products/types'
 
@@ -75,11 +76,11 @@ const CreateFolderTreeItem = ({
       style={{ paddingLeft: `${level * 16 + 8}px` }}
     >
       <div className="tree-toggle tree-toggle-static" aria-hidden="true" />
-      <FolderIcon size={16} style={{ marginRight: 8, flexShrink: 0, color: '#94a3b8' }} />
+      <FolderIcon size={16} className="mr-2 shrink-0 text-[var(--color-muted-foreground)]" />
       <div className="tree-create-row">
         <input
           ref={inputRef}
-          className="input small tree-create-input"
+          className="tree-inline-input tree-create-input"
           placeholder="Folder Name"
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -189,15 +190,21 @@ const SortableTreeItem = ({
         )}
 
         {isActive || isExpanded ? (
-          <FolderOpen size={16} style={{ marginRight: 8, flexShrink: 0, color: isActive ? 'currentColor' : '#3b82f6' }} />
+          <FolderOpen
+            size={16}
+            className={cn(
+              'mr-2 shrink-0',
+              isActive ? 'text-current' : 'text-[var(--color-primary)]',
+            )}
+          />
         ) : (
-          <FolderIcon size={16} style={{ marginRight: 8, flexShrink: 0, color: '#3b82f6' }} />
+          <FolderIcon size={16} className="mr-2 shrink-0 text-[var(--color-primary)]" />
         )}
 
         {isRenaming ? (
           <input
             ref={inputRef}
-            className="input small"
+            className="tree-inline-input tree-rename-input"
             value={renamingValue}
             onChange={(e) => setRenamingValue(e.target.value)}
             onKeyDown={(e) => {
@@ -206,10 +213,9 @@ const SortableTreeItem = ({
             }}
             onBlur={onRenameSubmit}
             onClick={(e) => e.stopPropagation()}
-            style={{ flex: 1, height: 24, fontSize: 'var(--type-size-sm)', padding: '2px 6px' }}
           />
         ) : (
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+          <span className="flex-1 truncate whitespace-nowrap">
             {node.name}
           </span>
         )}
@@ -432,14 +438,26 @@ export const FolderNavigationPanel = ({
           className={`tree-item ${folderView === 'all' ? 'active' : ''}`}
           onClick={() => onSelectView('all')}
         >
-          <Layers size={16} style={{ marginRight: 8, color: folderView === 'all' ? 'currentColor' : '#64748b' }} />
+          <Layers
+            size={16}
+            className={cn(
+              'mr-2',
+              folderView === 'all' ? 'text-current' : 'text-[var(--color-muted-foreground)]',
+            )}
+          />
           All Products
         </div>
         <div
           className={`tree-item ${folderView === 'uncategorised' ? 'active' : ''}`}
           onClick={() => onSelectView('uncategorised')}
         >
-          <FolderX size={16} style={{ marginRight: 8, color: folderView === 'uncategorised' ? 'currentColor' : '#64748b' }} />
+          <FolderX
+            size={16}
+            className={cn(
+              'mr-2',
+              folderView === 'uncategorised' ? 'text-current' : 'text-[var(--color-muted-foreground)]',
+            )}
+          />
           Uncategorised
         </div>
       </div>
@@ -485,14 +503,10 @@ export const FolderNavigationPanel = ({
                   onCancel={onCreateFolderCancel}
                 />
               ) : (
-                <div style={{ padding: '12px 16px' }}>
-                  <button
-                    type="button"
-                    className="button ghost small"
-                    onClick={() => onCreateFolder(null)}
-                  >
+                <div className="px-4 py-3">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => onCreateFolder(null)}>
                     Create first folder
-                  </button>
+                  </Button>
                 </div>
               )
             )}
@@ -502,62 +516,68 @@ export const FolderNavigationPanel = ({
 
       {/* Delete confirmation dialog */}
       {deletingFolderId && deleteStep && (
-        <div className="modal-backdrop" onClick={onDeleteCancel}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+        <Dialog open onClose={onDeleteCancel}>
+          <DialogContent className="max-w-[400px]">
             {deleteStep === 'choose' ? (
               <>
-                <h3 className="section-title" style={{ marginBottom: 12 }}>Delete "{deletingFolderName}"</h3>
-                <p className="small muted" style={{ marginBottom: 16 }}>
-                  What would you like to do with the products inside this folder?
-                </p>
-                <div className="stack" style={{ gap: 8 }}>
-                  <button
-                    className="button small"
-                    style={{ width: '100%', justifyContent: 'center' }}
+                <DialogHeader>
+                  <DialogTitle>Delete "{deletingFolderName}"</DialogTitle>
+                  <DialogDescription>
+                    What would you like to do with the products inside this folder?
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    size="sm"
+                    className="w-full justify-center"
                     onClick={() => onDeleteActionSelect('move-uncategorised')}
                   >
                     Move products to Uncategorised
-                  </button>
-                  <button
-                    className="button ghost small"
-                    style={{ width: '100%', justifyContent: 'center', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
                     onClick={() => onDeleteActionSelect('delete-products')}
                   >
                     Delete all products inside
-                  </button>
-                  <button
-                    className="button ghost small"
-                    style={{ width: '100%', justifyContent: 'center' }}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center"
                     onClick={onDeleteCancel}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (
               <>
-                <h3 className="section-title" style={{ marginBottom: 12 }}>Are you sure?</h3>
-                <p className="small muted" style={{ marginBottom: 16 }}>
-                  {deleteAction === 'move-uncategorised'
-                    ? `All products in "${deletingFolderName}" (and its subfolders) will be moved to Uncategorised. The folder will be permanently deleted.`
-                    : `All products in "${deletingFolderName}" (and its subfolders) will be permanently deleted along with the folder.`}
-                </p>
-                <div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}>
-                  <button className="button ghost small" onClick={onDeleteCancel}>
+                <DialogHeader>
+                  <DialogTitle>Are you sure?</DialogTitle>
+                  <DialogDescription>
+                    {deleteAction === 'move-uncategorised'
+                      ? `All products in "${deletingFolderName}" (and its subfolders) will be moved to Uncategorised. The folder will be permanently deleted.`
+                      : `All products in "${deletingFolderName}" (and its subfolders) will be permanently deleted along with the folder.`}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="ghost" size="sm" onClick={onDeleteCancel}>
                     Cancel
-                  </button>
-                  <button
-                    className="button small"
-                    style={deleteAction === 'delete-products' ? { background: 'var(--danger)', borderColor: 'var(--danger)' } : undefined}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={deleteAction === 'delete-products' ? 'destructive' : 'primary'}
                     onClick={onDeleteConfirm}
                   >
                     {deleteAction === 'move-uncategorised' ? 'Move & Delete Folder' : 'Delete Everything'}
-                  </button>
-                </div>
+                  </Button>
+                </DialogFooter>
               </>
             )}
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

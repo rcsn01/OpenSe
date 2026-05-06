@@ -23,7 +23,8 @@ import {
   useProcurementPurchaseOrderItems,
   useProcurementPurchaseOrders,
 } from "../hooks/queries/useProcurementTabs";
-import "./DashboardPage.css";
+import { bindStyles } from "../lib/bindStyles";
+import styles from "./DashboardPage.module.css";
 
 type VelocityTabId = "fast" | "slow" | "dead";
 type TrendDirection = "up" | "down" | "neutral";
@@ -76,6 +77,8 @@ const velocityTabs: Array<{ id: VelocityTabId; label: string }> = [
   { id: "slow", label: "Slow" },
   { id: "dead", label: "Dead Stock" },
 ];
+
+const css = bindStyles(styles as Record<string, string>);
 
 const attentionPriority: Record<AttentionSeverity, number> = {
   critical: 4,
@@ -565,7 +568,7 @@ export const DashboardPage = () => {
         id: "status",
         header: "Status",
         renderCell: (row) => (
-          <span className={`stoqr-dashboard__status-pill is-${row.statusTone}`}>
+          <span className={css("stoqr-dashboard__status-pill", `is-${row.statusTone}`)}>
             {row.statusLabel}
           </span>
         ),
@@ -583,14 +586,14 @@ export const DashboardPage = () => {
         headerClassName: "px-0",
         cellClassName: "px-0",
         renderCell: (item) => (
-          <div className="stoqr-dashboard__alert-table-cell">
+          <div className={css("stoqr-dashboard__alert-table-cell")}>
             <span
-              className={`stoqr-dashboard__alert-dot is-${item.severity}`}
+              className={css("stoqr-dashboard__alert-dot", `is-${item.severity}`)}
               aria-hidden="true"
             />
-            <div className="stoqr-dashboard__alert-copy">
-              <p className="stoqr-dashboard__alert-title">{item.title}</p>
-              <p className="stoqr-dashboard__alert-detail">{item.detail}</p>
+            <div className={css("stoqr-dashboard__alert-copy")}>
+              <p className={css("stoqr-dashboard__alert-title")}>{item.title}</p>
+              <p className={css("stoqr-dashboard__alert-detail")}>{item.detail}</p>
             </div>
           </div>
         ),
@@ -603,7 +606,7 @@ export const DashboardPage = () => {
         headerClassName: "pl-4 pr-0",
         cellClassName: "pl-4 pr-0",
         renderCell: (item) => (
-          <span className="stoqr-dashboard__alert-time">{item.timeLabel}</span>
+          <span className={css("stoqr-dashboard__alert-time")}>{item.timeLabel}</span>
         ),
       },
     ],
@@ -619,9 +622,9 @@ export const DashboardPage = () => {
         headerClassName: "px-0",
         cellClassName: "px-0",
         renderCell: (item) => (
-          <div className="stoqr-dashboard__velocity-copy">
-            <p className="stoqr-dashboard__velocity-name">{item.name}</p>
-            <p className="stoqr-dashboard__velocity-sku">{item.sku}</p>
+          <div className={css("stoqr-dashboard__velocity-copy")}>
+            <p className={css("stoqr-dashboard__velocity-name")}>{item.name}</p>
+            <p className={css("stoqr-dashboard__velocity-sku")}>{item.sku}</p>
           </div>
         ),
       },
@@ -633,12 +636,12 @@ export const DashboardPage = () => {
         headerClassName: "pl-4 pr-0",
         cellClassName: "pl-4 pr-0",
         renderCell: (item) => (
-          <div className="stoqr-dashboard__velocity-meta">
-            <span className="stoqr-dashboard__velocity-rate">
+          <div className={css("stoqr-dashboard__velocity-meta")}>
+            <span className={css("stoqr-dashboard__velocity-rate")}>
               {item.metricLabel}
             </span>
             <span
-              className={`stoqr-dashboard__velocity-status is-${item.statusTone}`}
+              className={css("stoqr-dashboard__velocity-status", `is-${item.statusTone}`)}
             >
               {item.statusLabel}
             </span>
@@ -656,7 +659,7 @@ export const DashboardPage = () => {
       emptyStateTitle="Welcome to Open StoQR"
       emptyStateDescription="Select or create a company to load your inventory dashboard."
       loadingMessage="Loading dashboard..."
-      containerClassName="stoqr-dashboard"
+      containerClassName={css("stoqr-dashboard")}
       contentStyle={{ padding: "18px 8px 32px" }}
       containerStyle={{ minWidth: 0 }}
     >
@@ -685,15 +688,15 @@ export const DashboardPage = () => {
             ))}
           </AnalyticsMetricGrid>
 
-          <section className="stoqr-dashboard__layout stoqr-dashboard__layout--primary">
+          <section className={css("stoqr-dashboard__layout", "stoqr-dashboard__layout--primary")}>
             <AnalyticsPanel
               title="Inbound vs Outbound Volume"
-              className="stoqr-dashboard__section"
+              className={css("stoqr-dashboard__section")}
               headerAside={
                 <AnalyticsLegend
                   items={[
-                    { label: "Inbound", color: "#e2e8f0" },
-                    { label: "Outbound", color: "#1e293b" },
+                    { label: "Inbound", color: "var(--color-surface-strong)" },
+                    { label: "Outbound", color: "var(--color-foreground)" },
                   ]}
                 />
               }
@@ -704,15 +707,15 @@ export const DashboardPage = () => {
                 ariaLabel="Inbound and outbound inventory volume"
                 emptyMessage="No movement history yet."
                 series={[
-                  { dataKey: "inbound", label: "Inbound", color: "#e2e8f0" },
-                  { dataKey: "outbound", label: "Outbound", color: "#1e293b" },
+                  { dataKey: "inbound", label: "Inbound", color: "var(--color-surface-strong)" },
+                  { dataKey: "outbound", label: "Outbound", color: "var(--color-foreground)" },
                 ]}
               />
             </AnalyticsPanel>
 
             <AnalyticsTablePanel
               surface="plain"
-              className="stoqr-dashboard__section"
+              className={css("stoqr-dashboard__section")}
               title="Actionable Alerts"
             >
               {pageModel.attentionItems.length > 0 ? (
@@ -729,15 +732,15 @@ export const DashboardPage = () => {
             </AnalyticsTablePanel>
           </section>
 
-          <section className="stoqr-dashboard__layout stoqr-dashboard__layout--secondary">
+          <section className={css("stoqr-dashboard__layout", "stoqr-dashboard__layout--secondary")}>
             <AnalyticsTablePanel
               surface="plain"
-              className="stoqr-dashboard__section"
+              className={css("stoqr-dashboard__section")}
               title="Expected Deliveries"
             >
               {pageModel.deliveryRows.length > 0 ? (
                 <>
-                  <div className="stoqr-dashboard__deliveries-desktop">
+                  <div className={css("stoqr-dashboard__deliveries-desktop")}>
                     <DataTable
                       variant="dashboard"
                       columns={deliveryColumns}
@@ -747,26 +750,26 @@ export const DashboardPage = () => {
                     />
                   </div>
 
-                  <div className="stoqr-dashboard__deliveries-mobile">
+                  <div className={css("stoqr-dashboard__deliveries-mobile")}>
                     {pageModel.deliveryRows.map((row) => (
                       <div
                         key={row.id}
-                        className="stoqr-dashboard__delivery-card"
+                        className={css("stoqr-dashboard__delivery-card")}
                       >
-                        <div className="stoqr-dashboard__delivery-card-row">
-                          <span className="stoqr-dashboard__delivery-card-po">
+                        <div className={css("stoqr-dashboard__delivery-card-row")}>
+                          <span className={css("stoqr-dashboard__delivery-card-po")}>
                             {row.poLabel}
                           </span>
                           <span
-                            className={`stoqr-dashboard__status-pill is-${row.statusTone}`}
+                            className={css("stoqr-dashboard__status-pill", `is-${row.statusTone}`)}
                           >
                             {row.statusLabel}
                           </span>
                         </div>
-                        <p className="stoqr-dashboard__delivery-card-vendor">
+                        <p className={css("stoqr-dashboard__delivery-card-vendor")}>
                           {row.vendor}
                         </p>
-                        <div className="stoqr-dashboard__delivery-card-meta">
+                        <div className={css("stoqr-dashboard__delivery-card-meta")}>
                           <span>{row.itemsCountLabel} items</span>
                           <span>{row.valueLabel}</span>
                           <span>{row.expectedLabel}</span>
@@ -782,12 +785,12 @@ export const DashboardPage = () => {
 
             <AnalyticsTablePanel
               surface="plain"
-              className="stoqr-dashboard__section"
+              className={css("stoqr-dashboard__section")}
               title="Item Velocity"
-              headerClassName="stoqr-dashboard__section-header stoqr-dashboard__section-header--compact"
+              headerClassName={css("stoqr-dashboard__section-header", "stoqr-dashboard__section-header--compact")}
               headerAside={
                 <div
-                  className="stoqr-dashboard__velocity-toggle"
+                  className={css("stoqr-dashboard__velocity-toggle")}
                   role="tablist"
                   aria-label="Velocity range"
                 >
@@ -795,7 +798,7 @@ export const DashboardPage = () => {
                     <button
                       key={tab.id}
                       type="button"
-                      className={`stoqr-dashboard__velocity-toggle-button${velocityTab === tab.id ? " is-active" : ""}`}
+                      className={css("stoqr-dashboard__velocity-toggle-button", velocityTab === tab.id && "is-active")}
                       onClick={() => setVelocityTab(tab.id)}
                     >
                       {tab.label}

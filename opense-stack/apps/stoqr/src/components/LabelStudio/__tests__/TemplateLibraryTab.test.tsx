@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TemplateLibraryTab } from '../TemplateLibraryTab'
@@ -18,6 +19,12 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
 }))
 
 describe('TemplateLibraryTab', () => {
+  const renderTemplateLibrary = (ui: React.ReactNode) => render(
+    <MemoryRouter>
+      {ui}
+    </MemoryRouter>,
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseLabelTemplates.mockReturnValue({
@@ -48,7 +55,7 @@ describe('TemplateLibraryTab', () => {
   })
 
   it('shows the redesigned template library columns and field chips', () => {
-    render(<TemplateLibraryTab companyId="company-1" selectedTemplateId="template-1" />)
+    renderTemplateLibrary(<TemplateLibraryTab companyId="company-1" selectedTemplateId="template-1" />)
 
     expect(screen.getByRole('columnheader', { name: 'Template Name' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Dimensions' })).toBeInTheDocument()
@@ -69,7 +76,7 @@ describe('TemplateLibraryTab', () => {
     const user = userEvent.setup()
     const onSelectTemplate = vi.fn()
 
-    render(<TemplateLibraryTab companyId="company-1" onSelectTemplate={onSelectTemplate} />)
+    renderTemplateLibrary(<TemplateLibraryTab companyId="company-1" onSelectTemplate={onSelectTemplate} />)
 
     await user.click(screen.getAllByRole('button', { name: 'Edit Product Label template' })[0])
 

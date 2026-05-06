@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useReportsData } from "../../hooks/queries/useReports";
+import "./CustomReportsSurface.css";
 
 type Template = {
   id: string;
   name: string;
-  fields: string[];
+  fields: FieldId[];
 };
 
 type Schedule = {
@@ -109,6 +110,8 @@ const FIELD_GROUPS = [
     ],
   },
 ] as const;
+
+type FieldId = (typeof FIELD_GROUPS)[number]["fields"][number]["id"];
 
 const weekdayLabels = [
   "Sunday",
@@ -285,7 +288,7 @@ export const CustomSavedReportsTab = ({
   const [activeTemplateId, setActiveTemplateId] = useState(
     DEFAULT_TEMPLATES[0].id,
   );
-  const [selectedFields, setSelectedFields] = useState<string[]>(
+  const [selectedFields, setSelectedFields] = useState<FieldId[]>(
     DEFAULT_TEMPLATES[0].fields,
   );
   const [dateRange, setDateRange] = useState("last-30-days");
@@ -360,7 +363,7 @@ export const CustomSavedReportsTab = ({
     setSelectedFields([]);
   };
 
-  const handleFieldToggle = (fieldId: string) => {
+  const handleFieldToggle = (fieldId: FieldId) => {
     setSelectedFields((current) => {
       if (current.includes(fieldId)) {
         return current.filter((field) => field !== fieldId);
@@ -381,7 +384,7 @@ export const CustomSavedReportsTab = ({
   };
 
   return (
-    <div className="custom-reports-studio stack">
+    <div className="custom-reports-studio">
       <section className="custom-reports-hero">
         <div className="custom-reports-hero-copy">
           <p className="custom-reports-eyebrow">Custom &amp; Saved Reports</p>
@@ -395,14 +398,14 @@ export const CustomSavedReportsTab = ({
         <div className="custom-reports-hero-actions">
           <button
             type="button"
-            className="button ghost"
+            className="custom-reports-action-button custom-reports-action-button--ghost"
             onClick={handleSaveTemplate}
           >
             Save Template
           </button>
           <button
             type="button"
-            className="button custom-reports-primary-action"
+            className="custom-reports-action-button custom-reports-primary-action"
           >
             Generate Report
           </button>
@@ -454,14 +457,14 @@ export const CustomSavedReportsTab = ({
         <aside className="custom-reports-rail">
           <section className="custom-reports-section">
             <div className="custom-reports-section-header">
-              <div className="stack" style={{ gap: 4 }}>
+              <div className="flex flex-col gap-1">
                 <p className="custom-reports-section-kicker">Library</p>
                 <h4 className="custom-reports-section-title">
                   Saved Templates
                 </h4>
               </div>
               <button
-                className="button ghost small custom-reports-section-action"
+                className="custom-reports-action-button custom-reports-action-button--ghost custom-reports-action-button--sm custom-reports-section-action"
                 type="button"
                 onClick={handleStartBlankReport}
               >
@@ -503,7 +506,7 @@ export const CustomSavedReportsTab = ({
 
           <section className="custom-reports-section">
             <div className="custom-reports-section-header">
-              <div className="stack" style={{ gap: 4 }}>
+              <div className="flex flex-col gap-1">
                 <p className="custom-reports-section-kicker">Automation</p>
                 <h4 className="custom-reports-section-title">
                   Scheduled Delivery
@@ -523,11 +526,11 @@ export const CustomSavedReportsTab = ({
                 <span className="schedule-card-icon">
                   <Icon name="clock" />
                 </span>
-                <div className="stack" style={{ gap: 4 }}>
+                <div className="flex flex-col gap-1">
                   <div className="schedule-card-title">
                     {formatReportType(featuredSchedule.report_type)}
                   </div>
-                  <div className="small muted">
+                  <div className="text-sm text-[var(--color-muted-foreground)]">
                     {formatCadence(featuredSchedule)}
                   </div>
                 </div>
@@ -550,7 +553,7 @@ export const CustomSavedReportsTab = ({
           <div className="custom-reports-workbench">
             <section className="custom-reports-builder">
               <div className="custom-reports-builder-header">
-                <div className="stack" style={{ gap: 4 }}>
+                <div className="flex flex-col gap-1">
                   <p className="custom-reports-section-kicker">Builder</p>
                   <h4 className="custom-reports-builder-title">
                     Report Builder
@@ -577,17 +580,16 @@ export const CustomSavedReportsTab = ({
                   return (
                     <section
                       key={group.id}
-                      className="builder-field-column stack"
+                      className="builder-field-column"
                     >
                       <div className="builder-group-header">
                         <div
-                          className="row"
-                          style={{ gap: 10, alignItems: "flex-start" }}
+                          className="flex items-start gap-2.5"
                         >
                           <span className="builder-group-icon">
                             <Icon name={group.icon} />
                           </span>
-                          <div className="stack" style={{ gap: 2 }}>
+                          <div className="flex flex-col gap-0.5">
                             <div className="builder-group-title">
                               {group.title}
                             </div>
@@ -723,7 +725,7 @@ export const CustomSavedReportsTab = ({
                       Date range
                     </span>
                     <select
-                      className="select"
+                      className="custom-reports-select"
                       value={dateRange}
                       onChange={(event) => setDateRange(event.target.value)}
                     >
@@ -737,7 +739,7 @@ export const CustomSavedReportsTab = ({
                   <label className="custom-reports-filter-control">
                     <span className="custom-reports-filter-label">Sort by</span>
                     <select
-                      className="select"
+                      className="custom-reports-select"
                       value={sortBy}
                       onChange={(event) => setSortBy(event.target.value)}
                     >

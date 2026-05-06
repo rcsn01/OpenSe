@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from "react";
+import { ContentTabs } from "@repo/ui";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCompany } from "../contexts/CompanyContext";
 import { BasePage } from "../components/BasePage";
 import { PageAvailabilityGuard } from "../components/PageAvailabilityGuard";
 import { usePageTopBarSearch } from "../components/Search/TopBarSearch";
-import { Tabs } from "../components/Tabs";
 import { StockHealthValuationTab } from "../components/Reports/StockHealthValuationTab";
 import { MovementVelocityTab } from "../components/Reports/MovementVelocityTab";
 import { ProcurementSuppliersTab } from "../components/Reports/ProcurementSuppliersTab";
@@ -87,12 +87,11 @@ export const ReportsPage = () => {
   return (
     <BasePage
       companyId={companyId}
-      containerClassName="stoqr-workspace-page"
-      contentStyle={{ padding: "18px 8px 32px" }}
-      containerStyle={{ minWidth: 0 }}
+      contentClassName="px-2 pb-8 pt-[18px]"
+      containerClassName="[&>*]:min-w-0 flex min-h-0 min-w-0 flex-1 flex-col gap-7 text-[var(--color-foreground)]"
     >
       <PageAvailabilityGuard companyId={companyId} feature="reports">
-        <Tabs
+        <ContentTabs
           activeTab={activeTab}
           onTabChange={(nextTab) => navigate(`/reports/${nextTab}`)}
           bottomSpacing

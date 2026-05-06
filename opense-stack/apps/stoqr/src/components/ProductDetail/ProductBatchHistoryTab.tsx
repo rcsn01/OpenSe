@@ -1,4 +1,4 @@
-import { EmptyState } from '../EmptyState'
+import { EmptyState } from '@repo/ui'
 import { formatDateTime } from '../../utils'
 import type { InventoryTransaction } from '../../types'
 

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { ArrowUpDown } from 'lucide-react'
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input } from '@repo/ui'
 import { toast } from 'sonner'
 import { useBulkUpdateInventoryProducts } from '../../../hooks/queries/useInventory'
 import type { InventoryProduct } from '../types'
@@ -58,22 +59,21 @@ export const BulkAdjustModal = ({ mode, companyId, selectedProducts, onClose, on
   const isDisabled = bulkUpdateMutation.isPending || (isPrice ? pricePct === 0 : quantityDelta === 0)
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
-        <h3 className="section-title" style={{ marginBottom: 12 }}>
-          {isPrice ? 'Price Adjustment' : 'Quantity Adjustment'}
-        </h3>
-        <p className="small muted" style={{ marginBottom: 16 }}>
-          Apply to {count} selected product{count !== 1 ? 's' : ''}.
-        </p>
+    <Dialog open onClose={onClose}>
+      <DialogContent className="max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>{isPrice ? 'Price Adjustment' : 'Quantity Adjustment'}</DialogTitle>
+          <DialogDescription>
+            Apply to {count} selected product{count !== 1 ? 's' : ''}.
+          </DialogDescription>
+        </DialogHeader>
 
-        <label className="stack" style={{ gap: 6 }}>
-          <span className="small" style={{ fontWeight: 'var(--type-weight-medium)' }}>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-[var(--color-foreground)]">
             {isPrice ? 'Percentage change' : 'Units to add or remove'}
           </span>
-          <div className="row" style={{ gap: 8 }}>
-            <input
-              className="input"
+          <div className="flex items-center gap-2">
+            <Input
               type="number"
               autoFocus
               value={isPrice ? pricePct : quantityDelta}
@@ -82,17 +82,16 @@ export const BulkAdjustModal = ({ mode, companyId, selectedProducts, onClose, on
                   ? setPricePct(Number(e.target.value) || 0)
                   : setQuantityDelta(Number(e.target.value) || 0)
               }
-              style={{ borderRadius: 8 }}
               placeholder="0"
               onKeyDown={(e) => {
                 if (e.key === 'Escape') onClose()
               }}
             />
-            <span className="muted" style={{ fontSize: 'var(--type-size-sm)', flexShrink: 0 }}>
+            <span className="shrink-0 text-sm text-[var(--color-muted-foreground)]">
               {isPrice ? '%' : 'units'}
             </span>
           </div>
-          <span className="small muted">
+          <span className="text-sm text-[var(--color-muted-foreground)]">
             {isPrice
               ? 'Positive values increase, negative values decrease.'
               : 'Positive values add stock, negative values subtract.'}
@@ -100,26 +99,26 @@ export const BulkAdjustModal = ({ mode, companyId, selectedProducts, onClose, on
         </label>
 
         {hint && (
-          <div className="bulk-preview" style={{ marginTop: 12 }}>
+          <div className="bulk-preview mt-3">
             <ArrowUpDown size={13} />
             <span>{hint}</span>
           </div>
         )}
 
-        <div className="row" style={{ gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
-          <button className="button ghost small" type="button" onClick={onClose}>
+        <DialogFooter>
+          <Button variant="ghost" size="sm" type="button" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            className="button small"
+          </Button>
+          <Button
+            size="sm"
             type="button"
             onClick={() => void handleApply()}
             disabled={isDisabled}
           >
             {bulkUpdateMutation.isPending ? 'Applying\u2026' : 'Apply'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

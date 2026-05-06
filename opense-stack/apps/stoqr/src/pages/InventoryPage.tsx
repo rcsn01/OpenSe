@@ -295,9 +295,8 @@ export const InventoryListPage = () => {
       isLoading={isLoading}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage inventory."
-      contentStyle={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}
-      containerClassName="stack"
-      containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
+      contentClassName="flex h-full min-h-0 flex-col overflow-hidden"
+      containerClassName="stack flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <AllProductsTab
         companyId={companyId}
@@ -341,7 +340,7 @@ export const InventoryListPage = () => {
         aria-label="Upload inventory CSV"
         type="file"
         accept=".csv,text/csv"
-        style={{ display: 'none' }}
+        className="hidden"
         onChange={handleImportFileChange}
       />
     </BasePage>

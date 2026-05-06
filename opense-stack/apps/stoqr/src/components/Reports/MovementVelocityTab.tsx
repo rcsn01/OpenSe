@@ -7,7 +7,12 @@ import {
   AnalyticsMiniSparkline,
   AnalyticsPanel,
   AnalyticsTablePanel,
+  Badge,
+  Button,
+  Card,
   DataTable,
+  Input,
+  cn,
   type DataTableColumn,
 } from "@repo/ui";
 import { useReportsData } from "../../hooks/queries/useReports";
@@ -206,10 +211,8 @@ export const MovementVelocityTab = ({
         header: "Product",
         renderCell: (sku) => (
           <div>
-            <div style={{ fontWeight: "var(--type-weight-semibold)" }}>
-              {sku.name}
-            </div>
-            <div className="small muted">{sku.sku}</div>
+            <div className="font-semibold text-[var(--color-foreground)]">{sku.name}</div>
+            <div className="text-sm text-[var(--color-muted-foreground)]">{sku.sku}</div>
           </div>
         ),
       },
@@ -218,12 +221,7 @@ export const MovementVelocityTab = ({
         header: "Movement",
         align: "right",
         renderCell: (sku) => (
-          <div
-            style={{
-              textAlign: "right",
-              fontWeight: "var(--type-weight-semibold)",
-            }}
-          >
+          <div className="text-right font-semibold text-[var(--color-foreground)]">
             {sku.total.toLocaleString()} units
           </div>
         ),
@@ -240,11 +238,11 @@ export const MovementVelocityTab = ({
         header: "Transfer",
         renderCell: (transfer) => (
           <div>
-            <div style={{ fontWeight: "var(--type-weight-semibold)" }}>
+            <div className="font-semibold text-[var(--color-foreground)]">
               {Math.abs(transfer.quantity_change)}x{" "}
               {transfer.products?.sku ?? "Unknown"}
             </div>
-            <div className="small muted">
+            <div className="text-sm text-[var(--color-muted-foreground)]">
               {transfer.transaction_type} ·{" "}
               {transfer.products?.name ?? "Unknown"}
             </div>
@@ -256,25 +254,16 @@ export const MovementVelocityTab = ({
         header: "Status",
         align: "right",
         renderCell: (transfer) => (
-          <div style={{ textAlign: "right" }}>
-            <span
-              className="badge"
-              style={{
-                background:
-                  transfer.transaction_type === "purchase" ||
-                  transfer.transaction_type === "scan_in"
-                    ? "rgba(22, 163, 74, 0.12)"
-                    : transfer.transaction_type === "return"
-                      ? "rgba(245, 158, 11, 0.16)"
-                      : "rgba(37, 99, 235, 0.12)",
-                color:
-                  transfer.transaction_type === "purchase" ||
-                  transfer.transaction_type === "scan_in"
-                    ? "#166534"
-                    : transfer.transaction_type === "return"
-                      ? "#92400e"
-                      : "#1e40af",
-              }}
+          <div className="text-right">
+            <Badge
+              variant={
+                transfer.transaction_type === "purchase" ||
+                transfer.transaction_type === "scan_in"
+                  ? "success"
+                  : transfer.transaction_type === "return"
+                    ? "warning"
+                    : "info"
+              }
             >
               {transfer.transaction_type === "purchase" ||
               transfer.transaction_type === "scan_in"
@@ -282,8 +271,8 @@ export const MovementVelocityTab = ({
                 : transfer.transaction_type === "return"
                   ? "In Transit"
                   : "Completed"}
-            </span>
-            <div className="small muted" style={{ marginTop: 2 }}>
+            </Badge>
+            <div className="mt-0.5 text-sm text-[var(--color-muted-foreground)]">
               {formatRelative(transfer.created_at)}
             </div>
           </div>
@@ -301,38 +290,30 @@ export const MovementVelocityTab = ({
         : "this quarter";
 
   return (
-    <div className="stoqr-analytics-tab">
+    <div className="flex min-w-0 flex-col gap-7">
       {/* Range selector */}
-      <div className="card" style={{ padding: "12px 24px" }}>
-        <div className="flex-between">
-          <div className="row" style={{ gap: 0 }}>
+      <Card className="px-6 py-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             {(["7d", "30d", "quarter"] as const).map((key) => (
-              <button
+              <Button
                 key={key}
-                className={`button ${range === key && !showCustom ? "" : "ghost"}`}
-                style={{
-                  borderRadius: "var(--radius-lg)",
-                  fontSize: "var(--type-size-sm)",
-                  padding: "6px 16px",
-                }}
+                variant={range === key && !showCustom ? "primary" : "ghost"}
+                size="sm"
+                className="rounded-[var(--radius-lg)]"
                 onClick={() => {
                   setRange(key);
                   setShowCustom(false);
                 }}
               >
                 {RANGE_LABELS[key]}
-              </button>
+              </Button>
             ))}
           </div>
-          <button
-            className={`button ${showCustom ? "" : "ghost"}`}
-            style={{
-              fontSize: "var(--type-size-sm)",
-              padding: "6px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
+          <Button
+            variant={showCustom ? "primary" : "ghost"}
+            size="sm"
+            className="gap-1.5"
             onClick={() => {
               setShowCustom(!showCustom);
               if (!showCustom) setRange("custom");
@@ -354,23 +335,21 @@ export const MovementVelocityTab = ({
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
             Custom Range
-          </button>
+          </Button>
         </div>
         {showCustom && (
-          <div className="row" style={{ gap: 12, marginTop: 12 }}>
-            <label className="stack" style={{ gap: 4 }}>
-              <span className="small muted">Start</span>
-              <input
-                className="input"
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <label className="flex flex-1 flex-col gap-1">
+              <span className="text-sm text-[var(--color-muted-foreground)]">Start</span>
+              <Input
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
               />
             </label>
-            <label className="stack" style={{ gap: 4 }}>
-              <span className="small muted">End</span>
-              <input
-                className="input"
+            <label className="flex flex-1 flex-col gap-1">
+              <span className="text-sm text-[var(--color-muted-foreground)]">End</span>
+              <Input
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
@@ -378,24 +357,24 @@ export const MovementVelocityTab = ({
             </label>
           </div>
         )}
-      </div>
+      </Card>
 
       <AnalyticsMetricGrid variant="stats-3">
         <AnalyticsMetricCard
           label="Inbound Volume"
           value={inboundTotal.toLocaleString()}
           valueMeta={
-            <span className="small muted">Units received {rangeLabel}</span>
+            <span className="text-sm text-[var(--color-muted-foreground)]">Units received {rangeLabel}</span>
           }
           visual={
-            <AnalyticsMiniSparkline data={inboundSparkline} color="#2563eb" />
+            <AnalyticsMiniSparkline data={inboundSparkline} color="var(--color-primary)" />
           }
         />
         <AnalyticsMetricCard
           label="Outbound Volume"
           value={outboundTotal.toLocaleString()}
           valueMeta={
-            <span className="small muted">Units shipped {rangeLabel}</span>
+            <span className="text-sm text-[var(--color-muted-foreground)]">Units shipped {rangeLabel}</span>
           }
           visual={
             <AnalyticsMiniSparkline
@@ -408,23 +387,18 @@ export const MovementVelocityTab = ({
           label="Average Return Rate"
           value={`${returnRate}%`}
           valueMeta={
-            <span className="small muted">Consistent with 30d avg</span>
+            <span className="text-sm text-[var(--color-muted-foreground)]">Consistent with 30d avg</span>
           }
           visual={
-            <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+            <div className="mt-1 flex gap-1">
               {Array.from({ length: 7 }).map((_, index) => (
                 <div
                   key={index}
-                  style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: "var(--radius-sm)",
-                    background:
-                      index < 5
-                        ? "var(--color-muted-foreground)"
-                        : "var(--color-border)",
-                    opacity: 0.6 + index * 0.05,
-                  }}
+                  className={cn(
+                    'h-[18px] w-[18px] rounded-[var(--radius-sm)]',
+                    index < 5 ? 'bg-[var(--color-muted-foreground)]' : 'bg-[var(--color-border)]',
+                  )}
+                  style={{ opacity: 0.6 + index * 0.05 }}
                 />
               ))}
             </div>
@@ -437,7 +411,7 @@ export const MovementVelocityTab = ({
         headerAside={
           <AnalyticsLegend
             items={[
-              { label: "Inbound", color: "#2563eb", shape: "dot" },
+              { label: "Inbound", color: "var(--color-primary)", shape: "dot" },
               {
                 label: "Outbound",
                 color: "var(--color-foreground)",
@@ -451,7 +425,7 @@ export const MovementVelocityTab = ({
           data={chartData}
           xDataKey="label"
           series={[
-            { dataKey: "inbound", label: "Inbound", color: "#2563eb" },
+            { dataKey: "inbound", label: "Inbound", color: "var(--color-primary)" },
             {
               dataKey: "outbound",
               label: "Outbound",
@@ -462,7 +436,7 @@ export const MovementVelocityTab = ({
         />
       </AnalyticsPanel>
 
-      <div className="grid grid-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <AnalyticsTablePanel title="Top Moving SKUs">
           <DataTable
             columns={topSkuColumns}

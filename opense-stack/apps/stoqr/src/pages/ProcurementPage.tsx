@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from "react";
+import { ContentTabs } from "@repo/ui";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCompany } from "../contexts/CompanyContext";
 import { BasePage } from "../components/BasePage";
 import { PageAvailabilityGuard } from "../components/PageAvailabilityGuard";
-import { Tabs } from "../components/Tabs";
 import { PurchaseOrdersTab } from "../components/Procurement/PurchaseOrdersTab";
 import { SuppliersTab } from "../components/Procurement/SuppliersTab";
 
@@ -46,12 +46,11 @@ export const ProcurementPage = () => {
       companyId={companyId}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
-      containerClassName="stoqr-workspace-page"
-      contentStyle={{ padding: "18px 8px 32px" }}
-      containerStyle={{ minWidth: 0 }}
+      contentClassName="px-2 pb-8 pt-[18px]"
+      containerClassName="[&>*]:min-w-0 flex min-h-0 min-w-0 flex-1 flex-col gap-7 text-[var(--color-foreground)]"
     >
       <PageAvailabilityGuard companyId={companyId} feature="procurement">
-        <Tabs
+        <ContentTabs
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={(nextTab) => navigate(`/procurement/${nextTab}`)}

@@ -288,8 +288,8 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
           <>
             <section className="label-batch-section">
               <span className="label-batch-section-label">1. Select Template</span>
-              <label className="stack" style={{ gap: 8 }}>
-                <select className="select" aria-label="Template" value={templateId} onChange={(event) => handleTemplateChange(event.target.value)}>
+              <label className="flex flex-col gap-2">
+                <select className="label-batch-select" aria-label="Template" value={templateId} onChange={(event) => handleTemplateChange(event.target.value)}>
                   <option value="">Select template</option>
                   {filteredTemplates.map((template) => (
                     <option key={template.id} value={template.id}>
@@ -302,7 +302,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
 
             <section className="label-batch-section">
               <span className="label-batch-section-label">2. Target Selection</span>
-              <div className="stack" style={{ gap: 12 }}>
+              <div className="flex flex-col gap-3">
                 <div className="label-batch-target-toggle" role="radiogroup" aria-label="Target type">
                   <button
                     type="button"
@@ -335,7 +335,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
 
                 {targetType === 'folder' ? (
                   <>
-                    <select className="select" aria-label="Folder" value={folderId} onChange={(event) => setFolderId(event.target.value)}>
+                    <select className="label-batch-select" aria-label="Folder" value={folderId} onChange={(event) => setFolderId(event.target.value)}>
                       <option value="">Select folder</option>
                       {folders.map((folder) => (
                         <option key={folder.id} value={folder.id}>
@@ -420,7 +420,12 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
               </div>
             </section>
 
-            <button className="label-batch-export-button" onClick={exportPdf} disabled={createPrintJobMutation.isPending}>
+            <button
+              type="button"
+              className="label-batch-export-button"
+              onClick={exportPdf}
+              disabled={createPrintJobMutation.isPending}
+            >
               Export PDF
             </button>
             {batchCount > 0 && exportPageCount > 0 && (

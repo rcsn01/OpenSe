@@ -17,6 +17,7 @@ import { useProductPageSearch } from '../../hooks/useProductPageSearch'
 import { useCreateProduct, useProductAttributeCatalog, useProductDetail, useProductFolders, useUpdateProduct } from '../../hooks/queries/useProducts'
 import { getPublicImageUrl } from '../../utils'
 import type { Folder } from '../../types'
+import './ProductSurface.module.css'
 
 type ProductFormMode = 'create' | 'edit'
 type CustomFieldDefinition = { key: string; type: 'text' | 'number' | 'boolean' | 'date' }

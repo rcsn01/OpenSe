@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Check, FileSpreadsheet, FolderOpen, Upload } from 'lucide-react'
+import { Button } from '@repo/ui'
 import { toast } from 'sonner'
 
 import type { ImportInventoryColumnField, ImportInventoryColumnMappings, ImportInventoryResult } from '../api/inventory'
@@ -11,6 +12,7 @@ import { useCompany } from '../contexts/CompanyContext'
 import { useImportInventoryProducts, useInventoryFilters } from '../hooks/queries/useInventory'
 import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../lib/pageSearch'
 import { parseCsv } from '../utils'
+import '../components/Inventory/InventorySurface.css'
 
 type CsvRow = Record<string, string>
 type ColumnAssignment = 'ignore' | 'attribute' | ImportInventoryColumnField
@@ -358,16 +360,15 @@ export const InventoryImportPage = () => {
         isLoading={false}
         emptyStateTitle="No company selected"
         emptyStateDescription="Select a company to import products."
-        contentStyle={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
-        containerClassName="inventory-import-layout"
-        containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+        contentClassName="flex h-full min-h-0 flex-col"
+        containerClassName="inventory-import-layout flex min-h-0 flex-1 flex-col"
       >
         <input
           ref={fileInputRef}
           aria-label="Upload product CSV"
           type="file"
           accept=".csv,text/csv"
-          style={{ display: 'none' }}
+          className="hidden"
           onChange={handleFileChange}
         />
 
@@ -376,21 +377,21 @@ export const InventoryImportPage = () => {
             <div className="inventory-import-empty-icon">
               <FileSpreadsheet size={26} />
             </div>
-            <div className="stack" style={{ gap: 6, alignItems: 'center' }}>
-              <h2 className="section-title" style={{ margin: 0 }}>Start with a CSV file</h2>
-              <p className="small muted" style={{ margin: 0, maxWidth: 420, textAlign: 'center' }}>
+            <div className="flex flex-col items-center gap-1.5">
+              <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">Start with a CSV file</h2>
+              <p className="max-w-[420px] text-center text-sm text-[var(--color-muted-foreground)]">
                 Choose a CSV to enter the mapping workspace. Once it loads, the table headers become the import form.
               </p>
             </div>
-            <div className="row" style={{ justifyContent: 'center' }}>
-              <button className="button" type="button" onClick={() => fileInputRef.current?.click()}>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button type="button" onClick={() => fileInputRef.current?.click()}>
                 <Upload size={16} />
                 Choose CSV
-              </button>
-              <button className="button ghost" type="button" onClick={() => navigate('/inventory/all')}>
+              </Button>
+              <Button variant="ghost" type="button" onClick={() => navigate('/inventory/all')}>
                 <ArrowLeft size={16} />
                 Back to Inventory
-              </button>
+              </Button>
             </div>
             {message && <div className="inventory-import-banner inventory-import-banner-warning">{message}</div>}
           </div>
@@ -405,23 +406,22 @@ export const InventoryImportPage = () => {
       isLoading={false}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to import products."
-      contentStyle={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}
-      containerClassName="inventory-import-layout"
-      containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
+      contentClassName="flex h-full min-h-0 flex-col overflow-hidden"
+      containerClassName="inventory-import-layout flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <input
         ref={fileInputRef}
         aria-label="Upload product CSV"
         type="file"
         accept=".csv,text/csv"
-        style={{ display: 'none' }}
+        className="hidden"
         onChange={handleFileChange}
       />
 
       <div className="inventory-import-shell">
         <div className="inventory-import-topbar">
           <div className="inventory-import-topbar-main">
-            <div className="stack" style={{ gap: 4 }}>
+            <div className="flex flex-col gap-1">
               <h1 className="inventory-import-title">Map Columns</h1>
               <div className="inventory-import-meta">
                 <span>{fileName}</span>
@@ -488,7 +488,7 @@ export const InventoryImportPage = () => {
             {normalizedSearchValue.length > 0 && (
               visibleHeaders.length === 0 || visiblePreviewRows.length === 0
             ) ? (
-              <div className="empty-state" style={{ minHeight: 220 }}>
+              <div className="empty-state min-h-[220px]">
                 No import columns or preview rows matched "{normalizedSearchValue}".
               </div>
             ) : (

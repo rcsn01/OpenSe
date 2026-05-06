@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Badge, Button, Card, cn } from '@repo/ui'
 
 import type { LabelProduct } from '../../api/labelStudio'
 import type { LabelAssetRenderers } from './labelAssetRenderers'
@@ -123,14 +124,14 @@ export const LabelPreviewCard = ({
   const showSingleLabelPreview = previewMode === 'label' && templateName && singleLabelPlan
 
   return (
-    <div className={['card export-preview-card label-preview-card', className].filter(Boolean).join(' ')}>
+    <Card className={cn('export-preview-card label-preview-card', className)}>
       {!hideHeader ? (
         <div className="label-preview-card-header">
           <div>
-            <h3 className="section-title" style={{ marginBottom: description ? 4 : 0 }}>{title}</h3>
-            {description ? <p className="small muted" style={{ margin: 0 }}>{description}</p> : null}
+            <h3 className={cn('text-lg font-semibold text-[var(--color-foreground)]', description && 'mb-1')}>{title}</h3>
+            {description ? <p className="text-sm text-[var(--color-muted-foreground)]">{description}</p> : null}
           </div>
-          {badgeText ? <span className="badge neutral">{badgeText}</span> : null}
+          {badgeText ? <Badge variant="outline">{badgeText}</Badge> : null}
         </div>
       ) : null}
 
@@ -157,29 +158,31 @@ export const LabelPreviewCard = ({
             <SingleLabelPreviewSvg plan={singleLabelPlan} assetMap={assetMap} />
           </div>
         ) : (
-          <div className="empty-state" style={{ padding: 24 }}>{emptyMessage}</div>
+          <div className="empty-state p-6">{emptyMessage}</div>
         )}
       </div>
 
       {previewMode === 'page' && pageCount > 1 ? (
         <div className="label-preview-pagination">
-          <button
+          <Button
             type="button"
-            className="button ghost small"
+            variant="ghost"
+            size="sm"
             onClick={() => setPageIndex((currentPage) => Math.max(0, currentPage - 1))}
             disabled={pageIndex === 0}
           >
             Previous Page
-          </button>
+          </Button>
           <span className="label-preview-pagination-status">{pageIndex + 1} / {pageCount}</span>
-          <button
+          <Button
             type="button"
-            className="button ghost small"
+            variant="ghost"
+            size="sm"
             onClick={() => setPageIndex((currentPage) => Math.min(pageCount - 1, currentPage + 1))}
             disabled={pageIndex >= pageCount - 1}
           >
             Next Page
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -201,6 +204,6 @@ export const LabelPreviewCard = ({
           ))}
         </div>
       ) : null}
-    </div>
+    </Card>
   )
 }
