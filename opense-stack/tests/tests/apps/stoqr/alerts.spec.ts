@@ -39,4 +39,18 @@ test.describe('Stoqr Alerts', () => {
     await expect(authenticatedPage.getByRole('switch', { name: 'Toggle In-App Notifications' })).toHaveAttribute('aria-checked', 'true');
     await expect(authenticatedPage.getByRole('switch', { name: 'Toggle Slack Webhook' })).toBeVisible();
   });
+
+  test('alert rules search filters the visible rule controls', async ({ authenticatedPage }) => {
+    await authenticatedPage.goto('/alerts/rules');
+
+    const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search alert rules...' });
+    await expect(searchInput).toBeVisible();
+
+    await searchInput.fill('slack');
+
+    await expect(authenticatedPage.getByText('Slack Webhook')).toBeVisible();
+    await expect(authenticatedPage.getByRole('switch', { name: 'Toggle Slack Webhook' })).toBeVisible();
+    await expect(authenticatedPage.getByText('In-App Notifications')).toHaveCount(0);
+    await expect(authenticatedPage.getByLabel('Default Low Stock Threshold')).toHaveCount(0);
+  });
 });

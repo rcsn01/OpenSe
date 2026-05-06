@@ -7,7 +7,7 @@ export class DashboardPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: /dashboard/i });
+    this.heading = page.getByText('Total Value').first();
     this.logoutButton = page.getByRole('button', { name: /log out|sign out/i });
   }
 
@@ -66,10 +66,10 @@ export class CreateProductPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole('heading', { name: /add new product|new product|create product/i });
+    this.heading = page.getByRole('heading', { name: /add product|add new product|new product|create product/i });
     this.nameInput = page.getByLabel(/name/i);
-    this.skuInput = page.getByLabel(/sku/i);
-    this.quantityInput = page.getByLabel(/initial stock|quantity|qty/i);
+    this.skuInput = page.getByPlaceholder('Optional');
+    this.quantityInput = page.getByLabel(/update stock|initial stock|quantity|qty/i);
     this.saveButton = page.getByRole('button', { name: /save|create/i });
   }
 
