@@ -10,16 +10,34 @@ const folderRow = (page: Page, name: string) =>
 const openFolderCreation = async (page: Page) => {
   const navigation = folderNavigation(page);
   await expect(navigation).toBeVisible();
-  await navigation.getByRole('button', { name: /new folder/i }).click();
-  const input = page.getByPlaceholder('Folder Name');
-  await expect(input).toBeVisible();
+  const folderRows = navigation.locator('.tree-item-folder');
+  const input = navigation.getByPlaceholder('Folder Name');
+
+  if (await folderRows.count()) {
+    const firstFolder = folderRows.first();
+    await expect(firstFolder).toBeVisible();
+    await firstFolder.hover();
+    await firstFolder.getByRole('button', { name: /add subfolder to/i }).click();
+
+    await expect(input).toBeVisible();
+    const parentBox = await firstFolder.boundingBox();
+    const inputBox = await input.boundingBox();
+
+    expect(parentBox).not.toBeNull();
+    expect(inputBox).not.toBeNull();
+    expect((inputBox?.y ?? 0) > (parentBox?.y ?? 0)).toBe(true);
+  } else {
+    await navigation.getByRole('button', { name: /create first folder/i }).click();
+    await expect(input).toBeVisible();
+  }
+
   return input;
 };
 
 const createFolder = async (page: Page, name: string) => {
   const input = await openFolderCreation(page);
   await input.fill(name);
-  await page.getByRole('button', { name: /^save$/i }).click();
+  await input.press('Enter');
   await expect(folderRow(page, name)).toBeVisible();
 };
 
@@ -27,7 +45,7 @@ const openFolderDeleteChoices = async (page: Page, name: string) => {
   const row = folderRow(page, name);
   await expect(row).toBeVisible();
   await row.hover();
-  await row.getByRole('button', { name: /delete/i }).click();
+  await row.getByRole('button', { name: /^delete$/i }).click();
   await expect(page.getByRole('heading', { name: new RegExp(`Delete \"${name}\"`) })).toBeVisible();
 };
 
@@ -43,7 +61,6 @@ test.describe('User Journey: Inventory Folder Navigation', () => {
     await expect(navigation).toBeVisible();
     await expect(navigation.getByText('All Products', { exact: true })).toBeVisible();
     await expect(navigation.getByText('Uncategorised', { exact: true })).toBeVisible();
-    await expect(navigation.getByText('Folders', { exact: true })).toBeVisible();
     await expect(navigation.locator('.tree-item.active').filter({ hasText: 'All Products' })).toBeVisible();
   });
 

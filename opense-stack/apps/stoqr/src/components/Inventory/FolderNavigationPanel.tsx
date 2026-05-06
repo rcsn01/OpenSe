@@ -47,11 +47,65 @@ const flattenTree = (nodes: TreeNode[]): string[] => {
   return result
 }
 
+const CreateFolderTreeItem = ({
+  level = 0,
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+}: {
+  level?: number
+  value: string
+  onChange: (value: string) => void
+  onSubmit: () => void
+  onCancel: () => void
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [])
+
+  return (
+    <div
+      className="tree-item tree-item-create"
+      style={{ paddingLeft: `${level * 16 + 8}px` }}
+    >
+      <div className="tree-toggle tree-toggle-static" aria-hidden="true" />
+      <FolderIcon size={16} style={{ marginRight: 8, flexShrink: 0, color: '#94a3b8' }} />
+      <div className="tree-create-row">
+        <input
+          ref={inputRef}
+          className="input small tree-create-input"
+          placeholder="Folder Name"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') onSubmit()
+            if (event.key === 'Escape') onCancel()
+          }}
+          onClick={(event) => event.stopPropagation()}
+        />
+      </div>
+    </div>
+  )
+}
+
 const SortableTreeItem = ({
   node,
   level = 0,
   activeId,
   onSelect,
+  onCreateFolder,
+  isCreatingFolder,
+  creatingFolderParentId,
+  newFolderName,
+  onCreateFolderNameChange,
+  onCreateFolderSubmit,
+  onCreateFolderCancel,
   expandedIds,
   toggleExpand,
   onRename,
@@ -66,6 +120,13 @@ const SortableTreeItem = ({
   level?: number
   activeId: string | null
   onSelect: (id: string) => void
+  onCreateFolder: (parentId: string) => void
+  isCreatingFolder: boolean
+  creatingFolderParentId: string | null
+  newFolderName: string
+  onCreateFolderNameChange: (value: string) => void
+  onCreateFolderSubmit: () => void
+  onCreateFolderCancel: () => void
   expandedIds: Set<string>
   toggleExpand: (id: string) => void
   onRename: (id: string, currentName: string) => void
@@ -76,6 +137,7 @@ const SortableTreeItem = ({
   onRenameSubmit: () => void
   onRenameCancel: () => void
 }) => {
+  const hasChildren = node.children.length > 0
   const isExpanded = expandedIds.has(node.id)
   const isActive = activeId === node.id
   const isRenaming = renamingId === node.id
@@ -107,20 +169,24 @@ const SortableTreeItem = ({
     <div ref={setNodeRef} style={style}>
       <div
         className={`tree-item tree-item-folder ${isActive ? 'active' : ''}`}
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        style={{ paddingLeft: `${level * 16}px` }}
         onClick={() => onSelect(node.id)}
         {...attributes}
         {...listeners}
       >
-        <div
-          className="tree-toggle"
-          onClick={(event) => {
-            event.stopPropagation()
-            toggleExpand(node.id)
-          }}
-        >
-          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </div>
+        {hasChildren ? (
+          <div
+            className="tree-toggle"
+            onClick={(event) => {
+              event.stopPropagation()
+              toggleExpand(node.id)
+            }}
+          >
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </div>
+        ) : (
+          <div className="tree-toggle tree-toggle-static" aria-hidden="true" />
+        )}
 
         {isActive || isExpanded ? (
           <FolderOpen size={16} style={{ marginRight: 8, flexShrink: 0, color: isActive ? 'currentColor' : '#3b82f6' }} />
@@ -152,6 +218,14 @@ const SortableTreeItem = ({
           <div className="tree-item-actions">
             <button
               className="tree-action-btn"
+              onClick={(e) => { e.stopPropagation(); onCreateFolder(node.id) }}
+              title={`Add subfolder to ${node.name}`}
+              aria-label={`Add subfolder to ${node.name}`}
+            >
+              <Plus size={12} />
+            </button>
+            <button
+              className="tree-action-btn"
               onClick={(e) => { e.stopPropagation(); onRename(node.id, node.name) }}
               title="Rename"
             >
@@ -168,6 +242,16 @@ const SortableTreeItem = ({
         )}
       </div>
 
+      {isExpanded && isCreatingFolder && creatingFolderParentId === node.id ? (
+        <CreateFolderTreeItem
+          level={level + 1}
+          value={newFolderName}
+          onChange={onCreateFolderNameChange}
+          onSubmit={onCreateFolderSubmit}
+          onCancel={onCreateFolderCancel}
+        />
+      ) : null}
+
       {isExpanded && node.children.map((child) => (
         <SortableTreeItem
           key={child.id}
@@ -175,6 +259,13 @@ const SortableTreeItem = ({
           level={level + 1}
           activeId={activeId}
           onSelect={onSelect}
+          onCreateFolder={onCreateFolder}
+          isCreatingFolder={isCreatingFolder}
+          creatingFolderParentId={creatingFolderParentId}
+          newFolderName={newFolderName}
+          onCreateFolderNameChange={onCreateFolderNameChange}
+          onCreateFolderSubmit={onCreateFolderSubmit}
+          onCreateFolderCancel={onCreateFolderCancel}
           expandedIds={expandedIds}
           toggleExpand={toggleExpand}
           onRename={onRename}
@@ -196,7 +287,13 @@ type FolderNavigationPanelProps = {
   folderView: FolderView
   onSelectFolder: (id: string) => void
   onSelectView: (view: FolderView) => void
-  onCreateFolder: () => void
+  onCreateFolder: (parentId: string | null) => void
+  isCreatingFolder: boolean
+  creatingFolderParentId: string | null
+  newFolderName: string
+  onCreateFolderNameChange: (value: string) => void
+  onCreateFolderSubmit: () => void
+  onCreateFolderCancel: () => void
   onRenameFolder: (folderId: string, newName: string) => void
   onDeleteFolder: (folderId: string) => void
   onMoveFolder: (folderId: string, newParentId: string | null, sortOrder: number) => void
@@ -216,6 +313,12 @@ export const FolderNavigationPanel = ({
   onSelectFolder,
   onSelectView,
   onCreateFolder,
+  isCreatingFolder,
+  creatingFolderParentId,
+  newFolderName,
+  onCreateFolderNameChange,
+  onCreateFolderSubmit,
+  onCreateFolderCancel,
   onRenameFolder,
   onMoveFolder,
   deletingFolderId,
@@ -291,6 +394,17 @@ export const FolderNavigationPanel = ({
     setRenamingValue('')
   }, [])
 
+  const handleCreateSubfolder = useCallback((parentId: string) => {
+    setExpandedIds((previous) => {
+      if (previous.has(parentId)) return previous
+      const next = new Set(previous)
+      next.add(parentId)
+      return next
+    })
+
+    onCreateFolder(parentId)
+  }, [onCreateFolder])
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -313,7 +427,7 @@ export const FolderNavigationPanel = ({
   return (
     <div className="explorer-sidebar">
       {/* Top-level views */}
-      <div style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+      <div>
         <div
           className={`tree-item ${folderView === 'all' ? 'active' : ''}`}
           onClick={() => onSelectView('all')}
@@ -330,43 +444,58 @@ export const FolderNavigationPanel = ({
         </div>
       </div>
 
-      {/* Folders section header */}
-      <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>Folders</span>
-        <button
-          className="tree-action-btn"
-          onClick={onCreateFolder}
-          title="New folder"
-          style={{ opacity: 1 }}
-        >
-          <Plus size={14} />
-        </button>
-      </div>
-
       {/* Folder tree with DnD */}
       <div className="tree-content">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={flatIds} strategy={verticalListSortingStrategy}>
-            {tree.map((node) => (
-              <SortableTreeItem
-                key={node.id}
-                node={node}
-                activeId={activeFolderId}
-                onSelect={(id) => {
-                  onSelectView('folder')
-                  onSelectFolder(id)
-                }}
-                expandedIds={expandedIds}
-                toggleExpand={toggleExpand}
-                onRename={handleStartRename}
-                onDelete={onDeleteStepChoose}
-                renamingId={renamingId}
-                renamingValue={renamingValue}
-                setRenamingValue={setRenamingValue}
-                onRenameSubmit={handleRenameSubmit}
-                onRenameCancel={handleRenameCancel}
-              />
-            ))}
+            {tree.length > 0 ? (
+              tree.map((node) => (
+                <SortableTreeItem
+                  key={node.id}
+                  node={node}
+                  activeId={activeFolderId}
+                  onSelect={(id) => {
+                    onSelectView('folder')
+                    onSelectFolder(id)
+                  }}
+                  onCreateFolder={handleCreateSubfolder}
+                  isCreatingFolder={isCreatingFolder}
+                  creatingFolderParentId={creatingFolderParentId}
+                  newFolderName={newFolderName}
+                  onCreateFolderNameChange={onCreateFolderNameChange}
+                  onCreateFolderSubmit={onCreateFolderSubmit}
+                  onCreateFolderCancel={onCreateFolderCancel}
+                  expandedIds={expandedIds}
+                  toggleExpand={toggleExpand}
+                  onRename={handleStartRename}
+                  onDelete={onDeleteStepChoose}
+                  renamingId={renamingId}
+                  renamingValue={renamingValue}
+                  setRenamingValue={setRenamingValue}
+                  onRenameSubmit={handleRenameSubmit}
+                  onRenameCancel={handleRenameCancel}
+                />
+              ))
+            ) : (
+              isCreatingFolder && creatingFolderParentId === null ? (
+                <CreateFolderTreeItem
+                  value={newFolderName}
+                  onChange={onCreateFolderNameChange}
+                  onSubmit={onCreateFolderSubmit}
+                  onCancel={onCreateFolderCancel}
+                />
+              ) : (
+                <div style={{ padding: '12px 16px' }}>
+                  <button
+                    type="button"
+                    className="button ghost small"
+                    onClick={() => onCreateFolder(null)}
+                  >
+                    Create first folder
+                  </button>
+                </div>
+              )
+            )}
           </SortableContext>
         </DndContext>
       </div>

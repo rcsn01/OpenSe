@@ -18,9 +18,21 @@ const createInventoryProduct = async (page: Page, name: string, sku: string, qua
 
 const createFolder = async (page: Page, folderName: string) => {
   await openInventoryList(page);
-  await page.getByRole('button', { name: /new folder/i }).click();
-  await page.getByPlaceholder('Folder Name').fill(folderName);
-  await page.getByRole('button', { name: /^save$/i }).click();
+  const navigation = page.getByRole('complementary', { name: /folder navigation/i });
+  const folderRows = navigation.locator('.tree-item-folder');
+  const input = navigation.getByPlaceholder('Folder Name');
+
+  if (await folderRows.count()) {
+    const firstFolder = folderRows.first();
+    await expect(firstFolder).toBeVisible();
+    await firstFolder.hover();
+    await firstFolder.getByRole('button', { name: /add subfolder to/i }).click();
+  } else {
+    await navigation.getByRole('button', { name: /create first folder/i }).click();
+  }
+
+  await input.fill(folderName);
+  await input.press('Enter');
   await expect(page.locator('.explorer-sidebar')).toContainText(folderName);
 };
 

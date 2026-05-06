@@ -53,6 +53,7 @@ export const AllProductsTab = ({
   // Folder creation inline state
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+  const [creatingFolderParentId, setCreatingFolderParentId] = useState<string | null>(null)
 
   // Folder delete dialog state
   const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null)
@@ -133,25 +134,32 @@ export const AllProductsTab = ({
     setPage(1)
   }
 
-  const handleCreateFolder = async () => {
-    if (isCreatingFolder) {
-      // Submit
-      if (!newFolderName.trim()) return
-      try {
-        await createFolderMutation.mutateAsync({
-          name: newFolderName,
-          parentId: folderView === 'folder' ? selectedFolderId : null,
-        })
-        toast.success('Folder created')
-        setNewFolderName('')
-        setIsCreatingFolder(false)
-        onRefresh()
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to create folder'
-        toast.error(message)
-      }
-    } else {
-      setIsCreatingFolder(true)
+  const resetFolderCreation = () => {
+    setIsCreatingFolder(false)
+    setNewFolderName('')
+    setCreatingFolderParentId(null)
+  }
+
+  const handleOpenCreateFolder = (parentId: string | null) => {
+    setCreatingFolderParentId(parentId)
+    setNewFolderName('')
+    setIsCreatingFolder(true)
+  }
+
+  const handleCreateFolderSubmit = async () => {
+    if (!newFolderName.trim()) return
+
+    try {
+      await createFolderMutation.mutateAsync({
+        name: newFolderName,
+        parentId: creatingFolderParentId,
+      })
+      toast.success('Folder created')
+      resetFolderCreation()
+      onRefresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create folder'
+      toast.error(message)
     }
   }
 
@@ -309,10 +317,15 @@ export const AllProductsTab = ({
             setPage(1)
             closeMobileExplorerIfNeeded()
           }}
-          onCreateFolder={() => {
-            void handleCreateFolder()
-            closeMobileExplorerIfNeeded()
+          onCreateFolder={(parentId) => {
+            handleOpenCreateFolder(parentId)
           }}
+          isCreatingFolder={isCreatingFolder}
+          creatingFolderParentId={creatingFolderParentId}
+          newFolderName={newFolderName}
+          onCreateFolderNameChange={setNewFolderName}
+          onCreateFolderSubmit={() => void handleCreateFolderSubmit()}
+          onCreateFolderCancel={resetFolderCreation}
           onRenameFolder={handleRenameFolder}
           onDeleteFolder={(folderId) => handleDeleteStepChoose(folderId)}
           onMoveFolder={handleMoveFolder}
@@ -327,40 +340,6 @@ export const AllProductsTab = ({
       </div>
 
       <div className="explorer-main">
-        {isCreatingFolder ? (
-          <div className="explorer-toolbar" style={{ border: 'none', borderBottom: '1px solid var(--border)', borderRadius: 0 }}>
-            <div className="row">
-              <div className="row bg-slate-50 p-1 rounded border border-slate-200">
-                <input
-                  className="input small"
-                  style={{ width: 140 }}
-                  autoFocus
-                  placeholder="Folder Name"
-                  value={newFolderName}
-                  onChange={(event) => setNewFolderName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') void handleCreateFolder()
-                    if (event.key === 'Escape') {
-                      setIsCreatingFolder(false)
-                      setNewFolderName('')
-                    }
-                  }}
-                />
-                <button className="button small" onClick={() => void handleCreateFolder()}>Save</button>
-                <button
-                  className="button ghost small"
-                  onClick={() => {
-                    setIsCreatingFolder(false)
-                    setNewFolderName('')
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
         <div className="card" style={{ padding: 0, overflow: 'hidden', border: 'none', borderRadius: 0, boxShadow: 'none', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <InventoryFiltersBar
             isSelectionMode={isSelectionMode}

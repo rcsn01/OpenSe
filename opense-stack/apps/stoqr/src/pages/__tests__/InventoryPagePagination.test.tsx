@@ -61,7 +61,7 @@ vi.mock('../../components/Inventory/AllProductsTab', () => ({
       <div>Current filter count: {activeCustomFieldFilters.length}</div>
       <div>Current sort: {sortField} {sortDir}</div>
       <button type="button" onClick={() => setPage(3)}>Go to page 3</button>
-      <button type="button" onClick={() => setPageSize(20)}>Show 20</button>
+      <button type="button" onClick={() => setPageSize(50)}>Show 50</button>
       <button type="button" onClick={() => setStockFilter('low')}>Low stock</button>
       <button type="button" onClick={() => onAddFilter('batch', 'acme')}>Add batch filter</button>
       <button type="button" onClick={() => onRemoveFilter('batch')}>Remove batch filter</button>
@@ -148,7 +148,7 @@ describe('InventoryListPage pagination state', () => {
       sortField: 'selling_price',
       sortDir: 'desc',
     })
-    expect(screen.getByTestId('location-display')).toHaveTextContent('/inventory/all?stock=out&page=2&pageSize=20&sortField=selling_price&sortDir=desc&cf.batch=acme')
+    expect(screen.getByTestId('location-display')).toHaveTextContent('/inventory/all?stock=out&page=2&sortField=selling_price&sortDir=desc&cf.batch=acme')
   })
 
   it('hydrates the top-bar search term from the URL before querying products', async () => {
@@ -168,7 +168,7 @@ describe('InventoryListPage pagination state', () => {
     renderInventoryPage()
 
     expect(screen.getByText('Current page: 1')).toBeInTheDocument()
-    expect(screen.getByText('Current page size: 10')).toBeInTheDocument()
+    expect(screen.getByText('Current page size: 20')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Go to page 3' }))
 
@@ -177,17 +177,17 @@ describe('InventoryListPage pagination state', () => {
       expect(screen.getByTestId('location-display')).toHaveTextContent('/inventory/all?page=3')
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show 20' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show 50' }))
 
     await waitFor(() => {
       expect(screen.getByText('Current page: 1')).toBeInTheDocument()
-      expect(screen.getByText('Current page size: 20')).toBeInTheDocument()
-      expect(screen.getByTestId('location-display')).toHaveTextContent('/inventory/all?pageSize=20')
+      expect(screen.getByText('Current page size: 50')).toBeInTheDocument()
+      expect(screen.getByTestId('location-display')).toHaveTextContent('/inventory/all?pageSize=50')
     })
 
     const latestInventoryQueryArgs = mocks.useInventoryProducts.mock.calls.at(-1)?.[0] as { page: number; pageSize: number }
 
-    expect(latestInventoryQueryArgs).toMatchObject({ page: 1, pageSize: 20 })
+    expect(latestInventoryQueryArgs).toMatchObject({ page: 1, pageSize: 50 })
   })
 
   it('writes stock and custom field filters to the URL and resets the current page', async () => {

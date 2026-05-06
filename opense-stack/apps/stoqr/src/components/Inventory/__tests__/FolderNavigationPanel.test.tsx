@@ -46,6 +46,12 @@ const createProps = (overrides: Partial<Parameters<typeof FolderNavigationPanel>
   onSelectFolder: vi.fn(),
   onSelectView: vi.fn(),
   onCreateFolder: vi.fn(),
+  isCreatingFolder: false,
+  creatingFolderParentId: null,
+  newFolderName: '',
+  onCreateFolderNameChange: vi.fn(),
+  onCreateFolderSubmit: vi.fn(),
+  onCreateFolderCancel: vi.fn(),
   onRenameFolder: vi.fn(),
   onDeleteFolder: vi.fn(),
   onMoveFolder: vi.fn(),
@@ -67,17 +73,21 @@ describe('FolderNavigationPanel', () => {
     expect(screen.getByText('Uncategorised')).toBeInTheDocument()
   })
 
-  it('renders the Folders section header', () => {
-    render(<FolderNavigationPanel {...createProps()} />)
-
-    expect(screen.getByText('Folders')).toBeInTheDocument()
-  })
-
   it('renders root-level folders in the tree', () => {
     render(<FolderNavigationPanel {...createProps()} />)
 
     expect(screen.getByText('Electronics')).toBeInTheDocument()
     expect(screen.getByText('Clothing')).toBeInTheDocument()
+  })
+
+  it('only shows the expand chevron for folders with children', () => {
+    render(<FolderNavigationPanel {...createProps()} />)
+
+    const parentRow = screen.getByText('Electronics').closest('.tree-item')
+    const leafRow = screen.getByText('Clothing').closest('.tree-item')
+
+    expect(parentRow?.querySelector('.tree-toggle svg')).not.toBeNull()
+    expect(leafRow?.querySelector('.tree-toggle svg')).toBeNull()
   })
 
   it('shows folders when sort_order is undefined (backwards compatibility)', () => {
@@ -97,7 +107,6 @@ describe('FolderNavigationPanel', () => {
 
     expect(screen.getByText('All Products')).toBeInTheDocument()
     expect(screen.getByText('Uncategorised')).toBeInTheDocument()
-    expect(screen.getByText('Folders')).toBeInTheDocument()
   })
 
   it('calls onSelectView with "all" when All Products is clicked', () => {
@@ -132,14 +141,45 @@ describe('FolderNavigationPanel', () => {
     expect(uncategorisedItem).toHaveClass('active')
   })
 
-  it('calls onCreateFolder when + button is clicked', () => {
+  it('calls onCreateFolder with the hovered folder id when the add button is clicked', () => {
     const props = createProps()
     render(<FolderNavigationPanel {...props} />)
 
-    const addButton = screen.getByTitle('New folder')
+    const addButton = screen.getByLabelText('Add subfolder to Electronics')
     fireEvent.click(addButton)
 
-    expect(props.onCreateFolder).toHaveBeenCalled()
+    expect(props.onCreateFolder).toHaveBeenCalledWith('f-1')
+  })
+
+  it('shows a fallback create button when there are no folders yet', () => {
+    const props = createProps({ folders: [] })
+    render(<FolderNavigationPanel {...props} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create first folder' }))
+
+    expect(props.onCreateFolder).toHaveBeenCalledWith(null)
+  })
+
+  it('renders the create input directly under the chosen parent folder', () => {
+    render(
+      <FolderNavigationPanel
+        {...createProps({
+          activeFolderId: 'f-1',
+          isCreatingFolder: true,
+          creatingFolderParentId: 'f-1',
+        })}
+      />,
+    )
+
+    const parentRow = screen.getByText('Electronics').closest('.tree-item')
+    const createRow = screen.getByPlaceholderText('Folder Name').closest('.tree-item')
+    const childRow = screen.getByText('Phones').closest('.tree-item')
+
+    expect(parentRow).not.toBeNull()
+    expect(createRow).not.toBeNull()
+    expect(childRow).not.toBeNull()
+    expect(parentRow?.compareDocumentPosition(createRow as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(createRow?.compareDocumentPosition(childRow as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('calls onSelectFolder when a folder in the tree is clicked', () => {
