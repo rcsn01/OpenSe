@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { TopBarSearchContent, TopBarSearchProvider } from '../../components/Search/TopBarSearch'
 import { ScanPage } from '../ScanPage'
 
 const mockBasePage = vi.fn()
@@ -74,30 +76,43 @@ describe('ScanPage', () => {
     vi.clearAllMocks()
   })
 
-  it('passes the shared top-bar search term into scan actions', () => {
+  const SearchShell = () => (
+    <TopBarSearchProvider>
+      <TopBarSearchContent />
+      <Outlet />
+    </TopBarSearchProvider>
+  )
+
+  it('passes the shared top-bar search term into scan actions', async () => {
+    const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={['/scan/scan-actions']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: 'dock scanner', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
+          <Route element={<SearchShell />}>
             <Route path="/scan/:tab" element={<ScanPage />} />
           </Route>
         </Routes>
       </MemoryRouter>,
     )
+
+    await user.type(screen.getByRole('combobox', { name: 'Search products...' }), 'dock scanner')
 
     expect(screen.getByText('Quick scan dock scanner')).toBeInTheDocument()
   })
 
-  it('passes the shared top-bar search term into scan history', () => {
+  it('passes the shared top-bar search term into scan history', async () => {
+    const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={['/scan/scan-history']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: 'dock scanner', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
+          <Route element={<SearchShell />}>
             <Route path="/scan/:tab" element={<ScanPage />} />
           </Route>
         </Routes>
       </MemoryRouter>,
     )
+
+    await user.type(screen.getByRole('combobox', { name: 'Search history...' }), 'dock scanner')
 
     expect(screen.getByText('Scan history dock scanner')).toBeInTheDocument()
   })
@@ -106,7 +121,7 @@ describe('ScanPage', () => {
     render(
       <MemoryRouter initialEntries={['/scan/scan-actions']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: '', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
+          <Route element={<SearchShell />}>
             <Route path="/scan/:tab" element={<ScanPage />} />
           </Route>
         </Routes>

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { useSearchParams, useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
+import { usePageTopBarSearch } from '../components/Search/TopBarSearch'
 import type { CustomFieldPrimitive, Folder } from '../types'
 import { parseCsv } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
@@ -24,7 +25,6 @@ import {
   useInventoryRefresh,
 } from '../hooks/queries/useInventory'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
-import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 export const getNextSelectedRowIdsForVisibleToggle = (current: Set<string>, visibleProductIds: string[]) => {
   const visibleProductIdSet = new Set(visibleProductIds)
@@ -40,7 +40,6 @@ export const getNextSelectedRowIdsForVisibleToggle = (current: Set<string>, visi
 export const InventoryListPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
   const importFileInputRef = useRef<HTMLInputElement | null>(null)
@@ -155,22 +154,31 @@ export const InventoryListPage = () => {
   const products = productsQuery.data?.products ?? ([] as InventoryProduct[])
   const totalCount = productsQuery.data?.totalCount ?? 0
   const folders = filtersQuery.data?.folders ?? ([] as Folder[])
+  const inventorySearchSuggestions = useMemo(
+    () => products.slice(0, 8).map((product) => ({
+      id: `inventory-product-${product.id}`,
+      title: product.name,
+      subtitle: `${product.sku} · ${product.quantity_on_hand} on hand`,
+      value: product.sku || product.name,
+      badge: 'Product',
+    })),
+    [products],
+  )
   const isLoading = useMemo(
     () => productsQuery.isLoading || filtersQuery.isLoading,
     [productsQuery.isLoading, filtersQuery.isLoading],
   )
 
-  useEffect(() => {
-    layoutContext?.setTopBarSearchConfig({
-      suggestions: products.slice(0, 8).map((product) => ({
-        id: `inventory-product-${product.id}`,
-        title: product.name,
-        subtitle: `${product.sku} · ${product.quantity_on_hand} on hand`,
-        value: product.sku || product.name,
-        badge: 'Product',
-      })),
-    })
-  }, [layoutContext, products])
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey: 'inventory-list',
+    placeholder: 'Search items...',
+    defaultSuggestions: [
+      { id: 'inventory-all-products', title: 'All Products', subtitle: 'Browse catalog items and stock', value: 'products', badge: 'Inventory' },
+      { id: 'inventory-low-stock', title: 'Low Stock', subtitle: 'Find products near reorder point', value: 'low stock', badge: 'Filter' },
+      { id: 'inventory-out-of-stock', title: 'Out of Stock', subtitle: 'Find products at zero quantity', value: 'out of stock', badge: 'Filter' },
+    ],
+    suggestions: inventorySearchSuggestions,
+  }), [inventorySearchSuggestions]))
 
   useEffect(() => {
     if (tab === 'barcode-sku') {

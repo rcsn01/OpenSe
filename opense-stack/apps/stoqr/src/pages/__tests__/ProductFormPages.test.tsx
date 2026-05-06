@@ -52,6 +52,15 @@ vi.mock('../../hooks/queries/useProducts', () => ({
   useProductDetail: () => ({ data: mockProductDetailData, isLoading: false }),
 }))
 
+vi.mock('../../hooks/queries/useInventory', () => ({
+  useInventoryProducts: () => ({
+    data: { products: [] },
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+  }),
+}))
+
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),

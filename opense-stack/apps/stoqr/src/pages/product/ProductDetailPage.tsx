@@ -10,6 +10,7 @@ import { ProductAttachmentsTab } from '../../components/ProductDetail/ProductAtt
 import { ProductBatchHistoryTab } from '../../components/ProductDetail/ProductBatchHistoryTab'
 import { ProductOverviewTab } from '../../components/ProductDetail/ProductOverviewTab'
 import { ProductSuppliersTab } from '../../components/ProductDetail/ProductSuppliersTab'
+import { useProductPageSearch } from '../../hooks/useProductPageSearch'
 import { useProductDetail, useProductFolders } from '../../hooks/queries/useProducts'
 
 const PRODUCT_DETAIL_TABS = [
@@ -38,6 +39,7 @@ export const ProductDetailPage = () => {
   const { id, tab } = useParams<{ id?: string; tab?: string }>()
   const navigate = useNavigate()
   const { companyId } = useCompany()
+  useProductPageSearch(companyId)
   const { data: folders = [] } = useProductFolders(companyId)
   const validTabs = PRODUCT_DETAIL_TABS.map((item) => item.id)
   const requestedTab = tab === 'batch' ? 'history' : tab

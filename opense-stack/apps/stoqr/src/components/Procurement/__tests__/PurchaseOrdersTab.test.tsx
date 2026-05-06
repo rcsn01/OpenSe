@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { TopBarSearchContent, TopBarSearchProvider } from '../../Search/TopBarSearch'
 import { PurchaseOrdersTab } from '../PurchaseOrdersTab'
 
 const mocks = vi.hoisted(() => ({
@@ -23,6 +25,15 @@ vi.mock('../../../hooks/queries/useProcurement', () => ({
 }))
 
 describe('PurchaseOrdersTab', () => {
+  const renderPurchaseOrdersTab = () => render(
+    <MemoryRouter initialEntries={['/']}>
+      <TopBarSearchProvider>
+        <TopBarSearchContent />
+        <PurchaseOrdersTab companyId="company-1" />
+      </TopBarSearchProvider>
+    </MemoryRouter>,
+  )
+
   beforeEach(() => {
     mocks.useCreatePurchaseOrder.mockReturnValue({
       mutateAsync: vi.fn(),
@@ -100,7 +111,7 @@ describe('PurchaseOrdersTab', () => {
   })
 
   it('renders approval and return statuses from purchase order columns', () => {
-    render(<PurchaseOrdersTab companyId="company-1" />)
+    renderPurchaseOrdersTab()
 
     expect(screen.getByText('Pending Approval')).toBeInTheDocument()
     expect(screen.getAllByText('Approved')).toHaveLength(2)
@@ -112,19 +123,24 @@ describe('PurchaseOrdersTab', () => {
     expect(screen.getByText('No return')).toBeInTheDocument()
   })
 
-  it('filters rows from the shared top bar search term', () => {
-    render(<PurchaseOrdersTab companyId="company-1" searchTerm="Shipped to Vendor" />)
+  it('filters rows from the shared top bar search term', async () => {
+    const user = userEvent.setup()
+    renderPurchaseOrdersTab()
 
-    expect(screen.queryByPlaceholderText('Search POs...')).not.toBeInTheDocument()
-    expect(screen.getByText('PO-2026-1208')).toBeInTheDocument()
+    await user.type(screen.getByRole('combobox', { name: 'Search POs...' }), 'Shipped to Vendor')
+
+    expect(screen.getAllByText('PO-2026-1208').length).toBeGreaterThan(0)
     expect(screen.queryByText('PO-2026-1206')).not.toBeInTheDocument()
     expect(screen.queryByText('PO-2026-1204')).not.toBeInTheDocument()
   })
 
-  it('supports fuzzy search matches from the shared top bar', () => {
-    render(<PurchaseOrdersTab companyId="company-1" searchTerm="ship vendor" />)
+  it('supports fuzzy search matches from the shared top bar', async () => {
+    const user = userEvent.setup()
+    renderPurchaseOrdersTab()
 
-    expect(screen.getByText('PO-2026-1208')).toBeInTheDocument()
+    await user.type(screen.getByRole('combobox', { name: 'Search POs...' }), 'ship vendor')
+
+    expect(screen.getAllByText('PO-2026-1208').length).toBeGreaterThan(0)
     expect(screen.queryByText('PO-2026-1206')).not.toBeInTheDocument()
     expect(screen.queryByText('PO-2026-1204')).not.toBeInTheDocument()
   })
@@ -132,7 +148,7 @@ describe('PurchaseOrdersTab', () => {
   it('filters rows using the shared filter dropdown', async () => {
     const user = userEvent.setup()
 
-    render(<PurchaseOrdersTab companyId="company-1" />)
+    renderPurchaseOrdersTab()
 
     await user.click(screen.getByRole('button', { name: 'PO status filter' }))
     await user.click(screen.getByRole('button', { name: 'Received' }))
@@ -145,7 +161,7 @@ describe('PurchaseOrdersTab', () => {
   })
 
   it('orders toolbar controls with filter on the left and actions on the right', () => {
-    render(<PurchaseOrdersTab companyId="company-1" />)
+    renderPurchaseOrdersTab()
 
     const filterButton = screen.getByRole('button', { name: 'PO status filter' })
     const autoGenerateButton = screen.getByRole('button', { name: /auto-generate from alerts/i })

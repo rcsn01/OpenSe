@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@repo/shared/auth/context'
 import { useCompany } from '../contexts/CompanyContext'
@@ -10,6 +10,7 @@ import {
   type OrganisationPageFeature,
 } from '../api/organisationPageSettings'
 import { BasePage } from '../components/BasePage'
+import { usePageTopBarSearch, useTopBarSearchValue } from '../components/Search/TopBarSearch'
 import { Tabs } from '../components/Tabs'
 import { ActivityLogsTab } from '../components/TeamSettings/ActivityLogsTab'
 import { MembersTab } from '../components/TeamSettings/MembersTab'
@@ -25,13 +26,12 @@ import {
   useUpdateRoleWithPermissions,
   useUpdateCompanyMemberRole,
 } from '../hooks/queries/useTeamSettings'
-import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 export const TeamSettingsPage = () => {
   const { companyId } = useCompany()
   const { user } = useAuth()
   const navigate = useNavigate()
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
+  const { searchValue } = useTopBarSearchValue()
   const { tab } = useParams<{ tab?: string }>()
   const tabAliasMap: Record<string, string> = {
     'user-management': 'teams',
@@ -40,7 +40,7 @@ export const TeamSettingsPage = () => {
   const normalizedTab = tab ? (tabAliasMap[tab] ?? tab) : 'teams'
   const validTabs = ['teams', 'permissions', 'activity', 'pages', 'two-factor'] as const
   const activeTab = validTabs.includes(normalizedTab as (typeof validTabs)[number]) ? normalizedTab : 'teams'
-  const activitySearchTerm = activeTab === 'activity' ? (layoutContext?.topBarSearchValue ?? '') : ''
+  const activitySearchTerm = activeTab === 'activity' ? searchValue : ''
   const { data, isLoading } = useTeamSettingsData(companyId)
   const { data: pageSettings = defaultOrganisationPageSettings, isLoading: loadingPageSettings } = useOrganisationPageSettings(companyId)
   const { data: activity = [], isLoading: loadingActivity } = useTeamActivityEvents(companyId)
@@ -61,6 +61,16 @@ export const TeamSettingsPage = () => {
     roleRank: role.role_rank,
     permissionCodes: rolePermissions[role.id] ?? [],
   }))
+  const activitySuggestions = useMemo(
+    () => activity.slice(0, 8).map((log) => ({
+      id: log.id,
+      title: log.message ?? log.event_type,
+      subtitle: `${log.profiles?.full_name ?? log.profiles?.username ?? 'System'} · ${log.event_type}`,
+      value: log.message ?? log.event_type,
+      badge: 'Log',
+    })),
+    [activity],
+  )
 
   const handleInvite = async (email: string, roleId: string) => {
     if (!companyId || !email || !roleId) return
@@ -105,21 +115,12 @@ export const TeamSettingsPage = () => {
     }
   }
 
-  useEffect(() => {
-    if (activeTab !== 'activity') {
-      return
-    }
-
-    layoutContext?.setTopBarSearchConfig({
-      suggestions: activity.slice(0, 8).map((log) => ({
-        id: log.id,
-        title: log.message ?? log.event_type,
-        subtitle: `${log.profiles?.full_name ?? log.profiles?.username ?? 'System'} · ${log.event_type}`,
-        value: log.message ?? log.event_type,
-        badge: 'Log',
-      })),
-    })
-  }, [activeTab, activity, layoutContext])
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey: 'team-activity',
+    enabled: activeTab === 'activity',
+    placeholder: 'Search activity logs...',
+    suggestions: activitySuggestions,
+  }), [activeTab, activitySuggestions]))
 
   useEffect(() => {
     if (tab && tabAliasMap[tab]) {

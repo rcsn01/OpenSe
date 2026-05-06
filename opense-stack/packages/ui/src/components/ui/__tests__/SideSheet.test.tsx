@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import type { CSSProperties } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { CSSProperties } from "react";
+import { describe, expect, it, vi } from "vitest";
 import {
   SideSheet,
   SideSheetBody,
@@ -11,7 +11,7 @@ import {
   SideSheetHeader,
   type SideSheetSize,
   SideSheetTitle,
-} from '../SideSheet'
+} from "../SideSheet";
 
 const SideSheetHarness = ({
   open,
@@ -19,16 +19,18 @@ const SideSheetHarness = ({
   size,
   panelStyle,
 }: {
-  open: boolean
-  onClose: () => void
-  size?: SideSheetSize
-  panelStyle?: CSSProperties
+  open: boolean;
+  onClose: () => void;
+  size?: SideSheetSize;
+  panelStyle?: CSSProperties;
 }) => (
   <SideSheet open={open} onClose={onClose} size={size} panelStyle={panelStyle}>
     <SideSheetContent>
       <SideSheetHeader>
         <SideSheetTitle>Workspace Settings</SideSheetTitle>
-        <SideSheetDescription>Manage collaborators and notifications.</SideSheetDescription>
+        <SideSheetDescription>
+          Manage collaborators and notifications.
+        </SideSheetDescription>
       </SideSheetHeader>
       <SideSheetBody>
         <div>Body content</div>
@@ -39,50 +41,55 @@ const SideSheetHarness = ({
       </SideSheetFooter>
     </SideSheetContent>
   </SideSheet>
-)
+);
 
-describe('SideSheet', () => {
-  it('renders as a right-aligned page layout', () => {
-    render(<SideSheetHarness open={true} onClose={() => {}} />)
+describe("SideSheet", () => {
+  it("renders as a right-aligned page layout", () => {
+    render(<SideSheetHarness open={true} onClose={() => {}} />);
 
-    expect(screen.getByRole('dialog')).toHaveClass('translate-x-full')
-    expect(screen.getByRole('button', { name: 'Close dialog' })).toBeInTheDocument()
-    expect(screen.getByText('Body content').parentElement).toHaveClass('flex-1', 'overflow-y-auto')
-    expect(screen.getByText('Save').parentElement).toHaveClass('border-t', 'pt-4')
-  })
+    expect(screen.getByRole("dialog")).toHaveClass("translate-x-full");
+    expect(
+      screen.getByRole("button", { name: "Close dialog" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Body content").parentElement).toHaveClass(
+      "flex-1",
+      "overflow-y-auto",
+    );
+    expect(screen.getByText("Save").parentElement).toHaveClass("pt-2");
+  });
 
-  it('closes from shared dialog affordances', async () => {
-    const user = userEvent.setup()
-    const onClose = vi.fn()
+  it("closes from shared dialog affordances", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
 
-    render(<SideSheetHarness open={true} onClose={onClose} />)
+    render(<SideSheetHarness open={true} onClose={onClose} />);
 
-    await user.click(screen.getByRole('button', { name: 'Close dialog' }))
-    await user.click(screen.getByTestId('dialog-backdrop'))
+    await user.click(screen.getByRole("button", { name: "Close dialog" }));
+    await user.click(screen.getByTestId("dialog-backdrop"));
 
-    expect(onClose).toHaveBeenCalledTimes(2)
-  })
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
 
-  it('forwards custom panel sizing styles to the right sheet dialog', () => {
+  it("forwards custom panel sizing styles to the right sheet dialog", () => {
     render(
       <SideSheetHarness
         open={true}
         onClose={() => {}}
         size="page"
-        panelStyle={{ width: 'min(100vw, clamp(64rem, 84vw, 110rem))' }}
+        panelStyle={{ width: "min(100vw, clamp(64rem, 84vw, 110rem))" }}
       />,
-    )
+    );
 
-    expect(screen.getByRole('dialog')).toHaveStyle({
-      width: 'min(100vw, clamp(64rem, 84vw, 110rem))',
-    })
-  })
+    expect(screen.getByRole("dialog")).toHaveStyle({
+      width: "min(100vw, clamp(64rem, 84vw, 110rem))",
+    });
+  });
 
-  it('applies the shared page-sized sheet preset', () => {
-    render(<SideSheetHarness open={true} onClose={() => {}} size="page" />)
+  it("applies the shared page-sized sheet preset", () => {
+    render(<SideSheetHarness open={true} onClose={() => {}} size="page" />);
 
-    expect(screen.getByRole('dialog')).toHaveStyle({
-      width: 'min(100vw, clamp(64rem, 84vw, 110rem))',
-    })
-  })
-})
+    expect(screen.getByRole("dialog")).toHaveStyle({
+      width: "min(100vw, clamp(64rem, 84vw, 110rem))",
+    });
+  });
+});

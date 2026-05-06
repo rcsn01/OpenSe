@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProcurementPage } from '../ProcurementPage'
 
@@ -36,7 +36,7 @@ vi.mock('../../components/Tabs', () => ({
 }))
 
 vi.mock('../../components/Procurement/PurchaseOrdersTab', () => ({
-  PurchaseOrdersTab: ({ searchTerm }: { searchTerm?: string }) => <div>Purchase Orders Content {searchTerm}</div>,
+  PurchaseOrdersTab: () => <div>Purchase Orders Content</div>,
 }))
 
 vi.mock('../../components/Procurement/SuppliersTab', () => ({
@@ -56,9 +56,7 @@ describe('ProcurementPage', () => {
     render(
       <MemoryRouter initialEntries={['/procurement/purchase-orders']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: 'Denied', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
-            <Route path="/procurement/:tab" element={<ProcurementPage />} />
-          </Route>
+          <Route path="/procurement/:tab" element={<ProcurementPage />} />
         </Routes>
       </MemoryRouter>,
     )
@@ -69,7 +67,7 @@ describe('ProcurementPage', () => {
     expect(screen.queryByText('Purchase Requests')).not.toBeInTheDocument()
     expect(screen.queryByText('Vendor Returns')).not.toBeInTheDocument()
     expect(screen.queryByText('Procurement')).not.toBeInTheDocument()
-    expect(screen.getByText('Purchase Orders Content Denied')).toBeInTheDocument()
+    expect(screen.getByText('Purchase Orders Content')).toBeInTheDocument()
   })
 
   it('renders the unavailable message when procurement is disabled', () => {
@@ -82,9 +80,7 @@ describe('ProcurementPage', () => {
     render(
       <MemoryRouter initialEntries={['/procurement/purchase-orders']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: 'Denied', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
-            <Route path="/procurement/:tab" element={<ProcurementPage />} />
-          </Route>
+          <Route path="/procurement/:tab" element={<ProcurementPage />} />
         </Routes>
       </MemoryRouter>,
     )
