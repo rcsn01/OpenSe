@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { TopBarSearchContent, TopBarSearchProvider } from '../../components/Search/TopBarSearch'
 import { TeamSettingsPage } from '../TeamSettingsPage'
 
 const mockUpdateCompanyMemberRole = vi.fn()
@@ -93,6 +94,13 @@ vi.mock('../../hooks/queries/useTeamSettings', () => ({
 }))
 
 describe('TeamSettingsPage', () => {
+  const SearchShell = () => (
+    <TopBarSearchProvider>
+      <TopBarSearchContent />
+      <Outlet />
+    </TopBarSearchProvider>
+  )
+
   it('renders renamed tabs for organisations area', () => {
     mockUpdateCompanyMemberRole.mockResolvedValue(undefined)
 
@@ -128,18 +136,21 @@ describe('TeamSettingsPage', () => {
     expect(mockUpdateCompanyMemberRole).toHaveBeenCalledWith({ memberId: 'member-1', roleId: 'role-2' })
   })
 
-  it('passes the shared top-bar search term into activity logs', () => {
+  it('passes the shared top-bar search term into activity logs', async () => {
     mockUpdateCompanyMemberRole.mockResolvedValue(undefined)
+    const user = userEvent.setup()
 
     render(
       <MemoryRouter initialEntries={['/settings/organisations/activity']}>
         <Routes>
-          <Route element={<Outlet context={{ topBarSearchValue: 'permission change', setTopBarSearchValue: vi.fn(), setTopBarSearchConfig: vi.fn() }} />}>
+          <Route element={<SearchShell />}>
             <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
           </Route>
         </Routes>
       </MemoryRouter>,
     )
+
+    await user.type(screen.getByRole('combobox', { name: 'Search activity logs...' }), 'permission change')
 
     expect(screen.getByText('Activity tab permission change')).toBeInTheDocument()
   })

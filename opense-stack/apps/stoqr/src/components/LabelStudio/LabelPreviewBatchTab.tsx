@@ -1,14 +1,13 @@
 import { Layers3, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
 import type { LabelProduct } from '../../api/labelStudio'
 import { useCreateLabelPrintJob, useLabelProductFolders, useLabelProducts, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
+import { usePageTopBarSearch, useTopBarSearchValue } from '../Search/TopBarSearch'
 import { LabelPreviewCard } from './LabelPreviewCard'
 import { downloadLabelPdf } from './downloadLabelPdf'
 import { buildLabelPlacements, getPlacementPageCount } from './labelRenderPlan'
 import { createLabelPdfDataUrl } from './pdfExport'
 import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
-import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
 
 type BatchTarget = 'single' | 'multiple' | 'folder'
 
@@ -16,7 +15,6 @@ type LabelPreviewBatchTabProps = {
   companyId: string
   selectedTemplateId?: string
   onSelectedTemplateChange?: (templateId: string) => void
-  searchTerm?: string
 }
 
 const sanitizeFileNamePart = (value: string | null | undefined) =>
@@ -30,8 +28,8 @@ const buildPdfFileName = (templateName: string | null | undefined, targetName: s
   return `${sanitizeFileNamePart(templateName)}-${sanitizeFileNamePart(targetName)}-${timestamp}.pdf`
 }
 
-export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange, searchTerm = '' }: LabelPreviewBatchTabProps) => {
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
+export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange }: LabelPreviewBatchTabProps) => {
+  const { searchValue } = useTopBarSearchValue()
   const { data: templates = [], isLoading: loadingTemplates } = useLabelTemplates(companyId)
   const [targetType, setTargetType] = useState<BatchTarget>('single')
   const [folderId, setFolderId] = useState('')
@@ -46,8 +44,8 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   const [productSearch, setProductSearch] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [message, setMessage] = useState<string | null>(null)
-  const normalizedSearchTerm = normalizePageSearchTerm(searchTerm)
-  const normalizedProductSearch = normalizePageSearchTerm(productSearch || searchTerm)
+  const normalizedSearchTerm = normalizePageSearchTerm(searchValue)
+  const normalizedProductSearch = normalizePageSearchTerm(productSearch || searchValue)
   const filteredTemplates = useMemo(() => fuzzySearchItems(templates, normalizedSearchTerm, [
     {
       key: (template) => template.name,
@@ -116,26 +114,34 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
     setTemplateId(initialSelectedTemplateId ?? '')
   }, [initialSelectedTemplateId])
 
-  useEffect(() => {
-    layoutContext?.setTopBarSearchConfig({
-      suggestions: [
-        ...filteredTemplates.slice(0, 4).map((template) => ({
-          id: `preview-template-${template.id}`,
-          title: template.name,
-          subtitle: 'Label template',
-          value: template.name,
-          badge: 'Template',
-        })),
-        ...filteredProducts.slice(0, 4).map((product) => ({
-          id: `preview-product-${product.id}`,
-          title: product.name,
-          subtitle: product.sku,
-          value: product.sku || product.name,
-          badge: 'Product',
-        })),
-      ],
-    })
-  }, [filteredProducts, filteredTemplates, layoutContext])
+  const previewSuggestions = useMemo(
+    () => [
+      ...filteredTemplates.slice(0, 4).map((template) => ({
+        id: `preview-template-${template.id}`,
+        title: template.name,
+        subtitle: 'Label template',
+        value: template.name,
+        badge: 'Template',
+      })),
+      ...filteredProducts.slice(0, 4).map((product) => ({
+        id: `preview-product-${product.id}`,
+        title: product.name,
+        subtitle: product.sku,
+        value: product.sku || product.name,
+        badge: 'Product',
+      })),
+    ],
+    [filteredProducts, filteredTemplates],
+  )
+
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey: 'label-studio-preview',
+    placeholder: 'Search label products...',
+    defaultSuggestions: [
+      { id: 'labels-preview', title: 'Preview Batch', subtitle: 'Queue products and preview print output', value: 'preview batch', badge: 'Labels' },
+    ],
+    suggestions: previewSuggestions,
+  }), [previewSuggestions]))
 
   const switchTargetType = (nextTargetType: BatchTarget) => {
     setTargetType(nextTargetType)

@@ -1,12 +1,10 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useCompany } from '../contexts/CompanyContext'
-import { useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BasePage } from '../components/BasePage'
 import { Tabs } from '../components/Tabs'
 import { TemplateLibraryTab } from '../components/LabelStudio/TemplateLibraryTab'
-import { LabelDesignerTab } from '../components/LabelStudio/LabelDesignerTab'
 import { LabelPreviewBatchTab } from '../components/LabelStudio/LabelPreviewBatchTab'
-import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 const labelStudioTabAliases = {
   design: 'templates',
@@ -30,18 +28,14 @@ export const LabelStudioPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
-  const { tab, templateId } = useParams<{ tab?: string; templateId?: string }>()
+  const { tab } = useParams<{ tab?: string }>()
   const activeTab = resolveTab(tab)
-  const topBarSearchValue = layoutContext?.topBarSearchValue ?? ''
   const rememberedTemplateId = searchParams.get('template') ?? ''
-  const selectedTemplateId = templateId ?? rememberedTemplateId
-  const isDesignerPage = activeTab === 'templates' && Boolean(templateId)
+  const selectedTemplateId = rememberedTemplateId
 
-  const buildLabelStudioPath = (
+  const buildLabelStudioPath = useCallback((
     nextTab: LabelStudioTab,
     nextTemplateId = selectedTemplateId,
-    openDesigner = false,
   ) => {
     const nextSearchParams = new URLSearchParams(searchParams)
 
@@ -52,16 +46,12 @@ export const LabelStudioPage = () => {
     }
 
     const search = nextSearchParams.toString()
-    const pathname = openDesigner && nextTemplateId
-      ? `/tools/labels/templates/${nextTemplateId}`
-      : `/tools/labels/${nextTab}`
+    const pathname = `/tools/labels/${nextTab}`
 
     return `${pathname}${search ? `?${search}` : ''}`
-  }
+  }, [searchParams, selectedTemplateId])
 
-  const canonicalPath = isDesignerPage
-    ? buildLabelStudioPath('templates', templateId, true)
-    : buildLabelStudioPath(activeTab, selectedTemplateId, false)
+  const canonicalPath = buildLabelStudioPath(activeTab, selectedTemplateId)
 
   useEffect(() => {
     const currentPath = `${location.pathname}${location.search}`
@@ -70,21 +60,21 @@ export const LabelStudioPage = () => {
     }
   }, [canonicalPath, location.pathname, location.search, navigate])
 
-  const openDesigner = (templateId: string) => {
-    navigate(buildLabelStudioPath('templates', templateId, true))
-  }
+  const openDesigner = useCallback((templateId: string) => {
+    const nextSearchParams = new URLSearchParams(searchParams)
+    nextSearchParams.set('template', templateId)
 
-  const handleTabChange = (nextTab: LabelStudioTab) => {
-    navigate(buildLabelStudioPath(nextTab, selectedTemplateId, false))
-  }
+    const search = nextSearchParams.toString()
+    navigate(`/tools/labels/templates/${templateId}${search ? `?${search}` : ''}`)
+  }, [navigate, searchParams])
 
-  const handleSelectedTemplateChange = (nextTemplateId: string) => {
-    navigate(buildLabelStudioPath(activeTab, nextTemplateId, false), { replace: true })
-  }
+  const handleTabChange = useCallback((nextTab: LabelStudioTab) => {
+    navigate(buildLabelStudioPath(nextTab, selectedTemplateId))
+  }, [buildLabelStudioPath, navigate, selectedTemplateId])
 
-  const closeDesigner = () => {
-    navigate(buildLabelStudioPath('templates', selectedTemplateId, false))
-  }
+  const handleSelectedTemplateChange = useCallback((nextTemplateId: string) => {
+    navigate(buildLabelStudioPath(activeTab, nextTemplateId), { replace: true })
+  }, [activeTab, buildLabelStudioPath, navigate])
 
   return (
     <BasePage
@@ -93,48 +83,35 @@ export const LabelStudioPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to access label tools."
     >
-      {isDesignerPage ? (
-        <LabelDesignerTab
-          companyId={companyId || ''}
-          selectedTemplateId={selectedTemplateId}
-          onClose={closeDesigner}
-          onSavedTemplateChange={(nextTemplateId) => {
-            navigate(buildLabelStudioPath('templates', nextTemplateId, true), { replace: true })
-          }}
-        />
-      ) : (
-        <Tabs
-          activeTab={activeTab}
-          onTabChange={(nextTab) => handleTabChange(nextTab as LabelStudioTab)}
-          bottomSpacing
-          tabs={[
-            {
-              id: 'templates',
-              label: 'Templates',
-              content: (
-                <TemplateLibraryTab
-                  companyId={companyId || ''}
-                  selectedTemplateId={selectedTemplateId}
-                  onSelectTemplate={openDesigner}
-                  searchTerm={activeTab === 'templates' ? topBarSearchValue : ''}
-                />
-              ),
-            },
-            {
-              id: 'preview-batch',
-              label: 'Preview & Batch',
-              content: (
-                <LabelPreviewBatchTab
-                  companyId={companyId || ''}
-                  selectedTemplateId={selectedTemplateId}
-                  onSelectedTemplateChange={handleSelectedTemplateChange}
-                  searchTerm={activeTab === 'preview-batch' ? topBarSearchValue : ''}
-                />
-              ),
-            },
-          ]}
-        />
-      )}
+      <Tabs
+        activeTab={activeTab}
+        onTabChange={(nextTab) => handleTabChange(nextTab as LabelStudioTab)}
+        bottomSpacing
+        tabs={[
+          {
+            id: 'templates',
+            label: 'Templates',
+            content: (
+              <TemplateLibraryTab
+                companyId={companyId || ''}
+                selectedTemplateId={selectedTemplateId}
+                onSelectTemplate={openDesigner}
+              />
+            ),
+          },
+          {
+            id: 'preview-batch',
+            label: 'Preview & Batch',
+            content: (
+              <LabelPreviewBatchTab
+                companyId={companyId || ''}
+                selectedTemplateId={selectedTemplateId}
+                onSelectedTemplateChange={handleSelectedTemplateChange}
+              />
+            ),
+          },
+        ]}
+      />
     </BasePage>
   )
 }

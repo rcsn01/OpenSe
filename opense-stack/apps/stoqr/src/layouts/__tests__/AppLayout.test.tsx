@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { usePageTopBarSearch } from '../../components/Search/TopBarSearch'
 import { AppLayout } from '../AppLayout'
 
 vi.mock('@repo/shared/auth/context', () => ({
@@ -29,18 +31,50 @@ const mockMatchMedia = (matches: boolean) =>
     dispatchEvent: vi.fn(),
   }))
 
+const SearchableStubPage = ({
+  searchKey,
+  placeholder,
+  enabled = true,
+}: {
+  searchKey: string
+  placeholder: string
+  enabled?: boolean
+}) => {
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey,
+    enabled,
+    placeholder,
+    defaultSuggestions: [
+      {
+        id: `${searchKey}-default`,
+        title: `${placeholder} default`,
+        value: placeholder,
+        badge: 'Test',
+      },
+    ],
+  }), [enabled, placeholder, searchKey]))
+
+  return <div>{searchKey}</div>
+}
+
 const renderRoute = (initialEntry: string) =>
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/dashboard" element={<div>Dashboard</div>} />
-          <Route path="/inventory/:tab" element={<div>Inventory</div>} />
-          <Route path="/scan/:tab" element={<div>Scanner</div>} />
-          <Route path="/tools/labels/:tab" element={<div>Label Studio</div>} />
-          <Route path="/reports/:tab" element={<div>Reports</div>} />
-          <Route path="/alerts/:tab" element={<div>Alerts</div>} />
-          <Route path="/procurement/:tab" element={<div>Procurement</div>} />
+          <Route path="/plain" element={<div>Plain Page</div>} />
+          <Route
+            path="/search/items"
+            element={<SearchableStubPage searchKey="search-items" placeholder="Search items..." />}
+          />
+          <Route
+            path="/search/alerts"
+            element={<SearchableStubPage searchKey="search-alerts" placeholder="Search alerts..." />}
+          />
+          <Route
+            path="/search/disabled"
+            element={<SearchableStubPage searchKey="search-disabled" placeholder="Search disabled..." enabled={false} />}
+          />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -54,58 +88,28 @@ describe('AppLayout', () => {
     })
   })
 
-  it('uses the alerts placeholder on alerts routes', () => {
-    renderRoute('/alerts/feed')
-
-    expect(screen.getByPlaceholderText('Search alerts...')).toBeInTheDocument()
-  })
-
-  it('uses the purchase order placeholder on procurement purchase order routes', () => {
-    renderRoute('/procurement/purchase-orders')
-
-    expect(screen.getByPlaceholderText('Search POs...')).toBeInTheDocument()
-    expect(screen.queryByPlaceholderText('Search items...')).not.toBeInTheDocument()
-  })
-
-  it('uses the generic placeholder on inventory list routes', () => {
-    renderRoute('/inventory/all')
+  it('renders the registered page placeholder when a child page opts into search', () => {
+    renderRoute('/search/items')
 
     expect(screen.getByPlaceholderText('Search items...')).toBeInTheDocument()
   })
 
-  it('uses the product placeholder on the scanner scan tab', () => {
-    renderRoute('/scan/scan-actions')
+  it('updates the top-bar search placeholder based on the active page registration', () => {
+    renderRoute('/search/alerts')
 
-    expect(screen.getByPlaceholderText('Search products...')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Search alerts...')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Search items...')).not.toBeInTheDocument()
   })
 
-  it('uses the history placeholder on the scanner history tab', () => {
-    renderRoute('/scan/scan-history')
+  it('hides the top-bar search when the active page does not register it', () => {
+    renderRoute('/plain')
 
-    expect(screen.getByPlaceholderText('Search history...')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 
-  it('uses the reports placeholder on reports routes', () => {
-    renderRoute('/reports/stock-health')
+  it('keeps the top-bar search hidden when a page registration is disabled', () => {
+    renderRoute('/search/disabled')
 
-    expect(screen.getByPlaceholderText('Search reports...')).toBeInTheDocument()
-  })
-
-  it('uses the label studio placeholder on label studio routes', () => {
-    renderRoute('/tools/labels/templates')
-
-    expect(screen.getByPlaceholderText('Search templates...')).toBeInTheDocument()
-  })
-
-  it('uses the preview placeholder on the label preview route', () => {
-    renderRoute('/tools/labels/preview-batch')
-
-    expect(screen.getByPlaceholderText('Search label products...')).toBeInTheDocument()
-  })
-
-  it('does not render page search on non-searchable routes', () => {
-    renderRoute('/dashboard')
-
-    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 })

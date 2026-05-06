@@ -1,17 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { MoreHorizontal, Package2, Plus } from 'lucide-react'
 import { DataTable, type DataTableColumn } from '@repo/ui'
-import { useOutletContext } from 'react-router-dom'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
-import { getEnabledLabelFields, getLabelLayoutSummary, resolveLabelLayout } from './labelLayout'
-import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
-import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
+import { usePageTopBarSearch, useTopBarSearchValue } from '../Search/TopBarSearch'
+import { getEnabledLabelFields, resolveLabelLayout } from './labelLayout'
+import {
+  buildLabelTemplateSearchSuggestions,
+  filterLabelTemplates,
+  getLabelTemplateIdFromSuggestion,
+} from './templateSearch'
 
 type TemplateLibraryTabProps = {
   companyId: string
   selectedTemplateId?: string
   onSelectTemplate?: (templateId: string) => void
-  searchTerm?: string
 }
 
 type TemplateTableRow = {
@@ -46,27 +48,18 @@ const formatDimensions = (layout: Record<string, unknown>) => {
   return `${controls.width}x${controls.height}mm`
 }
 
-export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemplate, searchTerm = '' }: TemplateLibraryTabProps) => {
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
+export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemplate }: TemplateLibraryTabProps) => {
+  const { searchValue } = useTopBarSearchValue()
   const { data: templates = [], isLoading } = useLabelTemplates(companyId)
   const createTemplateMutation = useCreateLabelTemplate(companyId)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [name, setName] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
-  const filteredTemplates = useMemo(() => fuzzySearchItems(templates, normalizePageSearchTerm(searchTerm), [
-    {
-      key: (template) => template.name,
-      maxRanking: fuzzyRankings.WORD_STARTS_WITH,
-    },
-    {
-      key: (template) => {
-        const summary = getLabelLayoutSummary(template.layout)
-        return [summary.size, summary.type, summary.fields]
-      },
-      maxRanking: fuzzyRankings.CONTAINS,
-    },
-  ]), [searchTerm, templates])
+  const filteredTemplates = useMemo(
+    () => filterLabelTemplates(templates, searchValue),
+    [searchValue, templates],
+  )
   const tableRows = useMemo<TemplateTableRow[]>(() => filteredTemplates.map((template) => {
     const controls = resolveLabelLayout(template.layout)
 
@@ -140,26 +133,21 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
     },
   ], [onSelectTemplate])
 
-  useEffect(() => {
-    layoutContext?.setTopBarSearchConfig({
-      suggestions: filteredTemplates.slice(0, 8).map((template) => {
-        const summary = getLabelLayoutSummary(template.layout)
-        return {
-          id: `label-template-${template.id}`,
-          title: template.name,
-          subtitle: `${summary.size} · ${summary.type}`,
-          value: template.name,
-          badge: 'Template',
-        }
-      }),
-      onSuggestionSelect: (suggestion) => {
-        const matchedTemplate = templates.find((template) => template.name === suggestion.value)
-        if (matchedTemplate) {
-          onSelectTemplate?.(matchedTemplate.id)
-        }
-      },
-    })
-  }, [filteredTemplates, layoutContext, onSelectTemplate, templates])
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey: 'label-studio-templates',
+    placeholder: 'Search templates...',
+    defaultSuggestions: [
+      { id: 'labels-templates', title: 'Label Templates', subtitle: 'Open and manage saved label templates', value: 'template', badge: 'Labels' },
+    ],
+    suggestions: buildLabelTemplateSearchSuggestions(filteredTemplates),
+    onSuggestionSelect: (suggestion) => {
+      const templateId = getLabelTemplateIdFromSuggestion(suggestion)
+      const matchedTemplate = templates.find((template) => template.id === templateId)
+      if (matchedTemplate) {
+        onSelectTemplate?.(matchedTemplate.id)
+      }
+    },
+  }), [filteredTemplates, onSelectTemplate, templates]))
 
   const createTemplate = async () => {
     setMessage(null)

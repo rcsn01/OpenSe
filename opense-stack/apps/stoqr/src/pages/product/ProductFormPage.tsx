@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { BasePage } from '../../components/BasePage'
 import { useCompany } from '../../contexts/CompanyContext'
 import type { ProductAttributeCatalogEntry } from '../../api/products'
+import { useProductPageSearch } from '../../hooks/useProductPageSearch'
 import { useCreateProduct, useProductAttributeCatalog, useProductDetail, useProductFolders, useUpdateProduct } from '../../hooks/queries/useProducts'
 import { getPublicImageUrl } from '../../utils'
 import type { Folder } from '../../types'
@@ -87,6 +88,7 @@ const buildFolderPathLabel = (folderId: string, folderMap: Map<string, Folder>) 
 
 export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; productId?: string }) => {
   const { companyId } = useCompany()
+  useProductPageSearch(companyId)
   const navigate = useNavigate()
   const createProductMutation = useCreateProduct(companyId)
   const updateProductMutation = useUpdateProduct(companyId, mode === 'edit' ? productId ?? null : null)

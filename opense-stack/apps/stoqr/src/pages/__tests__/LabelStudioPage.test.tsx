@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { LabelDesignerPage } from '../LabelDesignerPage'
 import { LabelStudioPage } from '../LabelStudioPage'
 
 vi.mock('../../contexts/CompanyContext', () => ({
@@ -65,6 +66,12 @@ vi.mock('../../components/LabelStudio/LabelPreviewBatchTab', () => ({
   ),
 }))
 
+vi.mock('../../hooks/queries/useLabelStudio', () => ({
+  useLabelTemplates: () => ({
+    data: [],
+  }),
+}))
+
 const LocationProbe = () => {
   const location = useLocation()
   return <div data-testid="location-path">{`${location.pathname}${location.search}`}</div>
@@ -74,7 +81,7 @@ const renderLabelStudioRoute = (initialEntry: string) =>
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/tools/labels/:tab/:templateId" element={<><LabelStudioPage /><LocationProbe /></>} />
+        <Route path="/tools/labels/:tab/:templateId" element={<><LabelDesignerPage /><LocationProbe /></>} />
         <Route
           path="/tools/labels/:tab"
           element={
@@ -95,7 +102,7 @@ describe('LabelStudioPage', () => {
     render(
       <MemoryRouter initialEntries={['/tools/labels/templates']}>
         <Routes>
-          <Route path="/tools/labels/:tab/:templateId" element={<><LabelStudioPage /><LocationProbe /></>} />
+          <Route path="/tools/labels/:tab/:templateId" element={<><LabelDesignerPage /><LocationProbe /></>} />
           <Route path="/tools/labels/:tab" element={<LabelStudioPage />} />
         </Routes>
       </MemoryRouter>,

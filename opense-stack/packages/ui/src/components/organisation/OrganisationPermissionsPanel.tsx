@@ -1,8 +1,14 @@
-import { useMemo, useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
-import { Button } from '../ui/Button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import { Checkbox } from '../ui/Checkbox'
+import { useMemo, useState } from "react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Button } from "../ui/Button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/Card";
+import { Checkbox } from "../ui/Checkbox";
 import {
   SideSheet,
   SideSheetBody,
@@ -11,64 +17,71 @@ import {
   SideSheetFooter,
   SideSheetHeader,
   SideSheetTitle,
-} from '../ui/SideSheet'
-import { Input, Textarea } from '../ui/Input'
-import { StackLayout } from '../layout/StackLayout'
-import { DataTable, type DataTableColumn } from '../ui/DataTable'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table'
+} from "../ui/SideSheet";
+import { Input, Textarea } from "../ui/Input";
+import { StackLayout } from "../layout/StackLayout";
+import { DataTable, type DataTableColumn } from "../ui/DataTable";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/Table";
 
 export type OrganisationRole = {
-  id: string
-  name: string
-  description: string | null
-  roleRank?: number
-  permissionCodes: string[]
-}
+  id: string;
+  name: string;
+  description: string | null;
+  roleRank?: number;
+  permissionCodes: string[];
+};
 
 export type OrganisationPermission = {
-  code: string
-  description: string | null
-}
+  code: string;
+  description: string | null;
+};
 
 type RolePayload = {
-  name: string
-  description: string
-  roleRank: number
-  permissionCodes: string[]
-}
+  name: string;
+  description: string;
+  roleRank: number;
+  permissionCodes: string[];
+};
 
 type OrganisationPermissionsPanelProps = {
-  title?: string
-  description?: string
-  roles: OrganisationRole[]
-  permissions: OrganisationPermission[]
-  loadingRoles?: boolean
-  loadingPermissions?: boolean
-  canManage: boolean
-  isRoleEditable?: (role: OrganisationRole) => boolean
-  onCreateRole: (payload: RolePayload) => Promise<void> | void
-  onUpdateRole: (roleId: string, payload: RolePayload) => Promise<void> | void
-  onDeleteRole?: (roleId: string) => Promise<void> | void
-}
+  title?: string;
+  description?: string;
+  roles: OrganisationRole[];
+  permissions: OrganisationPermission[];
+  loadingRoles?: boolean;
+  loadingPermissions?: boolean;
+  canManage: boolean;
+  isRoleEditable?: (role: OrganisationRole) => boolean;
+  onCreateRole: (payload: RolePayload) => Promise<void> | void;
+  onUpdateRole: (roleId: string, payload: RolePayload) => Promise<void> | void;
+  onDeleteRole?: (roleId: string) => Promise<void> | void;
+};
 
 type RoleTableRow = {
-  id: string
-  name: string
-  description: string | null
-  roleRank?: number
-  editable: boolean
-}
+  id: string;
+  name: string;
+  description: string | null;
+  roleRank?: number;
+  editable: boolean;
+};
 
 const formatLabel = (value: string) =>
   value
     .split(/[._-]/g)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
+    .join(" ");
 
 export function OrganisationPermissionsPanel({
-  title = 'Organisation Roles',
-  description = 'Manage roles and their permissions.',
+  title = "Organisation Roles",
+  description = "Manage roles and their permissions.",
   roles,
   permissions,
   loadingRoles = false,
@@ -79,193 +92,205 @@ export function OrganisationPermissionsPanel({
   onUpdateRole,
   onDeleteRole,
 }: OrganisationPermissionsPanelProps) {
-  const [addName, setAddName] = useState('')
-  const [addDescription, setAddDescription] = useState('')
-  const [addRoleRank, setAddRoleRank] = useState('100')
-  const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [editRoleRank, setEditRoleRank] = useState('100')
-  const [editPermissions, setEditPermissions] = useState<string[]>([])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [addName, setAddName] = useState("");
+  const [addDescription, setAddDescription] = useState("");
+  const [addRoleRank, setAddRoleRank] = useState("100");
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editRoleRank, setEditRoleRank] = useState("100");
+  const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const permissionMatrix = useMemo(() => {
-    const rows = new Map<string, { key: string; label: string; codesByType: Record<string, string> }>()
-    const typeSet = new Set<string>()
+    const rows = new Map<
+      string,
+      { key: string; label: string; codesByType: Record<string, string> }
+    >();
+    const typeSet = new Set<string>();
 
     for (const permission of permissions) {
-      const parts = permission.code.split('.')
-      const type = parts.length > 1 ? parts[parts.length - 1] : 'access'
-      const resourceKey = parts.length > 1 ? parts.slice(0, -1).join('.') : permission.code
+      const parts = permission.code.split(".");
+      const type = parts.length > 1 ? parts[parts.length - 1] : "access";
+      const resourceKey =
+        parts.length > 1 ? parts.slice(0, -1).join(".") : permission.code;
 
       if (!rows.has(resourceKey)) {
         rows.set(resourceKey, {
           key: resourceKey,
           label: formatLabel(resourceKey),
           codesByType: {},
-        })
+        });
       }
 
-      rows.get(resourceKey)!.codesByType[type] = permission.code
-      typeSet.add(type)
+      rows.get(resourceKey)!.codesByType[type] = permission.code;
+      typeSet.add(type);
     }
 
-    const preferredOrder = ['view', 'edit', 'manage', 'use']
+    const preferredOrder = ["view", "edit", "manage", "use"];
     const types = Array.from(typeSet).sort((left, right) => {
-      const leftIndex = preferredOrder.indexOf(left)
-      const rightIndex = preferredOrder.indexOf(right)
+      const leftIndex = preferredOrder.indexOf(left);
+      const rightIndex = preferredOrder.indexOf(right);
 
-      if (leftIndex >= 0 && rightIndex >= 0) return leftIndex - rightIndex
-      if (leftIndex >= 0) return -1
-      if (rightIndex >= 0) return 1
-      return left.localeCompare(right)
-    })
+      if (leftIndex >= 0 && rightIndex >= 0) return leftIndex - rightIndex;
+      if (leftIndex >= 0) return -1;
+      if (rightIndex >= 0) return 1;
+      return left.localeCompare(right);
+    });
 
-    const rowsList = Array.from(rows.values()).sort((left, right) => left.label.localeCompare(right.label))
+    const rowsList = Array.from(rows.values()).sort((left, right) =>
+      left.label.localeCompare(right.label),
+    );
 
     return {
       types,
       rows: rowsList,
-    }
-  }, [permissions])
+    };
+  }, [permissions]);
 
   const openEditRole = (roleId: string) => {
-    const role = roles.find((item) => item.id === roleId)
-    if (!role) return
+    const role = roles.find((item) => item.id === roleId);
+    if (!role) return;
 
-    setEditingRoleId(role.id)
-    setEditName(role.name)
-    setEditDescription(role.description ?? '')
-    setEditRoleRank(String(role.roleRank ?? 100))
-    setEditPermissions(role.permissionCodes)
-    setError(null)
-  }
+    setEditingRoleId(role.id);
+    setEditName(role.name);
+    setEditDescription(role.description ?? "");
+    setEditRoleRank(String(role.roleRank ?? 100));
+    setEditPermissions(role.permissionCodes);
+    setError(null);
+  };
 
   const closeEditRole = () => {
-    setEditingRoleId(null)
-    setEditName('')
-    setEditDescription('')
-    setEditRoleRank('100')
-    setEditPermissions([])
-    setError(null)
-  }
+    setEditingRoleId(null);
+    setEditName("");
+    setEditDescription("");
+    setEditRoleRank("100");
+    setEditPermissions([]);
+    setError(null);
+  };
 
   const parseRoleRank = (value: string): number | null => {
-    if (!value.trim()) return null
-    const parsed = Number(value)
-    if (!Number.isInteger(parsed) || parsed < 0) return null
-    return parsed
-  }
+    if (!value.trim()) return null;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 0) return null;
+    return parsed;
+  };
 
   const hasDuplicateRoleRank = (roleRank: number, ignoreRoleId?: string) => {
-    return roles.some((role) => role.id !== ignoreRoleId && role.roleRank === roleRank)
-  }
+    return roles.some(
+      (role) => role.id !== ignoreRoleId && role.roleRank === roleRank,
+    );
+  };
 
   const handleTogglePermission = (permissionCode: string, checked: boolean) => {
     setEditPermissions((current) => {
       if (checked) {
-        return Array.from(new Set([...current, permissionCode]))
+        return Array.from(new Set([...current, permissionCode]));
       }
-      return current.filter((code) => code !== permissionCode)
-    })
-  }
+      return current.filter((code) => code !== permissionCode);
+    });
+  };
 
   const handleAddRole = async () => {
-    const trimmedName = addName.trim()
+    const trimmedName = addName.trim();
     if (!trimmedName) {
-      setError('Role name is required.')
-      return
+      setError("Role name is required.");
+      return;
     }
 
-    const parsedRoleRank = parseRoleRank(addRoleRank)
+    const parsedRoleRank = parseRoleRank(addRoleRank);
     if (parsedRoleRank === null) {
-      setError('Role rank must be a non-negative integer.')
-      return
+      setError("Role rank must be a non-negative integer.");
+      return;
     }
 
     if (hasDuplicateRoleRank(parsedRoleRank)) {
-      setError('Role rank must be unique within your organisation.')
-      return
+      setError("Role rank must be unique within your organisation.");
+      return;
     }
 
     try {
-      setSaving(true)
-      setError(null)
+      setSaving(true);
+      setError(null);
       await onCreateRole({
         name: trimmedName,
         description: addDescription,
         roleRank: parsedRoleRank,
         permissionCodes: [],
-      })
-      setAddName('')
-      setAddDescription('')
-      setAddRoleRank('100')
+      });
+      setAddName("");
+      setAddDescription("");
+      setAddRoleRank("100");
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to save role.')
+      setError(err?.message ?? "Failed to save role.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleSaveRoleEdits = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!editingRoleId) return
+    event.preventDefault();
+    if (!editingRoleId) return;
 
-    const trimmedName = editName.trim()
+    const trimmedName = editName.trim();
     if (!trimmedName) {
-      setError('Role name is required.')
-      return
+      setError("Role name is required.");
+      return;
     }
 
-    const parsedRoleRank = parseRoleRank(editRoleRank)
+    const parsedRoleRank = parseRoleRank(editRoleRank);
     if (parsedRoleRank === null) {
-      setError('Role rank must be a non-negative integer.')
-      return
+      setError("Role rank must be a non-negative integer.");
+      return;
     }
 
     if (hasDuplicateRoleRank(parsedRoleRank, editingRoleId)) {
-      setError('Role rank must be unique within your organisation.')
-      return
+      setError("Role rank must be unique within your organisation.");
+      return;
     }
 
     try {
-      setSaving(true)
-      setError(null)
+      setSaving(true);
+      setError(null);
       await onUpdateRole(editingRoleId, {
         name: trimmedName,
         description: editDescription,
         roleRank: parsedRoleRank,
         permissionCodes: editPermissions,
-      })
-      closeEditRole()
+      });
+      closeEditRole();
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to save role changes.')
+      setError(err?.message ?? "Failed to save role changes.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDeleteRole = async (roleId: string) => {
-    if (!onDeleteRole) return
-    if (!window.confirm('Delete this role? Members assigned to it will lose the custom role assignment.')) {
-      return
+    if (!onDeleteRole) return;
+    if (
+      !window.confirm(
+        "Delete this role? Members assigned to it will lose the custom role assignment.",
+      )
+    ) {
+      return;
     }
 
     try {
-      setSaving(true)
-      setError(null)
-      await onDeleteRole(roleId)
+      setSaving(true);
+      setError(null);
+      await onDeleteRole(roleId);
 
       if (editingRoleId === roleId) {
-        closeEditRole()
+        closeEditRole();
       }
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to delete role.')
+      setError(err?.message ?? "Failed to delete role.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const roleRows = useMemo<RoleTableRow[]>(() => {
     return roles.map((role) => ({
@@ -274,61 +299,64 @@ export function OrganisationPermissionsPanel({
       description: role.description,
       roleRank: role.roleRank,
       editable: isRoleEditable ? isRoleEditable(role) : true,
-    }))
-  }, [isRoleEditable, roles])
+    }));
+  }, [isRoleEditable, roles]);
 
-  const roleColumns = useMemo<DataTableColumn<RoleTableRow>[]>(() => [
-    {
-      id: 'name',
-      header: 'Role Name',
-      cellClassName: 'font-medium text-[var(--color-foreground)]',
-      renderCell: (row) => row.name,
-    },
-    {
-      id: 'description',
-      header: 'Description',
-      cellClassName: 'text-[var(--color-muted-foreground)]',
-      renderCell: (row) => row.description || '—',
-    },
-    {
-      id: 'role-rank',
-      header: 'Role Rank',
-      cellClassName: 'text-[var(--color-muted-foreground)]',
-      renderCell: (row) => row.roleRank ?? '—',
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      width: 220,
-      renderCell: (row) => (
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => openEditRole(row.id)}
-            disabled={!canManage || saving || !row.editable}
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-          {onDeleteRole && (
+  const roleColumns = useMemo<DataTableColumn<RoleTableRow>[]>(
+    () => [
+      {
+        id: "name",
+        header: "Role Name",
+        cellClassName: "font-medium text-[var(--color-foreground)]",
+        renderCell: (row) => row.name,
+      },
+      {
+        id: "description",
+        header: "Description",
+        cellClassName: "text-[var(--color-muted-foreground)]",
+        renderCell: (row) => row.description || "—",
+      },
+      {
+        id: "role-rank",
+        header: "Role Rank",
+        cellClassName: "text-[var(--color-muted-foreground)]",
+        renderCell: (row) => row.roleRank ?? "—",
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        width: 220,
+        renderCell: (row) => (
+          <div className="flex gap-2">
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => handleDeleteRole(row.id)}
+              onClick={() => openEditRole(row.id)}
               disabled={!canManage || saving || !row.editable}
-              className="text-red-600 hover:text-red-700"
             >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
             </Button>
-          )}
-        </div>
-      ),
-    },
-  ], [canManage, onDeleteRole, openEditRole, saving])
+            {onDeleteRole && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => handleDeleteRole(row.id)}
+                disabled={!canManage || saving || !row.editable}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [canManage, onDeleteRole, openEditRole, saving],
+  );
 
   return (
     <StackLayout>
@@ -341,11 +369,15 @@ export function OrganisationPermissionsPanel({
         </CardHeader>
         <CardContent className="space-y-3">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
           )}
 
           {loadingRoles ? (
-            <div className="py-8 text-center text-slate-500">Loading roles...</div>
+            <div className="py-8 text-center text-slate-500">
+              Loading roles...
+            </div>
           ) : (
             <div className="space-y-3">
               <DataTable
@@ -355,7 +387,7 @@ export function OrganisationPermissionsPanel({
                 emptyState="No roles yet."
               />
 
-              <div className="grid gap-3 border-t border-[var(--color-border)] pt-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px_auto] md:items-start">
+              <div className="grid gap-3 pt-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px_auto] md:items-start">
                 <Input
                   value={addName}
                   onChange={(event) => setAddName(event.target.value)}
@@ -391,7 +423,11 @@ export function OrganisationPermissionsPanel({
         </CardContent>
       </Card>
 
-      <SideSheet open={Boolean(editingRoleId)} onClose={closeEditRole} size="page">
+      <SideSheet
+        open={Boolean(editingRoleId)}
+        onClose={closeEditRole}
+        size="page"
+      >
         <SideSheetContent>
           <SideSheetHeader>
             <SideSheetTitle>Edit Role Permissions</SideSheetTitle>
@@ -400,11 +436,16 @@ export function OrganisationPermissionsPanel({
             </SideSheetDescription>
           </SideSheetHeader>
 
-          <form className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={handleSaveRoleEdits}>
+          <form
+            className="flex min-h-0 flex-1 flex-col gap-4"
+            onSubmit={handleSaveRoleEdits}
+          >
             <SideSheetBody className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Role Name</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Role Name
+                  </label>
                   <Input
                     value={editName}
                     onChange={(event) => setEditName(event.target.value)}
@@ -412,7 +453,9 @@ export function OrganisationPermissionsPanel({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Description
+                  </label>
                   <Textarea
                     value={editDescription}
                     onChange={(event) => setEditDescription(event.target.value)}
@@ -420,7 +463,9 @@ export function OrganisationPermissionsPanel({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Role Rank</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Role Rank
+                  </label>
                   <Input
                     type="number"
                     min={0}
@@ -434,7 +479,9 @@ export function OrganisationPermissionsPanel({
 
               <div className="overflow-x-auto">
                 {loadingPermissions ? (
-                  <div className="py-8 text-center text-sm text-slate-500">Loading permissions...</div>
+                  <div className="py-8 text-center text-sm text-slate-500">
+                    Loading permissions...
+                  </div>
                 ) : (
                   <Table>
                     <TableHeader>
@@ -448,29 +495,39 @@ export function OrganisationPermissionsPanel({
                     <TableBody>
                       {permissionMatrix.rows.map((row) => (
                         <TableRow key={row.key}>
-                          <TableCell className="font-medium text-slate-900">{row.label}</TableCell>
+                          <TableCell className="font-medium text-slate-900">
+                            {row.label}
+                          </TableCell>
                           {permissionMatrix.types.map((type) => {
-                            const permissionCode = row.codesByType[type]
+                            const permissionCode = row.codesByType[type];
 
                             if (!permissionCode) {
                               return (
-                                <TableCell key={`${row.key}-${type}`} className="text-slate-400">
+                                <TableCell
+                                  key={`${row.key}-${type}`}
+                                  className="text-slate-400"
+                                >
                                   —
                                 </TableCell>
-                              )
+                              );
                             }
 
                             return (
                               <TableCell key={`${row.key}-${type}`}>
                                 <Checkbox
-                                  checked={editPermissions.includes(permissionCode)}
+                                  checked={editPermissions.includes(
+                                    permissionCode,
+                                  )}
                                   onChange={(event) =>
-                                    handleTogglePermission(permissionCode, event.target.checked)
+                                    handleTogglePermission(
+                                      permissionCode,
+                                      event.target.checked,
+                                    )
                                   }
                                   disabled={!canManage || saving}
                                 />
                               </TableCell>
-                            )
+                            );
                           })}
                         </TableRow>
                       ))}
@@ -480,21 +537,31 @@ export function OrganisationPermissionsPanel({
               </div>
 
               {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {error}
+                </div>
               )}
             </SideSheetBody>
 
             <SideSheetFooter>
-              <Button type="button" variant="outline" onClick={closeEditRole} disabled={saving}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeEditRole}
+                disabled={saving}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={!canManage || saving || !editName.trim()}>
-                {saving ? 'Saving...' : 'Save'}
+              <Button
+                type="submit"
+                disabled={!canManage || saving || !editName.trim()}
+              >
+                {saving ? "Saving..." : "Save"}
               </Button>
             </SideSheetFooter>
           </form>
         </SideSheetContent>
       </SideSheet>
     </StackLayout>
-  )
+  );
 }
