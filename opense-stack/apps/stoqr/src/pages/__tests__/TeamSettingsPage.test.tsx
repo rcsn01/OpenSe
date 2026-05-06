@@ -37,10 +37,19 @@ vi.mock('../../components/Tabs', () => ({
 }))
 
 vi.mock('../../components/TeamSettings/MembersTab', () => ({
-  MembersTab: ({ onRoleChange }: { onRoleChange: (memberId: string, roleId: string) => Promise<void> }) => (
-    <button type="button" onClick={() => void onRoleChange('member-1', 'role-2')}>
-      Trigger role change
-    </button>
+  MembersTab: ({
+    onRoleChange,
+    searchTerm,
+  }: {
+    onRoleChange: (memberId: string, roleId: string) => Promise<void>
+    searchTerm?: string
+  }) => (
+    <>
+      <button type="button" onClick={() => void onRoleChange('member-1', 'role-2')}>
+        Trigger role change
+      </button>
+      <div>Members tab {searchTerm}</div>
+    </>
   ),
 }))
 
@@ -134,6 +143,25 @@ describe('TeamSettingsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Trigger role change' }))
 
     expect(mockUpdateCompanyMemberRole).toHaveBeenCalledWith({ memberId: 'member-1', roleId: 'role-2' })
+  })
+
+  it('shows the shared top-bar search on the teams tab and passes the term into members', async () => {
+    mockUpdateCompanyMemberRole.mockResolvedValue(undefined)
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/settings/organisations/teams']}>
+        <Routes>
+          <Route element={<SearchShell />}>
+            <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByRole('combobox', { name: 'Search team members...' }), 'alex')
+
+    expect(screen.getByText('Members tab alex')).toBeInTheDocument()
   })
 
   it('passes the shared top-bar search term into activity logs', async () => {

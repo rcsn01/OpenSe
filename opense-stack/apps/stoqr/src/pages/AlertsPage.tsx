@@ -233,7 +233,6 @@ export const AlertsPage = () => {
   const [alerts, setAlerts] = useState(initialAlerts);
   const [activeFilter, setActiveFilter] = useState<FeedCategory>("all");
   const [selectedAlertIds, setSelectedAlertIds] = useState<string[]>([]);
-  const [fallbackSearchTerm] = useState("");
   const [tablePage, setTablePage] = useState(1);
   const [tableSortField, setTableSortField] = useState<AlertSortKey>("title");
   const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">(
@@ -243,14 +242,16 @@ export const AlertsPage = () => {
   const [routing, setRouting] = useState(initialRouting);
   const [subscriptions, setSubscriptions] = useState(initialSubscriptions);
   const activeTab = tab === "rules" ? "rules" : "feed";
-  const searchTerm = activeTab === "feed" ? searchValue : fallbackSearchTerm;
+  const feedSearchTerm = activeTab === "feed" ? searchValue : "";
+  const rulesSearchTerm = activeTab === "rules" ? searchValue : "";
   const hasSelectedAlerts = selectedAlertIds.length > 0;
 
   useEffect(() => {
     setTablePage(1);
-  }, [searchTerm]);
+  }, [feedSearchTerm]);
 
-  const normalizedSearchTerm = normalizePageSearchTerm(searchTerm);
+  const normalizedSearchTerm = normalizePageSearchTerm(feedSearchTerm);
+  const normalizedRulesSearchTerm = normalizePageSearchTerm(rulesSearchTerm);
   const categoryFilteredAlerts = useMemo(
     () =>
       alerts.filter(
@@ -298,20 +299,221 @@ export const AlertsPage = () => {
     [visibleAlerts],
   );
 
+  const thresholdRuleItems = useMemo(
+    () => [
+      {
+        id: "rules-threshold-low-stock",
+        key: "lowStock" as const,
+        title: "Default Low Stock Threshold",
+        subtitle: "Alert when any item drops below this quantity.",
+        value: thresholds.lowStock,
+        unitLabel: "units",
+        badge: "Threshold",
+        inputAriaLabel: "Default Low Stock Threshold",
+      },
+      {
+        id: "rules-threshold-expiry-window",
+        key: "expiryWindow" as const,
+        title: "Expiry Warning Window",
+        subtitle: "Days before expiration to trigger an alert.",
+        value: thresholds.expiryWindow,
+        unitLabel: "days",
+        badge: "Threshold",
+        inputAriaLabel: "Expiry Warning Window",
+      },
+    ],
+    [thresholds.expiryWindow, thresholds.lowStock],
+  );
+
+  const routingRuleItems = useMemo(
+    () => [
+      {
+        id: "rules-routing-in-app",
+        key: "inApp" as const,
+        title: "In-App Notifications",
+        subtitle: "Send alerts directly inside StoQR.",
+        badge: "Routing",
+        accentClassName:
+          "bg-[var(--color-info-light)] text-[var(--color-info)]",
+        icon: BellRing,
+        checked: routing.inApp,
+        toggleAriaLabel: "Toggle In-App Notifications",
+      },
+      {
+        id: "rules-routing-email-digest",
+        key: "emailDigest" as const,
+        title: "Email Digest (Daily)",
+        subtitle: "Deliver a daily digest to subscribed teams.",
+        badge: "Routing",
+        accentClassName:
+          "bg-[var(--color-muted)] text-[var(--color-foreground)]",
+        icon: Mail,
+        checked: routing.emailDigest,
+        toggleAriaLabel: "Toggle Email Digest",
+      },
+      {
+        id: "rules-routing-slack",
+        key: "slack" as const,
+        title: "Slack Webhook",
+        subtitle: "#warehouse-alerts",
+        badge: "Routing",
+        accentClassName:
+          "bg-[var(--color-success-light)] text-[var(--color-success)]",
+        icon: MessageSquareText,
+        checked: routing.slack,
+        toggleAriaLabel: "Toggle Slack Webhook",
+      },
+    ],
+    [routing.emailDigest, routing.inApp, routing.slack],
+  );
+
+  const subscriptionRuleItems = useMemo(
+    () => [
+      {
+        id: "rules-subscription-procurement",
+        key: "procurement" as const,
+        title: "Procurement Alerts",
+        subtitle: "Route alerts by department.",
+        badge: "Subscription",
+        value: subscriptions.procurement,
+        options: [...roleSubscriptionOptions.procurement],
+        inputAriaLabel: "Procurement Alerts subscription",
+      },
+      {
+        id: "rules-subscription-system",
+        key: "system" as const,
+        title: "System & Hardware Errors",
+        subtitle: "Route alerts by department.",
+        badge: "Subscription",
+        value: subscriptions.system,
+        options: [...roleSubscriptionOptions.system],
+        inputAriaLabel: "System & Hardware Errors subscription",
+      },
+    ],
+    [subscriptions.procurement, subscriptions.system],
+  );
+
+  const visibleThresholdRules = useMemo(
+    () =>
+      fuzzySearchItems(thresholdRuleItems, normalizedRulesSearchTerm, [
+        {
+          key: (rule) => rule.title,
+          maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+        },
+        {
+          key: (rule) => rule.subtitle,
+          maxRanking: fuzzyRankings.CONTAINS,
+        },
+        {
+          key: (rule) => rule.value,
+          maxRanking: fuzzyRankings.CONTAINS,
+        },
+      ]),
+    [normalizedRulesSearchTerm, thresholdRuleItems],
+  );
+
+  const visibleRoutingRules = useMemo(
+    () =>
+      fuzzySearchItems(routingRuleItems, normalizedRulesSearchTerm, [
+        {
+          key: (rule) => rule.title,
+          maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+        },
+        {
+          key: (rule) => rule.subtitle,
+          maxRanking: fuzzyRankings.CONTAINS,
+        },
+      ]),
+    [normalizedRulesSearchTerm, routingRuleItems],
+  );
+
+  const visibleSubscriptionRules = useMemo(
+    () =>
+      fuzzySearchItems(subscriptionRuleItems, normalizedRulesSearchTerm, [
+        {
+          key: (rule) => rule.title,
+          maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+        },
+        {
+          key: (rule) => rule.subtitle,
+          maxRanking: fuzzyRankings.CONTAINS,
+        },
+        {
+          key: (rule) =>
+            rule.options.find((option) => option.value === rule.value)?.label ??
+            rule.value,
+          maxRanking: fuzzyRankings.CONTAINS,
+        },
+      ]),
+    [normalizedRulesSearchTerm, subscriptionRuleItems],
+  );
+
+  const rulesSuggestions = useMemo(
+    () =>
+      [
+        ...thresholdRuleItems,
+        ...routingRuleItems,
+        ...subscriptionRuleItems,
+      ].map((rule) => ({
+        id: rule.id,
+        title: rule.title,
+        subtitle: rule.subtitle,
+        value: rule.title,
+        badge: rule.badge,
+      })),
+    [routingRuleItems, subscriptionRuleItems, thresholdRuleItems],
+  );
+
   usePageTopBarSearch(
     useMemo(
       () => ({
-        searchKey: "alerts-feed",
-        enabled: activeTab === "feed",
-        placeholder: "Search alerts...",
-        defaultSuggestions: [
-          { id: "alerts-critical", title: "Critical Alerts", subtitle: "Immediate operational issues", value: "critical", badge: "Alert" },
-          { id: "alerts-stock", title: "Stock Alerts", subtitle: "Inventory and replenishment issues", value: "stock", badge: "Alert" },
-          { id: "alerts-system", title: "System Alerts", subtitle: "Platform and device notifications", value: "system", badge: "Alert" },
-        ],
-        suggestions: alertSuggestions,
+        searchKey: activeTab === "feed" ? "alerts-feed" : "alerts-rules",
+        placeholder:
+          activeTab === "feed" ? "Search alerts..." : "Search alert rules...",
+        defaultSuggestions:
+          activeTab === "feed"
+            ? [
+                {
+                  id: "alerts-critical",
+                  title: "Critical Alerts",
+                  subtitle: "Immediate operational issues",
+                  value: "critical",
+                  badge: "Alert",
+                },
+                {
+                  id: "alerts-stock",
+                  title: "Stock Alerts",
+                  subtitle: "Inventory and replenishment issues",
+                  value: "stock",
+                  badge: "Alert",
+                },
+                {
+                  id: "alerts-system",
+                  title: "System Alerts",
+                  subtitle: "Platform and device notifications",
+                  value: "system",
+                  badge: "Alert",
+                },
+              ]
+            : [
+                {
+                  id: "alerts-rules-thresholds",
+                  title: "Threshold Settings",
+                  subtitle: "Low stock and expiry warning defaults",
+                  value: "thresholds",
+                  badge: "Rule",
+                },
+                {
+                  id: "alerts-rules-routing",
+                  title: "Notification Routing",
+                  subtitle: "In-app, email, and Slack delivery options",
+                  value: "routing",
+                  badge: "Rule",
+                },
+              ],
+        suggestions: activeTab === "feed" ? alertSuggestions : rulesSuggestions,
       }),
-      [activeTab, alertSuggestions],
+      [activeTab, alertSuggestions, rulesSuggestions],
     ),
   );
 
@@ -606,210 +808,152 @@ export const AlertsPage = () => {
 
   const rulesContent = (
     <div className="flex flex-col gap-8">
-      <Card variant="plain" className="overflow-hidden" padding="none">
-        <div className="border-b border-[var(--color-border)] px-6 py-5">
-          <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-            Global Threshold Settings
-          </h2>
-          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Set default triggers for physical inventory alerts.
-          </p>
-        </div>
-
-        <div className="divide-y divide-[var(--color-border)]">
-          <div className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                Default Low Stock Threshold
-              </h3>
-              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                Alert when any item drops below this quantity.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 md:flex-shrink-0">
-              <div className="w-24">
-                <Input
-                  type="number"
-                  value={thresholds.lowStock}
-                  onChange={(event) =>
-                    setThresholds((current) => ({
-                      ...current,
-                      lowStock: event.target.value,
-                    }))
-                  }
-                  aria-label="Default Low Stock Threshold"
-                />
-              </div>
-              <span className="text-sm text-[var(--color-muted-foreground)]">
-                units
-              </span>
-            </div>
+      {visibleThresholdRules.length === 0 &&
+      visibleRoutingRules.length === 0 &&
+      visibleSubscriptionRules.length === 0 ? (
+        <Card variant="plain" className="overflow-hidden" padding="none">
+          <div className="px-6 py-10 text-sm text-[var(--color-muted-foreground)]">
+            No alert rules matched "{normalizedRulesSearchTerm}".
           </div>
+        </Card>
+      ) : null}
 
-          <div className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                Expiry Warning Window
-              </h3>
-              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                Days before expiration to trigger an alert.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 md:flex-shrink-0">
-              <div className="w-24">
-                <Input
-                  type="number"
-                  value={thresholds.expiryWindow}
-                  onChange={(event) =>
-                    setThresholds((current) => ({
-                      ...current,
-                      expiryWindow: event.target.value,
-                    }))
-                  }
-                  aria-label="Expiry Warning Window"
-                />
-              </div>
-              <span className="text-sm text-[var(--color-muted-foreground)]">
-                days
-              </span>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid gap-8 xl:grid-cols-2">
+      {visibleThresholdRules.length > 0 ? (
         <Card variant="plain" className="overflow-hidden" padding="none">
           <div className="border-b border-[var(--color-border)] px-6 py-5">
             <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-              Notification Routing
+              Global Threshold Settings
             </h2>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              Where should alerts be sent?
+              Set default triggers for physical inventory alerts.
             </p>
           </div>
 
           <div className="divide-y divide-[var(--color-border)]">
-            <div className="flex items-center justify-between gap-4 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-[var(--color-info-light)] p-3 text-[var(--color-info)]">
-                  <BellRing size={18} aria-hidden="true" />
-                </div>
+            {visibleThresholdRules.map((rule) => (
+              <div
+                key={rule.id}
+                className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between"
+              >
                 <div>
                   <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                    In-App Notifications
-                  </h3>
-                </div>
-              </div>
-              <Toggle
-                checked={routing.inApp}
-                onChange={(event) =>
-                  setRouting((current) => ({
-                    ...current,
-                    inApp: event.target.checked,
-                  }))
-                }
-                aria-label="Toggle In-App Notifications"
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-[var(--color-muted)] p-3 text-[var(--color-foreground)]">
-                  <Mail size={18} aria-hidden="true" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                    Email Digest (Daily)
-                  </h3>
-                </div>
-              </div>
-              <Toggle
-                checked={routing.emailDigest}
-                onChange={(event) =>
-                  setRouting((current) => ({
-                    ...current,
-                    emailDigest: event.target.checked,
-                  }))
-                }
-                aria-label="Toggle Email Digest"
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-[var(--color-success-light)] p-3 text-[var(--color-success)]">
-                  <MessageSquareText size={18} aria-hidden="true" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                    Slack Webhook
+                    {rule.title}
                   </h3>
                   <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                    #warehouse-alerts
+                    {rule.subtitle}
                   </p>
                 </div>
+                <div className="flex items-center gap-3 md:flex-shrink-0">
+                  <div className="w-24">
+                    <Input
+                      type="number"
+                      value={rule.value}
+                      onChange={(event) =>
+                        setThresholds((current) => ({
+                          ...current,
+                          [rule.key]: event.target.value,
+                        }))
+                      }
+                      aria-label={rule.inputAriaLabel}
+                    />
+                  </div>
+                  <span className="text-sm text-[var(--color-muted-foreground)]">
+                    {rule.unitLabel}
+                  </span>
+                </div>
               </div>
-              <Toggle
-                checked={routing.slack}
-                onChange={(event) =>
-                  setRouting((current) => ({
-                    ...current,
-                    slack: event.target.checked,
-                  }))
-                }
-                aria-label="Toggle Slack Webhook"
-              />
-            </div>
+            ))}
           </div>
         </Card>
+      ) : null}
 
-        <Card variant="plain" className="overflow-hidden" padding="none">
-          <div className="border-b border-[var(--color-border)] px-6 py-5">
-            <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-              Role Subscriptions
-            </h2>
-            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              Route alerts by department.
-            </p>
-          </div>
+      {visibleRoutingRules.length > 0 || visibleSubscriptionRules.length > 0 ? (
+        <div className="grid gap-8 xl:grid-cols-2">
+          {visibleRoutingRules.length > 0 ? (
+            <Card variant="plain" className="overflow-hidden" padding="none">
+              <div className="border-b border-[var(--color-border)] px-6 py-5">
+                <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
+                  Notification Routing
+                </h2>
+                <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                  Where should alerts be sent?
+                </p>
+              </div>
 
-          <div className="flex flex-col gap-5 px-6 py-5">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                Procurement Alerts
-              </span>
-              <Select
-                value={subscriptions.procurement}
-                onChange={(event) =>
-                  setSubscriptions((current) => ({
-                    ...current,
-                    procurement: event.target.value,
-                  }))
-                }
-                options={[...roleSubscriptionOptions.procurement]}
-                aria-label="Procurement Alerts subscription"
-              />
-            </label>
+              <div className="divide-y divide-[var(--color-border)]">
+                {visibleRoutingRules.map((rule) => {
+                  const Icon = rule.icon;
 
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                System & Hardware Errors
-              </span>
-              <Select
-                value={subscriptions.system}
-                onChange={(event) =>
-                  setSubscriptions((current) => ({
-                    ...current,
-                    system: event.target.value,
-                  }))
-                }
-                options={[...roleSubscriptionOptions.system]}
-                aria-label="System & Hardware Errors subscription"
-              />
-            </label>
-          </div>
-        </Card>
-      </div>
+                  return (
+                    <div
+                      key={rule.id}
+                      className="flex items-center justify-between gap-4 px-6 py-5"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`rounded-xl p-3 ${rule.accentClassName}`}>
+                          <Icon size={18} aria-hidden="true" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+                            {rule.title}
+                          </h3>
+                          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                            {rule.subtitle}
+                          </p>
+                        </div>
+                      </div>
+                      <Toggle
+                        checked={rule.checked}
+                        onChange={(event) =>
+                          setRouting((current) => ({
+                            ...current,
+                            [rule.key]: event.target.checked,
+                          }))
+                        }
+                        aria-label={rule.toggleAriaLabel}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          ) : null}
+
+          {visibleSubscriptionRules.length > 0 ? (
+            <Card variant="plain" className="overflow-hidden" padding="none">
+              <div className="border-b border-[var(--color-border)] px-6 py-5">
+                <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
+                  Role Subscriptions
+                </h2>
+                <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                  Route alerts by department.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-5 px-6 py-5">
+                {visibleSubscriptionRules.map((rule) => (
+                  <label key={rule.id} className="flex flex-col gap-2">
+                    <span className="text-sm font-semibold text-[var(--color-foreground)]">
+                      {rule.title}
+                    </span>
+                    <Select
+                      value={rule.value}
+                      onChange={(event) =>
+                        setSubscriptions((current) => ({
+                          ...current,
+                          [rule.key]: event.target.value,
+                        }))
+                      }
+                      options={rule.options}
+                      aria-label={rule.inputAriaLabel}
+                    />
+                  </label>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 
