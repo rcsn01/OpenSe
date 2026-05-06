@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import {
   OrganisationTeamsTab,
   type OrganisationTeamsTabMember,
   type OrganisationTeamsTabRole,
 } from '@repo/ui'
+import { fuzzyRankings, fuzzySearchItems } from '../../lib/pageSearch'
 
 type Member = {
   id: string
@@ -19,6 +21,10 @@ type Role = {
   description: string | null
 }
 
+type SearchableMember = OrganisationTeamsTabMember & {
+  roleName: string
+}
+
 export const MembersTab = ({
   members,
   roles,
@@ -27,6 +33,7 @@ export const MembersTab = ({
   onInvite,
   inviteMessage,
   roleChangeMessage,
+  searchTerm = '',
 }: {
   members: Member[]
   roles: Role[]
@@ -35,33 +42,59 @@ export const MembersTab = ({
   onInvite: (email: string, roleId: string) => void
   inviteMessage: string | null
   roleChangeMessage: string | null
+  searchTerm?: string
 }) => {
-  const sharedMembers: OrganisationTeamsTabMember[] = members.map((member) => ({
-    id: member.id,
-    userId: member.user_id,
-    displayName: member.profiles?.full_name ?? member.profiles?.username ?? 'Unknown',
-    subtitle: member.user_id,
-    roleId: member.role_id,
-  }))
+  const sharedMembers = useMemo<SearchableMember[]>(
+    () => members.map((member) => ({
+      id: member.id,
+      userId: member.user_id,
+      displayName: member.profiles?.full_name ?? member.profiles?.username ?? 'Unknown',
+      subtitle: member.user_id,
+      roleId: member.role_id,
+      roleName: member.roles?.name ?? '',
+    })),
+    [members],
+  )
 
-  const sharedRoles: OrganisationTeamsTabRole[] = roles.map((role) => ({
-    id: role.id,
-    name: role.name,
-  }))
+  const filteredMembers = useMemo(
+    () => fuzzySearchItems(sharedMembers, searchTerm, [
+      {
+        key: (member) => member.displayName,
+        maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+      },
+      {
+        key: (member) => member.subtitle,
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+      {
+        key: (member) => member.roleName,
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+    ]),
+    [searchTerm, sharedMembers],
+  )
+
+  const sharedRoles = useMemo<OrganisationTeamsTabRole[]>(
+    () => roles.map((role) => ({
+      id: role.id,
+      name: role.name,
+    })),
+    [roles],
+  )
 
   return (
-      <OrganisationTeamsTab
-        members={sharedMembers}
-        roles={sharedRoles}
-        canManageTeam={true}
-        isRoleEditable={(member) => {
-          const rawRoleName = members.find((item) => item.id === member.id)?.roles?.name ?? ''
-          return rawRoleName.trim().toLowerCase() !== 'owner' && member.userId !== currentUserId
-        }}
-        onRoleChange={onRoleChange}
-        onInvite={onInvite}
-        inviteMessage={inviteMessage}
-        roleChangeMessage={roleChangeMessage}
-      />
+    <OrganisationTeamsTab
+      members={filteredMembers}
+      roles={sharedRoles}
+      canManageTeam={true}
+      isRoleEditable={(member) => {
+        const rawRoleName = members.find((item) => item.id === member.id)?.roles?.name ?? ''
+        return rawRoleName.trim().toLowerCase() !== 'owner' && member.userId !== currentUserId
+      }}
+      onRoleChange={onRoleChange}
+      onInvite={onInvite}
+      inviteMessage={inviteMessage}
+      roleChangeMessage={roleChangeMessage}
+    />
   )
 }

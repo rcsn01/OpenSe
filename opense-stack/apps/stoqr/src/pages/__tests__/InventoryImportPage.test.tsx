@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { TopBarSearchContent, TopBarSearchProvider } from '../../components/Search/TopBarSearch'
 import { InventoryImportPage } from '../InventoryImportPage'
 
 const mocks = vi.hoisted(() => ({
@@ -26,6 +28,13 @@ vi.mock('../../hooks/queries/useInventory', () => ({
 }))
 
 describe('InventoryImportPage', () => {
+  const SearchShell = () => (
+    <TopBarSearchProvider>
+      <TopBarSearchContent />
+      <Outlet />
+    </TopBarSearchProvider>
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.mutateAsync.mockResolvedValue({
@@ -34,6 +43,45 @@ describe('InventoryImportPage', () => {
       invalidCount: 0,
       duplicateSkus: [],
     })
+  })
+
+  it('shows the shared top-bar search and filters visible import columns', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={[
+        {
+          pathname: '/inventory/import',
+          state: {
+            csvUpload: {
+              fileName: 'products.csv',
+              headers: ['Product Name', 'SKU', 'Description', 'Color'],
+              rows: [
+                {
+                  'Product Name': 'Widget',
+                  SKU: 'SKU-1',
+                  Description: 'Main widget',
+                  Color: 'Blue',
+                },
+              ],
+              initialFolderId: 'folder-1',
+            },
+          },
+        },
+      ]}>
+        <Routes>
+          <Route element={<SearchShell />}>
+            <Route path="/inventory/import" element={<InventoryImportPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByText('Map Columns')
+    await user.type(screen.getByRole('combobox', { name: 'Search import data...' }), 'Color')
+
+    expect(screen.getByLabelText('Map Color column')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Map Product Name column')).not.toBeInTheDocument()
   })
 
   it('renders uploaded draft data in the mapping table and submits mapped import payload', async () => {

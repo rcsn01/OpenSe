@@ -99,6 +99,21 @@ const ToggleSearchPage = () => {
   )
 }
 
+const UnstableHandlerPage = () => {
+  const suggestions = [
+    { id: 'unstable-shared', title: 'Unstable Result', value: 'unstable', badge: 'Test' },
+  ]
+
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey: 'unstable-handler-search',
+    placeholder: 'Search unstable...',
+    suggestions,
+    onSuggestionSelect: () => undefined,
+  }), [suggestions]))
+
+  return <div>Unstable handler page</div>
+}
+
 const renderSearchRoutes = (initialEntry: string) => render(
   <MemoryRouter initialEntries={[initialEntry]}>
     <Routes>
@@ -107,6 +122,7 @@ const renderSearchRoutes = (initialEntry: string) => render(
         <Route path="/alerts" element={<AlertsSearchPage />} />
         <Route path="/merge" element={<MergeSuggestionsPage />} />
         <Route path="/toggle" element={<ToggleSearchPage />} />
+        <Route path="/unstable" element={<UnstableHandlerPage />} />
         <Route path="/plain" element={<div>Plain page</div>} />
       </Route>
     </Routes>
@@ -180,5 +196,12 @@ describe('TopBarSearchProvider', () => {
     await user.click(screen.getByRole('combobox', { name: 'Search alerts...' }))
     expect(screen.getByText('Alerts Home')).toBeInTheDocument()
     expect(screen.queryByText('Items Home')).not.toBeInTheDocument()
+  })
+
+  it('keeps a page registered even when it recreates suggestion handlers during rerenders', () => {
+    renderSearchRoutes('/unstable')
+
+    expect(screen.getByPlaceholderText('Search unstable...')).toBeInTheDocument()
+    expect(screen.getByText('Unstable handler page')).toBeInTheDocument()
   })
 })

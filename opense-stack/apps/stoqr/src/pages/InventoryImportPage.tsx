@@ -6,8 +6,10 @@ import { toast } from 'sonner'
 
 import type { ImportInventoryColumnField, ImportInventoryColumnMappings, ImportInventoryResult } from '../api/inventory'
 import { BasePage } from '../components/BasePage'
+import { usePageTopBarSearch, useTopBarSearchValue } from '../components/Search/TopBarSearch'
 import { useCompany } from '../contexts/CompanyContext'
 import { useImportInventoryProducts, useInventoryFilters } from '../hooks/queries/useInventory'
+import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../lib/pageSearch'
 import { parseCsv } from '../utils'
 
 type CsvRow = Record<string, string>
@@ -80,6 +82,7 @@ export const InventoryImportPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
   const location = useLocation()
+  const { searchValue } = useTopBarSearchValue()
   const filtersQuery = useInventoryFilters(companyId)
   const importProductsMutation = useImportInventoryProducts(companyId)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -93,6 +96,7 @@ export const InventoryImportPage = () => {
   const [resultSummary, setResultSummary] = useState<ImportInventoryResult | null>(null)
 
   const previewRows = useMemo(() => rows.slice(0, 10), [rows])
+  const normalizedSearchValue = normalizePageSearchTerm(searchValue)
   const folders = filtersQuery.data?.folders ?? []
   const assignedCoreFields = useMemo(
     () => IMPORT_COLUMN_FIELDS.reduce<Partial<Record<ImportInventoryColumnField, string>>>((acc, field) => {
@@ -123,6 +127,109 @@ export const InventoryImportPage = () => {
     }, {}),
     [headers, rows],
   )
+  const searchableColumns = useMemo(
+    () => headers.map((header) => ({
+      header,
+      values: previewRows.map((row) => row[header] ?? ''),
+    })),
+    [headers, previewRows],
+  )
+  const headerMatches = useMemo(
+    () => fuzzySearchItems(searchableColumns, normalizedSearchValue, [
+      {
+        key: (column) => column.header,
+        maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+      },
+    ]).map((column) => column.header),
+    [normalizedSearchValue, searchableColumns],
+  )
+  const valueMatchedHeaders = useMemo(
+    () => fuzzySearchItems(searchableColumns, normalizedSearchValue, [
+      {
+        key: (column) => column.values,
+        maxRanking: fuzzyRankings.CONTAINS,
+      },
+    ]).map((column) => column.header),
+    [normalizedSearchValue, searchableColumns],
+  )
+  const visibleHeaders = useMemo(() => {
+    if (normalizedSearchValue.length === 0) {
+      return headers
+    }
+
+    return Array.from(new Set([...headerMatches, ...valueMatchedHeaders]))
+  }, [headerMatches, headers, normalizedSearchValue, valueMatchedHeaders])
+  const visiblePreviewRows = useMemo(() => {
+    if (normalizedSearchValue.length === 0) {
+      return previewRows
+    }
+
+    if (visibleHeaders.length === 0) {
+      return []
+    }
+
+    if (headerMatches.length > 0) {
+      return previewRows
+    }
+
+    return fuzzySearchItems(previewRows, normalizedSearchValue, visibleHeaders.map((header) => ({
+      key: (row: CsvRow) => row[header] ?? '',
+      maxRanking: fuzzyRankings.CONTAINS,
+    })))
+  }, [headerMatches.length, normalizedSearchValue, previewRows, visibleHeaders])
+  const importSuggestions = useMemo(
+    () => [
+      ...(fileName
+        ? [
+            {
+              id: 'inventory-import-current-file',
+              title: fileName,
+              subtitle: `${rows.length} rows loaded for mapping`,
+              value: fileName,
+              badge: 'Import',
+            },
+          ]
+        : [
+            {
+              id: 'inventory-import-upload',
+              title: 'Upload Product CSV',
+              subtitle: 'Start by loading a CSV into the mapping workspace',
+              value: 'csv upload',
+              badge: 'Import',
+            },
+          ]),
+      ...headers.slice(0, 6).map((header) => ({
+        id: `inventory-import-header-${header}`,
+        title: header,
+        subtitle: `${columnStats[header]?.percent ?? 0}% fill rate`,
+        value: header,
+        badge: 'Column',
+      })),
+    ],
+    [columnStats, fileName, headers, rows.length],
+  )
+
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey: 'inventory-import',
+    placeholder: 'Search import data...',
+    defaultSuggestions: [
+      {
+        id: 'inventory-import-product-name',
+        title: 'Product Name',
+        subtitle: 'Required column for importing products',
+        value: 'product name',
+        badge: 'Column',
+      },
+      {
+        id: 'inventory-import-sku',
+        title: 'SKU',
+        subtitle: 'Optional unique identifier column',
+        value: 'sku',
+        badge: 'Column',
+      },
+    ],
+    suggestions: importSuggestions,
+  }), [importSuggestions]))
 
   useEffect(() => {
     const upload = (location.state as InventoryImportLocationState | null)?.csvUpload
@@ -378,84 +485,92 @@ export const InventoryImportPage = () => {
 
         <div className="inventory-import-table-shell">
           <div className="inventory-import-table-scroll">
-            <table className="inventory-import-table">
-              <thead>
-                <tr>
-                  {headers.map((header) => {
-                    const assignment = columnAssignments[header] ?? 'ignore'
-                    const isMapped = assignment !== 'ignore'
-
-                    return (
-                      <th key={header} className={`inventory-import-column${isMapped ? ' active' : ''}`}>
-                        <div className="inventory-import-header-cell">
-                          <select
-                            aria-label={`Map ${header} column`}
-                            className={`inventory-import-column-select${isMapped ? ' mapped' : ''}`}
-                            value={assignment}
-                            onChange={(event) => handleAssignmentChange(header, event.target.value as ColumnAssignment)}
-                          >
-                            <option value="ignore">Ignore column</option>
-                            {IMPORT_COLUMN_FIELDS.map((field) => {
-                              const assignedHeader = assignedCoreFields[field.key]
-
-                              return (
-                                <option
-                                  key={`${header}-${field.key}`}
-                                  value={field.key}
-                                  disabled={Boolean(assignedHeader && assignedHeader !== header)}
-                                >
-                                  {field.shortLabel}{field.required ? ' *' : ''}
-                                </option>
-                              )
-                            })}
-                            <option value="attribute">Custom Attribute</option>
-                          </select>
-
-                          <div className="inventory-import-header-meta">
-                            <div className="inventory-import-header-label-row">
-                              <span className="inventory-import-source-label">{header}</span>
-                              {isMapped && <Check size={14} className="inventory-import-header-check" />}
-                            </div>
-
-                            <div className="inventory-import-fill-row">
-                              <span>Fill rate</span>
-                              <span>{columnStats[header]?.percent ?? 0}%</span>
-                            </div>
-
-                            <div className="inventory-import-fill-track">
-                              <span
-                                className={`inventory-import-fill-bar ${columnStats[header]?.tone ?? 'danger'}`}
-                                style={{ width: `${columnStats[header]?.percent ?? 0}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {previewRows.map((row, rowIndex) => (
-                  <tr key={`${fileName}-${rowIndex}`}>
-                    {headers.map((header) => {
+            {normalizedSearchValue.length > 0 && (
+              visibleHeaders.length === 0 || visiblePreviewRows.length === 0
+            ) ? (
+              <div className="empty-state" style={{ minHeight: 220 }}>
+                No import columns or preview rows matched "{normalizedSearchValue}".
+              </div>
+            ) : (
+              <table className="inventory-import-table">
+                <thead>
+                  <tr>
+                    {visibleHeaders.map((header) => {
                       const assignment = columnAssignments[header] ?? 'ignore'
-                      const value = row[header]?.trim() ?? ''
+                      const isMapped = assignment !== 'ignore'
 
                       return (
-                        <td key={`${header}-${rowIndex}`} className={`inventory-import-cell${assignment !== 'ignore' ? ' active' : ''}`}>
-                          {value || <span className="inventory-import-empty-cell">Empty</span>}
-                        </td>
+                        <th key={header} className={`inventory-import-column${isMapped ? ' active' : ''}`}>
+                          <div className="inventory-import-header-cell">
+                            <select
+                              aria-label={`Map ${header} column`}
+                              className={`inventory-import-column-select${isMapped ? ' mapped' : ''}`}
+                              value={assignment}
+                              onChange={(event) => handleAssignmentChange(header, event.target.value as ColumnAssignment)}
+                            >
+                              <option value="ignore">Ignore column</option>
+                              {IMPORT_COLUMN_FIELDS.map((field) => {
+                                const assignedHeader = assignedCoreFields[field.key]
+
+                                return (
+                                  <option
+                                    key={`${header}-${field.key}`}
+                                    value={field.key}
+                                    disabled={Boolean(assignedHeader && assignedHeader !== header)}
+                                  >
+                                    {field.shortLabel}{field.required ? ' *' : ''}
+                                  </option>
+                                )
+                              })}
+                              <option value="attribute">Custom Attribute</option>
+                            </select>
+
+                            <div className="inventory-import-header-meta">
+                              <div className="inventory-import-header-label-row">
+                                <span className="inventory-import-source-label">{header}</span>
+                                {isMapped && <Check size={14} className="inventory-import-header-check" />}
+                              </div>
+
+                              <div className="inventory-import-fill-row">
+                                <span>Fill rate</span>
+                                <span>{columnStats[header]?.percent ?? 0}%</span>
+                              </div>
+
+                              <div className="inventory-import-fill-track">
+                                <span
+                                  className={`inventory-import-fill-bar ${columnStats[header]?.tone ?? 'danger'}`}
+                                  style={{ width: `${columnStats[header]?.percent ?? 0}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </th>
                       )
                     })}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {visiblePreviewRows.map((row, rowIndex) => (
+                    <tr key={`${fileName}-${rowIndex}`}>
+                      {visibleHeaders.map((header) => {
+                        const assignment = columnAssignments[header] ?? 'ignore'
+                        const value = row[header]?.trim() ?? ''
+
+                        return (
+                          <td key={`${header}-${rowIndex}`} className={`inventory-import-cell${assignment !== 'ignore' ? ' active' : ''}`}>
+                            {value || <span className="inventory-import-empty-cell">Empty</span>}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           <div className="inventory-import-footer">
-            End of preview. Showing {previewRows.length} of {rows.length} rows.
+            End of preview. Showing {visiblePreviewRows.length} of {previewRows.length} preview rows and {visibleHeaders.length} of {headers.length} columns.
           </div>
         </div>
       </div>

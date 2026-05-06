@@ -199,6 +199,25 @@ describe("AlertsPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("filters the alert rules tab from the shared top bar search", async () => {
+    const user = userEvent.setup();
+
+    renderAlertsRoute("/alerts/rules", true);
+
+    await user.type(
+      screen.getByRole("combobox", { name: "Search alert rules..." }),
+      "slack",
+    );
+
+    expect(screen.getAllByText("Slack Webhook").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText("In-App Notifications"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Default Low Stock Threshold"),
+    ).not.toBeInTheDocument();
+  });
+
   it("filters the feed using the shared filter dropdown", async () => {
     const user = userEvent.setup();
 

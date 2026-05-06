@@ -221,6 +221,34 @@ export const usePageTopBarSearch = (config: PageTopBarSearchConfig) => {
   const { searchValue, setSearchValue } = useTopBarSearchValue()
   const registerPageSearch = context?.registerPageSearch
   const unregisterPageSearch = context?.unregisterPageSearch
+  const suggestionSelectRef = useRef(config.onSuggestionSelect)
+  const hasSuggestionSelectHandler = Boolean(config.onSuggestionSelect)
+
+  useLayoutEffect(() => {
+    suggestionSelectRef.current = config.onSuggestionSelect
+  }, [config.onSuggestionSelect])
+
+  const stableSuggestionSelect = useCallback((suggestion: SearchSuggestion) => {
+    suggestionSelectRef.current?.(suggestion)
+  }, [])
+  const registeredConfig = useMemo<PageTopBarSearchConfig>(() => ({
+    searchKey: config.searchKey,
+    enabled: config.enabled,
+    placeholder: config.placeholder,
+    emptyMessage: config.emptyMessage,
+    defaultSuggestions: config.defaultSuggestions,
+    suggestions: config.suggestions,
+    onSuggestionSelect: hasSuggestionSelectHandler ? stableSuggestionSelect : undefined,
+  }), [
+    config.defaultSuggestions,
+    config.emptyMessage,
+    config.enabled,
+    config.placeholder,
+    config.searchKey,
+    config.suggestions,
+    hasSuggestionSelectHandler,
+    stableSuggestionSelect,
+  ])
 
   useLayoutEffect(() => {
     if (!unregisterPageSearch) return
@@ -233,13 +261,13 @@ export const usePageTopBarSearch = (config: PageTopBarSearchConfig) => {
   useLayoutEffect(() => {
     if (!registerPageSearch || !unregisterPageSearch) return
 
-    if (config.enabled === false) {
+    if (registeredConfig.enabled === false) {
       unregisterPageSearch(registrationId)
       return
     }
 
-    registerPageSearch(registrationId, config)
-  }, [config, registerPageSearch, registrationId, unregisterPageSearch])
+    registerPageSearch(registrationId, registeredConfig)
+  }, [registerPageSearch, registeredConfig, registrationId, unregisterPageSearch])
 
   return {
     searchValue,

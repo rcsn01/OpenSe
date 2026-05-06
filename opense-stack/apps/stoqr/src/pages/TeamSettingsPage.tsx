@@ -40,7 +40,11 @@ export const TeamSettingsPage = () => {
   const normalizedTab = tab ? (tabAliasMap[tab] ?? tab) : 'teams'
   const validTabs = ['teams', 'permissions', 'activity', 'pages', 'two-factor'] as const
   const activeTab = validTabs.includes(normalizedTab as (typeof validTabs)[number]) ? normalizedTab : 'teams'
+  const teamsSearchTerm = activeTab === 'teams' ? searchValue : ''
+  const permissionsSearchTerm = activeTab === 'permissions' ? searchValue : ''
   const activitySearchTerm = activeTab === 'activity' ? searchValue : ''
+  const pagesSearchTerm = activeTab === 'pages' ? searchValue : ''
+  const twoFactorSearchTerm = activeTab === 'two-factor' ? searchValue : ''
   const { data, isLoading } = useTeamSettingsData(companyId)
   const { data: pageSettings = defaultOrganisationPageSettings, isLoading: loadingPageSettings } = useOrganisationPageSettings(companyId)
   const { data: activity = [], isLoading: loadingActivity } = useTeamActivityEvents(companyId)
@@ -71,6 +75,133 @@ export const TeamSettingsPage = () => {
     })),
     [activity],
   )
+  const memberSuggestions = useMemo(
+    () => members.slice(0, 8).map((member) => ({
+      id: member.id,
+      title: member.profiles?.full_name ?? member.profiles?.username ?? 'Unknown member',
+      subtitle: `${member.roles?.name ?? 'No role'} · ${member.user_id}`,
+      value: member.profiles?.full_name ?? member.profiles?.username ?? member.user_id,
+      badge: 'Member',
+    })),
+    [members],
+  )
+  const permissionSuggestions = useMemo(
+    () => [
+      ...roles.slice(0, 4).map((role) => ({
+        id: `role-${role.id}`,
+        title: role.name,
+        subtitle: role.description ?? 'Organisation role',
+        value: role.name,
+        badge: 'Role',
+      })),
+      ...permissions.slice(0, 4).map((permission) => ({
+        id: `permission-${permission.code}`,
+        title: permission.code,
+        subtitle: permission.description ?? 'Permission code',
+        value: permission.code,
+        badge: 'Permission',
+      })),
+    ],
+    [permissions, roles],
+  )
+  const pageAccessSuggestions = useMemo(
+    () => ([
+      {
+        id: 'page-access-reports',
+        title: organisationPageFeatureLabels.reports,
+        subtitle: 'Analytics, exports, and saved reports',
+        value: organisationPageFeatureLabels.reports,
+        badge: 'Page',
+      },
+      {
+        id: 'page-access-procurement',
+        title: organisationPageFeatureLabels.procurement,
+        subtitle: 'Purchase orders, suppliers, and receiving',
+        value: organisationPageFeatureLabels.procurement,
+        badge: 'Page',
+      },
+      {
+        id: 'page-access-alerts',
+        title: organisationPageFeatureLabels.alerts,
+        subtitle: 'Alert feeds, rules, and alert management',
+        value: organisationPageFeatureLabels.alerts,
+        badge: 'Page',
+      },
+    ]),
+    [],
+  )
+  const teamSettingsSearchConfig = useMemo(() => {
+    if (activeTab === 'teams') {
+      return {
+        searchKey: 'team-settings-teams',
+        placeholder: 'Search team members...',
+        defaultSuggestions: [
+          {
+            id: 'team-members-default',
+            title: 'Team Members',
+            subtitle: 'Search by member name, role, or user ID',
+            value: 'team members',
+            badge: 'Member',
+          },
+        ],
+        suggestions: memberSuggestions,
+      }
+    }
+
+    if (activeTab === 'permissions') {
+      return {
+        searchKey: 'team-settings-permissions',
+        placeholder: 'Search roles and permissions...',
+        defaultSuggestions: [
+          {
+            id: 'team-permissions-default',
+            title: 'Organisation Permissions',
+            subtitle: 'Search roles, access levels, and permission codes',
+            value: 'permissions',
+            badge: 'Role',
+          },
+        ],
+        suggestions: permissionSuggestions,
+      }
+    }
+
+    if (activeTab === 'pages') {
+      return {
+        searchKey: 'team-settings-pages',
+        placeholder: 'Search page access...',
+        suggestions: pageAccessSuggestions,
+      }
+    }
+
+    if (activeTab === 'two-factor') {
+      return {
+        searchKey: 'team-settings-two-factor',
+        placeholder: 'Search two-factor...',
+        defaultSuggestions: [
+          {
+            id: 'team-two-factor-enabled',
+            title: 'Verified Factors',
+            subtitle: 'Look for active enrolled authentication factors',
+            value: 'verified',
+            badge: '2FA',
+          },
+          {
+            id: 'team-two-factor-authenticator',
+            title: 'Authenticator App',
+            subtitle: 'Search enrolled app-based authentication methods',
+            value: 'authenticator',
+            badge: '2FA',
+          },
+        ],
+      }
+    }
+
+    return {
+      searchKey: 'team-settings-activity',
+      placeholder: 'Search activity logs...',
+      suggestions: activitySuggestions,
+    }
+  }, [activeTab, activitySuggestions, memberSuggestions, pageAccessSuggestions, permissionSuggestions])
 
   const handleInvite = async (email: string, roleId: string) => {
     if (!companyId || !email || !roleId) return
@@ -115,12 +246,7 @@ export const TeamSettingsPage = () => {
     }
   }
 
-  usePageTopBarSearch(useMemo(() => ({
-    searchKey: 'team-activity',
-    enabled: activeTab === 'activity',
-    placeholder: 'Search activity logs...',
-    suggestions: activitySuggestions,
-  }), [activeTab, activitySuggestions]))
+  usePageTopBarSearch(teamSettingsSearchConfig)
 
   useEffect(() => {
     if (tab && tabAliasMap[tab]) {
@@ -153,6 +279,7 @@ export const TeamSettingsPage = () => {
                 onInvite={handleInvite}
                 inviteMessage={inviteMessage}
                 roleChangeMessage={roleChangeMessage}
+                searchTerm={teamsSearchTerm}
               />
             ),
           },
@@ -168,6 +295,7 @@ export const TeamSettingsPage = () => {
                 canManage={true}
                 onCreateRole={handleCreateRole}
                 onUpdateRole={handleUpdateRole}
+                searchTerm={permissionsSearchTerm}
               />
             ),
           },
@@ -185,13 +313,14 @@ export const TeamSettingsPage = () => {
                 isLoading={loadingPageSettings}
                 isUpdating={updatePageSettingsMutation.isPending}
                 onToggle={handlePageToggle}
+                searchTerm={pagesSearchTerm}
               />
             ),
           },
           {
             id: 'two-factor',
             label: 'Two-Factor Authentication',
-            content: <TwoFactorTab />,
+            content: <TwoFactorTab searchTerm={twoFactorSearchTerm} />,
           },
         ]}
       />

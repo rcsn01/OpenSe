@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { MoreHorizontal, Package2, Plus } from 'lucide-react'
 import { DataTable, type DataTableColumn } from '@repo/ui'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
 import { usePageTopBarSearch, useTopBarSearchValue } from '../Search/TopBarSearch'
+import type { SearchSuggestion } from '../../lib/pageSearch'
 import { getEnabledLabelFields, resolveLabelLayout } from './labelLayout'
 import {
   buildLabelTemplateSearchSuggestions,
@@ -132,6 +133,12 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       ),
     },
   ], [onSelectTemplate])
+  const handleSuggestionSelect = useCallback((suggestion: SearchSuggestion) => {
+    const templateId = getLabelTemplateIdFromSuggestion(suggestion)
+    if (templateId) {
+      onSelectTemplate?.(templateId)
+    }
+  }, [onSelectTemplate])
 
   usePageTopBarSearch(useMemo(() => ({
     searchKey: 'label-studio-templates',
@@ -140,14 +147,8 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       { id: 'labels-templates', title: 'Label Templates', subtitle: 'Open and manage saved label templates', value: 'template', badge: 'Labels' },
     ],
     suggestions: buildLabelTemplateSearchSuggestions(filteredTemplates),
-    onSuggestionSelect: (suggestion) => {
-      const templateId = getLabelTemplateIdFromSuggestion(suggestion)
-      const matchedTemplate = templates.find((template) => template.id === templateId)
-      if (matchedTemplate) {
-        onSelectTemplate?.(matchedTemplate.id)
-      }
-    },
-  }), [filteredTemplates, onSelectTemplate, templates]))
+    onSuggestionSelect: handleSuggestionSelect,
+  }), [filteredTemplates, handleSuggestionSelect]))
 
   const createTemplate = async () => {
     setMessage(null)
