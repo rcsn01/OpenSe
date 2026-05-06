@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { Camera, CameraOff, ScanBarcode } from 'lucide-react'
+import { ContentTabs } from '@repo/ui'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
 import { usePageTopBarSearch, useTopBarSearchValue } from '../components/Search/TopBarSearch'
-import { Tabs } from '../components/Tabs'
 import { QuickScanTab } from '../components/Scan/QuickScanTab'
 import { ScanHistoryTab } from '../components/Scan/ScanHistoryTab'
 import { toast } from 'sonner'
@@ -14,6 +14,7 @@ import { useScanHistory } from '../hooks/queries/useQuickScan'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { defaultInventoryUrlState } from './inventoryUrlState'
 import { normalizePageSearchTerm } from '../lib/pageSearch'
+import '../components/Scan/ScanSurface.css'
 
 export const ScanPage = () => {
   const { companyId } = useCompany()
@@ -184,7 +185,7 @@ export const ScanPage = () => {
       containerClassName="stack"
       containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
     >
-      <Tabs
+      <ContentTabs
         activeTab={activeTab}
         onTabChange={(nextTab) => navigate(`/scan/${nextTab}`)}
         bottomSpacing

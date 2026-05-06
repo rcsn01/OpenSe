@@ -1,256 +1,348 @@
 # Styling Architecture Migration Plan
 
+## Recommendation
+
+Do **not** execute the old version of this plan as-is.
+
+The goal is right, but the original plan had a dangerous phase order:
+
+1. It deleted `App.css` before replacing the shared primitives that still power large parts of the app.
+2. It proposed a new `features/` directory that does not match the current StoQR structure and would add unnecessary churn.
+3. It treated some Tailwind limitations too strictly even though this codebase already supports arbitrary values and utility-first patterns.
+
+This revised plan keeps the intent, but makes the migration safe for the current repo.
+
+---
+
 ## Current State
 
-The StoQR app (and to some extent the broader monorepo) currently uses a mix of three styling approaches with no clear ownership rules. This causes bloat, regressions, and confusion.
+StoQR currently mixes three styling approaches:
 
-| Approach | Location | Lines | Problem |
-|----------|----------|-------|---------|
-| **Global BEM CSS** | `apps/stoqr/src/App.css` | ~4,739 | Single dumping ground. Zero tree-shaking. High collision risk with generic names like `.button`, `.card`, `.grid`. |
-| **Page-level CSS** | `apps/stoqr/src/pages/DashboardPage.css` | ~438 | Only page with its own file. Inconsistent with other pages. |
-| **Tailwind inline** | Most `.tsx` pages/components | N/A | The intended standard, but undermined by the global file. |
-| **CVA components** | `@repo/ui` (Button, Card, Badge, etc.) | N/A | Reusable primitives exist, but are often duplicated in `App.css`. |
+| Approach | Location | Problem |
+|----------|----------|---------|
+| Global CSS | `apps/stoqr/src/App.css` | Large shared stylesheet with both primitives and feature-specific rules. Hard to delete safely. |
+| Page CSS | `apps/stoqr/src/pages/DashboardPage.css` | Single page-level exception. |
+| Tailwind + `@repo/ui` | Most `.tsx` files | Intended direction, but undermined by the remaining global CSS. |
 
-### Specific symptoms
+### Important repo facts
 
-- **Naming collisions:** `.button`, `.card`, `.badge`, `.grid` in `App.css` shadow or clash with `@repo/ui` Tailwind-based components.
-- **Dead code:** No safe way to delete a `.scan-*` or `.label-*` rule without grepping the entire codebase.
-- **Merge conflicts:** Every feature branch touches the same 4,739-line file.
-- **Inconsistent breakpoints:** Custom media queries scattered at `1200px`, `980px`, `900px`, `860px`, `767px`, `760px`, `640px`, `560px` with no standard.
-- **Orphaned themes:** `App.css` defines legacy tokens (`--primary`, `--text`) that alias central tokens from `@repo/ui/styles`, creating two sources of truth.
+- `App.css` is imported from [App.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/App.tsx:4).
+- `DashboardPage.css` is imported from [DashboardPage.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/pages/DashboardPage.tsx:26).
+- StoQR currently has **no** `.module.css` files.
+- `App.css` contains both feature namespaces and widely reused shared classes such as `.button`, `.card`, `.badge`, `.empty-state`, `.section-title`, `.page-title`, `.grid-*`, `.row`, `.input`, and more.
+
+That last point is the main risk: `App.css` is not just a dumping ground for feature blocks. It is also acting as a primitive layer for the whole app.
 
 ---
 
 ## Target Architecture
 
-We adopt a single rule:
+Use this rule:
 
-> **Tailwind first. CSS Modules for complex scoped layouts. Never global `.css` files.**
+> **Tailwind first. CSS Modules when the styling is genuinely component-scoped and awkward in utilities. No long-lived global feature CSS.**
 
 ### Decision matrix
 
-| Situation | Target Location | Rationale |
-|-----------|-----------------|-----------|
-| Reusable Button, Card, Badge, Input | `@repo/ui` component (Tailwind + CVA) | Shared across apps. Theme-aware via CSS variables. |
-| Page spacing, flex/grid layout, borders, colors | **Inline Tailwind** in the `.tsx` | Colocated with markup. IDE hover support. Purged automatically. |
-| Complex feature layout (camera frame, label canvas, product form) | **`[Component].module.css`** next to the component | Scoped to the file. Won't leak. Easy to delete with the component. |
-| Responsive rules with custom breakpoints | **CSS Module** | Tailwind's default breakpoints don't match bespoke scan/print layouts. |
-| State modifiers (`.is-active`, `.is-open`) | **CSS Module** | Avoids string interpolation in JSX (`className={active ? 'is-active' : ''}`). |
-| Precise pixel values (chart bars, print previews, absolute positioning) | **CSS Module** | `13px`, `116px`, `999px` are not in the Tailwind scale. |
+| Situation | Preferred target | Notes |
+|-----------|------------------|-------|
+| Shared primitives like Button, Card, Badge, Dialog | `@repo/ui` | Reuse existing components first. Add variants there only when there is a real cross-app need. |
+| Local layout, spacing, borders, typography, colors | Inline Tailwind in `.tsx` | Default choice. |
+| Existing large feature-specific selector sets | Co-located `[Owner].module.css` | Best transitional step when a straight Tailwind rewrite is too risky. |
+| Pseudo-elements, keyframes, print rules, bespoke media queries | CSS Module | Good fit for real CSS features. |
+| Precise sizes like `13px` or `116px` | Usually Tailwind arbitrary values | Example: `w-[13px] h-[116px]`. Do not force a module just for exact numbers. |
+| Simple active/open/selected state | Tailwind conditional classes first | Use modules only when the state styling becomes complex or selector-heavy. |
 
-### What is **not** allowed after migration
+### Rules after migration
 
-- **No new styles in `App.css`.** It will be deleted.
-- **No global BEM files.** E.g. `ScanPage.css` sitting in `src/styles/`.
-- **No `@apply` soup in modules.** Do not recreate BEM by pasting Tailwind utilities into a `.module.css` file. The module should contain only CSS that Tailwind cannot express cleanly.
+- No new feature styles in `App.css`.
+- No new page-level global `.css` files.
+- No mass `@apply` dumps that recreate utility classes inside modules.
+- Co-locate modules with the current owner component or page.
+- Do not introduce a new `features/` directory as part of this migration unless a separate structure refactor is approved.
 
 ---
 
 ## CSS Module conventions
 
 ### File naming
-```
-ScanCameraFrame.tsx
-ScanCameraFrame.module.css       ← co-located, same folder
+
+```text
+LabelPreviewBatchTab.tsx
+LabelPreviewBatchTab.module.css
 ```
 
 ### Import pattern
-```tsx
-import styles from './ScanCameraFrame.module.css'
-import { cn } from '../../lib/cn'
 
-// Tailwind for foundation, module for scoped overrides
-<div className={cn("flex flex-col gap-6", styles.cameraFrame)}>
+```tsx
+import { cn } from '@repo/ui/cn'
+import styles from './LabelPreviewBatchTab.module.css'
+
+<div className={cn("flex flex-col gap-6", styles.previewPane)} />
 ```
 
 ### State modifiers
-Use static class maps. Do not dynamically construct class names (CSS Modules hashes them at build time).
+
+Avoid fragile string construction. Prefer explicit conditionals.
 
 ```tsx
-// ❌ Don't do this
-<div className={`${styles.base} ${styles[`is-${mode}`]}`} />
-
-// ✅ Do this
-<div className={cn(styles.base, mode === 'active' && styles.isActive)} />
+<div className={cn(styles.base, isActive && styles.isActive)} />
 ```
 
-### Breakpoints inside modules
-Keep module queries minimal. Prefer Tailwind responsive prefixes (`md:`, `lg:`, `xl:`) for layout changes. Use module media queries only when the component has truly custom breakpoints (e.g. a print canvas at `1100px`).
+### Breakpoints
+
+Prefer standard Tailwind breakpoints for normal layout changes. Use module media queries only when the component truly depends on a non-standard breakpoint or print-specific behavior.
 
 ---
 
-## Migration Phases
+## Migration Strategy
 
-### Phase 1 — Stop the bleeding (~5 min)
+### Phase 0 - Freeze and inventory
 
-Add a deprecation header to `App.css`:
+Add a deprecation header to `App.css` and stop new additions immediately.
 
-```css
-/* ─────────────────────────────
-   DEPRECATED: Do not add new styles here.
-   Use inline Tailwind or [Component].module.css.
-   ───────────────────────────── */
+Then classify every selector in `App.css` into one of three buckets:
+
+1. **Shared primitives**
+   - Examples: `.button`, `.card`, `.badge`, `.empty-state`, `.section-title`, `.page-title`, `.grid-*`, `.row`, `.input`, `.select`, `.textarea`, `.icon-button`
+2. **Feature namespaces**
+   - Examples: `.scan-*`, `.label-*`, `.label-studio-*`, `.label-batch-*`, `.product-*`, `.inventory-import-*`, `.explorer-*`, `.tree-*`, `.file-*`, `.custom-reports-*`, `.export-*`
+3. **Dead or suspicious selectors**
+   - Verify usage before moving them
+
+Do not move or rewrite anything until this inventory exists.
+
+### Phase 1 - Extract feature namespaces without changing behavior
+
+Move feature-specific rules out of `App.css` and into co-located CSS Modules next to their current owners.
+
+Do **not** create a new top-level `features/` tree as part of this step. That would mix a style migration with a folder-structure migration.
+
+#### Recommended ownership map
+
+| Namespace | Co-located destination |
+|-----------|------------------------|
+| `.scan-*` | [ScanPage.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/pages/ScanPage.tsx), [QuickScanTab.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/Scan/QuickScanTab.tsx), [ScanHistoryTab.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/Scan/ScanHistoryTab.tsx) |
+| `.label-*`, `.label-studio-*`, `.label-batch-*`, `.export-*` | [LabelDesignerTab.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/LabelStudio/LabelDesignerTab.tsx), [TemplateLibraryTab.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/LabelStudio/TemplateLibraryTab.tsx), [LabelPreviewBatchTab.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/LabelStudio/LabelPreviewBatchTab.tsx), [LabelPreviewCard.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/LabelStudio/LabelPreviewCard.tsx), [LabelDownloadsTab.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/LabelStudio/LabelDownloadsTab.tsx) |
+| `.product-*`, `.product-form-*` | [ProductDetailPage.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/pages/product/ProductDetailPage.tsx), [ProductFormPage.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/pages/product/ProductFormPage.tsx), [ProductOverviewTab.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/ProductDetail/ProductOverviewTab.tsx), related Product Detail tab components |
+| `.inventory-import-*` | [InventoryImportPage.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/pages/InventoryImportPage.tsx) |
+| `.explorer-*`, `.tree-*`, `.file-*` | [AllProductsTab.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/Inventory/AllProductsTab.tsx), [FolderNavigationPanel.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/Inventory/FolderNavigationPanel.tsx), [InventoryFiltersBar.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/Inventory/all-products/InventoryFiltersBar.tsx) |
+| `.custom-reports-*`, report-builder classes | [CustomSavedReportsTab.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/components/Reports/CustomSavedReportsTab.tsx) |
+| `.stoqr-dashboard__*` from `DashboardPage.css` | [DashboardPage.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/pages/DashboardPage.tsx), with Tailwind first and a tiny module only if needed |
+
+#### Rules during extraction
+
+1. Preserve exact visual behavior first.
+2. Do not rewrite to Tailwind and relocate ownership in the same commit unless the slice is very small.
+3. Delete the extracted block from `App.css` immediately after the owner imports the module.
+4. Verify the affected flow before moving on.
+
+### Phase 2 - Replace shared primitives before deleting `App.css`
+
+This is the step the old plan had in the wrong order.
+
+Before `App.css` can be deleted, migrate every still-used shared selector to one of these destinations:
+
+| Selector type | Destination |
+|---------------|-------------|
+| Button-like classes | Existing `@repo/ui` Button or an app-local wrapper component during transition |
+| Card/surface classes | Existing `@repo/ui` Card or app-local wrapper |
+| Badge/status pills | Existing `@repo/ui` Badge or app-local wrapper |
+| Empty/loading states | App-local `EmptyState` component first, then promote to `@repo/ui` only if truly shared |
+| Form controls like `.input`, `.select`, `.textarea` | `@repo/ui` inputs where possible, otherwise Tailwind inline until consolidated |
+| Layout helpers like `.grid-*`, `.row`, `.flex-between`, `.table-surface`, `.stat-card` | Replace inline in each consumer instead of preserving them as global utilities |
+| Typography helpers like `.section-title`, `.page-title`, `.muted`, `.small` | Inline Tailwind or shared typography components |
+
+Important:
+
+- Do not preserve generic globals by creating a new `shared.css`.
+- Do not make this step optional.
+- Do not delete `App.css` while any live component still depends on these classes.
+
+### Phase 3 - Delete `DashboardPage.css`
+
+Convert [DashboardPage.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/pages/DashboardPage.tsx) to Tailwind-first styling.
+
+Use a tiny module only if something is meaningfully cleaner in CSS, such as:
+
+- chart bar sizing
+- one-off pseudo-elements
+- a genuinely awkward responsive rule
+
+After parity is verified, delete [DashboardPage.css](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/pages/DashboardPage.css).
+
+### Phase 4 - Delete `App.css`
+
+Delete `App.css` only when all three conditions are true:
+
+1. Every feature namespace has been extracted or rewritten.
+2. No live component uses any shared selector that still exists only in `App.css`.
+3. A repo-wide search confirms there are no remaining references.
+
+Then:
+
+- remove `import './App.css'` from [App.tsx](/Users/mac/Syncthing/Projects/OpenSe/opense-stack/apps/stoqr/src/App.tsx:4)
+- run the full regression suite
+- visually verify the highest-risk screens
+
+### Phase 5 - Standardise breakpoints after visual parity
+
+Only after migration stabilises, audit custom breakpoints and decide which ones should become standard.
+
+Baseline:
+
+```text
+sm 640px
+md 768px
+lg 1024px
+xl 1280px
 ```
 
-Audit any open PRs to prevent new additions.
+For non-standard values like `860px` or `1100px`:
 
-### Phase 2 — Extract feature blocks (~2–3 hours)
+- keep them if the layout really depends on them
+- otherwise collapse to a standard breakpoint
 
-Move each BEM namespace from `App.css` into a scoped module next to its owner component. Do not rewrite to Tailwind yet — just move.
-
-| Namespace | Source in `App.css` | Destination |
-|-----------|---------------------|-------------|
-| `.scan-*` | ~330 lines | `features/scan/ScanCameraFrame.module.css` |
-| `.label-*`, `.label-studio-*`, `.label-batch-*` | ~1,800 lines | `features/label-studio/LabelDesigner.module.css`, `LabelPreview.module.css`, `LabelBatch.module.css` |
-| `.product-*`, `.product-form-*` | ~1,100 lines | `features/product/ProductDetail.module.css`, `ProductForm.module.css` |
-| `.inventory-import-*` | ~300 lines | `features/inventory/InventoryImport.module.css` |
-| `.explorer-*`, `.tree-*`, `.file-*` | ~200 lines | `features/explorer/Explorer.module.css` |
-| `.custom-reports-*`, `.builder-*`, `.export-*` | ~500 lines | `features/reports/CustomReports.module.css` |
-| `.stoqr-dashboard__*` | `DashboardPage.css` | Convert to inline Tailwind (+ tiny module for chart bars only) |
-
-**Rules during extraction:**
-1. Preserve exact CSS values. No refactors.
-2. Update the owning `.tsx` to import the new module.
-3. Delete the block from `App.css` immediately.
-4. Run the app and visually verify the feature.
-
-### Phase 3 — Delete `App.css` and `DashboardPage.css` (~30 min)
-
-Once all classes are extracted:
-- Delete `apps/stoqr/src/App.css`.
-- Delete `apps/stoqr/src/pages/DashboardPage.css`.
-- Remove the `import './App.css'` from `main.tsx` or `App.tsx`.
-- Verify no unreferenced imports remain.
-
-### Phase 4 — Consolidate generics into `@repo/ui` (~2 hours, optional)
-
-Some classes in `App.css` are actually primitive utilities that multiple pages need:
-
-| `App.css` class | Action |
-|-------------------|--------|
-| `.button` | Delete. Use `<Button>` from `@repo/ui`. |
-| `.card` | Delete. Use `<Card>` from `@repo/ui`. |
-| `.badge` | Delete. Use `<Badge>` from `@repo/ui`. |
-| `.empty-state` | Migrate to `<EmptyState>` in `@repo/ui` if used across apps. |
-| `.modal`, `.modal-backdrop` | Migrate to `<Dialog>` in `@repo/ui`. |
-| `.auth-shell`, `.auth-card` | Keep as `AuthLayout.module.css` or migrate to `@repo/ui/layout`. |
-
-### Phase 5 — Standardise breakpoints (~1 hour)
-
-Document the app's standard breakpoints and consolidate module media queries where possible.
-
-```
-Mobile:   640px  (Tailwind default: sm)
-Tablet:   768px  (Tailwind default: md)
-Desktop:  1024px (Tailwind default: lg)
-Wide:     1280px (Tailwind default: xl)
-```
-
-Any module query using non-standard values (e.g. `1100px`, `860px`, `560px`) should be audited. If the difference is not meaningful, shift to the nearest Tailwind breakpoint.
+Do not force this cleanup during the first extraction pass.
 
 ---
 
 ## File layout after migration
 
-```
+Keep the current project structure and co-locate new modules with existing owners.
+
+```text
 apps/stoqr/src/
-  index.css                    ← Tailwind import + theme tokens only
-  App.tsx                      ← no global CSS import
-  features/
-    scan/
-      ScanCameraFrame.tsx
-      ScanCameraFrame.module.css
-    label-studio/
-      LabelDesignerTab.tsx
-      LabelDesigner.module.css
-      LabelPreview.module.css
-      LabelBatch.module.css
+  index.css
+  App.tsx
+  pages/
+    DashboardPage.tsx
+    DashboardPage.module.css         optional, only if still justified
+    ScanPage.tsx
+    ScanPage.module.css              optional
+    InventoryImportPage.tsx
+    InventoryImportPage.module.css
     product/
       ProductDetailPage.tsx
-      ProductDetail.module.css
-      ProductForm.module.css
-    inventory/
-      InventoryImportPage.tsx
-      InventoryImport.module.css
-    explorer/
-      ExplorerTab.tsx
-      Explorer.module.css
-    reports/
-      CustomReportsPage.tsx
-      CustomReports.module.css
-  pages/
-    DashboardPage.tsx           ← inline Tailwind (no .css file)
-    AlertsPage.tsx              ← inline Tailwind (unchanged)
-    InventoryPage.tsx           ← inline Tailwind (unchanged)
-    ScanPage.tsx                ← imports ScanCameraFrame.module.css
-    LabelStudioPage.tsx         ← imports LabelDesigner.module.css
-    ...
+      ProductDetailPage.module.css
+      ProductFormPage.tsx
+      ProductFormPage.module.css
+  components/
+    Scan/
+      QuickScanTab.tsx
+      QuickScanTab.module.css
+      ScanHistoryTab.tsx
+      ScanHistoryTab.module.css
+    LabelStudio/
+      LabelDesignerTab.tsx
+      LabelDesignerTab.module.css
+      LabelPreviewBatchTab.tsx
+      LabelPreviewBatchTab.module.css
+      TemplateLibraryTab.tsx
+      TemplateLibraryTab.module.css
+    Inventory/
+      AllProductsTab.tsx
+      AllProductsTab.module.css
+      FolderNavigationPanel.tsx
+      FolderNavigationPanel.module.css
+    Reports/
+      CustomSavedReportsTab.tsx
+      CustomSavedReportsTab.module.css
 ```
+
+This keeps the migration understandable and avoids mixing it with a repo re-organisation.
 
 ---
 
 ## Common anti-patterns
 
-### ❌ `@apply` soup in modules
+### Do not recreate utility CSS inside modules
+
 ```css
-/* Don't paste Tailwind utilities into a module */
-.scanButton {
+.buttonLikeThing {
   @apply inline-flex items-center justify-center gap-2;
-  @apply min-w-[144px] px-[22px] py-3 rounded-full;
+  @apply rounded-full px-4 py-2;
 }
 ```
-This defeats the purpose. Put those in JSX inline.
 
-### ❌ Constructing dynamic class names with modules
+If the style is just utilities, keep it in JSX.
+
+### Do not build fragile dynamic module class names
+
 ```tsx
-<div className={styles[`scan-${mode}`]} />   /* won't work */
+styles[`state-${mode}`]
 ```
-CSS Modules hash the class names at build time. Use explicit maps instead.
 
-### ❌ Generic names in modules
-```css
-/* module.css — still bad */
-.button { ... }
-.card { ... }
-```
-Names are scoped, but generic names make the JSX harder to grep. Prefer contextual names: `.scanCameraToggle`, `.labelArtboard`.
+This can work mechanically, but it is brittle and hard to grep. Prefer explicit conditionals or maps.
 
-### ❌ Leaving a "shared styles" global file
-```
-styles/
-  shared.css
-  globals.css
-```
-These always become dumping grounds. The only global file allowed is `index.css` (Tailwind + tokens).
+### Do not mix structure migration with style migration
+
+Avoid a commit that both:
+
+- moves files into new folders
+- renames components
+- converts CSS ownership
+
+That makes regressions much harder to trace.
+
+### Do not keep a permanent replacement for `App.css`
+
+If a temporary bridge file is ever needed during migration, it must have a removal owner and a removal checkpoint. The end state is still no long-lived global feature stylesheet.
+
+---
+
+## Verification plan
+
+Each migrated slice should pass:
+
+1. Typecheck
+2. Relevant unit tests
+3. Relevant e2e flows
+4. Manual visual QA on the migrated surface
+
+Minimum manual QA matrix:
+
+- Dashboard
+- Inventory list and folder explorer
+- Inventory import
+- Product detail
+- Product create and edit
+- Scan actions and scan history
+- Label templates, label editor, preview/batch, downloads
+- Reports, especially custom reports
+- Procurement tabs
+- Alerts
+- Team settings
+
+Migration commits should stay slice-sized. Good slices are:
+
+- one feature namespace
+- one dashboard conversion
+- one shared primitive family such as buttons or empty states
 
 ---
 
 ## Success criteria
 
-- [ ] `App.css` and `DashboardPage.css` are deleted.
-- [ ] `find apps/stoqr/src -name "*.css" -not -name "*.module.css" -not -name "index.css"` returns zero files.
-- [ ] No open PR adds new non-Tailwind CSS to a global file.
-- [ ] Every custom BEM namespace is either in a `.module.css` or converted to inline Tailwind.
-- [ ] Build passes and visual regression is acceptable across Scanner, Label Studio, Product Detail, Inventory Import, and Dashboard.
+- `App.css` is deleted.
+- `DashboardPage.css` is deleted.
+- StoQR contains no long-lived global feature stylesheet.
+- Every migrated screen still passes its behavior tests.
+- Visual QA is complete for the high-risk surfaces listed above.
+- New styles are either inline Tailwind, `@repo/ui`, or co-located modules.
 
 ---
 
-## Appendix: Tailwind vs Module cheat sheet
+## Tailwind vs Module cheat sheet
 
-| Visual need | Tailwind? | Notes |
-|-------------|-----------|-------|
-| `display: flex; gap: 24px;` | `flex gap-6` | Tailwind |
-| `grid-template-columns: repeat(3, 1fr);` | `grid grid-cols-3` | Tailwind |
-| `border-radius: 999px;` | `rounded-full` | Tailwind |
-| `color: #0f172a;` | `text-[#0f172a]` or token | Tailwind |
-| `width: 13px; height: 116px;` | `w-[13px] h-[116px]` | Tailwind (arbitrary value) |
-| `@media (max-width: 860px) { ... }` | `max-w-[860px]:flex-col` | Tailwind (arbitrary variant) |
-| `position: absolute; inset: 0;` | `absolute inset-0` | Tailwind |
-| `transition: opacity 0.18s ease;` | `transition-opacity duration-200` | Tailwind |
-| `.is-active { background: #fff; }` | **Module** — state variant | CSS Module |
-| `::before { ... }` | **Module** — pseudo-element | CSS Module |
-| `@keyframes fadeIn { ... }` | **Module** — animation | CSS Module |
-| `width: min(100%, 520px);` | `w-full max-w-[520px]` | Tailwind |
-| Complex nested hover/focus states | **Module** | CSS Module |
-| Print-specific styles (`@media print`) | **Module** | CSS Module |
-
+| Visual need | Preferred choice | Notes |
+|-------------|------------------|-------|
+| `display: flex; gap: 24px;` | Tailwind | `flex gap-6` |
+| `grid-template-columns: repeat(3, 1fr);` | Tailwind | `grid grid-cols-3` |
+| `width: 13px; height: 116px;` | Tailwind | `w-[13px] h-[116px]` |
+| `width: min(100%, 520px);` | Tailwind | `w-full max-w-[520px]` |
+| `@media (max-width: 860px)` | Module, usually | Tailwind `max-[860px]:...` is possible, but use it intentionally, not by default |
+| `::before`, `::after` | Module | Better fit for CSS |
+| `@media print` | Module | Better fit for CSS |
+| `@keyframes` | Module | Better fit for CSS |
+| Complex visual editor canvas or print preview | Module | Keeps the JSX readable |
+| Basic active state | Tailwind first | Module only if the selector logic becomes complex |

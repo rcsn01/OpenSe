@@ -224,17 +224,22 @@ export const StockHealthValuationTab = ({
 
   const DONUT_COLORS = [
     "var(--color-foreground)",
-    "#2563eb",
-    "#94a3b8",
-    "#cbd5e1",
-    "#d4a373",
-    "#ccd5ae",
+    "var(--color-primary)",
+    "var(--color-muted-foreground)",
+    "var(--color-border)",
+    "var(--color-warning)",
+    "var(--color-success-light)",
   ];
 
-  const BAR_COLORS = ["#0f172a", "#1e40af", "#2563eb", "#93c5fd"];
+  const BAR_COLORS = [
+    "var(--color-foreground)",
+    "var(--color-info)",
+    "var(--color-primary)",
+    "var(--color-info-light)",
+  ];
 
   return (
-    <div className="stoqr-analytics-tab">
+    <div className="flex min-w-0 flex-col gap-7">
       <AnalyticsMetricGrid variant="stats-4">
         <AnalyticsMetricCard
           label="Total Inventory Value"
@@ -285,14 +290,7 @@ export const StockHealthValuationTab = ({
               },
             ]}
           />
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              fontSize: "var(--type-size-xs)",
-              color: "var(--color-muted-foreground)",
-            }}
-          >
+          <div className="flex gap-3 text-xs text-[var(--color-muted-foreground)]">
             <span>{formatCurrency(healthBreakdown.healthy)}</span>
             <span>{formatCurrency(healthBreakdown.excess)}</span>
             <span>{formatCurrency(healthBreakdown.dead)}</span>
@@ -326,7 +324,7 @@ export const StockHealthValuationTab = ({
                 width: `${Math.min((turnover / 8) * 100, 100)}%`,
                 height: "100%",
                 borderRadius: "var(--radius-full)",
-                background: "#2563eb",
+                background: "var(--color-primary)",
               }}
             />
           </div>
@@ -367,7 +365,7 @@ export const StockHealthValuationTab = ({
         </AnalyticsPanel>
       </AnalyticsMetricGrid>
 
-      <div className="grid grid-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <AnalyticsPanel title="Aging Stock Analysis">
           <AnalyticsBarChart
             data={agingData}
@@ -376,7 +374,7 @@ export const StockHealthValuationTab = ({
               {
                 dataKey: "value",
                 label: "Value",
-                color: BAR_COLORS[0] ?? "#0f172a",
+                color: BAR_COLORS[0] ?? "var(--color-foreground)",
               },
             ]}
             yTickFormatter={(value) => `$${(Number(value) / 1000).toFixed(0)}k`}
@@ -396,7 +394,7 @@ export const StockHealthValuationTab = ({
               data={folderValuation}
               categoryKey="name"
               layout="vertical"
-              series={[{ dataKey: "value", label: "Value", color: "#2563eb" }]}
+              series={[{ dataKey: "value", label: "Value", color: "var(--color-primary)" }]}
               xTickFormatter={(value) =>
                 `$${(Number(value) / 1000).toFixed(0)}k`
               }
@@ -409,10 +407,10 @@ export const StockHealthValuationTab = ({
         </AnalyticsPanel>
       </div>
 
-      <div className="grid grid-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <AnalyticsPanel
           title="ABC Analysis"
-          headerAside={<span className="pill">Pareto (80/20)</span>}
+          headerAside={<span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)]">Pareto (80/20)</span>}
         >
           <AnalyticsBarChart
             data={abcData}
@@ -421,12 +419,12 @@ export const StockHealthValuationTab = ({
               {
                 dataKey: "valuePct",
                 label: "% of Total Value",
-                color: "#0f172a",
+                color: "var(--color-foreground)",
               },
               {
                 dataKey: "itemsPct",
                 label: "% of Total Items",
-                color: "#93c5fd",
+                color: "var(--color-info-light)",
               },
             ]}
             yTickFormatter={(value) => `${value}%`}
@@ -435,8 +433,8 @@ export const StockHealthValuationTab = ({
           <AnalyticsLegend
             muted
             items={[
-              { label: "% of Total Value", color: "#0f172a" },
-              { label: "% of Total Items", color: "#93c5fd" },
+              { label: "% of Total Value", color: "var(--color-foreground)" },
+              { label: "% of Total Items", color: "var(--color-info-light)" },
             ]}
           />
         </AnalyticsPanel>

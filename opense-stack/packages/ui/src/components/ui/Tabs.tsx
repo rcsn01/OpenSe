@@ -68,6 +68,52 @@ export function TabBar({
   );
 }
 
+export type ContentTab = TabItem & {
+  content: ReactNode;
+};
+
+interface ContentTabsProps {
+  tabs: ContentTab[];
+  activeTab?: string;
+  onTabChange?: (id: string) => void;
+  bottomSpacing?: boolean;
+  className?: string;
+  contentClassName?: string;
+}
+
+export function ContentTabs({
+  tabs,
+  activeTab,
+  onTabChange,
+  bottomSpacing = false,
+  className,
+  contentClassName,
+}: ContentTabsProps) {
+  const [internalTab, setInternalTab] = useState(tabs[0]?.id);
+  const resolvedActiveTab = activeTab ?? internalTab;
+
+  const handleTabChange = (tabId: string) => {
+    onTabChange?.(tabId);
+    if (!activeTab) {
+      setInternalTab(tabId);
+    }
+  };
+
+  return (
+    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
+      <TabBar
+        tabs={tabs}
+        activeTab={resolvedActiveTab}
+        onTabChange={handleTabChange}
+        bottomSpacing={bottomSpacing}
+      />
+      <div className={cn("flex min-h-0 flex-1 flex-col", contentClassName)}>
+        {tabs.find((tab) => tab.id === resolvedActiveTab)?.content}
+      </div>
+    </div>
+  );
+}
+
 /* ── Accordion ────────────────────────────────────────── */
 
 export function AccordionItem({

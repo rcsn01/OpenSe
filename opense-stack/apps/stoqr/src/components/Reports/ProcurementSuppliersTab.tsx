@@ -241,18 +241,18 @@ export const ProcurementSuppliersTab = ({
   }, [allOrders, allItems]);
 
   const RATING_STYLES: Record<string, { bg: string; color: string }> = {
-    Excellent: { bg: "rgba(22, 163, 74, 0.12)", color: "#166534" },
-    Good: { bg: "rgba(37, 99, 235, 0.12)", color: "#1e40af" },
-    "Needs Review": { bg: "rgba(245, 158, 11, 0.16)", color: "#92400e" },
+    Excellent: { bg: "var(--color-success-light)", color: "var(--color-success)" },
+    Good: { bg: "var(--color-info-light)", color: "var(--color-info)" },
+    "Needs Review": { bg: "var(--color-warning-light)", color: "var(--color-warning)" },
   };
 
   return (
-    <div className="stoqr-analytics-tab">
+    <div className="flex min-w-0 flex-col gap-7">
       <AnalyticsMetricGrid variant="stats-4">
         <AnalyticsMetricCard
           label="Pending PO Value"
           value={formatCompact(pendingPoValue)}
-          valueMeta={<span className="small muted">Active order pipeline</span>}
+          valueMeta={<span className="text-sm text-[var(--color-muted-foreground)]">Active order pipeline</span>}
           visual={
             <AnalyticsMiniSparkline
               data={pendingSparkline}
@@ -264,13 +264,13 @@ export const ProcurementSuppliersTab = ({
         <AnalyticsMetricCard
           label="Completed POs (30d)"
           value={formatCompact(completedPoValue)}
-          valueMeta={<span className="small muted">Total received value</span>}
+          valueMeta={<span className="text-sm text-[var(--color-muted-foreground)]">Total received value</span>}
         />
         <AnalyticsMetricCard
           label="Avg Lead Time"
           value={`${avgLeadTime.toFixed(1)}d`}
           valueMeta={
-            <span className="small muted">
+            <span className="text-sm text-[var(--color-muted-foreground)]">
               {avgLeadTime <= 14 ? "Slight improvement" : "Needs attention"}
             </span>
           }
@@ -287,7 +287,7 @@ export const ProcurementSuppliersTab = ({
                 style={{
                   height: 3,
                   flex: 1,
-                  background: "#2563eb",
+                  background: "var(--color-primary)",
                   borderRadius: "var(--radius-full)",
                 }}
               />
@@ -298,7 +298,7 @@ export const ProcurementSuppliersTab = ({
                     width: 10,
                     height: 10,
                     borderRadius: "50%",
-                    background: "#2563eb",
+                    background: "var(--color-primary)",
                     margin: "0 4px",
                   }}
                 />
@@ -307,7 +307,7 @@ export const ProcurementSuppliersTab = ({
                 style={{
                   height: 3,
                   flex: 1,
-                  background: "#2563eb",
+                  background: "var(--color-primary)",
                   borderRadius: "var(--radius-full)",
                 }}
               />
@@ -318,7 +318,7 @@ export const ProcurementSuppliersTab = ({
           label="Avg Defect Rate"
           value={`${avgDefectRate.toFixed(1)}%`}
           valueMeta={
-            <span className="small muted">
+            <span className="text-sm text-[var(--color-muted-foreground)]">
               {avgDefectRate > 2 ? "Requires attention" : "Within targets"}
             </span>
           }
@@ -345,7 +345,7 @@ export const ProcurementSuppliersTab = ({
         />
       </AnalyticsMetricGrid>
 
-      <div className="grid grid-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <AnalyticsTablePanel title="Supplier Scorecard">
           {supplierScorecard.length === 0 ? (
             <AnalyticsEmptyPanel message="No supplier data available." />
@@ -356,7 +356,7 @@ export const ProcurementSuppliersTab = ({
                   id: "supplier",
                   header: "Supplier",
                   renderCell: (row: (typeof supplierScorecard)[number]) => (
-                    <span style={{ fontWeight: "var(--type-weight-semibold)" }}>
+                    <span className="font-semibold text-[var(--color-foreground)]">
                       {row.name}
                     </span>
                   ),
@@ -388,7 +388,7 @@ export const ProcurementSuppliersTab = ({
                   align: "center",
                   renderCell: (row: (typeof supplierScorecard)[number]) => (
                     <span
-                      className="badge"
+                      className="inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-medium"
                       style={{
                         background: RATING_STYLES[row.rating]?.bg,
                         color: RATING_STYLES[row.rating]?.color,
@@ -416,7 +416,7 @@ export const ProcurementSuppliersTab = ({
               xDataKey="month"
               yAxisWidth={50}
               series={[
-                { dataKey: "price", label: "Unit Cost", color: "#2563eb" },
+                { dataKey: "price", label: "Unit Cost", color: "var(--color-primary)" },
               ]}
               tooltipFormatter={(value) => [
                 formatCurrency(Number(value)),

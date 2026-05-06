@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { FileText } from 'lucide-react'
-import { EmptyState } from '../EmptyState'
+import { EmptyState } from '@repo/ui'
 import {
   getProductAttachmentPublicUrl,
   type ProductAttachment,

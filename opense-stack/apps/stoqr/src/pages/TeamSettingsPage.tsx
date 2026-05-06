@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ContentTabs } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
 import { useCompany } from '../contexts/CompanyContext'
 import {
@@ -11,7 +12,6 @@ import {
 } from '../api/organisationPageSettings'
 import { BasePage } from '../components/BasePage'
 import { usePageTopBarSearch, useTopBarSearchValue } from '../components/Search/TopBarSearch'
-import { Tabs } from '../components/Tabs'
 import { ActivityLogsTab } from '../components/TeamSettings/ActivityLogsTab'
 import { MembersTab } from '../components/TeamSettings/MembersTab'
 import { PagesTab } from '../components/TeamSettings/PagesTab'
@@ -262,7 +262,7 @@ export const TeamSettingsPage = () => {
       emptyStateDescription="Choose an organisation to manage your teams and permissions."
       loadingMessage="Loading organisation settings..."
     >
-      <Tabs
+      <ContentTabs
         activeTab={activeTab}
         onTabChange={(nextTab) => navigate(`/settings/organisations/${nextTab}`)}
         bottomSpacing

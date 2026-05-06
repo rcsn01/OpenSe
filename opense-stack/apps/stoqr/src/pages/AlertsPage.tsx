@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   Checkbox,
+  ContentTabs,
   DataTable,
   type DataTableColumn,
   Input,
@@ -33,7 +34,6 @@ import {
   usePageTopBarSearch,
   useTopBarSearchValue,
 } from "../components/Search/TopBarSearch";
-import { Tabs } from "../components/Tabs";
 import { useCompany } from "../contexts/CompanyContext";
 import {
   fuzzyRankings,
@@ -963,13 +963,12 @@ export const AlertsPage = () => {
       isLoading={false}
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to view alerts."
-      containerClassName="stoqr-workspace-page"
-      contentStyle={{ padding: "18px 8px 32px" }}
-      containerStyle={{ minWidth: 0 }}
+      contentClassName="px-2 pb-8 pt-[18px]"
+      containerClassName="[&>*]:min-w-0 flex min-h-0 min-w-0 flex-1 flex-col gap-7 text-[var(--color-foreground)]"
     >
       <PageAvailabilityGuard companyId={companyId} feature="alerts">
         <h1 className="sr-only">Alerts</h1>
-        <Tabs
+        <ContentTabs
           activeTab={activeTab}
           onTabChange={(nextTab) => navigate(`/alerts/${nextTab}`)}
           bottomSpacing

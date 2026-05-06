@@ -1,10 +1,11 @@
 import { useCallback, useEffect } from 'react'
 import { useCompany } from '../contexts/CompanyContext'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ContentTabs } from '@repo/ui'
 import { BasePage } from '../components/BasePage'
-import { Tabs } from '../components/Tabs'
 import { TemplateLibraryTab } from '../components/LabelStudio/TemplateLibraryTab'
 import { LabelPreviewBatchTab } from '../components/LabelStudio/LabelPreviewBatchTab'
+import '../components/LabelStudio/LabelStudioSurface.css'
 
 const labelStudioTabAliases = {
   design: 'templates',
@@ -83,7 +84,7 @@ export const LabelStudioPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to access label tools."
     >
-      <Tabs
+      <ContentTabs
         activeTab={activeTab}
         onTabChange={(nextTab) => handleTabChange(nextTab as LabelStudioTab)}
         bottomSpacing

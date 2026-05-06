@@ -10,6 +10,7 @@ import {
   getLabelTemplateIdFromSuggestion,
 } from '../components/LabelStudio/templateSearch'
 import { useLabelTemplates } from '../hooks/queries/useLabelStudio'
+import '../components/LabelStudio/LabelStudioSurface.css'
 
 export const LabelDesignerPage = () => {
   const { companyId } = useCompany()

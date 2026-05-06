@@ -33,7 +33,13 @@ export {
   SideSheetBody,
   SideSheetFooter,
 } from "./ui/SideSheet";
-export { TabBar, AccordionItem, type TabItem } from "./ui/Tabs";
+export {
+  TabBar,
+  ContentTabs,
+  AccordionItem,
+  type TabItem,
+  type ContentTab,
+} from "./ui/Tabs";
 export { Avatar, AvatarGroup, type AvatarProps } from "./ui/Avatar";
 export { Progress, Skeleton } from "./ui/Progress";
 export { Spinner, DotPulse } from "./ui/Spinner";

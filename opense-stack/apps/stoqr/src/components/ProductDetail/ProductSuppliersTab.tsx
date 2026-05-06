@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { EmptyState } from '../EmptyState'
+import { EmptyState } from '@repo/ui'
 import { formatCurrency } from '../../utils'
 import { useProductSuppliers } from '../../hooks/queries/useProductDetailTabs'
 
@@ -56,4 +56,3 @@ export const ProductSuppliersTab = ({
     </section>
   )
 }
-

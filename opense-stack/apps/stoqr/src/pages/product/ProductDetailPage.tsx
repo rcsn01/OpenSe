@@ -12,6 +12,7 @@ import { ProductOverviewTab } from '../../components/ProductDetail/ProductOvervi
 import { ProductSuppliersTab } from '../../components/ProductDetail/ProductSuppliersTab'
 import { useProductPageSearch } from '../../hooks/useProductPageSearch'
 import { useProductDetail, useProductFolders } from '../../hooks/queries/useProducts'
+import './ProductSurface.module.css'
 
 const PRODUCT_DETAIL_TABS = [
   { id: 'overview', label: 'Overview' },

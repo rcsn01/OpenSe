@@ -1,5 +1,6 @@
 import { AlignCenter, AlignLeft, AlignRight, ArrowLeft, Eye, QrCode, ScanBarcode, Type } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Input } from '@repo/ui'
 import { useLabelTemplates, useUpdateLabelTemplateLayout } from '../../hooks/queries/useLabelStudio'
 import { LabelPreviewCard } from './LabelPreviewCard'
 import {
@@ -249,13 +250,12 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
                 <div className="label-studio-dimension-grid">
                   <label className="stack label-studio-readonly-field">
                     Display Name
-                    <input className="input" value={selectedTemplate.name} readOnly />
+                    <Input value={selectedTemplate.name} readOnly />
                   </label>
 
                   <label className="stack">
                     Width (mm)
-                    <input
-                      className="input"
+                    <Input
                       type="number"
                       min={20}
                       max={200}
@@ -266,8 +266,7 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
 
                   <label className="stack">
                     Height (mm)
-                    <input
-                      className="input"
+                    <Input
                       type="number"
                       min={20}
                       max={200}

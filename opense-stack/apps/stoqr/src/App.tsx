@@ -1,7 +1,6 @@
 import { Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom'
-import { ThemeProvider } from '@repo/ui'
+import { EmptyState, ThemeProvider } from '@repo/ui'
 import { AuthRedirectPage } from '@repo/shared/auth'
-import './App.css'
 import { AppLayout } from './layouts/AppLayout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
 import { buildAccountsAuthUrl } from './lib/authRedirect'
@@ -25,7 +24,7 @@ const CompanyGate = () => {
   const { isLoading } = useCompany()
 
   if (isLoading) {
-    return <div className="empty-state">Loading workspace...</div>
+    return <EmptyState title="Loading workspace..." description="" />
   }
 
   return <Outlet />
@@ -40,7 +39,7 @@ export const RootRedirect = () => {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return <div className="empty-state">Loading session...</div>
+    return <EmptyState title="Loading session..." description="" />
   }
 
   return <Navigate to={user ? '/dashboard' : '/auth'} replace />
@@ -50,7 +49,7 @@ export function App() {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return <div className="empty-state">Loading session...</div>
+    return <EmptyState title="Loading session..." description="" />
   }
 
   if (!user) {
