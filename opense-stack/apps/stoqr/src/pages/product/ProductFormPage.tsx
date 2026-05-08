@@ -500,304 +500,310 @@ export const ProductFormPage = ({ mode, productId }: { mode: ProductFormMode; pr
             <h1 className={sx('product-form-title')}>{heading}</h1>
           </div>
 
-          <section className={sx('product-form-section')}>
-            <div className={sx('product-form-section-title')}>General Information</div>
+          <div className={sx('product-form-layout')}>
+            <div className={sx('product-form-primary-column')}>
+              <section className={sx('product-form-section')}>
+                <div className={sx('product-form-section-title')}>General Information</div>
 
-            <div className={sx('product-form-field-grid')}>
-              <label className={sx('product-form-field', 'product-form-field--full')}>
-                <span className={sx('product-form-label')}>Product Name</span>
-                <input
-                  className={sx('product-form-line-input')}
-                  required
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Aeron Ergonomic Office Chair"
-                />
-              </label>
+                <div className={sx('product-form-field-grid')}>
+                  <label className={sx('product-form-field', 'product-form-field--wide')}>
+                    <span className={sx('product-form-label')}>Product Name</span>
+                    <input
+                      className={sx('product-form-line-input')}
+                      required
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Aeron Ergonomic Office Chair"
+                    />
+                  </label>
 
-              <label className={sx('product-form-field')}>
-                <span className={sx('product-form-label-row')}>
-                  <span className={sx('product-form-label')}>SKU</span>
-                  <button type="button" className={sx('product-form-inline-action')} onClick={generateSku}>
-                    <Wand2 size={12} />
-                    Generate
-                  </button>
-                </span>
-                <input
-                  className={sx('product-form-line-input')}
-                  value={sku}
-                  onChange={(event) => setSku(event.target.value)}
-                  placeholder="Optional"
-                />
-              </label>
+                  <label className={sx('product-form-field')}>
+                    <span className={sx('product-form-label-row')}>
+                      <span className={sx('product-form-label')}>SKU</span>
+                      <button type="button" className={sx('product-form-inline-action')} onClick={generateSku}>
+                        <Wand2 size={12} />
+                        Generate
+                      </button>
+                    </span>
+                    <input
+                      className={sx('product-form-line-input')}
+                      value={sku}
+                      onChange={(event) => setSku(event.target.value)}
+                      placeholder="Optional"
+                    />
+                  </label>
 
-              <label className={sx('product-form-field')}>
-                <span className={sx('product-form-label')}>Location (Folder/Aisle)</span>
-                <select
-                  className={sx('product-form-line-select')}
-                  value={folderId}
-                  onChange={(event) => setFolderId(event.target.value)}
-                >
-                  <option value="">Root Directory</option>
-                  {folderOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className={sx('product-form-field', 'product-form-field--full')}>
-                <span className={sx('product-form-label')}>Description</span>
-                <textarea
-                  className={sx('product-form-line-textarea')}
-                  rows={3}
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Describe the product, its purpose, and anything the warehouse team should know."
-                />
-              </label>
-
-              <label className={sx('product-form-field')}>
-                <span className={sx('product-form-label')}>Expiry Date</span>
-                <input
-                  type="date"
-                  className={sx('product-form-line-input')}
-                  value={expiryDate}
-                  onChange={(event) => setExpiryDate(event.target.value)}
-                />
-              </label>
-            </div>
-          </section>
-
-          <section className={sx('product-form-section')}>
-            <div className={sx('product-form-section-title')}>Pricing &amp; Inventory</div>
-
-            <div className={sx('product-form-field-grid')}>
-              <label className={sx('product-form-field')}>
-                <span className={sx('product-form-label')}>Selling Price</span>
-                <div className={sx('product-form-money-field')}>
-                  <span className={sx('product-form-money-prefix')}>$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className={sx('product-form-line-input')}
-                    value={sellingPrice}
-                    onChange={(event) => setSellingPrice(event.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-              </label>
-
-              <label className={sx('product-form-field')}>
-                <span className={sx('product-form-label')}>Cost Price</span>
-                <div className={sx('product-form-money-field')}>
-                  <span className={sx('product-form-money-prefix')}>$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className={sx('product-form-line-input')}
-                    value={costPrice}
-                    onChange={(event) => setCostPrice(event.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-              </label>
-
-              <label className={sx('product-form-field')}>
-                <span className={sx('product-form-label')}>Update Stock</span>
-                <input
-                  type="number"
-                  className={sx('product-form-line-input')}
-                  value={quantity}
-                  onChange={(event) => setQuantity(event.target.value)}
-                  placeholder="0"
-                />
-              </label>
-
-              <label className={sx('product-form-field')}>
-                <span className={sx('product-form-label')}>Low Stock Alert Threshold</span>
-                <input
-                  type="number"
-                  className={sx('product-form-line-input')}
-                  value={reorderPoint}
-                  onChange={(event) => setReorderPoint(event.target.value)}
-                  placeholder="10"
-                />
-              </label>
-            </div>
-          </section>
-
-          <section className={sx('product-form-section')}>
-            <div className={sx('product-form-section-head')}>
-              <div className={sx('product-form-section-title')}>Custom Attributes</div>
-              <button
-                type="button"
-                className={sx('product-form-text-action')}
-                onClick={() => setIsAttributePickerOpen((current) => !current)}
-              >
-                <Plus size={14} />
-                Add Attribute
-              </button>
-            </div>
-
-            {customFieldDefs.length > 0 ? (
-              <div className={sx('product-form-attributes-table')}>
-                <div className={sx('product-form-attributes-head')}>
-                  <span className={sx('product-form-label')}>Attribute Name</span>
-                  <span className={sx('product-form-label')}>Attribute Value</span>
-                  <span aria-hidden="true" />
-                </div>
-
-                {customFieldDefs.map((definition) => (
-                  <div key={definition.key} className={sx('product-form-attribute-row')}>
-                    <div className={sx('product-form-attribute-name')}>{definition.key}</div>
-                    <div className={sx('product-form-attribute-value')}>{renderAttributeEditor(definition)}</div>
-                    <button
-                      type="button"
-                      className={sx('product-form-remove-attribute')}
-                      aria-label={`Remove ${definition.key}`}
-                      onClick={() => {
-                        setCustomFieldDefs((previous) => previous.filter((field) => field.key !== definition.key))
-                        const nextFields = { ...customFields }
-                        delete nextFields[definition.key]
-                        setCustomFields(nextFields)
-                      }}
+                  <label className={sx('product-form-field')}>
+                    <span className={sx('product-form-label')}>Location (Folder/Aisle)</span>
+                    <select
+                      className={sx('product-form-line-select')}
+                      value={folderId}
+                      onChange={(event) => setFolderId(event.target.value)}
                     >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className={sx('product-form-empty-copy')}>No custom attributes added yet.</p>
-            )}
+                      <option value="">Root Directory</option>
+                      {folderOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-            {isAttributePickerOpen ? (
-              <div className={sx('product-form-attribute-builder')}>
-                <label className={sx('product-form-field', 'product-form-field--full')}>
-                  <span className={sx('product-form-label')}>Add From Existing Attributes</span>
-                  <select
-                    aria-label="Add attribute from existing list"
-                    className={sx('product-form-line-select')}
-                    value={selectedExistingFieldKey}
-                    onChange={(event) => {
-                      const nextValue = event.target.value
-                      setSelectedExistingFieldKey(nextValue)
+                  <label className={sx('product-form-field', 'product-form-field--full')}>
+                    <span className={sx('product-form-label')}>Description</span>
+                    <textarea
+                      className={sx('product-form-line-textarea')}
+                      rows={3}
+                      value={description}
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder="Describe the product, its purpose, and anything the warehouse team should know."
+                    />
+                  </label>
 
-                      if (!nextValue) return
+                  <label className={sx('product-form-field')}>
+                    <span className={sx('product-form-label')}>Expiry Date</span>
+                    <input
+                      type="date"
+                      className={sx('product-form-line-input')}
+                      value={expiryDate}
+                      onChange={(event) => setExpiryDate(event.target.value)}
+                    />
+                  </label>
+                </div>
+              </section>
 
-                      if (nextValue === '__new__') {
-                        setIsCreatingNewField(true)
-                        return
-                      }
-
-                      handleAddExistingField(nextValue)
-                    }}
+              <section className={sx('product-form-section')}>
+                <div className={sx('product-form-section-head')}>
+                  <div className={sx('product-form-section-title')}>Custom Attributes</div>
+                  <button
+                    type="button"
+                    className={sx('product-form-text-action')}
+                    onClick={() => setIsAttributePickerOpen((current) => !current)}
                   >
-                    <option value="">Select existing attribute</option>
-                    {existingAttributeOptions.map((definition) => (
-                      <option key={definition.key} value={definition.key}>
-                        {definition.key}
-                      </option>
-                    ))}
-                    <option value="__new__">Create new attribute...</option>
-                  </select>
-                </label>
+                    <Plus size={14} />
+                    Add Attribute
+                  </button>
+                </div>
 
-                {isCreatingNewField ? (
-                  <div className={sx('product-form-builder-grid')}>
-                    <label className={sx('product-form-field')}>
+                {customFieldDefs.length > 0 ? (
+                  <div className={sx('product-form-attributes-table')}>
+                    <div className={sx('product-form-attributes-head')}>
                       <span className={sx('product-form-label')}>Attribute Name</span>
-                      <input
-                        className={sx('product-form-line-input')}
-                        placeholder="Color"
-                        value={newFieldKey}
-                        onChange={(event) => setNewFieldKey(event.target.value)}
-                      />
-                    </label>
+                      <span className={sx('product-form-label')}>Attribute Value</span>
+                      <span aria-hidden="true" />
+                    </div>
 
-                    <label className={sx('product-form-field')}>
-                      <span className={sx('product-form-label')}>Value Type</span>
+                    {customFieldDefs.map((definition) => (
+                      <div key={definition.key} className={sx('product-form-attribute-row')}>
+                        <div className={sx('product-form-attribute-name')}>{definition.key}</div>
+                        <div className={sx('product-form-attribute-value')}>{renderAttributeEditor(definition)}</div>
+                        <button
+                          type="button"
+                          className={sx('product-form-remove-attribute')}
+                          aria-label={`Remove ${definition.key}`}
+                          onClick={() => {
+                            setCustomFieldDefs((previous) => previous.filter((field) => field.key !== definition.key))
+                            const nextFields = { ...customFields }
+                            delete nextFields[definition.key]
+                            setCustomFields(nextFields)
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={sx('product-form-empty-copy')}>No custom attributes added yet.</p>
+                )}
+
+                {isAttributePickerOpen ? (
+                  <div className={sx('product-form-attribute-builder')}>
+                    <label className={sx('product-form-field', 'product-form-field--full')}>
+                      <span className={sx('product-form-label')}>Add From Existing Attributes</span>
                       <select
+                        aria-label="Add attribute from existing list"
                         className={sx('product-form-line-select')}
-                        value={newFieldType}
-                        onChange={(event) => setNewFieldType(event.target.value as CustomFieldDefinition['type'])}
+                        value={selectedExistingFieldKey}
+                        onChange={(event) => {
+                          const nextValue = event.target.value
+                          setSelectedExistingFieldKey(nextValue)
+
+                          if (!nextValue) return
+
+                          if (nextValue === '__new__') {
+                            setIsCreatingNewField(true)
+                            return
+                          }
+
+                          handleAddExistingField(nextValue)
+                        }}
                       >
-                        <option value="text">Text</option>
-                        <option value="number">Number</option>
-                        <option value="boolean">Yes / No</option>
-                        <option value="date">Date</option>
+                        <option value="">Select existing attribute</option>
+                        {existingAttributeOptions.map((definition) => (
+                          <option key={definition.key} value={definition.key}>
+                            {definition.key}
+                          </option>
+                        ))}
+                        <option value="__new__">Create new attribute...</option>
                       </select>
                     </label>
 
-                    <div className={sx('product-form-builder-actions')}>
-                      <button type="button" className={sx('product-form-secondary-action')} onClick={handleAddField}>
-                        <Plus size={14} />
-                        Add Attribute
+                    {isCreatingNewField ? (
+                      <div className={sx('product-form-builder-grid')}>
+                        <label className={sx('product-form-field')}>
+                          <span className={sx('product-form-label')}>Attribute Name</span>
+                          <input
+                            className={sx('product-form-line-input')}
+                            placeholder="Color"
+                            value={newFieldKey}
+                            onChange={(event) => setNewFieldKey(event.target.value)}
+                          />
+                        </label>
+
+                        <label className={sx('product-form-field')}>
+                          <span className={sx('product-form-label')}>Value Type</span>
+                          <select
+                            className={sx('product-form-line-select')}
+                            value={newFieldType}
+                            onChange={(event) => setNewFieldType(event.target.value as CustomFieldDefinition['type'])}
+                          >
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="boolean">Yes / No</option>
+                            <option value="date">Date</option>
+                          </select>
+                        </label>
+
+                        <div className={sx('product-form-builder-actions')}>
+                          <button type="button" className={sx('product-form-secondary-action')} onClick={handleAddField}>
+                            <Plus size={14} />
+                            Add Attribute
+                          </button>
+                          <button type="button" className={sx('product-form-inline-action')} onClick={closeAttributeBuilder}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={sx('product-form-inline-action')}
+                        onClick={() => setIsCreatingNewField(true)}
+                      >
+                        Create a brand new attribute
                       </button>
-                      <button type="button" className={sx('product-form-inline-action')} onClick={closeAttributeBuilder}>
-                        Cancel
-                      </button>
+                    )}
+                  </div>
+                ) : null}
+              </section>
+            </div>
+
+            <aside className={sx('product-form-side-column')}>
+              <section className={sx('product-form-section')}>
+                <div className={sx('product-form-section-title')}>Pricing &amp; Inventory</div>
+
+                <div className={sx('product-form-field-grid', 'product-form-field-grid--side')}>
+                  <label className={sx('product-form-field')}>
+                    <span className={sx('product-form-label')}>Selling Price</span>
+                    <div className={sx('product-form-money-field')}>
+                      <span className={sx('product-form-money-prefix')}>$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className={sx('product-form-line-input')}
+                        value={sellingPrice}
+                        onChange={(event) => setSellingPrice(event.target.value)}
+                        placeholder="0"
+                      />
                     </div>
+                  </label>
+
+                  <label className={sx('product-form-field')}>
+                    <span className={sx('product-form-label')}>Cost Price</span>
+                    <div className={sx('product-form-money-field')}>
+                      <span className={sx('product-form-money-prefix')}>$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className={sx('product-form-line-input')}
+                        value={costPrice}
+                        onChange={(event) => setCostPrice(event.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
+                  </label>
+
+                  <label className={sx('product-form-field')}>
+                    <span className={sx('product-form-label')}>Update Stock</span>
+                    <input
+                      type="number"
+                      className={sx('product-form-line-input')}
+                      value={quantity}
+                      onChange={(event) => setQuantity(event.target.value)}
+                      placeholder="0"
+                    />
+                  </label>
+
+                  <label className={sx('product-form-field')}>
+                    <span className={sx('product-form-label')}>Low Stock Alert Threshold</span>
+                    <input
+                      type="number"
+                      className={sx('product-form-line-input')}
+                      value={reorderPoint}
+                      onChange={(event) => setReorderPoint(event.target.value)}
+                      placeholder="10"
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className={sx('product-form-section')}>
+                <div className={sx('product-form-section-title')}>Product Media</div>
+
+                <label className={sx('product-form-upload-zone', existingImageUrls.length + images.length >= 4 && 'is-disabled')}>
+                  <Upload size={22} />
+                  <span className={sx('product-form-upload-title')}>Click or drag images to upload</span>
+                  <span className={sx('product-form-upload-caption')}>JPEG, PNG up to 5 MB</span>
+                  {existingImageUrls.length + images.length < 4 ? (
+                    <input type="file" hidden accept="image/*" multiple onChange={handleImageChange} />
+                  ) : null}
+                </label>
+
+                {existingImageUrls.length > 0 || imagePreviews.length > 0 ? (
+                  <div className={sx('product-form-media-grid')}>
+                    {existingImageUrls.map((source, index) => (
+                      <div key={`existing-${source}`} className={sx('product-form-media-thumb')}>
+                        <img src={getPublicImageUrl(source)} alt={name || 'Existing product media'} />
+                        <button
+                          type="button"
+                          className={sx('product-form-media-remove')}
+                          onClick={() => removeExistingImage(index)}
+                          aria-label="Remove image"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+
+                    {imagePreviews.map((source, index) => (
+                      <div key={`new-${source}`} className={sx('product-form-media-thumb')}>
+                        <img src={source} alt={name || 'New product media preview'} />
+                        <button
+                          type="button"
+                          className={sx('product-form-media-remove')}
+                          onClick={() => removeNewImage(index)}
+                          aria-label="Remove image"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    className={sx('product-form-inline-action')}
-                    onClick={() => setIsCreatingNewField(true)}
-                  >
-                    Create a brand new attribute
-                  </button>
-                )}
-              </div>
-            ) : null}
-          </section>
-
-          <section className={sx('product-form-section')}>
-            <div className={sx('product-form-section-title')}>Product Media</div>
-
-            <label className={sx('product-form-upload-zone', existingImageUrls.length + images.length >= 4 && 'is-disabled')}>
-              <Upload size={22} />
-              <span className={sx('product-form-upload-title')}>Click or drag images to upload</span>
-              <span className={sx('product-form-upload-caption')}>JPEG, PNG up to 5 MB</span>
-              {existingImageUrls.length + images.length < 4 ? (
-                <input type="file" hidden accept="image/*" multiple onChange={handleImageChange} />
-              ) : null}
-            </label>
-
-            {existingImageUrls.length > 0 || imagePreviews.length > 0 ? (
-              <div className={sx('product-form-media-grid')}>
-                {existingImageUrls.map((source, index) => (
-                  <div key={`existing-${source}`} className={sx('product-form-media-thumb')}>
-                    <img src={getPublicImageUrl(source)} alt={name || 'Existing product media'} />
-                    <button
-                      type="button"
-                      className={sx('product-form-media-remove')}
-                      onClick={() => removeExistingImage(index)}
-                      aria-label="Remove image"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-
-                {imagePreviews.map((source, index) => (
-                  <div key={`new-${source}`} className={sx('product-form-media-thumb')}>
-                    <img src={source} alt={name || 'New product media preview'} />
-                    <button
-                      type="button"
-                      className={sx('product-form-media-remove')}
-                      onClick={() => removeNewImage(index)}
-                      aria-label="Remove image"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </section>
+                ) : null}
+              </section>
+            </aside>
+          </div>
         </form>
       </div>
     </BasePage>
