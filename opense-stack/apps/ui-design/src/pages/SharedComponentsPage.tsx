@@ -119,7 +119,6 @@ import {
   Download,
   Filter,
   FileText,
-  ListFilter,
   Palette,
   Plus,
   RotateCcw,
@@ -274,17 +273,6 @@ const inventoryFilterTemplates: Array<{
   { value: "Safety", label: "Safety", folderMatch: "Safety" },
   { value: "Dispatch", label: "Dispatch", folderMatch: "Dispatch" },
   { value: "Warehouse", label: "Warehouse", folderMatch: "Warehouse" },
-];
-
-const inventorySortTemplates: Array<{
-  label: string;
-  field: InventorySortKey;
-  direction: "asc" | "desc";
-}> = [
-  { label: "Item A-Z", field: "item", direction: "asc" },
-  { label: "Price high-low", field: "price", direction: "desc" },
-  { label: "Available low-high", field: "available", direction: "asc" },
-  { label: "Folder A-Z", field: "folder", direction: "asc" },
 ];
 
 const draftInventoryRow: InventoryRow = {
@@ -510,7 +498,21 @@ export function SharedComponentsPage() {
 
     const sectionId = location.hash.slice(1);
     const rafId = window.requestAnimationFrame(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ block: "start" });
+      const section = document.getElementById(sectionId);
+      const scrollContainer = section?.closest<HTMLElement>(
+        "[data-app-scroll-container]",
+      );
+
+      if (!section || !scrollContainer) return;
+
+      window.scrollTo({ top: 0, left: 0 });
+
+      const sectionTop =
+        section.getBoundingClientRect().top -
+        scrollContainer.getBoundingClientRect().top +
+        scrollContainer.scrollTop;
+
+      scrollContainer.scrollTo({ top: sectionTop });
     });
 
     return () => window.cancelAnimationFrame(rafId);
@@ -628,15 +630,6 @@ export function SharedComponentsPage() {
     setTablePage(1);
   };
 
-  const applySortTemplate = (
-    field: InventorySortKey,
-    direction: "asc" | "desc",
-  ) => {
-    setSortField(field);
-    setSortDirection(direction);
-    setTablePage(1);
-  };
-
   const handleAddDraftRow = () => {
     setHasDraftRow(true);
     setTablePage(1);
@@ -670,65 +663,8 @@ export function SharedComponentsPage() {
     });
   };
 
-  const activeFilterLabel =
-    inventoryFilterTemplates.find(
-      (template) => template.value === inventoryFilter,
-    )?.label ?? "All";
-
   const tableTemplateRow = (
-    <VStack className="gap-3">
-      <HStack wrap align="center" justify="between" className="gap-3">
-        <HStack wrap align="center" className="gap-2">
-          <Badge variant="outline">Optional template row</Badge>
-          <Badge variant="secondary">{activeFilterLabel}</Badge>
-        </HStack>
-        <HStack wrap align="center" className="gap-2">
-          <DropdownMenu
-            align="right"
-            trigger={
-              <Button type="button" variant="outline" size="sm">
-                <ListFilter className="h-4 w-4" />
-                Sort templates
-              </Button>
-            }
-            items={inventorySortTemplates.map((template) => ({
-              label: template.label,
-              icon: <ListFilter className="h-4 w-4" />,
-              onClick: () =>
-                applySortTemplate(template.field, template.direction),
-            }))}
-          />
-          <DropdownMenu
-            align="right"
-            trigger={
-              <Button type="button" variant="outline" size="sm">
-                <Plus className="h-4 w-4" />
-                Actions
-              </Button>
-            }
-            items={[
-              {
-                label: "Add draft",
-                icon: <Plus className="h-4 w-4" />,
-                disabled: hasDraftRow,
-                onClick: handleAddDraftRow,
-              },
-              {
-                label: "Remove draft",
-                icon: <Trash2 className="h-4 w-4" />,
-                disabled: !hasDraftRow,
-                onClick: handleRemoveDraftRow,
-              },
-              { divider: true, label: "Divider" },
-              {
-                label: "Reset",
-                icon: <RotateCcw className="h-4 w-4" />,
-                onClick: handleResetTableTemplates,
-              },
-            ]}
-          />
-        </HStack>
-      </HStack>
+    <HStack wrap align="center" justify="between" className="gap-3">
       <HStack wrap align="center" className="gap-2">
         <Filter className="h-4 w-4 text-[var(--color-muted-foreground)]" />
         {inventoryFilterTemplates.map((template) => (
@@ -743,7 +679,47 @@ export function SharedComponentsPage() {
           </Button>
         ))}
       </HStack>
-    </VStack>
+      <Dropdown
+        align="right"
+        trigger={(open) => (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={
+              open
+                ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary-hover)]"
+                : undefined
+            }
+          >
+            <Plus className="h-4 w-4" />
+            Actions
+          </Button>
+        )}
+      >
+        <DropdownItem
+          icon={<Plus className="h-4 w-4" />}
+          disabled={hasDraftRow}
+          onClick={handleAddDraftRow}
+        >
+          Add draft
+        </DropdownItem>
+        <DropdownItem
+          icon={<Trash2 className="h-4 w-4" />}
+          disabled={!hasDraftRow}
+          onClick={handleRemoveDraftRow}
+        >
+          Remove draft
+        </DropdownItem>
+        <DropdownSeparator />
+        <DropdownItem
+          icon={<RotateCcw className="h-4 w-4" />}
+          onClick={handleResetTableTemplates}
+        >
+          Reset
+        </DropdownItem>
+      </Dropdown>
+    </HStack>
   );
 
   return (
