@@ -105,10 +105,20 @@ describe('InventoryFiltersBar', () => {
     const props = createProps()
     render(<InventoryFiltersBar {...props} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /stock status filter/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Low Stock' }))
 
     expect(props.setStockFilter).toHaveBeenCalledWith('low')
+  })
+
+  it('opens create and import actions from direct action buttons', () => {
+    const props = createProps()
+    render(<InventoryFiltersBar {...props} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import CSV' }))
+    expect(props.onImportOpen).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Product' }))
+    expect(props.onCreateOpen).toHaveBeenCalledTimes(1)
   })
 
   it('renders view toggle buttons beside the action buttons and switches views', () => {

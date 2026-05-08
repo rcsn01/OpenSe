@@ -2,6 +2,10 @@ import { useMemo } from 'react'
 import { EmptyState } from '@repo/ui'
 import { formatCurrency } from '../../utils'
 import { useProductSuppliers } from '../../hooks/queries/useProductDetailTabs'
+import { bindStyles } from '../../lib/bindStyles'
+import styles from './ProductDetailSurface.module.css'
+
+const sx = bindStyles(styles)
 
 const formatDateLabel = (value: string) => new Date(value).toISOString().slice(0, 10)
 
@@ -21,15 +25,15 @@ export const ProductSuppliersTab = ({
     [suppliers],
   )
 
-  if (isLoading) return <div className="empty-state">Loading supplier data...</div>
+  if (isLoading) return <div className={sx('product-detail-empty-copy')}>Loading supplier data...</div>
 
   return (
-    <section className="product-tab-shell" aria-label="Suppliers">
+    <section className={sx('product-tab-shell')} aria-label="Suppliers">
       {sortedSuppliers.length === 0 ? (
         <EmptyState title="No suppliers found" description="Create a purchase order to link suppliers to this product." />
       ) : (
-        <div className="product-detail-table-shell">
-          <table className="product-detail-table product-detail-table--suppliers">
+        <div className={sx('product-detail-table-shell')}>
+          <table className={sx('product-detail-table', 'product-detail-table--suppliers')}>
             <thead>
               <tr>
                 <th>Vendor Name</th>
@@ -42,7 +46,7 @@ export const ProductSuppliersTab = ({
             <tbody>
               {sortedSuppliers.map((supplier) => (
                 <tr key={supplier.supplier_id}>
-                  <td className="product-detail-table-strong">{supplier.supplier_name}</td>
+                  <td className={sx('product-detail-table-strong')}>{supplier.supplier_name}</td>
                   <td>{productSku || '—'}</td>
                   <td>{formatCurrency(supplier.last_unit_cost)}</td>
                   <td>{supplier.last_order_quantity} units</td>

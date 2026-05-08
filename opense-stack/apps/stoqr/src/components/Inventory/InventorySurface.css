@@ -19,9 +19,9 @@
 
 .explorer-container {
   display: flex;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: 0;
-  background: var(--color-card);
+  background: transparent;
   overflow: hidden;
   flex: 1;
   min-height: 0;
@@ -52,7 +52,7 @@
 .explorer-sidebar {
   width: 220px;
   border-right: 1px solid var(--border);
-  background: var(--color-muted);
+  background: transparent;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -599,7 +599,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--color-card);
+  background: transparent;
 }
 
 @media (max-width: 767px) {

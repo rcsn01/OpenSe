@@ -9,6 +9,10 @@ import {
   useProductAttachments,
   useUploadProductAttachment,
 } from '../../hooks/queries/useProductDetailTabs'
+import { bindStyles } from '../../lib/bindStyles'
+import styles from './ProductDetailSurface.module.css'
+
+const sx = bindStyles(styles)
 
 export const ProductAttachmentsTab = ({ productId, companyId }: { productId: string; companyId: string }) => {
   const [uploading, setUploading] = useState(false)
@@ -51,14 +55,14 @@ export const ProductAttachmentsTab = ({ productId, companyId }: { productId: str
   }
 
   return (
-    <section className="product-tab-shell" aria-label="Files">
-      <div className="product-tab-header">
+    <section className={sx('product-tab-shell')} aria-label="Files">
+      <div className={sx('product-tab-header')}>
         <div>
-          <h3 className="product-tab-title">Uploaded Documents</h3>
+          <h3 className={sx('product-tab-title')}>Uploaded Documents</h3>
         </div>
         <button
           type="button"
-          className="product-section-link"
+          className={sx('product-section-link')}
           onClick={() => inputRef.current?.click()}
         >
           {uploading ? 'Uploading…' : '+ Upload File'}
@@ -67,24 +71,24 @@ export const ProductAttachmentsTab = ({ productId, companyId }: { productId: str
       </div>
 
       {isLoading ? (
-        <div className="empty-state">Loading files...</div>
+        <div className={sx('product-detail-empty-copy')}>Loading files...</div>
       ) : files.length === 0 ? (
         <EmptyState title="No attachments" description="Upload PDFs or documents for this product." />
       ) : (
-        <div className="product-file-list">
+        <div className={sx('product-file-list')}>
           {files.map((file: ProductAttachment) => (
             <button
               key={file.id}
               type="button"
-              className="product-file-row"
+              className={sx('product-file-row')}
               onClick={() => handleDownload(file.name)}
             >
-              <span className="product-file-icon" aria-hidden="true">
+              <span className={sx('product-file-icon')} aria-hidden="true">
                 <FileText size={18} />
               </span>
-              <span className="product-file-copy">
-                <span className="product-file-name">{file.name}</span>
-                <span className="product-file-meta">{formatFileSize(file.size)} • Added {formatDateLabel(file.created_at)}</span>
+              <span className={sx('product-file-copy')}>
+                <span className={sx('product-file-name')}>{file.name}</span>
+                <span className={sx('product-file-meta')}>{formatFileSize(file.size)} • Added {formatDateLabel(file.created_at)}</span>
               </span>
             </button>
           ))}

@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
-import { ChevronDown, X } from 'lucide-react'
+import { ChevronDown, Plus, Upload, X } from 'lucide-react'
 import {
   AddFilterDropdown,
+  Button,
   Dropdown,
   DropdownItem,
   InventoryViewToggle,
-  StockStatusFilterDropdown,
 } from '@repo/ui'
 import type { InventoryFiltersBarProps } from './types'
 
@@ -19,9 +19,6 @@ const stockFilterOptions: { value: InventoryFiltersBarProps['stockFilter']; labe
   { value: 'low', label: 'Low Stock' },
   { value: 'out', label: 'Out of Stock' },
 ]
-
-const isStockFilterValue = (value: string): value is InventoryFiltersBarProps['stockFilter'] =>
-  value === 'all' || value === 'low' || value === 'out'
 
 export const InventoryFiltersBar = ({
   isSelectionMode,
@@ -113,15 +110,19 @@ export const InventoryFiltersBar = ({
         <>
           <div className="flex flex-1 flex-wrap items-center gap-1.5">
             {mobileExplorerToggle}
-            <StockStatusFilterDropdown
-              value={stockFilter}
-              options={stockFilterOptions}
-              onChange={(value) => {
-                if (isStockFilterValue(value)) {
-                  setStockFilter(value)
-                }
-              }}
-            />
+            <div className="flex flex-wrap items-center gap-1">
+              {stockFilterOptions.map((option) => (
+                <Button
+                  key={option.value}
+                  type="button"
+                  variant={stockFilter === option.value ? 'secondary' : 'ghost'}
+                  size="xs"
+                  onClick={() => setStockFilter(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
 
             {activeCustomFieldFilters.length > 0 && (
               <div className="h-4 w-px shrink-0 bg-[var(--color-border)]" />
@@ -192,16 +193,24 @@ export const InventoryFiltersBar = ({
 
             <div className="h-4 w-px shrink-0 bg-[var(--color-border)]" />
 
-            <button
+            <Button
               type="button"
-              onClick={onImportOpen}
-              className="inventory-toolbar-link"
+              variant="ghost"
+              size="sm"
+              onClick={onCreateOpen}
             >
+              <Plus className="h-4 w-4" />
+              New Product
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onImportOpen}
+            >
+              <Upload className="h-4 w-4" />
               Import CSV
-            </button>
-            <button type="button" className="inventory-toolbar-button inventory-toolbar-button--primary" onClick={onCreateOpen}>
-              + New Product
-            </button>
+            </Button>
           </div>
         </>
       )}

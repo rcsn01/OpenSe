@@ -12,7 +12,8 @@ import { ProductOverviewTab } from '../../components/ProductDetail/ProductOvervi
 import { ProductSuppliersTab } from '../../components/ProductDetail/ProductSuppliersTab'
 import { useProductPageSearch } from '../../hooks/useProductPageSearch'
 import { useProductDetail, useProductFolders } from '../../hooks/queries/useProducts'
-import './ProductSurface.module.css'
+import { bindStyles } from '../../lib/bindStyles'
+import styles from '../../components/ProductDetail/ProductDetailSurface.module.css'
 
 const PRODUCT_DETAIL_TABS = [
   { id: 'overview', label: 'Overview' },
@@ -20,6 +21,8 @@ const PRODUCT_DETAIL_TABS = [
   { id: 'history', label: 'History' },
   { id: 'attachments', label: 'Files' },
 ] as const
+
+const sx = bindStyles(styles)
 
 const buildFolderPathLabel = (
   folderId: string,
@@ -96,13 +99,13 @@ export const ProductDetailPage = () => {
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to view details."
     >
-      <div className="product-detail-page">
+      <div className={sx('product-detail-page')}>
         {product ? (
           <>
-            <div className="product-detail-topbar">
+            <div className={sx('product-detail-topbar')}>
               <button
                 type="button"
-                className="product-detail-link"
+                className={sx('product-detail-link')}
                 onClick={() => navigate('/inventory/all')}
               >
                 <ArrowLeft size={14} />
@@ -111,33 +114,33 @@ export const ProductDetailPage = () => {
 
               <button
                 type="button"
-                className="product-detail-link product-detail-link--strong"
+                className={sx('product-detail-link', 'product-detail-link--strong')}
                 onClick={() => navigate(`/inventory/${product.id}/edit`)}
               >
                 Edit Product
               </button>
             </div>
 
-            <header className="product-detail-heading">
-              <h1 className="product-detail-title">{product.name}</h1>
-              <div className="product-detail-meta">
-                <span className="product-detail-meta-item">{product.sku || 'No SKU assigned'}</span>
-                <span className="product-detail-meta-separator" aria-hidden="true" />
-                <span className="product-detail-meta-item product-detail-meta-item--location">
+            <header className={sx('product-detail-heading')}>
+              <h1 className={sx('product-detail-title')}>{product.name}</h1>
+              <div className={sx('product-detail-meta')}>
+                <span className={sx('product-detail-meta-item')}>{product.sku || 'No SKU assigned'}</span>
+                <span className={sx('product-detail-meta-separator')} aria-hidden="true" />
+                <span className={sx('product-detail-meta-item', 'product-detail-meta-item--location')}>
                   <MapPin size={13} />
                   {locationLabel}
                 </span>
               </div>
             </header>
 
-            <div className="product-detail-nav" role="tablist" aria-label="Product sections">
+            <div className={sx('product-detail-nav')} role="tablist" aria-label="Product sections">
               {PRODUCT_DETAIL_TABS.map((detailTab) => (
                 <button
                   key={detailTab.id}
                   type="button"
                   role="tab"
                   aria-selected={activeTab === detailTab.id}
-                  className={`product-detail-nav-button${activeTab === detailTab.id ? ' is-active' : ''}`}
+                  className={sx('product-detail-nav-button', activeTab === detailTab.id && 'is-active')}
                   onClick={() => navigate(`/inventory/${product.id}/${detailTab.id}`)}
                 >
                   {detailTab.label}
@@ -148,7 +151,7 @@ export const ProductDetailPage = () => {
             {activeTab === 'overview' ? (
               renderTabContent()
             ) : (
-              <div className="product-detail-panel">{renderTabContent()}</div>
+              <div className={sx('product-detail-panel')}>{renderTabContent()}</div>
             )}
           </>
         ) : (
