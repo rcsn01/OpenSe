@@ -21,6 +21,7 @@ import {
 } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, cn } from '@repo/ui'
 import type { Folder } from '../../types'
 import type { FolderView } from './all-products/types'
 
@@ -47,11 +48,65 @@ const flattenTree = (nodes: TreeNode[]): string[] => {
   return result
 }
 
+const CreateFolderTreeItem = ({
+  level = 0,
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+}: {
+  level?: number
+  value: string
+  onChange: (value: string) => void
+  onSubmit: () => void
+  onCancel: () => void
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [])
+
+  return (
+    <div
+      className="tree-item tree-item-create"
+      style={{ paddingLeft: `${level * 16 + 8}px` }}
+    >
+      <div className="tree-toggle tree-toggle-static" aria-hidden="true" />
+      <FolderIcon size={16} className="mr-2 shrink-0 text-[var(--color-muted-foreground)]" />
+      <div className="tree-create-row">
+        <input
+          ref={inputRef}
+          className="tree-inline-input tree-create-input"
+          placeholder="Folder Name"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') onSubmit()
+            if (event.key === 'Escape') onCancel()
+          }}
+          onClick={(event) => event.stopPropagation()}
+        />
+      </div>
+    </div>
+  )
+}
+
 const SortableTreeItem = ({
   node,
   level = 0,
   activeId,
   onSelect,
+  onCreateFolder,
+  isCreatingFolder,
+  creatingFolderParentId,
+  newFolderName,
+  onCreateFolderNameChange,
+  onCreateFolderSubmit,
+  onCreateFolderCancel,
   expandedIds,
   toggleExpand,
   onRename,
@@ -66,6 +121,13 @@ const SortableTreeItem = ({
   level?: number
   activeId: string | null
   onSelect: (id: string) => void
+  onCreateFolder: (parentId: string) => void
+  isCreatingFolder: boolean
+  creatingFolderParentId: string | null
+  newFolderName: string
+  onCreateFolderNameChange: (value: string) => void
+  onCreateFolderSubmit: () => void
+  onCreateFolderCancel: () => void
   expandedIds: Set<string>
   toggleExpand: (id: string) => void
   onRename: (id: string, currentName: string) => void
@@ -76,6 +138,7 @@ const SortableTreeItem = ({
   onRenameSubmit: () => void
   onRenameCancel: () => void
 }) => {
+  const hasChildren = node.children.length > 0
   const isExpanded = expandedIds.has(node.id)
   const isActive = activeId === node.id
   const isRenaming = renamingId === node.id
@@ -107,31 +170,41 @@ const SortableTreeItem = ({
     <div ref={setNodeRef} style={style}>
       <div
         className={`tree-item tree-item-folder ${isActive ? 'active' : ''}`}
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        style={{ paddingLeft: `${level * 16}px` }}
         onClick={() => onSelect(node.id)}
         {...attributes}
         {...listeners}
       >
-        <div
-          className="tree-toggle"
-          onClick={(event) => {
-            event.stopPropagation()
-            toggleExpand(node.id)
-          }}
-        >
-          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </div>
+        {hasChildren ? (
+          <div
+            className="tree-toggle"
+            onClick={(event) => {
+              event.stopPropagation()
+              toggleExpand(node.id)
+            }}
+          >
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </div>
+        ) : (
+          <div className="tree-toggle tree-toggle-static" aria-hidden="true" />
+        )}
 
         {isActive || isExpanded ? (
-          <FolderOpen size={16} style={{ marginRight: 8, flexShrink: 0, color: isActive ? 'currentColor' : '#3b82f6' }} />
+          <FolderOpen
+            size={16}
+            className={cn(
+              'mr-2 shrink-0',
+              isActive ? 'text-current' : 'text-[var(--color-primary)]',
+            )}
+          />
         ) : (
-          <FolderIcon size={16} style={{ marginRight: 8, flexShrink: 0, color: '#3b82f6' }} />
+          <FolderIcon size={16} className="mr-2 shrink-0 text-[var(--color-primary)]" />
         )}
 
         {isRenaming ? (
           <input
             ref={inputRef}
-            className="input small"
+            className="tree-inline-input tree-rename-input"
             value={renamingValue}
             onChange={(e) => setRenamingValue(e.target.value)}
             onKeyDown={(e) => {
@@ -140,16 +213,23 @@ const SortableTreeItem = ({
             }}
             onBlur={onRenameSubmit}
             onClick={(e) => e.stopPropagation()}
-            style={{ flex: 1, height: 24, fontSize: 'var(--type-size-sm)', padding: '2px 6px' }}
           />
         ) : (
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+          <span className="flex-1 truncate whitespace-nowrap">
             {node.name}
           </span>
         )}
 
         {!isRenaming && (
           <div className="tree-item-actions">
+            <button
+              className="tree-action-btn"
+              onClick={(e) => { e.stopPropagation(); onCreateFolder(node.id) }}
+              title={`Add subfolder to ${node.name}`}
+              aria-label={`Add subfolder to ${node.name}`}
+            >
+              <Plus size={12} />
+            </button>
             <button
               className="tree-action-btn"
               onClick={(e) => { e.stopPropagation(); onRename(node.id, node.name) }}
@@ -168,6 +248,16 @@ const SortableTreeItem = ({
         )}
       </div>
 
+      {isExpanded && isCreatingFolder && creatingFolderParentId === node.id ? (
+        <CreateFolderTreeItem
+          level={level + 1}
+          value={newFolderName}
+          onChange={onCreateFolderNameChange}
+          onSubmit={onCreateFolderSubmit}
+          onCancel={onCreateFolderCancel}
+        />
+      ) : null}
+
       {isExpanded && node.children.map((child) => (
         <SortableTreeItem
           key={child.id}
@@ -175,6 +265,13 @@ const SortableTreeItem = ({
           level={level + 1}
           activeId={activeId}
           onSelect={onSelect}
+          onCreateFolder={onCreateFolder}
+          isCreatingFolder={isCreatingFolder}
+          creatingFolderParentId={creatingFolderParentId}
+          newFolderName={newFolderName}
+          onCreateFolderNameChange={onCreateFolderNameChange}
+          onCreateFolderSubmit={onCreateFolderSubmit}
+          onCreateFolderCancel={onCreateFolderCancel}
           expandedIds={expandedIds}
           toggleExpand={toggleExpand}
           onRename={onRename}
@@ -196,7 +293,13 @@ type FolderNavigationPanelProps = {
   folderView: FolderView
   onSelectFolder: (id: string) => void
   onSelectView: (view: FolderView) => void
-  onCreateFolder: () => void
+  onCreateFolder: (parentId: string | null) => void
+  isCreatingFolder: boolean
+  creatingFolderParentId: string | null
+  newFolderName: string
+  onCreateFolderNameChange: (value: string) => void
+  onCreateFolderSubmit: () => void
+  onCreateFolderCancel: () => void
   onRenameFolder: (folderId: string, newName: string) => void
   onDeleteFolder: (folderId: string) => void
   onMoveFolder: (folderId: string, newParentId: string | null, sortOrder: number) => void
@@ -216,6 +319,12 @@ export const FolderNavigationPanel = ({
   onSelectFolder,
   onSelectView,
   onCreateFolder,
+  isCreatingFolder,
+  creatingFolderParentId,
+  newFolderName,
+  onCreateFolderNameChange,
+  onCreateFolderSubmit,
+  onCreateFolderCancel,
   onRenameFolder,
   onMoveFolder,
   deletingFolderId,
@@ -291,6 +400,17 @@ export const FolderNavigationPanel = ({
     setRenamingValue('')
   }, [])
 
+  const handleCreateSubfolder = useCallback((parentId: string) => {
+    setExpandedIds((previous) => {
+      if (previous.has(parentId)) return previous
+      const next = new Set(previous)
+      next.add(parentId)
+      return next
+    })
+
+    onCreateFolder(parentId)
+  }, [onCreateFolder])
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -313,122 +433,151 @@ export const FolderNavigationPanel = ({
   return (
     <div className="explorer-sidebar">
       {/* Top-level views */}
-      <div style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+      <div>
         <div
           className={`tree-item ${folderView === 'all' ? 'active' : ''}`}
           onClick={() => onSelectView('all')}
         >
-          <Layers size={16} style={{ marginRight: 8, color: folderView === 'all' ? 'currentColor' : '#64748b' }} />
+          <Layers
+            size={16}
+            className={cn(
+              'mr-2',
+              folderView === 'all' ? 'text-current' : 'text-[var(--color-muted-foreground)]',
+            )}
+          />
           All Products
         </div>
         <div
           className={`tree-item ${folderView === 'uncategorised' ? 'active' : ''}`}
           onClick={() => onSelectView('uncategorised')}
         >
-          <FolderX size={16} style={{ marginRight: 8, color: folderView === 'uncategorised' ? 'currentColor' : '#64748b' }} />
+          <FolderX
+            size={16}
+            className={cn(
+              'mr-2',
+              folderView === 'uncategorised' ? 'text-current' : 'text-[var(--color-muted-foreground)]',
+            )}
+          />
           Uncategorised
         </div>
-      </div>
-
-      {/* Folders section header */}
-      <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>Folders</span>
-        <button
-          className="tree-action-btn"
-          onClick={onCreateFolder}
-          title="New folder"
-          style={{ opacity: 1 }}
-        >
-          <Plus size={14} />
-        </button>
       </div>
 
       {/* Folder tree with DnD */}
       <div className="tree-content">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={flatIds} strategy={verticalListSortingStrategy}>
-            {tree.map((node) => (
-              <SortableTreeItem
-                key={node.id}
-                node={node}
-                activeId={activeFolderId}
-                onSelect={(id) => {
-                  onSelectView('folder')
-                  onSelectFolder(id)
-                }}
-                expandedIds={expandedIds}
-                toggleExpand={toggleExpand}
-                onRename={handleStartRename}
-                onDelete={onDeleteStepChoose}
-                renamingId={renamingId}
-                renamingValue={renamingValue}
-                setRenamingValue={setRenamingValue}
-                onRenameSubmit={handleRenameSubmit}
-                onRenameCancel={handleRenameCancel}
-              />
-            ))}
+            {tree.length > 0 ? (
+              tree.map((node) => (
+                <SortableTreeItem
+                  key={node.id}
+                  node={node}
+                  activeId={activeFolderId}
+                  onSelect={(id) => {
+                    onSelectView('folder')
+                    onSelectFolder(id)
+                  }}
+                  onCreateFolder={handleCreateSubfolder}
+                  isCreatingFolder={isCreatingFolder}
+                  creatingFolderParentId={creatingFolderParentId}
+                  newFolderName={newFolderName}
+                  onCreateFolderNameChange={onCreateFolderNameChange}
+                  onCreateFolderSubmit={onCreateFolderSubmit}
+                  onCreateFolderCancel={onCreateFolderCancel}
+                  expandedIds={expandedIds}
+                  toggleExpand={toggleExpand}
+                  onRename={handleStartRename}
+                  onDelete={onDeleteStepChoose}
+                  renamingId={renamingId}
+                  renamingValue={renamingValue}
+                  setRenamingValue={setRenamingValue}
+                  onRenameSubmit={handleRenameSubmit}
+                  onRenameCancel={handleRenameCancel}
+                />
+              ))
+            ) : (
+              isCreatingFolder && creatingFolderParentId === null ? (
+                <CreateFolderTreeItem
+                  value={newFolderName}
+                  onChange={onCreateFolderNameChange}
+                  onSubmit={onCreateFolderSubmit}
+                  onCancel={onCreateFolderCancel}
+                />
+              ) : (
+                <div className="px-4 py-3">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => onCreateFolder(null)}>
+                    Create first folder
+                  </Button>
+                </div>
+              )
+            )}
           </SortableContext>
         </DndContext>
       </div>
 
       {/* Delete confirmation dialog */}
       {deletingFolderId && deleteStep && (
-        <div className="modal-backdrop" onClick={onDeleteCancel}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+        <Dialog open onClose={onDeleteCancel}>
+          <DialogContent className="max-w-[400px]">
             {deleteStep === 'choose' ? (
               <>
-                <h3 className="section-title" style={{ marginBottom: 12 }}>Delete "{deletingFolderName}"</h3>
-                <p className="small muted" style={{ marginBottom: 16 }}>
-                  What would you like to do with the products inside this folder?
-                </p>
-                <div className="stack" style={{ gap: 8 }}>
-                  <button
-                    className="button small"
-                    style={{ width: '100%', justifyContent: 'center' }}
+                <DialogHeader>
+                  <DialogTitle>Delete "{deletingFolderName}"</DialogTitle>
+                  <DialogDescription>
+                    What would you like to do with the products inside this folder?
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    size="sm"
+                    className="w-full justify-center"
                     onClick={() => onDeleteActionSelect('move-uncategorised')}
                   >
                     Move products to Uncategorised
-                  </button>
-                  <button
-                    className="button ghost small"
-                    style={{ width: '100%', justifyContent: 'center', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
                     onClick={() => onDeleteActionSelect('delete-products')}
                   >
                     Delete all products inside
-                  </button>
-                  <button
-                    className="button ghost small"
-                    style={{ width: '100%', justifyContent: 'center' }}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center"
                     onClick={onDeleteCancel}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (
               <>
-                <h3 className="section-title" style={{ marginBottom: 12 }}>Are you sure?</h3>
-                <p className="small muted" style={{ marginBottom: 16 }}>
-                  {deleteAction === 'move-uncategorised'
-                    ? `All products in "${deletingFolderName}" (and its subfolders) will be moved to Uncategorised. The folder will be permanently deleted.`
-                    : `All products in "${deletingFolderName}" (and its subfolders) will be permanently deleted along with the folder.`}
-                </p>
-                <div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}>
-                  <button className="button ghost small" onClick={onDeleteCancel}>
+                <DialogHeader>
+                  <DialogTitle>Are you sure?</DialogTitle>
+                  <DialogDescription>
+                    {deleteAction === 'move-uncategorised'
+                      ? `All products in "${deletingFolderName}" (and its subfolders) will be moved to Uncategorised. The folder will be permanently deleted.`
+                      : `All products in "${deletingFolderName}" (and its subfolders) will be permanently deleted along with the folder.`}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="ghost" size="sm" onClick={onDeleteCancel}>
                     Cancel
-                  </button>
-                  <button
-                    className="button small"
-                    style={deleteAction === 'delete-products' ? { background: 'var(--danger)', borderColor: 'var(--danger)' } : undefined}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={deleteAction === 'delete-products' ? 'destructive' : 'primary'}
                     onClick={onDeleteConfirm}
                   >
                     {deleteAction === 'move-uncategorised' ? 'Move & Delete Folder' : 'Delete Everything'}
-                  </button>
-                </div>
+                  </Button>
+                </DialogFooter>
               </>
             )}
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

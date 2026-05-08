@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Button, Card } from '@repo/ui'
 import { useLabelPrintJobs } from '../../hooks/queries/useLabelStudio'
 import { downloadLabelPdf } from './downloadLabelPdf'
 
@@ -53,9 +54,9 @@ export const LabelDownloadsTab = ({
   )
 
   return (
-    <div className="card stack export-downloads-card">
-      <div className="flex-between">
-        <h3 className="section-title" style={{ margin: 0 }}>{title}</h3>
+    <Card className="export-downloads-card flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-lg font-semibold text-[var(--color-foreground)]">{title}</h3>
       </div>
       {isLoading ? (
         <div className="empty-state">Loading downloads...</div>
@@ -70,21 +71,23 @@ export const LabelDownloadsTab = ({
               </div>
               <div className="export-download-info">
                 <div className="export-download-name">{buildExportFileName(job)}</div>
-                <div className="small muted">
+                <div className="text-sm text-[var(--color-muted-foreground)]">
                   {formatRelativeDate(job.created_at)} · {formatRequestedBy(job)} · {job.quantity} items
                 </div>
               </div>
-              <button
-                className="icon-button export-download-action"
+              <Button
+                variant="ghost"
+                size="icon"
+                className="export-download-action"
                 aria-label={`Download ${buildExportFileName(job)}`}
                 onClick={() => downloadLabelPdf(job.output_url as string, buildExportFileName(job))}
               >
                 ⬇
-              </button>
+              </Button>
             </div>
           ))}
         </div>
       )}
-    </div>
+    </Card>
   )
 }

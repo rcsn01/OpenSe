@@ -1,8 +1,5 @@
 import { Link } from 'react-router-dom'
-import { DataTable, Heading, Label } from '@repo/ui'
-import { EmptyState } from '../../EmptyState'
-import { Pagination } from '../../Pagination'
-import { Badge } from '../../Badge'
+import { Badge, DataTable, EmptyState, Heading, Label, Pagination, cn } from '@repo/ui'
 import { formatCurrency } from '../../../utils'
 import { useInlineProductEdit } from './useInlineProductEdit'
 import type { ProductListViewProps } from './types'
@@ -39,15 +36,15 @@ export const ProductListView = ({
   }
 
   return (
-    <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {isLoading ? (
-        <div className="empty-state" style={{ padding: 48 }}>Loading inventory data...</div>
+        <div className="empty-state px-12 py-12">Loading inventory data...</div>
       ) : products.length === 0 ? (
         <EmptyState title="No products found" description="Try adjusting filters or adding new items." />
       ) : view === 'grid' ? (
         <>
-          <div style={{ padding: 20, overflowY: 'auto', flex: 1, minHeight: 0 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+          <div className="min-h-0 flex-1 overflow-y-auto p-5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
               {products.map((product) => {
                 const isLow = product.quantity_on_hand <= product.reorder_point
                 const isOut = product.quantity_on_hand === 0
@@ -55,17 +52,12 @@ export const ProductListView = ({
                 return (
                   <div
                     key={product.id}
-                    className="card"
-                    style={{
-                      padding: 16,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 12,
-                      border: selectedRowIds.has(product.id) ? '1px solid var(--primary)' : undefined,
-                      background: selectedRowIds.has(product.id) ? 'var(--primary-soft)' : undefined,
-                    }}
+                    className={cn(
+                      'inventory-product-card',
+                      selectedRowIds.has(product.id) && 'is-selected',
+                    )}
                   >
-                    <div className="flex-between" style={{ alignItems: 'flex-start', gap: 12 }}>
+                    <div className="flex items-start justify-between gap-3">
                       <input
                         type="checkbox"
                         checked={selectedRowIds.has(product.id)}
@@ -73,39 +65,46 @@ export const ProductListView = ({
                         onChange={() => toggleSelection(product.id)}
                       />
                       {isOut ? (
-                        <Badge label="Out of Stock" variant="danger" />
+                        <Badge variant="destructive">Out of Stock</Badge>
                       ) : isLow ? (
-                        <Badge label="Low Stock" variant="warning" />
+                        <Badge variant="warning">Low Stock</Badge>
                       ) : (
-                        <Badge label="In Stock" variant="success" />
+                        <Badge variant="success">In Stock</Badge>
                       )}
                     </div>
 
-                    <div style={{ minWidth: 0 }}>
-                      <Link to={`/inventory/${product.id}/overview`} style={{ display: 'block', minWidth: 0 }}>
-                        <Heading level="h6" style={{ margin: 0, lineHeight: 1.2 }}>
+                    <div className="min-w-0">
+                      <Link to={`/inventory/${product.id}/overview`} className="block min-w-0">
+                        <Heading level="h6" className="m-0 leading-tight">
                           {product.name}
                         </Heading>
                       </Link>
                       <Label className="block">{product.sku}</Label>
                     </div>
 
-                    <div className="stack" style={{ gap: 8 }}>
-                      <div className="flex-between small">
-                        <span className="muted">Folder</span>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-[var(--color-muted-foreground)]">Folder</span>
                         <span>{folderName(product.folder_id)}</span>
                       </div>
-                      <div className="flex-between small">
-                        <span className="muted">Price</span>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-[var(--color-muted-foreground)]">Price</span>
                         <span>{formatCurrency(product.selling_price)}</span>
                       </div>
-                      <div className="flex-between small">
-                        <span className="muted">On Hand</span>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-[var(--color-muted-foreground)]">On Hand</span>
                         <span>{product.quantity_on_hand}</span>
                       </div>
-                      <div className="flex-between small">
-                        <span className="muted">Available</span>
-                        <span style={{ fontWeight: 600, color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-[var(--color-muted-foreground)]">Available</span>
+                        <span
+                          className={cn(
+                            'font-semibold',
+                            product.quantity_on_hand >= product.reorder_point
+                              ? 'text-[var(--color-success)]'
+                              : 'text-[var(--color-destructive)]',
+                          )}
+                        >
                           {product.quantity_on_hand} / {product.reorder_point}
                         </span>
                       </div>
@@ -116,13 +115,14 @@ export const ProductListView = ({
             </div>
           </div>
 
-          <div style={{ padding: '0 20px 16px' }}>
+          <div className="px-5 pb-4">
             <Pagination
-              page={page}
-              pageSize={pageSize}
+              currentPage={page}
+              totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
               totalItems={totalCount}
+              itemsPerPage={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={setPageSize}
+              onItemsPerPageChange={setPageSize}
               pageSizeOptions={inventoryPageSizeOptions}
             />
           </div>
@@ -166,7 +166,7 @@ export const ProductListView = ({
               renderCell: (product) => (
                 <Link
                   to={`/inventory/${product.id}/overview`}
-                  style={{ display: 'block', minWidth: 0 }}
+                  className="block min-w-0"
                   onClick={(event) => event.stopPropagation()}
                 >
                   <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-normal text-[var(--color-foreground)]">
@@ -180,7 +180,7 @@ export const ProductListView = ({
               header: 'Folder',
               sortKey: 'folder_id',
               width: 140,
-              renderCell: (product) => <span className="muted small">{folderName(product.folder_id)}</span>,
+              renderCell: (product) => <span className="text-sm text-[var(--color-muted-foreground)]">{folderName(product.folder_id)}</span>,
             },
             {
               id: 'selling_price',
@@ -193,7 +193,6 @@ export const ProductListView = ({
 
                 return isEditingPrice ? (
                   <input
-                    className="input small"
                     autoFocus
                     type="number"
                     step="0.01"
@@ -211,17 +210,19 @@ export const ProductListView = ({
                       }
                       if (event.key === 'Escape') cancelEdit()
                     }}
-                    style={{ width: 120, textAlign: 'right' }}
+                    className="inventory-inline-input inventory-inline-input--price"
                   />
                 ) : (
                   <span
-                    className="editable-cell"
                     onClick={(event) => {
                       event.stopPropagation()
                       startEdit(product, 'selling_price')
                     }}
                     aria-disabled={isSaving}
-                    style={{ cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}
+                    className={cn(
+                      'editable-cell',
+                      isSaving ? 'cursor-not-allowed opacity-70' : 'cursor-pointer',
+                    )}
                   >
                     {formatCurrency(product.selling_price)}
                     <span className="edit-icon">✎</span>
@@ -237,10 +238,12 @@ export const ProductListView = ({
               align: 'right',
               renderCell: (product) => (
                 <span
-                  style={{
-                    fontWeight: 'var(--type-weight-semibold)',
-                    color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)',
-                  }}
+                  className={cn(
+                    'font-semibold',
+                    product.quantity_on_hand >= product.reorder_point
+                      ? 'text-[var(--color-success)]'
+                      : 'text-[var(--color-destructive)]',
+                  )}
                 >
                   {product.quantity_on_hand} / {product.reorder_point}
                 </span>
@@ -256,7 +259,9 @@ export const ProductListView = ({
           sortDirection={sortDir}
           onSortChange={handleColumnSort}
           onRowClick={(product) => toggleSelection(product.id)}
-          getRowStyle={(product) => ({ background: selectedRowIds.has(product.id) ? 'var(--primary-soft)' : undefined })}
+          rowClassName={(product) => (
+            selectedRowIds.has(product.id) ? 'bg-[var(--color-primary-light)]' : undefined
+          )}
           footerClassName="border-t-0 px-5 pb-4 pt-0"
           pagination={{
             currentPage: page,

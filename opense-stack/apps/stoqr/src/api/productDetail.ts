@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient'
+import { db, supabase } from '../supabaseClient'
 
 export type SupplierSummary = {
   supplier_id: string
@@ -6,6 +6,7 @@ export type SupplierSummary = {
   last_po_date: string
   last_unit_cost: number
   total_quantity: number
+  last_order_quantity: number
 }
 
 export type BatchHistoryItem = {
@@ -41,7 +42,13 @@ type BatchHistoryRow = {
   created_at: string
   quantity_change: number
   notes: string | null
-  profiles: { full_name: string | null } | { full_name: string | null }[] | null
+  performed_by: string | null
+}
+
+type ProfileLookup = {
+  id: string
+  full_name: string | null
+  username: string | null
 }
 
 const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
@@ -50,7 +57,7 @@ const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
 }
 
 export const fetchProductSuppliers = async (companyId: string, productId: string): Promise<SupplierSummary[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('purchase_order_items')
     .select(`
       unit_cost, quantity_ordered,
@@ -81,6 +88,7 @@ export const fetchProductSuppliers = async (companyId: string, productId: string
         last_po_date: date,
         last_unit_cost: item.unit_cost,
         total_quantity: 0,
+        last_order_quantity: item.quantity_ordered,
       }
     }
 
@@ -89,6 +97,7 @@ export const fetchProductSuppliers = async (companyId: string, productId: string
     if (new Date(date) > new Date(summaryMap[supplierId].last_po_date)) {
       summaryMap[supplierId].last_po_date = date
       summaryMap[supplierId].last_unit_cost = item.unit_cost
+      summaryMap[supplierId].last_order_quantity = item.quantity_ordered
     }
   })
 
@@ -96,12 +105,9 @@ export const fetchProductSuppliers = async (companyId: string, productId: string
 }
 
 export const fetchProductBatchHistory = async (companyId: string, productId: string): Promise<BatchHistoryItem[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('inventory_transactions')
-    .select(`
-      created_at, quantity_change, notes,
-      profiles (full_name)
-    `)
+    .select('created_at, quantity_change, notes, performed_by')
     .eq('company_id', companyId)
     .eq('product_id', productId)
     .eq('transaction_type', 'sale')
@@ -109,11 +115,32 @@ export const fetchProductBatchHistory = async (companyId: string, productId: str
 
   if (error) throw error
 
-  return ((data as unknown as BatchHistoryRow[] | null) ?? []).map((item) => ({
+  const rows = (data as unknown as BatchHistoryRow[] | null) ?? []
+  const profileIds = Array.from(new Set(rows.map((item) => item.performed_by).filter((value): value is string => !!value)))
+
+  const { data: profileRows, error: profilesError } = profileIds.length
+    ? await supabase
+        .from('profiles')
+        .select('id, full_name, username')
+        .in('id', profileIds)
+    : { data: [] as ProfileLookup[], error: null }
+
+  if (profilesError) {
+    console.warn('Product batch history profile enrichment failed', profilesError)
+  }
+
+  const profilesById = new Map(
+    ((profileRows ?? []) as ProfileLookup[]).map((profile) => [
+      profile.id,
+      { full_name: profile.full_name ?? profile.username },
+    ]),
+  )
+
+  return rows.map((item) => ({
     created_at: item.created_at,
     quantity_change: item.quantity_change,
     notes: item.notes,
-    profiles: normalizeSingle(item.profiles),
+    profiles: item.performed_by ? profilesById.get(item.performed_by) ?? null : null,
   }))
 }
 

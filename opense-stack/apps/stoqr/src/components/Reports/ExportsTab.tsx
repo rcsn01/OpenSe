@@ -1,3 +1,4 @@
+import { Button, Card } from '@repo/ui'
 import { formatCurrency } from '../../utils'
 
 type ExportProduct = {
@@ -96,16 +97,16 @@ export const ExportsTab = ({
   }
 
   return (
-    <div className="stack">
-      <div className="card stack">
-        <h3 className="section-title">Export to CSV / PDF</h3>
-        <div className="small muted">Exports use the currently selected date range.</div>
-        <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
-          <button className="button" onClick={exportValuationCsv}>Export Valuation CSV</button>
-          <button className="button" onClick={exportMovementsCsv}>Export Movements CSV</button>
-          <button className="button secondary" onClick={exportPdfSummary}>Export PDF Summary</button>
+    <div className="flex flex-col gap-4">
+      <Card className="flex flex-col gap-4">
+        <h3 className="text-lg font-semibold text-[var(--color-foreground)]">Export to CSV / PDF</h3>
+        <div className="text-sm text-[var(--color-muted-foreground)]">Exports use the currently selected date range.</div>
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={exportValuationCsv}>Export Valuation CSV</Button>
+          <Button onClick={exportMovementsCsv}>Export Movements CSV</Button>
+          <Button variant="secondary" onClick={exportPdfSummary}>Export PDF Summary</Button>
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

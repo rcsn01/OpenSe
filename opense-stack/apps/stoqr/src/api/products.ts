@@ -9,6 +9,7 @@ type CustomFieldType = 'text' | 'number' | 'boolean' | 'date'
 type ProductTransactionRow = {
   id: string
   transaction_type: string
+  source: string | null
   quantity_change: number
   stock_after: number | null
   created_at: string
@@ -24,7 +25,7 @@ type ProfileLookup = {
 
 export type CreateProductPayload = {
   name: string
-  sku: string
+  sku?: string | null
   description: string
   quantity: string
   reorderPoint: string
@@ -61,6 +62,24 @@ const normalizeCustomFieldValue = (value: CustomFieldPrimitive): CustomFieldPrim
   }
 
   return value
+}
+
+const normalizeOptionalText = (value: string | null | undefined): string | null => {
+  if (typeof value !== 'string') return null
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+const normalizeFetchedProduct = (row: Product | null): Product | null => {
+  if (!row || typeof row !== 'object' || !('sku' in row)) {
+    return row
+  }
+
+  return {
+    ...row,
+    sku: row.sku ?? '',
+  }
 }
 
 const uploadProductImages = async (companyId: string, productId: string, images: File[]) => {
@@ -154,7 +173,7 @@ export const createProduct = async (
     .insert({
       company_id: companyId,
       name: payload.name,
-      sku: payload.sku,
+      sku: normalizeOptionalText(payload.sku),
       description: payload.description || null,
       quantity_on_hand: toNumber(payload.quantity),
       reorder_point: toNumber(payload.reorderPoint),
@@ -195,7 +214,7 @@ export const updateProduct = async (
     .from('products')
     .update({
       name: payload.name,
-      sku: payload.sku,
+      sku: normalizeOptionalText(payload.sku),
       description: payload.description || null,
       quantity_on_hand: toNumber(payload.quantity),
       reorder_point: toNumber(payload.reorderPoint),
@@ -244,7 +263,7 @@ export const fetchProductDetail = async (
 
   const { data: transactionsData, error: transactionsError } = await db
     .from('inventory_transactions')
-    .select('id, transaction_type, quantity_change, stock_after, created_at, notes, performed_by')
+    .select('id, transaction_type, source, quantity_change, stock_after, created_at, notes, performed_by')
     .eq('company_id', companyId)
     .eq('product_id', productId)
     .order('created_at', { ascending: false })
@@ -252,7 +271,7 @@ export const fetchProductDetail = async (
   if (transactionsError) {
     console.warn('Product detail transactions query failed', transactionsError)
     return {
-      product: (productData as Product | null) ?? null,
+      product: normalizeFetchedProduct((productData as Product | null) ?? null),
       transactions: [],
     }
   }
@@ -280,6 +299,7 @@ export const fetchProductDetail = async (
   const normalizedTransactions = transactionRows.map((transaction) => ({
     id: transaction.id,
     transaction_type: transaction.transaction_type,
+    source: transaction.source,
     quantity_change: transaction.quantity_change,
     stock_after: transaction.stock_after,
     notes: transaction.notes,
@@ -288,7 +308,7 @@ export const fetchProductDetail = async (
   })) as InventoryTransaction[]
 
   return {
-    product: (productData as Product | null) ?? null,
+    product: normalizeFetchedProduct((productData as Product | null) ?? null),
     transactions: normalizedTransactions,
   }
 }

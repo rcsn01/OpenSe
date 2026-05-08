@@ -1,5 +1,5 @@
-import { type CSSProperties, type ReactNode } from 'react'
-import { cn } from '../../lib/cn'
+import { type CSSProperties, type ReactNode } from "react";
+import { cn } from "../../lib/cn";
 import {
   Dialog,
   DialogContent,
@@ -7,76 +7,109 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './Dialog'
+} from "./Dialog";
 
-export type SideSheetSize = 'default' | 'page'
+export type SideSheetSize = "default" | "page";
 
 const sideSheetSizeStyles: Record<SideSheetSize, CSSProperties | undefined> = {
   default: undefined,
   page: {
-    width: 'min(100vw, clamp(64rem, 84vw, 110rem))',
+    width: "min(100vw, clamp(64rem, 84vw, 110rem))",
   },
-}
+};
 
 interface SideSheetProps {
-  children: ReactNode
-  open: boolean
-  onClose: () => void
-  size?: SideSheetSize
-  panelStyle?: CSSProperties
+  children: ReactNode;
+  open: boolean;
+  onClose: () => void;
+  size?: SideSheetSize;
+  panelStyle?: CSSProperties;
 }
 
 interface SideSheetSectionProps {
-  children: ReactNode
-  className?: string
+  children: ReactNode;
+  className?: string;
 }
 
-export function SideSheet({ children, open, onClose, size = 'default', panelStyle }: SideSheetProps) {
+export function SideSheet({
+  children,
+  open,
+  onClose,
+  size = "default",
+  panelStyle,
+}: SideSheetProps) {
   const resolvedPanelStyle = {
     ...sideSheetSizeStyles[size],
     ...panelStyle,
-  }
+  };
 
   return (
-    <Dialog open={open} onClose={onClose} layout="right-sheet" panelStyle={resolvedPanelStyle}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      layout="right-sheet"
+      panelStyle={resolvedPanelStyle}
+    >
       {children}
     </Dialog>
-  )
+  );
 }
 
-export function SideSheetContent({ children, className }: SideSheetSectionProps) {
+export function SideSheetContent({
+  children,
+  className,
+}: SideSheetSectionProps) {
   return (
     <DialogContent
       className={cn(
-        'flex h-[100dvh] w-full flex-col overflow-hidden rounded-none border-0 p-4 shadow-none sm:rounded-l-[var(--radius-xl)] sm:border sm:p-6 sm:shadow-[var(--shadow-xl)]',
+        "flex h-[100dvh] w-full flex-col overflow-hidden rounded-none bg-[color:color-mix(in_srgb,var(--color-card)_96%,transparent)] p-4 shadow-none sm:rounded-l-[var(--radius-2xl)] sm:p-6 sm:shadow-[var(--shadow-xl)]",
         className,
       )}
     >
       {children}
     </DialogContent>
-  )
+  );
 }
 
-export function SideSheetHeader({ children, className }: SideSheetSectionProps) {
-  return <DialogHeader className={cn('shrink-0', className)}>{children}</DialogHeader>
+export function SideSheetHeader({
+  children,
+  className,
+}: SideSheetSectionProps) {
+  return (
+    <DialogHeader className={cn("shrink-0", className)}>
+      {children}
+    </DialogHeader>
+  );
 }
 
 export function SideSheetTitle({ children, className }: SideSheetSectionProps) {
-  return <DialogTitle className={className}>{children}</DialogTitle>
+  return <DialogTitle className={className}>{children}</DialogTitle>;
 }
 
-export function SideSheetDescription({ children, className }: SideSheetSectionProps) {
-  return <DialogDescription className={className}>{children}</DialogDescription>
+export function SideSheetDescription({
+  children,
+  className,
+}: SideSheetSectionProps) {
+  return (
+    <DialogDescription className={className}>{children}</DialogDescription>
+  );
 }
 
 export function SideSheetBody({ children, className }: SideSheetSectionProps) {
-  return <div className={cn('min-h-0 flex-1 overflow-y-auto', className)}>{children}</div>
+  return (
+    <div className={cn("min-h-0 flex-1 overflow-y-auto", className)}>
+      {children}
+    </div>
+  );
 }
 
-export function SideSheetFooter({ children, className }: SideSheetSectionProps) {
+export function SideSheetFooter({
+  children,
+  className,
+}: SideSheetSectionProps) {
   return (
-    <DialogFooter className={cn('mt-4 shrink-0 border-t border-[var(--color-border)] pt-4', className)}>
+    <DialogFooter className={cn("mt-4 shrink-0 pt-2", className)}>
       {children}
     </DialogFooter>
-  )
+  );
 }

@@ -1,19 +1,19 @@
-import { type ReactNode } from 'react'
-import { Select } from '../ui/Input'
-import { Button } from '../ui/Button'
-import { StackLayout } from '../layout/StackLayout'
+import { type ReactNode } from "react";
+import { Select } from "../ui/Input";
+import { Button } from "../ui/Button";
+import { StackLayout } from "../layout/StackLayout";
 
 type OrganisationTeamsPageProps = {
-  filterValue: string
-  onFilterChange: (value: string) => void
-  filterOptions: { value: string; label: string }[]
-  canManageTeam: boolean
-  onInviteClick?: () => void
-  inviteLabel?: string
-  inviteIcon?: ReactNode
-  tableContent: ReactNode
-  secondaryContent?: ReactNode
-}
+  filterValue: string;
+  onFilterChange: (value: string) => void;
+  filterOptions: { value: string; label: string }[];
+  canManageTeam: boolean;
+  onInviteClick?: () => void;
+  inviteLabel?: string;
+  inviteIcon?: ReactNode;
+  tableContent: ReactNode;
+  secondaryContent?: ReactNode;
+};
 
 export function OrganisationTeamsPage({
   filterValue,
@@ -21,15 +21,15 @@ export function OrganisationTeamsPage({
   filterOptions,
   canManageTeam,
   onInviteClick,
-  inviteLabel = 'Invite Member',
+  inviteLabel = "Invite Member",
   inviteIcon,
   tableContent,
   secondaryContent,
 }: OrganisationTeamsPageProps) {
   return (
     <StackLayout>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:flex-row">
+      <div className="overflow-hidden">
+        <div className="flex flex-col items-center justify-between gap-4 px-1 py-2 sm:flex-row">
           <div className="flex w-full items-center gap-2 sm:w-auto">
             <Select
               value={filterValue}
@@ -40,19 +40,20 @@ export function OrganisationTeamsPage({
           </div>
 
           {canManageTeam && onInviteClick && (
-            <Button onClick={onInviteClick} className="w-full shadow-md shadow-blue-500/20 sm:w-auto">
+            <Button
+              onClick={onInviteClick}
+              className="w-full shadow-md shadow-blue-500/20 sm:w-auto"
+            >
               {inviteIcon}
               {inviteLabel}
             </Button>
           )}
         </div>
 
-        <div>
-          {tableContent}
-        </div>
+        <div>{tableContent}</div>
       </div>
 
       {secondaryContent}
     </StackLayout>
-  )
+  );
 }

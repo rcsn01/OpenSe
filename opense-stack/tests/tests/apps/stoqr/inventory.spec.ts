@@ -21,7 +21,6 @@ test.describe('Stoqr Inventory', () => {
     await expect(authenticatedPage).toHaveURL(/\/inventory\/all(?:\?|$)/);
     await expect(sidebar).toBeVisible();
     await expect(sidebar.getByText('All Products', { exact: true })).toBeVisible();
-    await expect(sidebar.getByText('Folders', { exact: true })).toBeVisible();
     await expect(authenticatedPage.getByText('All Tags')).toHaveCount(0);
     await expect(authenticatedPage.getByRole('tab', { name: /all products/i })).toHaveCount(0);
     await expect(authenticatedPage.getByRole('tab', { name: /folders/i })).toHaveCount(0);
@@ -71,6 +70,7 @@ test.describe('Stoqr Inventory', () => {
 
     const itemsPerPage = authenticatedPage.getByRole('combobox', { name: 'Items per page' });
     await expect(itemsPerPage).toBeVisible();
+    await expect(itemsPerPage).toHaveValue('20');
 
     const optionValues = await itemsPerPage.locator('option').evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value),

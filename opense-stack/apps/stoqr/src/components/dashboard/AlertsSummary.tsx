@@ -1,3 +1,5 @@
+import { Card } from '@repo/ui'
+
 export const AlertsSummary = ({
   summary,
 }: {
@@ -18,16 +20,19 @@ export const AlertsSummary = ({
   ]
 
   return (
-    <div className="card stack">
-      <h3 className="section-title">Alerts Summary</h3>
-      <div className="grid grid-2">
+    <Card className="flex flex-col gap-4">
+      <h3 className="text-lg font-semibold text-[var(--color-foreground)]">Alerts Summary</h3>
+      <div className="grid gap-4 md:grid-cols-2">
         {items.map((item) => (
-          <div key={item.label} className="flex-between" style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-            <span className="small muted">{item.label}</span>
-            <span style={{ fontWeight: 'var(--type-weight-bold)' }}>{item.value}</span>
+          <div
+            key={item.label}
+            className="flex items-center justify-between border-b border-[var(--color-border)] py-2"
+          >
+            <span className="text-sm text-[var(--color-muted-foreground)]">{item.label}</span>
+            <span className="font-semibold text-[var(--color-foreground)]">{item.value}</span>
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   )
 }

@@ -2,6 +2,20 @@
 @import "@repo/ui/styles";
 @source "../../../packages/ui/src";
 
+:root {
+  --bg: var(--color-background);
+  --card: var(--color-card);
+  --muted: var(--color-muted-foreground);
+  --text: var(--color-foreground);
+  --border: var(--color-border);
+  --primary: var(--color-primary);
+  --primary-soft: var(--color-primary-light);
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --danger: var(--color-destructive);
+  --shadow: var(--shadow-md);
+}
+
 @theme {
   --color-presetPrimary: #1E293B;
   --color-presetAccent: #F97316;

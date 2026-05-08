@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { TopBarSearchContent, TopBarSearchProvider } from '../../components/Search/TopBarSearch'
 import { ReportsPage } from '../ReportsPage'
 
 let mockOrganisationPageSettings = {
@@ -55,6 +57,18 @@ vi.mock('../../components/Reports/CustomSavedReportsTab', () => ({
   CustomSavedReportsTab: () => <div>Custom Saved Content</div>,
 }))
 
+const SearchShell = () => (
+  <TopBarSearchProvider>
+    <TopBarSearchContent />
+    <Outlet />
+  </TopBarSearchProvider>
+)
+
+const LocationProbe = () => {
+  const location = useLocation()
+  return <div data-testid="location-path">{`${location.pathname}${location.search}`}</div>
+}
+
 describe('ReportsPage', () => {
   beforeEach(() => {
     mockOrganisationPageSettings = {
@@ -98,5 +112,33 @@ describe('ReportsPage', () => {
 
     expect(screen.getByText('Feature unavailable, please contact your admin for assistance.')).toBeInTheDocument()
     expect(screen.queryByText('Stock Health & Valuation')).not.toBeInTheDocument()
+  })
+
+  it('navigates between report tabs from the shared top-bar search', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/reports/stock-health']}>
+        <Routes>
+          <Route element={<SearchShell />}>
+            <Route
+              path="/reports/:tab"
+              element={
+                <>
+                  <ReportsPage />
+                  <LocationProbe />
+                </>
+              }
+            />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.type(screen.getByRole('combobox', { name: 'Search reports...' }), 'custom')
+    await user.keyboard('{Enter}')
+
+    expect(screen.getByTestId('location-path')).toHaveTextContent('/reports/custom-saved')
+    expect(screen.getByText('Custom Saved Content')).toBeInTheDocument()
   })
 })

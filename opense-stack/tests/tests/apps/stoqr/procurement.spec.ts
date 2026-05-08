@@ -40,4 +40,29 @@ test.describe('Stoqr Procurement', () => {
     await expect(authenticatedPage.getByPlaceholder('Search suppliers...')).toBeVisible();
     await expect(authenticatedPage.getByPlaceholder('Search POs...')).toHaveCount(0);
   });
+
+  test('suppliers tab search filters the supplier roster', async ({ authenticatedPage }) => {
+    const procurementPage = new ProcurementPage(authenticatedPage);
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const supplierName = `Supplier Search ${uniqueId}`;
+
+    await procurementPage.goto();
+    await authenticatedPage.getByRole('button', { name: 'Suppliers' }).click();
+    await expect(authenticatedPage).toHaveURL(/\/procurement\/suppliers(?:\?|$)/);
+
+    await authenticatedPage.getByRole('button', { name: /add supplier/i }).click();
+    await authenticatedPage.getByLabel('Company Name').fill(supplierName);
+    await authenticatedPage.getByLabel('Contact Person').fill('Casey Jones');
+    await authenticatedPage.getByLabel('Phone').fill('555-0101');
+    await authenticatedPage.getByLabel('Email').fill(`search-${uniqueId}@supplier.test`);
+    await authenticatedPage.getByRole('button', { name: 'Save Supplier' }).click();
+
+    await expect(authenticatedPage.getByText('Supplier added.')).toBeVisible();
+    await expect(authenticatedPage.getByRole('heading', { name: supplierName })).toBeVisible();
+
+    const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search suppliers...' });
+    await searchInput.fill(supplierName);
+
+    await expect(authenticatedPage.getByRole('heading', { name: supplierName })).toBeVisible();
+  });
 });

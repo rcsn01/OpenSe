@@ -71,6 +71,39 @@ describe('products api', () => {
     })
   })
 
+  it('stores null sku when the product is created without one', async () => {
+    const single = vi.fn().mockResolvedValue({ data: { id: 'prod-null-sku' }, error: null })
+    const insert = vi.fn(() => ({ select: vi.fn(() => ({ single })) }))
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') {
+        return { insert }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await createProduct(
+      'company-1',
+      {
+        name: 'Widget without sku',
+        sku: '   ',
+        description: '',
+        quantity: '0',
+        reorderPoint: '1',
+        costPrice: '',
+        sellingPrice: '',
+        folderId: '',
+        expiryDate: '',
+        customFields: {},
+      },
+      [],
+    )
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      sku: null,
+    }))
+  })
+
   it('uploads product images and stores uploaded paths', async () => {
     const single = vi.fn().mockResolvedValue({ data: { id: 'prod-2' }, error: null })
     const insert = vi.fn(() => ({ select: vi.fn(() => ({ single })) }))
@@ -307,5 +340,49 @@ describe('products api', () => {
       image_urls: ['company-1/prod-9/existing.png', 'company-1/prod-9/1700000000123_new_image.png'],
     })
     expect(upload).toHaveBeenCalledWith('company-1/prod-9/1700000000123_new_image.png', expect.anything())
+  })
+
+  it('clears sku when an updated product removes it', async () => {
+    const firstEqId = vi.fn().mockResolvedValue({ error: null })
+    const firstEqCompany = vi.fn(() => ({ eq: firstEqId }))
+    const secondEqId = vi.fn().mockResolvedValue({ error: null })
+    const secondEqCompany = vi.fn(() => ({ eq: secondEqId }))
+
+    const update = vi
+      .fn()
+      .mockReturnValueOnce({ eq: firstEqCompany })
+      .mockReturnValueOnce({ eq: secondEqCompany })
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') {
+        return { update }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    mockStorageFrom.mockReturnValue({ upload: vi.fn().mockResolvedValue({ error: null }) })
+
+    await updateProduct(
+      'company-1',
+      'prod-10',
+      {
+        name: 'Updated Widget',
+        sku: '',
+        description: '',
+        quantity: '12',
+        reorderPoint: '4',
+        costPrice: '11.5',
+        sellingPrice: '18',
+        folderId: '',
+        expiryDate: '',
+        customFields: {},
+      },
+      [],
+      [],
+    )
+
+    expect(update).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      sku: null,
+    }))
   })
 })

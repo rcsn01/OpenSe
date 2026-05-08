@@ -1,16 +1,29 @@
-import { DataTable } from '@repo/ui'
-import { useEffect, useMemo, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { MoreHorizontal, Package2, Plus } from 'lucide-react'
+import { DataTable, type DataTableColumn } from '@repo/ui'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
-import { getLabelLayoutSummary } from './labelLayout'
-import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
-import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
+import { usePageTopBarSearch, useTopBarSearchValue } from '../Search/TopBarSearch'
+import type { SearchSuggestion } from '../../lib/pageSearch'
+import { getEnabledLabelFields, resolveLabelLayout } from './labelLayout'
+import {
+  buildLabelTemplateSearchSuggestions,
+  filterLabelTemplates,
+  getLabelTemplateIdFromSuggestion,
+} from './templateSearch'
 
 type TemplateLibraryTabProps = {
   companyId: string
   selectedTemplateId?: string
   onSelectTemplate?: (templateId: string) => void
-  searchTerm?: string
+}
+
+type TemplateTableRow = {
+  id: string
+  name: string
+  dimensionsLabel: string
+  activeFields: string[]
+  lastModifiedLabel: string
+  isSelected: boolean
 }
 
 const formatDate = (dateString: string | null | undefined): string => {
@@ -20,55 +33,142 @@ const formatDate = (dateString: string | null | undefined): string => {
   const diffMs = now.getTime() - date.getTime()
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const diffWeeks = Math.floor(diffDays / 7)
+  const diffMonths = Math.floor(diffDays / 30)
 
   if (diffHours < 1) return 'Just now'
-  if (diffHours < 24) return `${diffHours} hrs ago`
-  if (diffDays === 1) return 'Yesterday'
+  if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+  if (diffDays < 7) return `${Math.max(diffDays, 1)} ${diffDays === 1 ? 'day' : 'days'} ago`
+  if (diffWeeks < 5) return `${Math.max(diffWeeks, 1)} ${diffWeeks === 1 ? 'week' : 'weeks'} ago`
+  if (diffMonths < 12) return `${Math.max(diffMonths, 1)} ${diffMonths === 1 ? 'month' : 'months'} ago`
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemplate, searchTerm = '' }: TemplateLibraryTabProps) => {
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
+const formatDimensions = (layout: Record<string, unknown>) => {
+  const controls = resolveLabelLayout(layout)
+  return `${controls.width}x${controls.height}mm`
+}
+
+export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemplate }: TemplateLibraryTabProps) => {
+  const { searchValue } = useTopBarSearchValue()
   const { data: templates = [], isLoading } = useLabelTemplates(companyId)
   const createTemplateMutation = useCreateLabelTemplate(companyId)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [isCompactView, setIsCompactView] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+    return window.matchMedia('(max-width: 640px)').matches
+  })
   const [name, setName] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
-  const filteredTemplates = useMemo(() => fuzzySearchItems(templates, normalizePageSearchTerm(searchTerm), [
-    {
-      key: (template) => template.name,
-      maxRanking: fuzzyRankings.WORD_STARTS_WITH,
-    },
-    {
-      key: (template) => {
-        const summary = getLabelLayoutSummary(template.layout)
-        return [summary.size, summary.type, summary.fields]
-      },
-      maxRanking: fuzzyRankings.CONTAINS,
-    },
-  ]), [searchTerm, templates])
-
   useEffect(() => {
-    layoutContext?.setTopBarSearchConfig({
-      suggestions: filteredTemplates.slice(0, 8).map((template) => {
-        const summary = getLabelLayoutSummary(template.layout)
-        return {
-          id: `label-template-${template.id}`,
-          title: template.name,
-          subtitle: `${summary.size} · ${summary.type}`,
-          value: template.name,
-          badge: 'Template',
-        }
-      }),
-      onSuggestionSelect: (suggestion) => {
-        const matchedTemplate = templates.find((template) => template.name === suggestion.value)
-        if (matchedTemplate) {
-          onSelectTemplate?.(matchedTemplate.id)
-        }
-      },
-    })
-  }, [filteredTemplates, layoutContext, onSelectTemplate, templates])
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+
+    const mediaQuery = window.matchMedia('(max-width: 640px)')
+    const syncCompactView = () => {
+      setIsCompactView(mediaQuery.matches)
+    }
+
+    syncCompactView()
+    mediaQuery.addEventListener('change', syncCompactView)
+
+    return () => {
+      mediaQuery.removeEventListener('change', syncCompactView)
+    }
+  }, [])
+
+  const filteredTemplates = useMemo(
+    () => filterLabelTemplates(templates, searchValue),
+    [searchValue, templates],
+  )
+  const tableRows = useMemo<TemplateTableRow[]>(() => filteredTemplates.map((template) => {
+    const controls = resolveLabelLayout(template.layout)
+
+    return {
+      id: template.id,
+      name: template.name,
+      dimensionsLabel: formatDimensions(template.layout),
+      activeFields: getEnabledLabelFields(controls),
+      lastModifiedLabel: formatDate(template.updated_at ?? template.created_at),
+      isSelected: selectedTemplateId === template.id,
+    }
+  }), [filteredTemplates, selectedTemplateId])
+  const columns = useMemo<DataTableColumn<TemplateTableRow>[]>(() => [
+    {
+      id: 'templateName',
+      header: 'Template Name',
+      renderCell: (row) => (
+        <div className="label-template-name-cell">
+          <span className="label-template-name-icon" aria-hidden="true">
+            <Package2 size={14} />
+          </span>
+          <div className="label-template-name-copy">
+            <div className="label-template-name-row">
+              <button
+                type="button"
+                className="label-template-name-button"
+                onClick={() => onSelectTemplate?.(row.id)}
+                aria-label={`Edit ${row.name} template`}
+              >
+                <span className="label-template-name">{row.name}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'dimensions',
+      header: 'Dimensions',
+      renderCell: (row) => row.dimensionsLabel,
+    },
+    {
+      id: 'activeFields',
+      header: 'Active Fields',
+      renderCell: (row) => (
+        <div className="label-template-field-list">
+          {row.activeFields.map((field) => (
+            <span key={field} className="label-template-field-pill">{field}</span>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'lastModified',
+      header: 'Last Modified',
+      renderCell: (row) => row.lastModifiedLabel,
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      renderCell: (row) => (
+        <button
+          type="button"
+          className="label-template-action"
+          aria-label={`Template actions for ${row.name}`}
+          onClick={() => onSelectTemplate?.(row.id)}
+        >
+          <MoreHorizontal size={16} />
+        </button>
+      ),
+    },
+  ], [onSelectTemplate])
+  const handleSuggestionSelect = useCallback((suggestion: SearchSuggestion) => {
+    const templateId = getLabelTemplateIdFromSuggestion(suggestion)
+    if (templateId) {
+      onSelectTemplate?.(templateId)
+    }
+  }, [onSelectTemplate])
+
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey: 'label-studio-templates',
+    placeholder: 'Search templates...',
+    defaultSuggestions: [
+      { id: 'labels-templates', title: 'Label Templates', subtitle: 'Open and manage saved label templates', value: 'template', badge: 'Labels' },
+    ],
+    suggestions: buildLabelTemplateSearchSuggestions(filteredTemplates),
+    onSuggestionSelect: handleSuggestionSelect,
+  }), [filteredTemplates, handleSuggestionSelect]))
 
   const createTemplate = async () => {
     setMessage(null)
@@ -85,97 +185,102 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       })
       setName('')
       setShowCreateForm(false)
-      setMessage('Template created. Select it from the library to design it.')
+      setMessage('Template created. Click its name to edit it.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Failed to create template.')
     }
   }
 
   return (
-    <div className="card stack">
-      <div className="flex-between" style={{ marginBottom: 8 }}>
-        <h3 className="section-title" style={{ margin: 0 }}>Template Library</h3>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button className="button" onClick={() => setShowCreateForm(!showCreateForm)}>
-            + New Template
-          </button>
-        </div>
+    <div className="label-template-library">
+      <div className="label-template-table-shell">
+        {!isCompactView ? (
+          <DataTable
+            columns={columns}
+            rows={tableRows}
+            getRowId={(row) => row.id}
+            emptyState={<div className="empty-state">{isLoading ? 'Loading templates...' : 'No templates found.'}</div>}
+            rowClassName={(row) => row.isSelected ? 'label-template-table-row is-editing' : 'label-template-table-row'}
+          />
+        ) : null}
+
+        {isCompactView ? (
+          <div className="label-template-mobile-list" aria-label="Template library mobile list">
+            {isLoading ? (
+              <div className="empty-state">Loading templates...</div>
+            ) : filteredTemplates.length === 0 ? (
+              <div className="empty-state">No templates found.</div>
+            ) : (
+              filteredTemplates.map((template) => {
+                const controls = resolveLabelLayout(template.layout)
+                const activeFields = getEnabledLabelFields(controls)
+                const isSelected = selectedTemplateId === template.id
+
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className={`label-template-mobile-card${isSelected ? ' is-editing' : ''}`}
+                    aria-label={`Edit ${template.name} template`}
+                    onClick={() => onSelectTemplate?.(template.id)}
+                  >
+                    <div className="label-template-mobile-topline">
+                      <span className="label-template-name">{template.name}</span>
+                      <span className="label-template-mobile-dimensions">{formatDimensions(template.layout)}</span>
+                    </div>
+                    <div className="label-template-mobile-meta">{formatDate(template.updated_at ?? template.created_at)}</div>
+                    <div className="label-template-field-list">
+                      {activeFields.map((field) => (
+                        <span key={field} className="label-template-field-pill">{field}</span>
+                      ))}
+                    </div>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        ) : null}
       </div>
 
       {showCreateForm && (
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
-          <label className="stack" style={{ flex: 1 }}>
+        <div className="label-template-create-panel">
+          <label className="label-template-create-field label-template-create-field-stack">
             Template Name
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Retail Shelf Tag" />
+            <input
+              className="label-template-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Retail Shelf Tag"
+            />
           </label>
-          <button className="button" onClick={createTemplate} disabled={createTemplateMutation.isPending}>Create Template</button>
-          <button className="button ghost" onClick={() => { setShowCreateForm(false); setName(''); setMessage(null) }}>Cancel</button>
+          <div className="label-template-create-actions">
+            <button
+              type="button"
+              className="label-template-action-button label-template-action-button--primary"
+              onClick={createTemplate}
+              disabled={createTemplateMutation.isPending}
+            >
+              Create Template
+            </button>
+            <button
+              type="button"
+              className="label-template-action-button label-template-action-button--ghost"
+              onClick={() => { setShowCreateForm(false); setName(''); setMessage(null) }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
-      {message && <div className="small muted" style={{ padding: '8px 0' }}>{message}</div>}
+      {message ? <div className="label-template-message">{message}</div> : null}
 
-      {isLoading ? (
-        <div className="empty-state">Loading templates...</div>
-      ) : filteredTemplates.length === 0 ? (
-        <div className="empty-state">No templates found.</div>
-      ) : (
-        <DataTable
-          columns={[
-            {
-              id: 'name',
-              header: 'Name',
-              renderCell: (template) => {
-                const isEditing = selectedTemplateId === template.id
-
-                return (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontWeight: 600 }}>{template.name}</span>
-                      {isEditing && <span className="badge warning">Editing</span>}
-                    </div>
-                    <div className="small muted">
-                      Updated {formatDate(template.updated_at ?? template.created_at)}
-                    </div>
-                  </>
-                )
-              },
-            },
-            {
-              id: 'size',
-              header: 'Size',
-              renderCell: (template) => getLabelLayoutSummary(template.layout).size,
-            },
-            {
-              id: 'type',
-              header: 'Type',
-              renderCell: (template) => getLabelLayoutSummary(template.layout).type,
-            },
-            {
-              id: 'fields',
-              header: 'Fields',
-              renderCell: (template) => getLabelLayoutSummary(template.layout).fields,
-            },
-          ]}
-          rows={filteredTemplates}
-          getRowId={(template) => template.id}
-          onRowClick={(template) => onSelectTemplate?.(template.id)}
-          getRowProps={(template) => ({
-            role: 'button',
-            tabIndex: 0,
-            'aria-label': `Open ${template.name} template`,
-            onKeyDown: (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                onSelectTemplate?.(template.id)
-              }
-            },
-          })}
-          getRowStyle={(template) => (
-            selectedTemplateId === template.id ? { background: 'rgba(37, 99, 235, 0.04)' } : undefined
-          )}
-        />
-      )}
+      <div className="label-template-create-cta-wrap">
+        <button className="label-template-create-cta" type="button" onClick={() => setShowCreateForm((current) => !current)}>
+          <Plus size={16} />
+          {showCreateForm ? 'Hide new template' : 'Create new template'}
+        </button>
+      </div>
     </div>
   )
 }

@@ -119,7 +119,7 @@ export function OrganisationTeamsTab({
               <EmptyState title={emptyStateTitle} description={emptyStateDescription} />
             </div>
           ) : (
-            <OrganisationMembersTable rows={rows} containerClassName="overflow-hidden bg-white" />
+            <OrganisationMembersTable rows={rows} containerClassName="overflow-hidden" />
           )
         }
       />

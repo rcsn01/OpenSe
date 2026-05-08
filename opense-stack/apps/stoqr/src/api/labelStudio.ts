@@ -35,6 +35,10 @@ export type LabelPrintJob = {
   created_at: string
 }
 
+const labelTemplateSelectFields = 'id, company_id, name, is_system, layout, variable_fields, created_at, updated_at'
+
+const normalizeTemplateName = (value: string) => value.trim().toLowerCase()
+
 export const fetchLabelProducts = async (
   companyId: string,
   search: string,
@@ -58,7 +62,10 @@ export const fetchLabelProducts = async (
 
   if (error) throw error
 
-  return (data as LabelProduct[] | null) ?? []
+  return (((data as LabelProduct[] | null) ?? []).map((product) => ({
+    ...product,
+    sku: product.sku ?? '',
+  })))
 }
 
 export const fetchLabelProductFolders = async (companyId: string): Promise<LabelProductFolder[]> => {
@@ -76,14 +83,39 @@ export const fetchLabelProductFolders = async (companyId: string): Promise<Label
 export const fetchLabelTemplates = async (companyId: string): Promise<LabelTemplate[]> => {
   const { data, error } = await db
     .from('label_templates')
-    .select('id, company_id, name, is_system, layout, variable_fields, created_at, updated_at')
+    .select(labelTemplateSelectFields)
     .or(`company_id.is.null,company_id.eq.${companyId}`)
     .order('is_system', { ascending: false })
     .order('name', { ascending: true })
 
   if (error) throw error
 
-  return (data as LabelTemplate[] | null) ?? []
+  const rows = (data as LabelTemplate[] | null) ?? []
+  const prioritizedRows = [...rows].sort((left, right) => {
+    const leftPriority = left.company_id === companyId ? 0 : 1
+    const rightPriority = right.company_id === companyId ? 0 : 1
+
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority
+    }
+
+    return left.name.localeCompare(right.name)
+  })
+
+  const dedupedRows: LabelTemplate[] = []
+  const seenTemplateNames = new Set<string>()
+
+  for (const row of prioritizedRows) {
+    const normalizedName = normalizeTemplateName(row.name)
+    if (seenTemplateNames.has(normalizedName)) {
+      continue
+    }
+
+    seenTemplateNames.add(normalizedName)
+    dedupedRows.push(row)
+  }
+
+  return dedupedRows.sort((left, right) => left.name.localeCompare(right.name))
 }
 
 export const createLabelTemplate = async (params: {
@@ -108,17 +140,53 @@ export const updateLabelTemplateLayout = async (params: {
   companyId: string
   layout: Record<string, unknown>
   variableFields: string[]
-}) => {
-  const { error } = await db
+}): Promise<LabelTemplate> => {
+  const { data: existingTemplate, error: existingTemplateError } = await db
     .from('label_templates')
-    .update({
-      layout: params.layout,
-      variable_fields: params.variableFields,
-    })
+    .select('id, company_id, name, is_system')
     .eq('id', params.templateId)
-    .eq('company_id', params.companyId)
+    .maybeSingle()
+
+  if (existingTemplateError) throw existingTemplateError
+  if (!existingTemplate) throw new Error('Template not found.')
+
+  if (existingTemplate.company_id === params.companyId) {
+    const { data, error } = await db
+      .from('label_templates')
+      .update({
+        layout: params.layout,
+        variable_fields: params.variableFields,
+      })
+      .eq('id', params.templateId)
+      .eq('company_id', params.companyId)
+      .select(labelTemplateSelectFields)
+      .single()
+
+    if (error) throw error
+
+    return data as LabelTemplate
+  }
+
+  const { data, error } = await db
+    .from('label_templates')
+    .upsert(
+      {
+        company_id: params.companyId,
+        name: existingTemplate.name,
+        is_system: false,
+        layout: params.layout,
+        variable_fields: params.variableFields,
+      },
+      {
+        onConflict: 'company_id,name',
+      },
+    )
+    .select(labelTemplateSelectFields)
+    .single()
 
   if (error) throw error
+
+  return data as LabelTemplate
 }
 
 export const createLabelPrintJob = async (params: {

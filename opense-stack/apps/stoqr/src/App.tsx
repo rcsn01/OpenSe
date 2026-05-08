@@ -1,16 +1,17 @@
-import { Navigate, Outlet, Route, Routes, useOutletContext, useParams } from 'react-router-dom'
-import { ThemeProvider } from '@repo/ui'
+import { Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom'
+import { EmptyState, ThemeProvider } from '@repo/ui'
 import { AuthRedirectPage } from '@repo/shared/auth'
-import './App.css'
-import { AppLayout, type AppLayoutOutletContext } from './layouts/AppLayout'
+import { AppLayout } from './layouts/AppLayout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
 import { buildAccountsAuthUrl } from './lib/authRedirect'
 import { DashboardPage } from './pages/DashboardPage'
+import { InventoryImportPage } from './pages/InventoryImportPage'
 import { InventoryListPage } from './pages/InventoryPage'
 import { CreateProductPage } from './pages/product/CreateProductPage'
 import { EditProductPage } from './pages/product/EditProductPage'
 import { ScanPage } from './pages/ScanPage'
 import { LabelStudioPage } from './pages/LabelStudioPage'
+import { LabelDesignerPage } from './pages/LabelDesignerPage'
 import { ProductDetailPage } from './pages/product/ProductDetailPage'
 import { TeamSettingsPage } from './pages/TeamSettingsPage'
 import { ReportsPage } from './pages/ReportsPage'
@@ -21,13 +22,12 @@ import { Toaster } from 'sonner'
 
 const CompanyGate = () => {
   const { isLoading } = useCompany()
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
 
   if (isLoading) {
-    return <div className="empty-state">Loading workspace...</div>
+    return <EmptyState title="Loading workspace..." description="" />
   }
 
-  return <Outlet context={layoutContext} />
+  return <Outlet />
 }
 
 const LegacyTeamSettingsRedirect = () => {
@@ -39,7 +39,7 @@ export const RootRedirect = () => {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return <div className="empty-state">Loading session...</div>
+    return <EmptyState title="Loading session..." description="" />
   }
 
   return <Navigate to={user ? '/dashboard' : '/auth'} replace />
@@ -49,7 +49,7 @@ export function App() {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return <div className="empty-state">Loading session...</div>
+    return <EmptyState title="Loading session..." description="" />
   }
 
   if (!user) {
@@ -86,6 +86,7 @@ export function App() {
               <Route index element={<RootRedirect />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/inventory" element={<Navigate to="/inventory/all" replace />} />
+              <Route path="/inventory/import" element={<InventoryImportPage />} />
               <Route path="/inventory/new" element={<CreateProductPage />} />
               <Route path="/inventory/:tab" element={<InventoryListPage />} />
               <Route path="/inventory/:id/edit" element={<EditProductPage />} />
@@ -96,6 +97,7 @@ export function App() {
               <Route path="/tools/labels" element={<Navigate to="/tools/labels/templates" replace />} />
               <Route path="/tools/labels/design" element={<Navigate to="/tools/labels/templates" replace />} />
               <Route path="/tools/labels/downloads" element={<Navigate to="/tools/labels/preview-batch" replace />} />
+              <Route path="/tools/labels/:tab/:templateId" element={<LabelDesignerPage />} />
               <Route path="/tools/labels/:tab" element={<LabelStudioPage />} />
               <Route path="/settings/team" element={<Navigate to="/settings/organisations/teams" replace />} />
               <Route path="/settings/team/:tab" element={<LegacyTeamSettingsRedirect />} />
