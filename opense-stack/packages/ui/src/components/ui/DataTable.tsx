@@ -104,6 +104,9 @@ type DataTableProps<Row, SortKey extends string = string> = {
   theadClassName?: string;
   tbodyClassName?: string;
   footerClassName?: string;
+  topRow?: ReactNode;
+  topRowClassName?: string;
+  topRowCellClassName?: string;
   minTableWidth?: CSSProperties["minWidth"];
   tableLayout?: CSSProperties["tableLayout"];
   sortField?: SortKey | null;
@@ -131,6 +134,9 @@ export function DataTable<Row, SortKey extends string = string>({
   theadClassName,
   tbodyClassName,
   footerClassName,
+  topRow,
+  topRowClassName,
+  topRowCellClassName,
   minTableWidth,
   tableLayout,
   sortField,
@@ -237,6 +243,21 @@ export function DataTable<Row, SortKey extends string = string>({
           </thead>
 
           <tbody className={tbodyClassName}>
+            {topRow ? (
+              <tr className={topRowClassName}>
+                <td
+                  colSpan={columns.length}
+                  className={cn(
+                    variantClassNames.bodyCell,
+                    tableCellTextClassName,
+                    topRowCellClassName,
+                  )}
+                >
+                  {topRow}
+                </td>
+              </tr>
+            ) : null}
+
             {rows.length === 0 ? (
               <tr>
                 <td
