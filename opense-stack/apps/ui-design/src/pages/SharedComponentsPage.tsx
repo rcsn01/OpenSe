@@ -117,11 +117,15 @@ import {
   Bell,
   Boxes,
   Download,
+  Filter,
   FileText,
+  ListFilter,
   Palette,
   Plus,
+  RotateCcw,
   Search,
   Settings,
+  Trash2,
   UserPlus,
   Workflow,
 } from "lucide-react";
@@ -136,6 +140,12 @@ type InventoryRow = {
 };
 
 type InventorySortKey = "sku" | "item" | "folder" | "price" | "available";
+type InventoryFilterTemplate =
+  | "all"
+  | "PCR"
+  | "Safety"
+  | "Dispatch"
+  | "Warehouse";
 
 type AnalyticsAlertRow = {
   name: string;
@@ -253,6 +263,38 @@ const filterItems = [
   { value: "batch", label: "Batch" },
   { value: "supplier", label: "Supplier" },
 ];
+
+const inventoryFilterTemplates: Array<{
+  value: InventoryFilterTemplate;
+  label: string;
+  folderMatch?: string;
+}> = [
+  { value: "all", label: "All" },
+  { value: "PCR", label: "PCR", folderMatch: "PCR" },
+  { value: "Safety", label: "Safety", folderMatch: "Safety" },
+  { value: "Dispatch", label: "Dispatch", folderMatch: "Dispatch" },
+  { value: "Warehouse", label: "Warehouse", folderMatch: "Warehouse" },
+];
+
+const inventorySortTemplates: Array<{
+  label: string;
+  field: InventorySortKey;
+  direction: "asc" | "desc";
+}> = [
+  { label: "Item A-Z", field: "item", direction: "asc" },
+  { label: "Price high-low", field: "price", direction: "desc" },
+  { label: "Available low-high", field: "available", direction: "asc" },
+  { label: "Folder A-Z", field: "folder", direction: "asc" },
+];
+
+const draftInventoryRow: InventoryRow = {
+  id: "inv-draft",
+  sku: "DRAFT-001",
+  item: "Draft receiving template",
+  folder: "Warehouse Network",
+  price: 0,
+  available: 0,
+};
 
 const analyticsTrendData = [
   { month: "Jan", inbound: 42, outbound: 28 },
@@ -452,6 +494,9 @@ export function SharedComponentsPage() {
   const [tablePageSize, setTablePageSize] = useState(5);
   const [sortField, setSortField] = useState<InventorySortKey | null>("item");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [inventoryFilter, setInventoryFilter] =
+    useState<InventoryFilterTemplate>("all");
+  const [hasDraftRow, setHasDraftRow] = useState(false);
   const [teamFilter, setTeamFilter] = useState("all");
   const [roles, setRoles] = useState<OrganisationRole[]>(initialRoles);
   const [members, setMembers] =
@@ -471,10 +516,25 @@ export function SharedComponentsPage() {
     return () => window.cancelAnimationFrame(rafId);
   }, [location.hash]);
 
-  const sortedRows = useMemo(() => {
-    if (!sortField) return inventoryRows;
+  const filteredRows = useMemo(() => {
+    const baseRows = hasDraftRow
+      ? [draftInventoryRow, ...inventoryRows]
+      : inventoryRows;
+    const activeTemplate = inventoryFilterTemplates.find(
+      (template) => template.value === inventoryFilter,
+    );
 
-    return [...inventoryRows].sort((left, right) => {
+    if (!activeTemplate?.folderMatch) return baseRows;
+
+    return baseRows.filter((row) =>
+      row.folder.includes(activeTemplate.folderMatch),
+    );
+  }, [hasDraftRow, inventoryFilter]);
+
+  const sortedRows = useMemo(() => {
+    if (!sortField) return filteredRows;
+
+    return [...filteredRows].sort((left, right) => {
       const leftValue = left[sortField];
       const rightValue = right[sortField];
 
@@ -487,7 +547,7 @@ export function SharedComponentsPage() {
       const comparison = String(leftValue).localeCompare(String(rightValue));
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [sortDirection, sortField]);
+  }, [filteredRows, sortDirection, sortField]);
 
   const pagedRows = useMemo(() => {
     const startIndex = (tablePage - 1) * tablePageSize;
@@ -562,6 +622,129 @@ export function SharedComponentsPage() {
     setSortField(nextField);
     setSortDirection("asc");
   };
+
+  const applyFilterTemplate = (nextFilter: InventoryFilterTemplate) => {
+    setInventoryFilter(nextFilter);
+    setTablePage(1);
+  };
+
+  const applySortTemplate = (
+    field: InventorySortKey,
+    direction: "asc" | "desc",
+  ) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setTablePage(1);
+  };
+
+  const handleAddDraftRow = () => {
+    setHasDraftRow(true);
+    setTablePage(1);
+    toast({
+      title: "Draft row added",
+      message: "A local demo row was added to the table.",
+      variant: "success",
+    });
+  };
+
+  const handleRemoveDraftRow = () => {
+    setHasDraftRow(false);
+    setTablePage(1);
+    toast({
+      title: "Draft row removed",
+      message: "The local demo row was removed from the table.",
+      variant: "info",
+    });
+  };
+
+  const handleResetTableTemplates = () => {
+    setInventoryFilter("all");
+    setHasDraftRow(false);
+    setSortField("item");
+    setSortDirection("asc");
+    setTablePage(1);
+    toast({
+      title: "Table templates reset",
+      message: "Filters, sorting, and draft actions are back to defaults.",
+      variant: "default",
+    });
+  };
+
+  const activeFilterLabel =
+    inventoryFilterTemplates.find(
+      (template) => template.value === inventoryFilter,
+    )?.label ?? "All";
+
+  const tableTemplateRow = (
+    <VStack className="gap-3">
+      <HStack wrap align="center" justify="between" className="gap-3">
+        <HStack wrap align="center" className="gap-2">
+          <Badge variant="outline">Optional template row</Badge>
+          <Badge variant="secondary">{activeFilterLabel}</Badge>
+        </HStack>
+        <HStack wrap align="center" className="gap-2">
+          <DropdownMenu
+            align="right"
+            trigger={
+              <Button type="button" variant="outline" size="sm">
+                <ListFilter className="h-4 w-4" />
+                Sort templates
+              </Button>
+            }
+            items={inventorySortTemplates.map((template) => ({
+              label: template.label,
+              icon: <ListFilter className="h-4 w-4" />,
+              onClick: () =>
+                applySortTemplate(template.field, template.direction),
+            }))}
+          />
+          <DropdownMenu
+            align="right"
+            trigger={
+              <Button type="button" variant="outline" size="sm">
+                <Plus className="h-4 w-4" />
+                Actions
+              </Button>
+            }
+            items={[
+              {
+                label: "Add draft",
+                icon: <Plus className="h-4 w-4" />,
+                disabled: hasDraftRow,
+                onClick: handleAddDraftRow,
+              },
+              {
+                label: "Remove draft",
+                icon: <Trash2 className="h-4 w-4" />,
+                disabled: !hasDraftRow,
+                onClick: handleRemoveDraftRow,
+              },
+              { divider: true, label: "Divider" },
+              {
+                label: "Reset",
+                icon: <RotateCcw className="h-4 w-4" />,
+                onClick: handleResetTableTemplates,
+              },
+            ]}
+          />
+        </HStack>
+      </HStack>
+      <HStack wrap align="center" className="gap-2">
+        <Filter className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+        {inventoryFilterTemplates.map((template) => (
+          <Button
+            key={template.value}
+            type="button"
+            variant={inventoryFilter === template.value ? "secondary" : "ghost"}
+            size="xs"
+            onClick={() => applyFilterTemplate(template.value)}
+          >
+            {template.label}
+          </Button>
+        ))}
+      </HStack>
+    </VStack>
+  );
 
   return (
     <Container size="xl" className="ui-gallery-shell">
@@ -999,6 +1182,9 @@ export function SharedComponentsPage() {
                 sortField={sortField}
                 sortDirection={sortDirection}
                 onSortChange={handleSort}
+                topRow={tableTemplateRow}
+                topRowClassName="bg-[var(--color-surface-subtle)]/75"
+                topRowCellClassName="border-b border-[var(--color-shell-border)] px-4 py-3"
                 pagination={{
                   currentPage: tablePage,
                   totalItems: sortedRows.length,
