@@ -1,4 +1,7 @@
 Testing Suite (Playwright E2E)
+
+For UI-specific implementation and verification expectations, see [UI Implementation Guide.md](./UI%20Implementation%20Guide.md).
+
 # Security Check
 ```bash
 pnpm security:check-secrets
@@ -50,6 +53,12 @@ tests/tests/
 Environment toggles:
 - `E2E_WITH_ACCOUNTS=true|false`: include or exclude Accounts project.
 - `E2E_ACCOUNTS_DEEP=true|false`: run mutation-heavy Accounts deep tests (`billing-seats.spec.ts`).
+
+UI verification rules:
+- For UI changes, do not stop at passing unit tests. Verify the affected route in a real browser.
+- Prefer focused tests for the affected app/route before running the full suite.
+- For StoQR UI changes, the usual minimum is: focused tests, `pnpm --dir opense-stack/apps/stoqr build`, and a browser pass on the changed route.
+
 Viewing Reports
 # Open HTML report
 open tests/playwright-report/index.html

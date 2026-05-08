@@ -26,3 +26,8 @@ Tech stack:
 - Monorepo: Turbo
 - Package manager: pnpm
 Each app in apps/ is independent but shares auth and UI via packages/. They all connect to the same Supabase instance.
+
+UI ownership notes:
+- `packages/ui` is the source of shared design tokens and reusable UI primitives.
+- App-specific UI composition lives with the owning app in `apps/<app>/src/pages` and `apps/<app>/src/components`.
+- For implementation rules on when to use `@repo/ui`, Tailwind, or owner-scoped CSS, see [UI Implementation Guide.md](./UI%20Implementation%20Guide.md).
