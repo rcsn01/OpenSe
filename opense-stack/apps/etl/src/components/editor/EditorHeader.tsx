@@ -53,9 +53,9 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
     hasNotifications = false,
 }) => {
     return (
-        <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-4 z-10 shrink-0 shadow-sm">
+        <header className="h-16 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-4 z-10 shrink-0 shadow-sm">
             <div className="flex items-center gap-4">
-                <Link to={`/dashboard/${dashboardTab}`} className="p-2 text-slate-400 hover:bg-slate-100 rounded-md transition-colors" title="Back to Dashboard">
+                <Link to={`/dashboard/${dashboardTab}`} className="p-2 text-slate-400 hover:bg-slate-800 rounded-md transition-colors" title="Back to Dashboard">
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div className="h-6 w-px bg-slate-200" />
@@ -68,7 +68,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
                             e.currentTarget.blur();
                         }
                     }}
-                    className="text-lg font-semibold text-slate-900 border-none focus:ring-0 p-0 hover:bg-slate-50 rounded px-2 w-64 lg:w-96 transition-colors bg-transparent"
+                    className="text-lg font-semibold text-slate-100 border-none focus:ring-0 p-0 hover:bg-slate-800 rounded px-2 w-64 lg:w-96 transition-colors bg-transparent"
                     placeholder="Workflow Name"
                 />
             </div>
@@ -78,7 +78,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
                 <button
                     onClick={onUndo}
                     disabled={!canUndo}
-                    className="p-2 text-slate-500 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-2 text-slate-200 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     title="Undo (Ctrl+Z)"
                 >
                     <Undo2 className="w-4 h-4" />
@@ -86,7 +86,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
                 <button
                     onClick={onRedo}
                     disabled={!canRedo}
-                    className="p-2 text-slate-500 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-2 text-slate-200 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     title="Redo (Ctrl+Y)"
                 >
                     <Redo2 className="w-4 h-4" />
@@ -105,7 +105,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
                 <Button
                     variant="ghost"
                     onClick={onImportClick}
-                    className="text-slate-600"
+                    className="text-slate-100"
                 >
                     <Download className="w-4 h-4 mr-2" />
                     Import
@@ -114,7 +114,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
                 <Button
                     variant="ghost"
                     onClick={onExportClick}
-                    className="text-slate-600"
+                    className="text-slate-100"
                 >
                     <Download className="w-4 h-4 mr-2" />
                     Export
