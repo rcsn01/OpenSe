@@ -4,6 +4,8 @@
 
 This document sets the rules for designing interfaces across the OpenSe platform. Every screen, component, and interaction must follow these principles so that the experience is consistent, maintainable, and easy to build.
 
+For engineering implementation rules, see [../development/UI Implementation Guide.md](../development/UI%20Implementation%20Guide.md).
+
 ## Philosophy
 
 The design system is token-based. This means design decisions (colours, spacing, typography) are not arbitrary values chosen per-screen. They are predefined tokens applied through variables and shared components.
