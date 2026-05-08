@@ -32,8 +32,8 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
   const hasSearch = search.trim().length > 0;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      {loading ? (
+      <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-sm">     
+       {loading ? (
         <div className="flex items-center justify-center gap-2 px-6 py-12 text-sm text-slate-500">
           <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
           Loading workflows...
@@ -53,8 +53,8 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-left">
-            <thead className="bg-slate-50/80">
-              <tr className="border-b border-slate-200">
+            <thead className="bg-slate-800/80">
+              <tr className="bborder-b border-slate-700">
                 <th className="px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 sm:px-6">Workflow</th>
                 <th className="px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Owner</th>
                 <th className="px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Created</th>
@@ -74,7 +74,7 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
                 return (
                   <tr
                     key={workflow.id}
-                    className="group cursor-pointer border-b border-slate-100 transition hover:bg-slate-50/70"
+                    className="group cursor-pointer border-b border-slate-800 transition hover:bg-slate-800/50"
                     role="button"
                     tabIndex={0}
                     onClick={() => onEdit(workflow.id)}
@@ -87,7 +87,7 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
                   >
                     <td className="px-5 py-3 align-middle sm:px-6">
                       <div className="min-w-0">
-                        <Label className="block truncate" title={workflow.name}>{workflowName}</Label>
+                        <Label className="block truncate text-slate-100" title={workflow.name}>{workflowName}</Label>
                         <SubLabel as="div" className="block truncate" title={workflow.id}>{workflowId}</SubLabel>
                       </div>
                     </td>
@@ -97,11 +97,11 @@ export const WorkflowTable: React.FC<WorkflowTableProps> = ({
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-600">
                           {ownerInitial}
                         </div>
-                        <p className="max-w-[180px] truncate text-sm text-slate-700">{ownerLabel}</p>
+                        <p className="max-w-[180px] truncate text-sm text-slate-300">{ownerLabel}</p>
                       </div>
                     </td>
 
-                    <td className="px-5 py-3 align-middle text-sm text-slate-600">
+                    <td className="px-5 py-3 align-middle text-sm text-slate-400">
                       <div className="flex items-center gap-2">
                         <CalendarDays className="h-4 w-4 text-slate-400" />
                         {formatDate(workflow.created_at)}

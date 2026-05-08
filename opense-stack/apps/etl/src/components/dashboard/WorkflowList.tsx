@@ -61,12 +61,12 @@ export const WorkflowList = ({ mode }: WorkflowListProps) => {
 
             <Link
                 to={mode === 'org' && currentOrg ? `/editor/new?orgId=${currentOrg.id}` : '/editor/new'}
-                className="mt-6 block w-full rounded-xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 transition-all group bg-white/50"
+                className="mt-6 block w-full rounded-xl border border-slate-700 bg-slate-900 p-8 text-center hover:border-blue-500 hover:bg-slate-800 transition-all group"
             >
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 group-hover:bg-blue-100 transition-colors">
-                    <Plus className="h-6 w-6 text-slate-500 group-hover:text-blue-600 transition-colors" />
-                </div>
-                <h3 className="mt-3 text-sm font-semibold text-slate-900 group-hover:text-blue-700">Create a new workflow</h3>
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 group-hover:bg-blue-500/20 transition-colors">
+                <Plus className="h-6 w-6 text-slate-400 group-hover:text-blue-400 transition-colors" />
+                    </div>
+                <h3 className="mt-3 text-sm font-semibold text-slate-200 group-hover:text-blue-400">Create a new workflow</h3>
                 <p className="mt-1 text-sm text-slate-500">
                     {mode === 'org' && currentOrg
                         ? `Start a new shared workflow in ${currentOrg.name}`
