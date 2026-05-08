@@ -182,6 +182,21 @@ export function DataTable<Row, SortKey extends string = string>({
           ) : null}
 
           <thead className={theadClassName}>
+            {topRow ? (
+              <tr className={topRowClassName}>
+                <td
+                  colSpan={columns.length}
+                  className={cn(
+                    variantClassNames.bodyCell,
+                    tableCellTextClassName,
+                    topRowCellClassName,
+                  )}
+                >
+                  {topRow}
+                </td>
+              </tr>
+            ) : null}
+
             <tr>
               {columns.map((column) => {
                 const align = column.align ?? "left";
@@ -243,21 +258,6 @@ export function DataTable<Row, SortKey extends string = string>({
           </thead>
 
           <tbody className={tbodyClassName}>
-            {topRow ? (
-              <tr className={topRowClassName}>
-                <td
-                  colSpan={columns.length}
-                  className={cn(
-                    variantClassNames.bodyCell,
-                    tableCellTextClassName,
-                    topRowCellClassName,
-                  )}
-                >
-                  {topRow}
-                </td>
-              </tr>
-            ) : null}
-
             {rows.length === 0 ? (
               <tr>
                 <td

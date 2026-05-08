@@ -54,14 +54,16 @@ describe('DataTable', () => {
     expect(screen.queryByText('Template controls')).not.toBeInTheDocument()
   })
 
-  it('renders the optional top row before data rows', () => {
+  it('renders the optional top row above column headers', () => {
     renderTable({ topRow: <div>Template controls</div> })
 
+    const headerRows = within(screen.getAllByRole('rowgroup')[0]).getAllByRole('row')
     const bodyRows = within(screen.getAllByRole('rowgroup')[1]).getAllByRole('row')
 
-    expect(bodyRows).toHaveLength(3)
-    expect(bodyRows[0]).toHaveTextContent('Template controls')
-    expect(bodyRows[1]).toHaveTextContent('Alpha')
+    expect(headerRows).toHaveLength(2)
+    expect(headerRows[0]).toHaveTextContent('Template controls')
+    expect(headerRows[1]).toHaveTextContent('Name')
+    expect(bodyRows[0]).toHaveTextContent('Alpha')
   })
 
   it('spans the optional top row across all columns', () => {
@@ -72,17 +74,19 @@ describe('DataTable', () => {
     expect(topRowCell).toHaveAttribute('colspan', String(columns.length))
   })
 
-  it('keeps the empty state below the optional top row', () => {
+  it('keeps the empty state below column headers when a top row is present', () => {
     renderTable({
       rows: [],
       topRow: <div>Template controls</div>,
       emptyState: 'Nothing here yet.',
     })
 
+    const headerRows = within(screen.getAllByRole('rowgroup')[0]).getAllByRole('row')
     const bodyRows = within(screen.getAllByRole('rowgroup')[1]).getAllByRole('row')
 
-    expect(bodyRows).toHaveLength(2)
-    expect(bodyRows[0]).toHaveTextContent('Template controls')
-    expect(bodyRows[1]).toHaveTextContent('Nothing here yet.')
+    expect(headerRows[0]).toHaveTextContent('Template controls')
+    expect(headerRows[1]).toHaveTextContent('Name')
+    expect(bodyRows).toHaveLength(1)
+    expect(bodyRows[0]).toHaveTextContent('Nothing here yet.')
   })
 })

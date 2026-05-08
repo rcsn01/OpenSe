@@ -1,6 +1,5 @@
 import { cn } from "../../lib/cn";
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -64,9 +63,9 @@ export function Pagination({
     ? Math.min(currentPage * itemsPerPage, totalItems)
     : 0;
   const iconButtonCls =
-    "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-surface-subtle)] text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-strong)] disabled:pointer-events-none disabled:opacity-40";
+    "inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] disabled:pointer-events-none disabled:opacity-35";
   const pageButtonCls =
-    "inline-flex h-9 min-w-9 items-center justify-center rounded-full px-3 text-sm font-medium transition-colors";
+    "inline-flex h-8 min-w-8 items-center justify-center rounded-[var(--radius-md)] px-2.5 text-sm font-semibold transition-colors";
 
   return (
     <div
@@ -90,8 +89,11 @@ export function Pagination({
         ) : null}
       </div>
 
-      <div className="ml-auto flex flex-wrap items-center gap-3">
-        <nav aria-label="Pagination" className="flex items-center gap-2">
+      <div className="ml-auto flex flex-wrap items-center gap-4">
+        <nav
+          aria-label="Pagination"
+          className="inline-flex items-center gap-1"
+        >
           <button
             type="button"
             aria-label="Go to first page"
@@ -128,8 +130,8 @@ export function Pagination({
                 className={cn(
                   pageButtonCls,
                   p === currentPage
-                    ? "bg-[var(--color-foreground)] text-[var(--color-background)] shadow-[var(--shadow-sm)]"
-                    : "bg-[var(--color-surface-subtle)] text-[var(--color-foreground)] hover:bg-[var(--color-surface-strong)]",
+                    ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-[var(--shadow-sm)]"
+                    : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]",
                 )}
               >
                 {p}
@@ -158,12 +160,13 @@ export function Pagination({
         </nav>
 
         {typeof itemsPerPage === "number" && onItemsPerPageChange ? (
-          <label className="relative flex h-9 items-center rounded-full bg-[var(--color-surface-subtle)] px-4 pr-10 text-sm text-[var(--color-foreground)]">
+          <label className="relative flex h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-sm text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]">
+            <span>Rows</span>
             <select
               aria-label="Items per page"
               value={itemsPerPage}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-              className="appearance-none bg-transparent pr-4 text-sm font-medium text-[var(--color-foreground)] outline-none"
+              className="cursor-pointer appearance-none bg-transparent text-sm font-semibold text-[var(--color-foreground)] outline-none"
             >
               {pageSizeOptions.map((n) => (
                 <option key={n} value={n}>
@@ -171,7 +174,6 @@ export function Pagination({
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-[var(--color-muted-foreground)]" />
           </label>
         ) : null}
       </div>

@@ -18,12 +18,12 @@ function RoutedApp() {
       <ToastProvider>
         <BrowserRouter>
           <Routes>
-            <Route
-              path="/preview/landing-navbar"
-              element={<LandingNavbarPreviewPage />}
-            />
             <Route element={<AppLayout />}>
               <Route path="/" element={<SharedComponentsPage />} />
+              <Route
+                path="/preview/landing-navbar"
+                element={<LandingNavbarPreviewPage />}
+              />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

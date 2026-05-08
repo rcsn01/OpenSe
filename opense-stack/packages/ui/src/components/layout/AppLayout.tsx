@@ -135,7 +135,7 @@ export function AppLayout({
   return (
     <div
       className={cn(
-        'app-layout flex h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]',
+        'app-layout fixed inset-0 flex h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]',
         isMobileSidebarEnabled ? 'app-layout-mobile-enabled' : 'app-layout-mobile-disabled',
         isMobileSidebarEnabled && isMobileSidebarOpen ? 'app-layout-mobile-open' : 'app-layout-mobile-closed',
         className,
@@ -164,7 +164,9 @@ export function AppLayout({
       {/* Main content - top bar + scrollable area */}
       <main className="app-layout-main ml-[220px] flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {showTopBar && resolvedTopBar}
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div data-app-scroll-container className="min-h-0 flex-1 overflow-y-auto">
+          {children}
+        </div>
       </main>
     </div>
   )
