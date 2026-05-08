@@ -16,6 +16,7 @@ export const BasePage = ({
   loadingMessage = 'Loading...',
   emptyStateTitle = 'No company selected',
   emptyStateDescription = 'Select a company to continue.',
+  contentClassName,
   contentStyle,
   containerClassName = 'stack',
   containerStyle,
@@ -30,6 +31,7 @@ export const BasePage = ({
       isLoading={isLoading}
       loadingMessage={loadingMessage}
       emptyState={emptyState}
+      contentClassName={contentClassName}
       contentStyle={contentStyle}
       containerClassName={containerClassName}
       containerStyle={containerStyle}

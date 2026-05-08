@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { EmptyState } from '@repo/ui'
 import {
   isOrganisationPageFeatureEnabled,
   type OrganisationPageFeature,
@@ -24,13 +25,13 @@ export const PageAvailabilityGuard = ({
   }
 
   if (isLoading) {
-    return <div className="empty-state">Loading page availability...</div>
+    return <EmptyState title="Loading page availability..." description="" />
   }
 
   if (!isOrganisationPageFeatureEnabled(data, feature)) {
     return (
-      <div className="empty-state" role="status">
-        <h3 style={{ margin: 0 }}>{FEATURE_UNAVAILABLE_MESSAGE}</h3>
+      <div role="status">
+        <EmptyState title={FEATURE_UNAVAILABLE_MESSAGE} description="" />
       </div>
     )
   }

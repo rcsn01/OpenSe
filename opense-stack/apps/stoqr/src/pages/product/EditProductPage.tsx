@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom'
-import { EmptyState } from '../../components/EmptyState'
+import { EmptyState } from '@repo/ui'
 import { ProductFormPage } from './ProductFormPage'
 
 export const EditProductPage = () => {

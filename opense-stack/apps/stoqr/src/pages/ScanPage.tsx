@@ -1,30 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { Camera, CameraOff, ScanBarcode } from 'lucide-react'
+import { ContentTabs } from '@repo/ui'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
-import { Tabs } from '../components/Tabs'
+import { usePageTopBarSearch, useTopBarSearchValue } from '../components/Search/TopBarSearch'
 import { QuickScanTab } from '../components/Scan/QuickScanTab'
 import { ScanHistoryTab } from '../components/Scan/ScanHistoryTab'
-import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 import { toast } from 'sonner'
 import { useInventoryProducts } from '../hooks/queries/useInventory'
 import { useScanHistory } from '../hooks/queries/useQuickScan'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { defaultInventoryUrlState } from './inventoryUrlState'
 import { normalizePageSearchTerm } from '../lib/pageSearch'
+import '../components/Scan/ScanSurface.css'
 
 export const ScanPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const validTabs = ['scan-actions', 'scan-history'] as const
   const activeTab = validTabs.includes((tab ?? '') as (typeof validTabs)[number]) ? tab! : 'scan-actions'
-  const topBarSearchValue = layoutContext?.topBarSearchValue ?? ''
-  const debouncedSearchValue = useDebouncedValue(topBarSearchValue, 250)
-  const scanHistorySearchTerm = activeTab === 'scan-history' ? topBarSearchValue : ''
+  const { searchValue, setSearchValue } = useTopBarSearchValue()
+  const debouncedSearchValue = useDebouncedValue(searchValue, 250)
+  const scanHistorySearchTerm = activeTab === 'scan-history' ? searchValue : ''
   const [scanValue, setScanValue] = useState('')
   const [isScanning, setIsScanning] = useState(false)
   const [entryMethod, setEntryMethod] = useState<'camera' | 'manual'>('manual')
@@ -54,43 +54,57 @@ export const ScanPage = () => {
       return
     }
 
-    const normalizedSearchValue = normalizePageSearchTerm(topBarSearchValue)
+    const normalizedSearchValue = normalizePageSearchTerm(searchValue)
     setScanValue(normalizedSearchValue)
     setEntryMethod('manual')
-  }, [activeTab, topBarSearchValue])
+  }, [activeTab, searchValue])
 
-  useEffect(() => {
-    if (activeTab === 'scan-actions') {
-      const suggestedProducts = (productSuggestionsQuery.data?.products ?? []).slice(0, 8).map((product) => ({
-        id: `scan-product-${product.id}`,
-        title: product.name,
-        subtitle: `${product.sku} · ${product.quantity_on_hand} on hand`,
-        value: product.sku || product.name,
-        badge: 'Product',
-      }))
-
-      layoutContext?.setTopBarSearchConfig({
-        suggestions: suggestedProducts,
-        onSuggestionSelect: (suggestion) => {
-          setScanValue(suggestion.value)
-          setEntryMethod('manual')
-        },
-      })
-      return
-    }
-
-    const historySuggestions = (scanHistoryQuery.data ?? []).slice(0, 8).map((event) => ({
+  const productSuggestions = useMemo(
+    () => (productSuggestionsQuery.data?.products ?? []).slice(0, 8).map((product) => ({
+      id: `scan-product-${product.id}`,
+      title: product.name,
+      subtitle: `${product.sku} · ${product.quantity_on_hand} on hand`,
+      value: product.sku || product.name,
+      badge: 'Product',
+    })),
+    [productSuggestionsQuery.data?.products],
+  )
+  const historySuggestions = useMemo(
+    () => (scanHistoryQuery.data ?? []).slice(0, 8).map((event) => ({
       id: `scan-history-${event.id}`,
       title: event.product?.name ?? 'Unknown item',
       subtitle: `${event.product?.sku ?? event.barcode ?? '—'} · ${event.actorName}`,
       value: event.product?.sku ?? event.barcode ?? event.product?.name ?? '',
       badge: event.entry_method,
-    }))
+    })),
+    [scanHistoryQuery.data],
+  )
+  const handleProductSuggestionSelect = useCallback((suggestion: { value: string }) => {
+    setScanValue(suggestion.value)
+    setEntryMethod('manual')
+  }, [])
 
-    layoutContext?.setTopBarSearchConfig({
-      suggestions: historySuggestions,
-    })
-  }, [activeTab, layoutContext, productSuggestionsQuery.data?.products, scanHistoryQuery.data])
+  usePageTopBarSearch(useMemo(() => (
+    activeTab === 'scan-actions'
+      ? {
+          searchKey: 'scan-actions',
+          placeholder: 'Search products...',
+          defaultSuggestions: [
+            { id: 'scanner-scan', title: 'Search by Barcode or SKU', subtitle: 'Look up a product before adjusting stock', value: 'sku', badge: 'Scanner' },
+          ],
+          suggestions: productSuggestions,
+          onSuggestionSelect: handleProductSuggestionSelect,
+        }
+      : {
+          searchKey: 'scan-history',
+          placeholder: 'Search history...',
+          defaultSuggestions: [
+            { id: 'scan-history-camera', title: 'Camera Scans', subtitle: 'Recent barcode scans captured by camera', value: 'camera', badge: 'History' },
+            { id: 'scan-history-manual', title: 'Manual Entries', subtitle: 'Recent scans entered manually', value: 'manual', badge: 'History' },
+          ],
+          suggestions: historySuggestions,
+        }
+  ), [activeTab, handleProductSuggestionSelect, historySuggestions, productSuggestions]))
 
   useEffect(() => {
     return () => {
@@ -119,8 +133,8 @@ export const ScanPage = () => {
     void stopCamera()
     setEntryMethod('manual')
     setScanValue('')
-    layoutContext?.setTopBarSearchValue('')
-  }, [layoutContext, stopCamera])
+    setSearchValue('')
+  }, [setSearchValue, stopCamera])
 
   const startCamera = useCallback(async () => {
     if (scannerRef.current?.isScanning) return
@@ -171,7 +185,7 @@ export const ScanPage = () => {
       containerClassName="stack"
       containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
     >
-      <Tabs
+      <ContentTabs
         activeTab={activeTab}
         onTabChange={(nextTab) => navigate(`/scan/${nextTab}`)}
         bottomSpacing
@@ -187,27 +201,25 @@ export const ScanPage = () => {
                 entryMethod={entryMethod}
                 onResetSearch={handleResetSearch}
                 cameraContent={
-                  <div className="flex h-full min-h-0 flex-1 flex-col gap-4">
-                    <div className="relative min-h-[26rem] flex-1 overflow-hidden rounded-lg bg-[var(--color-muted)]">
+                  <div className="scan-camera-panel">
+                    <div className={`scan-camera-frame${isScanning ? ' is-active' : ''}`}>
                       <div
                         id="reader"
-                        className="h-full w-full"
+                        className="scan-camera-reader"
                       />
                       {!isScanning && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-[var(--color-muted-foreground)]">
-                          <div className="mb-3 rounded-full bg-[var(--color-background)] p-3.5 shadow-sm">
-                            <ScanBarcode size={24} className="text-[var(--color-primary)]" />
+                        <div className="scan-camera-placeholder">
+                          <div className="scan-camera-placeholder-icon">
+                            <ScanBarcode size={22} />
                           </div>
-                          <p className="text-sm font-medium">Point your camera at a barcode</p>
+                          <h2 className="scan-camera-placeholder-title">Camera is off</h2>
+                          <p className="scan-camera-placeholder-copy">Tap below to activate your camera and scan a product.</p>
                         </div>
                       )}
                     </div>
                     <button
-                      className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-                        isScanning
-                          ? 'border border-[var(--color-border)] text-[var(--color-destructive)] hover:bg-[var(--color-muted)]'
-                          : 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-sm hover:opacity-90'
-                      }`}
+                      type="button"
+                      className={`scan-camera-toggle${isScanning ? ' is-active' : ''}`}
                       onClick={isScanning ? stopCamera : startCamera}
                     >
                       {isScanning ? <CameraOff size={16} /> : <Camera size={16} />}

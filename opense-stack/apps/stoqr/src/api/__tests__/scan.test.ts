@@ -65,7 +65,7 @@ describe('scan api', () => {
       eq: vi.fn(() => transactionsQuery),
       order: vi.fn(() => transactionsQuery),
       limit: vi.fn(() => transactionsQuery),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { performed_by: 'user-1' }, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { performed_by: 'user-1', created_at: '2026-02-20T10:00:00Z' }, error: null }),
     }
 
     mockDbFrom.mockImplementation((table: string) => {
@@ -91,6 +91,7 @@ describe('scan api', () => {
     expect(result.product?.id).toBe('p-1')
     expect(result.product?.sku).toBe('SKU-100')
     expect(result.lastHandledBy).toBe('Alex User')
+    expect(result.lastUpdatedAt).toBe('2026-02-20T10:00:00Z')
     expect(result.notFoundSku).toBeNull()
   })
 
@@ -138,7 +139,7 @@ describe('scan api', () => {
       eq: vi.fn(() => transactionsQuery),
       order: vi.fn(() => transactionsQuery),
       limit: vi.fn(() => transactionsQuery),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { performed_by: 'user-1' }, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { performed_by: 'user-1', created_at: '2026-02-21T10:00:00Z' }, error: null }),
     }
 
     let productsCallCount = 0
@@ -201,12 +202,17 @@ describe('scan api', () => {
       quantity: 3,
       barcode: 'BC-100',
       entryMethod: 'camera',
+      reason: 'sold',
+      note: 'Shelf pickup',
+      stockAfter: 9,
     })
 
     expect(inventoryInsert).toHaveBeenCalledWith(expect.objectContaining({
       transaction_type: 'scan_out',
       quantity_change: -3,
       source: 'scan',
+      stock_after: 9,
+      notes: 'Shelf pickup',
     }))
 
     expect(scanEventsInsert).toHaveBeenCalledWith(expect.objectContaining({
@@ -214,6 +220,40 @@ describe('scan api', () => {
       quantity: 3,
       entry_method: 'camera',
       transaction_id: 'tx-1',
+      metadata: { reason: 'sold', note: 'Shelf pickup' },
+    }))
+  })
+
+  it('logs an inventory audit without creating a stock transaction when quantity does not change', async () => {
+    const scanEventsInsert = vi.fn().mockResolvedValue({ error: null })
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'scan_events') {
+        return { insert: scanEventsInsert }
+      }
+      if (table === 'inventory_transactions') {
+        return { insert: vi.fn(() => { throw new Error('inventory transaction should not be created') }) }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await createQuickScanTransaction({
+      companyId: 'company-1',
+      productId: 'p-1',
+      userId: 'user-1',
+      transactionType: 'lookup',
+      quantity: 0,
+      barcode: 'BC-100',
+      entryMethod: 'manual',
+      reason: 'inventory_audit',
+      note: 'Shelf count matched system',
+      stockAfter: 42,
+    })
+
+    expect(scanEventsInsert).toHaveBeenCalledWith(expect.objectContaining({
+      scan_type: 'lookup',
+      quantity: 0,
+      metadata: { reason: 'inventory_audit', note: 'Shelf count matched system' },
     }))
   })
 
@@ -333,8 +373,9 @@ describe('scan api', () => {
             quantity: 5,
             entry_method: 'manual',
             scanned_by: 'user-1',
+            metadata: { reason: 'new_delivery', note: 'Dock restock' },
             products: { id: 'p-1', name: 'Item 1', sku: 'SKU-1' },
-            inventory_transactions: { transaction_type: 'scan_in' },
+            inventory_transactions: { transaction_type: 'scan_in', notes: 'Dock restock', stock_after: 17 },
           },
         ],
         error: null,
@@ -366,6 +407,11 @@ describe('scan api', () => {
       scan_type: 'stock_in',
       actorName: 'Pat Scanner',
       transactionType: 'scan_in',
+      reason: 'new_delivery',
+      reasonLabel: 'New Delivery',
+      note: 'Dock restock',
+      change: 5,
+      stockAfter: 17,
     })
   })
 })

@@ -249,6 +249,26 @@ test.describe('Stoqr Organisations Settings', () => {
     }
   })
 
+  test('pages tab search filters organisation page controls from the shared top bar', async ({ browser }) => {
+    const adminSession = await openAuthenticatedPageForUser(browser, ACME_ADMIN_USER)
+
+    try {
+      await openOrganisationSettingsTab(adminSession.page, 'pages')
+
+      const searchInput = adminSession.page.getByRole('combobox', { name: 'Search page access...' })
+      await expect(searchInput).toBeVisible()
+
+      await searchInput.fill('procurement')
+
+      await expect(adminSession.page.getByRole('heading', { name: 'Procurement' })).toBeVisible()
+      await expect(adminSession.page.getByText('purchase orders, suppliers, and receiving workflows', { exact: false })).toBeVisible()
+      await expect(adminSession.page.getByRole('heading', { name: 'Reports' })).toHaveCount(0)
+      await expect(adminSession.page.getByRole('heading', { name: 'Alerts' })).toHaveCount(0)
+    } finally {
+      await adminSession.context.close()
+    }
+  })
+
   test('pages tab disables routes for the whole organisation', async ({ browser }) => {
     test.setTimeout(90_000)
 

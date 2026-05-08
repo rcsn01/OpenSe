@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { LabelDesignerPage } from '../LabelDesignerPage'
 import { LabelStudioPage } from '../LabelStudioPage'
 
 vi.mock('../../contexts/CompanyContext', () => ({
@@ -10,24 +11,6 @@ vi.mock('../../contexts/CompanyContext', () => ({
 
 vi.mock('../../components/BasePage', () => ({
   BasePage: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}))
-
-vi.mock('@repo/ui', () => ({
-  SideSheet: ({
-    open,
-    children,
-    size,
-  }: {
-    open: boolean
-    children: React.ReactNode
-    size?: string
-  }) =>
-    open ? <div data-testid="designer-sheet" data-panel-size={size}>{children}</div> : null,
-  SideSheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SideSheetHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SideSheetTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  SideSheetDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-  SideSheetBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
 vi.mock('../../components/Tabs', () => ({
@@ -62,15 +45,18 @@ vi.mock('../../components/LabelStudio/TemplateLibraryTab', () => ({
     <div>
       <div>Selected template: {selectedTemplateId || 'none'}</div>
       <button type="button" onClick={() => onSelectTemplate?.('template-1')}>
-        Open template designer
+        Edit Product Label template
       </button>
     </div>
   ),
 }))
 
 vi.mock('../../components/LabelStudio/LabelDesignerTab', () => ({
-  LabelDesignerTab: ({ selectedTemplateId }: { selectedTemplateId?: string }) => (
-    <div>Designer template: {selectedTemplateId || 'none'}</div>
+  LabelDesignerTab: ({ selectedTemplateId, onClose }: { selectedTemplateId?: string; onClose?: () => void }) => (
+    <div>
+      <div>Designer template: {selectedTemplateId || 'none'}</div>
+      <button type="button" onClick={() => onClose?.()}>Back to templates</button>
+    </div>
   ),
 }))
 
@@ -80,15 +66,22 @@ vi.mock('../../components/LabelStudio/LabelPreviewBatchTab', () => ({
   ),
 }))
 
+vi.mock('../../hooks/queries/useLabelStudio', () => ({
+  useLabelTemplates: () => ({
+    data: [],
+  }),
+}))
+
 const LocationProbe = () => {
   const location = useLocation()
-  return <div data-testid="location-path">{location.pathname}</div>
+  return <div data-testid="location-path">{`${location.pathname}${location.search}`}</div>
 }
 
 const renderLabelStudioRoute = (initialEntry: string) =>
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
+        <Route path="/tools/labels/:tab/:templateId" element={<><LabelDesignerPage /><LocationProbe /></>} />
         <Route
           path="/tools/labels/:tab"
           element={
@@ -103,12 +96,13 @@ const renderLabelStudioRoute = (initialEntry: string) =>
   )
 
 describe('LabelStudioPage', () => {
-  it('keeps only the combined workflows and opens the designer sheet from the template library', async () => {
+  it('keeps only the combined workflows and opens the template editor on its own route', async () => {
     const user = userEvent.setup()
 
     render(
       <MemoryRouter initialEntries={['/tools/labels/templates']}>
         <Routes>
+          <Route path="/tools/labels/:tab/:templateId" element={<><LabelDesignerPage /><LocationProbe /></>} />
           <Route path="/tools/labels/:tab" element={<LabelStudioPage />} />
         </Routes>
       </MemoryRouter>,
@@ -119,40 +113,35 @@ describe('LabelStudioPage', () => {
     expect(screen.queryByRole('button', { name: 'Design' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Downloads' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Open template designer' }))
+    await user.click(screen.getByRole('button', { name: 'Edit Product Label template' }))
 
-    expect(screen.getByTestId('designer-sheet')).toBeInTheDocument()
-    expect(screen.getByTestId('designer-sheet')).toHaveAttribute(
-      'data-panel-size',
-      'page',
-    )
     expect(screen.getByText('Designer template: template-1')).toBeInTheDocument()
+    expect(screen.getByTestId('location-path')).toHaveTextContent('/tools/labels/templates/template-1?template=template-1')
   })
 
   it('shares the selected template with the preview workflow', async () => {
     const user = userEvent.setup()
 
     render(
-      <MemoryRouter initialEntries={['/tools/labels/templates']}>
+      <MemoryRouter initialEntries={['/tools/labels/templates?template=template-1']}>
         <Routes>
           <Route path="/tools/labels/:tab" element={<LabelStudioPage />} />
         </Routes>
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'Open template designer' }))
     await user.click(screen.getByRole('button', { name: 'Preview & Batch' }))
 
     expect(screen.getByText('Preview template: template-1')).toBeInTheDocument()
   })
 
   it('canonicalizes legacy design and downloads routes to the combined tabs', async () => {
-    renderLabelStudioRoute('/tools/labels/design')
+    renderLabelStudioRoute('/tools/labels/design?template=template-1')
 
-    expect(screen.getByTestId('location-path')).toHaveTextContent('/tools/labels/templates')
+    expect(screen.getByTestId('location-path')).toHaveTextContent('/tools/labels/templates?template=template-1')
 
-    renderLabelStudioRoute('/tools/labels/downloads')
+    renderLabelStudioRoute('/tools/labels/downloads?template=template-1')
 
-    expect(screen.getAllByTestId('location-path')[1]).toHaveTextContent('/tools/labels/preview-batch')
+    expect(screen.getAllByTestId('location-path')[1]).toHaveTextContent('/tools/labels/preview-batch?template=template-1')
   })
 })

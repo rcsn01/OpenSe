@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Badge, Button, Card, cn } from '@repo/ui'
 
 import type { LabelProduct } from '../../api/labelStudio'
 import type { LabelAssetRenderers } from './labelAssetRenderers'
@@ -14,6 +15,7 @@ type LabelPreviewSummaryItem = {
 type LabelPreviewCardProps = {
   title: string
   description?: string
+  className?: string
   templateName?: string | null
   layout?: Record<string, unknown> | null
   variableFields?: string[]
@@ -25,6 +27,10 @@ type LabelPreviewCardProps = {
   previewMode?: 'label' | 'page'
   renderers?: LabelAssetRenderers
   summaryItems?: LabelPreviewSummaryItem[]
+  hideHeader?: boolean
+  showTemplateMeta?: boolean
+  showVariableFields?: boolean
+  showSummaryItems?: boolean
 }
 
 const defaultSample = {
@@ -47,6 +53,7 @@ const formatFieldName = (value: string) => {
 export const LabelPreviewCard = ({
   title,
   description,
+  className,
   templateName,
   layout,
   variableFields,
@@ -58,6 +65,10 @@ export const LabelPreviewCard = ({
   previewMode = 'label',
   renderers,
   summaryItems,
+  hideHeader = false,
+  showTemplateMeta = true,
+  showVariableFields = true,
+  showSummaryItems = true,
 }: LabelPreviewCardProps) => {
   const layoutKey = JSON.stringify(layout ?? null)
   const resolvedLayout = useMemo(() => resolveLabelLayout(layout), [layoutKey, layout])
@@ -113,16 +124,18 @@ export const LabelPreviewCard = ({
   const showSingleLabelPreview = previewMode === 'label' && templateName && singleLabelPlan
 
   return (
-    <div className="card export-preview-card label-preview-card">
-      <div className="label-preview-card-header">
-        <div>
-          <h3 className="section-title" style={{ marginBottom: description ? 4 : 0 }}>{title}</h3>
-          {description ? <p className="small muted" style={{ margin: 0 }}>{description}</p> : null}
+    <Card className={cn('export-preview-card label-preview-card', className)}>
+      {!hideHeader ? (
+        <div className="label-preview-card-header">
+          <div>
+            <h3 className={cn('text-lg font-semibold text-[var(--color-foreground)]', description && 'mb-1')}>{title}</h3>
+            {description ? <p className="text-sm text-[var(--color-muted-foreground)]">{description}</p> : null}
+          </div>
+          {badgeText ? <Badge variant="outline">{badgeText}</Badge> : null}
         </div>
-        {badgeText ? <span className="badge neutral">{badgeText}</span> : null}
-      </div>
+      ) : null}
 
-      {templateName ? (
+      {showTemplateMeta && templateName ? (
         <div className="label-preview-template-row">
           <span className="label-preview-template-chip">{templateName}</span>
           {previewMode === 'page' && pageCount > 0 ? (
@@ -145,33 +158,35 @@ export const LabelPreviewCard = ({
             <SingleLabelPreviewSvg plan={singleLabelPlan} assetMap={assetMap} />
           </div>
         ) : (
-          <div className="empty-state" style={{ padding: 24 }}>{emptyMessage}</div>
+          <div className="empty-state p-6">{emptyMessage}</div>
         )}
       </div>
 
       {previewMode === 'page' && pageCount > 1 ? (
         <div className="label-preview-pagination">
-          <button
+          <Button
             type="button"
-            className="button ghost small"
+            variant="ghost"
+            size="sm"
             onClick={() => setPageIndex((currentPage) => Math.max(0, currentPage - 1))}
             disabled={pageIndex === 0}
           >
             Previous Page
-          </button>
+          </Button>
           <span className="label-preview-pagination-status">{pageIndex + 1} / {pageCount}</span>
-          <button
+          <Button
             type="button"
-            className="button ghost small"
+            variant="ghost"
+            size="sm"
             onClick={() => setPageIndex((currentPage) => Math.min(pageCount - 1, currentPage + 1))}
             disabled={pageIndex >= pageCount - 1}
           >
             Next Page
-          </button>
+          </Button>
         </div>
       ) : null}
 
-      {summaryItems?.length ? (
+      {showSummaryItems && summaryItems?.length ? (
         <div className="label-preview-meta-grid">
           {summaryItems.map((item) => (
             <div key={`${item.label}-${item.value}`} className="label-preview-meta">
@@ -182,13 +197,13 @@ export const LabelPreviewCard = ({
         </div>
       ) : null}
 
-      {variableFields?.length ? (
+      {showVariableFields && variableFields?.length ? (
         <div className="label-preview-variables">
           {variableFields.map((field) => (
             <span key={field} className="label-preview-variable-pill">{formatFieldName(field)}</span>
           ))}
         </div>
       ) : null}
-    </div>
+    </Card>
   )
 }

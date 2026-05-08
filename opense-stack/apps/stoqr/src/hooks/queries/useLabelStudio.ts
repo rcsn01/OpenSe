@@ -6,6 +6,7 @@ import {
   fetchLabelPrintJobs,
   fetchLabelProducts,
   fetchLabelTemplates,
+  type LabelTemplate,
   updateLabelTemplateLayout,
 } from '../../api/labelStudio'
 
@@ -76,12 +77,34 @@ export const useUpdateLabelTemplateLayout = (companyId: string | null) => {
       variableFields: string[]
     }) => {
       if (!companyId) throw new Error('No company selected')
-      await updateLabelTemplateLayout({
+      return updateLabelTemplateLayout({
         companyId,
         ...payload,
       })
     },
-    onSuccess: () => {
+    onSuccess: (savedTemplate) => {
+      queryClient.setQueryData(labelStudioKeys.templates(companyId), (currentTemplates: LabelTemplate[] | undefined) => {
+        if (!savedTemplate) return currentTemplates
+
+        const nextTemplates = (currentTemplates ?? []).filter((template) => {
+          if (template.id === savedTemplate.id) {
+            return false
+          }
+
+          const matchesTemplateName = template.name.trim().toLowerCase() === savedTemplate.name.trim().toLowerCase()
+          if (!matchesTemplateName) {
+            return true
+          }
+
+          if (savedTemplate.company_id === companyId && (template.company_id === null || template.company_id === companyId)) {
+            return false
+          }
+
+          return true
+        })
+
+        return [...nextTemplates, savedTemplate].sort((left, right) => left.name.localeCompare(right.name))
+      })
       queryClient.invalidateQueries({ queryKey: labelStudioKeys.templates(companyId) })
     },
   })

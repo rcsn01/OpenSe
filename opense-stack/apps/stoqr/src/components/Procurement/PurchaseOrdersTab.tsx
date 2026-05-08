@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AddFilterDropdown,
   Badge,
@@ -14,8 +14,8 @@ import {
   Select,
 } from '@repo/ui'
 import { BellRing, Building2, CheckCircle2, Plus, Sparkles, X } from 'lucide-react'
-import { useOutletContext } from 'react-router-dom'
 import type { PurchaseOrder } from '../../api/procurement'
+import { usePageTopBarSearch, useTopBarSearchValue } from '../Search/TopBarSearch'
 import {
   useCreatePurchaseOrder,
   useProcurementPurchaseOrderItems,
@@ -24,7 +24,6 @@ import {
 } from '../../hooks/queries/useProcurementTabs'
 import { useProcurementProducts } from '../../hooks/queries/useProcurement'
 import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
-import type { AppLayoutOutletContext } from '../../layouts/AppLayout'
 import { formatCurrency } from '../../utils'
 
 type StatusFilter = 'all' | PurchaseOrder['status']
@@ -133,8 +132,8 @@ const getReturnWorkflow = (returnStatus: ReturnStatus): WorkflowBadge | null => 
   }
 }
 
-export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: string | null; searchTerm?: string }) => {
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
+export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) => {
+  const { searchValue } = useTopBarSearchValue()
   const [isCreating, setIsCreating] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [showAlertsHint, setShowAlertsHint] = useState(false)
@@ -187,7 +186,7 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
   }, [purchaseOrderItems, purchaseOrders])
 
   const filteredPurchaseOrders = useMemo(() => {
-    const searchedPurchaseOrders = fuzzySearchItems(purchaseOrders, searchTerm, [
+    const searchedPurchaseOrders = fuzzySearchItems(purchaseOrders, searchValue, [
       {
         key: (order) => formatPurchaseOrderNumber(order),
         maxRanking: fuzzyRankings.STARTS_WITH,
@@ -206,28 +205,37 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
     ])
 
     return searchedPurchaseOrders.filter((order) => statusFilter === 'all' || order.status === statusFilter)
-  }, [purchaseOrders, searchTerm, statusFilter, workflowByPo])
+  }, [purchaseOrders, searchValue, statusFilter, workflowByPo])
 
   const statusFilterItems = statusOptions.filter((option) => option.value !== statusFilter)
   const activeStatusLabel = statusFilter === 'all' ? null : statusLabels[statusFilter]
+  const purchaseOrderSuggestions = useMemo(
+    () => filteredPurchaseOrders.slice(0, 8).map((order) => ({
+      id: order.id,
+      title: formatPurchaseOrderNumber(order),
+      subtitle: order.suppliers?.name ?? 'No supplier assigned',
+      value: formatPurchaseOrderNumber(order),
+      keywords: [
+        order.suppliers?.name ?? '',
+        workflowByPo[order.id]?.request.label ?? '',
+        workflowByPo[order.id]?.order.label ?? '',
+        workflowByPo[order.id]?.returnStatus?.label ?? '',
+      ],
+      badge: 'PO',
+    })),
+    [filteredPurchaseOrders, workflowByPo],
+  )
 
-  useEffect(() => {
-    layoutContext?.setTopBarSearchConfig({
-      suggestions: filteredPurchaseOrders.slice(0, 8).map((order) => ({
-        id: order.id,
-        title: formatPurchaseOrderNumber(order),
-        subtitle: order.suppliers?.name ?? 'No supplier assigned',
-        value: formatPurchaseOrderNumber(order),
-        keywords: [
-          order.suppliers?.name ?? '',
-          workflowByPo[order.id]?.request.label ?? '',
-          workflowByPo[order.id]?.order.label ?? '',
-          workflowByPo[order.id]?.returnStatus?.label ?? '',
-        ],
-        badge: 'PO',
-      })),
-    })
-  }, [filteredPurchaseOrders, layoutContext, workflowByPo])
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey: 'procurement-purchase-orders',
+    placeholder: 'Search POs...',
+    defaultSuggestions: [
+      { id: 'procurement-po-drafts', title: 'Draft Purchase Orders', subtitle: 'POs awaiting supplier confirmation', value: 'draft', badge: 'PO' },
+      { id: 'procurement-po-transit', title: 'In Transit', subtitle: 'Open orders currently on the way', value: 'in transit', badge: 'PO' },
+      { id: 'procurement-po-returns', title: 'Vendor Returns', subtitle: 'Orders with return workflows', value: 'return', badge: 'PO' },
+    ],
+    suggestions: purchaseOrderSuggestions,
+  }), [purchaseOrderSuggestions]))
 
   const handleCreatePO = async () => {
     if (!newPoSupplier) return
@@ -253,13 +261,13 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
   const emptyStateDescription =
     purchaseOrders.length === 0
       ? 'Create your first purchase order to start tracking supplier commitments and incoming stock.'
-      : normalizePageSearchTerm(searchTerm).length > 0
-        ? `No purchase orders matched "${normalizePageSearchTerm(searchTerm)}". Try a different term or status filter.`
+      : normalizePageSearchTerm(searchValue).length > 0
+        ? `No purchase orders matched "${normalizePageSearchTerm(searchValue)}". Try a different term or status filter.`
         : 'Try adjusting your search or status filter to find a matching purchase order.'
 
   return (
     <div className="flex flex-col gap-6">
-      <Card className="overflow-hidden" padding="none">
+      <Card variant="plain" className="overflow-hidden" padding="none">
         <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2 sm:min-w-[220px]">
             <AddFilterDropdown
@@ -407,9 +415,8 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
               {
                 id: 'po-number',
                 header: 'PO Number',
-                cellClassName: '!py-5',
                 renderCell: (order) => (
-                  <span className="text-sm font-semibold text-[var(--color-primary)]">
+                  <span className="font-semibold text-[var(--color-primary)]">
                     {formatPurchaseOrderNumber(order)}
                   </span>
                 ),
@@ -417,13 +424,12 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
               {
                 id: 'supplier',
                 header: 'Supplier',
-                cellClassName: '!py-5',
                 renderCell: (order) => (
                   <div className="flex items-center gap-3">
                     <div className="rounded-lg bg-[var(--color-muted)] p-2 text-[var(--color-muted-foreground)]">
                       <Building2 size={16} />
                     </div>
-                    <span className="font-medium text-[var(--color-foreground)]">
+                    <span className="font-medium">
                       {order.suppliers?.name ?? 'Unknown supplier'}
                     </span>
                   </div>
@@ -432,26 +438,22 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
               {
                 id: 'created',
                 header: 'Created',
-                cellClassName: '!py-5 text-[var(--color-muted-foreground)]',
                 renderCell: (order) => formatDateLabel(order.created_at),
               },
               {
                 id: 'expected',
                 header: 'Expected',
-                cellClassName: '!py-5 text-[var(--color-muted-foreground)]',
                 renderCell: (order) => formatDateLabel(order.expected_date),
               },
               {
                 id: 'total',
                 header: 'Total',
                 align: 'right',
-                cellClassName: '!py-5 font-semibold text-[var(--color-foreground)]',
                 renderCell: (order) => formatCurrency(order.total_amount ?? totalsByPo[order.id] ?? 0),
               },
               {
                 id: 'workflow',
                 header: 'Workflow',
-                cellClassName: '!py-5',
                 renderCell: (order) => {
                   const workflow = workflowByPo[order.id] ?? {
                     request: { label: 'Pending Approval', variant: 'warning' as const },
@@ -504,7 +506,6 @@ export const PurchaseOrdersTab = ({ companyId, searchTerm = '' }: { companyId: s
             rows={filteredPurchaseOrders}
             getRowId={(order) => order.id}
             minTableWidth={1120}
-            tableWrapClassName="border-0 rounded-none"
           />
         )}
       </Card>

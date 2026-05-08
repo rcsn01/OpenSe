@@ -4,11 +4,11 @@ import { test } from '../../fixtures/auth'
 import { CreateProductPage, LabelStudioPage } from '../../pages/AppPages'
 
 const createTemplate = async (page: Page, templateName: string) => {
-  await page.getByRole('button', { name: '+ New Template' }).click()
+  await page.getByRole('button', { name: 'Create new template' }).click()
   await page.getByLabel('Template Name').fill(templateName)
   await page.getByRole('button', { name: 'Create Template' }).click()
-  await expect(page.getByText('Template created. Select it from the library to design it.')).toBeVisible()
-  await expect(page.getByRole('button', { name: `Open ${templateName} template` })).toBeVisible()
+  await expect(page.getByText('Template created. Click its name to edit it.')).toBeVisible()
+  await expect(page.getByRole('button', { name: `Edit ${templateName} template` })).toBeVisible()
 }
 
 const createProductForLabelExport = async (page: Page, productName: string, sku: string) => {
@@ -32,16 +32,16 @@ test.describe('Stoqr Label Studio', () => {
     await expect(authenticatedPage.getByRole('button', { name: 'Preview & Batch' })).toBeVisible()
     await expect(authenticatedPage.getByRole('button', { name: 'Design' })).toHaveCount(0)
     await expect(authenticatedPage.getByRole('button', { name: 'Downloads' })).toHaveCount(0)
-    await expect(authenticatedPage.getByRole('heading', { name: 'Template Library' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: 'Create new template' })).toBeVisible()
 
     await createTemplate(authenticatedPage, templateName)
-    await authenticatedPage.getByRole('button', { name: `Open ${templateName} template` }).click()
+    await authenticatedPage.getByRole('button', { name: `Edit ${templateName} template` }).click()
 
-    await expect(authenticatedPage.getByRole('heading', { name: 'Label Designer' }).first()).toBeVisible()
-    await expect(authenticatedPage.getByLabel('Label Width (mm)')).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: templateName })).toBeVisible()
+    await expect(authenticatedPage.getByLabel('Width (mm)')).toBeVisible()
     await expect(authenticatedPage.getByLabel('Content Padding (pt)')).toBeVisible()
-    await expect(authenticatedPage.getByRole('heading', { name: 'Machine-readable' })).toBeVisible()
-    await expect(authenticatedPage.getByRole('heading', { name: 'Live Design Preview' })).toBeVisible()
+    await expect(authenticatedPage.getByText('Identifiers')).toBeVisible()
+    await expect(authenticatedPage.getByText('Live Canvas')).toBeVisible()
   })
 
   test('preview and batch validates selections and exports a pdf for a product', async ({ authenticatedPage }) => {
@@ -59,20 +59,21 @@ test.describe('Stoqr Label Studio', () => {
     await authenticatedPage.getByRole('button', { name: 'Preview & Batch' }).click()
 
     await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/preview-batch(?:\?|$)/)
-    await expect(authenticatedPage.getByRole('heading', { name: 'Export Configuration' })).toBeVisible()
-    await expect(authenticatedPage.getByRole('radio', { name: 'Single Product' })).toBeVisible()
-    await expect(authenticatedPage.getByRole('radio', { name: 'Entire Folder' })).toBeVisible()
-    await expect(authenticatedPage.getByRole('button', { name: /export pdf batch/i })).toBeVisible()
-    await expect(authenticatedPage.getByRole('heading', { name: 'Recent Exports' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: 'Export & Batch' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('radio', { name: 'Single' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('radio', { name: 'Folder' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: 'Export PDF' })).toBeVisible()
+    await expect(authenticatedPage.getByText('A4 Layout Preview')).toBeVisible()
 
-    await authenticatedPage.getByRole('button', { name: /export pdf batch/i }).click()
+    await authenticatedPage.getByRole('button', { name: 'Export PDF' }).click()
     await expect(authenticatedPage.getByText('Select template and valid quantity.')).toBeVisible()
 
     await authenticatedPage.getByLabel('Template', { exact: true }).selectOption({ label: templateName })
-    await authenticatedPage.getByLabel('Product', { exact: true }).selectOption({ label: `${productName} (${sku})` })
+    await authenticatedPage.getByLabel('Product Search').fill(sku)
+    await authenticatedPage.getByRole('button', { name: new RegExp(productName) }).click()
 
     const downloadPromise = authenticatedPage.waitForEvent('download')
-    await authenticatedPage.getByRole('button', { name: /export pdf batch/i }).click()
+    await authenticatedPage.getByRole('button', { name: 'Export PDF' }).click()
 
     const download = await downloadPromise
     expect(download.suggestedFilename()).toMatch(/\.pdf$/i)
@@ -86,24 +87,49 @@ test.describe('Stoqr Label Studio', () => {
     await labelStudioPage.goto()
     await labelStudioPage.expectLoaded()
     await createTemplate(authenticatedPage, templateName)
-    await authenticatedPage.getByRole('button', { name: `Open ${templateName} template` }).click()
+    await authenticatedPage.getByRole('button', { name: `Edit ${templateName} template` }).click()
 
-    await expect(authenticatedPage.getByRole('heading', { name: 'Live Design Preview' })).toBeVisible()
-    await expect(authenticatedPage.getByRole('heading', { name: 'Visible fields' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('heading', { name: templateName })).toBeVisible()
+    await expect(authenticatedPage.getByText('Live Canvas')).toBeVisible()
+    await expect(authenticatedPage.getByText('Visibility Settings')).toBeVisible()
 
     await authenticatedPage.getByLabel('Content Padding (pt)').fill('12')
     await authenticatedPage.getByLabel('Barcode Scale (%)').fill('130')
     await authenticatedPage.getByLabel('QR Scale (%)').fill('110')
-    await authenticatedPage.getByLabel('Text Alignment').selectOption('center')
-    await authenticatedPage.getByRole('button', { name: /Price/i }).click()
-    await authenticatedPage.getByRole('button', { name: 'Save Design' }).click()
+    await authenticatedPage.getByRole('button', { name: 'Center aligned' }).click()
+    await authenticatedPage.getByRole('switch', { name: 'Price Field' }).click()
+    await authenticatedPage.getByRole('button', { name: 'Save Changes' }).click()
 
-    await authenticatedPage.getByRole('button', { name: 'Close dialog' }).click()
-    await authenticatedPage.getByRole('button', { name: `Open ${templateName} template` }).click()
+    await expect(authenticatedPage.getByRole('button', { name: 'Discard' })).toBeDisabled()
+    await authenticatedPage.getByRole('button', { name: 'Back to templates' }).click()
+    await authenticatedPage.getByRole('button', { name: `Edit ${templateName} template` }).click()
 
     await expect(authenticatedPage.getByLabel('Content Padding (pt)')).toHaveValue('12')
     await expect(authenticatedPage.getByLabel('Barcode Scale (%)')).toHaveValue('130')
-    await expect(authenticatedPage.getByLabel('Text Alignment')).toHaveValue('center')
-    await expect(authenticatedPage.getByRole('button', { name: /Price/i })).toHaveAttribute('aria-pressed', 'true')
+    await expect(authenticatedPage.getByRole('button', { name: 'Center aligned' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(authenticatedPage.getByRole('switch', { name: 'Price Field' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  test('template search works from the library and the dedicated designer page', async ({ authenticatedPage }) => {
+    const labelStudioPage = new LabelStudioPage(authenticatedPage)
+    const templateOne = `Search Template ${Date.now()} A`
+    const templateTwo = `Search Template ${Date.now()} B`
+
+    await labelStudioPage.goto()
+    await labelStudioPage.expectLoaded()
+    await createTemplate(authenticatedPage, templateOne)
+    await createTemplate(authenticatedPage, templateTwo)
+
+    const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search templates...' })
+    await searchInput.fill(templateTwo)
+    await authenticatedPage.getByRole('option', { name: new RegExp(templateTwo) }).click()
+
+    await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/templates\/.+\?.*template=.+/)
+    await expect(authenticatedPage.getByRole('heading', { name: templateTwo })).toBeVisible()
+
+    await searchInput.fill(templateOne)
+    await authenticatedPage.getByRole('option', { name: new RegExp(templateOne) }).click()
+
+    await expect(authenticatedPage.getByRole('heading', { name: templateOne })).toBeVisible()
   })
 })

@@ -6,9 +6,9 @@ import {
   type LabelTextRenderItem,
 } from './labelRenderPlan'
 
-const LABEL_BORDER_COLOR = '#b3b3b3'
-const LABEL_TEXT_COLOR = '#111827'
-const PAGE_HEADER_COLOR = '#404040'
+const LABEL_BORDER_COLOR = 'var(--color-border)'
+const LABEL_TEXT_COLOR = 'var(--color-foreground)'
+const PAGE_HEADER_COLOR = 'var(--color-muted-foreground)'
 
 const getTextAnchor = (textAlign: LabelTextRenderItem['textAlign']) => {
   if (textAlign === 'center') return 'middle'
@@ -36,7 +36,7 @@ export const LabelSvgGroup = ({ plan, assetMap, offsetX = 0, offsetY = 0 }: Labe
       y={0}
       width={plan.width}
       height={plan.height}
-      fill="#ffffff"
+      fill="var(--color-background)"
       stroke={plan.borderWidth > 0 ? LABEL_BORDER_COLOR : 'none'}
       strokeWidth={plan.borderWidth}
     />
@@ -68,8 +68,8 @@ export const LabelSvgGroup = ({ plan, assetMap, offsetX = 0, offsetY = 0 }: Labe
               y={assetItem.y}
               width={assetItem.width}
               height={assetItem.height}
-              fill="#f8fafc"
-              stroke="#cbd5e1"
+              fill="var(--color-surface-subtle)"
+              stroke="var(--color-border)"
               strokeDasharray="4 3"
             />
           </g>
@@ -119,7 +119,14 @@ type LabelPagePreviewSvgProps = {
 
 export const LabelPagePreviewSvg = ({ templateName, labels, assetMap }: LabelPagePreviewSvgProps) => (
   <svg className="label-preview-page-svg" viewBox={`0 0 ${A4_PAGE.width} ${A4_PAGE.height}`} role="img" aria-label="PDF page preview">
-    <rect x={0.5} y={0.5} width={A4_PAGE.width - 1} height={A4_PAGE.height - 1} fill="#ffffff" stroke="#cbd5e1" />
+    <rect
+      x={0.5}
+      y={0.5}
+      width={A4_PAGE.width - 1}
+      height={A4_PAGE.height - 1}
+      fill="var(--color-background)"
+      stroke="var(--color-border)"
+    />
     <text x={24} y={16} fill={PAGE_HEADER_COLOR} fontFamily={LABEL_FONT_STACK} fontSize={9}>
       Template: {templateName}
     </text>

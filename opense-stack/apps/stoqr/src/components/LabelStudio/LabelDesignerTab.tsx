@@ -1,9 +1,10 @@
+import { AlignCenter, AlignLeft, AlignRight, ArrowLeft, Eye, QrCode, ScanBarcode, Type } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Input } from '@repo/ui'
 import { useLabelTemplates, useUpdateLabelTemplateLayout } from '../../hooks/queries/useLabelStudio'
 import { LabelPreviewCard } from './LabelPreviewCard'
 import {
   controlsToLayout,
-  getLabelLayoutSummary,
   getMaxQrScale,
   QR_SCALE_MIN,
   resolveLabelLayout,
@@ -12,31 +13,99 @@ import {
 
 type ToggleField = 'showName' | 'showSku' | 'showPrice' | 'showBarcode' | 'showQr' | 'showBorder'
 
-const sizePresets = [
-  { label: 'Compact', description: '60 x 30 mm', width: 60, height: 30 },
-  { label: 'Shelf', description: '100 x 50 mm', width: 100, height: 50 },
-  { label: 'Shipping', description: '100 x 75 mm', width: 100, height: 75 },
-  { label: 'Bin', description: '150 x 100 mm', width: 150, height: 100 },
+const alignmentOptions: Array<{
+  value: LabelLayoutControls['textAlign']
+  label: string
+  icon: typeof AlignLeft
+}> = [
+  { value: 'left', label: 'Left aligned', icon: AlignLeft },
+  { value: 'center', label: 'Center aligned', icon: AlignCenter },
+  { value: 'right', label: 'Right aligned', icon: AlignRight },
 ]
 
-const fieldOptions: Array<{ key: ToggleField; label: string; description: string }> = [
-  { key: 'showName', label: 'Name', description: 'Product title line' },
-  { key: 'showSku', label: 'SKU', description: 'Stock code line' },
-  { key: 'showPrice', label: 'Price', description: 'Selling price line' },
-  { key: 'showBarcode', label: 'Barcode', description: 'Machine-readable barcode' },
-  { key: 'showQr', label: 'QR', description: 'Compact QR code block' },
-  { key: 'showBorder', label: 'Border', description: 'Printed label outline' },
+const visibilityOptions: Array<{ key: Extract<ToggleField, 'showName' | 'showSku' | 'showPrice' | 'showBorder'>; label: string; description: string }> = [
+  { key: 'showName', label: 'Product Name', description: 'Show the primary product title on label.' },
+  { key: 'showSku', label: 'SKU / Article No.', description: 'Show the stock code under the product name.' },
+  { key: 'showPrice', label: 'Price Field', description: 'Show the product selling price in the preview.' },
+  { key: 'showBorder', label: 'Label Border', description: 'Render the printed border around the label.' },
 ]
+
+const identifierOptions: Array<{ key: Extract<ToggleField, 'showBarcode' | 'showQr'>; label: string; description: string }> = [
+  { key: 'showBarcode', label: 'Barcode (1D)', description: 'Enable the linear barcode block on the label.' },
+  { key: 'showQr', label: 'QR Code (2D)', description: 'Enable the QR code block on the label.' },
+]
+
+const previewSample = {
+  id: 'premium-wireless-headphones',
+  name: 'Premium Wireless Headphones',
+  sku: 'AUDIO-WH-01',
+  selling_price: 299,
+}
 
 type LabelDesignerTabProps = {
   companyId: string
   selectedTemplateId?: string
-  onSelectedTemplateChange?: (templateId: string) => void
+  onClose?: () => void
+  onSavedTemplateChange?: (templateId: string) => void
 }
 
-export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange }: LabelDesignerTabProps) => {
+type SwitchRowProps = {
+  label: string
+  description: string
+  checked: boolean
+  onToggle: () => void
+}
+
+const SwitchRow = ({ label, description, checked, onToggle }: SwitchRowProps) => (
+  <button
+    type="button"
+    className={`label-studio-switch-row${checked ? ' is-active' : ''}`}
+    role="switch"
+    aria-checked={checked}
+    onClick={onToggle}
+  >
+    <span className="label-studio-switch-copy">
+      <span className="label-studio-switch-label">{label}</span>
+      <span className="label-studio-switch-description">{description}</span>
+    </span>
+    <span className="label-studio-switch-control" aria-hidden="true">
+      <span className="label-studio-switch-thumb" />
+    </span>
+  </button>
+)
+
+type SliderControlProps = {
+  label: string
+  value: number
+  min: number
+  max: number
+  step?: number
+  ariaLabel?: string
+  onChange: (value: number) => void
+}
+
+const SliderControl = ({ label, value, min, max, step = 1, ariaLabel, onChange }: SliderControlProps) => (
+  <label className="label-studio-range-control">
+    <div className="label-studio-range-header">
+      <span>{label}</span>
+      <span>{value}</span>
+    </div>
+    <input
+      className="label-studio-range-input"
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      aria-label={ariaLabel ?? label}
+      onChange={(event) => onChange(Number(event.target.value) || min)}
+    />
+  </label>
+)
+
+export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onClose, onSavedTemplateChange }: LabelDesignerTabProps) => {
   const { data: templates = [], isLoading } = useLabelTemplates(companyId)
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialSelectedTemplateId ?? '')
+  const selectedTemplateId = initialSelectedTemplateId ?? ''
   const [controls, setControls] = useState<LabelLayoutControls>(resolveLabelLayout(null))
   const [message, setMessage] = useState<string | null>(null)
   const updateLayoutMutation = useUpdateLabelTemplateLayout(companyId)
@@ -48,10 +117,6 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
   const selectedTemplateLayoutKey = JSON.stringify(selectedTemplate?.layout ?? null)
 
   useEffect(() => {
-    setSelectedTemplateId(initialSelectedTemplateId ?? '')
-  }, [initialSelectedTemplateId])
-
-  useEffect(() => {
     if (!selectedTemplateId) {
       setControls(resolveLabelLayout(null))
       return
@@ -61,25 +126,12 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
     setMessage(null)
   }, [selectedTemplateId, selectedTemplateLayoutKey])
 
-  const previewSummaryItems = useMemo(
-    () => {
-      const summary = getLabelLayoutSummary(controls)
-
-      return [
-        { label: 'Size', value: summary.size },
-        { label: 'Type', value: summary.type },
-        { label: 'Fields', value: summary.fields },
-      ]
-    },
-    [controls],
-  )
   const maxQrScale = useMemo(() => getMaxQrScale(controls), [controls])
+  const hasUnsavedChanges = useMemo(() => {
+    if (!selectedTemplate) return false
 
-  const onTemplateChange = (id: string) => {
-    setSelectedTemplateId(id)
-    onSelectedTemplateChange?.(id)
-    setMessage(null)
-  }
+    return JSON.stringify(controlsToLayout(controls)) !== JSON.stringify(controlsToLayout(resolveLabelLayout(selectedTemplate.layout)))
+  }, [controls, selectedTemplate, selectedTemplateLayoutKey])
 
   const updateControl = <TKey extends keyof LabelLayoutControls>(field: TKey, value: LabelLayoutControls[TKey]) => {
     setControls((currentControls) => resolveLabelLayout({ ...currentControls, [field]: value }))
@@ -94,12 +146,13 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
     }
 
     try {
-      await updateLayoutMutation.mutateAsync({
+      const savedTemplate = await updateLayoutMutation.mutateAsync({
         templateId: selectedTemplate.id,
         layout: controlsToLayout(controls),
         variableFields: selectedTemplate.variable_fields,
       })
-      setMessage('Design saved.')
+      onSavedTemplateChange?.(savedTemplate.id)
+      setMessage(savedTemplate.id === selectedTemplate.id ? 'Design saved.' : 'Design saved as a company template.')
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Failed to save design.')
     }
@@ -115,236 +168,261 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
   }
 
   return (
-    <div className="label-designer-layout">
-      <div className="card stack label-designer-card">
-        <div className="label-designer-header">
+    <div className="label-studio-designer">
+      <header className="label-studio-editor-topbar">
+        <div className="label-studio-editor-heading">
+          <button type="button" className="label-studio-back-button" onClick={onClose} aria-label="Back to templates">
+            <ArrowLeft size={18} />
+          </button>
           <div>
-            <h3 className="section-title" style={{ marginBottom: 4 }}>Label Designer</h3>
-            <p className="small muted" style={{ margin: 0 }}>Adjust sizing, spacing, field visibility, and machine-readable elements.</p>
+            <h2 className="label-studio-editor-title">{selectedTemplate?.name ?? 'Label Studio'}</h2>
           </div>
-          <button className="button ghost small" type="button" onClick={resetToSavedLayout} disabled={!selectedTemplate}>
-            Reset to saved
+        </div>
+
+        <div className="label-studio-editor-actions">
+          <button
+            type="button"
+            className="label-studio-text-button"
+            onClick={resetToSavedLayout}
+            disabled={!selectedTemplate || !hasUnsavedChanges}
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            className="label-studio-primary-button"
+            onClick={saveLayout}
+            disabled={!selectedTemplate || updateLayoutMutation.isPending}
+          >
+            {updateLayoutMutation.isPending ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
-        {isLoading ? (
-          <div className="empty-state">Loading templates...</div>
-        ) : templates.length === 0 ? (
-          <div className="empty-state">Create a template first in the Templates tab.</div>
-        ) : (
-          <>
-            <label className="stack">
-              Template
-              <select className="select" value={selectedTemplateId} onChange={(event) => onTemplateChange(event.target.value)}>
-                <option value="">Select template</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+      </header>
 
-            <section className="label-designer-section">
-              <div>
-                <h4 className="label-designer-section-title">Size presets</h4>
-                <p className="small muted" style={{ margin: 0 }}>Start with a common format, then tune the details below.</p>
-              </div>
-              <div className="label-designer-preset-grid">
-                {sizePresets.map((preset) => {
-                  const isActive = controls.width === preset.width && controls.height === preset.height
-                  return (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      className={`label-designer-preset${isActive ? ' is-active' : ''}`}
-                      onClick={() => {
-                        updateControl('width', preset.width)
-                        updateControl('height', preset.height)
-                      }}
-                    >
-                      <span className="label-designer-preset-title">{preset.label}</span>
-                      <span className="small muted">{preset.description}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </section>
+      {message ? <div className="label-studio-editor-message" role="status">{message}</div> : null}
 
-            <section className="label-designer-section">
-              <div>
-                <h4 className="label-designer-section-title">Canvas</h4>
-                <p className="small muted" style={{ margin: 0 }}>Control label size, spacing, and text flow.</p>
-              </div>
-              <div className="grid grid-2 label-designer-control-grid">
-                <label className="stack">
-                  Label Width (mm)
-                  <input
-                    className="input"
-                    type="number"
-                    min={20}
-                    max={200}
-                    value={controls.width}
-                    onChange={(event) => updateControl('width', Number(event.target.value) || 20)}
-                  />
-                </label>
+      {isLoading ? (
+        <div className="empty-state">Loading templates...</div>
+      ) : templates.length === 0 ? (
+        <div className="empty-state">Create a template first in the Templates tab.</div>
+      ) : !selectedTemplate ? (
+        <div className="empty-state">Select a template from the Templates tab to open the editor.</div>
+      ) : (
+        <div className="label-studio-editor-grid">
+          <div className="label-studio-editor-main">
+            <section className="label-studio-editor-panel label-studio-editor-panel--canvas">
+              <div className="label-studio-editor-panel-header">
+                <span className="label-studio-editor-panel-label">
+                  <Eye size={12} />
+                  Live Canvas
+                </span>
 
-                <label className="stack">
-                  Label Height (mm)
-                  <input
-                    className="input"
-                    type="number"
-                    min={20}
-                    max={200}
-                    value={controls.height}
-                    onChange={(event) => updateControl('height', Number(event.target.value) || 20)}
-                  />
-                </label>
-
-                <label className="stack">
-                  Font Size (pt)
-                  <input
-                    className="input"
-                    type="number"
-                    min={8}
-                    max={48}
-                    value={controls.fontSize}
-                    onChange={(event) => updateControl('fontSize', Number(event.target.value) || 8)}
-                  />
-                </label>
-
-                <label className="stack">
-                  Content Padding (pt)
-                  <input
-                    className="input"
-                    type="number"
-                    min={4}
-                    max={24}
-                    value={controls.padding}
-                    onChange={(event) => updateControl('padding', Number(event.target.value) || 4)}
-                  />
-                </label>
-
-                <label className="stack">
-                  Name Lines
-                  <input
-                    className="input"
-                    type="number"
-                    min={1}
-                    max={3}
-                    value={controls.nameLines}
-                    onChange={(event) => updateControl('nameLines', Number(event.target.value) || 1)}
-                  />
-                </label>
-
-                <label className="stack">
-                  Text Alignment
-                  <select className="select" value={controls.textAlign} onChange={(event) => updateControl('textAlign', event.target.value as LabelLayoutControls['textAlign'])}>
-                    <option value="left">Left</option>
-                    <option value="center">Center</option>
-                    <option value="right">Right</option>
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            <section className="label-designer-section">
-              <div>
-                <h4 className="label-designer-section-title">Machine-readable</h4>
-                <p className="small muted" style={{ margin: 0 }}>Scale barcode and QR blocks without changing the label size.</p>
-              </div>
-              <div className="grid grid-2 label-designer-control-grid">
-                <label className="stack">
-                  Barcode Scale (%)
-                  <input
-                    className="input"
-                    type="number"
-                    min={50}
-                    max={160}
-                    value={controls.barcodeScale}
-                    onChange={(event) => updateControl('barcodeScale', Number(event.target.value) || 50)}
-                  />
-                </label>
-
-                <label className="stack">
-                  QR Scale (%)
-                  <div className="label-designer-slider-shell">
-                    <div className="label-designer-slider-header">
-                      <span className="small muted">Current</span>
-                      <span className="small muted">{controls.qrScale}%</span>
-                    </div>
-                    <input
-                      className="label-designer-slider"
-                      type="range"
-                      aria-label="QR Scale (%)"
-                      min={QR_SCALE_MIN}
-                      max={maxQrScale}
-                      step={1}
-                      value={controls.qrScale}
-                      onChange={(event) => updateControl('qrScale', Number(event.target.value) || QR_SCALE_MIN)}
-                    />
-                    <div className="label-designer-slider-values small muted">
-                      <span>{QR_SCALE_MIN}%</span>
-                      <span>{maxQrScale}%</span>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </section>
-
-            <section className="label-designer-section">
-              <div>
-                <h4 className="label-designer-section-title">Visible fields</h4>
-                <p className="small muted" style={{ margin: 0 }}>Turn each piece of label content on or off for this template.</p>
-              </div>
-              <div className="label-designer-field-grid">
-                {fieldOptions.map((field) => (
-                  <button
-                    key={field.key}
-                    type="button"
-                    className={`label-designer-field-toggle${controls[field.key] ? ' is-active' : ''}`}
-                    aria-pressed={controls[field.key]}
-                    onClick={() => toggleControl(field.key)}
-                  >
-                    <span className="label-designer-field-title">{field.label}</span>
-                    <span className="small muted">{field.description}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <div className="label-designer-footer">
-              <div className="stack" style={{ gap: 8 }}>
-                <span className="small muted">Available variables</span>
-                <div className="row wrap">
-                  {(selectedTemplate?.variable_fields ?? []).map((field) => (
-                    <span key={field} className="pill">{field}</span>
-                  ))}
-                  {!selectedTemplate ? <span className="small muted">Select a template</span> : null}
+                <div className="label-studio-canvas-zoom" aria-label="Canvas zoom preview">
+                  <button type="button" className="label-studio-canvas-zoom-button" disabled aria-hidden="true">-</button>
+                  <span>100%</span>
+                  <button type="button" className="label-studio-canvas-zoom-button" disabled aria-hidden="true">+</button>
                 </div>
               </div>
 
-              <div className="row wrap">
-                <button className="button secondary" type="button" onClick={resetToSavedLayout} disabled={!selectedTemplate}>
-                  Reset
-                </button>
-                <button className="button" onClick={saveLayout} disabled={updateLayoutMutation.isPending}>Save Design</button>
+              <div className="label-studio-canvas-area">
+                <LabelPreviewCard
+                  className="label-studio-designer-preview-card"
+                  title="Live Canvas"
+                  templateName={selectedTemplate.name}
+                  layout={controls}
+                  variableFields={selectedTemplate.variable_fields}
+                  emptyMessage="Select a template to preview design settings."
+                  sampleProduct={previewSample}
+                  hideHeader
+                  showTemplateMeta={false}
+                  showVariableFields={false}
+                  showSummaryItems={false}
+                />
               </div>
+            </section>
+
+            <div className="label-studio-editor-bottom-grid">
+              <section className="label-studio-editor-panel">
+                <div className="label-studio-editor-panel-header">
+                  <span className="label-studio-editor-panel-label">Canvas Dimensions</span>
+                </div>
+
+                <div className="label-studio-dimension-grid">
+                  <label className="stack label-studio-readonly-field">
+                    Display Name
+                    <Input value={selectedTemplate.name} readOnly />
+                  </label>
+
+                  <label className="stack">
+                    Width (mm)
+                    <Input
+                      type="number"
+                      min={20}
+                      max={200}
+                      value={controls.width}
+                      onChange={(event) => updateControl('width', Number(event.target.value) || 20)}
+                    />
+                  </label>
+
+                  <label className="stack">
+                    Height (mm)
+                    <Input
+                      type="number"
+                      min={20}
+                      max={200}
+                      value={controls.height}
+                      onChange={(event) => updateControl('height', Number(event.target.value) || 20)}
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className="label-studio-editor-panel">
+                <div className="label-studio-editor-panel-header">
+                  <span className="label-studio-editor-panel-label">Visibility Settings</span>
+                </div>
+
+                <div className="label-studio-switch-grid">
+                  {visibilityOptions.map((option) => (
+                    <SwitchRow
+                      key={option.key}
+                      label={option.label}
+                      description={option.description}
+                      checked={controls[option.key]}
+                      onToggle={() => toggleControl(option.key)}
+                    />
+                  ))}
+                </div>
+              </section>
             </div>
 
-            {message ? <div className="small muted">{message}</div> : null}
-          </>
-        )}
-      </div>
+            <section className="label-studio-editor-panel">
+              <div className="label-studio-editor-panel-header">
+                <span className="label-studio-editor-panel-label">
+                  <Type size={12} />
+                  Test Preview Data
+                </span>
+              </div>
 
-      <LabelPreviewCard
-        title="Live Design Preview"
-        description="Every change renders here before you save it to the template."
-        templateName={selectedTemplate?.name}
-        layout={controls}
-        variableFields={selectedTemplate?.variable_fields}
-        emptyMessage="Select a template to preview design settings."
-        summaryItems={selectedTemplateId ? previewSummaryItems : undefined}
-      />
+              <div className="label-studio-preview-data-grid">
+                <div className="label-studio-preview-data-item">
+                  <span className="label-studio-preview-data-label">Name</span>
+                  <span className="label-studio-preview-data-value">{previewSample.name}</span>
+                </div>
+                <div className="label-studio-preview-data-item">
+                  <span className="label-studio-preview-data-label">SKU</span>
+                  <span className="label-studio-preview-data-value">{previewSample.sku}</span>
+                </div>
+                <div className="label-studio-preview-data-item">
+                  <span className="label-studio-preview-data-label">Price</span>
+                  <span className="label-studio-preview-data-value">${previewSample.selling_price.toFixed(2)}</span>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <aside className="label-studio-editor-sidebar">
+            <section className="label-studio-editor-panel">
+              <div className="label-studio-editor-panel-header">
+                <span className="label-studio-editor-panel-label">
+                  <ScanBarcode size={12} />
+                  Identifiers
+                </span>
+              </div>
+
+              <div className="label-studio-switch-grid">
+                {identifierOptions.map((option) => (
+                  <SwitchRow
+                    key={option.key}
+                    label={option.label}
+                    description={option.description}
+                    checked={controls[option.key]}
+                    onToggle={() => toggleControl(option.key)}
+                  />
+                ))}
+              </div>
+
+              <SliderControl
+                label="Barcode Scale"
+                ariaLabel="Barcode Scale (%)"
+                value={controls.barcodeScale}
+                min={50}
+                max={160}
+                onChange={(value) => updateControl('barcodeScale', value)}
+              />
+
+              <SliderControl
+                label="QR Code Scale"
+                ariaLabel="QR Scale (%)"
+                value={controls.qrScale}
+                min={QR_SCALE_MIN}
+                max={maxQrScale}
+                onChange={(value) => updateControl('qrScale', value)}
+              />
+            </section>
+
+            <section className="label-studio-editor-panel">
+              <div className="label-studio-editor-panel-header">
+                <span className="label-studio-editor-panel-label">
+                  <QrCode size={12} />
+                  Global Styling
+                </span>
+              </div>
+
+              <div className="label-studio-alignment-block">
+                <div className="label-studio-range-header">
+                  <span>Content Alignment</span>
+                </div>
+                <div className="label-studio-alignment-group" role="group" aria-label="Text Alignment">
+                  {alignmentOptions.map((option) => {
+                    const Icon = option.icon
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`label-studio-alignment-button${controls.textAlign === option.value ? ' is-active' : ''}`}
+                        aria-label={option.label}
+                        aria-pressed={controls.textAlign === option.value}
+                        onClick={() => updateControl('textAlign', option.value)}
+                      >
+                        <Icon size={16} />
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <SliderControl
+                label="Primary Font Size"
+                ariaLabel="Primary Font Size"
+                value={controls.fontSize}
+                min={8}
+                max={48}
+                onChange={(value) => updateControl('fontSize', value)}
+              />
+
+              <SliderControl
+                label="Canvas Padding"
+                ariaLabel="Content Padding (pt)"
+                value={controls.padding}
+                min={4}
+                max={24}
+                onChange={(value) => updateControl('padding', value)}
+              />
+
+              <SliderControl
+                label="Name Lines"
+                ariaLabel="Name Lines"
+                value={controls.nameLines}
+                min={1}
+                max={3}
+                onChange={(value) => updateControl('nameLines', value)}
+              />
+            </section>
+          </aside>
+        </div>
+      )}
     </div>
   )
 }

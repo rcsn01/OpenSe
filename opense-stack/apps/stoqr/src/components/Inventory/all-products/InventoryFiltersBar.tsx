@@ -89,21 +89,20 @@ export const InventoryFiltersBar = ({
     <div className={`inventory-toolbar${isSelectionMode ? ' selection-mode' : ''}`}>
       {isSelectionMode ? (
         <>
-          <div className="row" style={{ gap: 6 }}>
+          <div className="flex items-center gap-1.5">
             {mobileExplorerToggle}
-            <span style={{ fontSize: 'var(--type-size-xs)', fontWeight: 'var(--type-weight-semibold)', color: 'var(--primary)' }}>
+            <span className="text-xs font-semibold text-[var(--color-primary)]">
               {selectedRowIds.size} selected
             </span>
           </div>
-          <div className="row" style={{ gap: 4 }}>
-            <button className="button ghost small" type="button" onClick={onBulkPriceAdjust}>Adjust Price</button>
-            <button className="button ghost small" type="button" onClick={onBulkQuantityAdjust}>Adjust Qty</button>
-            <button className="button ghost small" type="button" onClick={onExportCsv}>Export CSV</button>
-            <button className="button ghost small" type="button" onClick={onMoveSelected}>Move</button>
+          <div className="flex flex-wrap items-center gap-1">
+            <button className="inventory-toolbar-button inventory-toolbar-button--ghost" type="button" onClick={onBulkPriceAdjust}>Adjust Price</button>
+            <button className="inventory-toolbar-button inventory-toolbar-button--ghost" type="button" onClick={onBulkQuantityAdjust}>Adjust Qty</button>
+            <button className="inventory-toolbar-button inventory-toolbar-button--ghost" type="button" onClick={onExportCsv}>Export CSV</button>
+            <button className="inventory-toolbar-button inventory-toolbar-button--ghost" type="button" onClick={onMoveSelected}>Move</button>
             <button
               type="button"
-              className="button ghost small"
-              style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
+              className="inventory-toolbar-button inventory-toolbar-button--ghost inventory-toolbar-button--danger"
               onClick={handleBulkDelete}
             >
               Delete
@@ -112,7 +111,7 @@ export const InventoryFiltersBar = ({
         </>
       ) : (
         <>
-          <div className="row wrap" style={{ flex: 1, gap: 6, alignItems: 'center' }}>
+          <div className="flex flex-1 flex-wrap items-center gap-1.5">
             {mobileExplorerToggle}
             <StockStatusFilterDropdown
               value={stockFilter}
@@ -125,47 +124,22 @@ export const InventoryFiltersBar = ({
             />
 
             {activeCustomFieldFilters.length > 0 && (
-              <div style={{ width: 1, height: 16, background: 'var(--border)', flexShrink: 0 }} />
+              <div className="h-4 w-px shrink-0 bg-[var(--color-border)]" />
             )}
 
             {activeCustomFieldFilters.map((filter) => (
               <div
                 key={filter.key}
-                className="row"
+                className="inline-flex items-center gap-1 rounded bg-[color:rgba(102,193,63,0.06)] px-1.5 py-1 text-xs font-medium text-[var(--color-foreground)]"
                 aria-label={`Active filter: ${filter.key}`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '3px 6px',
-                  background: 'rgba(102, 193, 63, 0.06)',
-                  borderRadius: 4,
-                  fontSize: 'var(--type-size-xs)',
-                  fontWeight: 'var(--type-weight-medium)',
-                  color: 'var(--text)',
-                }}
               >
-                <span style={{ opacity: 0.5 }}>{filter.key}:</span>
+                <span className="opacity-50">{filter.key}:</span>
                 <span>{formatCustomFieldValue(filter.value)}</span>
                 <button
                   type="button"
                   aria-label={`Remove ${filter.key} filter`}
                   onClick={() => onRemoveFilter(filter.key)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    width: 14,
-                    height: 14,
-                    lineHeight: 1,
-                    color: 'var(--color-foreground)',
-                    opacity: 0.35,
-                    borderRadius: 2,
-                  }}
+                  className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm p-0 text-[var(--color-foreground)] opacity-35 transition-opacity hover:opacity-100"
                 >
                   <X size={10} />
                 </button>
@@ -173,7 +147,7 @@ export const InventoryFiltersBar = ({
             ))}
 
             {pendingField && (
-              <div className="row" style={{ gap: 4, alignItems: 'center' }}>
+              <div className="flex items-center gap-1">
                 <Dropdown
                   className="min-w-[120px]"
                   defaultOpen
@@ -181,19 +155,7 @@ export const InventoryFiltersBar = ({
                     <button
                       type="button"
                       aria-label="Custom field value"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        padding: '4px 6px',
-                        fontSize: 'var(--type-size-xs)',
-                        fontWeight: 'var(--type-weight-medium)',
-                        color: 'var(--primary)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        borderRadius: 4,
-                      }}
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-muted)]"
                     >
                       {pendingFilterKey}:
                       <ChevronDown size={12} />
@@ -213,20 +175,7 @@ export const InventoryFiltersBar = ({
                   type="button"
                   aria-label="Cancel pending filter"
                   onClick={handleCancelPending}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    width: 14,
-                    height: 14,
-                    lineHeight: 1,
-                    color: 'var(--color-foreground)',
-                    opacity: 0.35,
-                  }}
+                  className="inline-flex h-3.5 w-3.5 items-center justify-center p-0 text-[var(--color-foreground)] opacity-35 transition-opacity hover:opacity-100"
                 >
                   <X size={10} />
                 </button>
@@ -238,31 +187,19 @@ export const InventoryFiltersBar = ({
             )}
           </div>
 
-          <div className="row" style={{ gap: 6, alignItems: 'center', flexShrink: 0 }}>
+          <div className="flex shrink-0 items-center gap-1.5">
             <InventoryViewToggle value={view} onChange={setView} />
 
-            <div style={{ width: 1, height: 16, background: 'var(--border)', flexShrink: 0 }} />
+            <div className="h-4 w-px shrink-0 bg-[var(--color-border)]" />
 
             <button
               type="button"
               onClick={onImportOpen}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '4px 8px',
-                fontSize: 'var(--type-size-xs)',
-                fontWeight: 'var(--type-weight-medium)',
-                color: 'var(--muted)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'color 0.15s',
-              }}
+              className="inventory-toolbar-link"
             >
               Import CSV
             </button>
-            <button className="button small" onClick={onCreateOpen} style={{ padding: '5px 10px', fontSize: 'var(--type-size-xs)', borderRadius: 6 }}>
+            <button type="button" className="inventory-toolbar-button inventory-toolbar-button--primary" onClick={onCreateOpen}>
               + New Product
             </button>
           </div>

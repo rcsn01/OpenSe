@@ -27,7 +27,7 @@ export const defaultInventoryUrlState = {
   searchTerm: '',
   stockFilter: 'all' as InventoryStockFilter,
   page: 1,
-  pageSize: 10,
+  pageSize: 20,
   sortField: 'name' as SortField,
   sortDir: 'asc' as SortDirection,
 }

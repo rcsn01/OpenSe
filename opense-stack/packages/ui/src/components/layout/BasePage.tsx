@@ -1,4 +1,5 @@
 import type { ReactNode, CSSProperties } from 'react'
+import { cn } from '../../lib/cn'
 import { EmptyState } from '../ui/EmptyState'
 
 export interface BasePageProps {
@@ -8,6 +9,7 @@ export interface BasePageProps {
   /** When true, renders loading message instead of children */
   isLoading?: boolean
   loadingMessage?: string
+  contentClassName?: string
   contentStyle?: CSSProperties
   containerClassName?: string
   containerStyle?: CSSProperties
@@ -23,6 +25,7 @@ export const BasePage = ({
   emptyState,
   isLoading = false,
   loadingMessage = 'Loading...',
+  contentClassName,
   contentStyle,
   containerClassName = 'stack',
   containerStyle,
@@ -36,7 +39,7 @@ export const BasePage = ({
   }
 
   return (
-    <div className="base-page-content" style={contentStyle}>
+    <div className={cn('base-page-content', contentClassName)} style={contentStyle}>
       <div className={containerClassName} style={containerStyle}>
         {children}
       </div>

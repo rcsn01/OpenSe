@@ -1,9 +1,8 @@
-import { useMemo, useState } from 'react'
+import { type CSSProperties, useMemo, useState } from 'react'
 import {
   DataTable,
   Button,
   Tooltip,
-  Badge,
   Body,
   Avatar,
   AvatarGroup,
@@ -17,6 +16,131 @@ import {
   InventoryToolbarControls,
 } from '../components/ui'
 import { Section, SubSection } from '../components/shared/PageSection'
+
+type PurchaseOrderStatus = 'Delayed' | 'Pending' | 'On track'
+
+type PurchaseOrderSortField = 'poNumber' | 'vendor' | 'items' | 'value' | 'expected' | 'status'
+
+type PurchaseOrderRow = {
+  poNumber: string
+  vendor: string
+  items: number
+  value: number
+  expectedLabel: string
+  expectedSortValue: number
+  status: PurchaseOrderStatus
+}
+
+type TypographyToken = 'table-header-text' | 'table-cell-text'
+
+const getTypographyTokenStyle = (token: TypographyToken): CSSProperties => ({
+  fontSize: `var(--typography-${token}-size)`,
+  lineHeight: `var(--typography-${token}-line-height)`,
+  fontWeight: `var(--typography-${token}-weight)`,
+  letterSpacing: `var(--typography-${token}-tracking)`,
+  color: `var(--typography-${token}-color)`,
+})
+
+const tableHeaderTextStyle = getTypographyTokenStyle('table-header-text')
+const tableCellTextStyle = getTypographyTokenStyle('table-cell-text')
+const tableHeaderClassName =
+  'border-b border-[#d9e2ef] bg-transparent px-4 py-4 uppercase'
+const tableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
+
+const purchaseOrderSeedRows: PurchaseOrderRow[] = [
+  { poNumber: 'PO-3009', vendor: 'Rowe Scientific', items: 31, value: 547, expectedLabel: '61 days overdue', expectedSortValue: -61, status: 'Delayed' },
+  { poNumber: 'PO-3018', vendor: 'Livingstone', items: 45, value: 1341, expectedLabel: '52 days overdue', expectedSortValue: -52, status: 'Delayed' },
+  { poNumber: 'PO-3027', vendor: 'Livingstone', items: 59, value: 2475, expectedLabel: '43 days overdue', expectedSortValue: -43, status: 'Delayed' },
+  { poNumber: 'PO-3036', vendor: 'Roche', items: 24, value: 1298, expectedLabel: '34 days overdue', expectedSortValue: -34, status: 'Delayed' },
+  { poNumber: 'PO-3045', vendor: 'Mektronics', items: 38, value: 2518, expectedLabel: '25 days overdue', expectedSortValue: -25, status: 'Delayed' },
+  { poNumber: 'PO-1204', vendor: 'Textile Wonders', items: 48, value: 288, expectedLabel: 'In 4 days', expectedSortValue: 4, status: 'Pending' },
+  { poNumber: 'PO-3122', vendor: 'Helix Bio', items: 16, value: 912, expectedLabel: 'In 9 days', expectedSortValue: 9, status: 'On track' },
+  { poNumber: 'PO-3148', vendor: 'North Lab Supply', items: 27, value: 1640, expectedLabel: 'In 12 days', expectedSortValue: 12, status: 'On track' },
+  { poNumber: 'PO-3161', vendor: 'ThermoGene', items: 52, value: 3011, expectedLabel: 'In 16 days', expectedSortValue: 16, status: 'Pending' },
+  { poNumber: 'PO-3174', vendor: 'Apex Medical', items: 33, value: 1185, expectedLabel: 'In 21 days', expectedSortValue: 21, status: 'On track' },
+]
+
+const formatExpectedLabel = (expectedSortValue: number) => {
+  if (expectedSortValue < 0) {
+    return `${Math.abs(expectedSortValue)} days overdue`
+  }
+
+  return `In ${expectedSortValue} days`
+}
+
+const getPurchaseOrderStatus = (expectedSortValue: number): PurchaseOrderStatus => {
+  if (expectedSortValue < 0) {
+    return 'Delayed'
+  }
+
+  if (expectedSortValue <= 10) {
+    return 'Pending'
+  }
+
+  return 'On track'
+}
+
+const purchaseOrderRows: PurchaseOrderRow[] = Array.from({ length: 49 }, (_, index) => {
+  if (index < purchaseOrderSeedRows.length) {
+    return purchaseOrderSeedRows[index]
+  }
+
+  const template = purchaseOrderSeedRows[index % purchaseOrderSeedRows.length]
+  const offset = index - purchaseOrderSeedRows.length + 1
+  const expectedSortValue = template.expectedSortValue + ((offset % 9) - 4)
+
+  return {
+    poNumber: `PO-${3180 + offset}`,
+    vendor: template.vendor,
+    items: Math.max(8, template.items + ((offset % 7) - 3) * 2),
+    value: template.value + offset * 87,
+    expectedSortValue,
+    expectedLabel: formatExpectedLabel(expectedSortValue),
+    status: getPurchaseOrderStatus(expectedSortValue),
+  }
+})
+
+const purchaseOrderValueFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+})
+
+const extractPurchaseOrderNumber = (poNumber: string) => Number(poNumber.replace(/[^0-9]/g, ''))
+
+const getPurchaseOrderStatusClassName = (status: PurchaseOrderStatus) => {
+  switch (status) {
+    case 'Delayed':
+      return 'text-[#ff4d4f]'
+    case 'Pending':
+      return 'text-[#f59e0b]'
+    default:
+      return 'text-[#0f766e]'
+  }
+}
+
+const comparePurchaseOrders = (
+  left: PurchaseOrderRow,
+  right: PurchaseOrderRow,
+  field: PurchaseOrderSortField,
+) => {
+  switch (field) {
+    case 'poNumber':
+      return extractPurchaseOrderNumber(left.poNumber) - extractPurchaseOrderNumber(right.poNumber)
+    case 'vendor':
+      return left.vendor.localeCompare(right.vendor)
+    case 'items':
+      return left.items - right.items
+    case 'value':
+      return left.value - right.value
+    case 'expected':
+      return left.expectedSortValue - right.expectedSortValue
+    case 'status':
+      return left.status.localeCompare(right.status)
+    default:
+      return 0
+  }
+}
 
 const stockStatusOptions = [
   { value: 'all', label: 'All Statuses' },
@@ -41,37 +165,27 @@ export function DataDisplayPage() {
   const [combinedNextFilterField, setCombinedNextFilterField] = useState(addFilterItems[0].label)
   const [combinedView, setCombinedView] = useState<'list' | 'grid'>('list')
   const [tablePage, setTablePage] = useState(1)
-  const [tableSortField, setTableSortField] = useState<'name' | 'status' | 'role' | 'email'>('name')
+  const [tablePageSize, setTablePageSize] = useState(10)
+  const [tableSortField, setTableSortField] = useState<PurchaseOrderSortField | null>(null)
   const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('asc')
 
-  const tableRows = useMemo(
-    () => [
-      { name: 'Alice Johnson', status: 'Active', role: 'Admin', email: 'alice@example.com' },
-      { name: 'Bob Smith', status: 'Inactive', role: 'Editor', email: 'bob@example.com' },
-      { name: 'Carol Williams', status: 'Active', role: 'Viewer', email: 'carol@example.com' },
-      { name: 'Danielle Brooks', status: 'Active', role: 'Manager', email: 'danielle@example.com' },
-      { name: 'Elliot Cruz', status: 'Pending', role: 'Contributor', email: 'elliot@example.com' },
-      { name: 'Farah Khan', status: 'Active', role: 'Viewer', email: 'farah@example.com' },
-    ],
-    [],
-  )
-
   const sortedTableRows = useMemo(() => {
-    return [...tableRows].sort((left, right) => {
-      const leftValue = left[tableSortField]
-      const rightValue = right[tableSortField]
-      const comparison = leftValue.localeCompare(rightValue)
+    if (!tableSortField) {
+      return purchaseOrderRows
+    }
+
+    return [...purchaseOrderRows].sort((left, right) => {
+      const comparison = comparePurchaseOrders(left, right, tableSortField)
       return tableSortDirection === 'asc' ? comparison : -comparison
     })
-  }, [tableRows, tableSortDirection, tableSortField])
+  }, [tableSortDirection, tableSortField])
 
-  const pageSize = 3
   const pagedTableRows = useMemo(() => {
-    const startIndex = (tablePage - 1) * pageSize
-    return sortedTableRows.slice(startIndex, startIndex + pageSize)
-  }, [sortedTableRows, tablePage])
+    const startIndex = (tablePage - 1) * tablePageSize
+    return sortedTableRows.slice(startIndex, startIndex + tablePageSize)
+  }, [sortedTableRows, tablePage, tablePageSize])
 
-  const handleTableSort = (field: 'name' | 'status' | 'role' | 'email') => {
+  const handleTableSort = (field: PurchaseOrderSortField) => {
     if (tableSortField === field) {
       setTableSortDirection((current) => current === 'asc' ? 'desc' : 'asc')
       return
@@ -79,6 +193,11 @@ export function DataDisplayPage() {
 
     setTableSortField(field)
     setTableSortDirection('asc')
+    setTablePage(1)
+  }
+
+  const handlePageSizeChange = (pageSize: number) => {
+    setTablePageSize(pageSize)
     setTablePage(1)
   }
 
@@ -105,57 +224,98 @@ export function DataDisplayPage() {
         </SubSection>
 
         <SubSection title="Table">
-          <Card padding="none">
+          <Card padding="none" className="overflow-hidden rounded-[26px] border-0 bg-white shadow-none">
             <DataTable
               columns={[
                 {
-                  id: 'name',
-                  header: 'Name',
-                  sortKey: 'name',
-                  renderCell: (row: (typeof pagedTableRows)[number]) => row.name,
+                  id: 'poNumber',
+                  header: 'PO Number',
+                  sortKey: 'poNumber',
+                  width: '18%',
+                  headerClassName: tableHeaderClassName,
+                  headerStyle: tableHeaderTextStyle,
+                  cellClassName: tableCellClassName,
+                  cellStyle: tableCellTextStyle,
+                  renderCell: (row: PurchaseOrderRow) => row.poNumber,
+                },
+                {
+                  id: 'vendor',
+                  header: 'Vendor',
+                  sortKey: 'vendor',
+                  width: '22%',
+                  headerClassName: tableHeaderClassName,
+                  headerStyle: tableHeaderTextStyle,
+                  cellClassName: tableCellClassName,
+                  cellStyle: tableCellTextStyle,
+                  renderCell: (row: PurchaseOrderRow) => row.vendor,
+                },
+                {
+                  id: 'items',
+                  header: 'Items',
+                  sortKey: 'items',
+                  width: '11%',
+                  headerClassName: tableHeaderClassName,
+                  headerStyle: tableHeaderTextStyle,
+                  cellClassName: tableCellClassName,
+                  cellStyle: tableCellTextStyle,
+                  renderCell: (row: PurchaseOrderRow) => row.items,
+                },
+                {
+                  id: 'value',
+                  header: 'Value',
+                  sortKey: 'value',
+                  width: '12%',
+                  headerClassName: tableHeaderClassName,
+                  headerStyle: tableHeaderTextStyle,
+                  cellClassName: tableCellClassName,
+                  cellStyle: tableCellTextStyle,
+                  renderCell: (row: PurchaseOrderRow) => purchaseOrderValueFormatter.format(row.value),
+                },
+                {
+                  id: 'expected',
+                  header: 'Expected',
+                  sortKey: 'expected',
+                  width: '23%',
+                  headerClassName: tableHeaderClassName,
+                  headerStyle: tableHeaderTextStyle,
+                  cellClassName: tableCellClassName,
+                  cellStyle: tableCellTextStyle,
+                  renderCell: (row: PurchaseOrderRow) => row.expectedLabel,
                 },
                 {
                   id: 'status',
                   header: 'Status',
                   sortKey: 'status',
-                  renderCell: (row: (typeof pagedTableRows)[number]) => (
-                    <Badge
-                      variant={row.status === 'Active' ? 'success' : row.status === 'Pending' ? 'warning' : 'secondary'}
-                      size="sm"
-                    >
+                  width: '14%',
+                  headerClassName: tableHeaderClassName,
+                  headerStyle: tableHeaderTextStyle,
+                  cellClassName: tableCellClassName,
+                  cellStyle: tableCellTextStyle,
+                  renderCell: (row: PurchaseOrderRow) => (
+                    <span className={getPurchaseOrderStatusClassName(row.status)}>
                       {row.status}
-                    </Badge>
-                  ),
-                },
-                {
-                  id: 'role',
-                  header: 'Role',
-                  sortKey: 'role',
-                  renderCell: (row: (typeof pagedTableRows)[number]) => row.role,
-                },
-                {
-                  id: 'email',
-                  header: 'Email',
-                  sortKey: 'email',
-                  renderCell: (row: (typeof pagedTableRows)[number]) => (
-                    <Body size="body4" muted>
-                      {row.email}
-                    </Body>
+                    </span>
                   ),
                 },
               ]}
               rows={pagedTableRows}
-              getRowId={(row) => row.email}
+              getRowId={(row) => row.poNumber}
+              minTableWidth={860}
               sortField={tableSortField}
               sortDirection={tableSortDirection}
               onSortChange={handleTableSort}
+              rowClassName="bg-white transition-colors hover:bg-[#f8fbff]"
+              tableWrapClassName="border-0 bg-white"
+              tableClassName="bg-white"
               pagination={{
                 currentPage: tablePage,
-                totalItems: tableRows.length,
-                itemsPerPage: pageSize,
+                totalItems: purchaseOrderRows.length,
+                itemsPerPage: tablePageSize,
                 onPageChange: setTablePage,
+                onItemsPerPageChange: handlePageSizeChange,
+                pageSizeOptions: [10, 20, 30, 50],
               }}
-              footerClassName="px-4 pb-4 pt-0"
+              footerClassName="border-[#d9e2ef] bg-white px-6 py-4"
             />
           </Card>
         </SubSection>

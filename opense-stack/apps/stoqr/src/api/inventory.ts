@@ -35,6 +35,11 @@ export type ProductBarcode = {
   products: { id: string; name: string; sku: string } | null
 }
 
+const normalizeDisplaySku = <TRow extends { sku?: string | null }>(row: TRow): TRow & { sku: string } => ({
+  ...row,
+  sku: row.sku ?? '',
+})
+
 const inferCustomFieldType = (value: CustomFieldPrimitive): CustomFieldValueType => {
   if (typeof value === 'boolean') return 'boolean'
   if (typeof value === 'number') return 'number'
@@ -170,6 +175,8 @@ export const fetchInventoryProducts = async ({
 
   let products = (data as InventoryProduct[] | null) ?? []
 
+  products = products.map((product) => normalizeDisplaySku(product))
+
   if (stockFilter === 'low') {
     products = products.filter((product) => product.quantity_on_hand <= product.reorder_point)
   }
@@ -233,26 +240,172 @@ export const createFolderInInventory = async (
 
 export type ImportInventoryRow = Record<string, string>
 
-export const importInventoryProducts = async (companyId: string, rows: ImportInventoryRow[]): Promise<number> => {
-  const preparedProducts = rows
-    .map((row) => ({
-      company_id: companyId,
-      name: row.name || row.Name,
-      sku: row.sku || row.SKU,
-      quantity_on_hand: toNumber(row.quantity_on_hand || row.qty || row.quantity),
-      reorder_point: toNumber(row.reorder_point, 10),
-      cost_price: toNumber(row.cost_price, 0),
-      selling_price: toNumber(row.selling_price, 0),
-    }))
-    .filter((product) => product.name && product.sku)
+export type ImportInventoryColumnField =
+  | 'name'
+  | 'sku'
+  | 'description'
+  | 'cost_price'
+  | 'selling_price'
+  | 'quantity_on_hand'
+  | 'reorder_point'
 
-  if (preparedProducts.length === 0) return 0
+export type ImportInventoryColumnMappings = Record<ImportInventoryColumnField, string | null>
+
+export type ImportInventoryPayload = {
+  rows: ImportInventoryRow[]
+  folderId: string | null
+  columnMappings: ImportInventoryColumnMappings
+  attributeColumns: string[]
+}
+
+export type ImportInventoryResult = {
+  importedCount: number
+  duplicateCount: number
+  invalidCount: number
+  duplicateSkus: string[]
+}
+
+const getMappedImportValue = (
+  row: ImportInventoryRow,
+  columnMappings: ImportInventoryColumnMappings,
+  field: ImportInventoryColumnField,
+) => {
+  const column = columnMappings[field]
+
+  if (!column) {
+    return ''
+  }
+
+  return row[column]?.trim() ?? ''
+}
+
+export const importInventoryProducts = async (
+  companyId: string,
+  payload: ImportInventoryPayload,
+): Promise<ImportInventoryResult> => {
+  const duplicateSkuSet = new Set<string>()
+  const seenCsvSkus = new Set<string>()
+  let invalidCount = 0
+  let duplicateCount = 0
+
+  const candidateProducts = payload.rows.reduce<Array<{
+    company_id: string
+    folder_id: string | null
+    name: string
+    sku: string | null
+    description: string | null
+    quantity_on_hand: number
+    reorder_point: number
+    cost_price: number
+    selling_price: number
+    custom_fields: Record<string, string>
+  }>>((acc, row) => {
+    const name = getMappedImportValue(row, payload.columnMappings, 'name')
+    const sku = getMappedImportValue(row, payload.columnMappings, 'sku') || null
+
+    if (!name) {
+      invalidCount += 1
+      return acc
+    }
+
+    if (sku) {
+      const normalizedSku = sku.toLowerCase()
+
+      if (seenCsvSkus.has(normalizedSku)) {
+        duplicateCount += 1
+        duplicateSkuSet.add(sku)
+        return acc
+      }
+
+      seenCsvSkus.add(normalizedSku)
+    }
+
+    const customFields = payload.attributeColumns.reduce<Record<string, string>>((fieldAcc, column) => {
+      const value = row[column]?.trim() ?? ''
+
+      if (value) {
+        fieldAcc[column] = value
+      }
+
+      return fieldAcc
+    }, {})
+
+    acc.push({
+      company_id: companyId,
+      folder_id: payload.folderId,
+      name,
+      sku,
+      description: getMappedImportValue(row, payload.columnMappings, 'description') || null,
+      quantity_on_hand: toNumber(getMappedImportValue(row, payload.columnMappings, 'quantity_on_hand'), 0),
+      reorder_point: toNumber(getMappedImportValue(row, payload.columnMappings, 'reorder_point'), 10),
+      cost_price: toNumber(getMappedImportValue(row, payload.columnMappings, 'cost_price'), 0),
+      selling_price: toNumber(getMappedImportValue(row, payload.columnMappings, 'selling_price'), 0),
+      custom_fields: customFields,
+    })
+
+    return acc
+  }, [])
+
+  if (candidateProducts.length === 0) {
+    return {
+      importedCount: 0,
+      duplicateCount,
+      invalidCount,
+      duplicateSkus: Array.from(duplicateSkuSet).slice(0, 5),
+    }
+  }
+
+  const candidateSkus = candidateProducts
+    .map((product) => product.sku)
+    .filter((sku): sku is string => Boolean(sku))
+
+  let existingSkuSet = new Set<string>()
+
+  if (candidateSkus.length > 0) {
+    const { data: existingProducts, error: existingProductsError } = await db
+      .from('products')
+      .select('sku')
+      .eq('company_id', companyId)
+      .in('sku', candidateSkus)
+
+    if (existingProductsError) throw existingProductsError
+
+    existingSkuSet = new Set(
+      ((existingProducts as Array<{ sku: string | null }> | null) ?? [])
+        .map((product) => product.sku)
+        .filter((sku): sku is string => Boolean(sku)),
+    )
+  }
+
+  const preparedProducts = candidateProducts.filter((product) => {
+    if (!product.sku || !existingSkuSet.has(product.sku)) {
+      return true
+    }
+
+    duplicateCount += 1
+    duplicateSkuSet.add(product.sku)
+    return false
+  })
+
+  if (preparedProducts.length === 0) {
+    return {
+      importedCount: 0,
+      duplicateCount,
+      invalidCount,
+      duplicateSkus: Array.from(duplicateSkuSet).slice(0, 5),
+    }
+  }
 
   const { error } = await db.from('products').insert(preparedProducts)
 
   if (error) throw error
 
-  return preparedProducts.length
+  return {
+    importedCount: preparedProducts.length,
+    duplicateCount,
+    invalidCount,
+    duplicateSkus: Array.from(duplicateSkuSet).slice(0, 5),
+  }
 }
 
 type BarcodeRow = Omit<ProductBarcode, 'products'> & {
@@ -278,7 +431,11 @@ export const fetchInventoryReferenceData = async (companyId: string): Promise<{
   return {
     barcodes: ((barcodeData as BarcodeRow[] | null) ?? []).map((row) => ({
       ...row,
-      products: normalizeSingle(row.products),
+      products: (() => {
+        const product = normalizeSingle(row.products)
+
+        return product ? normalizeDisplaySku(product) : null
+      })(),
     })),
   }
 }

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams, useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import type { ChangeEvent } from 'react'
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useCompany } from '../contexts/CompanyContext'
 import { BasePage } from '../components/BasePage'
+import { usePageTopBarSearch } from '../components/Search/TopBarSearch'
 import type { CustomFieldPrimitive, Folder } from '../types'
 import { parseCsv } from '../utils'
 import { AllProductsTab } from '../components/Inventory/AllProductsTab'
@@ -17,13 +20,11 @@ import {
 } from './inventoryUrlState'
 import {
   useDeleteInventoryProducts,
-  useImportInventoryProducts,
   useInventoryFilters,
   useInventoryProducts,
   useInventoryRefresh,
 } from '../hooks/queries/useInventory'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
-import type { AppLayoutOutletContext } from '../layouts/AppLayout'
 
 export const getNextSelectedRowIdsForVisibleToggle = (current: Set<string>, visibleProductIds: string[]) => {
   const visibleProductIdSet = new Set(visibleProductIds)
@@ -39,14 +40,9 @@ export const getNextSelectedRowIdsForVisibleToggle = (current: Set<string>, visi
 export const InventoryListPage = () => {
   const { companyId } = useCompany()
   const navigate = useNavigate()
-  const layoutContext = useOutletContext<AppLayoutOutletContext | null>()
   const { tab } = useParams<{ tab?: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
-
-  // Removed isCreateOpen state
-  const [isImportOpen, setIsImportOpen] = useState(false)
-  const [importRows, setImportRows] = useState<Record<string, string>[]>([])
-  const [importMessage, setImportMessage] = useState<string | null>(null)
+  const importFileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [pendingFilterKey, setPendingFilterKey] = useState<string | null>(null)
   const [folderView, setFolderView] = useState<FolderView>('all')
@@ -153,28 +149,36 @@ export const InventoryListPage = () => {
   })
 
   const deleteProductsMutation = useDeleteInventoryProducts(companyId)
-  const importProductsMutation = useImportInventoryProducts(companyId)
   const refreshInventory = useInventoryRefresh()
 
   const products = productsQuery.data?.products ?? ([] as InventoryProduct[])
   const totalCount = productsQuery.data?.totalCount ?? 0
   const folders = filtersQuery.data?.folders ?? ([] as Folder[])
+  const inventorySearchSuggestions = useMemo(
+    () => products.slice(0, 8).map((product) => ({
+      id: `inventory-product-${product.id}`,
+      title: product.name,
+      subtitle: `${product.sku} · ${product.quantity_on_hand} on hand`,
+      value: product.sku || product.name,
+      badge: 'Product',
+    })),
+    [products],
+  )
   const isLoading = useMemo(
     () => productsQuery.isLoading || filtersQuery.isLoading,
     [productsQuery.isLoading, filtersQuery.isLoading],
   )
 
-  useEffect(() => {
-    layoutContext?.setTopBarSearchConfig({
-      suggestions: products.slice(0, 8).map((product) => ({
-        id: `inventory-product-${product.id}`,
-        title: product.name,
-        subtitle: `${product.sku} · ${product.quantity_on_hand} on hand`,
-        value: product.sku || product.name,
-        badge: 'Product',
-      })),
-    })
-  }, [layoutContext, products])
+  usePageTopBarSearch(useMemo(() => ({
+    searchKey: 'inventory-list',
+    placeholder: 'Search items...',
+    defaultSuggestions: [
+      { id: 'inventory-all-products', title: 'All Products', subtitle: 'Browse catalog items and stock', value: 'products', badge: 'Inventory' },
+      { id: 'inventory-low-stock', title: 'Low Stock', subtitle: 'Find products near reorder point', value: 'low stock', badge: 'Filter' },
+      { id: 'inventory-out-of-stock', title: 'Out of Stock', subtitle: 'Find products at zero quantity', value: 'out of stock', badge: 'Filter' },
+    ],
+    suggestions: inventorySearchSuggestions,
+  }), [inventorySearchSuggestions]))
 
   useEffect(() => {
     if (tab === 'barcode-sku') {
@@ -248,29 +252,42 @@ export const InventoryListPage = () => {
     }
   }
 
-  const handleImportFile = async (file: File) => {
-    const content = await file.text()
-    const { rows } = parseCsv(content)
-    setImportRows(rows)
-    setImportMessage(rows.length ? null : 'No rows found in CSV.')
-  }
+  const handleImportOpen = useCallback(() => {
+    importFileInputRef.current?.click()
+  }, [])
 
-  const handleImport = async () => {
-    if (!companyId || importRows.length === 0) return
+  const handleImportFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      return
+    }
+
     try {
-      const importedCount = await importProductsMutation.mutateAsync(importRows)
-      if (importedCount === 0) {
-        setImportMessage('No valid rows found in CSV.')
+      const content = await file.text()
+      const parsed = parseCsv(content)
+
+      if (parsed.headers.length === 0 || parsed.rows.length === 0) {
+        toast.error('This CSV does not contain any importable rows.')
         return
       }
-      setImportMessage(`Imported ${importedCount} products.`)
-      setImportRows([])
-      setIsImportOpen(false)
-      refreshInventory()
+
+      navigate('/inventory/import', {
+        state: {
+          csvUpload: {
+            fileName: file.name,
+            headers: parsed.headers,
+            rows: parsed.rows,
+            initialFolderId: folderView === 'folder' && selectedFolderId ? selectedFolderId : '__root__',
+          },
+        },
+      })
     } catch (error) {
-      setImportMessage(error instanceof Error ? error.message : 'Import failed.')
+      toast.error(error instanceof Error ? error.message : 'Unable to read this CSV file.')
+    } finally {
+      event.target.value = ''
     }
-  }
+  }, [folderView, navigate, selectedFolderId])
 
   return (
     <BasePage
@@ -278,9 +295,8 @@ export const InventoryListPage = () => {
       isLoading={isLoading}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage inventory."
-      contentStyle={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}
-      containerClassName="stack"
-      containerStyle={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}
+      contentClassName="flex h-full min-h-0 flex-col overflow-hidden"
+      containerClassName="stack flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <AllProductsTab
         companyId={companyId}
@@ -296,7 +312,7 @@ export const InventoryListPage = () => {
         pendingFilterKey={pendingFilterKey}
         setPendingFilterKey={setPendingFilterKey}
         customFieldFilters={customFieldFilters}
-        onImportOpen={() => setIsImportOpen(true)}
+        onImportOpen={handleImportOpen}
         onCreateOpen={() => navigate('/inventory/new')}
         products={products}
         isLoading={isLoading}
@@ -319,42 +335,14 @@ export const InventoryListPage = () => {
         }}
       />
 
-      {/* Removed CreateProductModal */}
-
-      {isImportOpen && (
-        <div className="modal-backdrop" role="dialog">
-          <div className="modal">
-            <div className="flex-between" style={{ marginBottom: 16 }}>
-              <h3 className="section-title">Import Inventory (CSV)</h3>
-              <button className="button ghost" onClick={() => setIsImportOpen(false)}>Close</button>
-            </div>
-            <div className="stack">
-              <input
-                className="input"
-                type="file"
-                accept=".csv"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) handleImportFile(file)
-                }}
-              />
-              {importRows.length > 0 && (
-                <div className="card" style={{ boxShadow: 'none', background: '#f8fafc' }}>
-                  <div className="flex-between">
-                    <h4 style={{ margin: 0 }}>Preview</h4>
-                    <span className="small muted">{importRows.length} rows</span>
-                  </div>
-                </div>
-              )}
-              {importMessage && <div className="pill">{importMessage}</div>}
-              <div className="flex-between">
-                <span className="small muted">Required: Name, SKU, Qty</span>
-                <button className="button" type="button" onClick={handleImport} disabled={importRows.length === 0}>Confirm Import</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <input
+        ref={importFileInputRef}
+        aria-label="Upload inventory CSV"
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={handleImportFileChange}
+      />
     </BasePage>
   )
 }

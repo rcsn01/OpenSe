@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TemplateLibraryTab } from '../TemplateLibraryTab'
@@ -18,6 +19,12 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
 }))
 
 describe('TemplateLibraryTab', () => {
+  const renderTemplateLibrary = (ui: React.ReactNode) => render(
+    <MemoryRouter>
+      {ui}
+    </MemoryRouter>,
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseLabelTemplates.mockReturnValue({
@@ -47,32 +54,31 @@ describe('TemplateLibraryTab', () => {
     })
   })
 
-  it('shows size, type, and fields columns instead of source and action', () => {
-    render(<TemplateLibraryTab companyId="company-1" />)
+  it('shows the redesigned template library columns and field chips', () => {
+    renderTemplateLibrary(<TemplateLibraryTab companyId="company-1" selectedTemplateId="template-1" />)
 
-    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Size' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Fields' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Template Name' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Dimensions' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Active Fields' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Last Modified' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Source' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: 'Action' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Edit Product Label template/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Type' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Editing')).not.toBeInTheDocument()
 
-    expect(screen.getByText('100mm x 50mm')).toBeInTheDocument()
-    expect(screen.getByText('12pt / left')).toBeInTheDocument()
-    expect(screen.getByText('Name, SKU, Barcode')).toBeInTheDocument()
+    expect(screen.getAllByText('100x50mm').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Name').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('SKU').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Barcode').length).toBeGreaterThan(0)
   })
 
-  it('opens the designer when the first cell is clicked', async () => {
+  it('opens the designer when the template name is activated', async () => {
     const user = userEvent.setup()
     const onSelectTemplate = vi.fn()
 
-    render(<TemplateLibraryTab companyId="company-1" onSelectTemplate={onSelectTemplate} />)
+    renderTemplateLibrary(<TemplateLibraryTab companyId="company-1" onSelectTemplate={onSelectTemplate} />)
 
-    const nameCell = screen.getByText('Product Label').closest('td')
-    if (!nameCell) throw new Error('Expected template name cell to exist')
-
-    await user.click(nameCell)
+    await user.click(screen.getAllByRole('button', { name: 'Edit Product Label template' })[0])
 
     expect(onSelectTemplate).toHaveBeenCalledWith('template-1')
   })

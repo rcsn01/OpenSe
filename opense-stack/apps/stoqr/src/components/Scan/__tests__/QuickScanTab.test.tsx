@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,6 +7,7 @@ import { QuickScanTab } from '../QuickScanTab'
 const mockUseQuickScanUser = vi.fn()
 const mockUseQuickScanLookup = vi.fn()
 const mockUseQuickScanTransaction = vi.fn()
+const mockUseProductFolders = vi.fn()
 
 vi.mock('../../../hooks/queries/useQuickScan', () => ({
   useQuickScanUser: () => mockUseQuickScanUser(),
@@ -14,20 +15,29 @@ vi.mock('../../../hooks/queries/useQuickScan', () => ({
   useQuickScanTransaction: () => mockUseQuickScanTransaction(),
 }))
 
+vi.mock('../../../hooks/queries/useProducts', () => ({
+  useProductFolders: () => mockUseProductFolders(),
+}))
+
 const defaultProduct = {
   id: 'prod-1',
-  name: 'Eppendorf Tubes 500',
-  sku: '30123301',
+  name: 'AeroPress Coffee Maker',
+  sku: 'COF-AERO-001',
   quantity_on_hand: 42,
   reorder_point: 10,
   description: null,
   cost_price: null,
   selling_price: null,
-  folder_id: null,
+  folder_id: 'folder-2',
   image_urls: [],
   custom_fields: {},
   expiry_date: null,
 }
+
+const defaultFolders = [
+  { id: 'folder-1', name: 'Aisle 4', parent_id: null },
+  { id: 'folder-2', name: 'Shelf B', parent_id: 'folder-1' },
+]
 
 const refetchFn = vi.fn()
 const mutateAsyncFn = vi.fn()
@@ -37,6 +47,7 @@ describe('QuickScanTab', () => {
     vi.clearAllMocks()
 
     mockUseQuickScanUser.mockReturnValue({ data: 'user-1' })
+    mockUseProductFolders.mockReturnValue({ data: defaultFolders })
     mockUseQuickScanLookup.mockReturnValue({
       data: null,
       isLoading: false,
@@ -48,7 +59,7 @@ describe('QuickScanTab', () => {
     })
   })
 
-  it('shows camera content without inline manual entry when no scan value', () => {
+  it('shows the camera state when there is no scan value', () => {
     render(
       <QuickScanTab
         scanValue=""
@@ -60,17 +71,17 @@ describe('QuickScanTab', () => {
     )
 
     expect(screen.getByText('Camera Panel')).toBeInTheDocument()
-    expect(screen.queryByText('Manual Entry')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Barcode / SKU / Product Name')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^search$/i })).not.toBeInTheDocument()
+    expect(screen.queryByText('Scan Item')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /enter code manually/i })).not.toBeInTheDocument()
   })
 
-  it('shows product not found message after lookup with no match', () => {
+  it('shows product not found feedback after a lookup miss', () => {
     mockUseQuickScanLookup.mockReturnValue({
       data: {
         product: null,
-        notFoundSku: 'ABC-123',
+        notFoundSku: 'UNKNOWN-100',
         lastHandledBy: '—',
+        lastUpdatedAt: null,
       },
       isLoading: false,
       refetch: refetchFn,
@@ -78,129 +89,76 @@ describe('QuickScanTab', () => {
 
     render(
       <QuickScanTab
-        scanValue="ABC-123"
+        scanValue="UNKNOWN-100"
         setScanValue={vi.fn()}
         companyId="company-1"
         entryMethod="camera"
-        cameraContent={<div>Camera Panel</div>}
       />,
     )
 
-    expect(screen.getByText(/No product found for:/i)).toBeInTheDocument()
-    expect(screen.getByText('ABC-123')).toBeInTheDocument()
-    expect(screen.queryByText('Camera Panel')).not.toBeInTheDocument()
+    expect(screen.getByText('Product not found')).toBeInTheDocument()
+    expect(screen.getByText(/UNKNOWN-100/)).toBeInTheDocument()
   })
 
-  it('shows product details with stock badge when product is found', () => {
+  it('shows the update inventory layout when a product is found', () => {
     mockUseQuickScanLookup.mockReturnValue({
-      data: { product: defaultProduct, notFoundSku: null, lastHandledBy: 'Jane Doe' },
+      data: {
+        product: defaultProduct,
+        notFoundSku: null,
+        lastHandledBy: 'Jane Doe',
+        lastUpdatedAt: '2026-05-05T10:00:00Z',
+      },
       isLoading: false,
       refetch: refetchFn,
     })
 
     render(
       <QuickScanTab
-        scanValue="30123301"
+        scanValue="COF-AERO-001"
         setScanValue={vi.fn()}
         companyId="company-1"
         entryMethod="manual"
       />,
     )
 
-    expect(screen.getByText('Eppendorf Tubes 500')).toBeInTheDocument()
-    expect(screen.getByText('SKU: 30123301')).toBeInTheDocument()
-    expect(screen.getByText('42 in stock')).toBeInTheDocument()
-    expect(screen.getByText(/Last handled by Jane Doe/)).toBeInTheDocument()
+    expect(screen.getByText('Update Inventory')).toBeInTheDocument()
+    expect(screen.getByText('AeroPress Coffee Maker')).toBeInTheDocument()
+    expect(screen.getByText('Aisle 4, Shelf B')).toBeInTheDocument()
+    expect(screen.getByText('Current Stock')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('42')).toBeInTheDocument()
+    expect(screen.getByText('New Delivery')).toBeInTheDocument()
+    expect(screen.getByText('Inventory Audit')).toBeInTheDocument()
   })
 
-  it('shows three stock mode buttons: Manual, Receive, Dispatch', () => {
-    mockUseQuickScanLookup.mockReturnValue({
-      data: { product: defaultProduct, notFoundSku: null, lastHandledBy: '—' },
-      isLoading: false,
-      refetch: refetchFn,
-    })
-
-    render(
-      <QuickScanTab
-        scanValue="30123301"
-        setScanValue={vi.fn()}
-        companyId="company-1"
-        entryMethod="manual"
-      />,
-    )
-
-    const radioGroup = screen.getByRole('radiogroup', { name: /stock update mode/i })
-    const radios = within(radioGroup).getAllByRole('radio')
-    expect(radios).toHaveLength(3)
-    expect(screen.getByText('Manual')).toBeInTheDocument()
-    expect(screen.getByText('Receive')).toBeInTheDocument()
-    expect(screen.getByText('Dispatch')).toBeInTheDocument()
-  })
-
-  it('shows Cancel and Confirm Update buttons when product is visible', () => {
-    mockUseQuickScanLookup.mockReturnValue({
-      data: { product: defaultProduct, notFoundSku: null, lastHandledBy: '—' },
-      isLoading: false,
-      refetch: refetchFn,
-    })
-
-    render(
-      <QuickScanTab
-        scanValue="30123301"
-        setScanValue={vi.fn()}
-        companyId="company-1"
-        entryMethod="manual"
-      />,
-    )
-
-    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /confirm update/i })).toBeInTheDocument()
-  })
-
-  it('shows Mark Out of Stock and Full Restock quick-action buttons', () => {
-    mockUseQuickScanLookup.mockReturnValue({
-      data: { product: defaultProduct, notFoundSku: null, lastHandledBy: '—' },
-      isLoading: false,
-      refetch: refetchFn,
-    })
-
-    render(
-      <QuickScanTab
-        scanValue="30123301"
-        setScanValue={vi.fn()}
-        companyId="company-1"
-        entryMethod="manual"
-      />,
-    )
-
-    expect(screen.getByRole('button', { name: /mark out of stock/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /full restock/i })).toBeInTheDocument()
-  })
-
-  it('submits receive transaction via Confirm Update', async () => {
+  it('submits a new delivery update with the new quantity and note', async () => {
     const user = userEvent.setup()
     mutateAsyncFn.mockResolvedValue(undefined)
     refetchFn.mockResolvedValue(undefined)
 
     mockUseQuickScanLookup.mockReturnValue({
-      data: { product: defaultProduct, notFoundSku: null, lastHandledBy: '—' },
+      data: {
+        product: defaultProduct,
+        notFoundSku: null,
+        lastHandledBy: 'Jane Doe',
+        lastUpdatedAt: '2026-05-05T10:00:00Z',
+      },
       isLoading: false,
       refetch: refetchFn,
     })
 
     render(
       <QuickScanTab
-        scanValue="30123301"
+        scanValue="COF-AERO-001"
         setScanValue={vi.fn()}
         companyId="company-1"
         entryMethod="manual"
       />,
     )
 
-    // Receive mode is default; set quantity to trigger pending
-    const qtyInput = screen.getByLabelText('Quantity') as HTMLInputElement
-    await user.tripleClick(qtyInput)
-    await user.keyboard('5')
+    const newQuantityInput = screen.getByLabelText('New quantity') as HTMLInputElement
+    await user.clear(newQuantityInput)
+    await user.type(newQuantityInput, '52')
+    await user.type(screen.getByPlaceholderText('Add details about this update...'), 'Received on dock 2')
 
     await user.click(screen.getByRole('button', { name: /confirm update/i }))
 
@@ -209,97 +167,115 @@ describe('QuickScanTab', () => {
         companyId: 'company-1',
         productId: 'prod-1',
         transactionType: 'scan_in',
-        quantity: 5,
+        quantity: 10,
+        reason: 'new_delivery',
+        note: 'Received on dock 2',
+        stockAfter: 52,
       }),
     )
   })
 
-  it('submits dispatch transaction when Dispatch mode is selected', async () => {
+  it('submits a sold update when the new quantity is lower than current stock', async () => {
     const user = userEvent.setup()
     mutateAsyncFn.mockResolvedValue(undefined)
     refetchFn.mockResolvedValue(undefined)
 
     mockUseQuickScanLookup.mockReturnValue({
-      data: { product: defaultProduct, notFoundSku: null, lastHandledBy: '—' },
+      data: {
+        product: defaultProduct,
+        notFoundSku: null,
+        lastHandledBy: 'Jane Doe',
+        lastUpdatedAt: '2026-05-05T10:00:00Z',
+      },
       isLoading: false,
       refetch: refetchFn,
     })
 
     render(
       <QuickScanTab
-        scanValue="30123301"
+        scanValue="COF-AERO-001"
         setScanValue={vi.fn()}
         companyId="company-1"
         entryMethod="manual"
       />,
     )
 
-    // Switch to Dispatch mode
-    await user.click(screen.getByText('Dispatch'))
+    await user.click(screen.getByRole('radio', { name: 'Sold' }))
 
-    const qtyInput = screen.getByLabelText('Quantity') as HTMLInputElement
-    await user.tripleClick(qtyInput)
-    await user.keyboard('3')
+    const newQuantityInput = screen.getByLabelText('New quantity') as HTMLInputElement
+    await user.clear(newQuantityInput)
+    await user.type(newQuantityInput, '38')
 
     await user.click(screen.getByRole('button', { name: /confirm update/i }))
 
     expect(mutateAsyncFn).toHaveBeenCalledWith(
       expect.objectContaining({
         transactionType: 'scan_out',
-        quantity: 3,
+        quantity: 4,
+        reason: 'sold',
+        stockAfter: 38,
       }),
     )
   })
 
-  it('Mark Out of Stock sets stock to 0 and triggers confirm', async () => {
+  it('logs an inventory audit when quantity stays the same', async () => {
     const user = userEvent.setup()
     mutateAsyncFn.mockResolvedValue(undefined)
     refetchFn.mockResolvedValue(undefined)
 
     mockUseQuickScanLookup.mockReturnValue({
-      data: { product: defaultProduct, notFoundSku: null, lastHandledBy: '—' },
+      data: {
+        product: defaultProduct,
+        notFoundSku: null,
+        lastHandledBy: 'Jane Doe',
+        lastUpdatedAt: '2026-05-05T10:00:00Z',
+      },
       isLoading: false,
       refetch: refetchFn,
     })
 
     render(
       <QuickScanTab
-        scanValue="30123301"
+        scanValue="COF-AERO-001"
         setScanValue={vi.fn()}
         companyId="company-1"
         entryMethod="manual"
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: /mark out of stock/i }))
-
-    // Should show new stock level of 0
-    expect(screen.getByText('0')).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Inventory Audit' }))
 
     await user.click(screen.getByRole('button', { name: /confirm update/i }))
 
     expect(mutateAsyncFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        transactionType: 'scan_out',
-        quantity: 42,
+        transactionType: 'lookup',
+        quantity: 0,
+        reason: 'inventory_audit',
+        stockAfter: 42,
       }),
     )
   })
 
-  it('search again resets scan value', async () => {
+  it('returns to scanner mode from the update view', async () => {
     const user = userEvent.setup()
     const setScanValue = vi.fn()
     const onResetSearch = vi.fn()
 
     mockUseQuickScanLookup.mockReturnValue({
-      data: { product: defaultProduct, notFoundSku: null, lastHandledBy: '—' },
+      data: {
+        product: defaultProduct,
+        notFoundSku: null,
+        lastHandledBy: 'Jane Doe',
+        lastUpdatedAt: '2026-05-05T10:00:00Z',
+      },
       isLoading: false,
       refetch: refetchFn,
     })
 
     render(
       <QuickScanTab
-        scanValue="30123301"
+        scanValue="COF-AERO-001"
         setScanValue={setScanValue}
         companyId="company-1"
         entryMethod="manual"
@@ -307,28 +283,9 @@ describe('QuickScanTab', () => {
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: /search again/i }))
+    await user.click(screen.getByRole('button', { name: /back to scanner/i }))
 
     expect(setScanValue).toHaveBeenCalledWith('')
     expect(onResetSearch).toHaveBeenCalledTimes(1)
-  })
-
-  it('shows loading state while looking up product', () => {
-    mockUseQuickScanLookup.mockReturnValue({
-      data: null,
-      isLoading: true,
-      refetch: refetchFn,
-    })
-
-    render(
-      <QuickScanTab
-        scanValue="30123301"
-        setScanValue={vi.fn()}
-        companyId="company-1"
-        entryMethod="manual"
-      />,
-    )
-
-    expect(screen.getByText('Looking up…')).toBeInTheDocument()
   })
 })

@@ -1,10 +1,19 @@
 import { useMemo } from 'react'
-import { DataTable } from '@repo/ui'
-import { EmptyState } from '../EmptyState'
+import { EmptyState } from '@repo/ui'
 import { formatCurrency } from '../../utils'
 import { useProductSuppliers } from '../../hooks/queries/useProductDetailTabs'
 
-export const ProductSuppliersTab = ({ productId, companyId }: { productId: string; companyId: string }) => {
+const formatDateLabel = (value: string) => new Date(value).toISOString().slice(0, 10)
+
+export const ProductSuppliersTab = ({
+  productId,
+  companyId,
+  productSku,
+}: {
+  productId: string
+  companyId: string
+  productSku?: string
+}) => {
   const { data: suppliers = [], isLoading } = useProductSuppliers(companyId, productId)
 
   const sortedSuppliers = useMemo(
@@ -15,57 +24,35 @@ export const ProductSuppliersTab = ({ productId, companyId }: { productId: strin
   if (isLoading) return <div className="empty-state">Loading supplier data...</div>
 
   return (
-    <div className="stack">
-      <div className="card">
-        <div className="flex-between">
-          <h3 className="section-title">Linked Vendors</h3>
-          <button className="button secondary small">Link New Vendor</button>
+    <section className="product-tab-shell" aria-label="Suppliers">
+      {sortedSuppliers.length === 0 ? (
+        <EmptyState title="No suppliers found" description="Create a purchase order to link suppliers to this product." />
+      ) : (
+        <div className="product-detail-table-shell">
+          <table className="product-detail-table product-detail-table--suppliers">
+            <thead>
+              <tr>
+                <th>Vendor Name</th>
+                <th>Vendor SKU</th>
+                <th>Last Cost</th>
+                <th>Last Purchased</th>
+                <th>Last Order</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedSuppliers.map((supplier) => (
+                <tr key={supplier.supplier_id}>
+                  <td className="product-detail-table-strong">{supplier.supplier_name}</td>
+                  <td>{productSku || '—'}</td>
+                  <td>{formatCurrency(supplier.last_unit_cost)}</td>
+                  <td>{supplier.last_order_quantity} units</td>
+                  <td>{formatDateLabel(supplier.last_po_date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <p className="muted small">Suppliers who have provided this product based on purchase history.</p>
-
-        {sortedSuppliers.length === 0 ? (
-          <EmptyState title="No suppliers found" description="Create a Purchase Order to link suppliers." />
-        ) : (
-          <div style={{ marginTop: 12 }}>
-            <DataTable
-              columns={[
-                {
-                  id: 'vendor-name',
-                  header: 'Vendor Name',
-                  renderCell: (supplier) => (
-                    <span style={{ fontWeight: 'var(--type-weight-semibold)' }}>{supplier.supplier_name}</span>
-                  ),
-                },
-                {
-                  id: 'vendor-sku',
-                  header: 'Vendor SKU',
-                  renderCell: () => <span className="muted small">Same as SKU</span>,
-                },
-                {
-                  id: 'last-cost',
-                  header: 'Last Cost',
-                  align: 'right',
-                  renderCell: (supplier) => formatCurrency(supplier.last_unit_cost),
-                },
-                {
-                  id: 'total-purchased',
-                  header: 'Total Purchased',
-                  align: 'right',
-                  renderCell: (supplier) => supplier.total_quantity,
-                },
-                {
-                  id: 'last-order',
-                  header: 'Last Order',
-                  renderCell: (supplier) => <span className="small muted">{new Date(supplier.last_po_date).toLocaleDateString()}</span>,
-                },
-              ]}
-              rows={sortedSuppliers}
-              getRowId={(supplier) => supplier.supplier_id}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+      )}
+    </section>
   )
 }
-
