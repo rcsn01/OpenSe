@@ -8,6 +8,7 @@ import {
   useQuickScanUser,
 } from '../../hooks/queries/useQuickScan'
 import { SCAN_REASON_LABELS, type ScanUpdateReason } from '../../lib/scanReason'
+import { getPublicImageUrl } from '../../utils'
 
 const REASON_OPTIONS: Array<{ value: ScanUpdateReason; label: string }> = [
   { value: 'new_delivery', label: SCAN_REASON_LABELS.new_delivery },
@@ -105,6 +106,10 @@ export const QuickScanTab = ({
     () => buildFolderPathLabel(product?.folder_id ?? null, folders),
     [folders, product?.folder_id],
   )
+  const primaryImageUrl = useMemo(() => {
+    const imagePath = product?.image_urls?.[0]
+    return imagePath ? getPublicImageUrl(imagePath) : ''
+  }, [product?.image_urls])
 
   const hasQuantityChange = product ? draftQuantity !== product.quantity_on_hand : false
   const canConfirm = !!product && !transactionMutation.isPending && (hasQuantityChange || reason === 'inventory_audit')
@@ -172,19 +177,15 @@ export const QuickScanTab = ({
           <header className="scan-update-topbar">
             <button
               type="button"
-              className="scan-update-back"
+              className="scan-update-back scan-update-back--desktop"
               aria-label="Back to scanner"
               onClick={handleReturnToScanner}
             >
-              <span className="scan-update-back-mobile" aria-hidden="true">
-                <X size={18} />
-              </span>
               <span className="scan-update-back-desktop">
                 <ArrowLeft size={15} />
                 Back to scanner
               </span>
             </button>
-            <p className="scan-update-eyebrow">Update Inventory</p>
           </header>
 
           {lookupQuery.isLoading ? (
@@ -201,8 +202,33 @@ export const QuickScanTab = ({
             <div className="scan-update-shell">
               <section className="scan-update-main">
                 <div className="scan-product-summary">
-                  <p className="scan-product-sku">{product.sku || 'No SKU assigned'}</p>
-                  <h2 className="scan-product-name">{product.name}</h2>
+                  <section className="scan-product-photo-card" aria-label="Product photo">
+                    {primaryImageUrl ? (
+                      <img
+                        src={primaryImageUrl}
+                        alt={product.name}
+                        className="scan-product-photo"
+                      />
+                    ) : (
+                      <div className="scan-product-photo-placeholder">
+                        No product image uploaded
+                      </div>
+                    )}
+                  </section>
+                  <div className="scan-product-identity">
+                    <div className="scan-product-kicker-row">
+                      <button
+                        type="button"
+                        className="scan-update-back scan-update-back--mobile-inline"
+                        aria-label="Close update view"
+                        onClick={handleReturnToScanner}
+                      >
+                        <X size={18} />
+                      </button>
+                      <p className="scan-product-sku">{product.sku || 'No SKU assigned'}</p>
+                    </div>
+                    <h2 className="scan-product-name">{product.name}</h2>
+                  </div>
                 </div>
 
                 <dl className="scan-product-meta-grid">
@@ -216,38 +242,56 @@ export const QuickScanTab = ({
                   </div>
                 </dl>
 
-                <div className="scan-update-section">
-                  <p className="scan-update-label">Reason for update</p>
-                  <div className="scan-reason-grid" role="radiogroup" aria-label="Reason for update">
-                    {REASON_OPTIONS.map((option) => (
-                      <label key={option.value} className="scan-reason-option">
-                        <input
-                          type="radio"
-                          name="scan-reason"
-                          checked={reason === option.value}
-                          onChange={() => {
-                            setReason(option.value)
-                            setMessage(null)
-                          }}
-                        />
-                        <span>{option.label}</span>
-                      </label>
-                    ))}
+                <div className="scan-update-fields-row">
+                  <div className="scan-update-section">
+                    <p className="scan-update-label">Reason for update</p>
+                    <select
+                      className="scan-reason-select"
+                      aria-label="Reason for update"
+                      value={reason}
+                      onChange={(event) => {
+                        setReason(event.target.value as ScanUpdateReason)
+                        setMessage(null)
+                      }}
+                    >
+                      {REASON_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="scan-reason-grid" role="radiogroup" aria-label="Reason for update">
+                      {REASON_OPTIONS.map((option) => (
+                        <label key={option.value} className="scan-reason-option">
+                          <input
+                            type="radio"
+                            name="scan-reason"
+                            checked={reason === option.value}
+                            onChange={() => {
+                              setReason(option.value)
+                              setMessage(null)
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="scan-update-section">
-                  <p className="scan-update-label">Optional Notes</p>
-                  <textarea
-                    className="scan-update-notes"
-                    placeholder="Add details about this update..."
-                    value={note}
-                    onChange={(event) => {
-                      setNote(event.target.value)
-                      setMessage(null)
-                    }}
-                    rows={2}
-                  />
+                  <div className="scan-update-section">
+                    <p className="scan-update-label">Optional Notes</p>
+                    <textarea
+                      className="scan-update-notes"
+                      aria-label="Optional Notes"
+                      placeholder="Add details..."
+                      value={note}
+                      onChange={(event) => {
+                        setNote(event.target.value)
+                        setMessage(null)
+                      }}
+                      rows={2}
+                    />
+                  </div>
                 </div>
               </section>
 

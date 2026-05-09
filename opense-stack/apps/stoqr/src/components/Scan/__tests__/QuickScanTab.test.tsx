@@ -19,6 +19,14 @@ vi.mock('../../../hooks/queries/useProducts', () => ({
   useProductFolders: () => mockUseProductFolders(),
 }))
 
+vi.mock('../../../utils', async () => {
+  const actual = await vi.importActual<typeof import('../../../utils')>('../../../utils')
+  return {
+    ...actual,
+    getPublicImageUrl: (pathOrUrl: string) => `https://cdn.example.test/${pathOrUrl}`,
+  }
+})
+
 const defaultProduct = {
   id: 'prod-1',
   name: 'AeroPress Coffee Maker',
@@ -103,6 +111,46 @@ describe('QuickScanTab', () => {
   it('shows the update inventory layout when a product is found', () => {
     mockUseQuickScanLookup.mockReturnValue({
       data: {
+        product: {
+          ...defaultProduct,
+          image_urls: ['company-1/prod-1/front.png'],
+        },
+        notFoundSku: null,
+        lastHandledBy: 'Jane Doe',
+        lastUpdatedAt: '2026-05-05T10:00:00Z',
+      },
+      isLoading: false,
+      refetch: refetchFn,
+    })
+
+    render(
+      <QuickScanTab
+        scanValue="COF-AERO-001"
+        setScanValue={vi.fn()}
+        companyId="company-1"
+        entryMethod="manual"
+      />,
+    )
+
+    expect(screen.getByRole('region', { name: 'Update inventory' })).toBeInTheDocument()
+    expect(screen.queryByText('Update Inventory')).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Product photo' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'AeroPress Coffee Maker' })).toHaveAttribute(
+      'src',
+      'https://cdn.example.test/company-1/prod-1/front.png',
+    )
+    expect(screen.getByText('AeroPress Coffee Maker')).toBeInTheDocument()
+    expect(screen.getByText('Aisle 4, Shelf B')).toBeInTheDocument()
+    expect(screen.getByText('Current Stock')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('42')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Reason for update' })).toHaveValue('new_delivery')
+    expect(screen.getByRole('radiogroup', { name: 'Reason for update' })).toBeInTheDocument()
+    expect(screen.getAllByText('Inventory Audit').length).toBeGreaterThan(0)
+  })
+
+  it('shows a product photo fallback when the scanned product has no image', () => {
+    mockUseQuickScanLookup.mockReturnValue({
+      data: {
         product: defaultProduct,
         notFoundSku: null,
         lastHandledBy: 'Jane Doe',
@@ -121,13 +169,7 @@ describe('QuickScanTab', () => {
       />,
     )
 
-    expect(screen.getByText('Update Inventory')).toBeInTheDocument()
-    expect(screen.getByText('AeroPress Coffee Maker')).toBeInTheDocument()
-    expect(screen.getByText('Aisle 4, Shelf B')).toBeInTheDocument()
-    expect(screen.getByText('Current Stock')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('42')).toBeInTheDocument()
-    expect(screen.getByText('New Delivery')).toBeInTheDocument()
-    expect(screen.getByText('Inventory Audit')).toBeInTheDocument()
+    expect(screen.getByText('No product image uploaded')).toBeInTheDocument()
   })
 
   it('submits a new delivery update with the new quantity and note', async () => {
@@ -158,7 +200,7 @@ describe('QuickScanTab', () => {
     const newQuantityInput = screen.getByLabelText('New quantity') as HTMLInputElement
     await user.clear(newQuantityInput)
     await user.type(newQuantityInput, '52')
-    await user.type(screen.getByPlaceholderText('Add details about this update...'), 'Received on dock 2')
+    await user.type(screen.getByRole('textbox', { name: 'Optional Notes' }), 'Received on dock 2')
 
     await user.click(screen.getByRole('button', { name: /confirm update/i }))
 
