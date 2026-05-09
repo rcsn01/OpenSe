@@ -154,10 +154,10 @@ describe("AlertsPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Dismiss" }));
 
-    expect(
-      screen.getByText("No alerts match the current filters."),
-    ).toBeInTheDocument();
-    expect(within(alertsFeedTab).getByText("0")).toBeInTheDocument();
+    expect(screen.getByText("Showing 2 of 2 alerts")).toBeInTheDocument();
+    expect(screen.getByText("PO Delayed: Alpha Supplies")).toBeInTheDocument();
+    expect(screen.getByText("Receiving Discrepancy")).toBeInTheDocument();
+    expect(within(alertsFeedTab).getByText("2")).toBeInTheDocument();
   });
 
   it("filters the feed from the top bar search on alerts routes", async () => {

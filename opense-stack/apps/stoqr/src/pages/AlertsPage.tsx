@@ -3,7 +3,6 @@ import {
   Badge,
   Button,
   Card,
-  Checkbox,
   ContentTabs,
   DataTable,
   type DataTableColumn,
@@ -74,6 +73,9 @@ const alertCategoryLabel: Record<FeedCategory, string> = {
 const alertTableHeaderClassName =
   "border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase";
 const alertTableCellClassName = "border-b border-[#d9e2ef] px-4 py-3";
+const alertTableSelectionHeaderClassName =
+  "border-b border-[#d9e2ef] bg-white px-0 py-4 uppercase";
+const alertTableSelectionCellClassName = "border-b border-[#d9e2ef] px-0 py-3";
 
 const initialAlerts: FeedAlert[] = [
   {
@@ -242,6 +244,10 @@ export const AlertsPage = () => {
   const feedSearchTerm = activeTab === "feed" ? searchValue : "";
   const rulesSearchTerm = activeTab === "rules" ? searchValue : "";
   const hasSelectedAlerts = selectedAlertIds.length > 0;
+  const selectedAlertIdSet = useMemo(
+    () => new Set(selectedAlertIds),
+    [selectedAlertIds],
+  );
 
   useEffect(() => {
     setTablePage(1);
@@ -545,26 +551,8 @@ export const AlertsPage = () => {
     (currentTablePage - 1) * feedPageSize,
     currentTablePage * feedPageSize,
   );
-  const allVisibleSelected =
-    visibleAlerts.length > 0 &&
-    visibleAlerts.every((alert) => selectedAlertIds.includes(alert.id));
   const unreadCount = alerts.filter((alert) => !alert.isRead).length;
   const alertColumns: Array<DataTableColumn<FeedAlert, AlertSortKey>> = [
-    {
-      id: "select",
-      header: "",
-      width: 48,
-      sortable: false,
-      headerClassName: alertTableHeaderClassName,
-      cellClassName: alertTableCellClassName,
-      renderCell: (alert) => (
-        <Checkbox
-          checked={selectedAlertIds.includes(alert.id)}
-          onChange={(event) => updateSelection(alert.id, event.target.checked)}
-          aria-label={`Select ${alert.code}`}
-        />
-      ),
-    },
     {
       id: "title",
       header: "Alert",
@@ -646,7 +634,10 @@ export const AlertsPage = () => {
           size="sm"
           variant="secondary"
           className="shadow-none"
-          onClick={() => handleAlertAction(alert.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleAlertAction(alert.id);
+          }}
         >
           {alert.actionLabel}
         </Button>
@@ -654,27 +645,28 @@ export const AlertsPage = () => {
     },
   ];
 
-  const updateSelection = (alertId: string, checked: boolean) => {
+  const toggleAlertSelection = (alertId: string) => {
     setSelectedAlertIds((currentIds) => {
-      if (checked) {
-        return currentIds.includes(alertId)
-          ? currentIds
-          : [...currentIds, alertId];
+      if (currentIds.includes(alertId)) {
+        return currentIds.filter((currentId) => currentId !== alertId);
       }
 
-      return currentIds.filter((currentId) => currentId !== alertId);
+      return [...currentIds, alertId];
     });
   };
 
-  const toggleSelectAllVisible = (checked: boolean) => {
-    const visibleIds = visibleAlerts.map((alert) => alert.id);
+  const toggleSelectAllPagedAlerts = () => {
+    const visibleIds = pagedAlerts.map((alert) => alert.id);
+    const allPagedAlertsSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((alertId) => selectedAlertIdSet.has(alertId));
 
     setSelectedAlertIds((currentIds) => {
-      if (checked) {
-        return [...new Set([...currentIds, ...visibleIds])];
+      if (allPagedAlertsSelected) {
+        return currentIds.filter((currentId) => !visibleIds.includes(currentId));
       }
 
-      return currentIds.filter((currentId) => !visibleIds.includes(currentId));
+      return [...new Set([...currentIds, ...visibleIds])];
     });
   };
 
@@ -733,20 +725,6 @@ export const AlertsPage = () => {
       <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-1 sm:gap-3">
-            <Checkbox
-              checked={allVisibleSelected}
-              onChange={(event) => toggleSelectAllVisible(event.target.checked)}
-              label="Select All"
-              aria-label="Select all visible alerts"
-            />
-
-            {hasSelectedAlerts ? (
-              <div
-                className="hidden h-5 w-px bg-[var(--color-border)] sm:block"
-                aria-hidden="true"
-              />
-            ) : null}
-
             {hasSelectedAlerts ? (
               <>
                 <Button
@@ -808,6 +786,21 @@ export const AlertsPage = () => {
         tableLayout="fixed"
         tableWrapClassName="border-0 bg-white"
         tableClassName="bg-white"
+        selection={{
+          selectedRowIds: selectedAlertIdSet,
+          onToggleAll: toggleSelectAllPagedAlerts,
+          onToggleRow: (alert) => toggleAlertSelection(alert.id),
+          selectAllLabel: "Select all visible alerts",
+          getRowLabel: (alert) => alert.code,
+          columnWidth: 28,
+          headerClassName: alertTableSelectionHeaderClassName,
+          cellClassName: alertTableSelectionCellClassName,
+        }}
+        rowClassName={(alert) =>
+          selectedAlertIdSet.has(alert.id)
+            ? "bg-[var(--color-primary-light)]"
+            : undefined
+        }
         pagination={{
           currentPage: currentTablePage,
           totalItems: visibleAlerts.length,
