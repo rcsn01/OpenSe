@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  AddFilterDropdown,
   Badge,
   Button,
   Card,
@@ -21,7 +20,6 @@ import {
   Mail,
   MessageSquareText,
   Trash2,
-  X,
 } from "lucide-react";
 import {
   Navigate,
@@ -60,23 +58,22 @@ type FeedAlert = {
 };
 
 const alertFilters: Array<{ id: FeedCategory; label: string }> = [
-  { id: "all", label: "All Alerts" },
+  { id: "all", label: "All" },
   { id: "stock", label: "Stock & Inventory" },
   { id: "procurement", label: "Procurement & Orders" },
   { id: "system", label: "System & Operations" },
 ];
 
-const alertFilterOptions = alertFilters.map((filter) => ({
-  value: filter.id,
-  label: filter.label,
-}));
-
 const alertCategoryLabel: Record<FeedCategory, string> = {
-  all: "All Alerts",
+  all: "All",
   stock: "Stock & Inventory",
   procurement: "Procurement & Orders",
   system: "System & Operations",
 };
+
+const alertTableHeaderClassName =
+  "border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase";
+const alertTableCellClassName = "border-b border-[#d9e2ef] px-4 py-3";
 
 const initialAlerts: FeedAlert[] = [
   {
@@ -552,15 +549,14 @@ export const AlertsPage = () => {
     visibleAlerts.length > 0 &&
     visibleAlerts.every((alert) => selectedAlertIds.includes(alert.id));
   const unreadCount = alerts.filter((alert) => !alert.isRead).length;
-  const alertFilterItems = alertFilterOptions.filter(
-    (filter) => filter.value !== activeFilter,
-  );
-
   const alertColumns: Array<DataTableColumn<FeedAlert, AlertSortKey>> = [
     {
       id: "select",
       header: "",
       width: 48,
+      sortable: false,
+      headerClassName: alertTableHeaderClassName,
+      cellClassName: alertTableCellClassName,
       renderCell: (alert) => (
         <Checkbox
           checked={selectedAlertIds.includes(alert.id)}
@@ -573,6 +569,9 @@ export const AlertsPage = () => {
       id: "title",
       header: "Alert",
       sortKey: "title",
+      width: "44%",
+      headerClassName: alertTableHeaderClassName,
+      cellClassName: alertTableCellClassName,
       renderCell: (alert) => (
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
@@ -597,6 +596,9 @@ export const AlertsPage = () => {
       id: "severity",
       header: "Severity",
       sortKey: "severity",
+      width: "14%",
+      headerClassName: alertTableHeaderClassName,
+      cellClassName: alertTableCellClassName,
       renderCell: (alert) => (
         <Badge
           variant={severityVariant[alert.severity]}
@@ -612,12 +614,18 @@ export const AlertsPage = () => {
       id: "category",
       header: "Category",
       sortKey: "category",
+      width: "16%",
+      headerClassName: alertTableHeaderClassName,
+      cellClassName: alertTableCellClassName,
       renderCell: (alert) => alertCategoryLabel[alert.category],
     },
     {
       id: "status",
       header: "Status",
       sortKey: "status",
+      width: "10%",
+      headerClassName: alertTableHeaderClassName,
+      cellClassName: alertTableCellClassName,
       renderCell: (alert) => (
         <Badge variant={alert.isRead ? "secondary" : "success"} size="sm">
           {alert.isRead ? "Read" : "Unread"}
@@ -628,6 +636,10 @@ export const AlertsPage = () => {
       id: "action",
       header: "",
       align: "right",
+      width: "12%",
+      sortable: false,
+      headerClassName: alertTableHeaderClassName,
+      cellClassName: alertTableCellClassName,
       renderCell: (alert) => (
         <Button
           type="button"
@@ -713,7 +725,11 @@ export const AlertsPage = () => {
   };
 
   const feedContent = (
-    <Card variant="plain" className="overflow-hidden" padding="none">
+    <Card
+      variant="plain"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
+      padding="none"
+    >
       <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-1 sm:gap-3">
@@ -724,26 +740,11 @@ export const AlertsPage = () => {
               aria-label="Select all visible alerts"
             />
 
-            {activeFilter !== "all" || hasSelectedAlerts ? (
+            {hasSelectedAlerts ? (
               <div
                 className="hidden h-5 w-px bg-[var(--color-border)] sm:block"
                 aria-hidden="true"
               />
-            ) : null}
-
-            {activeFilter !== "all" ? (
-              <div className="inline-flex items-center gap-1 rounded-[4px] bg-[rgba(102,193,63,0.06)] px-2 py-1 text-xs font-medium text-[var(--color-foreground)]">
-                <span className="opacity-60">Category:</span>
-                <span>{alertCategoryLabel[activeFilter]}</span>
-                <button
-                  type="button"
-                  aria-label={`Clear ${alertCategoryLabel[activeFilter]} filter`}
-                  onClick={() => handleFilterChange("all")}
-                  className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-[2px] border-none bg-transparent p-0 text-[var(--color-foreground)] opacity-35 transition-opacity hover:opacity-70"
-                >
-                  <X size={10} />
-                </button>
-              </div>
             ) : null}
 
             {hasSelectedAlerts ? (
@@ -768,12 +769,19 @@ export const AlertsPage = () => {
                 </Button>
               </>
             ) : (
-              <AddFilterDropdown
-                items={alertFilterItems}
-                onSelect={handleFilterChange}
-                ariaLabel="Alert category filter"
-                label="Filter"
-              />
+              <>
+                {alertFilters.map((filter) => (
+                  <Button
+                    key={filter.id}
+                    type="button"
+                    variant={activeFilter === filter.id ? "secondary" : "ghost"}
+                    size="xs"
+                    onClick={() => handleFilterChange(filter.id)}
+                  >
+                    {filter.label}
+                  </Button>
+                ))}
+              </>
             )}
           </div>
 
@@ -784,6 +792,7 @@ export const AlertsPage = () => {
       </div>
 
       <DataTable
+        className="min-h-0 flex-1"
         columns={alertColumns}
         rows={pagedAlerts}
         getRowId={(alert) => alert.id}
@@ -796,6 +805,9 @@ export const AlertsPage = () => {
         sortDirection={tableSortDirection}
         onSortChange={handleTableSort}
         minTableWidth={900}
+        tableLayout="fixed"
+        tableWrapClassName="border-0 bg-white"
+        tableClassName="bg-white"
         pagination={{
           currentPage: currentTablePage,
           totalItems: visibleAlerts.length,
@@ -963,8 +975,8 @@ export const AlertsPage = () => {
       isLoading={false}
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to view alerts."
-      contentClassName="px-2 pb-8 pt-[18px]"
-      containerClassName="[&>*]:min-w-0 flex min-h-0 min-w-0 flex-1 flex-col gap-7 text-[var(--color-foreground)]"
+      contentClassName="flex h-full min-h-0 overflow-hidden px-2 pb-8 pt-[18px]"
+      containerClassName="[&>*]:min-w-0 flex h-full min-h-0 min-w-0 flex-1 flex-col gap-7 overflow-hidden text-[var(--color-foreground)]"
     >
       <PageAvailabilityGuard companyId={companyId} feature="alerts">
         <h1 className="sr-only">Alerts</h1>
@@ -972,6 +984,8 @@ export const AlertsPage = () => {
           activeTab={activeTab}
           onTabChange={(nextTab) => navigate(`/alerts/${nextTab}`)}
           bottomSpacing
+          className="overflow-hidden"
+          contentClassName="overflow-hidden"
           tabs={[
             {
               id: "feed",

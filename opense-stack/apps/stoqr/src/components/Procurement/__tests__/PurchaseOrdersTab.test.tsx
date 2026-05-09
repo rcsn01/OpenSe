@@ -145,15 +145,13 @@ describe('PurchaseOrdersTab', () => {
     expect(screen.queryByText('PO-2026-1204')).not.toBeInTheDocument()
   })
 
-  it('filters rows using the shared filter dropdown', async () => {
+  it('filters rows using the shared filter buttons', async () => {
     const user = userEvent.setup()
 
     renderPurchaseOrdersTab()
 
-    await user.click(screen.getByRole('button', { name: 'PO status filter' }))
     await user.click(screen.getByRole('button', { name: 'Received' }))
 
-    expect(screen.getByRole('button', { name: 'Clear Received filter' })).toBeInTheDocument()
     expect(screen.getByText('PO-2026-1208')).toBeInTheDocument()
     expect(screen.queryByText('PO-2026-1206')).not.toBeInTheDocument()
     expect(screen.queryByText('PO-2026-1204')).not.toBeInTheDocument()
@@ -163,7 +161,7 @@ describe('PurchaseOrdersTab', () => {
   it('orders toolbar controls with filter on the left and actions on the right', () => {
     renderPurchaseOrdersTab()
 
-    const filterButton = screen.getByRole('button', { name: 'PO status filter' })
+    const filterButton = screen.getByRole('button', { name: 'All' })
     const autoGenerateButton = screen.getByRole('button', { name: /auto-generate from alerts/i })
     const createButton = screen.getByRole('button', { name: /create po/i })
 

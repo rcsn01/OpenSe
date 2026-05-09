@@ -1,5 +1,7 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { DataTable, type DataTableColumn } from '../ui/DataTable'
+
+type OrganisationMembersSortField = 'member' | 'role' | 'permissions-role' | 'status'
 
 export type OrganisationMembersTableRow = {
   id: string
@@ -7,8 +9,11 @@ export type OrganisationMembersTableRow = {
   subtitle: string
   initials?: string
   roleContent: ReactNode
+  roleSortValue?: string
   permissionsRoleContent?: ReactNode
+  permissionsRoleSortValue?: string
   statusContent?: ReactNode
+  statusSortValue?: string
   actionsContent?: ReactNode
 }
 
@@ -25,15 +30,64 @@ export function OrganisationMembersTable({
   showPermissionsRole = false,
   showStatus = false,
   showActions = false,
-  containerClassName = 'overflow-hidden',
+  containerClassName = 'flex min-h-0 flex-1 overflow-hidden',
 }: OrganisationMembersTableProps) {
-  const bodyCellClassName = 'whitespace-nowrap'
+  const [sortField, setSortField] = useState<OrganisationMembersSortField | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
-  const columns: DataTableColumn<OrganisationMembersTableRow>[] = [
+  const headerClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
+  const cellClassName = 'border-b border-[#d9e2ef] px-4 py-3 whitespace-nowrap'
+  const hasRoleSortValues = rows.some((row) => row.roleSortValue)
+  const hasPermissionsRoleSortValues = rows.some((row) => row.permissionsRoleSortValue)
+  const hasStatusSortValues = rows.some((row) => row.statusSortValue)
+
+  const sortedRows = useMemo(() => {
+    if (!sortField) {
+      return rows
+    }
+
+    const getSortValue = (row: OrganisationMembersTableRow) => {
+      switch (sortField) {
+        case 'member':
+          return row.displayName
+        case 'role':
+          return row.roleSortValue ?? ''
+        case 'permissions-role':
+          return row.permissionsRoleSortValue ?? ''
+        case 'status':
+          return row.statusSortValue ?? ''
+        default:
+          return ''
+      }
+    }
+
+    return [...rows].sort((a, b) => {
+      const first = getSortValue(a).toLowerCase()
+      const second = getSortValue(b).toLowerCase()
+      const comparison = first.localeCompare(second, undefined, { numeric: true, sensitivity: 'base' })
+
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [rows, sortDirection, sortField])
+
+  const handleSortChange = (nextSortField: OrganisationMembersSortField) => {
+    if (sortField === nextSortField) {
+      setSortDirection((currentDirection) => (currentDirection === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+
+    setSortField(nextSortField)
+    setSortDirection('asc')
+  }
+
+  const columns: DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>[] = [
     {
       id: 'member',
       header: 'Member',
-      cellClassName: bodyCellClassName,
+      sortKey: 'member',
+      width: showPermissionsRole || showStatus || showActions ? '34%' : '58%',
+      headerClassName,
+      cellClassName,
       renderCell: (row) => {
         const initials = (row.initials ?? row.displayName.charAt(0)).toUpperCase()
 
@@ -57,33 +111,48 @@ export function OrganisationMembersTable({
     {
       id: 'role',
       header: 'Role',
-      cellClassName: bodyCellClassName,
+      sortKey: 'role',
+      sortable: hasRoleSortValues,
+      width: showPermissionsRole || showStatus || showActions ? '22%' : '42%',
+      headerClassName,
+      cellClassName,
       renderCell: (row) => row.roleContent,
     },
     ...(showPermissionsRole
       ? [{
           id: 'permissions-role',
           header: 'Permissions Role',
-          cellClassName: bodyCellClassName,
+          sortKey: 'permissions-role',
+          sortable: hasPermissionsRoleSortValues,
+          width: '22%',
+          headerClassName,
+          cellClassName,
           renderCell: (row: OrganisationMembersTableRow) => row.permissionsRoleContent,
-        } satisfies DataTableColumn<OrganisationMembersTableRow>]
+        } satisfies DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>]
       : []),
     ...(showStatus
       ? [{
           id: 'status',
           header: 'Status',
-          cellClassName: bodyCellClassName,
+          sortKey: 'status',
+          sortable: hasStatusSortValues,
+          width: '12%',
+          headerClassName,
+          cellClassName,
           renderCell: (row: OrganisationMembersTableRow) => row.statusContent,
-        } satisfies DataTableColumn<OrganisationMembersTableRow>]
+        } satisfies DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>]
       : []),
     ...(showActions
       ? [{
           id: 'actions',
           header: 'Actions',
           align: 'right' as const,
-          cellClassName: `${bodyCellClassName} text-right`,
+          sortable: false,
+          width: '10%',
+          headerClassName,
+          cellClassName: `${cellClassName} text-right`,
           renderCell: (row: OrganisationMembersTableRow) => row.actionsContent,
-        } satisfies DataTableColumn<OrganisationMembersTableRow>]
+        } satisfies DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>]
       : []),
   ]
 
@@ -91,9 +160,16 @@ export function OrganisationMembersTable({
     <div className={containerClassName}>
       <DataTable
         columns={columns}
-        rows={rows}
+        rows={sortedRows}
         getRowId={(row) => row.id}
-        tableClassName="min-w-full"
+        className="min-h-0 flex-1"
+        minTableWidth={showPermissionsRole || showStatus || showActions ? 920 : 760}
+        tableLayout="fixed"
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onSortChange={handleSortChange}
+        tableWrapClassName="border-0 bg-white"
+        tableClassName="bg-white"
       />
     </div>
   )

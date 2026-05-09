@@ -10,8 +10,8 @@ import {
   setOrganisationPageFeatureEnabled,
   type OrganisationPageFeature,
 } from '../api/organisationPageSettings'
-import { BasePage } from '../components/BasePage'
-import { usePageTopBarSearch, useTopBarSearchValue } from '../components/Search/TopBarSearch'
+import { StoqrPageShell } from '../components/StoqrPageShell'
+import { useTopBarSearchValue } from '../components/Search/TopBarSearch'
 import { ActivityLogsTab } from '../components/TeamSettings/ActivityLogsTab'
 import { MembersTab } from '../components/TeamSettings/MembersTab'
 import { PagesTab } from '../components/TeamSettings/PagesTab'
@@ -246,8 +246,6 @@ export const TeamSettingsPage = () => {
     }
   }
 
-  usePageTopBarSearch(teamSettingsSearchConfig)
-
   useEffect(() => {
     if (tab && tabAliasMap[tab]) {
       navigate(`/settings/organisations/${tabAliasMap[tab]}`, { replace: true })
@@ -255,17 +253,22 @@ export const TeamSettingsPage = () => {
   }, [navigate, tab])
 
   return (
-    <BasePage
+    <StoqrPageShell
       companyId={companyId}
+      search={teamSettingsSearchConfig}
       isLoading={isLoading}
       emptyStateTitle="No organisation selected"
       emptyStateDescription="Choose an organisation to manage your teams and permissions."
       loadingMessage="Loading organisation settings..."
+      contentClassName="flex h-full min-h-0 overflow-hidden px-2 pb-8 pt-[18px]"
+      containerClassName="[&>*]:min-w-0 flex h-full min-h-0 min-w-0 flex-1 flex-col gap-7 overflow-hidden text-[var(--color-foreground)]"
     >
       <ContentTabs
         activeTab={activeTab}
         onTabChange={(nextTab) => navigate(`/settings/organisations/${nextTab}`)}
         bottomSpacing
+        className="overflow-hidden"
+        contentClassName="overflow-hidden"
         tabs={[
           {
             id: 'teams',
@@ -324,6 +327,6 @@ export const TeamSettingsPage = () => {
           },
         ]}
       />
-    </BasePage>
+    </StoqrPageShell>
   )
 }

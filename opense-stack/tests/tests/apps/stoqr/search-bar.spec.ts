@@ -78,4 +78,21 @@ test.describe('Stoqr Top-Bar Search', () => {
     await expect.poll(() => new URL(authenticatedPage.url()).searchParams.get('q')).toBeNull();
     await expect(authenticatedPage.getByText('Out of Stock: Premium Widget')).toBeVisible();
   });
+
+  test('shared page shell keeps search visible on default app sections', async ({ authenticatedPage }) => {
+    const defaultSections = [
+      { nav: 'Dashboard', placeholder: 'Search items...' },
+      { nav: 'Scanner', placeholder: 'Search products...' },
+      { nav: 'Label Studio', placeholder: 'Search templates...' },
+      { nav: 'Reports', placeholder: 'Search reports...' },
+      { nav: 'Organisations', placeholder: 'Search team members...' },
+    ];
+
+    await safeGoto(authenticatedPage, '/dashboard');
+
+    for (const section of defaultSections) {
+      await authenticatedPage.getByRole('link', { name: section.nav }).click();
+      await expect(authenticatedPage.getByRole('combobox', { name: section.placeholder })).toBeVisible();
+    }
+  });
 });

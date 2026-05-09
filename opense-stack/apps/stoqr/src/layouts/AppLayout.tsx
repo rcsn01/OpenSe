@@ -27,34 +27,30 @@ import {
 
 const mainNavItems = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-  { href: '/inventory', label: 'Inventory', icon: <Package className="w-5 h-5" /> },
-  { href: '/scan', label: 'Scanner', icon: <ScanBarcode className="w-5 h-5" /> },
-  { href: '/tools/labels', label: 'Label Studio', icon: <Tags className="w-5 h-5" /> },
-  { href: '/reports', label: 'Reports', icon: <FileText className="w-5 h-5" /> },
-  { href: '/procurement', label: 'Procurement', icon: <Truck className="w-5 h-5" /> },
+  { href: '/inventory/all', label: 'Inventory', icon: <Package className="w-5 h-5" /> },
+  { href: '/scan/scan-actions', label: 'Scanner', icon: <ScanBarcode className="w-5 h-5" /> },
+  { href: '/tools/labels/templates', label: 'Label Studio', icon: <Tags className="w-5 h-5" /> },
+  { href: '/reports/stock-health', label: 'Reports', icon: <FileText className="w-5 h-5" /> },
+  { href: '/procurement/purchase-orders', label: 'Procurement', icon: <Truck className="w-5 h-5" /> },
 ]
 
 const configNavItems = [
-  { href: '/alerts', label: 'Alerts', icon: <Bell className="w-5 h-5" /> },
-  { href: '/settings/organisations', label: 'Organisations', icon: <Settings className="w-5 h-5" /> },
+  { href: '/alerts/feed', label: 'Alerts', icon: <Bell className="w-5 h-5" /> },
+  { href: '/settings/organisations/teams', label: 'Organisations', icon: <Settings className="w-5 h-5" /> },
 ]
 
 export const AppLayout = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const [userName, setUserName] = useState<string>('')
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.matchMedia('(max-width: 767px)').matches
   })
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
   const accountsUrl =
     (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
-
-  useEffect(() => {
-    setUserName(user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User')
-  }, [user])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)')

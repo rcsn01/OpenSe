@@ -1,5 +1,4 @@
 import { type ReactNode } from "react";
-import { Select } from "../ui/Input";
 import { Button } from "../ui/Button";
 import { StackLayout } from "../layout/StackLayout";
 
@@ -21,28 +20,36 @@ export function OrganisationTeamsPage({
   filterOptions,
   canManageTeam,
   onInviteClick,
-  inviteLabel = "Invite Member",
+  inviteLabel = "Actions",
   inviteIcon,
   tableContent,
   secondaryContent,
 }: OrganisationTeamsPageProps) {
   return (
-    <StackLayout>
-      <div className="overflow-hidden">
+    <StackLayout className="min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex flex-col items-center justify-between gap-4 px-1 py-2 sm:flex-row">
-          <div className="flex w-full items-center gap-2 sm:w-auto">
-            <Select
-              value={filterValue}
-              onChange={(event) => onFilterChange(event.target.value)}
-              options={filterOptions}
-              className="min-w-36"
-            />
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            {filterOptions.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={filterValue === option.value ? "primary" : "ghost"}
+                size="xs"
+                onClick={() => onFilterChange(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
           </div>
 
           {canManageTeam && onInviteClick && (
             <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={onInviteClick}
-              className="w-full shadow-md shadow-blue-500/20 sm:w-auto"
+              className="w-full sm:w-auto"
             >
               {inviteIcon}
               {inviteLabel}
@@ -50,7 +57,7 @@ export function OrganisationTeamsPage({
           )}
         </div>
 
-        <div>{tableContent}</div>
+        <div className="min-h-0 flex-1 overflow-hidden">{tableContent}</div>
       </div>
 
       {secondaryContent}

@@ -6,6 +6,8 @@ import type { ProductListViewProps } from './types'
 import type { SortField } from '../types'
 
 const inventoryPageSizeOptions = [10, 20, 50]
+const inventoryTableHeaderClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
+const inventoryTableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
 
 export const ProductListView = ({
   companyId,
@@ -28,8 +30,6 @@ export const ProductListView = ({
 }: ProductListViewProps) => {
   const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name ?? '—'
   const { editingCell, editingValue, isSaving, setEditingValue, startEdit, commitEdit, cancelEdit } = useInlineProductEdit(companyId, onRefresh)
-  const allVisibleSelected = products.length > 0 && products.every((product) => selectedRowIds.has(product.id))
-  const someVisibleSelected = products.some((product) => selectedRowIds.has(product.id))
 
   const handleColumnSort = (field: SortField) => {
     onSortChange(field)
@@ -133,36 +133,11 @@ export const ProductListView = ({
           tableWrapClassName="flex-1 min-h-0"
           columns={[
             {
-              id: 'selection',
-              header: (
-                <input
-                  type="checkbox"
-                  aria-label="Select all visible products"
-                  checked={allVisibleSelected}
-                  ref={(input) => {
-                    if (input) input.indeterminate = someVisibleSelected && !allVisibleSelected
-                  }}
-                  onChange={toggleAll}
-                  onClick={(event) => event.stopPropagation()}
-                />
-              ),
-              width: 44,
-              align: 'center',
-              renderCell: (product) => (
-                <input
-                  type="checkbox"
-                  aria-label={`Select ${product.name}`}
-                  checked={selectedRowIds.has(product.id)}
-                  disabled={isSaving}
-                  onChange={() => toggleSelection(product.id)}
-                  onClick={(event) => event.stopPropagation()}
-                />
-              ),
-            },
-            {
               id: 'name',
               header: 'Name / SKU',
               sortKey: 'name',
+              headerClassName: inventoryTableHeaderClassName,
+              cellClassName: inventoryTableCellClassName,
               renderCell: (product) => (
                 <Link
                   to={`/inventory/${product.id}/overview`}
@@ -180,6 +155,8 @@ export const ProductListView = ({
               header: 'Folder',
               sortKey: 'folder_id',
               width: 140,
+              headerClassName: inventoryTableHeaderClassName,
+              cellClassName: inventoryTableCellClassName,
               renderCell: (product) => <span className="text-sm text-[var(--color-muted-foreground)]">{folderName(product.folder_id)}</span>,
             },
             {
@@ -188,6 +165,8 @@ export const ProductListView = ({
               sortKey: 'selling_price',
               width: 110,
               align: 'right',
+              headerClassName: inventoryTableHeaderClassName,
+              cellClassName: inventoryTableCellClassName,
               renderCell: (product) => {
                 const isEditingPrice = editingCell?.id === product.id && editingCell.field === 'selling_price'
 
@@ -236,6 +215,8 @@ export const ProductListView = ({
               sortKey: 'quantity_on_hand',
               width: 120,
               align: 'right',
+              headerClassName: inventoryTableHeaderClassName,
+              cellClassName: inventoryTableCellClassName,
               renderCell: (product) => (
                 <span
                   className={cn(
@@ -258,6 +239,17 @@ export const ProductListView = ({
           sortField={sortField}
           sortDirection={sortDir}
           onSortChange={handleColumnSort}
+          selection={{
+            selectedRowIds,
+            onToggleAll: toggleAll,
+            onToggleRow: (product) => toggleSelection(product.id),
+            isRowDisabled: isSaving,
+            selectAllLabel: 'Select all visible products',
+            getRowLabel: (product) => product.name,
+            columnWidth: 44,
+            headerClassName: inventoryTableHeaderClassName,
+            cellClassName: inventoryTableCellClassName,
+          }}
           onRowClick={(product) => toggleSelection(product.id)}
           rowClassName={(product) => (
             selectedRowIds.has(product.id) ? 'bg-[var(--color-primary-light)]' : undefined

@@ -21,10 +21,18 @@ type TemplateTableRow = {
   id: string
   name: string
   dimensionsLabel: string
+  width: number
+  height: number
   activeFields: string[]
   lastModifiedLabel: string
+  lastModifiedSortValue: number
   isSelected: boolean
 }
+
+type TemplateSortField = 'templateName' | 'dimensions' | 'activeFields' | 'lastModified'
+
+const templateTableHeaderClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
+const templateTableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
 
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return ''
@@ -49,6 +57,12 @@ const formatDimensions = (layout: Record<string, unknown>) => {
   return `${controls.width}x${controls.height}mm`
 }
 
+const getDateSortValue = (dateString: string | null | undefined) => {
+  if (!dateString) return 0
+  const timestamp = new Date(dateString).getTime()
+  return Number.isNaN(timestamp) ? 0 : timestamp
+}
+
 export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemplate }: TemplateLibraryTabProps) => {
   const { searchValue } = useTopBarSearchValue()
   const { data: templates = [], isLoading } = useLabelTemplates(companyId)
@@ -60,6 +74,8 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
   })
   const [name, setName] = useState('')
   const [message, setMessage] = useState<string | null>(null)
+  const [tableSortField, setTableSortField] = useState<TemplateSortField | null>('lastModified')
+  const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
@@ -88,15 +104,60 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       id: template.id,
       name: template.name,
       dimensionsLabel: formatDimensions(template.layout),
+      width: controls.width,
+      height: controls.height,
       activeFields: getEnabledLabelFields(controls),
       lastModifiedLabel: formatDate(template.updated_at ?? template.created_at),
+      lastModifiedSortValue: getDateSortValue(template.updated_at ?? template.created_at),
       isSelected: selectedTemplateId === template.id,
     }
   }), [filteredTemplates, selectedTemplateId])
-  const columns = useMemo<DataTableColumn<TemplateTableRow>[]>(() => [
+  const sortedTableRows = useMemo(() => {
+    if (!tableSortField) {
+      return tableRows
+    }
+
+    return [...tableRows].sort((left, right) => {
+      let comparison = 0
+
+      switch (tableSortField) {
+        case 'templateName':
+          comparison = left.name.localeCompare(right.name)
+          break
+        case 'dimensions':
+          comparison = (left.width * left.height) - (right.width * right.height)
+          break
+        case 'activeFields':
+          comparison = left.activeFields.join(', ').localeCompare(right.activeFields.join(', '))
+          break
+        case 'lastModified':
+          comparison = left.lastModifiedSortValue - right.lastModifiedSortValue
+          break
+        default:
+          comparison = 0
+      }
+
+      return tableSortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [tableRows, tableSortDirection, tableSortField])
+  const handleTableSort = (field: TemplateSortField) => {
+    if (tableSortField === field) {
+      setTableSortDirection((current) => current === 'asc' ? 'desc' : 'asc')
+      return
+    }
+
+    setTableSortField(field)
+    setTableSortDirection('asc')
+  }
+
+  const columns = useMemo<DataTableColumn<TemplateTableRow, TemplateSortField>[]>(() => [
     {
       id: 'templateName',
       header: 'Template Name',
+      sortKey: 'templateName',
+      width: '34%',
+      headerClassName: templateTableHeaderClassName,
+      cellClassName: templateTableCellClassName,
       renderCell: (row) => (
         <div className="label-template-name-cell">
           <span className="label-template-name-icon" aria-hidden="true">
@@ -120,11 +181,19 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
     {
       id: 'dimensions',
       header: 'Dimensions',
+      sortKey: 'dimensions',
+      width: '14%',
+      headerClassName: templateTableHeaderClassName,
+      cellClassName: templateTableCellClassName,
       renderCell: (row) => row.dimensionsLabel,
     },
     {
       id: 'activeFields',
       header: 'Active Fields',
+      sortKey: 'activeFields',
+      width: '28%',
+      headerClassName: templateTableHeaderClassName,
+      cellClassName: templateTableCellClassName,
       renderCell: (row) => (
         <div className="label-template-field-list">
           {row.activeFields.map((field) => (
@@ -136,11 +205,20 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
     {
       id: 'lastModified',
       header: 'Last Modified',
+      sortKey: 'lastModified',
+      width: '16%',
+      headerClassName: templateTableHeaderClassName,
+      cellClassName: templateTableCellClassName,
       renderCell: (row) => row.lastModifiedLabel,
     },
     {
       id: 'actions',
       header: 'Actions',
+      sortable: false,
+      width: '8%',
+      align: 'right',
+      headerClassName: templateTableHeaderClassName,
+      cellClassName: templateTableCellClassName,
       renderCell: (row) => (
         <button
           type="button"
@@ -197,9 +275,16 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
         {!isCompactView ? (
           <DataTable
             columns={columns}
-            rows={tableRows}
+            rows={sortedTableRows}
             getRowId={(row) => row.id}
             emptyState={<div className="empty-state">{isLoading ? 'Loading templates...' : 'No templates found.'}</div>}
+            minTableWidth={920}
+            tableLayout="fixed"
+            sortField={tableSortField}
+            sortDirection={tableSortDirection}
+            onSortChange={handleTableSort}
+            tableWrapClassName="border-0 bg-white"
+            tableClassName="bg-white"
             rowClassName={(row) => row.isSelected ? 'label-template-table-row is-editing' : 'label-template-table-row'}
           />
         ) : null}

@@ -42,9 +42,10 @@ describe('OrganisationPermissionsPanel', () => {
       />,
     )
 
+    await user.click(screen.getByRole('button', { name: /add role/i }))
     await user.type(screen.getByPlaceholderText('New role name'), 'Reviewer')
     await user.type(screen.getByPlaceholderText('Role description'), 'Review only role')
-    await user.click(screen.getByRole('button', { name: /add role/i }))
+    await user.click(screen.getByRole('button', { name: /create role/i }))
 
     expect(onCreateRole).toHaveBeenCalledWith({
       name: 'Reviewer',
@@ -100,13 +101,14 @@ describe('OrganisationPermissionsPanel', () => {
       />,
     )
 
-    expect(screen.getByText('100')).toBeInTheDocument()
-    expect(screen.getByText('50')).toBeInTheDocument()
+    expect(screen.getAllByText('100').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('50').length).toBeGreaterThan(0)
 
+    await user.click(screen.getByRole('button', { name: /add role/i }))
     await user.type(screen.getByPlaceholderText('New role name'), 'Duplicate Rank Role')
     await user.clear(screen.getByPlaceholderText('Role rank'))
     await user.type(screen.getByPlaceholderText('Role rank'), '50')
-    await user.click(screen.getByRole('button', { name: /add role/i }))
+    await user.click(screen.getByRole('button', { name: /create role/i }))
 
     expect(onCreateRole).not.toHaveBeenCalled()
     expect(screen.getByText(/role rank must be unique within your organisation/i)).toBeInTheDocument()

@@ -2,14 +2,21 @@ import { useCallback, useMemo } from "react";
 import { ContentTabs } from "@repo/ui";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCompany } from "../contexts/CompanyContext";
-import { BasePage } from "../components/BasePage";
+import { StoqrPageShell } from "../components/StoqrPageShell";
 import { PageAvailabilityGuard } from "../components/PageAvailabilityGuard";
-import { usePageTopBarSearch } from "../components/Search/TopBarSearch";
 import { StockHealthValuationTab } from "../components/Reports/StockHealthValuationTab";
 import { MovementVelocityTab } from "../components/Reports/MovementVelocityTab";
 import { ProcurementSuppliersTab } from "../components/Reports/ProcurementSuppliersTab";
 import { AuditsShrinkageTab } from "../components/Reports/AuditsShrinkageTab";
 import { CustomSavedReportsTab } from "../components/Reports/CustomSavedReportsTab";
+
+const reportDestinationBySuggestionId: Record<string, string> = {
+  "report-stock-health": "stock-health",
+  "report-movement": "movement-velocity",
+  "report-procurement": "procurement-suppliers",
+  "report-audits": "audits-shrinkage",
+  "report-custom": "custom-saved",
+};
 
 export const ReportsPage = () => {
   const { companyId } = useCompany();
@@ -27,13 +34,6 @@ export const ReportsPage = () => {
   )
     ? tab!
     : "stock-health";
-  const reportDestinationBySuggestionId: Record<string, string> = {
-    "report-stock-health": "stock-health",
-    "report-movement": "movement-velocity",
-    "report-procurement": "procurement-suppliers",
-    "report-audits": "audits-shrinkage",
-    "report-custom": "custom-saved",
-  };
   const handleSuggestionSelect = useCallback((suggestion: { id: string }) => {
     const nextTab = reportDestinationBySuggestionId[suggestion.id];
     if (nextTab) {
@@ -41,7 +41,7 @@ export const ReportsPage = () => {
     }
   }, [navigate]);
 
-  usePageTopBarSearch(useMemo(() => ({
+  const searchConfig = useMemo(() => ({
     searchKey: "reports",
     placeholder: "Search reports...",
     defaultSuggestions: [
@@ -82,13 +82,14 @@ export const ReportsPage = () => {
       },
     ],
     onSuggestionSelect: handleSuggestionSelect,
-  }), [handleSuggestionSelect]));
+  }), [handleSuggestionSelect]);
 
   return (
-    <BasePage
+    <StoqrPageShell
       companyId={companyId}
-      contentClassName="px-2 pb-8 pt-[18px]"
-      containerClassName="[&>*]:min-w-0 flex min-h-0 min-w-0 flex-1 flex-col gap-7 text-[var(--color-foreground)]"
+      search={searchConfig}
+      contentClassName="flex h-full min-h-0 overflow-hidden px-2 pb-8 pt-[18px]"
+      containerClassName="[&>*]:min-w-0 flex h-full min-h-0 min-w-0 flex-1 flex-col gap-7 overflow-hidden text-[var(--color-foreground)]"
     >
       <PageAvailabilityGuard companyId={companyId} feature="reports">
         <ContentTabs
@@ -124,6 +125,6 @@ export const ReportsPage = () => {
           ]}
         />
       </PageAvailabilityGuard>
-    </BasePage>
+    </StoqrPageShell>
   );
 };

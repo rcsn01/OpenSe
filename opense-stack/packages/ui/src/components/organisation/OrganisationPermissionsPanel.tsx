@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "../ui/Button";
 import {
@@ -72,6 +72,8 @@ type RoleTableRow = {
   editable: boolean;
 };
 
+type RoleSortField = "name" | "description" | "role-rank";
+
 const formatLabel = (value: string) =>
   value
     .split(/[._-]/g)
@@ -95,6 +97,7 @@ export function OrganisationPermissionsPanel({
   const [addName, setAddName] = useState("");
   const [addDescription, setAddDescription] = useState("");
   const [addRoleRank, setAddRoleRank] = useState("100");
+  const [isAddingRole, setIsAddingRole] = useState(false);
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -102,6 +105,14 @@ export function OrganisationPermissionsPanel({
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rolePage, setRolePage] = useState(1);
+  const [rolePageSize, setRolePageSize] = useState(10);
+  const [roleSortField, setRoleSortField] = useState<RoleSortField | null>(
+    null,
+  );
+  const [roleSortDirection, setRoleSortDirection] = useState<"asc" | "desc">(
+    "asc",
+  );
 
   const permissionMatrix = useMemo(() => {
     const rows = new Map<
@@ -222,6 +233,7 @@ export function OrganisationPermissionsPanel({
       setAddName("");
       setAddDescription("");
       setAddRoleRank("100");
+      setIsAddingRole(false);
     } catch (err: any) {
       setError(err?.message ?? "Failed to save role.");
     } finally {
@@ -302,32 +314,111 @@ export function OrganisationPermissionsPanel({
     }));
   }, [isRoleEditable, roles]);
 
-  const roleColumns = useMemo<DataTableColumn<RoleTableRow>[]>(
+  const sortedRoleRows = useMemo(() => {
+    if (!roleSortField) {
+      return roleRows;
+    }
+
+    const getSortValue = (row: RoleTableRow) => {
+      switch (roleSortField) {
+        case "name":
+          return row.name;
+        case "description":
+          return row.description ?? "";
+        case "role-rank":
+          return row.roleRank ?? Number.MAX_SAFE_INTEGER;
+        default:
+          return "";
+      }
+    };
+
+    return [...roleRows].sort((a, b) => {
+      const first = getSortValue(a);
+      const second = getSortValue(b);
+
+      const comparison =
+        typeof first === "number" && typeof second === "number"
+          ? first - second
+          : String(first).localeCompare(String(second), undefined, {
+              numeric: true,
+              sensitivity: "base",
+            });
+
+      return roleSortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [roleRows, roleSortDirection, roleSortField]);
+
+  const roleTotalPages = Math.max(1, Math.ceil(sortedRoleRows.length / rolePageSize));
+  const paginatedRoleRows = useMemo(() => {
+    const startIndex = (rolePage - 1) * rolePageSize;
+    return sortedRoleRows.slice(startIndex, startIndex + rolePageSize);
+  }, [rolePage, rolePageSize, sortedRoleRows]);
+
+  useEffect(() => {
+    setRolePage(1);
+  }, [roles, rolePageSize]);
+
+  useEffect(() => {
+    if (rolePage > roleTotalPages) {
+      setRolePage(roleTotalPages);
+    }
+  }, [rolePage, roleTotalPages]);
+
+  const handleRoleSortChange = (nextSortField: RoleSortField) => {
+    if (roleSortField === nextSortField) {
+      setRoleSortDirection((currentDirection) =>
+        currentDirection === "asc" ? "desc" : "asc",
+      );
+      return;
+    }
+
+    setRoleSortField(nextSortField);
+    setRoleSortDirection("asc");
+  };
+
+  const roleTableHeaderClassName =
+    "border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase";
+  const roleTableCellClassName = "border-b border-[#d9e2ef] px-4 py-3";
+
+  const roleColumns = useMemo<DataTableColumn<RoleTableRow, RoleSortField>[]>(
     () => [
       {
         id: "name",
         header: "Role Name",
-        cellClassName: "font-medium text-[var(--color-foreground)]",
+        sortKey: "name",
+        width: "26%",
+        headerClassName: roleTableHeaderClassName,
+        cellClassName: `${roleTableCellClassName} font-medium text-[var(--color-foreground)]`,
         renderCell: (row) => row.name,
       },
       {
         id: "description",
         header: "Description",
-        cellClassName: "text-[var(--color-muted-foreground)]",
+        sortKey: "description",
+        width: "44%",
+        headerClassName: roleTableHeaderClassName,
+        cellClassName: `${roleTableCellClassName} text-[var(--color-muted-foreground)]`,
         renderCell: (row) => row.description || "—",
       },
       {
         id: "role-rank",
         header: "Role Rank",
-        cellClassName: "text-[var(--color-muted-foreground)]",
+        sortKey: "role-rank",
+        width: "14%",
+        headerClassName: roleTableHeaderClassName,
+        cellClassName: `${roleTableCellClassName} text-[var(--color-muted-foreground)]`,
         renderCell: (row) => row.roleRank ?? "—",
       },
       {
         id: "actions",
         header: "Actions",
-        width: 220,
+        sortable: false,
+        align: "right",
+        width: "16%",
+        headerClassName: roleTableHeaderClassName,
+        cellClassName: `${roleTableCellClassName} text-right`,
         renderCell: (row) => (
-          <div className="flex gap-2">
+          <div className="flex justify-end gap-2">
             <Button
               type="button"
               size="sm"
@@ -335,7 +426,7 @@ export function OrganisationPermissionsPanel({
               onClick={() => openEditRole(row.id)}
               disabled={!canManage || saving || !row.editable}
             >
-              <Pencil className="mr-2 h-4 w-4" />
+              <Pencil className="h-4 w-4" />
               Edit
             </Button>
             {onDeleteRole && (
@@ -347,7 +438,7 @@ export function OrganisationPermissionsPanel({
                 disabled={!canManage || saving || !row.editable}
                 className="text-red-600 hover:text-red-700"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
                 Delete
               </Button>
             )}
@@ -359,15 +450,17 @@ export function OrganisationPermissionsPanel({
   );
 
   return (
-    <StackLayout>
-      <Card variant="plain" padding="md">
-        <CardHeader>
-          <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+    <StackLayout className="min-h-0 flex-1">
+      <Card variant="plain" padding="md" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {(title || description) && (
+          <CardHeader>
+            <div>
+              {title && <CardTitle>{title}</CardTitle>}
+              {description && <CardDescription>{description}</CardDescription>}
+            </div>
+          </CardHeader>
+        )}
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
@@ -379,45 +472,91 @@ export function OrganisationPermissionsPanel({
               Loading roles...
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
               <DataTable
                 columns={roleColumns}
-                rows={roleRows}
+                rows={paginatedRoleRows}
                 getRowId={(row) => row.id}
                 emptyState="No roles yet."
+                className="min-h-0 flex-1"
+                minTableWidth={900}
+                tableLayout="fixed"
+                sortField={roleSortField}
+                sortDirection={roleSortDirection}
+                onSortChange={handleRoleSortChange}
+                tableWrapClassName="border-0 bg-white"
+                tableClassName="bg-white"
+                pagination={{
+                  currentPage: rolePage,
+                  totalPages: roleTotalPages,
+                  totalItems: sortedRoleRows.length,
+                  itemsPerPage: rolePageSize,
+                  onPageChange: setRolePage,
+                  onItemsPerPageChange: (nextPageSize) => {
+                    setRolePageSize(nextPageSize);
+                    setRolePage(1);
+                  },
+                }}
+                bottomRow={isAddingRole ? (
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px_auto_auto] md:items-start">
+                    <Input
+                      value={addName}
+                      onChange={(event) => setAddName(event.target.value)}
+                      placeholder="New role name"
+                      disabled={!canManage || saving}
+                    />
+                    <Input
+                      value={addDescription}
+                      onChange={(event) => setAddDescription(event.target.value)}
+                      placeholder="Role description"
+                      disabled={!canManage || saving}
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={addRoleRank}
+                      onChange={(event) => setAddRoleRank(event.target.value)}
+                      placeholder="Role rank"
+                      disabled={!canManage || saving}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddRole}
+                      disabled={!canManage || saving || !addName.trim()}
+                    >
+                      {saving ? "Saving..." : "Create Role"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setIsAddingRole(false);
+                        setAddName("");
+                        setAddDescription("");
+                        setAddRoleRank("100");
+                        setError(null);
+                      }}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsAddingRole(true)}
+                    disabled={!canManage || saving}
+                    className="w-full justify-center border border-dashed border-[#d9e2ef] py-5"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Role
+                  </Button>
+                )}
+                bottomRowCellClassName="bg-white px-4 py-3"
               />
-
-              <div className="grid gap-3 pt-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px_auto] md:items-start">
-                <Input
-                  value={addName}
-                  onChange={(event) => setAddName(event.target.value)}
-                  placeholder="New role name"
-                  disabled={!canManage || saving}
-                />
-                <Input
-                  value={addDescription}
-                  onChange={(event) => setAddDescription(event.target.value)}
-                  placeholder="Role description"
-                  disabled={!canManage || saving}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={addRoleRank}
-                  onChange={(event) => setAddRoleRank(event.target.value)}
-                  placeholder="Role rank"
-                  disabled={!canManage || saving}
-                />
-                <Button
-                  type="button"
-                  onClick={handleAddRole}
-                  disabled={!canManage || saving || !addName.trim()}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Role
-                </Button>
-              </div>
             </div>
           )}
         </CardContent>

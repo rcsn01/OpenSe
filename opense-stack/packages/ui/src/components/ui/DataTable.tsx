@@ -92,6 +92,18 @@ type DataTablePaginationProps = {
   className?: string;
 };
 
+type DataTableSelectionProps<Row> = {
+  selectedRowIds: Set<string>;
+  onToggleRow: (row: Row, rowId: string, index: number) => void;
+  onToggleAll?: () => void;
+  isRowDisabled?: boolean | ((row: Row, index: number) => boolean);
+  selectAllLabel?: string;
+  getRowLabel?: (row: Row, index: number) => string;
+  columnWidth?: CSSProperties["width"];
+  headerClassName?: string;
+  cellClassName?: string;
+};
+
 type DataTableProps<Row, SortKey extends string = string> = {
   columns: Array<DataTableColumn<Row, SortKey>>;
   rows: Row[];
@@ -107,6 +119,9 @@ type DataTableProps<Row, SortKey extends string = string> = {
   topRow?: ReactNode;
   topRowClassName?: string;
   topRowCellClassName?: string;
+  bottomRow?: ReactNode;
+  bottomRowClassName?: string;
+  bottomRowCellClassName?: string;
   minTableWidth?: CSSProperties["minWidth"];
   tableLayout?: CSSProperties["tableLayout"];
   sortField?: SortKey | null;
@@ -120,6 +135,7 @@ type DataTableProps<Row, SortKey extends string = string> = {
   ) => HTMLAttributes<HTMLTableRowElement>;
   onRowClick?: (row: Row, index: number) => void;
   pagination?: DataTablePaginationProps;
+  selection?: DataTableSelectionProps<Row>;
 };
 
 export function DataTable<Row, SortKey extends string = string>({
@@ -137,6 +153,9 @@ export function DataTable<Row, SortKey extends string = string>({
   topRow,
   topRowClassName,
   topRowCellClassName,
+  bottomRow,
+  bottomRowClassName,
+  bottomRowCellClassName,
   minTableWidth,
   tableLayout,
   sortField,
@@ -147,6 +166,7 @@ export function DataTable<Row, SortKey extends string = string>({
   getRowProps,
   onRowClick,
   pagination,
+  selection,
 }: DataTableProps<Row, SortKey>) {
   const totalPages =
     pagination?.totalPages ??
@@ -155,12 +175,34 @@ export function DataTable<Row, SortKey extends string = string>({
       ? Math.max(1, Math.ceil(pagination.totalItems / pagination.itemsPerPage))
       : 1);
   const variantClassNames = dataTableVariantClassNames[variant];
+  const columnSpan = columns.length + (selection ? 1 : 0);
+  const selectableRows = selection
+    ? rows
+        .map((row, index) => ({ row, index }))
+        .filter(({ row, index }) => {
+          if (typeof selection.isRowDisabled === "function") {
+            return !selection.isRowDisabled(row, index);
+          }
+          return !selection.isRowDisabled;
+        })
+    : [];
+  const allVisibleRowsSelected =
+    Boolean(selection) &&
+    selectableRows.length > 0 &&
+    selectableRows.every(({ row, index }) =>
+      selection!.selectedRowIds.has(getRowId(row, index)),
+    );
+  const someVisibleRowsSelected =
+    Boolean(selection) &&
+    selectableRows.some(({ row, index }) =>
+      selection!.selectedRowIds.has(getRowId(row, index)),
+    );
 
   return (
     <div className={cn("flex min-h-0 flex-col overflow-hidden", className)}>
       <div
         className={cn(
-          "table-wrap w-full overflow-auto",
+          "table-wrap min-h-0 w-full flex-1 overflow-auto",
           variantClassNames.tableWrap,
           tableWrapClassName,
         )}
@@ -173,8 +215,12 @@ export function DataTable<Row, SortKey extends string = string>({
           )}
           style={{ minWidth: minTableWidth, tableLayout }}
         >
-          {columns.some((column) => typeof column.width !== "undefined") ? (
+          {selection ||
+          columns.some((column) => typeof column.width !== "undefined") ? (
             <colgroup>
+              {selection ? (
+                <col style={{ width: selection.columnWidth ?? 44 }} />
+              ) : null}
               {columns.map((column) => (
                 <col key={column.id} style={{ width: column.width }} />
               ))}
@@ -185,7 +231,7 @@ export function DataTable<Row, SortKey extends string = string>({
             {topRow ? (
               <tr className={topRowClassName}>
                 <td
-                  colSpan={columns.length}
+                  colSpan={columnSpan}
                   className={cn(
                     variantClassNames.bodyCell,
                     tableCellTextClassName,
@@ -198,6 +244,36 @@ export function DataTable<Row, SortKey extends string = string>({
             ) : null}
 
             <tr>
+              {selection ? (
+                <th
+                  className={cn(
+                    variantClassNames.headerCell,
+                    tableHeaderTextClassName,
+                    alignmentClassNames.center,
+                    selection.headerClassName,
+                  )}
+                  style={alignmentStyles.center}
+                >
+                  <span className="inline-flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      aria-label={
+                        selection.selectAllLabel ?? "Select all visible rows"
+                      }
+                      checked={allVisibleRowsSelected}
+                      ref={(input) => {
+                        if (input) {
+                          input.indeterminate =
+                            someVisibleRowsSelected && !allVisibleRowsSelected;
+                        }
+                      }}
+                      disabled={!selection.onToggleAll || selectableRows.length === 0}
+                      onChange={selection.onToggleAll}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  </span>
+                </th>
+              ) : null}
               {columns.map((column) => {
                 const align = column.align ?? "left";
                 const isSortable = Boolean(
@@ -261,7 +337,7 @@ export function DataTable<Row, SortKey extends string = string>({
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length}
+                  colSpan={columnSpan}
                   className={cn(
                     variantClassNames.emptyStateCell,
                     tableCellTextClassName,
@@ -310,6 +386,38 @@ export function DataTable<Row, SortKey extends string = string>({
                       ...getRowStyle?.(row, index),
                     }}
                   >
+                    {selection ? (
+                      <td
+                        className={cn(
+                          variantClassNames.bodyCell,
+                          tableCellTextClassName,
+                          index === rows.length - 1 && "border-b-0",
+                          alignmentClassNames.center,
+                          selection.cellClassName,
+                        )}
+                        style={alignmentStyles.center}
+                      >
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${
+                            selection.getRowLabel?.(row, index) ??
+                            getRowId(row, index)
+                          }`}
+                          checked={selection.selectedRowIds.has(
+                            getRowId(row, index),
+                          )}
+                          disabled={
+                            typeof selection.isRowDisabled === "function"
+                              ? selection.isRowDisabled(row, index)
+                              : selection.isRowDisabled
+                          }
+                          onChange={() =>
+                            selection.onToggleRow(row, getRowId(row, index), index)
+                          }
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                      </td>
+                    ) : null}
                     {columns.map((column) => {
                       const align = column.align ?? "left";
                       const computedCellStyle =
@@ -340,6 +448,21 @@ export function DataTable<Row, SortKey extends string = string>({
                 );
               })
             )}
+            {bottomRow ? (
+              <tr className={bottomRowClassName}>
+                <td
+                  colSpan={columnSpan}
+                  className={cn(
+                    variantClassNames.bodyCell,
+                    tableCellTextClassName,
+                    "border-b-0",
+                    bottomRowCellClassName,
+                  )}
+                >
+                  {bottomRow}
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -347,7 +470,7 @@ export function DataTable<Row, SortKey extends string = string>({
       {pagination ? (
         <div
           className={cn(
-            "table-footer",
+            "table-footer shrink-0",
             variantClassNames.footer,
             footerClassName,
           )}
