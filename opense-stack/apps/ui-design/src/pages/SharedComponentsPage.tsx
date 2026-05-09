@@ -117,7 +117,6 @@ import {
   Bell,
   Boxes,
   Download,
-  Filter,
   FileText,
   Palette,
   Plus,
@@ -666,7 +665,6 @@ export function SharedComponentsPage() {
   const tableTemplateRow = (
     <HStack wrap align="center" justify="between" className="gap-3">
       <HStack wrap align="center" className="gap-2">
-        <Filter className="h-4 w-4 text-[var(--color-muted-foreground)]" />
         {inventoryFilterTemplates.map((template) => (
           <Button
             key={template.value}

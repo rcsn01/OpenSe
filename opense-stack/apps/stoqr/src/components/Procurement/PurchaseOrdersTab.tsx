@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import {
-  AddFilterDropdown,
   Badge,
   Button,
   Card,
@@ -9,11 +8,12 @@ import {
   CardHeader,
   CardTitle,
   DataTable,
+  type DataTableColumn,
   EmptyState,
   Input,
   Select,
 } from '@repo/ui'
-import { BellRing, Building2, CheckCircle2, Plus, Sparkles, X } from 'lucide-react'
+import { BellRing, Building2, CheckCircle2, Plus, Sparkles } from 'lucide-react'
 import type { PurchaseOrder } from '../../api/procurement'
 import { usePageTopBarSearch, useTopBarSearchValue } from '../Search/TopBarSearch'
 import {
@@ -29,6 +29,7 @@ import { formatCurrency } from '../../utils'
 type StatusFilter = 'all' | PurchaseOrder['status']
 type ApprovalStatus = NonNullable<PurchaseOrder['approval_status']>
 type ReturnStatus = NonNullable<PurchaseOrder['return_status']>
+type PurchaseOrderSortField = 'poNumber' | 'supplier' | 'created' | 'expected' | 'total' | 'workflow'
 
 type WorkflowBadge = {
   label: string
@@ -60,13 +61,17 @@ const statusVariants: Record<PurchaseOrder['status'], 'warning' | 'info' | 'seco
 }
 
 const statusOptions: Array<{ value: StatusFilter; label: string }> = [
-  { value: 'all', label: 'All statuses' },
+  { value: 'all', label: 'All' },
   { value: 'draft', label: statusLabels.draft },
   { value: 'sent', label: statusLabels.sent },
   { value: 'partial', label: statusLabels.partial },
   { value: 'closed', label: statusLabels.closed },
   { value: 'cancelled', label: statusLabels.cancelled },
 ]
+
+const purchaseOrderPageSizeOptions = [10, 20, 30, 50]
+const purchaseOrderTableHeaderClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
+const purchaseOrderTableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
 
 const approvalStatusLabels: Record<ApprovalStatus, string> = {
   pending: 'Pending Approval',
@@ -132,6 +137,12 @@ const getReturnWorkflow = (returnStatus: ReturnStatus): WorkflowBadge | null => 
   }
 }
 
+const getDateSortValue = (value: string | null | undefined) => {
+  if (!value) return 0
+  const timestamp = new Date(value).getTime()
+  return Number.isNaN(timestamp) ? 0 : timestamp
+}
+
 export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) => {
   const { searchValue } = useTopBarSearchValue()
   const [isCreating, setIsCreating] = useState(false)
@@ -140,6 +151,10 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
   const [newPoSupplier, setNewPoSupplier] = useState('')
   const [newPoDate, setNewPoDate] = useState('')
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+  const [tablePage, setTablePage] = useState(1)
+  const [tablePageSize, setTablePageSize] = useState(purchaseOrderPageSizeOptions[0])
+  const [tableSortField, setTableSortField] = useState<PurchaseOrderSortField | null>('created')
+  const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('desc')
 
   const { data: purchaseOrders = [], isLoading: loadingOrders } = useProcurementPurchaseOrders(companyId)
   const { data: purchaseOrderItems = [] } = useProcurementPurchaseOrderItems(companyId)
@@ -207,8 +222,195 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
     return searchedPurchaseOrders.filter((order) => statusFilter === 'all' || order.status === statusFilter)
   }, [purchaseOrders, searchValue, statusFilter, workflowByPo])
 
-  const statusFilterItems = statusOptions.filter((option) => option.value !== statusFilter)
-  const activeStatusLabel = statusFilter === 'all' ? null : statusLabels[statusFilter]
+  const sortedPurchaseOrders = useMemo(() => {
+    if (!tableSortField) {
+      return filteredPurchaseOrders
+    }
+
+    return [...filteredPurchaseOrders].sort((left, right) => {
+      let comparison = 0
+
+      switch (tableSortField) {
+        case 'poNumber':
+          comparison = left.po_number - right.po_number
+          break
+        case 'supplier':
+          comparison = (left.suppliers?.name ?? '').localeCompare(right.suppliers?.name ?? '')
+          break
+        case 'created':
+          comparison = getDateSortValue(left.created_at) - getDateSortValue(right.created_at)
+          break
+        case 'expected':
+          comparison = getDateSortValue(left.expected_date) - getDateSortValue(right.expected_date)
+          break
+        case 'total':
+          comparison =
+            (left.total_amount ?? totalsByPo[left.id] ?? 0) -
+            (right.total_amount ?? totalsByPo[right.id] ?? 0)
+          break
+        case 'workflow':
+          comparison = (workflowByPo[left.id]?.order.label ?? statusLabels[left.status]).localeCompare(
+            workflowByPo[right.id]?.order.label ?? statusLabels[right.status],
+          )
+          break
+        default:
+          comparison = 0
+      }
+
+      return tableSortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [filteredPurchaseOrders, tableSortDirection, tableSortField, totalsByPo, workflowByPo])
+
+  const currentTablePage = Math.min(
+    tablePage,
+    Math.max(1, Math.ceil(sortedPurchaseOrders.length / tablePageSize)),
+  )
+  const pagedPurchaseOrders = useMemo(() => {
+    const startIndex = (currentTablePage - 1) * tablePageSize
+    return sortedPurchaseOrders.slice(startIndex, startIndex + tablePageSize)
+  }, [currentTablePage, sortedPurchaseOrders, tablePageSize])
+
+  const handlePageSizeChange = (pageSize: number) => {
+    setTablePageSize(pageSize)
+    setTablePage(1)
+  }
+
+  const handleStatusFilterChange = (filter: StatusFilter) => {
+    setStatusFilter(filter)
+    setTablePage(1)
+  }
+
+  const handleTableSort = (field: PurchaseOrderSortField) => {
+    if (tableSortField === field) {
+      setTableSortDirection((current) => current === 'asc' ? 'desc' : 'asc')
+      return
+    }
+
+    setTableSortField(field)
+    setTableSortDirection('asc')
+    setTablePage(1)
+  }
+
+  const purchaseOrderColumns = useMemo<DataTableColumn<PurchaseOrder, PurchaseOrderSortField>[]>(
+    () => [
+      {
+        id: 'po-number',
+        header: 'PO Number',
+        sortKey: 'poNumber',
+        width: '14%',
+        headerClassName: purchaseOrderTableHeaderClassName,
+        cellClassName: purchaseOrderTableCellClassName,
+        renderCell: (order) => (
+          <span className="font-semibold text-[var(--color-primary)]">
+            {formatPurchaseOrderNumber(order)}
+          </span>
+        ),
+      },
+      {
+        id: 'supplier',
+        header: 'Supplier',
+        sortKey: 'supplier',
+        width: '23%',
+        headerClassName: purchaseOrderTableHeaderClassName,
+        cellClassName: purchaseOrderTableCellClassName,
+        renderCell: (order) => (
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-[var(--color-muted)] p-2 text-[var(--color-muted-foreground)]">
+              <Building2 size={16} />
+            </div>
+            <span className="font-medium">
+              {order.suppliers?.name ?? 'Unknown supplier'}
+            </span>
+          </div>
+        ),
+      },
+      {
+        id: 'created',
+        header: 'Created',
+        sortKey: 'created',
+        width: '11%',
+        headerClassName: purchaseOrderTableHeaderClassName,
+        cellClassName: purchaseOrderTableCellClassName,
+        renderCell: (order) => formatDateLabel(order.created_at),
+      },
+      {
+        id: 'expected',
+        header: 'Expected',
+        sortKey: 'expected',
+        width: '11%',
+        headerClassName: purchaseOrderTableHeaderClassName,
+        cellClassName: purchaseOrderTableCellClassName,
+        renderCell: (order) => formatDateLabel(order.expected_date),
+      },
+      {
+        id: 'total',
+        header: 'Total',
+        sortKey: 'total',
+        width: '10%',
+        align: 'right',
+        headerClassName: purchaseOrderTableHeaderClassName,
+        cellClassName: purchaseOrderTableCellClassName,
+        renderCell: (order) => formatCurrency(order.total_amount ?? totalsByPo[order.id] ?? 0),
+      },
+      {
+        id: 'workflow',
+        header: 'Workflow',
+        sortKey: 'workflow',
+        width: '31%',
+        headerClassName: purchaseOrderTableHeaderClassName,
+        cellClassName: purchaseOrderTableCellClassName,
+        renderCell: (order) => {
+          const workflow = workflowByPo[order.id] ?? {
+            request: { label: 'Pending Approval', variant: 'warning' as const },
+            order: { label: statusLabels[order.status], variant: statusVariants[order.status] },
+            returnStatus: null,
+            orderedUnits: 0,
+            receivedUnits: 0,
+          }
+
+          return (
+            <div className="flex min-w-[280px] flex-col gap-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                  Request
+                </span>
+                <Badge variant={workflow.request.variant} size="md">
+                  {workflow.request.label}
+                </Badge>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                  Order
+                </span>
+                <Badge variant={workflow.order.variant} size="md">
+                  {workflow.order.label}
+                </Badge>
+                <span className="text-xs text-[var(--color-muted-foreground)]">
+                  {workflow.receivedUnits}/{workflow.orderedUnits} units received
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                  Return
+                </span>
+                {workflow.returnStatus ? (
+                  <Badge variant={workflow.returnStatus.variant} size="md">
+                    {workflow.returnStatus.label}
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-[var(--color-muted-foreground)]">No return</span>
+                )}
+              </div>
+            </div>
+          )
+        },
+      },
+    ],
+    [totalsByPo, workflowByPo],
+  )
+
   const purchaseOrderSuggestions = useMemo(
     () => filteredPurchaseOrders.slice(0, 8).map((order) => ({
       id: order.id,
@@ -266,31 +468,21 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
         : 'Try adjusting your search or status filter to find a matching purchase order.'
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card variant="plain" className="overflow-hidden" padding="none">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
+      <Card variant="plain" className="flex min-h-0 flex-1 flex-col overflow-hidden" padding="none">
         <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2 sm:min-w-[220px]">
-            <AddFilterDropdown
-              items={statusFilterItems}
-              onSelect={(value) => setStatusFilter(value as StatusFilter)}
-              ariaLabel="PO status filter"
-              label="Filter"
-            />
-
-            {activeStatusLabel ? (
-              <div className="inline-flex items-center gap-1 rounded-[4px] bg-[rgba(102,193,63,0.06)] px-2 py-1 text-xs font-medium text-[var(--color-foreground)]">
-                <span className="opacity-60">Status:</span>
-                <span>{activeStatusLabel}</span>
-                <button
-                  type="button"
-                  aria-label={`Clear ${activeStatusLabel} filter`}
-                  onClick={() => setStatusFilter('all')}
-                  className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-[2px] border-none bg-transparent p-0 text-[var(--color-foreground)] opacity-35 transition-opacity hover:opacity-70"
-                >
-                  <X size={10} />
-                </button>
-              </div>
-            ) : null}
+            {statusOptions.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={statusFilter === option.value ? 'secondary' : 'ghost'}
+                size="xs"
+                onClick={() => handleStatusFilterChange(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 sm:justify-end">
@@ -300,12 +492,13 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
 
             <Button
               type="button"
-              variant="outline"
-              className="min-w-[220px] justify-between"
+              variant="ghost"
+              size="sm"
+              className={showAlertsHint ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary-hover)]' : undefined}
               onClick={() => setShowAlertsHint((current) => !current)}
             >
               <span className="inline-flex items-center gap-2">
-                <BellRing size={16} />
+                <BellRing className="h-4 w-4" />
                 Auto-Generate from Alerts
               </span>
               <Badge variant={lowStockProducts.length > 0 ? 'warning' : 'secondary'} size="sm">
@@ -313,8 +506,14 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
               </Badge>
             </Button>
 
-            <Button type="button" className="min-w-[140px]" onClick={() => setIsCreating((current) => !current)}>
-              <Plus size={16} />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={isCreating ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary-hover)]' : undefined}
+              onClick={() => setIsCreating((current) => !current)}
+            >
+              <Plus className="h-4 w-4" />
               Create PO
             </Button>
           </div>
@@ -411,101 +610,25 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
           </div>
         ) : (
           <DataTable
-            columns={[
-              {
-                id: 'po-number',
-                header: 'PO Number',
-                renderCell: (order) => (
-                  <span className="font-semibold text-[var(--color-primary)]">
-                    {formatPurchaseOrderNumber(order)}
-                  </span>
-                ),
-              },
-              {
-                id: 'supplier',
-                header: 'Supplier',
-                renderCell: (order) => (
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-[var(--color-muted)] p-2 text-[var(--color-muted-foreground)]">
-                      <Building2 size={16} />
-                    </div>
-                    <span className="font-medium">
-                      {order.suppliers?.name ?? 'Unknown supplier'}
-                    </span>
-                  </div>
-                ),
-              },
-              {
-                id: 'created',
-                header: 'Created',
-                renderCell: (order) => formatDateLabel(order.created_at),
-              },
-              {
-                id: 'expected',
-                header: 'Expected',
-                renderCell: (order) => formatDateLabel(order.expected_date),
-              },
-              {
-                id: 'total',
-                header: 'Total',
-                align: 'right',
-                renderCell: (order) => formatCurrency(order.total_amount ?? totalsByPo[order.id] ?? 0),
-              },
-              {
-                id: 'workflow',
-                header: 'Workflow',
-                renderCell: (order) => {
-                  const workflow = workflowByPo[order.id] ?? {
-                    request: { label: 'Pending Approval', variant: 'warning' as const },
-                    order: { label: statusLabels[order.status], variant: statusVariants[order.status] },
-                    returnStatus: null,
-                    orderedUnits: 0,
-                    receivedUnits: 0,
-                  }
-
-                  return (
-                    <div className="flex min-w-[280px] flex-col gap-2.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                          Request
-                        </span>
-                        <Badge variant={workflow.request.variant} size="md">
-                          {workflow.request.label}
-                        </Badge>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                          Order
-                        </span>
-                        <Badge variant={workflow.order.variant} size="md">
-                          {workflow.order.label}
-                        </Badge>
-                        <span className="text-xs text-[var(--color-muted-foreground)]">
-                          {workflow.receivedUnits}/{workflow.orderedUnits} units received
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                          Return
-                        </span>
-                        {workflow.returnStatus ? (
-                          <Badge variant={workflow.returnStatus.variant} size="md">
-                            {workflow.returnStatus.label}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-[var(--color-muted-foreground)]">No return</span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                },
-              },
-            ]}
-            rows={filteredPurchaseOrders}
+            className="min-h-0 flex-1"
+            columns={purchaseOrderColumns}
+            rows={pagedPurchaseOrders}
             getRowId={(order) => order.id}
             minTableWidth={1120}
+            tableLayout="fixed"
+            sortField={tableSortField}
+            sortDirection={tableSortDirection}
+            onSortChange={handleTableSort}
+            tableWrapClassName="border-0 bg-white"
+            tableClassName="bg-white"
+            pagination={{
+              currentPage: currentTablePage,
+              totalItems: filteredPurchaseOrders.length,
+              itemsPerPage: tablePageSize,
+              onPageChange: setTablePage,
+              onItemsPerPageChange: handlePageSizeChange,
+              pageSizeOptions: purchaseOrderPageSizeOptions,
+            }}
           />
         )}
       </Card>

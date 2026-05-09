@@ -4,6 +4,7 @@ import { ThemeProvider, ToastProvider } from "./components/ui";
 import { AppLayout } from "./layouts/AppLayout";
 import { LandingNavbarPreviewPage } from "./pages/LandingNavbarPreviewPage";
 import { SharedComponentsPage } from "./pages/SharedComponentsPage";
+import { StoqrPage } from "./pages/StoqrPage";
 
 function RoutedApp() {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ function RoutedApp() {
                 path="/preview/landing-navbar"
                 element={<LandingNavbarPreviewPage />}
               />
+              <Route path="/preview/stoqr" element={<StoqrPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

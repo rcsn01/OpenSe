@@ -131,8 +131,9 @@ describe("AlertsPage", () => {
       screen.getByText("Out of Stock: Premium Widget"),
     ).toBeInTheDocument();
     expect(within(alertsFeedTab).getByText("7")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Alert category filter" }),
+      screen.getByRole("button", { name: "Stock & Inventory" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Mark Read" }),
@@ -144,7 +145,7 @@ describe("AlertsPage", () => {
     await user.click(screen.getByLabelText("Select all visible alerts"));
 
     expect(
-      screen.queryByRole("button", { name: "Alert category filter" }),
+      screen.queryByRole("button", { name: "Stock & Inventory" }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Mark Read" }),
@@ -218,14 +219,11 @@ describe("AlertsPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("filters the feed using the shared filter dropdown", async () => {
+  it("filters the feed using the shared filter buttons", async () => {
     const user = userEvent.setup();
 
     renderAlertsRoute("/alerts/feed");
 
-    await user.click(
-      screen.getByRole("button", { name: "Alert category filter" }),
-    );
     await user.click(screen.getByRole("button", { name: "Stock & Inventory" }));
 
     expect(screen.getByText("Showing 2 of 7 alerts")).toBeInTheDocument();
@@ -239,9 +237,7 @@ describe("AlertsPage", () => {
       screen.queryByText("PO Delayed: Alpha Supplies"),
     ).not.toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "Clear Stock & Inventory filter" }),
-    );
+    await user.click(screen.getByRole("button", { name: "All" }));
 
     expect(screen.getByText("Showing 7 of 7 alerts")).toBeInTheDocument();
   });

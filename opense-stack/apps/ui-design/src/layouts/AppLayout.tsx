@@ -18,6 +18,7 @@ import {
   Layers,
   Moon,
   Palette,
+  Package,
   SlidersHorizontal,
   Sparkles,
   SunMedium,
@@ -80,6 +81,11 @@ const previewItems = [
     path: "/preview/landing-navbar",
     label: "Landing Navbar",
     icon: <LayoutPanelTop className="h-4 w-4" />,
+  },
+  {
+    path: "/preview/stoqr",
+    label: "Stoqr Page",
+    icon: <Package className="h-4 w-4" />,
   },
 ];
 

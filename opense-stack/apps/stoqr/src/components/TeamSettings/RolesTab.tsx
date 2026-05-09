@@ -66,8 +66,8 @@ export const RolesTab = ({
 
   return (
     <OrganisationPermissionsPanel
-      title="Organisation Permissions"
-      description="Manage StoQR roles and access permissions."
+      title=""
+      description=""
       roles={filteredRoles}
       permissions={filteredPermissions}
       loadingRoles={loadingRoles}

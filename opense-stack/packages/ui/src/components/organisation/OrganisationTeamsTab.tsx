@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { UserPlus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/Dialog'
 import { Input, Select } from '../ui/Input'
@@ -73,6 +73,7 @@ export function OrganisationTeamsTab({
       displayName: member.displayName,
       subtitle: member.subtitle,
       initials: member.initials,
+      roleSortValue: roles.find((role) => role.id === member.roleId)?.name ?? member.roleId ?? 'Member',
       roleContent: editable ? (
         <Select
           value={member.roleId ?? ''}
@@ -89,7 +90,7 @@ export function OrganisationTeamsTab({
   })
 
   const filterOptions = [
-    { value: 'all', label: 'All Roles' },
+    { value: 'all', label: 'All' },
     ...roles.map((role) => ({ value: role.id, label: role.name })),
   ]
 
@@ -111,15 +112,15 @@ export function OrganisationTeamsTab({
         filterOptions={filterOptions}
         canManageTeam={canManageTeam}
         onInviteClick={onInvite ? () => setIsInviteModalOpen(true) : undefined}
-        inviteLabel="Invite Member"
-        inviteIcon={<UserPlus className="w-4 h-4 mr-2" />}
+        inviteLabel="Invite Members"
+        inviteIcon={<Plus className="h-4 w-4" />}
         tableContent={
           rows.length === 0 ? (
             <div className="p-12">
               <EmptyState title={emptyStateTitle} description={emptyStateDescription} />
             </div>
           ) : (
-            <OrganisationMembersTable rows={rows} containerClassName="overflow-hidden" />
+            <OrganisationMembersTable rows={rows} containerClassName="flex min-h-0 flex-1 overflow-hidden" />
           )
         }
       />

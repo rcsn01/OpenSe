@@ -4,8 +4,8 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { Camera, CameraOff, ScanBarcode } from 'lucide-react'
 import { ContentTabs } from '@repo/ui'
 import { useCompany } from '../contexts/CompanyContext'
-import { BasePage } from '../components/BasePage'
-import { usePageTopBarSearch, useTopBarSearchValue } from '../components/Search/TopBarSearch'
+import { StoqrPageShell } from '../components/StoqrPageShell'
+import { useTopBarSearchValue } from '../components/Search/TopBarSearch'
 import { QuickScanTab } from '../components/Scan/QuickScanTab'
 import { ScanHistoryTab } from '../components/Scan/ScanHistoryTab'
 import { toast } from 'sonner'
@@ -84,7 +84,7 @@ export const ScanPage = () => {
     setEntryMethod('manual')
   }, [])
 
-  usePageTopBarSearch(useMemo(() => (
+  const searchConfig = useMemo(() => (
     activeTab === 'scan-actions'
       ? {
           searchKey: 'scan-actions',
@@ -104,7 +104,7 @@ export const ScanPage = () => {
           ],
           suggestions: historySuggestions,
         }
-  ), [activeTab, handleProductSuggestionSelect, historySuggestions, productSuggestions]))
+  ), [activeTab, handleProductSuggestionSelect, historySuggestions, productSuggestions])
 
   useEffect(() => {
     return () => {
@@ -170,16 +170,17 @@ export const ScanPage = () => {
       )
       
       setIsScanning(true)
-    } catch (error: any) {
+    } catch (error) {
       console.error("Camera start failed", error)
-      toast.error(`Camera error: ${error.message || 'Could not start camera'}`)
+      toast.error(`Camera error: ${error instanceof Error ? error.message : 'Could not start camera'}`)
       setIsScanning(false)
     }
   }, [scanValue, stopCamera])
 
   return (
-    <BasePage
+    <StoqrPageShell
       companyId={companyId}
+      search={searchConfig}
       isLoading={false}
       contentStyle={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}
       containerClassName="stack"
@@ -237,6 +238,6 @@ export const ScanPage = () => {
           },
         ]}
       />
-    </BasePage>
+    </StoqrPageShell>
   )
 }

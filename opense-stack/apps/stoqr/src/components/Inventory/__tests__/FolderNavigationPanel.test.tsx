@@ -178,8 +178,12 @@ describe('FolderNavigationPanel', () => {
     expect(parentRow).not.toBeNull()
     expect(createRow).not.toBeNull()
     expect(childRow).not.toBeNull()
-    expect(parentRow?.compareDocumentPosition(createRow as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(createRow?.compareDocumentPosition(childRow as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    if (!parentRow || !createRow || !childRow) {
+      throw new Error('Expected folder rows to render')
+    }
+
+    expect(parentRow.compareDocumentPosition(createRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(createRow.compareDocumentPosition(childRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('calls onSelectFolder when a folder in the tree is clicked', () => {

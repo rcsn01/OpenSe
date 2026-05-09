@@ -46,8 +46,8 @@ export const ProcurementPage = () => {
       companyId={companyId}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
-      contentClassName="px-2 pb-8 pt-[18px]"
-      containerClassName="[&>*]:min-w-0 flex min-h-0 min-w-0 flex-1 flex-col gap-7 text-[var(--color-foreground)]"
+      contentClassName="flex h-full min-h-0 overflow-hidden px-2 pb-8 pt-[18px]"
+      containerClassName="[&>*]:min-w-0 flex h-full min-h-0 min-w-0 flex-1 flex-col gap-7 overflow-hidden text-[var(--color-foreground)]"
     >
       <PageAvailabilityGuard companyId={companyId} feature="procurement">
         <ContentTabs
@@ -55,6 +55,8 @@ export const ProcurementPage = () => {
           activeTab={activeTab}
           onTabChange={(nextTab) => navigate(`/procurement/${nextTab}`)}
           bottomSpacing
+          className="overflow-hidden"
+          contentClassName="overflow-hidden"
         />
       </PageAvailabilityGuard>
     </BasePage>

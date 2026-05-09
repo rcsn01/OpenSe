@@ -4,12 +4,22 @@ import {
   Button,
   Tooltip,
   Body,
+  Badge,
   Avatar,
   AvatarGroup,
   Card,
   Container,
   VStack,
   HStack,
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Pagination,
   StockStatusFilterDropdown,
   AddFilterDropdown,
   InventoryViewToggle,
@@ -20,6 +30,7 @@ import { Section, SubSection } from '../components/shared/PageSection'
 type PurchaseOrderStatus = 'Delayed' | 'Pending' | 'On track'
 
 type PurchaseOrderSortField = 'poNumber' | 'vendor' | 'items' | 'value' | 'expected' | 'status'
+type PurchaseOrderFilter = 'all' | PurchaseOrderStatus
 
 type PurchaseOrderRow = {
   poNumber: string
@@ -157,6 +168,13 @@ const addFilterItems = [
 const getOptionLabel = (options: { value: string; label: string }[], value: string) =>
   options.find((option) => option.value === value)?.label ?? value
 
+const tableFilterOptions: Array<{ value: PurchaseOrderFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'Delayed', label: 'Delayed' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'On track', label: 'On track' },
+]
+
 export function DataDisplayPage() {
   const [stockStatus, setStockStatus] = useState(stockStatusOptions[0].value)
   const [nextFilterField, setNextFilterField] = useState(addFilterItems[0].label)
@@ -164,21 +182,31 @@ export function DataDisplayPage() {
   const [combinedStockStatus, setCombinedStockStatus] = useState(stockStatusOptions[0].value)
   const [combinedNextFilterField, setCombinedNextFilterField] = useState(addFilterItems[0].label)
   const [combinedView, setCombinedView] = useState<'list' | 'grid'>('list')
+  const [tableFilter, setTableFilter] = useState<PurchaseOrderFilter>('all')
   const [tablePage, setTablePage] = useState(1)
   const [tablePageSize, setTablePageSize] = useState(10)
   const [tableSortField, setTableSortField] = useState<PurchaseOrderSortField | null>(null)
   const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [standalonePage, setStandalonePage] = useState(1)
 
-  const sortedTableRows = useMemo(() => {
-    if (!tableSortField) {
+  const filteredTableRows = useMemo(() => {
+    if (tableFilter === 'all') {
       return purchaseOrderRows
     }
 
-    return [...purchaseOrderRows].sort((left, right) => {
+    return purchaseOrderRows.filter((row) => row.status === tableFilter)
+  }, [tableFilter])
+
+  const sortedTableRows = useMemo(() => {
+    if (!tableSortField) {
+      return filteredTableRows
+    }
+
+    return [...filteredTableRows].sort((left, right) => {
       const comparison = comparePurchaseOrders(left, right, tableSortField)
       return tableSortDirection === 'asc' ? comparison : -comparison
     })
-  }, [tableSortDirection, tableSortField])
+  }, [filteredTableRows, tableSortDirection, tableSortField])
 
   const pagedTableRows = useMemo(() => {
     const startIndex = (tablePage - 1) * tablePageSize
@@ -200,6 +228,32 @@ export function DataDisplayPage() {
     setTablePageSize(pageSize)
     setTablePage(1)
   }
+
+  const handleTableFilterChange = (filter: PurchaseOrderFilter) => {
+    setTableFilter(filter)
+    setTablePage(1)
+  }
+
+  const tableTopRow = (
+    <HStack wrap align="center" justify="between" className="gap-3">
+      <HStack wrap align="center" className="gap-2">
+        {tableFilterOptions.map((option) => (
+          <Button
+            key={option.value}
+            type="button"
+            variant={tableFilter === option.value ? 'secondary' : 'ghost'}
+            size="xs"
+            onClick={() => handleTableFilterChange(option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </HStack>
+      <Badge variant="secondary" size="sm">
+        {filteredTableRows.length} orders
+      </Badge>
+    </HStack>
+  )
 
   return (
     <Container size="lg" className="py-8">
@@ -301,6 +355,9 @@ export function DataDisplayPage() {
               rows={pagedTableRows}
               getRowId={(row) => row.poNumber}
               minTableWidth={860}
+              topRow={tableTopRow}
+              topRowClassName="bg-white"
+              topRowCellClassName="border-b border-[#d9e2ef] px-4 py-3"
               sortField={tableSortField}
               sortDirection={tableSortDirection}
               onSortChange={handleTableSort}
@@ -309,13 +366,73 @@ export function DataDisplayPage() {
               tableClassName="bg-white"
               pagination={{
                 currentPage: tablePage,
-                totalItems: purchaseOrderRows.length,
+                totalItems: filteredTableRows.length,
                 itemsPerPage: tablePageSize,
                 onPageChange: setTablePage,
                 onItemsPerPageChange: handlePageSizeChange,
                 pageSizeOptions: [10, 20, 30, 50],
               }}
               footerClassName="border-[#d9e2ef] bg-white px-6 py-4"
+            />
+          </Card>
+        </SubSection>
+
+        <SubSection title="Table Primitives">
+          <VStack>
+            <Table>
+              <TableCaption>Shared table primitives</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Team</TableHead>
+                  <TableHead>Owner</TableHead>
+                  <TableHead>Updated</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell>Operations</TableCell>
+                  <TableCell>Jordan Lee</TableCell>
+                  <TableCell>Today</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Warehouse</TableCell>
+                  <TableCell>Riley Patel</TableCell>
+                  <TableCell>Yesterday</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+
+            <TableContainer>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Metric</TableHead>
+                    <TableHead className="text-right">Value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Open orders</TableCell>
+                    <TableCell className="text-right">49</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Late orders</TableCell>
+                    <TableCell className="text-right">5</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </VStack>
+        </SubSection>
+
+        <SubSection title="Pagination">
+          <Card>
+            <Pagination
+              currentPage={standalonePage}
+              totalPages={12}
+              totalItems={118}
+              itemsPerPage={10}
+              onPageChange={setStandalonePage}
             />
           </Card>
         </SubSection>

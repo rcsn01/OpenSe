@@ -39,7 +39,7 @@ type TopBarSearchContextValue = {
 
 const TopBarSearchContext = createContext<TopBarSearchContextValue | null>(null)
 
-const noopSetSearchValue = (_value: string) => undefined
+const noopSetSearchValue = () => undefined
 
 const areSearchSuggestionsEqual = (left: SearchSuggestion[] = [], right: SearchSuggestion[] = []) => {
   if (left.length !== right.length) return false
@@ -95,6 +95,66 @@ const buildEmptyMessage = (placeholder: string) => (
   `No ${placeholder.toLowerCase().replace(/^search\s+/, '')} found.`
 )
 
+const getRouteFallbackSearchConfig = (pathname: string): PageTopBarSearchConfig | null => {
+  if (pathname === '/inventory' || pathname.startsWith('/inventory/')) {
+    return {
+      searchKey: 'inventory-list',
+      placeholder: 'Search items...',
+    }
+  }
+
+  if (pathname === '/procurement' || pathname.startsWith('/procurement/')) {
+    return {
+      searchKey: 'procurement',
+      placeholder: pathname.includes('/suppliers') ? 'Search suppliers...' : 'Search POs...',
+    }
+  }
+
+  if (pathname === '/alerts' || pathname.startsWith('/alerts/')) {
+    return {
+      searchKey: 'alerts',
+      placeholder: pathname.includes('/rules') ? 'Search alert rules...' : 'Search alerts...',
+    }
+  }
+
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    return {
+      searchKey: 'dashboard',
+      placeholder: 'Search items...',
+    }
+  }
+
+  if (pathname === '/reports' || pathname.startsWith('/reports/')) {
+    return {
+      searchKey: 'reports',
+      placeholder: 'Search reports...',
+    }
+  }
+
+  if (pathname === '/tools/labels' || pathname.startsWith('/tools/labels/')) {
+    return {
+      searchKey: 'label-studio',
+      placeholder: 'Search templates...',
+    }
+  }
+
+  if (pathname === '/scan' || pathname.startsWith('/scan/')) {
+    return {
+      searchKey: 'scanner',
+      placeholder: 'Search products...',
+    }
+  }
+
+  if (pathname === '/settings/organisations' || pathname.startsWith('/settings/organisations/')) {
+    return {
+      searchKey: 'team-settings-teams',
+      placeholder: 'Search team members...',
+    }
+  }
+
+  return null
+}
+
 const useTopBarSearchContext = () => useContext(TopBarSearchContext)
 const useUrlSearchValue = () => {
   const location = useLocation()
@@ -110,7 +170,11 @@ export const TopBarSearchProvider = ({ children }: { children: React.ReactNode }
     () => Array.from(registrations.values()).at(-1) ?? null,
     [registrations],
   )
-  const activeConfig = activeRegistration?.config ?? null
+  const routeFallbackConfig = useMemo(
+    () => getRouteFallbackSearchConfig(location.pathname),
+    [location.pathname],
+  )
+  const activeConfig = activeRegistration?.config ?? routeFallbackConfig
   const urlSearchValue = useMemo(
     () => new URLSearchParams(location.search).get(topBarSearchParamKey) ?? '',
     [location.search],

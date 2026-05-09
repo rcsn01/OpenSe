@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react'
 import { useCompany } from '../contexts/CompanyContext'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ContentTabs } from '@repo/ui'
-import { BasePage } from '../components/BasePage'
+import { StoqrPageShell } from '../components/StoqrPageShell'
 import { TemplateLibraryTab } from '../components/LabelStudio/TemplateLibraryTab'
 import { LabelPreviewBatchTab } from '../components/LabelStudio/LabelPreviewBatchTab'
 import '../components/LabelStudio/LabelStudioSurface.css'
@@ -78,7 +78,7 @@ export const LabelStudioPage = () => {
   }, [activeTab, buildLabelStudioPath, navigate])
 
   return (
-    <BasePage
+    <StoqrPageShell
       companyId={companyId}
       isLoading={false}
       emptyStateTitle="No company selected"
@@ -113,6 +113,6 @@ export const LabelStudioPage = () => {
           },
         ]}
       />
-    </BasePage>
+    </StoqrPageShell>
   )
 }

@@ -14,8 +14,7 @@ import { useNavigate } from "react-router-dom";
 import type { DashboardData } from "../api/dashboard";
 import type { AlertEvent } from "../api/alerts";
 import type { PurchaseOrder, PurchaseOrderItem } from "../api/procurement";
-import { BasePage } from "../components/BasePage";
-import { usePageTopBarSearch } from "../components/Search/TopBarSearch";
+import { StoqrPageShell } from "../components/StoqrPageShell";
 import { useCompany } from "../contexts/CompanyContext";
 import { useAlertEvents } from "../hooks/queries/useAlerts";
 import { useDashboard } from "../hooks/queries/useDashboard";
@@ -450,8 +449,7 @@ export const DashboardPage = () => {
     [data?.products, navigate],
   );
 
-  usePageTopBarSearch(
-    useMemo(() => ({
+  const searchConfig = useMemo(() => ({
       searchKey: "dashboard-items",
       placeholder: "Search items...",
       suggestions: productSearchSuggestions,
@@ -459,8 +457,7 @@ export const DashboardPage = () => {
     }), [
       handleProductSuggestionSelect,
       productSearchSuggestions,
-    ]),
-  );
+    ]);
 
   const pageModel = useMemo(() => {
     if (!data) return null;
@@ -653,8 +650,9 @@ export const DashboardPage = () => {
   );
 
   return (
-    <BasePage
+    <StoqrPageShell
       companyId={companyId}
+      search={searchConfig}
       isLoading={shouldShowLoading}
       emptyStateTitle="Welcome to Open StoQR"
       emptyStateDescription="Select or create a company to load your inventory dashboard."
@@ -825,6 +823,6 @@ export const DashboardPage = () => {
       ) : (
         <div className="empty-state">No dashboard data available.</div>
       )}
-    </BasePage>
+    </StoqrPageShell>
   );
 };

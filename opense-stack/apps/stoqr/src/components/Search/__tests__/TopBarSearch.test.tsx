@@ -123,6 +123,14 @@ const renderSearchRoutes = (initialEntry: string) => render(
         <Route path="/merge" element={<MergeSuggestionsPage />} />
         <Route path="/toggle" element={<ToggleSearchPage />} />
         <Route path="/unstable" element={<UnstableHandlerPage />} />
+        <Route path="/inventory/all" element={<div>Inventory page</div>} />
+        <Route path="/procurement/purchase-orders" element={<div>Procurement page</div>} />
+        <Route path="/alerts/feed" element={<div>Alerts feed page</div>} />
+        <Route path="/alerts/rules" element={<div>Alert rules page</div>} />
+        <Route path="/reports/stock-health" element={<div>Reports page</div>} />
+        <Route path="/tools/labels/templates" element={<div>Label Studio page</div>} />
+        <Route path="/scan/scan-actions" element={<div>Scanner page</div>} />
+        <Route path="/settings/organisations/teams" element={<div>Organisations page</div>} />
         <Route path="/plain" element={<div>Plain page</div>} />
       </Route>
     </Routes>
@@ -203,5 +211,40 @@ describe('TopBarSearchProvider', () => {
 
     expect(screen.getByPlaceholderText('Search unstable...')).toBeInTheDocument()
     expect(screen.getByText('Unstable handler page')).toBeInTheDocument()
+  })
+
+  it('falls back to route search config for searchable shell pages before page registration', () => {
+    renderSearchRoutes('/reports/stock-health')
+
+    expect(screen.getByPlaceholderText('Search reports...')).toBeInTheDocument()
+  })
+
+  it('hydrates route fallback search values from q before page registration', () => {
+    renderSearchRoutes('/inventory/all?q=30123301')
+
+    expect(screen.getByRole('combobox', { name: 'Search items...' })).toHaveValue('30123301')
+    expect(screen.getByTestId('location')).toHaveTextContent('/inventory/all?q=30123301')
+  })
+
+  it('falls back to route search config for tool and settings pages', () => {
+    renderSearchRoutes('/tools/labels/templates')
+    expect(screen.getByPlaceholderText('Search templates...')).toBeInTheDocument()
+
+    renderSearchRoutes('/scan/scan-actions')
+    expect(screen.getByPlaceholderText('Search products...')).toBeInTheDocument()
+
+    renderSearchRoutes('/settings/organisations/teams')
+    expect(screen.getByPlaceholderText('Search team members...')).toBeInTheDocument()
+  })
+
+  it('falls back to route search config for registered app sections', () => {
+    renderSearchRoutes('/procurement/purchase-orders')
+    expect(screen.getByPlaceholderText('Search POs...')).toBeInTheDocument()
+
+    renderSearchRoutes('/alerts/feed')
+    expect(screen.getByPlaceholderText('Search alerts...')).toBeInTheDocument()
+
+    renderSearchRoutes('/alerts/rules')
+    expect(screen.getByPlaceholderText('Search alert rules...')).toBeInTheDocument()
   })
 })
