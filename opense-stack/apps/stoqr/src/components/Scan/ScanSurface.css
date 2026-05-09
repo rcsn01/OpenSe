@@ -1,8 +1,19 @@
 
+.scan-page-tabs,
+.scan-page-tabs-content {
+  min-width: 0;
+}
+
+.scan-page-tabs-content {
+  overflow: hidden;
+}
+
 .scan-tab-view {
   display: flex;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .scan-idle-view,
@@ -12,6 +23,13 @@
   flex: 1;
   min-height: 0;
   flex-direction: column;
+}
+
+.scan-update-view,
+.scan-history-view {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
 }
 
 .scan-view-header {
@@ -58,6 +76,8 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  justify-content: center;
 }
 
 .scan-camera-panel {
@@ -68,7 +88,7 @@
   align-items: center;
   justify-content: center;
   gap: 24px;
-  width: 100%;
+  width: min(100%, 720px);
   padding: 32px 0;
 }
 
@@ -77,13 +97,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(100%, 520px);
-  min-height: 380px;
+  width: min(100%, 560px);
+  min-height: clamp(320px, 48vh, 460px);
   background: transparent;
 }
 
 .scan-camera-frame.is-active {
-  min-height: 420px;
+  min-height: clamp(340px, 52vh, 500px);
   border: 1px solid #edf1f7;
   background: #f8fafc;
   overflow: hidden;
@@ -147,6 +167,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.18s ease;
+  min-height: 44px;
 }
 
 .scan-camera-toggle:hover {
@@ -207,6 +228,10 @@
   display: inline-flex;
 }
 
+.scan-update-back--mobile-inline {
+  display: none;
+}
+
 .scan-update-back-desktop {
   display: none;
   align-items: center;
@@ -254,9 +279,12 @@
 
 .scan-update-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  gap: clamp(28px, 4vw, 56px);
   flex: 1;
   min-height: 0;
+  width: min(100%, 1280px);
+  align-self: center;
 }
 
 .scan-update-main,
@@ -267,19 +295,67 @@
 .scan-update-controls {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 26px;
-  padding-left: 36px;
+  padding-left: clamp(28px, 3vw, 44px);
+  padding-right: clamp(28px, 3vw, 44px);
+  padding-bottom: 28px;
   border-left: 1px solid #edf1f7;
 }
 
 .scan-product-summary {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  gap: clamp(20px, 3vw, 32px);
+  align-items: center;
   padding-bottom: 26px;
   margin-bottom: 26px;
   border-bottom: 1px solid #edf1f7;
 }
 
+.scan-product-photo-card {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid #edf1f7;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.scan-product-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.scan-product-photo-placeholder {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  text-align: center;
+  color: #98a4b9;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.scan-product-identity {
+  min-width: 0;
+}
+
+.scan-product-kicker-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .scan-product-sku {
-  margin: 0 0 12px;
+  margin: 0;
   color: #9aa6bb;
   font-size: 0.76rem;
   font-weight: 700;
@@ -293,7 +369,8 @@
   font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 300;
   letter-spacing: -0.06em;
-  line-height: 0.96;
+  line-height: 1;
+  overflow-wrap: anywhere;
 }
 
 .scan-product-meta-grid {
@@ -334,6 +411,10 @@
   margin-bottom: 0;
 }
 
+.scan-update-fields-row {
+  display: block;
+}
+
 .scan-update-label {
   margin: 0 0 18px;
   color: #a0a9bc;
@@ -353,13 +434,34 @@
   gap: 16px 28px;
 }
 
+.scan-reason-select {
+  display: none;
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  color: #10223d;
+  padding: 0 14px;
+  font-size: 0.95rem;
+}
+
+.scan-reason-select:focus {
+  outline: none;
+}
+
 .scan-reason-option {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   color: #10223d;
   font-size: 1rem;
   cursor: pointer;
+}
+
+.scan-reason-option span {
+  min-width: 0;
 }
 
 .scan-reason-option input {
@@ -540,6 +642,7 @@
 .scan-history-mobile-list {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .scan-history-mobile-item {
@@ -597,6 +700,7 @@
 
 .scan-history-desktop-shell {
   display: none;
+  min-height: 0;
 }
 
 @media (min-width: 861px) {
@@ -620,14 +724,19 @@
 @media (max-width: 860px) {
   .scan-update-shell {
     grid-template-columns: 1fr;
+    gap: 0;
+    align-self: stretch;
   }
 
   .scan-update-controls {
+    justify-content: flex-start;
     padding-left: 0;
-    margin-top: 28px;
-    padding-top: 28px;
+    padding-right: 0;
+    margin-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
     border-left: none;
-    border-top: 1px solid #edf1f7;
+    border-top: none;
   }
 
   .scan-history-desktop-shell {
@@ -636,6 +745,15 @@
 }
 
 @media (max-width: 640px) {
+  .scan-page-tabs {
+    gap: 0;
+  }
+
+  .scan-update-view,
+  .scan-history-view {
+    padding-right: 0;
+  }
+
   .scan-view-header {
     padding-bottom: 16px;
   }
@@ -646,42 +764,168 @@
 
   .scan-camera-panel {
     justify-content: center;
-    padding: 48px 0 20px;
+    width: 100%;
+    padding: 28px 0 20px;
+    gap: 20px;
   }
 
   .scan-camera-frame {
     width: 100%;
-    min-height: 300px;
+    min-height: min(320px, 46vh);
   }
 
   .scan-camera-frame.is-active {
-    min-height: 340px;
+    min-height: min(360px, 52vh);
+  }
+
+  .scan-camera-placeholder {
+    padding: 18px;
+  }
+
+  .scan-camera-placeholder-icon {
+    width: 68px;
+    height: 68px;
+  }
+
+  .scan-camera-toggle {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .scan-update-topbar {
+    display: none;
+  }
+
+  .scan-update-eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
   }
 
   .scan-update-main,
   .scan-update-controls {
-    padding-top: 24px;
+    padding-top: 22px;
   }
 
   .scan-product-name {
-    font-size: 2.25rem;
+    font-size: clamp(1.65rem, 9vw, 2.25rem);
+    letter-spacing: -0.04em;
+  }
+
+  .scan-product-summary {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 112px);
+    gap: 16px;
+    align-items: start;
+    padding-bottom: 22px;
+    margin-bottom: 22px;
+  }
+
+  .scan-product-photo-card {
+    order: 2;
+  }
+
+  .scan-product-identity {
+    order: 1;
+  }
+
+  .scan-update-back--mobile-inline {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    color: #8b98ad;
+  }
+
+  .scan-product-kicker-row {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .scan-product-photo-card {
+    border-radius: 14px;
+  }
+
+  .scan-product-photo-placeholder {
+    padding: 10px;
+    font-size: 0.72rem;
+  }
+
+  .scan-product-meta-row {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    gap: 14px;
+    align-items: baseline;
+  }
+
+  .scan-product-meta-grid {
+    gap: 10px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+
+  .scan-product-meta-row dd {
+    text-align: right;
   }
 
   .scan-reason-grid {
-    gap: 14px 20px;
+    display: none;
+  }
+
+  .scan-reason-select {
+    display: block;
+  }
+
+  .scan-update-fields-row {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: 14px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #edf1f7;
+  }
+
+  .scan-update-fields-row .scan-update-section {
+    min-width: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-bottom: none;
+  }
+
+  .scan-update-fields-row .scan-update-label {
+    margin-bottom: 8px;
+  }
+
+  .scan-update-fields-row .scan-update-notes {
+    min-height: 44px;
+    padding: 9px 0 8px;
+    line-height: 1.35;
   }
 
   .scan-quantity-row {
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
     gap: 16px;
     max-width: none;
   }
 
   .scan-quantity-button {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .scan-quantity-input {
+    font-size: clamp(2.75rem, 18vw, 4rem);
+    letter-spacing: -0.05em;
   }
 
   .scan-quick-adjust-grid {
+    grid-template-columns: repeat(4, minmax(44px, 1fr));
     max-width: none;
+  }
+
+  .scan-history-mobile-item {
+    gap: 14px;
+    padding: 16px 0;
+  }
+
+  .scan-history-mobile-name {
+    font-size: 0.98rem;
   }
 }
