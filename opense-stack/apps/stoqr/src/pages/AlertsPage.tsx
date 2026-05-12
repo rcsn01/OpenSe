@@ -17,14 +17,10 @@ import {
   CheckCheck,
   Info,
   Mail,
-  MessageSquareText,
-  Trash2,
+  Plus,
+  Settings2,
 } from "lucide-react";
-import {
-  Navigate,
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { BasePage } from "../components/BasePage";
 import { PageAvailabilityGuard } from "../components/PageAvailabilityGuard";
 import {
@@ -33,146 +29,35 @@ import {
 } from "../components/Search/TopBarSearch";
 import { useCompany } from "../contexts/CompanyContext";
 import {
+  useAlertEvents,
+  useAlertDeliveryLogs,
+  useAlertRules,
+  useCreateAlertRule,
+  useDispatchAlertEmails,
+  useUpdateAlertEventStatus,
+  useUpdateAlertRule,
+  useUpdateAlertRuleEnabled,
+} from "../hooks/queries/useAlerts";
+import { useTeamSettingsData } from "../hooks/queries/useTeamSettings";
+import {
   fuzzyRankings,
   fuzzySearchItems,
   normalizePageSearchTerm,
 } from "../lib/pageSearch";
+import type { AlertEvent, AlertRule } from "../api/alerts";
+import type { Role } from "../api/teamSettings";
 
 type AlertsTab = "feed" | "rules";
 type FeedCategory = "all" | "stock" | "procurement" | "system";
-type FeedSeverity = "critical" | "warning" | "info";
-type AlertSortKey = "title" | "severity" | "category" | "status";
-type NotificationRouteKey = "inApp" | "emailDigest" | "slack";
+type FeedSeverity = AlertEvent["severity"];
+type AlertSortKey = "message" | "severity" | "category" | "status";
 
-type FeedAlert = {
-  id: string;
-  code: string;
-  timeLabel: string;
-  title: string;
-  description: string;
-  severity: FeedSeverity;
-  category: FeedCategory;
-  actionLabel: string;
-  isRead: boolean;
-};
-
-const alertFilters: Array<{ id: FeedCategory; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "stock", label: "Stock & Inventory" },
-  { id: "procurement", label: "Procurement & Orders" },
-  { id: "system", label: "System & Operations" },
-];
-
-const alertCategoryLabel: Record<FeedCategory, string> = {
-  all: "All",
-  stock: "Stock & Inventory",
-  procurement: "Procurement & Orders",
-  system: "System & Operations",
-};
-
-const alertTableHeaderClassName =
-  "border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase";
-const alertTableCellClassName = "border-b border-[#d9e2ef] px-4 py-3";
-const alertTableSelectionHeaderClassName =
-  "border-b border-[#d9e2ef] bg-white px-0 py-4 uppercase";
-const alertTableSelectionCellClassName = "border-b border-[#d9e2ef] px-0 py-3";
-
-const initialAlerts: FeedAlert[] = [
-  {
-    id: "alert-1001",
-    code: "ALT-1001",
-    timeLabel: "10 mins ago",
-    title: "Out of Stock: Premium Widget",
-    description: "SKU-7782 has reached 0 units. Minimum threshold is 50.",
-    severity: "critical",
-    category: "stock",
-    actionLabel: "Draft PO",
-    isRead: false,
-  },
-  {
-    id: "alert-1002",
-    code: "ALT-1002",
-    timeLabel: "2 hours ago",
-    title: "PO Delayed: Alpha Supplies",
-    description: "PO-2024-089 has passed Expected Delivery Date (Oct 12).",
-    severity: "warning",
-    category: "procurement",
-    actionLabel: "View PO",
-    isRead: false,
-  },
-  {
-    id: "alert-1003",
-    code: "ALT-1003",
-    timeLabel: "15 mins ago",
-    title: "Hardware Offline: Main Dock Scanner",
-    description: 'Scanner device "Dock-Scan-01" lost connection 15 mins ago.',
-    severity: "critical",
-    category: "system",
-    actionLabel: "Resolve",
-    isRead: false,
-  },
-  {
-    id: "alert-1004",
-    code: "ALT-1004",
-    timeLabel: "1 day ago",
-    title: "Expiry Warning: Organic Solvent",
-    description: "Batch #B-998 (SKU-4412) expires in 7 days.",
-    severity: "warning",
-    category: "stock",
-    actionLabel: "Draft PO",
-    isRead: false,
-  },
-  {
-    id: "alert-1005",
-    code: "ALT-1005",
-    timeLabel: "3 hours ago",
-    title: "Receiving Discrepancy",
-    description: "Scanned qty (45) does not match PO-2024-090 qty (50).",
-    severity: "info",
-    category: "procurement",
-    actionLabel: "View PO",
-    isRead: false,
-  },
-  {
-    id: "alert-1006",
-    code: "ALT-1006",
-    timeLabel: "1 day ago",
-    title: "Admin Settings Changed",
-    description:
-      'User "Admin_Sarah" updated global organisation working hours.',
-    severity: "info",
-    category: "system",
-    actionLabel: "Resolve",
-    isRead: false,
-  },
-  {
-    id: "alert-1007",
-    code: "ALT-1007",
-    timeLabel: "4 hours ago",
-    title: "Integration Error: Xero Sync",
-    description:
-      "Failed to push 12 invoices to Xero via API. Check connection.",
-    severity: "critical",
-    category: "system",
-    actionLabel: "Resolve",
-    isRead: false,
-  },
-];
-
-const initialThresholds = {
-  lowStock: "50",
-  expiryWindow: "14",
-};
-
-const initialRouting: Record<NotificationRouteKey, boolean> = {
-  inApp: true,
-  emailDigest: true,
-  slack: false,
-};
-
-const initialSubscriptions = {
-  procurement: "purchasing-managers",
-  system: "it-admins",
+type RuleFormState = {
+  id: string | null;
+  name: string;
+  recipientRoleIds: string[];
+  emailEnabled: boolean;
+  enabled: boolean;
 };
 
 const legacyTabRedirects: Record<string, AlertsTab> = {
@@ -181,290 +66,246 @@ const legacyTabRedirects: Record<string, AlertsTab> = {
   history: "feed",
 };
 
+const feedPageSize = 8;
+const LOW_STOCK_RULE_CONDITION = { thresholdSource: "product_reorder_point" };
+
 const severityVariant = {
+  low: "secondary",
+  medium: "info",
+  high: "warning",
   critical: "destructive",
-  warning: "warning",
-  info: "info",
 } as const;
 
 const severityLabel = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
   critical: "Critical",
-  warning: "Warning",
-  info: "Info",
 } as const;
 
-const feedPageSize = 5;
+const alertCategoryLabel: Record<FeedCategory, string> = {
+  all: "All",
+  stock: "Stock & Inventory",
+  procurement: "Procurement & Orders",
+  system: "System & Operations",
+};
 
-const roleSubscriptionOptions = {
-  procurement: [
-    { value: "purchasing-managers", label: "Purchasing Managers only" },
-    { value: "buyers-and-managers", label: "Buyers and Purchasing Managers" },
-    { value: "ops-and-procurement", label: "Operations and Procurement leads" },
-  ],
-  system: [
-    { value: "it-admins", label: "IT & Admins" },
-    { value: "warehouse-leads", label: "Warehouse Leads and IT" },
-    { value: "admins-only", label: "Admins only" },
-  ],
-} as const;
+const feedFilters: Array<{ id: FeedCategory; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "stock", label: "Stock & Inventory" },
+  { id: "procurement", label: "Procurement & Orders" },
+  { id: "system", label: "System & Operations" },
+];
 
-const getAlertSortValue = (alert: FeedAlert, sortKey: AlertSortKey) => {
-  if (sortKey === "severity") return severityLabel[alert.severity];
-  if (sortKey === "category") return alertCategoryLabel[alert.category];
-  if (sortKey === "status") return alert.isRead ? "Read" : "Unread";
+const emptyRuleForm: RuleFormState = {
+  id: null,
+  name: "Low stock alert",
+  recipientRoleIds: [],
+  emailEnabled: false,
+  enabled: true,
+};
 
-  return alert.title;
+const formatDateTime = (value: string) =>
+  new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+
+const getEventCategory = (event: AlertEvent): FeedCategory => {
+  if (event.alert_type === "low_stock" || event.alert_type === "expiration") {
+    return "stock";
+  }
+  if (event.alert_type === "reorder_point") return "procurement";
+  return "system";
+};
+
+const getAlertSortValue = (event: AlertEvent, sortKey: AlertSortKey) => {
+  if (sortKey === "severity") return severityLabel[event.severity];
+  if (sortKey === "category") return alertCategoryLabel[getEventCategory(event)];
+  if (sortKey === "status") return event.status;
+  return event.message;
 };
 
 const renderSeverityIcon = (severity: FeedSeverity) => {
   if (severity === "critical")
     return <AlertCircle size={12} aria-hidden="true" />;
-  if (severity === "warning")
-    return <AlertTriangle size={12} aria-hidden="true" />;
+  if (severity === "high") return <AlertTriangle size={12} aria-hidden="true" />;
   return <Info size={12} aria-hidden="true" />;
 };
+
+const roleToken = (roleId: string) => `role:${roleId}`;
+
+const parseRecipientRoleIds = (rule: AlertRule) =>
+  rule.recipients
+    .map((recipient) => recipient.replace(/^role:/, ""))
+    .filter(Boolean);
+
+const getRuleRoleNames = (rule: AlertRule, rolesById: Map<string, Role>) => {
+  const names = parseRecipientRoleIds(rule)
+    .map((roleId) => rolesById.get(roleId)?.name ?? "Unknown role")
+    .filter(Boolean);
+
+  return names.length ? names.join(", ") : "No roles selected";
+};
+
+const getRuleChannelsLabel = (rule: AlertRule) => {
+  const channels = [];
+  if (rule.delivery_channels.includes("in_app")) channels.push("In-app");
+  if (rule.delivery_channels.includes("email")) channels.push("Email");
+  if (rule.delivery_channels.includes("push")) channels.push("Push");
+  return channels.length ? channels.join(", ") : "No channels";
+};
+
+const getPrimaryLowStockRule = (rules: AlertRule[]) =>
+  rules.find((rule) => rule.alert_type === "low_stock") ?? null;
 
 export const AlertsPage = () => {
   const { companyId } = useCompany();
   const navigate = useNavigate();
   const { searchValue } = useTopBarSearchValue();
   const { tab } = useParams<{ tab?: string }>();
-  const [alerts, setAlerts] = useState(initialAlerts);
-  const [activeFilter, setActiveFilter] = useState<FeedCategory>("all");
-  const [selectedAlertIds, setSelectedAlertIds] = useState<string[]>([]);
-  const [tablePage, setTablePage] = useState(1);
-  const [tableSortField, setTableSortField] = useState<AlertSortKey>("title");
-  const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">(
-    "asc",
-  );
-  const [thresholds, setThresholds] = useState(initialThresholds);
-  const [routing, setRouting] = useState(initialRouting);
-  const [subscriptions, setSubscriptions] = useState(initialSubscriptions);
   const activeTab = tab === "rules" ? "rules" : "feed";
   const feedSearchTerm = activeTab === "feed" ? searchValue : "";
   const rulesSearchTerm = activeTab === "rules" ? searchValue : "";
-  const hasSelectedAlerts = selectedAlertIds.length > 0;
-  const selectedAlertIdSet = useMemo(
-    () => new Set(selectedAlertIds),
-    [selectedAlertIds],
+  const normalizedSearchTerm = normalizePageSearchTerm(feedSearchTerm);
+  const normalizedRulesSearchTerm = normalizePageSearchTerm(rulesSearchTerm);
+
+  const { data: events = [], isLoading: loadingEvents } = useAlertEvents(companyId);
+  const { data: deliveries = [], isLoading: loadingDeliveries } =
+    useAlertDeliveryLogs(companyId);
+  const { data: rules = [], isLoading: loadingRules } = useAlertRules(companyId);
+  const { data: teamSettings, isLoading: loadingTeamSettings } =
+    useTeamSettingsData(companyId);
+  const createRuleMutation = useCreateAlertRule(companyId);
+  const updateRuleMutation = useUpdateAlertRule(companyId);
+  const updateRuleEnabledMutation = useUpdateAlertRuleEnabled(companyId);
+  const updateEventStatusMutation = useUpdateAlertEventStatus(companyId);
+  const dispatchEmailMutation = useDispatchAlertEmails(companyId);
+
+  const roles = teamSettings?.roles ?? [];
+  const rolesById = useMemo(
+    () => new Map(roles.map((role) => [role.id, role])),
+    [roles],
+  );
+  const roleOptions = useMemo(
+    () => roles.map((role) => ({ value: role.id, label: role.name })),
+    [roles],
+  );
+
+  const [activeFilter, setActiveFilter] = useState<FeedCategory>("all");
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
+  const [tablePage, setTablePage] = useState(1);
+  const [tableSortField, setTableSortField] = useState<AlertSortKey>("message");
+  const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">(
+    "asc",
+  );
+  const [ruleForm, setRuleForm] = useState<RuleFormState>(emptyRuleForm);
+  const [ruleMessage, setRuleMessage] = useState<string | null>(null);
+  const [dispatchMessage, setDispatchMessage] = useState<string | null>(null);
+
+  const lowStockRules = useMemo(
+    () => rules.filter((rule) => rule.alert_type === "low_stock"),
+    [rules],
+  );
+  const lowStockRule = useMemo(
+    () => getPrimaryLowStockRule(lowStockRules),
+    [lowStockRules],
   );
 
   useEffect(() => {
-    setTablePage(1);
-  }, [feedSearchTerm]);
+    if (!lowStockRule) return;
+    setRuleForm({
+      id: lowStockRule.id,
+      name: lowStockRule.name,
+      recipientRoleIds: parseRecipientRoleIds(lowStockRule),
+      emailEnabled: lowStockRule.delivery_channels.includes("email"),
+      enabled: lowStockRule.enabled,
+    });
+  }, [lowStockRule]);
 
-  const normalizedSearchTerm = normalizePageSearchTerm(feedSearchTerm);
-  const normalizedRulesSearchTerm = normalizePageSearchTerm(rulesSearchTerm);
-  const categoryFilteredAlerts = useMemo(
-    () =>
-      alerts.filter(
-        (alert) => activeFilter === "all" || alert.category === activeFilter,
-      ),
-    [activeFilter, alerts],
+  useEffect(() => {
+    setTablePage(1);
+  }, [feedSearchTerm, activeFilter]);
+
+  const selectedEventIdSet = useMemo(
+    () => new Set(selectedEventIds),
+    [selectedEventIds],
   );
-  const visibleAlerts = useMemo(
+  const hasSelectedEvents = selectedEventIds.length > 0;
+
+  const categoryFilteredEvents = useMemo(
     () =>
-      fuzzySearchItems(categoryFilteredAlerts, normalizedSearchTerm, [
+      events.filter(
+        (event) =>
+          activeFilter === "all" || getEventCategory(event) === activeFilter,
+      ),
+    [activeFilter, events],
+  );
+
+  const visibleEvents = useMemo(
+    () =>
+      fuzzySearchItems(categoryFilteredEvents, normalizedSearchTerm, [
         {
-          key: (alert) => alert.code,
-          maxRanking: fuzzyRankings.STARTS_WITH,
-        },
-        {
-          key: (alert) => alert.title,
+          key: (event) => event.message,
           maxRanking: fuzzyRankings.WORD_STARTS_WITH,
         },
         {
-          key: (alert) => alert.description,
+          key: (event) => event.products?.name ?? "",
           maxRanking: fuzzyRankings.CONTAINS,
         },
         {
-          key: (alert) => severityLabel[alert.severity],
+          key: (event) => event.products?.sku ?? "",
           maxRanking: fuzzyRankings.CONTAINS,
         },
         {
-          key: (alert) => alert.timeLabel,
+          key: (event) => severityLabel[event.severity],
           maxRanking: fuzzyRankings.CONTAINS,
         },
       ]),
-    [categoryFilteredAlerts, normalizedSearchTerm],
+    [categoryFilteredEvents, normalizedSearchTerm],
+  );
+
+  const visibleRules = useMemo(
+    () =>
+      fuzzySearchItems(lowStockRules, normalizedRulesSearchTerm, [
+        {
+          key: (rule) => rule.name,
+          maxRanking: fuzzyRankings.WORD_STARTS_WITH,
+        },
+        {
+          key: (rule) => rule.alert_type.replace(/_/g, " "),
+          maxRanking: fuzzyRankings.CONTAINS,
+        },
+        {
+          key: (rule) => getRuleRoleNames(rule, rolesById),
+          maxRanking: fuzzyRankings.CONTAINS,
+        },
+      ]),
+    [lowStockRules, normalizedRulesSearchTerm, rolesById],
   );
 
   const alertSuggestions = useMemo(
     () =>
-      visibleAlerts.slice(0, 8).map((alert) => ({
-        id: alert.id,
-        title: alert.title,
-        subtitle: `${alert.code} · ${severityLabel[alert.severity]}`,
-        value: alert.title,
-        keywords: [alert.description, alert.category, alert.timeLabel],
+      visibleEvents.slice(0, 8).map((event) => ({
+        id: event.id,
+        title: event.message,
+        subtitle: `${event.products?.sku ?? "No SKU"} · ${severityLabel[event.severity]}`,
+        value: event.message,
         badge: "Alert",
       })),
-    [visibleAlerts],
-  );
-
-  const thresholdRuleItems = useMemo(
-    () => [
-      {
-        id: "rules-threshold-low-stock",
-        key: "lowStock" as const,
-        title: "Default Low Stock Threshold",
-        subtitle: "Alert when any item drops below this quantity.",
-        value: thresholds.lowStock,
-        unitLabel: "units",
-        badge: "Threshold",
-        inputAriaLabel: "Default Low Stock Threshold",
-      },
-      {
-        id: "rules-threshold-expiry-window",
-        key: "expiryWindow" as const,
-        title: "Expiry Warning Window",
-        subtitle: "Days before expiration to trigger an alert.",
-        value: thresholds.expiryWindow,
-        unitLabel: "days",
-        badge: "Threshold",
-        inputAriaLabel: "Expiry Warning Window",
-      },
-    ],
-    [thresholds.expiryWindow, thresholds.lowStock],
-  );
-
-  const routingRuleItems = useMemo(
-    () => [
-      {
-        id: "rules-routing-in-app",
-        key: "inApp" as const,
-        title: "In-App Notifications",
-        subtitle: "Send alerts directly inside StoQR.",
-        badge: "Routing",
-        accentClassName:
-          "bg-[var(--color-info-light)] text-[var(--color-info)]",
-        icon: BellRing,
-        checked: routing.inApp,
-        toggleAriaLabel: "Toggle In-App Notifications",
-      },
-      {
-        id: "rules-routing-email-digest",
-        key: "emailDigest" as const,
-        title: "Email Digest (Daily)",
-        subtitle: "Deliver a daily digest to subscribed teams.",
-        badge: "Routing",
-        accentClassName:
-          "bg-[var(--color-muted)] text-[var(--color-foreground)]",
-        icon: Mail,
-        checked: routing.emailDigest,
-        toggleAriaLabel: "Toggle Email Digest",
-      },
-      {
-        id: "rules-routing-slack",
-        key: "slack" as const,
-        title: "Slack Webhook",
-        subtitle: "#warehouse-alerts",
-        badge: "Routing",
-        accentClassName:
-          "bg-[var(--color-success-light)] text-[var(--color-success)]",
-        icon: MessageSquareText,
-        checked: routing.slack,
-        toggleAriaLabel: "Toggle Slack Webhook",
-      },
-    ],
-    [routing.emailDigest, routing.inApp, routing.slack],
-  );
-
-  const subscriptionRuleItems = useMemo(
-    () => [
-      {
-        id: "rules-subscription-procurement",
-        key: "procurement" as const,
-        title: "Procurement Alerts",
-        subtitle: "Route alerts by department.",
-        badge: "Subscription",
-        value: subscriptions.procurement,
-        options: [...roleSubscriptionOptions.procurement],
-        inputAriaLabel: "Procurement Alerts subscription",
-      },
-      {
-        id: "rules-subscription-system",
-        key: "system" as const,
-        title: "System & Hardware Errors",
-        subtitle: "Route alerts by department.",
-        badge: "Subscription",
-        value: subscriptions.system,
-        options: [...roleSubscriptionOptions.system],
-        inputAriaLabel: "System & Hardware Errors subscription",
-      },
-    ],
-    [subscriptions.procurement, subscriptions.system],
-  );
-
-  const visibleThresholdRules = useMemo(
-    () =>
-      fuzzySearchItems(thresholdRuleItems, normalizedRulesSearchTerm, [
-        {
-          key: (rule) => rule.title,
-          maxRanking: fuzzyRankings.WORD_STARTS_WITH,
-        },
-        {
-          key: (rule) => rule.subtitle,
-          maxRanking: fuzzyRankings.CONTAINS,
-        },
-        {
-          key: (rule) => rule.value,
-          maxRanking: fuzzyRankings.CONTAINS,
-        },
-      ]),
-    [normalizedRulesSearchTerm, thresholdRuleItems],
-  );
-
-  const visibleRoutingRules = useMemo(
-    () =>
-      fuzzySearchItems(routingRuleItems, normalizedRulesSearchTerm, [
-        {
-          key: (rule) => rule.title,
-          maxRanking: fuzzyRankings.WORD_STARTS_WITH,
-        },
-        {
-          key: (rule) => rule.subtitle,
-          maxRanking: fuzzyRankings.CONTAINS,
-        },
-      ]),
-    [normalizedRulesSearchTerm, routingRuleItems],
-  );
-
-  const visibleSubscriptionRules = useMemo(
-    () =>
-      fuzzySearchItems(subscriptionRuleItems, normalizedRulesSearchTerm, [
-        {
-          key: (rule) => rule.title,
-          maxRanking: fuzzyRankings.WORD_STARTS_WITH,
-        },
-        {
-          key: (rule) => rule.subtitle,
-          maxRanking: fuzzyRankings.CONTAINS,
-        },
-        {
-          key: (rule) =>
-            rule.options.find((option) => option.value === rule.value)?.label ??
-            rule.value,
-          maxRanking: fuzzyRankings.CONTAINS,
-        },
-      ]),
-    [normalizedRulesSearchTerm, subscriptionRuleItems],
+    [visibleEvents],
   );
 
   const rulesSuggestions = useMemo(
     () =>
-      [
-        ...thresholdRuleItems,
-        ...routingRuleItems,
-        ...subscriptionRuleItems,
-      ].map((rule) => ({
+      visibleRules.slice(0, 8).map((rule) => ({
         id: rule.id,
-        title: rule.title,
-        subtitle: rule.subtitle,
-        value: rule.title,
-        badge: rule.badge,
+        title: rule.name,
+        subtitle: getRuleRoleNames(rule, rolesById),
+        value: rule.name,
+        badge: "Rule",
       })),
-    [routingRuleItems, subscriptionRuleItems, thresholdRuleItems],
+    [rolesById, visibleRules],
   );
 
   usePageTopBarSearch(
@@ -477,13 +318,6 @@ export const AlertsPage = () => {
           activeTab === "feed"
             ? [
                 {
-                  id: "alerts-critical",
-                  title: "Critical Alerts",
-                  subtitle: "Immediate operational issues",
-                  value: "critical",
-                  badge: "Alert",
-                },
-                {
                   id: "alerts-stock",
                   title: "Stock Alerts",
                   subtitle: "Inventory and replenishment issues",
@@ -491,26 +325,19 @@ export const AlertsPage = () => {
                   badge: "Alert",
                 },
                 {
-                  id: "alerts-system",
-                  title: "System Alerts",
-                  subtitle: "Platform and device notifications",
-                  value: "system",
+                  id: "alerts-critical",
+                  title: "Critical Alerts",
+                  subtitle: "Immediate operational issues",
+                  value: "critical",
                   badge: "Alert",
                 },
               ]
             : [
                 {
-                  id: "alerts-rules-thresholds",
-                  title: "Threshold Settings",
-                  subtitle: "Low stock and expiry warning defaults",
-                  value: "thresholds",
-                  badge: "Rule",
-                },
-                {
-                  id: "alerts-rules-routing",
-                  title: "Notification Routing",
-                  subtitle: "In-app, email, and Slack delivery options",
-                  value: "routing",
+                  id: "alerts-rule-low-stock",
+                  title: "Low stock alert",
+                  subtitle: "Notify roles when stock reaches low stock level",
+                  value: "low stock",
                   badge: "Rule",
                 },
               ],
@@ -529,13 +356,14 @@ export const AlertsPage = () => {
   if (tab !== "feed" && tab !== "rules") {
     return <Navigate to="/alerts/feed" replace />;
   }
+
   const shouldUseSearchRanking =
     normalizedSearchTerm.length > 0 &&
-    tableSortField === "title" &&
+    tableSortField === "message" &&
     tableSortDirection === "asc";
-  const sortedAlerts = shouldUseSearchRanking
-    ? visibleAlerts
-    : [...visibleAlerts].sort((left, right) => {
+  const sortedEvents = shouldUseSearchRanking
+    ? visibleEvents
+    : [...visibleEvents].sort((left, right) => {
         const comparison = getAlertSortValue(
           left,
           tableSortField,
@@ -544,166 +372,30 @@ export const AlertsPage = () => {
       });
   const totalAlertPages = Math.max(
     1,
-    Math.ceil(sortedAlerts.length / feedPageSize),
+    Math.ceil(sortedEvents.length / feedPageSize),
   );
   const currentTablePage = Math.min(tablePage, totalAlertPages);
-  const pagedAlerts = sortedAlerts.slice(
+  const pagedEvents = sortedEvents.slice(
     (currentTablePage - 1) * feedPageSize,
     currentTablePage * feedPageSize,
   );
-  const unreadCount = alerts.filter((alert) => !alert.isRead).length;
-  const alertColumns: Array<DataTableColumn<FeedAlert, AlertSortKey>> = [
-    {
-      id: "title",
-      header: "Alert",
-      sortKey: "title",
-      width: "44%",
-      headerClassName: alertTableHeaderClassName,
-      cellClassName: alertTableCellClassName,
-      renderCell: (alert) => (
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
-            <span className="font-semibold uppercase tracking-[0.08em] text-[var(--color-foreground)]">
-              {alert.code}
-            </span>
-            <span aria-hidden="true">•</span>
-            <span>{alert.timeLabel}</span>
-          </div>
-          <div
-            className={`text-base text-[var(--color-foreground)] ${alert.isRead ? "font-medium" : "font-semibold"}`}
-          >
-            {alert.title}
-          </div>
-          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            {alert.description}
-          </p>
-        </div>
-      ),
-    },
-    {
-      id: "severity",
-      header: "Severity",
-      sortKey: "severity",
-      width: "14%",
-      headerClassName: alertTableHeaderClassName,
-      cellClassName: alertTableCellClassName,
-      renderCell: (alert) => (
-        <Badge
-          variant={severityVariant[alert.severity]}
-          size="md"
-          className="gap-1.5"
-        >
-          {renderSeverityIcon(alert.severity)}
-          {severityLabel[alert.severity]}
-        </Badge>
-      ),
-    },
-    {
-      id: "category",
-      header: "Category",
-      sortKey: "category",
-      width: "16%",
-      headerClassName: alertTableHeaderClassName,
-      cellClassName: alertTableCellClassName,
-      renderCell: (alert) => alertCategoryLabel[alert.category],
-    },
-    {
-      id: "status",
-      header: "Status",
-      sortKey: "status",
-      width: "10%",
-      headerClassName: alertTableHeaderClassName,
-      cellClassName: alertTableCellClassName,
-      renderCell: (alert) => (
-        <Badge variant={alert.isRead ? "secondary" : "success"} size="sm">
-          {alert.isRead ? "Read" : "Unread"}
-        </Badge>
-      ),
-    },
-    {
-      id: "action",
-      header: "",
-      align: "right",
-      width: "12%",
-      sortable: false,
-      headerClassName: alertTableHeaderClassName,
-      cellClassName: alertTableCellClassName,
-      renderCell: (alert) => (
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          className="shadow-none"
-          onClick={(event) => {
-            event.stopPropagation();
-            handleAlertAction(alert.id);
-          }}
-        >
-          {alert.actionLabel}
-        </Button>
-      ),
-    },
-  ];
-
-  const toggleAlertSelection = (alertId: string) => {
-    setSelectedAlertIds((currentIds) => {
-      if (currentIds.includes(alertId)) {
-        return currentIds.filter((currentId) => currentId !== alertId);
-      }
-
-      return [...currentIds, alertId];
-    });
-  };
-
-  const toggleSelectAllPagedAlerts = () => {
-    const visibleIds = pagedAlerts.map((alert) => alert.id);
-    const allPagedAlertsSelected =
-      visibleIds.length > 0 &&
-      visibleIds.every((alertId) => selectedAlertIdSet.has(alertId));
-
-    setSelectedAlertIds((currentIds) => {
-      if (allPagedAlertsSelected) {
-        return currentIds.filter((currentId) => !visibleIds.includes(currentId));
-      }
-
-      return [...new Set([...currentIds, ...visibleIds])];
-    });
-  };
-
-  const markSelectedAsRead = () => {
-    if (selectedAlertIds.length === 0) return;
-
-    setAlerts((currentAlerts) =>
-      currentAlerts.map((alert) =>
-        selectedAlertIds.includes(alert.id)
-          ? { ...alert, isRead: true }
-          : alert,
-      ),
-    );
-    setSelectedAlertIds([]);
-  };
-
-  const dismissSelectedAlerts = () => {
-    if (selectedAlertIds.length === 0) return;
-
-    setAlerts((currentAlerts) =>
-      currentAlerts.filter((alert) => !selectedAlertIds.includes(alert.id)),
-    );
-    setSelectedAlertIds([]);
-  };
-
-  const handleAlertAction = (alertId: string) => {
-    setAlerts((currentAlerts) =>
-      currentAlerts.map((alert) =>
-        alert.id === alertId ? { ...alert, isRead: true } : alert,
-      ),
-    );
-  };
-
-  const handleFilterChange = (value: string) => {
-    setActiveFilter(value as FeedCategory);
-    setTablePage(1);
-  };
+  const openCount = events.filter((event) => event.status === "open").length;
+  const emailDeliveries = deliveries.filter((delivery) => delivery.channel === "email");
+  const pendingEmailCount = emailDeliveries.filter(
+    (delivery) => delivery.status === "pending",
+  ).length;
+  const sendingEmailCount = emailDeliveries.filter(
+    (delivery) => delivery.status === "sending",
+  ).length;
+  const sentEmailCount = emailDeliveries.filter(
+    (delivery) => delivery.status === "sent",
+  ).length;
+  const failedEmailCount = emailDeliveries.filter(
+    (delivery) => delivery.status === "failed",
+  ).length;
+  const latestFailedEmail = emailDeliveries.find(
+    (delivery) => delivery.status === "failed" && delivery.error_message,
+  );
 
   const handleTableSort = (field: AlertSortKey) => {
     if (tableSortField === field) {
@@ -716,6 +408,276 @@ export const AlertsPage = () => {
     setTablePage(1);
   };
 
+  const toggleEventSelection = (eventId: string) => {
+    setSelectedEventIds((currentIds) =>
+      currentIds.includes(eventId)
+        ? currentIds.filter((currentId) => currentId !== eventId)
+        : [...currentIds, eventId],
+    );
+  };
+
+  const toggleSelectAllPagedEvents = () => {
+    const visibleIds = pagedEvents.map((event) => event.id);
+    const allPagedEventsSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((eventId) => selectedEventIdSet.has(eventId));
+
+    setSelectedEventIds((currentIds) => {
+      if (allPagedEventsSelected) {
+        return currentIds.filter((currentId) => !visibleIds.includes(currentId));
+      }
+
+      return [...new Set([...currentIds, ...visibleIds])];
+    });
+  };
+
+  const updateSelectedStatus = async (status: AlertEvent["status"]) => {
+    if (selectedEventIds.length === 0) return;
+
+    await Promise.all(
+      selectedEventIds.map((eventId) =>
+        updateEventStatusMutation.mutateAsync({ eventId, status }),
+      ),
+    );
+    setSelectedEventIds([]);
+  };
+
+  const updateSingleStatus = async (
+    eventId: string,
+    status: AlertEvent["status"],
+  ) => {
+    await updateEventStatusMutation.mutateAsync({ eventId, status });
+  };
+
+  const dispatchQueuedEmails = async () => {
+    setDispatchMessage(null);
+    try {
+      const result = await dispatchEmailMutation.mutateAsync();
+      setDispatchMessage(
+        result.claimed === 0
+          ? "No queued email alerts to send."
+          : `Email dispatch finished: ${result.sent} sent, ${result.failed} failed.`,
+      );
+    } catch (error) {
+      setDispatchMessage(
+        error instanceof Error
+          ? error.message
+          : "Email dispatch failed. Check the Edge Function logs.",
+      );
+    }
+  };
+
+  const toggleRoleRecipient = (roleId: string) => {
+    setRuleForm((current) => ({
+      ...current,
+      recipientRoleIds: current.recipientRoleIds.includes(roleId)
+        ? current.recipientRoleIds.filter((currentId) => currentId !== roleId)
+        : [...current.recipientRoleIds, roleId],
+    }));
+  };
+
+  const resetRuleForm = () => {
+    setRuleForm(emptyRuleForm);
+    setRuleMessage(null);
+  };
+
+  const editRule = (rule: AlertRule) => {
+    setRuleForm({
+      id: rule.id,
+      name: rule.name,
+      enabled: rule.enabled,
+      recipientRoleIds: parseRecipientRoleIds(rule),
+      emailEnabled: rule.delivery_channels.includes("email"),
+    });
+    setRuleMessage(null);
+  };
+
+  const saveRule = async () => {
+    if (!ruleForm.name.trim()) {
+      setRuleMessage("Add a rule name before saving.");
+      return;
+    }
+    if (ruleForm.recipientRoleIds.length === 0) {
+      setRuleMessage("Select at least one organisation role.");
+      return;
+    }
+
+    const payload = {
+      name: ruleForm.name.trim(),
+      alertType: "low_stock" as const,
+      condition: LOW_STOCK_RULE_CONDITION,
+      deliveryChannels: ruleForm.emailEnabled
+        ? (["in_app", "email"] satisfies AlertRule["delivery_channels"])
+        : (["in_app"] satisfies AlertRule["delivery_channels"]),
+      recipients: ruleForm.recipientRoleIds.map(roleToken),
+      enabled: ruleForm.enabled,
+    };
+
+    if (ruleForm.id) {
+      await updateRuleMutation.mutateAsync({ ruleId: ruleForm.id, ...payload });
+      setRuleMessage("Low stock alert rule updated.");
+    } else {
+      await createRuleMutation.mutateAsync(payload);
+      setRuleMessage("Low stock alert rule created.");
+    }
+  };
+
+  const alertColumns: Array<DataTableColumn<AlertEvent, AlertSortKey>> = [
+    {
+      id: "message",
+      header: "Alert",
+      sortKey: "message",
+      width: "46%",
+      renderCell: (event) => (
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
+            <span className="font-semibold uppercase tracking-[0.08em] text-[var(--color-foreground)]">
+              {event.products?.sku ?? "No SKU"}
+            </span>
+            <span aria-hidden="true">•</span>
+            <span>{formatDateTime(event.triggered_at)}</span>
+          </div>
+          <div className="text-base font-semibold text-[var(--color-foreground)]">
+            {event.message}
+          </div>
+          {event.products?.name ? (
+            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+              {event.products.name}
+            </p>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      id: "severity",
+      header: "Severity",
+      sortKey: "severity",
+      width: "14%",
+      renderCell: (event) => (
+        <Badge
+          variant={severityVariant[event.severity]}
+          size="md"
+          className="gap-1.5"
+        >
+          {renderSeverityIcon(event.severity)}
+          {severityLabel[event.severity]}
+        </Badge>
+      ),
+    },
+    {
+      id: "category",
+      header: "Category",
+      sortKey: "category",
+      width: "16%",
+      renderCell: (event) => alertCategoryLabel[getEventCategory(event)],
+    },
+    {
+      id: "status",
+      header: "Status",
+      sortKey: "status",
+      width: "12%",
+      renderCell: (event) => (
+        <Badge
+          variant={event.status === "open" ? "success" : "secondary"}
+          size="sm"
+        >
+          {event.status === "open"
+            ? "Open"
+            : event.status === "acknowledged"
+              ? "Acknowledged"
+              : "Resolved"}
+        </Badge>
+      ),
+    },
+    {
+      id: "action",
+      header: "",
+      align: "right",
+      width: "12%",
+      sortable: false,
+      renderCell: (event) => (
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="shadow-none"
+          onClick={(clickEvent) => {
+            clickEvent.stopPropagation();
+            void updateSingleStatus(
+              event.id,
+              event.status === "open" ? "acknowledged" : "resolved",
+            );
+          }}
+        >
+          {event.status === "open" ? "Acknowledge" : "Resolve"}
+        </Button>
+      ),
+    },
+  ];
+
+  const ruleColumns: Array<DataTableColumn<AlertRule>> = [
+    {
+      id: "rule",
+      header: "Rule",
+      width: "32%",
+      renderCell: (rule) => (
+        <div>
+          <p className="font-semibold text-[var(--color-foreground)]">
+            {rule.name}
+          </p>
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+            Quantity on hand reaches Low Stock Alert level
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "roles",
+      header: "Notify roles",
+      width: "28%",
+      renderCell: (rule) => getRuleRoleNames(rule, rolesById),
+    },
+    {
+      id: "channel",
+      header: "Channel",
+      width: "14%",
+      renderCell: (rule) => getRuleChannelsLabel(rule),
+    },
+    {
+      id: "status",
+      header: "Status",
+      width: "12%",
+      renderCell: (rule) => (
+        <Toggle
+          checked={rule.enabled}
+          aria-label={`Toggle ${rule.name}`}
+          onChange={(event) =>
+            updateRuleEnabledMutation.mutate({
+              ruleId: rule.id,
+              enabled: event.target.checked,
+            })
+          }
+        />
+      ),
+    },
+    {
+      id: "actions",
+      header: "",
+      align: "right",
+      width: "14%",
+      renderCell: (rule) => (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => editRule(rule)}
+        >
+          Edit
+        </Button>
+      ),
+    },
+  ];
+
   const feedContent = (
     <Card
       variant="plain"
@@ -725,46 +687,43 @@ export const AlertsPage = () => {
       <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-1 sm:gap-3">
-            {hasSelectedAlerts ? (
+            {hasSelectedEvents ? (
               <>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={markSelectedAsRead}
+                  onClick={() => void updateSelectedStatus("acknowledged")}
                 >
                   <CheckCheck size={14} aria-hidden="true" />
-                  Mark Read
+                  Acknowledge
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={dismissSelectedAlerts}
+                  onClick={() => void updateSelectedStatus("resolved")}
                 >
-                  <Trash2 size={14} aria-hidden="true" />
-                  Dismiss
+                  Resolve
                 </Button>
               </>
             ) : (
-              <>
-                {alertFilters.map((filter) => (
-                  <Button
-                    key={filter.id}
-                    type="button"
-                    variant={activeFilter === filter.id ? "secondary" : "ghost"}
-                    size="xs"
-                    onClick={() => handleFilterChange(filter.id)}
-                  >
-                    {filter.label}
-                  </Button>
-                ))}
-              </>
+              feedFilters.map((filter) => (
+                <Button
+                  key={filter.id}
+                  type="button"
+                  variant={activeFilter === filter.id ? "secondary" : "ghost"}
+                  size="xs"
+                  onClick={() => setActiveFilter(filter.id)}
+                >
+                  {filter.label}
+                </Button>
+              ))
             )}
           </div>
 
           <div className="text-sm text-[var(--color-muted-foreground)]">
-            Showing {visibleAlerts.length} of {alerts.length} alerts
+            Showing {visibleEvents.length} of {events.length} alerts
           </div>
         </div>
       </div>
@@ -772,38 +731,38 @@ export const AlertsPage = () => {
       <DataTable
         className="min-h-0 flex-1"
         columns={alertColumns}
-        rows={pagedAlerts}
-        getRowId={(alert) => alert.id}
+        rows={pagedEvents}
+        getRowId={(event) => event.id}
         emptyState={
-          normalizedSearchTerm.length > 0
-            ? `No alerts matched "${normalizedSearchTerm}".`
-            : "No alerts match the current filters."
+          loadingEvents
+            ? "Loading alerts..."
+            : normalizedSearchTerm.length > 0
+              ? `No alerts matched "${normalizedSearchTerm}".`
+              : "No delivered alerts yet."
         }
         sortField={tableSortField}
         sortDirection={tableSortDirection}
         onSortChange={handleTableSort}
-        minTableWidth={900}
+        minTableWidth={940}
         tableLayout="fixed"
         tableWrapClassName="border-0 bg-white"
         tableClassName="bg-white"
         selection={{
-          selectedRowIds: selectedAlertIdSet,
-          onToggleAll: toggleSelectAllPagedAlerts,
-          onToggleRow: (alert) => toggleAlertSelection(alert.id),
+          selectedRowIds: selectedEventIdSet,
+          onToggleAll: toggleSelectAllPagedEvents,
+          onToggleRow: (event) => toggleEventSelection(event.id),
           selectAllLabel: "Select all visible alerts",
-          getRowLabel: (alert) => alert.code,
+          getRowLabel: (event) => event.message,
           columnWidth: 28,
-          headerClassName: alertTableSelectionHeaderClassName,
-          cellClassName: alertTableSelectionCellClassName,
         }}
-        rowClassName={(alert) =>
-          selectedAlertIdSet.has(alert.id)
+        rowClassName={(event) =>
+          selectedEventIdSet.has(event.id)
             ? "bg-[var(--color-primary-light)]"
             : undefined
         }
         pagination={{
           currentPage: currentTablePage,
-          totalItems: visibleAlerts.length,
+          totalItems: visibleEvents.length,
           itemsPerPage: feedPageSize,
           onPageChange: setTablePage,
         }}
@@ -811,154 +770,245 @@ export const AlertsPage = () => {
     </Card>
   );
 
-  const rulesContent = (
-    <div className="flex flex-col gap-8">
-      {visibleThresholdRules.length === 0 &&
-      visibleRoutingRules.length === 0 &&
-      visibleSubscriptionRules.length === 0 ? (
-        <Card variant="plain" className="overflow-hidden" padding="none">
-          <div className="px-6 py-10 text-sm text-[var(--color-muted-foreground)]">
-            No alert rules matched "{normalizedRulesSearchTerm}".
-          </div>
-        </Card>
-      ) : null}
+  const rolesLoading = loadingTeamSettings || loadingRules;
+  const saveDisabled =
+    rolesLoading ||
+    createRuleMutation.isPending ||
+    updateRuleMutation.isPending ||
+    roleFormHasNoRecipients(ruleForm);
 
-      {visibleThresholdRules.length > 0 ? (
-        <Card variant="plain" className="overflow-hidden" padding="none">
-          <div className="border-b border-[var(--color-border)] px-6 py-5">
+  const rulesContent = (
+    <div className="grid min-h-0 gap-7 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <Card variant="plain" className="overflow-hidden" padding="none">
+        <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] px-6 py-5">
+          <div>
             <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-              Global Threshold Settings
+              Alert Triggers
             </h2>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              Set default triggers for physical inventory alerts.
+              Manage automatic notifications for inventory conditions.
             </p>
           </div>
+          <Button type="button" variant="secondary" size="sm" onClick={resetRuleForm}>
+            <Plus size={14} aria-hidden="true" />
+            New Trigger
+          </Button>
+        </div>
 
-          <div className="divide-y divide-[var(--color-border)]">
-            {visibleThresholdRules.map((rule) => (
-              <div
-                key={rule.id}
-                className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between"
-              >
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                    {rule.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                    {rule.subtitle}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 md:flex-shrink-0">
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      value={rule.value}
-                      onChange={(event) =>
-                        setThresholds((current) => ({
-                          ...current,
-                          [rule.key]: event.target.value,
-                        }))
-                      }
-                      aria-label={rule.inputAriaLabel}
-                    />
-                  </div>
-                  <span className="text-sm text-[var(--color-muted-foreground)]">
-                    {rule.unitLabel}
-                  </span>
-                </div>
-              </div>
-            ))}
+        <DataTable
+          columns={ruleColumns}
+          rows={visibleRules}
+          getRowId={(rule) => rule.id}
+          emptyState={
+            loadingRules
+              ? "Loading alert triggers..."
+              : "No alert triggers yet. Create a low-stock trigger to get started."
+          }
+          minTableWidth={780}
+          tableLayout="fixed"
+        />
+      </Card>
+
+      <Card variant="plain" className="overflow-hidden" padding="none">
+        <div className="border-b border-[var(--color-border)] px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-[var(--color-info-light)] p-3 text-[var(--color-info)]">
+              <Settings2 size={18} aria-hidden="true" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
+                {ruleForm.id ? "Edit Low-Stock Trigger" : "Create Low-Stock Trigger"}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                Notify selected roles when an item reaches its Low Stock Alert level.
+              </p>
+            </div>
           </div>
-        </Card>
-      ) : null}
+        </div>
 
-      {visibleRoutingRules.length > 0 || visibleSubscriptionRules.length > 0 ? (
-        <div className="grid gap-8 xl:grid-cols-2">
-          {visibleRoutingRules.length > 0 ? (
-            <Card variant="plain" className="overflow-hidden" padding="none">
-              <div className="border-b border-[var(--color-border)] px-6 py-5">
-                <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-                  Notification Routing
-                </h2>
-                <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                  Where should alerts be sent?
-                </p>
+        <div className="flex flex-col gap-5 px-6 py-5">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-[var(--color-foreground)]">
+              Rule name
+            </span>
+            <Input
+              value={ruleForm.name}
+              onChange={(event) =>
+                setRuleForm((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }))
+              }
+              aria-label="Rule name"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-[var(--color-foreground)]">
+              Trigger
+            </span>
+            <Select
+              value="low_stock"
+              disabled
+              aria-label="Trigger type"
+              options={[
+                {
+                  value: "low_stock",
+                  label: "Quantity on hand <= Low Stock Alert level",
+                },
+              ]}
+            />
+          </label>
+
+          <div className="flex flex-col gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+                Notify roles
+              </h3>
+              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                Select one or more organisation roles.
+              </p>
+            </div>
+            {rolesLoading ? (
+              <div className="rounded-lg bg-[var(--color-surface-subtle)] p-4 text-sm text-[var(--color-muted-foreground)]">
+                Loading organisation roles...
               </div>
-
-              <div className="divide-y divide-[var(--color-border)]">
-                {visibleRoutingRules.map((rule) => {
-                  const Icon = rule.icon;
-
-                  return (
-                    <div
-                      key={rule.id}
-                      className="flex items-center justify-between gap-4 px-6 py-5"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`rounded-xl p-3 ${rule.accentClassName}`}>
-                          <Icon size={18} aria-hidden="true" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                            {rule.title}
-                          </h3>
-                          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                            {rule.subtitle}
-                          </p>
-                        </div>
-                      </div>
-                      <Toggle
-                        checked={rule.checked}
-                        onChange={(event) =>
-                          setRouting((current) => ({
-                            ...current,
-                            [rule.key]: event.target.checked,
-                          }))
-                        }
-                        aria-label={rule.toggleAriaLabel}
-                      />
-                    </div>
-                  );
-                })}
+            ) : roleOptions.length === 0 ? (
+              <div className="rounded-lg bg-[var(--color-surface-subtle)] p-4 text-sm text-[var(--color-muted-foreground)]">
+                No organisation roles are available yet. Create roles in Organisations settings first.
               </div>
-            </Card>
-          ) : null}
-
-          {visibleSubscriptionRules.length > 0 ? (
-            <Card variant="plain" className="overflow-hidden" padding="none">
-              <div className="border-b border-[var(--color-border)] px-6 py-5">
-                <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-                  Role Subscriptions
-                </h2>
-                <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                  Route alerts by department.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-5 px-6 py-5">
-                {visibleSubscriptionRules.map((rule) => (
-                  <label key={rule.id} className="flex flex-col gap-2">
-                    <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                      {rule.title}
+            ) : (
+              <div className="grid gap-2">
+                {roleOptions.map((role) => (
+                  <label
+                    key={role.value}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] px-3 py-2"
+                  >
+                    <span className="text-sm text-[var(--color-foreground)]">
+                      {role.label}
                     </span>
-                    <Select
-                      value={rule.value}
-                      onChange={(event) =>
-                        setSubscriptions((current) => ({
-                          ...current,
-                          [rule.key]: event.target.value,
-                        }))
-                      }
-                      options={rule.options}
-                      aria-label={rule.inputAriaLabel}
+                    <input
+                      type="checkbox"
+                      checked={ruleForm.recipientRoleIds.includes(role.value)}
+                      onChange={() => toggleRoleRecipient(role.value)}
+                      aria-label={`Notify ${role.label}`}
                     />
                   </label>
                 ))}
               </div>
-            </Card>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] px-3 py-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-[var(--color-info-light)] p-2 text-[var(--color-info)]">
+                <BellRing size={16} aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[var(--color-foreground)]">
+                  In-app notifications
+                </p>
+                <p className="text-sm text-[var(--color-muted-foreground)]">
+                  Delivery rows are created for members in the selected roles.
+                </p>
+              </div>
+            </div>
+            <Toggle checked aria-label="In-app notifications enabled" disabled readOnly />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] px-3 py-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-[var(--color-success-light)] p-2 text-[var(--color-success)]">
+                <Mail size={16} aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[var(--color-foreground)]">
+                  Email notifications
+                </p>
+                <p className="text-sm text-[var(--color-muted-foreground)]">
+                  Queue email delivery for members in the selected roles.
+                </p>
+              </div>
+            </div>
+            <Toggle
+              checked={ruleForm.emailEnabled}
+              aria-label="Email notifications enabled"
+              onChange={(event) =>
+                setRuleForm((current) => ({
+                  ...current,
+                  emailEnabled: event.target.checked,
+                }))
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-semibold text-[var(--color-foreground)]">
+              Trigger enabled
+            </span>
+            <Toggle
+              checked={ruleForm.enabled}
+              aria-label="Trigger enabled"
+              onChange={(event) =>
+                setRuleForm((current) => ({
+                  ...current,
+                  enabled: event.target.checked,
+                }))
+              }
+            />
+          </div>
+
+          {ruleMessage ? (
+            <div className="rounded-lg bg-[var(--color-surface-subtle)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
+              {ruleMessage}
+            </div>
           ) : null}
+
+          <div className="rounded-lg border border-[var(--color-border)] px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--color-foreground)]">
+                  Email delivery status
+                </p>
+                <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                  {loadingDeliveries
+                    ? "Loading delivery queue..."
+                    : `${pendingEmailCount} queued, ${sendingEmailCount} sending, ${sentEmailCount} sent, ${failedEmailCount} failed`}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => void dispatchQueuedEmails()}
+                disabled={dispatchEmailMutation.isPending || pendingEmailCount === 0}
+              >
+                <Mail size={14} aria-hidden="true" />
+                Send queued
+              </Button>
+            </div>
+            {latestFailedEmail?.error_message ? (
+              <p className="mt-2 text-sm text-[var(--color-danger)]">
+                Latest failure: {latestFailedEmail.error_message}
+              </p>
+            ) : null}
+            {dispatchMessage ? (
+              <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+                {dispatchMessage}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={resetRuleForm}>
+              Reset
+            </Button>
+            <Button type="button" onClick={() => void saveRule()} disabled={saveDisabled}>
+              {ruleForm.id ? "Save Trigger" : "Create Trigger"}
+            </Button>
+          </div>
         </div>
-      ) : null}
+      </Card>
     </div>
   );
 
@@ -983,7 +1033,7 @@ export const AlertsPage = () => {
             {
               id: "feed",
               label: "Alerts Feed",
-              count: unreadCount,
+              count: openCount,
               content: feedContent,
             },
             { id: "rules", label: "Alert Rules", content: rulesContent },
@@ -993,3 +1043,6 @@ export const AlertsPage = () => {
     </BasePage>
   );
 };
+
+const roleFormHasNoRecipients = (ruleForm: RuleFormState) =>
+  ruleForm.recipientRoleIds.length === 0;

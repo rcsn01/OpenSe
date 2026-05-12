@@ -131,6 +131,32 @@ describe('alerts api', () => {
       error: null,
     })
 
+    mockSupabaseRpc.mockImplementation((fn: string) => {
+      if (fn === 'get_stoqr_delivered_alert_events') {
+        return Promise.resolve({
+          data: [
+            {
+              id: 'e-1',
+              company_id: 'company-1',
+              rule_id: 'r-1',
+              product_id: 'p-1',
+              alert_type: 'expiration',
+              severity: 'high',
+              status: 'open',
+              message: 'Expiry soon',
+              triggered_at: '2026-02-24T00:00:00Z',
+              delivery_id: 'd-1',
+              product_name: 'Milk',
+              product_sku: 'MLK',
+            },
+          ],
+          error: null,
+        })
+      }
+
+      throw new Error(`Unexpected rpc: ${fn}`)
+    })
+
     mockDbFrom.mockImplementation((table: string) => {
       if (table === 'alert_rules') {
         return {
@@ -177,22 +203,20 @@ describe('alerts api', () => {
   })
 
   it('updates alert event status scoped by company', async () => {
-    const eqCompany = vi.fn().mockResolvedValue({ error: null })
-    const eqEvent = vi.fn(() => ({ eq: eqCompany }))
-
-    mockDbFrom.mockImplementation((table: string) => {
-      if (table === 'alert_events') {
-        return {
-          update: vi.fn(() => ({ eq: eqEvent })),
-        }
-      }
-      throw new Error(`Unexpected table: ${table}`)
-    })
+    mockSupabaseRpc.mockResolvedValue({ data: null, error: null })
 
     await updateAlertEventStatus('company-1', 'event-1', 'acknowledged')
     await updateAlertEventStatus('company-1', 'event-1', 'resolved')
 
-    expect(eqEvent).toHaveBeenCalledWith('id', 'event-1')
-    expect(eqCompany).toHaveBeenCalledWith('company_id', 'company-1')
+    expect(mockSupabaseRpc).toHaveBeenCalledWith('update_stoqr_delivered_alert_status', {
+      target_company_id: 'company-1',
+      target_event_id: 'event-1',
+      next_status: 'acknowledged',
+    })
+    expect(mockSupabaseRpc).toHaveBeenCalledWith('update_stoqr_delivered_alert_status', {
+      target_company_id: 'company-1',
+      target_event_id: 'event-1',
+      next_status: 'resolved',
+    })
   })
 })

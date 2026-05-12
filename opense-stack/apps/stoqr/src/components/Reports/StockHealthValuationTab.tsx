@@ -5,12 +5,31 @@ import {
   AnalyticsEmptyPanel,
   AnalyticsLegend,
   AnalyticsMetricCard,
-  AnalyticsMetricGrid,
   AnalyticsPanel,
+  AnalyticsTablePanel,
+  DataTable,
+  type DataTableColumn,
 } from "@repo/ui";
 import { useReportsData } from "../../hooks/queries/useReports";
 import { useProductFolders } from "../../hooks/queries/useProducts";
 import { formatCurrency } from "../../utils";
+
+type ProductHealthStatus = "Healthy" | "Slow moving" | "No recent movement";
+
+type ProductHealthInsight = {
+  id: string;
+  name: string;
+  sku: string;
+  value: number;
+  quantity: number;
+  status: ProductHealthStatus;
+  statusTone: "positive" | "warning" | "danger";
+  lastMovementLabel: string;
+  action: string;
+};
+
+const formatInteger = (value: number) =>
+  new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
 
 export const StockHealthValuationTab = ({
   companyId,
@@ -46,37 +65,109 @@ export const StockHealthValuationTab = ({
       );
   }, [transactions]);
 
-  const movedProductIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const t of transactions) {
-      if (t.products?.id) ids.add(t.products.id);
+  const productInsights = useMemo<ProductHealthInsight[]>(() => {
+    const lastMovement = new Map<string, number>();
+    const outboundByProduct = new Map<string, number>();
+
+    for (const transaction of transactions) {
+      if (!transaction.products?.id) continue;
+
+      const productId = transaction.products.id;
+      const movementTime = new Date(transaction.created_at).getTime();
+      const existingMovement = lastMovement.get(productId);
+      if (!existingMovement || movementTime > existingMovement) {
+        lastMovement.set(productId, movementTime);
+      }
+
+      if (transaction.quantity_change < 0) {
+        outboundByProduct.set(
+          productId,
+          (outboundByProduct.get(productId) ?? 0) +
+            Math.abs(transaction.quantity_change),
+        );
+      }
     }
-    return ids;
-  }, [transactions]);
+
+    const now = Date.now();
+
+    return products
+      .map((product) => {
+        const value = product.quantity_on_hand * (product.cost_price ?? 0);
+        const last = lastMovement.get(product.id);
+        const outbound = outboundByProduct.get(product.id) ?? 0;
+        const estimatedDaysOnHand =
+          outbound > 0
+            ? Math.round(product.quantity_on_hand / (outbound / 30))
+            : null;
+
+        let status: ProductHealthStatus = "Healthy";
+        let statusTone: ProductHealthInsight["statusTone"] = "positive";
+        let action = "Keep stocked";
+
+        if (!last) {
+          status = "No recent movement";
+          statusTone = "danger";
+          action = "Review demand or classify";
+        } else if ((estimatedDaysOnHand ?? 0) > 90) {
+          status = "Slow moving";
+          statusTone = "warning";
+          action = "Reduce reorder quantity";
+        }
+
+        const lastMovementLabel = last
+          ? `${Math.max(0, Math.floor((now - last) / (24 * 60 * 60 * 1000)))}d ago`
+          : "No 30d movement";
+
+        return {
+          id: product.id,
+          name: product.name,
+          sku: product.sku,
+          value,
+          quantity: product.quantity_on_hand,
+          status,
+          statusTone,
+          lastMovementLabel,
+          action,
+        };
+      })
+      .filter((insight) => insight.value > 0)
+      .sort((left, right) => {
+        const statusRank: Record<ProductHealthStatus, number> = {
+          "No recent movement": 0,
+          "Slow moving": 1,
+          Healthy: 2,
+        };
+
+        return (
+          statusRank[left.status] - statusRank[right.status] ||
+          right.value - left.value
+        );
+      });
+  }, [products, transactions]);
 
   const healthBreakdown = useMemo(() => {
     let healthy = 0;
     let excess = 0;
     let dead = 0;
-    for (const p of products) {
-      const val = p.quantity_on_hand * (p.cost_price ?? 0);
-      if (!movedProductIds.has(p.id)) {
-        dead += val;
-      } else if (
-        p.quantity_on_hand > (p.selling_price ?? Number.POSITIVE_INFINITY)
-      ) {
-        // Use max_stock_level if available via custom_fields, fallback heuristic
-        excess += val;
-      } else {
-        healthy += val;
+    for (const insight of productInsights) {
+      if (insight.status === "No recent movement") {
+        dead += insight.value;
+      } else if (insight.status === "Slow moving") {
+        excess += insight.value;
+      } else if (insight.status === "Healthy") {
+        healthy += insight.value;
       }
     }
     return { healthy, excess, dead };
-  }, [products, movedProductIds]);
+  }, [productInsights]);
 
   const healthTotal =
     healthBreakdown.healthy + healthBreakdown.excess + healthBreakdown.dead ||
     1;
+  const atRiskValue = healthBreakdown.excess + healthBreakdown.dead;
+  const atRiskItems = productInsights.filter(
+    (insight) => insight.status !== "Healthy",
+  ).length;
 
   const turnover = useMemo(() => {
     if (totalValue === 0) return 0;
@@ -88,7 +179,6 @@ export const StockHealthValuationTab = ({
     return Math.round(totalValue / (cogs30d / 30));
   }, [totalValue, cogs30d]);
 
-  // Aging stock analysis
   const agingData = useMemo(() => {
     const now = Date.now();
     const lastMovement = new Map<string, number>();
@@ -100,21 +190,20 @@ export const StockHealthValuationTab = ({
     }
 
     const buckets = {
-      "0-30 Days": 0,
-      "31-60 Days": 0,
-      "61-90 Days": 0,
-      "90+ Days": 0,
+      "0-7 Days": 0,
+      "8-30 Days": 0,
+      "No 30d Movement": 0,
     };
     for (const p of products) {
       const val = p.quantity_on_hand * (p.cost_price ?? 0);
       const last = lastMovement.get(p.id);
-      const days = last
-        ? Math.floor((now - last) / (24 * 60 * 60 * 1000))
-        : 999;
-      if (days <= 30) buckets["0-30 Days"] += val;
-      else if (days <= 60) buckets["31-60 Days"] += val;
-      else if (days <= 90) buckets["61-90 Days"] += val;
-      else buckets["90+ Days"] += val;
+      if (!last) {
+        buckets["No 30d Movement"] += val;
+        continue;
+      }
+      const days = Math.floor((now - last) / (24 * 60 * 60 * 1000));
+      if (days <= 7) buckets["0-7 Days"] += val;
+      else buckets["8-30 Days"] += val;
     }
 
     return Object.entries(buckets).map(([name, value]) => ({ name, value }));
@@ -222,6 +311,17 @@ export const StockHealthValuationTab = ({
       .slice(0, 6);
   }, [products, folders]);
 
+  const uncategorizedValue =
+    categoryData.find((entry) => entry.name === "Uncategorized")?.value ?? 0;
+  const hasMeaningfulCategories =
+    categoryData.filter((entry) => entry.value > 0).length > 1;
+  const hasMeaningfulFolders =
+    folderValuation.filter((entry) => entry.value > 0).length > 1;
+  const primaryFolderValuation = folderValuation[0];
+  const topExceptions = productInsights
+    .filter((insight) => insight.status !== "Healthy")
+    .slice(0, 6);
+
   const DONUT_COLORS = [
     "var(--color-foreground)",
     "var(--color-primary)",
@@ -234,69 +334,186 @@ export const StockHealthValuationTab = ({
   const BAR_COLORS = [
     "var(--color-foreground)",
     "var(--color-info)",
-    "var(--color-primary)",
-    "var(--color-info-light)",
+    "var(--color-warning)",
   ];
+
+  const exceptionColumns = useMemo<DataTableColumn<ProductHealthInsight>[]>(
+    () => [
+      {
+        id: "product",
+        header: "Product",
+        renderCell: (row) => (
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="truncate font-medium text-[var(--color-foreground)]">
+              {row.name}
+            </span>
+            <span className="text-xs text-[var(--color-muted-foreground)]">
+              {row.sku}
+            </span>
+          </div>
+        ),
+      },
+      {
+        id: "status",
+        header: "Signal",
+        renderCell: (row) => (
+          <span
+            className={[
+              "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+              row.statusTone === "danger"
+                ? "bg-[var(--color-muted)] text-[var(--color-destructive)]"
+                : row.statusTone === "warning"
+                  ? "bg-[var(--color-muted)] text-[var(--color-warning)]"
+                  : "bg-[var(--color-muted)] text-[var(--color-success)]",
+            ].join(" ")}
+          >
+            {row.status}
+          </span>
+        ),
+      },
+      {
+        id: "value",
+        header: "Value",
+        align: "right",
+        renderCell: (row) => formatCurrency(row.value),
+      },
+      {
+        id: "quantity",
+        header: "On hand",
+        align: "right",
+        renderCell: (row) => formatInteger(row.quantity),
+      },
+      {
+        id: "lastMovement",
+        header: "Last move",
+        renderCell: (row) => row.lastMovementLabel,
+      },
+      {
+        id: "action",
+        header: "Suggested action",
+        renderCell: (row) => row.action,
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="flex min-w-0 flex-col gap-7">
-      <AnalyticsMetricGrid variant="stats-4">
-        <AnalyticsMetricCard
-          label="Total Inventory Value"
-          value={formatCurrency(totalValue)}
-        />
-        <AnalyticsMetricCard
-          label="COGS (30 Days)"
-          value={formatCurrency(cogs30d)}
-        />
-        <AnalyticsPanel title="Stock Health Breakdown">
-          <div
-            style={{
-              display: "flex",
-              height: 6,
-              borderRadius: "var(--radius-full)",
-              overflow: "hidden",
-              background: "var(--color-muted)",
-            }}
-          >
-            <div
-              style={{
-                width: `${(healthBreakdown.healthy / healthTotal) * 100}%`,
-                background: "var(--color-success)",
+      <div className="grid items-start gap-6 min-[1180px]:grid-cols-2 min-[1640px]:grid-cols-[minmax(360px,0.9fr)_minmax(520px,1.35fr)_minmax(320px,0.85fr)]">
+        <AnalyticsPanel title="Inventory Summary">
+          <div className="grid gap-5 sm:grid-cols-2 min-[1180px]:grid-cols-2">
+            <AnalyticsMetricCard
+              label="Total Inventory Value"
+              value={formatCurrency(totalValue)}
+              detail={`${formatInteger(products.length)} active SKUs`}
+            />
+            <AnalyticsMetricCard
+              label="At-Risk Value"
+              value={formatCurrency(atRiskValue)}
+              accent={{
+                label: `${formatInteger(atRiskItems)} SKUs need review`,
+                tone: atRiskValue > 0 ? "warning" : "positive",
               }}
             />
-            <div
-              style={{
-                width: `${(healthBreakdown.excess / healthTotal) * 100}%`,
-                background: "var(--color-warning)",
+            <AnalyticsMetricCard
+              label="Turnover"
+              value={`${turnover.toFixed(1)}x`}
+              accent={{
+                label: "Goal 8.0x",
+                tone: turnover >= 8 ? "positive" : "warning",
               }}
             />
-            <div
-              style={{
-                width: `${(healthBreakdown.dead / healthTotal) * 100}%`,
-                background: "var(--color-destructive)",
+            <AnalyticsMetricCard
+              label="Days on Hand"
+              value={cogs30d === 0 ? "N/A" : `${daysOnHand}d`}
+              accent={{
+                label: "Limit 45d",
+                tone: daysOnHand > 45 ? "warning" : "positive",
               }}
+              detail={`COGS 30d ${formatCurrency(cogs30d)}`}
             />
-          </div>
-          <AnalyticsLegend
-            muted
-            items={[
-              { label: "Healthy", color: "var(--color-success)", shape: "dot" },
-              { label: "Excess", color: "var(--color-warning)", shape: "dot" },
-              {
-                label: "Dead",
-                color: "var(--color-destructive)",
-                shape: "dot",
-              },
-            ]}
-          />
-          <div className="flex gap-3 text-xs text-[var(--color-muted-foreground)]">
-            <span>{formatCurrency(healthBreakdown.healthy)}</span>
-            <span>{formatCurrency(healthBreakdown.excess)}</span>
-            <span>{formatCurrency(healthBreakdown.dead)}</span>
           </div>
         </AnalyticsPanel>
-        <AnalyticsPanel title="Efficiency Targets">
+
+        <AnalyticsPanel
+          title="Stock Health Breakdown"
+          subtitle="Inventory value by current action signal"
+        >
+          <div className="flex flex-col gap-4">
+            <div
+              style={{
+                display: "flex",
+                height: 14,
+                borderRadius: "var(--radius-full)",
+                overflow: "hidden",
+                background: "var(--color-muted)",
+              }}
+            >
+              <div
+                style={{
+                  width: `${(healthBreakdown.healthy / healthTotal) * 100}%`,
+                  background: "var(--color-success)",
+                }}
+              />
+              <div
+                style={{
+                  width: `${(healthBreakdown.excess / healthTotal) * 100}%`,
+                  background: "var(--color-warning)",
+                }}
+              />
+              <div
+                style={{
+                  width: `${(healthBreakdown.dead / healthTotal) * 100}%`,
+                  background: "var(--color-destructive)",
+                }}
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              {[
+                {
+                  label: "Healthy",
+                  value: healthBreakdown.healthy,
+                  color: "var(--color-success)",
+                },
+                {
+                  label: "Slow moving",
+                  value: healthBreakdown.excess,
+                  color: "var(--color-warning)",
+                },
+                {
+                  label: "No recent movement",
+                  value: healthBreakdown.dead,
+                  color: "var(--color-destructive)",
+                },
+              ].map((entry) => (
+                <div
+                  key={entry.label}
+                  className="rounded-[var(--radius-lg)] bg-[var(--color-surface-subtle)] p-3"
+                >
+                  <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ background: entry.color }}
+                    />
+                    {entry.label}
+                  </div>
+                  <div className="text-lg font-semibold text-[var(--color-foreground)]">
+                    {formatCurrency(entry.value)}
+                  </div>
+                  <div className="text-xs text-[var(--color-muted-foreground)]">
+                    {Math.round((entry.value / healthTotal) * 100)}% of value
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AnalyticsPanel>
+
+        <AnalyticsPanel
+          title="Efficiency Targets"
+          subtitle="How stock performance compares with operating targets"
+          className="min-[1180px]:col-span-2 min-[1640px]:col-span-1"
+        >
           <div
             style={{
               display: "flex",
@@ -363,10 +580,13 @@ export const StockHealthValuationTab = ({
             />
           </div>
         </AnalyticsPanel>
-      </AnalyticsMetricGrid>
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <AnalyticsPanel title="Aging Stock Analysis">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(360px,0.9fr)_minmax(360px,0.9fr)_minmax(320px,0.7fr)]">
+        <AnalyticsPanel
+          title="Recent Movement Aging"
+          subtitle="Value grouped by the last movement found in the 30-day report window"
+        >
           <AnalyticsBarChart
             data={agingData}
             categoryKey="name"
@@ -383,31 +603,10 @@ export const StockHealthValuationTab = ({
               "Value",
             ]}
             cellColors={BAR_COLORS}
+            height={240}
           />
         </AnalyticsPanel>
 
-        <AnalyticsPanel title="Valuation by Folder">
-          {folderValuation.length === 0 ? (
-            <AnalyticsEmptyPanel message="No folder data available." />
-          ) : (
-            <AnalyticsBarChart
-              data={folderValuation}
-              categoryKey="name"
-              layout="vertical"
-              series={[{ dataKey: "value", label: "Value", color: "var(--color-primary)" }]}
-              xTickFormatter={(value) =>
-                `$${(Number(value) / 1000).toFixed(0)}k`
-              }
-              tooltipFormatter={(value) => [
-                formatCurrency(Number(value)),
-                "Value",
-              ]}
-            />
-          )}
-        </AnalyticsPanel>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
         <AnalyticsPanel
           title="ABC Analysis"
           headerAside={<span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)]">Pareto (80/20)</span>}
@@ -418,54 +617,117 @@ export const StockHealthValuationTab = ({
             series={[
               {
                 dataKey: "valuePct",
-                label: "% of Total Value",
+                label: "Value Share",
                 color: "var(--color-foreground)",
               },
               {
                 dataKey: "itemsPct",
-                label: "% of Total Items",
+                label: "SKU Share",
                 color: "var(--color-info-light)",
               },
             ]}
             yTickFormatter={(value) => `${value}%`}
             tooltipFormatter={(value) => [`${value}%`]}
+            height={240}
           />
           <AnalyticsLegend
             muted
             items={[
-              { label: "% of Total Value", color: "var(--color-foreground)" },
-              { label: "% of Total Items", color: "var(--color-info-light)" },
+              { label: "Value Share", color: "var(--color-foreground)" },
+              { label: "SKU Share", color: "var(--color-info-light)" },
             ]}
           />
         </AnalyticsPanel>
 
-        <AnalyticsPanel title="Category Breakdown">
-          {categoryData.length === 0 ? (
-            <AnalyticsEmptyPanel message="No category data available." />
-          ) : (
-            <>
-              <AnalyticsDonutChart
-                data={categoryData}
-                colors={DONUT_COLORS}
+        <div className="grid gap-6">
+          <AnalyticsPanel title="Valuation by Folder">
+            {folderValuation.length === 0 ? (
+              <AnalyticsEmptyPanel message="No folder data available." />
+            ) : !hasMeaningfulFolders && primaryFolderValuation ? (
+              <div className="rounded-[var(--radius-lg)] bg-[var(--color-surface-subtle)] p-4">
+                <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                  {primaryFolderValuation.name}
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-[var(--color-foreground)]">
+                  {formatCurrency(primaryFolderValuation.value)}
+                </p>
+                <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+                  Add folders or locations to compare valuation across stock areas.
+                </p>
+              </div>
+            ) : (
+              <AnalyticsBarChart
+                data={folderValuation}
+                categoryKey="name"
+                layout="vertical"
+                series={[{ dataKey: "value", label: "Value", color: "var(--color-primary)" }]}
+                xTickFormatter={(value) =>
+                  `$${(Number(value) / 1000).toFixed(0)}k`
+                }
                 tooltipFormatter={(value) => [
                   formatCurrency(Number(value)),
                   "Value",
                 ]}
+                height={220}
               />
-              <AnalyticsLegend
-                muted
-                items={categoryData.map((entry, index) => ({
-                  label: entry.name,
-                  color:
-                    DONUT_COLORS[index % DONUT_COLORS.length] ??
-                    "var(--color-muted-foreground)",
-                  shape: "dot",
-                }))}
-              />
-            </>
-          )}
-        </AnalyticsPanel>
+            )}
+          </AnalyticsPanel>
+
+          <AnalyticsPanel title="Category Breakdown">
+            {categoryData.length === 0 ? (
+              <AnalyticsEmptyPanel message="No category data available." />
+            ) : !hasMeaningfulCategories ? (
+              <div className="rounded-[var(--radius-lg)] bg-[var(--color-surface-subtle)] p-4">
+                <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                  Uncategorized
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-[var(--color-foreground)]">
+                  {formatCurrency(uncategorizedValue)}
+                </p>
+                <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+                  Categorize inventory before using a distribution chart here.
+                </p>
+              </div>
+            ) : (
+              <>
+                <AnalyticsDonutChart
+                  data={categoryData}
+                  colors={DONUT_COLORS}
+                  height={220}
+                  tooltipFormatter={(value) => [
+                    formatCurrency(Number(value)),
+                    "Value",
+                  ]}
+                />
+                <AnalyticsLegend
+                  muted
+                  items={categoryData.map((entry, index) => ({
+                    label: entry.name,
+                    color:
+                      DONUT_COLORS[index % DONUT_COLORS.length] ??
+                      "var(--color-muted-foreground)",
+                    shape: "dot",
+                  }))}
+                />
+              </>
+            )}
+          </AnalyticsPanel>
+        </div>
       </div>
+
+      <AnalyticsTablePanel
+        title="Largest Value Exceptions"
+        subtitle="Highest-value SKUs with weak recent movement or excess days on hand"
+      >
+        <DataTable
+          variant="dashboard"
+          rows={topExceptions}
+          columns={exceptionColumns}
+          getRowId={(row) => row.id}
+          emptyState="No stock health exceptions in the current report window."
+          minTableWidth={780}
+        />
+      </AnalyticsTablePanel>
     </div>
   );
 };

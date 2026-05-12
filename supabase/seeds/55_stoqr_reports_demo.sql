@@ -753,3 +753,97 @@ SET
   recipients = EXCLUDED.recipients,
   created_by = EXCLUDED.created_by,
   created_at = EXCLUDED.created_at;
+
+INSERT INTO stoqr.alert_rules (
+  id,
+  company_id,
+  name,
+  alert_type,
+  enabled,
+  condition,
+  delivery_channels,
+  recipients,
+  created_by,
+  created_at
+)
+VALUES
+  (
+    'f1919191-f191-f191-f191-f19191919191',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'Low stock alert',
+    'low_stock',
+    true,
+    '{"thresholdSource":"product_reorder_point"}'::jsonb,
+    ARRAY['in_app', 'email'],
+    ARRAY['role:20202020-2020-2020-2020-202020202020'],
+    '11111111-1111-1111-1111-111111111111',
+    timezone('utc'::text, now()) - interval '3 days'
+  )
+ON CONFLICT (id) DO UPDATE
+SET
+  name = EXCLUDED.name,
+  alert_type = EXCLUDED.alert_type,
+  enabled = EXCLUDED.enabled,
+  condition = EXCLUDED.condition,
+  delivery_channels = EXCLUDED.delivery_channels,
+  recipients = EXCLUDED.recipients,
+  created_by = EXCLUDED.created_by,
+  created_at = EXCLUDED.created_at;
+
+INSERT INTO stoqr.alert_events (
+  id,
+  company_id,
+  rule_id,
+  product_id,
+  alert_type,
+  severity,
+  status,
+  message,
+  metadata,
+  triggered_at
+)
+VALUES
+  (
+    'f2929292-f292-f292-f292-f29292929292',
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'f1919191-f191-f191-f191-f19191919191',
+    '84848484-8484-8484-8484-a00000000008',
+    'low_stock',
+    'high',
+    'open',
+    'Gown Isolation Disposable is at 4 units, at or below its Low Stock Alert level of 12.',
+    '{"quantity_on_hand":4,"reorder_point":12,"recipient_roles":["role:20202020-2020-2020-2020-202020202020"]}'::jsonb,
+    timezone('utc'::text, now()) - interval '45 minutes'
+  )
+ON CONFLICT (id) DO UPDATE
+SET
+  rule_id = EXCLUDED.rule_id,
+  product_id = EXCLUDED.product_id,
+  alert_type = EXCLUDED.alert_type,
+  severity = EXCLUDED.severity,
+  status = EXCLUDED.status,
+  message = EXCLUDED.message,
+  metadata = EXCLUDED.metadata,
+  triggered_at = EXCLUDED.triggered_at;
+
+INSERT INTO stoqr.alert_delivery_logs (
+  id,
+  company_id,
+  alert_event_id,
+  channel,
+  recipient,
+  status,
+  sent_at
+)
+VALUES
+  ('f3939393-f393-f393-f393-f39393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'in_app', '33333333-3333-3333-3333-333333333333', 'sent', timezone('utc'::text, now()) - interval '45 minutes'),
+  ('f4949494-f494-f494-f494-f49494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'in_app', '44444444-4444-4444-4444-444444444444', 'sent', timezone('utc'::text, now()) - interval '45 minutes'),
+  ('f5959595-f595-f595-f595-f59595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'email', 'admin@acme.test', 'pending', NULL),
+  ('f6969696-f696-f696-f696-f69696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'email', 'editor@acme.test', 'pending', NULL)
+ON CONFLICT (id) DO UPDATE
+SET
+  alert_event_id = EXCLUDED.alert_event_id,
+  channel = EXCLUDED.channel,
+  recipient = EXCLUDED.recipient,
+  status = EXCLUDED.status,
+  sent_at = EXCLUDED.sent_at;

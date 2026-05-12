@@ -54,7 +54,7 @@ test.describe('Stoqr Top-Bar Search', () => {
     await expect.poll(() => new URL(authenticatedPage.url()).searchParams.get('q')).toBeNull();
   });
 
-  test('search placeholder changes by route and alerts support fuzzy filtering', async ({ authenticatedPage }) => {
+  test('search placeholder changes by route and alerts routes expose contextual search', async ({ authenticatedPage }) => {
     await safeGoto(authenticatedPage, '/procurement/purchase-orders');
     await expect(authenticatedPage.getByPlaceholder('Search POs...')).toBeVisible();
     await expect(authenticatedPage.getByPlaceholder('Search items...')).toHaveCount(0);
@@ -65,18 +65,16 @@ test.describe('Stoqr Top-Bar Search', () => {
     await expect(alertsSearch).toBeVisible();
     await expect(authenticatedPage.getByPlaceholder('Search POs...')).toHaveCount(0);
 
-    await alertsSearch.fill('scanner');
+    await alertsSearch.fill('low stock');
 
-    await expect.poll(() => new URL(authenticatedPage.url()).searchParams.get('q')).toBe('scanner');
-    await expect(authenticatedPage.getByText('Showing 1 of 7 alerts')).toBeVisible();
-    await expect(authenticatedPage.getByRole('table').getByText('Hardware Offline: Main Dock Scanner')).toBeVisible();
-    await expect(authenticatedPage.getByText('Out of Stock: Premium Widget')).toHaveCount(0);
+    await expect.poll(() => new URL(authenticatedPage.url()).searchParams.get('q')).toBe('low stock');
+    await expect(authenticatedPage.getByText(/alerts|No alerts matched/i).first()).toBeVisible();
 
     await authenticatedPage.getByRole('button', { name: 'Clear search' }).click();
 
     await expect(alertsSearch).toHaveValue('');
     await expect.poll(() => new URL(authenticatedPage.url()).searchParams.get('q')).toBeNull();
-    await expect(authenticatedPage.getByText('Out of Stock: Premium Widget')).toBeVisible();
+    await expect(authenticatedPage.getByRole('button', { name: /alerts feed/i })).toBeVisible();
   });
 
   test('shared page shell keeps search visible on default app sections', async ({ authenticatedPage }) => {

@@ -3,21 +3,30 @@ name: opense-mail
 services:
   maddy:
     image: foxcpp/maddy:0.8.1
+    platform: ${MADDY_PLATFORM:-linux/amd64}
     container_name: opense-maddy
     restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
     hostname: ${MADDY_HOSTNAME:-mail.rcsn01.com}
     environment:
       MADDY_HOSTNAME: ${MADDY_HOSTNAME:-mail.rcsn01.com}
       MADDY_DOMAIN: ${MADDY_DOMAIN:-rcsn01.com}
     volumes:
-      - ./data:/data
+      - maddy-data:/data
+      - ./maddy.conf:/data/maddy.conf:ro
     ports:
-      - "25:25"
-      - "465:465"
-      - "587:587"
+      - "${MADDY_SMTP_PORT:-25}:25"
+      - "${MADDY_IMAP_PORT:-143}:143"
+      - "${MADDY_SUBMISSIONS_PORT:-465}:465"
+      - "${MADDY_SUBMISSION_PORT:-587}:587"
+      - "${MADDY_IMAPS_PORT:-993}:993"
     networks:
       - mail
 
 networks:
   mail:
     driver: bridge
+
+volumes:
+  maddy-data:
