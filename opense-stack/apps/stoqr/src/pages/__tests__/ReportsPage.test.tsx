@@ -87,11 +87,11 @@ describe('ReportsPage', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Stock Health & Valuation')).toBeInTheDocument()
-    expect(screen.getByText('Movement & Velocity')).toBeInTheDocument()
-    expect(screen.getByText('Procurement & Suppliers')).toBeInTheDocument()
-    expect(screen.getByText('Audits & Shrinkage')).toBeInTheDocument()
-    expect(screen.getByText('Custom & Saved Reports')).toBeInTheDocument()
+    expect(screen.getByText('Inventory Health')).toBeInTheDocument()
+    expect(screen.getByText('Stock Movement')).toBeInTheDocument()
+    expect(screen.getByText('Purchasing')).toBeInTheDocument()
+    expect(screen.getByText('Stock Accuracy')).toBeInTheDocument()
+    expect(screen.getByText('Saved Reports')).toBeInTheDocument()
     expect(screen.getByText('Stock Health Content')).toBeInTheDocument()
   })
 
@@ -111,7 +111,7 @@ describe('ReportsPage', () => {
     )
 
     expect(screen.getByText('Feature unavailable, please contact your admin for assistance.')).toBeInTheDocument()
-    expect(screen.queryByText('Stock Health & Valuation')).not.toBeInTheDocument()
+    expect(screen.queryByText('Inventory Health')).not.toBeInTheDocument()
   })
 
   it('navigates between report tabs from the shared top-bar search', async () => {

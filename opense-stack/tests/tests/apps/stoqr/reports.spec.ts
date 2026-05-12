@@ -2,11 +2,11 @@ import { test } from '../../fixtures/auth';
 import { expect } from '@playwright/test';
 
 const expectReportTabs = async (page: import('@playwright/test').Page) => {
-  await expect(page.getByRole('button', { name: /stock health & valuation/i })).toBeVisible();
-  await expect(page.getByRole('button', { name: /movement & velocity/i })).toBeVisible();
-  await expect(page.getByRole('button', { name: /procurement & suppliers/i })).toBeVisible();
-  await expect(page.getByRole('button', { name: /audits & shrinkage/i })).toBeVisible();
-  await expect(page.getByRole('button', { name: /custom & saved reports/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /inventory health/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /stock movement/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /purchasing/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /stock accuracy/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /saved reports/i })).toBeVisible();
 };
 
 test.describe('Stoqr Reports', () => {
@@ -69,7 +69,7 @@ test.describe('Stoqr Reports', () => {
     await expect(searchInput).toBeVisible();
 
     await searchInput.fill('custom saved');
-    await authenticatedPage.getByRole('option', { name: /Custom & Saved Reports/i }).click();
+    await authenticatedPage.getByRole('option', { name: /Saved Reports/i }).click();
 
     await expect(authenticatedPage).toHaveURL(/\/reports\/custom-saved$/);
     await expect(authenticatedPage.getByRole('heading', { name: 'Saved Templates' })).toBeVisible();

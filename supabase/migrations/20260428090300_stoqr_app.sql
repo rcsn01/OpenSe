@@ -261,7 +261,7 @@ CREATE TABLE stoqr.alert_delivery_logs (
   alert_event_id UUID NOT NULL REFERENCES stoqr.alert_events(id) ON DELETE CASCADE,
   channel TEXT NOT NULL CHECK (channel IN ('in_app', 'email', 'push')),
   recipient TEXT,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sending', 'sent', 'failed')),
   provider_message_id TEXT,
   error_message TEXT,
   sent_at TIMESTAMPTZ
@@ -2035,6 +2035,338 @@ BEGIN
 END;
 $$;
 
+CREATE FUNCTION stoqr.evaluate_low_stock_alerts()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = stoqr, public
+AS $$
+DECLARE
+  v_rule stoqr.alert_rules%ROWTYPE;
+  v_event_id UUID;
+  v_old_low BOOLEAN := false;
+  v_new_low BOOLEAN := false;
+BEGIN
+  IF NEW.deleted_at IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+
+  v_new_low := COALESCE(NEW.reorder_point, 0) > 0
+    AND COALESCE(NEW.quantity_on_hand, 0) <= COALESCE(NEW.reorder_point, 0);
+
+  IF TG_OP = 'UPDATE' THEN
+    v_old_low := COALESCE(OLD.reorder_point, 0) > 0
+      AND COALESCE(OLD.quantity_on_hand, 0) <= COALESCE(OLD.reorder_point, 0);
+  END IF;
+
+  IF NOT v_new_low OR v_old_low THEN
+    RETURN NEW;
+  END IF;
+
+  FOR v_rule IN
+    SELECT *
+    FROM stoqr.alert_rules
+    WHERE company_id = NEW.company_id
+      AND alert_type = 'low_stock'
+      AND enabled = true
+      AND delivery_channels && ARRAY['in_app', 'email']::text[]
+  LOOP
+    IF EXISTS (
+      SELECT 1
+      FROM stoqr.alert_events existing
+      WHERE existing.company_id = NEW.company_id
+        AND existing.rule_id = v_rule.id
+        AND existing.product_id = NEW.id
+        AND existing.status = 'open'
+    ) THEN
+      CONTINUE;
+    END IF;
+
+    INSERT INTO stoqr.alert_events (
+      company_id,
+      rule_id,
+      product_id,
+      alert_type,
+      severity,
+      status,
+      message,
+      metadata
+    )
+    VALUES (
+      NEW.company_id,
+      v_rule.id,
+      NEW.id,
+      'low_stock',
+      CASE WHEN COALESCE(NEW.quantity_on_hand, 0) <= 0 THEN 'critical' ELSE 'high' END,
+      'open',
+      format(
+        '%s is at %s units, at or below its Low Stock Alert level of %s.',
+        NEW.name,
+        COALESCE(NEW.quantity_on_hand, 0),
+        COALESCE(NEW.reorder_point, 0)
+      ),
+      jsonb_build_object(
+        'quantity_on_hand', COALESCE(NEW.quantity_on_hand, 0),
+        'reorder_point', COALESCE(NEW.reorder_point, 0),
+        'recipient_roles', COALESCE(v_rule.recipients, ARRAY[]::text[])
+      )
+    )
+    RETURNING id INTO v_event_id;
+
+    INSERT INTO stoqr.alert_delivery_logs (
+      company_id,
+      alert_event_id,
+      channel,
+      recipient,
+      status,
+      sent_at
+    )
+    SELECT DISTINCT
+      NEW.company_id,
+      v_event_id,
+      'in_app',
+      omr.user_id::text,
+      'sent',
+      timezone('utc'::text, now())
+    FROM unnest(COALESCE(v_rule.recipients, ARRAY[]::text[])) AS recipient_token(token)
+    JOIN stoqr.organisation_member_roles omr
+      ON omr.company_id = NEW.company_id
+     AND omr.role_id = replace(recipient_token.token, 'role:', '')::uuid
+    WHERE recipient_token.token ~* '^role:[0-9a-f-]{36}$';
+
+    INSERT INTO stoqr.alert_delivery_logs (
+      company_id,
+      alert_event_id,
+      channel,
+      recipient,
+      status
+    )
+    SELECT DISTINCT
+      NEW.company_id,
+      v_event_id,
+      'email',
+      NULLIF(p.email, ''),
+      'pending'
+    FROM unnest(COALESCE(v_rule.recipients, ARRAY[]::text[])) AS recipient_token(token)
+    JOIN stoqr.organisation_member_roles omr
+      ON omr.company_id = NEW.company_id
+     AND omr.role_id = replace(recipient_token.token, 'role:', '')::uuid
+    JOIN public.profiles p ON p.id = omr.user_id
+    WHERE v_rule.delivery_channels @> ARRAY['email']::text[]
+      AND recipient_token.token ~* '^role:[0-9a-f-]{36}$'
+      AND NULLIF(p.email, '') IS NOT NULL;
+  END LOOP;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_evaluate_low_stock_alerts
+  AFTER INSERT OR UPDATE OF quantity_on_hand, reorder_point ON stoqr.products
+  FOR EACH ROW
+  EXECUTE FUNCTION stoqr.evaluate_low_stock_alerts();
+
+CREATE FUNCTION public.claim_stoqr_pending_email_alerts(target_company_id UUID, batch_size INTEGER DEFAULT 25)
+RETURNS TABLE (
+  delivery_id UUID,
+  company_id UUID,
+  alert_event_id UUID,
+  recipient_email TEXT,
+  alert_type TEXT,
+  severity TEXT,
+  message TEXT,
+  triggered_at TIMESTAMPTZ,
+  product_name TEXT,
+  product_sku TEXT,
+  organisation_name TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
+  RETURN QUERY
+  WITH claimed AS (
+    SELECT adl.id
+    FROM stoqr.alert_delivery_logs adl
+    JOIN stoqr.alert_events ae ON ae.id = adl.alert_event_id
+    WHERE adl.company_id = target_company_id
+      AND adl.channel = 'email'
+      AND adl.status = 'pending'
+      AND NULLIF(adl.recipient, '') IS NOT NULL
+    ORDER BY ae.triggered_at ASC, adl.id ASC
+    LIMIT LEAST(GREATEST(COALESCE(batch_size, 25), 1), 100)
+    FOR UPDATE SKIP LOCKED
+  ),
+  updated AS (
+    UPDATE stoqr.alert_delivery_logs adl
+    SET status = 'sending',
+        error_message = NULL
+    FROM claimed
+    WHERE adl.id = claimed.id
+    RETURNING adl.id, adl.company_id, adl.alert_event_id, adl.recipient
+  )
+  SELECT
+    updated.id,
+    updated.company_id,
+    updated.alert_event_id,
+    updated.recipient,
+    ae.alert_type,
+    ae.severity,
+    ae.message,
+    ae.triggered_at,
+    p.name,
+    p.sku,
+    o.name
+  FROM updated
+  JOIN stoqr.alert_events ae ON ae.id = updated.alert_event_id
+  JOIN public.organisations o ON o.id = updated.company_id
+  LEFT JOIN stoqr.products p ON p.id = ae.product_id
+  ORDER BY ae.triggered_at ASC, updated.id ASC;
+END;
+$$;
+
+CREATE FUNCTION public.mark_stoqr_alert_email_delivery(
+  target_delivery_id UUID,
+  next_status TEXT,
+  provider_message_id TEXT DEFAULT NULL,
+  error_message TEXT DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
+  IF next_status NOT IN ('sent', 'failed') THEN
+    RAISE EXCEPTION 'Invalid email delivery status';
+  END IF;
+
+  UPDATE stoqr.alert_delivery_logs
+  SET status = next_status,
+      provider_message_id = mark_stoqr_alert_email_delivery.provider_message_id,
+      error_message = mark_stoqr_alert_email_delivery.error_message,
+      sent_at = CASE WHEN next_status = 'sent' THEN timezone('utc'::text, now()) ELSE sent_at END
+  WHERE id = target_delivery_id
+    AND channel = 'email';
+END;
+$$;
+
+CREATE FUNCTION public.get_stoqr_delivered_alert_events(target_company_id UUID)
+RETURNS TABLE (
+  id UUID,
+  company_id UUID,
+  rule_id UUID,
+  product_id UUID,
+  alert_type TEXT,
+  severity TEXT,
+  status TEXT,
+  message TEXT,
+  triggered_at TIMESTAMPTZ,
+  delivery_id UUID,
+  product_name TEXT,
+  product_sku TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+BEGIN
+  IF NOT (
+    public.has_permission(target_company_id, 'alerts.view')
+    OR public.has_permission(target_company_id, 'alerts.manage')
+    OR public.has_permission(target_company_id, 'dashboard.view')
+  ) THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
+  RETURN QUERY
+  WITH visible_events AS (
+    SELECT DISTINCT ON (ae.id)
+      ae.id,
+      ae.company_id,
+      ae.rule_id,
+      ae.product_id,
+      ae.alert_type,
+      ae.severity,
+      ae.status,
+      ae.message,
+      ae.triggered_at,
+      adl.id AS delivery_id,
+      p.name AS product_name,
+      p.sku AS product_sku
+    FROM stoqr.alert_events ae
+    LEFT JOIN stoqr.alert_delivery_logs adl
+      ON adl.alert_event_id = ae.id
+     AND adl.channel = 'in_app'
+    LEFT JOIN stoqr.products p ON p.id = ae.product_id
+    WHERE ae.company_id = target_company_id
+      AND (
+        public.has_permission(target_company_id, 'alerts.manage')
+        OR adl.recipient = auth.uid()::text
+      )
+    ORDER BY ae.id, ae.triggered_at DESC
+  )
+  SELECT *
+  FROM visible_events
+  ORDER BY triggered_at DESC;
+END;
+$$;
+
+CREATE FUNCTION public.update_stoqr_delivered_alert_status(
+  target_company_id UUID,
+  target_event_id UUID,
+  next_status TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+BEGIN
+  IF next_status NOT IN ('open', 'acknowledged', 'resolved') THEN
+    RAISE EXCEPTION 'Invalid alert status';
+  END IF;
+
+  IF NOT (
+    public.has_permission(target_company_id, 'alerts.manage')
+    OR EXISTS (
+      SELECT 1
+      FROM stoqr.alert_delivery_logs adl
+      JOIN stoqr.alert_events ae ON ae.id = adl.alert_event_id
+      WHERE ae.company_id = target_company_id
+        AND ae.id = target_event_id
+        AND adl.channel = 'in_app'
+        AND adl.recipient = auth.uid()::text
+    )
+  ) THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
+  UPDATE stoqr.alert_events
+  SET
+    status = next_status,
+    acknowledged_at = CASE
+      WHEN next_status = 'acknowledged' THEN timezone('utc'::text, now())
+      ELSE acknowledged_at
+    END,
+    resolved_at = CASE
+      WHEN next_status = 'resolved' THEN timezone('utc'::text, now())
+      ELSE resolved_at
+    END
+  WHERE company_id = target_company_id
+    AND id = target_event_id;
+END;
+$$;
+
 GRANT SELECT ON TABLE stoqr.app_permissions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.roles TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.role_permissions TO authenticated;
@@ -2099,6 +2431,7 @@ REVOKE ALL ON FUNCTION public.grant_new_permission_to_owner_roles() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ensure_org_owner_member_and_default_seats() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.has_permission(UUID, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION stoqr.update_inventory_count() FROM PUBLIC;
+REVOKE ALL ON FUNCTION stoqr.evaluate_low_stock_alerts() FROM PUBLIC;
 REVOKE ALL ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION stoqr.capture_activity_event() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_inventory_stats(UUID) FROM PUBLIC;
@@ -2110,6 +2443,10 @@ REVOKE ALL ON FUNCTION public.get_stoqr_report_reorder_analysis(UUID) FROM PUBLI
 REVOKE ALL ON FUNCTION public.get_stoqr_report_dead_stock(UUID, INTEGER) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE, DATE, JSONB) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_stoqr_alert_products(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_stoqr_delivered_alert_events(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO authenticated, service_role;
@@ -2126,3 +2463,7 @@ GRANT EXECUTE ON FUNCTION public.get_stoqr_report_reorder_analysis(UUID) TO auth
 GRANT EXECUTE ON FUNCTION public.get_stoqr_report_dead_stock(UUID, INTEGER) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE, DATE, JSONB) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_stoqr_alert_products(UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) TO service_role;
+GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_stoqr_delivered_alert_events(UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) TO authenticated, service_role;

@@ -1,15 +1,95 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AlertsPage } from "../AlertsPage";
 import { AppLayout } from "../../layouts/AppLayout";
 
+const mockCreateRule = vi.fn();
+const mockUpdateRule = vi.fn();
+const mockUpdateRuleEnabled = vi.fn();
+const mockUpdateEventStatus = vi.fn();
+const mockDispatchEmails = vi.fn();
+
 let mockOrganisationPageSettings = {
   reportsEnabled: true,
   procurementEnabled: true,
   alertsEnabled: true,
 };
+
+let mockEvents = [
+  {
+    id: "event-1",
+    company_id: "company-1",
+    rule_id: "rule-1",
+    product_id: "product-1",
+    alert_type: "low_stock" as const,
+    severity: "high" as const,
+    status: "open" as const,
+    message: "PCR Tips is at 4 units, at or below its Low Stock Alert level of 12.",
+    triggered_at: "2026-05-12T00:00:00Z",
+    products: { name: "PCR Tips", sku: "TIP-001" },
+  },
+  {
+    id: "event-2",
+    company_id: "company-1",
+    rule_id: "rule-1",
+    product_id: "product-2",
+    alert_type: "expiration" as const,
+    severity: "medium" as const,
+    status: "acknowledged" as const,
+    message: "Buffer expires soon.",
+    triggered_at: "2026-05-11T00:00:00Z",
+    products: { name: "Buffer", sku: "BUF-001" },
+  },
+];
+
+let mockRules = [
+  {
+    id: "rule-1",
+    company_id: "company-1",
+    name: "Low stock alert",
+    alert_type: "low_stock" as const,
+    enabled: true,
+    condition: { thresholdSource: "product_reorder_point" },
+    delivery_channels: ["in_app" as const],
+    recipients: ["role:role-manager"],
+    created_at: "2026-05-10T00:00:00Z",
+  },
+];
+
+let mockDeliveries = [
+  {
+    id: "delivery-1",
+    alert_event_id: "event-1",
+    channel: "email" as const,
+    recipient: "admin@acme.test",
+    status: "pending" as const,
+    sent_at: null,
+    error_message: null,
+    alert_events: {
+      message: "PCR Tips is at 4 units, at or below its Low Stock Alert level of 12.",
+      alert_type: "low_stock",
+      severity: "high",
+      triggered_at: "2026-05-12T00:00:00Z",
+    },
+  },
+];
+
+const mockRoles = [
+  {
+    id: "role-manager",
+    name: "Manager",
+    description: "Operations manager",
+    role_rank: 800,
+  },
+  {
+    id: "role-viewer",
+    name: "Viewer",
+    description: "Read-only",
+    role_rank: 300,
+  },
+];
 
 vi.mock("@repo/shared/auth/context", () => ({
   useAuth: () => ({
@@ -32,6 +112,43 @@ vi.mock("../../contexts/CompanyContext", () => ({
 vi.mock("../../hooks/queries/useOrganisationPageSettings", () => ({
   useOrganisationPageSettings: () => ({
     data: mockOrganisationPageSettings,
+    isLoading: false,
+  }),
+}));
+
+vi.mock("../../hooks/queries/useAlerts", () => ({
+  useAlertEvents: () => ({ data: mockEvents, isLoading: false }),
+  useAlertDeliveryLogs: () => ({ data: mockDeliveries, isLoading: false }),
+  useAlertRules: () => ({ data: mockRules, isLoading: false }),
+  useCreateAlertRule: () => ({
+    mutateAsync: mockCreateRule,
+    isPending: false,
+  }),
+  useUpdateAlertRule: () => ({
+    mutateAsync: mockUpdateRule,
+    isPending: false,
+  }),
+  useUpdateAlertRuleEnabled: () => ({
+    mutate: mockUpdateRuleEnabled,
+  }),
+  useUpdateAlertEventStatus: () => ({
+    mutateAsync: mockUpdateEventStatus,
+  }),
+  useDispatchAlertEmails: () => ({
+    mutateAsync: mockDispatchEmails,
+    isPending: false,
+  }),
+}));
+
+vi.mock("../../hooks/queries/useTeamSettings", () => ({
+  useTeamSettingsData: () => ({
+    data: {
+      roles: mockRoles,
+      members: [],
+      invitations: [],
+      permissions: [],
+      rolePermissions: {},
+    },
     isLoading: false,
   }),
 }));
@@ -92,11 +209,71 @@ const renderAlertsRoute = (initialEntry: string, withAppLayout = false) =>
 
 describe("AlertsPage", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mockOrganisationPageSettings = {
       reportsEnabled: true,
       procurementEnabled: true,
       alertsEnabled: true,
     };
+    mockEvents = [
+      {
+        id: "event-1",
+        company_id: "company-1",
+        rule_id: "rule-1",
+        product_id: "product-1",
+        alert_type: "low_stock",
+        severity: "high",
+        status: "open",
+        message:
+          "PCR Tips is at 4 units, at or below its Low Stock Alert level of 12.",
+        triggered_at: "2026-05-12T00:00:00Z",
+        products: { name: "PCR Tips", sku: "TIP-001" },
+      },
+      {
+        id: "event-2",
+        company_id: "company-1",
+        rule_id: "rule-1",
+        product_id: "product-2",
+        alert_type: "expiration",
+        severity: "medium",
+        status: "acknowledged",
+        message: "Buffer expires soon.",
+        triggered_at: "2026-05-11T00:00:00Z",
+        products: { name: "Buffer", sku: "BUF-001" },
+      },
+    ];
+    mockRules = [
+      {
+        id: "rule-1",
+        company_id: "company-1",
+        name: "Low stock alert",
+        alert_type: "low_stock",
+        enabled: true,
+        condition: { thresholdSource: "product_reorder_point" },
+        delivery_channels: ["in_app"],
+        recipients: ["role:role-manager"],
+        created_at: "2026-05-10T00:00:00Z",
+      },
+    ];
+    mockDeliveries = [
+      {
+        id: "delivery-1",
+        alert_event_id: "event-1",
+        channel: "email",
+        recipient: "admin@acme.test",
+        status: "pending",
+        sent_at: null,
+        error_message: null,
+        alert_events: {
+          message:
+            "PCR Tips is at 4 units, at or below its Low Stock Alert level of 12.",
+          alert_type: "low_stock",
+          severity: "high",
+          triggered_at: "2026-05-12T00:00:00Z",
+        },
+      },
+    ];
+    mockDispatchEmails.mockResolvedValue({ claimed: 1, sent: 1, failed: 0, results: [] });
 
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -104,60 +281,27 @@ describe("AlertsPage", () => {
     });
   });
 
-  it("renders the new feed and supports bulk dismiss actions", async () => {
+  it("renders delivered alerts and supports bulk acknowledgement", async () => {
     const user = userEvent.setup();
 
     renderAlertsRoute("/alerts/feed");
 
     const alertsFeedTab = screen.getByRole("button", { name: /alerts feed/i });
-    const alertsTabBar = alertsFeedTab.closest("nav");
-
-    expect(alertsFeedTab).toBeInTheDocument();
-    expect(alertsTabBar).not.toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Alert Rules" }),
-    ).toBeInTheDocument();
-    expect(alertsTabBar).toHaveClass("mb-[var(--gap-4)]");
-    expect(
-      screen.queryByRole("button", { name: /notifications/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /email \/ push/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /history/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Out of Stock: Premium Widget"),
-    ).toBeInTheDocument();
-    expect(within(alertsFeedTab).getByText("7")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Stock & Inventory" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Mark Read" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Dismiss" }),
-    ).not.toBeInTheDocument();
+    expect(within(alertsFeedTab).getByText("1")).toBeInTheDocument();
+    expect(screen.getByText(/PCR Tips is at 4 units/i)).toBeInTheDocument();
+    expect(screen.getByText("TIP-001")).toBeInTheDocument();
 
     await user.click(screen.getByLabelText("Select all visible alerts"));
+    await user.click(screen.getAllByRole("button", { name: "Acknowledge" })[0]);
 
-    expect(
-      screen.queryByRole("button", { name: "Stock & Inventory" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Mark Read" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Dismiss" }));
-
-    expect(screen.getByText("Showing 2 of 2 alerts")).toBeInTheDocument();
-    expect(screen.getByText("PO Delayed: Alpha Supplies")).toBeInTheDocument();
-    expect(screen.getByText("Receiving Discrepancy")).toBeInTheDocument();
-    expect(within(alertsFeedTab).getByText("2")).toBeInTheDocument();
+    expect(mockUpdateEventStatus).toHaveBeenCalledWith({
+      eventId: "event-1",
+      status: "acknowledged",
+    });
+    expect(mockUpdateEventStatus).toHaveBeenCalledWith({
+      eventId: "event-2",
+      status: "acknowledged",
+    });
   });
 
   it("filters the feed from the top bar search on alerts routes", async () => {
@@ -165,58 +309,11 @@ describe("AlertsPage", () => {
 
     renderAlertsRoute("/alerts/feed", true);
 
-    const searchInput = screen.getByPlaceholderText("Search alerts...");
+    await user.type(screen.getByPlaceholderText("Search alerts..."), "buffer");
 
-    expect(searchInput).toBeInTheDocument();
-    expect(
-      screen.queryByPlaceholderText("Search items..."),
-    ).not.toBeInTheDocument();
-
-    await user.type(searchInput, "scanner");
-
-    expect(screen.getByText("Showing 1 of 7 alerts")).toBeInTheDocument();
-    expect(
-      screen.getAllByText("Hardware Offline: Main Dock Scanner").length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.queryByText("Out of Stock: Premium Widget"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("supports fuzzy matches from the top bar search on alerts routes", async () => {
-    const user = userEvent.setup();
-
-    renderAlertsRoute("/alerts/feed", true);
-
-    await user.type(
-      screen.getByPlaceholderText("Search alerts..."),
-      "po alpha",
-    );
-
-    expect(screen.getByText("Showing 1 of 7 alerts")).toBeInTheDocument();
-    expect(screen.getByText("PO Delayed: Alpha Supplies")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Out of Stock: Premium Widget"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("filters the alert rules tab from the shared top bar search", async () => {
-    const user = userEvent.setup();
-
-    renderAlertsRoute("/alerts/rules", true);
-
-    await user.type(
-      screen.getByRole("combobox", { name: "Search alert rules..." }),
-      "slack",
-    );
-
-    expect(screen.getAllByText("Slack Webhook").length).toBeGreaterThan(0);
-    expect(
-      screen.queryByText("In-App Notifications"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Default Low Stock Threshold"),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Showing 1 of 2 alerts")).toBeInTheDocument();
+    expect(screen.getAllByText("Buffer expires soon.").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/PCR Tips is at 4 units/i)).not.toBeInTheDocument();
   });
 
   it("filters the feed using the shared filter buttons", async () => {
@@ -226,20 +323,60 @@ describe("AlertsPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Stock & Inventory" }));
 
-    expect(screen.getByText("Showing 2 of 7 alerts")).toBeInTheDocument();
-    expect(
-      screen.getByText("Out of Stock: Premium Widget"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Expiry Warning: Organic Solvent"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("PO Delayed: Alpha Supplies"),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Showing 2 of 2 alerts")).toBeInTheDocument();
+    expect(screen.getByText(/PCR Tips is at 4 units/i)).toBeInTheDocument();
+    expect(screen.getByText("Buffer expires soon.")).toBeInTheDocument();
+  });
 
-    await user.click(screen.getByRole("button", { name: "All" }));
+  it("renders alert rules with organisation-role recipients", async () => {
+    renderAlertsRoute("/alerts/rules");
 
-    expect(screen.getByText("Showing 7 of 7 alerts")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alert Triggers" })).toBeInTheDocument();
+    expect(screen.getAllByText("Low stock alert").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Manager").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("In-app").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Notify Manager")).toBeChecked();
+    expect(screen.getByRole("switch", { name: "Email notifications enabled" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  it("updates a low-stock rule with multiple selected roles and email delivery", async () => {
+    const user = userEvent.setup();
+
+    renderAlertsRoute("/alerts/rules");
+
+    await user.click(screen.getByLabelText("Notify Viewer"));
+    await user.click(screen.getByRole("switch", { name: "Email notifications enabled" }));
+    await user.click(screen.getByRole("button", { name: "Save Trigger" }));
+
+    await waitFor(() => {
+      expect(mockUpdateRule).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ruleId: "rule-1",
+          alertType: "low_stock",
+          deliveryChannels: ["in_app", "email"],
+          recipients: ["role:role-manager", "role:role-viewer"],
+          condition: { thresholdSource: "product_reorder_point" },
+        }),
+      );
+    });
+  });
+
+  it("dispatches queued alert emails from the rules page", async () => {
+    const user = userEvent.setup();
+
+    renderAlertsRoute("/alerts/rules");
+
+    expect(screen.getByText("1 queued, 0 sending, 0 sent, 0 failed")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Send queued" }));
+
+    await waitFor(() => {
+      expect(mockDispatchEmails).toHaveBeenCalled();
+    });
+    expect(screen.getByText("Email dispatch finished: 1 sent, 0 failed.")).toBeInTheDocument();
   });
 
   it("redirects legacy notifications routes to feed and switches into alert rules", async () => {
@@ -256,22 +393,7 @@ describe("AlertsPage", () => {
     expect(screen.getByTestId("location-path")).toHaveTextContent(
       "/alerts/rules",
     );
-    expect(
-      screen.getByRole("heading", { name: "Global Threshold Settings" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Notification Routing" }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("Default Low Stock Threshold")).toHaveValue(
-      50,
-    );
-    expect(screen.getByLabelText("Expiry Warning Window")).toHaveValue(14);
-    expect(
-      screen.getByRole("combobox", { name: "Procurement Alerts subscription" }),
-    ).toHaveValue("purchasing-managers");
-    expect(
-      screen.getByRole("switch", { name: "Toggle In-App Notifications" }),
-    ).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("heading", { name: "Alert Triggers" })).toBeInTheDocument();
   });
 
   it("renders the unavailable message when alerts are disabled", () => {
@@ -288,8 +410,6 @@ describe("AlertsPage", () => {
         "Feature unavailable, please contact your admin for assistance.",
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText("Out of Stock: Premium Widget"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/PCR Tips is at 4 units/i)).not.toBeInTheDocument();
   });
 });

@@ -31,10 +31,22 @@ export type AlertDeliveryLog = {
   alert_event_id: string
   channel: 'in_app' | 'email' | 'push'
   recipient: string | null
-  status: 'pending' | 'sent' | 'failed'
+  status: 'pending' | 'sending' | 'sent' | 'failed'
   sent_at: string | null
   error_message: string | null
   alert_events: { message: string; alert_type: string; severity: string; triggered_at: string } | null
+}
+
+export type AlertEmailDispatchResult = {
+  claimed: number
+  sent: number
+  failed: number
+  results: Array<{
+    deliveryId: string
+    recipient: string
+    status: 'sent' | 'failed'
+    error?: string
+  }>
 }
 
 export const fetchAlertProducts = async (companyId: string): Promise<Product[]> => {
@@ -70,6 +82,12 @@ type AlertDeliveryLogRow = Omit<AlertDeliveryLog, 'alert_events'> & {
     | null
 }
 
+type DeliveredAlertEventRow = AlertEventRow & {
+  delivery_id: string | null
+  product_name: string | null
+  product_sku: string | null
+}
+
 export const fetchAlertRules = async (companyId: string): Promise<AlertRule[]> => {
   const { data, error } = await db
     .from('alert_rules')
@@ -90,6 +108,7 @@ export const createAlertRule = async (
     condition: Record<string, unknown>
     deliveryChannels: Array<'in_app' | 'email' | 'push'>
     recipients: string[]
+    enabled?: boolean
   },
 ) => {
   const { error } = await db.from('alert_rules').insert({
@@ -99,8 +118,36 @@ export const createAlertRule = async (
     condition: payload.condition,
     delivery_channels: payload.deliveryChannels,
     recipients: payload.recipients,
-    enabled: true,
+    enabled: payload.enabled ?? true,
   })
+
+  if (error) throw error
+}
+
+export const updateAlertRule = async (
+  companyId: string,
+  ruleId: string,
+  payload: {
+    name: string
+    alertType: AlertRule['alert_type']
+    condition: Record<string, unknown>
+    deliveryChannels: Array<'in_app' | 'email' | 'push'>
+    recipients: string[]
+    enabled: boolean
+  },
+) => {
+  const { error } = await db
+    .from('alert_rules')
+    .update({
+      name: payload.name,
+      alert_type: payload.alertType,
+      condition: payload.condition,
+      delivery_channels: payload.deliveryChannels,
+      recipients: payload.recipients,
+      enabled: payload.enabled,
+    })
+    .eq('id', ruleId)
+    .eq('company_id', companyId)
 
   if (error) throw error
 }
@@ -120,18 +167,25 @@ export const updateAlertRuleEnabled = async (
 }
 
 export const fetchAlertEvents = async (companyId: string): Promise<AlertEvent[]> => {
-  const { data, error } = await db
-    .from('alert_events')
-    .select('id, company_id, rule_id, product_id, alert_type, severity, status, message, triggered_at, products(name, sku)')
-    .eq('company_id', companyId)
-    .order('triggered_at', { ascending: false })
-    .limit(100)
+  const { data, error } = await supabase.rpc('get_stoqr_delivered_alert_events', {
+    target_company_id: companyId,
+  })
 
   if (error) throw error
 
-  return ((data as AlertEventRow[] | null) ?? []).map((row) => ({
-    ...row,
-    products: normalizeSingle(row.products),
+  return ((data as DeliveredAlertEventRow[] | null) ?? []).map((row) => ({
+    id: row.id,
+    company_id: row.company_id,
+    rule_id: row.rule_id,
+    product_id: row.product_id,
+    alert_type: row.alert_type,
+    severity: row.severity,
+    status: row.status,
+    message: row.message,
+    triggered_at: row.triggered_at,
+    products: row.product_name || row.product_sku
+      ? { name: row.product_name ?? 'Unknown product', sku: row.product_sku ?? 'N/A' }
+      : null,
   }))
 }
 
@@ -140,15 +194,11 @@ export const updateAlertEventStatus = async (
   eventId: string,
   status: AlertEvent['status'],
 ) => {
-  const patch: { status: AlertEvent['status']; acknowledged_at?: string | null; resolved_at?: string | null } = { status }
-  if (status === 'acknowledged') patch.acknowledged_at = new Date().toISOString()
-  if (status === 'resolved') patch.resolved_at = new Date().toISOString()
-
-  const { error } = await db
-    .from('alert_events')
-    .update(patch)
-    .eq('id', eventId)
-    .eq('company_id', companyId)
+  const { error } = await supabase.rpc('update_stoqr_delivered_alert_status', {
+    target_company_id: companyId,
+    target_event_id: eventId,
+    next_status: status,
+  })
 
   if (error) throw error
 }
@@ -167,4 +217,14 @@ export const fetchAlertDeliveryLogs = async (companyId: string): Promise<AlertDe
     ...row,
     alert_events: normalizeSingle(row.alert_events),
   }))
+}
+
+export const dispatchAlertEmails = async (companyId: string): Promise<AlertEmailDispatchResult> => {
+  const { data, error } = await supabase.functions.invoke('send-stoqr-alert-emails', {
+    body: { companyId, batchSize: 25 },
+  })
+
+  if (error) throw error
+
+  return (data ?? { claimed: 0, sent: 0, failed: 0, results: [] }) as AlertEmailDispatchResult
 }

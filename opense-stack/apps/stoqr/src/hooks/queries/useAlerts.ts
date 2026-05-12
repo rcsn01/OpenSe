@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createAlertRule,
+  dispatchAlertEmails,
   fetchAlertDeliveryLogs,
   fetchAlertEvents,
   fetchAlertProducts,
   fetchAlertRules,
+  updateAlertRule,
   updateAlertEventStatus,
   updateAlertRuleEnabled,
 } from '../../api/alerts'
@@ -55,9 +57,33 @@ export const useCreateAlertRule = (companyId: string | null) => {
       condition: Record<string, unknown>
       deliveryChannels: Array<'in_app' | 'email' | 'push'>
       recipients: string[]
+      enabled?: boolean
     }) => {
       if (!companyId) throw new Error('No company selected')
       await createAlertRule(companyId, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alertsKeys.root(companyId) })
+    },
+  })
+}
+
+export const useUpdateAlertRule = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: {
+      ruleId: string
+      name: string
+      alertType: 'low_stock' | 'reorder_point' | 'expiration' | 'custom'
+      condition: Record<string, unknown>
+      deliveryChannels: Array<'in_app' | 'email' | 'push'>
+      recipients: string[]
+      enabled: boolean
+    }) => {
+      if (!companyId) throw new Error('No company selected')
+      const { ruleId, ...rulePayload } = payload
+      await updateAlertRule(companyId, ruleId, rulePayload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: alertsKeys.root(companyId) })
@@ -86,6 +112,20 @@ export const useUpdateAlertEventStatus = (companyId: string | null) => {
     mutationFn: async (payload: { eventId: string; status: 'open' | 'acknowledged' | 'resolved' }) => {
       if (!companyId) throw new Error('No company selected')
       await updateAlertEventStatus(companyId, payload.eventId, payload.status)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alertsKeys.root(companyId) })
+    },
+  })
+}
+
+export const useDispatchAlertEmails = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!companyId) throw new Error('No company selected')
+      return dispatchAlertEmails(companyId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: alertsKeys.root(companyId) })
