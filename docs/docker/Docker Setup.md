@@ -2,6 +2,8 @@
 
 This guide covers three workflows for running the OpenSe webapps with Docker.
 
+For the StoQR alert mail service, see [StoQR Alert Email Setup](./StoQR%20Alert%20Email%20Setup.md).
+
 | App | Package | Dev port | Prod port |
 |---|---|---|---|
 | Admin | `@repo/admin` | 5990 | 5990 |

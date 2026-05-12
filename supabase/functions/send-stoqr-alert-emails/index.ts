@@ -47,6 +47,29 @@ const parseTimeout = (value: string | undefined, fallback: number) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
+const describeSmtpError = (error: unknown) => {
+  if (!(error instanceof Error)) return 'Unknown email delivery error'
+
+  const smtpError = error as Error & {
+    code?: string
+    command?: string
+    errno?: string | number
+    response?: string
+    responseCode?: number
+    syscall?: string
+  }
+
+  return [
+    smtpError.message,
+    smtpError.code ? `code=${smtpError.code}` : null,
+    smtpError.command ? `command=${smtpError.command}` : null,
+    smtpError.responseCode ? `responseCode=${smtpError.responseCode}` : null,
+    smtpError.response ? `response=${smtpError.response}` : null,
+    smtpError.errno ? `errno=${smtpError.errno}` : null,
+    smtpError.syscall ? `syscall=${smtpError.syscall}` : null,
+  ].filter(Boolean).join(' | ')
+}
+
 const parseBody = async (req: Request): Promise<DispatchRequestBody> => {
   const body = await req.json().catch(() => ({})) as Record<string, unknown>
   const raw = typeof body.batchSize === 'number' ? body.batchSize : Number(body.batchSize ?? 25)
@@ -176,11 +199,13 @@ Deno.serve(async (req: Request) => {
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   const dispatchToken = Deno.env.get('ALERT_EMAIL_DISPATCH_TOKEN')
-  const smtpHost = Deno.env.get('ALERT_SMTP_HOST')
-  const smtpPort = Number(Deno.env.get('ALERT_SMTP_PORT') ?? 587)
+  const smtpHost = Deno.env.get('ALERT_SMTP_PUBLIC_HOST') ?? Deno.env.get('ALERT_SMTP_HOST')
+  const smtpPort = Number(Deno.env.get('ALERT_SMTP_PUBLIC_PORT') ?? Deno.env.get('ALERT_SMTP_PORT') ?? 587)
   const smtpUser = Deno.env.get('ALERT_SMTP_USER')
   const smtpPass = Deno.env.get('ALERT_SMTP_PASS')
   const from = Deno.env.get('ALERT_MAIL_FROM')
+  const rejectUnauthorized = parseBoolean(Deno.env.get('ALERT_SMTP_TLS_REJECT_UNAUTHORIZED'), true)
+  const smtpTlsServername = Deno.env.get('ALERT_SMTP_TLS_SERVERNAME')?.trim() || undefined
 
   if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
     return json(req, 500, { error: 'Supabase environment is not configured' })
@@ -212,13 +237,19 @@ Deno.serve(async (req: Request) => {
   const transporter = nodemailer.createTransport({
     host: smtpHost,
     port: smtpPort,
-    secure: parseBoolean(Deno.env.get('ALERT_SMTP_SECURE'), smtpPort === 465),
+    secure: parseBoolean(Deno.env.get('ALERT_SMTP_PUBLIC_SECURE') ?? Deno.env.get('ALERT_SMTP_SECURE'), smtpPort === 465),
     ignoreTLS: parseBoolean(Deno.env.get('ALERT_SMTP_IGNORE_TLS'), false),
     requireTLS: parseBoolean(Deno.env.get('ALERT_SMTP_REQUIRE_TLS'), false),
     connectionTimeout: parseTimeout(Deno.env.get('ALERT_SMTP_CONNECTION_TIMEOUT_MS'), 10_000),
     greetingTimeout: parseTimeout(Deno.env.get('ALERT_SMTP_GREETING_TIMEOUT_MS'), 10_000),
     socketTimeout: parseTimeout(Deno.env.get('ALERT_SMTP_SOCKET_TIMEOUT_MS'), 15_000),
+    tls: {
+      rejectUnauthorized,
+      servername: smtpTlsServername,
+    },
     auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
+    logger: parseBoolean(Deno.env.get('ALERT_SMTP_DEBUG'), false),
+    debug: parseBoolean(Deno.env.get('ALERT_SMTP_DEBUG'), false),
   })
 
   const results = []
@@ -242,7 +273,8 @@ Deno.serve(async (req: Request) => {
 
       results.push({ deliveryId: alert.delivery_id, recipient: alert.recipient_email, status: 'sent' })
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown email delivery error'
+      const message = describeSmtpError(error)
+      console.error('StoQR alert email delivery failed', message)
 
       await rpc(supabaseUrl, serviceRoleKey, 'mark_stoqr_alert_email_delivery', {
         target_delivery_id: alert.delivery_id,

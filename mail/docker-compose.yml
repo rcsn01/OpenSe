@@ -12,9 +12,16 @@ services:
     environment:
       MADDY_HOSTNAME: ${MADDY_HOSTNAME:-mail.rcsn01.com}
       MADDY_DOMAIN: ${MADDY_DOMAIN:-rcsn01.com}
+      MADDY_TLS_CERT_FILE: ${MADDY_TLS_CERT_FILE:-/etc/letsencrypt/live/mail.rcsn01.com/fullchain.pem}
+      MADDY_TLS_KEY_FILE: ${MADDY_TLS_KEY_FILE:-/etc/letsencrypt/live/mail.rcsn01.com/privkey.pem}
+      MADDY_RELAY_HOST: ${MADDY_RELAY_HOST:-mail.tpg.com.au}
+      MADDY_RELAY_PORT: ${MADDY_RELAY_PORT:-465}
+      MADDY_RELAY_USERNAME: ${MADDY_RELAY_USERNAME:-}
+      MADDY_RELAY_PASSWORD: ${MADDY_RELAY_PASSWORD:-}
     volumes:
       - maddy-data:/data
       - ./maddy.conf:/data/maddy.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     ports:
       - "${MADDY_SMTP_PORT:-25}:25"
       - "${MADDY_IMAP_PORT:-143}:143"
