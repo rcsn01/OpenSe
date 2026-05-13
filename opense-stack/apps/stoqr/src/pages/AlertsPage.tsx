@@ -6,19 +6,14 @@ import {
   ContentTabs,
   DataTable,
   type DataTableColumn,
-  Input,
-  Select,
   Toggle,
 } from "@repo/ui";
 import {
   AlertCircle,
   AlertTriangle,
-  BellRing,
   CheckCheck,
   Info,
-  Mail,
   Plus,
-  Settings2,
 } from "lucide-react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { BasePage } from "../components/BasePage";
@@ -30,12 +25,8 @@ import {
 import { useCompany } from "../contexts/CompanyContext";
 import {
   useAlertEvents,
-  useAlertDeliveryLogs,
   useAlertRules,
-  useCreateAlertRule,
-  useDispatchAlertEmails,
   useUpdateAlertEventStatus,
-  useUpdateAlertRule,
   useUpdateAlertRuleEnabled,
 } from "../hooks/queries/useAlerts";
 import { useTeamSettingsData } from "../hooks/queries/useTeamSettings";
@@ -52,14 +43,6 @@ type FeedCategory = "all" | "stock" | "procurement" | "system";
 type FeedSeverity = AlertEvent["severity"];
 type AlertSortKey = "message" | "severity" | "category" | "status";
 
-type RuleFormState = {
-  id: string | null;
-  name: string;
-  recipientRoleIds: string[];
-  emailEnabled: boolean;
-  enabled: boolean;
-};
-
 const legacyTabRedirects: Record<string, AlertsTab> = {
   notifications: "feed",
   delivery: "rules",
@@ -67,7 +50,6 @@ const legacyTabRedirects: Record<string, AlertsTab> = {
 };
 
 const feedPageSize = 8;
-const LOW_STOCK_RULE_CONDITION = { thresholdSource: "product_reorder_point" };
 
 const severityVariant = {
   low: "secondary",
@@ -97,14 +79,6 @@ const feedFilters: Array<{ id: FeedCategory; label: string }> = [
   { id: "system", label: "System & Operations" },
 ];
 
-const emptyRuleForm: RuleFormState = {
-  id: null,
-  name: "Low stock alert",
-  recipientRoleIds: [],
-  emailEnabled: false,
-  enabled: true,
-};
-
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
@@ -133,8 +107,6 @@ const renderSeverityIcon = (severity: FeedSeverity) => {
   return <Info size={12} aria-hidden="true" />;
 };
 
-const roleToken = (roleId: string) => `role:${roleId}`;
-
 const parseRecipientRoleIds = (rule: AlertRule) =>
   rule.recipients
     .map((recipient) => recipient.replace(/^role:/, ""))
@@ -153,11 +125,11 @@ const getRuleChannelsLabel = (rule: AlertRule) => {
   if (rule.delivery_channels.includes("in_app")) channels.push("In-app");
   if (rule.delivery_channels.includes("email")) channels.push("Email");
   if (rule.delivery_channels.includes("push")) channels.push("Push");
+  if (rule.delivery_channels.includes("telegram")) channels.push("Telegram");
+  if (rule.delivery_channels.includes("mattermost")) channels.push("Mattermost");
+  if (rule.delivery_channels.includes("whatsapp")) channels.push("WhatsApp");
   return channels.length ? channels.join(", ") : "No channels";
 };
-
-const getPrimaryLowStockRule = (rules: AlertRule[]) =>
-  rules.find((rule) => rule.alert_type === "low_stock") ?? null;
 
 export const AlertsPage = () => {
   const { companyId } = useCompany();
@@ -171,27 +143,16 @@ export const AlertsPage = () => {
   const normalizedRulesSearchTerm = normalizePageSearchTerm(rulesSearchTerm);
 
   const { data: events = [], isLoading: loadingEvents } = useAlertEvents(companyId);
-  const { data: deliveries = [], isLoading: loadingDeliveries } =
-    useAlertDeliveryLogs(companyId);
   const { data: rules = [], isLoading: loadingRules } = useAlertRules(companyId);
-  const { data: teamSettings, isLoading: loadingTeamSettings } =
-    useTeamSettingsData(companyId);
-  const createRuleMutation = useCreateAlertRule(companyId);
-  const updateRuleMutation = useUpdateAlertRule(companyId);
+  const { data: teamSettings } = useTeamSettingsData(companyId);
   const updateRuleEnabledMutation = useUpdateAlertRuleEnabled(companyId);
   const updateEventStatusMutation = useUpdateAlertEventStatus(companyId);
-  const dispatchEmailMutation = useDispatchAlertEmails(companyId);
 
   const roles = teamSettings?.roles ?? [];
   const rolesById = useMemo(
     () => new Map(roles.map((role) => [role.id, role])),
     [roles],
   );
-  const roleOptions = useMemo(
-    () => roles.map((role) => ({ value: role.id, label: role.name })),
-    [roles],
-  );
-
   const [activeFilter, setActiveFilter] = useState<FeedCategory>("all");
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const [tablePage, setTablePage] = useState(1);
@@ -199,29 +160,11 @@ export const AlertsPage = () => {
   const [tableSortDirection, setTableSortDirection] = useState<"asc" | "desc">(
     "asc",
   );
-  const [ruleForm, setRuleForm] = useState<RuleFormState>(emptyRuleForm);
-  const [ruleMessage, setRuleMessage] = useState<string | null>(null);
-  const [dispatchMessage, setDispatchMessage] = useState<string | null>(null);
 
   const lowStockRules = useMemo(
     () => rules.filter((rule) => rule.alert_type === "low_stock"),
     [rules],
   );
-  const lowStockRule = useMemo(
-    () => getPrimaryLowStockRule(lowStockRules),
-    [lowStockRules],
-  );
-
-  useEffect(() => {
-    if (!lowStockRule) return;
-    setRuleForm({
-      id: lowStockRule.id,
-      name: lowStockRule.name,
-      recipientRoleIds: parseRecipientRoleIds(lowStockRule),
-      emailEnabled: lowStockRule.delivery_channels.includes("email"),
-      enabled: lowStockRule.enabled,
-    });
-  }, [lowStockRule]);
 
   useEffect(() => {
     setTablePage(1);
@@ -380,22 +323,6 @@ export const AlertsPage = () => {
     currentTablePage * feedPageSize,
   );
   const openCount = events.filter((event) => event.status === "open").length;
-  const emailDeliveries = deliveries.filter((delivery) => delivery.channel === "email");
-  const pendingEmailCount = emailDeliveries.filter(
-    (delivery) => delivery.status === "pending",
-  ).length;
-  const sendingEmailCount = emailDeliveries.filter(
-    (delivery) => delivery.status === "sending",
-  ).length;
-  const sentEmailCount = emailDeliveries.filter(
-    (delivery) => delivery.status === "sent",
-  ).length;
-  const failedEmailCount = emailDeliveries.filter(
-    (delivery) => delivery.status === "failed",
-  ).length;
-  const latestFailedEmail = emailDeliveries.find(
-    (delivery) => delivery.status === "failed" && delivery.error_message,
-  );
 
   const handleTableSort = (field: AlertSortKey) => {
     if (tableSortField === field) {
@@ -449,78 +376,6 @@ export const AlertsPage = () => {
     await updateEventStatusMutation.mutateAsync({ eventId, status });
   };
 
-  const dispatchQueuedEmails = async () => {
-    setDispatchMessage(null);
-    try {
-      const result = await dispatchEmailMutation.mutateAsync();
-      setDispatchMessage(
-        result.claimed === 0
-          ? "No queued email alerts to send."
-          : `Email dispatch finished: ${result.sent} sent, ${result.failed} failed.`,
-      );
-    } catch (error) {
-      setDispatchMessage(
-        error instanceof Error
-          ? error.message
-          : "Email dispatch failed. Check the Edge Function logs.",
-      );
-    }
-  };
-
-  const toggleRoleRecipient = (roleId: string) => {
-    setRuleForm((current) => ({
-      ...current,
-      recipientRoleIds: current.recipientRoleIds.includes(roleId)
-        ? current.recipientRoleIds.filter((currentId) => currentId !== roleId)
-        : [...current.recipientRoleIds, roleId],
-    }));
-  };
-
-  const resetRuleForm = () => {
-    setRuleForm(emptyRuleForm);
-    setRuleMessage(null);
-  };
-
-  const editRule = (rule: AlertRule) => {
-    setRuleForm({
-      id: rule.id,
-      name: rule.name,
-      enabled: rule.enabled,
-      recipientRoleIds: parseRecipientRoleIds(rule),
-      emailEnabled: rule.delivery_channels.includes("email"),
-    });
-    setRuleMessage(null);
-  };
-
-  const saveRule = async () => {
-    if (!ruleForm.name.trim()) {
-      setRuleMessage("Add a rule name before saving.");
-      return;
-    }
-    if (ruleForm.recipientRoleIds.length === 0) {
-      setRuleMessage("Select at least one organisation role.");
-      return;
-    }
-
-    const payload = {
-      name: ruleForm.name.trim(),
-      alertType: "low_stock" as const,
-      condition: LOW_STOCK_RULE_CONDITION,
-      deliveryChannels: ruleForm.emailEnabled
-        ? (["in_app", "email"] satisfies AlertRule["delivery_channels"])
-        : (["in_app"] satisfies AlertRule["delivery_channels"]),
-      recipients: ruleForm.recipientRoleIds.map(roleToken),
-      enabled: ruleForm.enabled,
-    };
-
-    if (ruleForm.id) {
-      await updateRuleMutation.mutateAsync({ ruleId: ruleForm.id, ...payload });
-      setRuleMessage("Low stock alert rule updated.");
-    } else {
-      await createRuleMutation.mutateAsync(payload);
-      setRuleMessage("Low stock alert rule created.");
-    }
-  };
 
   const alertColumns: Array<DataTableColumn<AlertEvent, AlertSortKey>> = [
     {
@@ -646,34 +501,20 @@ export const AlertsPage = () => {
     {
       id: "status",
       header: "Status",
-      width: "12%",
+      width: "16%",
       renderCell: (rule) => (
-        <Toggle
-          checked={rule.enabled}
-          aria-label={`Toggle ${rule.name}`}
-          onChange={(event) =>
-            updateRuleEnabledMutation.mutate({
-              ruleId: rule.id,
-              enabled: event.target.checked,
-            })
-          }
-        />
-      ),
-    },
-    {
-      id: "actions",
-      header: "",
-      align: "right",
-      width: "14%",
-      renderCell: (rule) => (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => editRule(rule)}
-        >
-          Edit
-        </Button>
+        <div onClick={(event) => event.stopPropagation()}>
+          <Toggle
+            checked={rule.enabled}
+            aria-label={`Toggle ${rule.name}`}
+            onChange={(event) =>
+              updateRuleEnabledMutation.mutate({
+                ruleId: rule.id,
+                enabled: event.target.checked,
+              })
+            }
+          />
+        </div>
       ),
     },
   ];
@@ -770,246 +611,37 @@ export const AlertsPage = () => {
     </Card>
   );
 
-  const rolesLoading = loadingTeamSettings || loadingRules;
-  const saveDisabled =
-    rolesLoading ||
-    createRuleMutation.isPending ||
-    updateRuleMutation.isPending ||
-    roleFormHasNoRecipients(ruleForm);
-
   const rulesContent = (
-    <div className="grid min-h-0 gap-7 xl:grid-cols-[minmax(0,1fr)_420px]">
-      <Card variant="plain" className="overflow-hidden" padding="none">
-        <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] px-6 py-5">
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-              Alert Triggers
-            </h2>
-            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              Manage automatic notifications for inventory conditions.
-            </p>
-          </div>
-          <Button type="button" variant="secondary" size="sm" onClick={resetRuleForm}>
-            <Plus size={14} aria-hidden="true" />
-            New Trigger
-          </Button>
+    <Card variant="plain" className="overflow-hidden" padding="none">
+      <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] px-6 py-5">
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
+            Alert Triggers
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+            Manage automatic notifications for inventory conditions.
+          </p>
         </div>
+        <Button type="button" variant="secondary" size="sm" onClick={() => navigate("/alerts/rules/new")}>
+          <Plus size={14} aria-hidden="true" />
+          New Trigger
+        </Button>
+      </div>
 
-        <DataTable
-          columns={ruleColumns}
-          rows={visibleRules}
-          getRowId={(rule) => rule.id}
-          emptyState={
-            loadingRules
-              ? "Loading alert triggers..."
-              : "No alert triggers yet. Create a low-stock trigger to get started."
-          }
-          minTableWidth={780}
-          tableLayout="fixed"
-        />
-      </Card>
-
-      <Card variant="plain" className="overflow-hidden" padding="none">
-        <div className="border-b border-[var(--color-border)] px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-[var(--color-info-light)] p-3 text-[var(--color-info)]">
-              <Settings2 size={18} aria-hidden="true" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-                {ruleForm.id ? "Edit Low-Stock Trigger" : "Create Low-Stock Trigger"}
-              </h2>
-              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                Notify selected roles when an item reaches its Low Stock Alert level.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-5 px-6 py-5">
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold text-[var(--color-foreground)]">
-              Rule name
-            </span>
-            <Input
-              value={ruleForm.name}
-              onChange={(event) =>
-                setRuleForm((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-              aria-label="Rule name"
-            />
-          </label>
-
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold text-[var(--color-foreground)]">
-              Trigger
-            </span>
-            <Select
-              value="low_stock"
-              disabled
-              aria-label="Trigger type"
-              options={[
-                {
-                  value: "low_stock",
-                  label: "Quantity on hand <= Low Stock Alert level",
-                },
-              ]}
-            />
-          </label>
-
-          <div className="flex flex-col gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                Notify roles
-              </h3>
-              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                Select one or more organisation roles.
-              </p>
-            </div>
-            {rolesLoading ? (
-              <div className="rounded-lg bg-[var(--color-surface-subtle)] p-4 text-sm text-[var(--color-muted-foreground)]">
-                Loading organisation roles...
-              </div>
-            ) : roleOptions.length === 0 ? (
-              <div className="rounded-lg bg-[var(--color-surface-subtle)] p-4 text-sm text-[var(--color-muted-foreground)]">
-                No organisation roles are available yet. Create roles in Organisations settings first.
-              </div>
-            ) : (
-              <div className="grid gap-2">
-                {roleOptions.map((role) => (
-                  <label
-                    key={role.value}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] px-3 py-2"
-                  >
-                    <span className="text-sm text-[var(--color-foreground)]">
-                      {role.label}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={ruleForm.recipientRoleIds.includes(role.value)}
-                      onChange={() => toggleRoleRecipient(role.value)}
-                      aria-label={`Notify ${role.label}`}
-                    />
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] px-3 py-3">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-[var(--color-info-light)] p-2 text-[var(--color-info)]">
-                <BellRing size={16} aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                  In-app notifications
-                </p>
-                <p className="text-sm text-[var(--color-muted-foreground)]">
-                  Delivery rows are created for members in the selected roles.
-                </p>
-              </div>
-            </div>
-            <Toggle checked aria-label="In-app notifications enabled" disabled readOnly />
-          </div>
-
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] px-3 py-3">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-[var(--color-success-light)] p-2 text-[var(--color-success)]">
-                <Mail size={16} aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                  Email notifications
-                </p>
-                <p className="text-sm text-[var(--color-muted-foreground)]">
-                  Queue email delivery for members in the selected roles.
-                </p>
-              </div>
-            </div>
-            <Toggle
-              checked={ruleForm.emailEnabled}
-              aria-label="Email notifications enabled"
-              onChange={(event) =>
-                setRuleForm((current) => ({
-                  ...current,
-                  emailEnabled: event.target.checked,
-                }))
-              }
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-[var(--color-foreground)]">
-              Trigger enabled
-            </span>
-            <Toggle
-              checked={ruleForm.enabled}
-              aria-label="Trigger enabled"
-              onChange={(event) =>
-                setRuleForm((current) => ({
-                  ...current,
-                  enabled: event.target.checked,
-                }))
-              }
-            />
-          </div>
-
-          {ruleMessage ? (
-            <div className="rounded-lg bg-[var(--color-surface-subtle)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
-              {ruleMessage}
-            </div>
-          ) : null}
-
-          <div className="rounded-lg border border-[var(--color-border)] px-3 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                  Email delivery status
-                </p>
-                <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                  {loadingDeliveries
-                    ? "Loading delivery queue..."
-                    : `${pendingEmailCount} queued, ${sendingEmailCount} sending, ${sentEmailCount} sent, ${failedEmailCount} failed`}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => void dispatchQueuedEmails()}
-                disabled={dispatchEmailMutation.isPending || pendingEmailCount === 0}
-              >
-                <Mail size={14} aria-hidden="true" />
-                Send queued
-              </Button>
-            </div>
-            {latestFailedEmail?.error_message ? (
-              <p className="mt-2 text-sm text-[var(--color-danger)]">
-                Latest failure: {latestFailedEmail.error_message}
-              </p>
-            ) : null}
-            {dispatchMessage ? (
-              <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-                {dispatchMessage}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="ghost" onClick={resetRuleForm}>
-              Reset
-            </Button>
-            <Button type="button" onClick={() => void saveRule()} disabled={saveDisabled}>
-              {ruleForm.id ? "Save Trigger" : "Create Trigger"}
-            </Button>
-          </div>
-        </div>
-      </Card>
-    </div>
+      <DataTable
+        columns={ruleColumns}
+        rows={visibleRules}
+        getRowId={(rule) => rule.id}
+        emptyState={
+          loadingRules
+            ? "Loading alert triggers..."
+            : "No alert triggers yet. Create a low-stock trigger to get started."
+        }
+        minTableWidth={780}
+        tableLayout="fixed"
+        onRowClick={(rule) => navigate(`/alerts/rules/${rule.id}`)}
+      />
+    </Card>
   );
 
   return (
@@ -1043,6 +675,3 @@ export const AlertsPage = () => {
     </BasePage>
   );
 };
-
-const roleFormHasNoRecipients = (ruleForm: RuleFormState) =>
-  ruleForm.recipientRoleIds.length === 0;

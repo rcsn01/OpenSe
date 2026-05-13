@@ -259,12 +259,51 @@ CREATE TABLE stoqr.alert_delivery_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   alert_event_id UUID NOT NULL REFERENCES stoqr.alert_events(id) ON DELETE CASCADE,
-  channel TEXT NOT NULL CHECK (channel IN ('in_app', 'email', 'push')),
+  channel TEXT NOT NULL CHECK (channel IN ('in_app', 'email', 'push', 'telegram', 'mattermost', 'whatsapp')),
   recipient TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sending', 'sent', 'failed')),
   provider_message_id TEXT,
   error_message TEXT,
   sent_at TIMESTAMPTZ
+);
+
+CREATE TABLE stoqr.alert_connectors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL CHECK (provider IN ('telegram', 'mattermost', 'whatsapp')),
+  display_name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'disconnected' CHECK (status IN ('disconnected', 'pairing', 'connected', 'error')),
+  health_status TEXT,
+  last_error TEXT,
+  created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ
+);
+
+CREATE TABLE stoqr.alert_connector_targets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  connector_id UUID NOT NULL REFERENCES stoqr.alert_connectors(id) ON DELETE CASCADE,
+  target_type TEXT NOT NULL DEFAULT 'chat' CHECK (target_type IN ('chat', 'group', 'channel', 'webhook')),
+  target_name TEXT NOT NULL,
+  provider_target_id TEXT NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ,
+  UNIQUE (connector_id, provider_target_id)
+);
+
+CREATE TABLE stoqr.alert_rule_connector_targets (
+  rule_id UUID NOT NULL REFERENCES stoqr.alert_rules(id) ON DELETE CASCADE,
+  target_id UUID NOT NULL REFERENCES stoqr.alert_connector_targets(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  PRIMARY KEY (rule_id, target_id)
+);
+
+CREATE TABLE stoqr.alert_dispatch_config (
+  singleton BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton),
+  function_url TEXT NOT NULL,
+  dispatch_token TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
 CREATE TABLE stoqr.activity_events (
@@ -412,6 +451,16 @@ CREATE TRIGGER handle_alert_rules_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION moddatetime(updated_at);
 
+CREATE TRIGGER handle_alert_connectors_updated_at
+  BEFORE UPDATE ON stoqr.alert_connectors
+  FOR EACH ROW
+  EXECUTE FUNCTION moddatetime(updated_at);
+
+CREATE TRIGGER handle_alert_connector_targets_updated_at
+  BEFORE UPDATE ON stoqr.alert_connector_targets
+  FOR EACH ROW
+  EXECUTE FUNCTION moddatetime(updated_at);
+
 CREATE TRIGGER handle_label_templates_updated_at
   BEFORE UPDATE ON stoqr.label_templates
   FOR EACH ROW
@@ -442,6 +491,9 @@ CREATE INDEX idx_alert_rules_company_type ON stoqr.alert_rules (company_id, aler
 CREATE INDEX idx_alert_events_company_status ON stoqr.alert_events (company_id, status, triggered_at DESC);
 CREATE INDEX idx_alert_events_product ON stoqr.alert_events (product_id, triggered_at DESC);
 CREATE INDEX idx_alert_delivery_logs_event ON stoqr.alert_delivery_logs (alert_event_id);
+CREATE INDEX idx_alert_connectors_company_provider ON stoqr.alert_connectors (company_id, provider);
+CREATE INDEX idx_alert_connector_targets_connector ON stoqr.alert_connector_targets (connector_id);
+CREATE INDEX idx_alert_rule_connector_targets_target ON stoqr.alert_rule_connector_targets (target_id);
 CREATE INDEX idx_activity_events_company_created ON stoqr.activity_events (company_id, created_at DESC);
 CREATE INDEX idx_label_templates_company ON stoqr.label_templates (company_id);
 CREATE UNIQUE INDEX idx_label_templates_global_name_unique
@@ -479,6 +531,10 @@ ALTER TABLE stoqr.receiving_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.alert_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.alert_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.alert_delivery_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stoqr.alert_connectors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stoqr.alert_connector_targets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stoqr.alert_rule_connector_targets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stoqr.alert_dispatch_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.activity_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.label_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.label_print_jobs ENABLE ROW LEVEL SECURITY;
@@ -1491,6 +1547,81 @@ CREATE POLICY "Staff can manage alert events" ON stoqr.alert_events
 CREATE POLICY "Staff can view alert deliveries" ON stoqr.alert_delivery_logs
   FOR SELECT USING (public.has_permission(company_id, 'alerts.manage'));
 
+CREATE POLICY "Members can view alert connectors" ON stoqr.alert_connectors
+  FOR SELECT USING (
+    public.has_permission(company_id, 'alerts.view')
+    OR public.has_permission(company_id, 'alerts.manage')
+  );
+
+CREATE POLICY "Staff can manage alert connectors" ON stoqr.alert_connectors
+  FOR ALL USING (public.has_permission(company_id, 'alerts.manage'))
+  WITH CHECK (public.has_permission(company_id, 'alerts.manage'));
+
+CREATE POLICY "Members can view alert connector targets" ON stoqr.alert_connector_targets
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM stoqr.alert_connectors ac
+      WHERE ac.id = alert_connector_targets.connector_id
+        AND (
+          public.has_permission(ac.company_id, 'alerts.view')
+          OR public.has_permission(ac.company_id, 'alerts.manage')
+        )
+    )
+  );
+
+CREATE POLICY "Staff can manage alert connector targets" ON stoqr.alert_connector_targets
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM stoqr.alert_connectors ac
+      WHERE ac.id = alert_connector_targets.connector_id
+        AND public.has_permission(ac.company_id, 'alerts.manage')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM stoqr.alert_connectors ac
+      WHERE ac.id = alert_connector_targets.connector_id
+        AND public.has_permission(ac.company_id, 'alerts.manage')
+    )
+  );
+
+CREATE POLICY "Members can view alert rule connector targets" ON stoqr.alert_rule_connector_targets
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1
+      FROM stoqr.alert_rules ar
+      WHERE ar.id = alert_rule_connector_targets.rule_id
+        AND (
+          public.has_permission(ar.company_id, 'alerts.view')
+          OR public.has_permission(ar.company_id, 'alerts.manage')
+        )
+    )
+  );
+
+CREATE POLICY "Staff can manage alert rule connector targets" ON stoqr.alert_rule_connector_targets
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM stoqr.alert_rules ar
+      WHERE ar.id = alert_rule_connector_targets.rule_id
+        AND public.has_permission(ar.company_id, 'alerts.manage')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM stoqr.alert_rules ar
+      JOIN stoqr.alert_connector_targets act ON act.id = alert_rule_connector_targets.target_id
+      JOIN stoqr.alert_connectors ac ON ac.id = act.connector_id
+      WHERE ar.id = alert_rule_connector_targets.rule_id
+        AND ar.company_id = ac.company_id
+        AND public.has_permission(ar.company_id, 'alerts.manage')
+    )
+  );
+
 CREATE POLICY "Members can view activity events" ON stoqr.activity_events
   FOR SELECT USING (
     public.has_permission(company_id, 'activity.view')
@@ -2069,7 +2200,7 @@ BEGIN
     WHERE company_id = NEW.company_id
       AND alert_type = 'low_stock'
       AND enabled = true
-      AND delivery_channels && ARRAY['in_app', 'email']::text[]
+      AND delivery_channels && ARRAY['in_app', 'email', 'telegram', 'mattermost', 'whatsapp']::text[]
   LOOP
     IF EXISTS (
       SELECT 1
@@ -2132,7 +2263,8 @@ BEGIN
     JOIN stoqr.organisation_member_roles omr
       ON omr.company_id = NEW.company_id
      AND omr.role_id = replace(recipient_token.token, 'role:', '')::uuid
-    WHERE recipient_token.token ~* '^role:[0-9a-f-]{36}$';
+    WHERE v_rule.delivery_channels @> ARRAY['in_app']::text[]
+      AND recipient_token.token ~* '^role:[0-9a-f-]{36}$';
 
     INSERT INTO stoqr.alert_delivery_logs (
       company_id,
@@ -2155,6 +2287,29 @@ BEGIN
     WHERE v_rule.delivery_channels @> ARRAY['email']::text[]
       AND recipient_token.token ~* '^role:[0-9a-f-]{36}$'
       AND NULLIF(p.email, '') IS NOT NULL;
+
+    INSERT INTO stoqr.alert_delivery_logs (
+      company_id,
+      alert_event_id,
+      channel,
+      recipient,
+      status
+    )
+    SELECT DISTINCT
+      NEW.company_id,
+      v_event_id,
+      ac.provider,
+      act.id::text,
+      'pending'
+    FROM stoqr.alert_connectors ac
+    JOIN stoqr.alert_connector_targets act ON act.connector_id = ac.id
+    WHERE ac.company_id = NEW.company_id
+      AND ac.provider = ANY(v_rule.delivery_channels)
+      AND ac.provider IN ('telegram', 'mattermost', 'whatsapp')
+      AND ac.status = 'connected'
+      AND act.enabled = true;
+
+    PERFORM public.request_stoqr_alert_notification_dispatch(NEW.company_id);
   END LOOP;
 
   RETURN NEW;
@@ -2257,6 +2412,159 @@ BEGIN
       sent_at = CASE WHEN next_status = 'sent' THEN timezone('utc'::text, now()) ELSE sent_at END
   WHERE id = target_delivery_id
     AND channel = 'email';
+END;
+$$;
+
+CREATE FUNCTION public.request_stoqr_alert_notification_dispatch(target_company_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+DECLARE
+  v_function_url TEXT;
+  v_dispatch_token TEXT;
+BEGIN
+  SELECT function_url, dispatch_token
+  INTO v_function_url, v_dispatch_token
+  FROM stoqr.alert_dispatch_config
+  WHERE singleton = true;
+
+  IF v_function_url IS NULL OR v_dispatch_token IS NULL THEN
+    RETURN;
+  END IF;
+
+  PERFORM net.http_post(
+    url := v_function_url,
+    body := jsonb_build_object(
+      'companyId', target_company_id,
+      'batchSize', 100
+    ),
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-alert-dispatch-token', v_dispatch_token
+    ),
+    timeout_milliseconds := 30000
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE WARNING 'Failed to enqueue StoQR alert notification dispatch for company %: %', target_company_id, SQLERRM;
+END;
+$$;
+
+CREATE FUNCTION public.claim_stoqr_pending_alert_notifications(target_company_id UUID, batch_size INTEGER DEFAULT 25)
+RETURNS TABLE (
+  delivery_id UUID,
+  company_id UUID,
+  alert_event_id UUID,
+  channel TEXT,
+  recipient TEXT,
+  connector_id UUID,
+  connector_provider TEXT,
+  target_id UUID,
+  target_name TEXT,
+  target_type TEXT,
+  provider_target_id TEXT,
+  alert_type TEXT,
+  severity TEXT,
+  message TEXT,
+  triggered_at TIMESTAMPTZ,
+  product_name TEXT,
+  product_sku TEXT,
+  organisation_name TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
+  RETURN QUERY
+  WITH claimed AS (
+    SELECT adl.id
+    FROM stoqr.alert_delivery_logs adl
+    JOIN stoqr.alert_events ae ON ae.id = adl.alert_event_id
+    WHERE adl.company_id = target_company_id
+      AND adl.channel IN ('email', 'telegram', 'mattermost', 'whatsapp')
+      AND adl.status = 'pending'
+      AND NULLIF(adl.recipient, '') IS NOT NULL
+    ORDER BY ae.triggered_at ASC, adl.id ASC
+    LIMIT LEAST(GREATEST(COALESCE(batch_size, 25), 1), 100)
+    FOR UPDATE SKIP LOCKED
+  ),
+  updated AS (
+    UPDATE stoqr.alert_delivery_logs adl
+    SET status = 'sending',
+        error_message = NULL
+    FROM claimed
+    WHERE adl.id = claimed.id
+    RETURNING adl.id, adl.company_id, adl.alert_event_id, adl.channel, adl.recipient
+  )
+  SELECT
+    updated.id,
+    updated.company_id,
+    updated.alert_event_id,
+    updated.channel,
+    updated.recipient,
+    ac.id,
+    ac.provider,
+    act.id,
+    act.target_name,
+    act.target_type,
+    act.provider_target_id,
+    ae.alert_type,
+    ae.severity,
+    ae.message,
+    ae.triggered_at,
+    p.name,
+    p.sku,
+    o.name
+  FROM updated
+  JOIN stoqr.alert_events ae ON ae.id = updated.alert_event_id
+  JOIN public.organisations o ON o.id = updated.company_id
+  LEFT JOIN stoqr.products p ON p.id = ae.product_id
+  LEFT JOIN stoqr.alert_connector_targets act
+    ON act.id = CASE
+      WHEN updated.channel IN ('telegram', 'mattermost', 'whatsapp')
+       AND updated.recipient ~* '^[0-9a-f-]{36}$'
+      THEN updated.recipient::uuid
+      ELSE NULL::uuid
+    END
+  LEFT JOIN stoqr.alert_connectors ac ON ac.id = act.connector_id
+  ORDER BY ae.triggered_at ASC, updated.id ASC;
+END;
+$$;
+
+CREATE FUNCTION public.mark_stoqr_alert_notification_delivery(
+  target_delivery_id UUID,
+  next_status TEXT,
+  provider_message_id TEXT DEFAULT NULL,
+  error_message TEXT DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
+  IF next_status NOT IN ('sent', 'failed') THEN
+    RAISE EXCEPTION 'Invalid alert delivery status';
+  END IF;
+
+  UPDATE stoqr.alert_delivery_logs
+  SET status = next_status,
+      provider_message_id = mark_stoqr_alert_notification_delivery.provider_message_id,
+      error_message = mark_stoqr_alert_notification_delivery.error_message,
+      sent_at = CASE WHEN next_status = 'sent' THEN timezone('utc'::text, now()) ELSE sent_at END
+  WHERE id = target_delivery_id
+    AND channel IN ('email', 'telegram', 'mattermost', 'whatsapp');
 END;
 $$;
 
@@ -2389,6 +2697,9 @@ GRANT SELECT, INSERT ON TABLE stoqr.receiving_logs TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.alert_rules TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.alert_events TO authenticated;
 GRANT SELECT ON TABLE stoqr.alert_delivery_logs TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.alert_connectors TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.alert_connector_targets TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.alert_rule_connector_targets TO authenticated;
 GRANT SELECT ON TABLE stoqr.activity_events TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.label_templates TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.label_print_jobs TO authenticated;
@@ -2416,6 +2727,10 @@ GRANT ALL PRIVILEGES ON TABLE stoqr.receiving_logs TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.alert_rules TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.alert_events TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.alert_delivery_logs TO service_role;
+GRANT ALL PRIVILEGES ON TABLE stoqr.alert_connectors TO service_role;
+GRANT ALL PRIVILEGES ON TABLE stoqr.alert_connector_targets TO service_role;
+GRANT ALL PRIVILEGES ON TABLE stoqr.alert_rule_connector_targets TO service_role;
+GRANT ALL PRIVILEGES ON TABLE stoqr.alert_dispatch_config TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.activity_events TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.label_templates TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.label_print_jobs TO service_role;
@@ -2445,6 +2760,9 @@ REVOKE ALL ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE,
 REVOKE ALL ON FUNCTION public.get_stoqr_alert_products(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_stoqr_delivered_alert_events(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) FROM PUBLIC;
 
@@ -2465,5 +2783,8 @@ GRANT EXECUTE ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DA
 GRANT EXECUTE ON FUNCTION public.get_stoqr_alert_products(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) TO service_role;
 GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) TO service_role;
+GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.get_stoqr_delivered_alert_events(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) TO authenticated, service_role;

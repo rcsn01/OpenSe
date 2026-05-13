@@ -9,11 +9,20 @@ declare const Deno: {
   }
 }
 
-type PendingEmailAlert = {
+type AlertChannel = 'email' | 'telegram' | 'mattermost' | 'whatsapp'
+
+type PendingAlertNotification = {
   delivery_id: string
   company_id: string
   alert_event_id: string
-  recipient_email: string
+  channel: AlertChannel
+  recipient: string
+  connector_id: string | null
+  connector_provider: AlertChannel | null
+  target_id: string | null
+  target_name: string | null
+  target_type: string | null
+  provider_target_id: string | null
   alert_type: string
   severity: string
   message: string
@@ -47,26 +56,24 @@ const parseTimeout = (value: string | undefined, fallback: number) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
-const describeSmtpError = (error: unknown) => {
-  if (!(error instanceof Error)) return 'Unknown email delivery error'
+const describeError = (error: unknown) => {
+  if (!(error instanceof Error)) return 'Unknown alert notification delivery error'
 
-  const smtpError = error as Error & {
+  const providerError = error as Error & {
     code?: string
     command?: string
-    errno?: string | number
     response?: string
     responseCode?: number
     syscall?: string
   }
 
   return [
-    smtpError.message,
-    smtpError.code ? `code=${smtpError.code}` : null,
-    smtpError.command ? `command=${smtpError.command}` : null,
-    smtpError.responseCode ? `responseCode=${smtpError.responseCode}` : null,
-    smtpError.response ? `response=${smtpError.response}` : null,
-    smtpError.errno ? `errno=${smtpError.errno}` : null,
-    smtpError.syscall ? `syscall=${smtpError.syscall}` : null,
+    providerError.message,
+    providerError.code ? `code=${providerError.code}` : null,
+    providerError.command ? `command=${providerError.command}` : null,
+    providerError.responseCode ? `responseCode=${providerError.responseCode}` : null,
+    providerError.response ? `response=${providerError.response}` : null,
+    providerError.syscall ? `syscall=${providerError.syscall}` : null,
   ].filter(Boolean).join(' | ')
 }
 
@@ -153,12 +160,12 @@ const formatAlertType = (value: string) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
 
-const buildSubject = (alert: PendingEmailAlert) => {
+const buildSubject = (alert: PendingAlertNotification) => {
   const product = alert.product_name ? `: ${alert.product_name}` : ''
   return `[StoQR] ${formatAlertType(alert.alert_type)} alert${product}`
 }
 
-const buildText = (alert: PendingEmailAlert) => [
+const buildText = (alert: PendingAlertNotification) => [
   `${formatAlertType(alert.alert_type)} alert`,
   '',
   alert.message,
@@ -169,7 +176,7 @@ const buildText = (alert: PendingEmailAlert) => [
   `Triggered: ${new Date(alert.triggered_at).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' })}`,
 ].filter(Boolean).join('\n')
 
-const buildHtml = (alert: PendingEmailAlert) => {
+const buildHtml = (alert: PendingAlertNotification) => {
   const product = alert.product_name
     ? `<p><strong>Product:</strong> ${escapeHtml(alert.product_name)}${alert.product_sku ? ` (${escapeHtml(alert.product_sku)})` : ''}</p>`
     : ''
@@ -184,6 +191,90 @@ const buildHtml = (alert: PendingEmailAlert) => {
       <p><strong>Triggered:</strong> ${escapeHtml(new Date(alert.triggered_at).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' }))}</p>
     </div>
   `
+}
+
+const createMailTransporter = (smtpPort: number) => nodemailer.createTransport({
+  host: Deno.env.get('ALERT_SMTP_PUBLIC_HOST') ?? Deno.env.get('ALERT_SMTP_HOST'),
+  port: smtpPort,
+  secure: parseBoolean(Deno.env.get('ALERT_SMTP_PUBLIC_SECURE') ?? Deno.env.get('ALERT_SMTP_SECURE'), smtpPort === 465),
+  ignoreTLS: parseBoolean(Deno.env.get('ALERT_SMTP_IGNORE_TLS'), false),
+  requireTLS: parseBoolean(Deno.env.get('ALERT_SMTP_REQUIRE_TLS'), false),
+  connectionTimeout: parseTimeout(Deno.env.get('ALERT_SMTP_CONNECTION_TIMEOUT_MS'), 10_000),
+  greetingTimeout: parseTimeout(Deno.env.get('ALERT_SMTP_GREETING_TIMEOUT_MS'), 10_000),
+  socketTimeout: parseTimeout(Deno.env.get('ALERT_SMTP_SOCKET_TIMEOUT_MS'), 15_000),
+  tls: {
+    rejectUnauthorized: parseBoolean(Deno.env.get('ALERT_SMTP_TLS_REJECT_UNAUTHORIZED'), true),
+    servername: Deno.env.get('ALERT_SMTP_TLS_SERVERNAME')?.trim() || undefined,
+  },
+  auth: Deno.env.get('ALERT_SMTP_USER') && Deno.env.get('ALERT_SMTP_PASS')
+    ? { user: Deno.env.get('ALERT_SMTP_USER'), pass: Deno.env.get('ALERT_SMTP_PASS') }
+    : undefined,
+  logger: parseBoolean(Deno.env.get('ALERT_SMTP_DEBUG'), false),
+  debug: parseBoolean(Deno.env.get('ALERT_SMTP_DEBUG'), false),
+})
+
+const sendGatewayNotification = async (alert: PendingAlertNotification) => {
+  if (alert.channel === 'mattermost' && alert.provider_target_id && /^https?:\/\//i.test(alert.provider_target_id)) {
+    const response = await fetch(alert.provider_target_id, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: buildText(alert) }),
+    })
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      throw new Error(text || 'Mattermost webhook dispatch failed')
+    }
+
+    return alert.delivery_id
+  }
+
+  const gatewayUrl = Deno.env.get('CONNECTOR_GATEWAY_URL')?.replace(/\/$/, '')
+  const gatewayToken = Deno.env.get('CONNECTOR_GATEWAY_TOKEN')
+
+  if (!gatewayUrl || !gatewayToken) {
+    throw new Error('Connector gateway environment is not configured')
+  }
+
+  if (!alert.connector_id || !alert.target_id || !alert.provider_target_id) {
+    throw new Error(`Missing ${alert.channel} connector target metadata`)
+  }
+
+  const response = await fetch(`${gatewayUrl}/dispatch`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${gatewayToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      deliveryId: alert.delivery_id,
+      companyId: alert.company_id,
+      channel: alert.channel,
+      connectorId: alert.connector_id,
+      targetId: alert.target_id,
+      targetName: alert.target_name,
+      targetType: alert.target_type,
+      providerTargetId: alert.provider_target_id,
+      alert: {
+        id: alert.alert_event_id,
+        type: alert.alert_type,
+        severity: alert.severity,
+        message: alert.message,
+        triggeredAt: alert.triggered_at,
+        productName: alert.product_name,
+        productSku: alert.product_sku,
+        organisationName: alert.organisation_name,
+        text: buildText(alert),
+      },
+    }),
+  })
+
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(data?.error ?? `${alert.channel} connector dispatch failed`)
+  }
+
+  return data?.messageId ?? null
 }
 
 Deno.serve(async (req: Request) => {
@@ -202,11 +293,7 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('STOQR_ALERT_DISPATCH_TOKEN') ?? Deno.env.get('ALERT_EMAIL_DISPATCH_TOKEN')
   const smtpHost = Deno.env.get('ALERT_SMTP_PUBLIC_HOST') ?? Deno.env.get('ALERT_SMTP_HOST')
   const smtpPort = Number(Deno.env.get('ALERT_SMTP_PUBLIC_PORT') ?? Deno.env.get('ALERT_SMTP_PORT') ?? 587)
-  const smtpUser = Deno.env.get('ALERT_SMTP_USER')
-  const smtpPass = Deno.env.get('ALERT_SMTP_PASS')
   const from = Deno.env.get('ALERT_MAIL_FROM')
-  const rejectUnauthorized = parseBoolean(Deno.env.get('ALERT_SMTP_TLS_REJECT_UNAUTHORIZED'), true)
-  const smtpTlsServername = Deno.env.get('ALERT_SMTP_TLS_SERVERNAME')?.trim() || undefined
 
   if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
     return json(req, 500, { error: 'Supabase environment is not configured' })
@@ -226,65 +313,58 @@ Deno.serve(async (req: Request) => {
     return json(req, 401, { error: 'Unauthorized' })
   }
 
-  if (!smtpHost || !from || !Number.isFinite(smtpPort)) {
-    return json(req, 500, { error: 'Alert mail SMTP environment is not configured' })
-  }
-
-  const alerts = await rpc<PendingEmailAlert[]>(supabaseUrl, serviceRoleKey, 'claim_stoqr_pending_email_alerts', {
+  const alerts = await rpc<PendingAlertNotification[]>(supabaseUrl, serviceRoleKey, 'claim_stoqr_pending_alert_notifications', {
     target_company_id: companyId,
     batch_size: batchSize,
   })
 
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: parseBoolean(Deno.env.get('ALERT_SMTP_PUBLIC_SECURE') ?? Deno.env.get('ALERT_SMTP_SECURE'), smtpPort === 465),
-    ignoreTLS: parseBoolean(Deno.env.get('ALERT_SMTP_IGNORE_TLS'), false),
-    requireTLS: parseBoolean(Deno.env.get('ALERT_SMTP_REQUIRE_TLS'), false),
-    connectionTimeout: parseTimeout(Deno.env.get('ALERT_SMTP_CONNECTION_TIMEOUT_MS'), 10_000),
-    greetingTimeout: parseTimeout(Deno.env.get('ALERT_SMTP_GREETING_TIMEOUT_MS'), 10_000),
-    socketTimeout: parseTimeout(Deno.env.get('ALERT_SMTP_SOCKET_TIMEOUT_MS'), 15_000),
-    tls: {
-      rejectUnauthorized,
-      servername: smtpTlsServername,
-    },
-    auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
-    logger: parseBoolean(Deno.env.get('ALERT_SMTP_DEBUG'), false),
-    debug: parseBoolean(Deno.env.get('ALERT_SMTP_DEBUG'), false),
-  })
+  const mailTransporter = alerts.some((alert) => alert.channel === 'email')
+    ? createMailTransporter(smtpPort)
+    : null
+
+  if (mailTransporter && (!smtpHost || !from || !Number.isFinite(smtpPort))) {
+    return json(req, 500, { error: 'Alert mail SMTP environment is not configured' })
+  }
 
   const results = []
 
   for (const alert of alerts) {
     try {
-      const info = await transporter.sendMail({
-        from,
-        to: alert.recipient_email,
-        subject: buildSubject(alert),
-        text: buildText(alert),
-        html: buildHtml(alert),
-      })
+      let providerMessageId: string | null = null
 
-      await rpc(supabaseUrl, serviceRoleKey, 'mark_stoqr_alert_email_delivery', {
+      if (alert.channel === 'email') {
+        const info = await mailTransporter!.sendMail({
+          from,
+          to: alert.recipient,
+          subject: buildSubject(alert),
+          text: buildText(alert),
+          html: buildHtml(alert),
+        })
+        providerMessageId = info.messageId ?? null
+      } else {
+        providerMessageId = await sendGatewayNotification(alert)
+      }
+
+      await rpc(supabaseUrl, serviceRoleKey, 'mark_stoqr_alert_notification_delivery', {
         target_delivery_id: alert.delivery_id,
         next_status: 'sent',
-        provider_message_id: info.messageId ?? null,
+        provider_message_id: providerMessageId,
         error_message: null,
       })
 
-      results.push({ deliveryId: alert.delivery_id, recipient: alert.recipient_email, status: 'sent' })
+      results.push({ deliveryId: alert.delivery_id, channel: alert.channel, recipient: alert.recipient, status: 'sent' })
     } catch (error) {
-      const message = describeSmtpError(error)
-      console.error('StoQR alert email delivery failed', message)
+      const message = describeError(error)
+      console.error('StoQR alert notification delivery failed', message)
 
-      await rpc(supabaseUrl, serviceRoleKey, 'mark_stoqr_alert_email_delivery', {
+      await rpc(supabaseUrl, serviceRoleKey, 'mark_stoqr_alert_notification_delivery', {
         target_delivery_id: alert.delivery_id,
         next_status: 'failed',
         provider_message_id: null,
         error_message: message,
       })
 
-      results.push({ deliveryId: alert.delivery_id, recipient: alert.recipient_email, status: 'failed', error: message })
+      results.push({ deliveryId: alert.delivery_id, channel: alert.channel, recipient: alert.recipient, status: 'failed', error: message })
     }
   }
 

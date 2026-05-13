@@ -17,6 +17,7 @@ import { TeamSettingsPage } from './pages/TeamSettingsPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ProcurementPage } from './pages/ProcurementPage'
 import { AlertsPage } from './pages/AlertsPage'
+import { AlertRuleEditorPage } from './pages/AlertRuleEditorPage'
 import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { Toaster } from 'sonner'
 
@@ -108,6 +109,8 @@ export function App() {
               <Route path="/procurement" element={<Navigate to="/procurement/purchase-orders" replace />} />
               <Route path="/procurement/:tab" element={<ProcurementPage />} />
               <Route path="/alerts" element={<Navigate to="/alerts/feed" replace />} />
+              <Route path="/alerts/rules/new" element={<AlertRuleEditorPage />} />
+              <Route path="/alerts/rules/:ruleId" element={<AlertRuleEditorPage />} />
               <Route path="/alerts/:tab" element={<AlertsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

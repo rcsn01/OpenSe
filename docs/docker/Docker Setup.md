@@ -3,6 +3,7 @@
 This guide covers three workflows for running the OpenSe webapps with Docker.
 
 For the StoQR alert mail service, see [StoQR Alert Email Setup](./StoQR%20Alert%20Email%20Setup.md).
+For Telegram, Mattermost, and WhatsApp alert connectors, see [StoQR Chat Connector Setup](./StoQR%20Chat%20Connector%20Setup.md).
 
 | App | Package | Dev port | Prod port |
 |---|---|---|---|

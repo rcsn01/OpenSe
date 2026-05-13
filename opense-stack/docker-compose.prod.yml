@@ -55,6 +55,18 @@ services:
       - "5993:80"
     restart: unless-stopped
 
+  alert-connectors:
+    build:
+      context: .
+      dockerfile: apps/alert-connectors/Dockerfile
+    image: opense/alert-connectors
+    env_file: .env
+    ports:
+      - "6075:6075"
+    volumes:
+      - alert-connector-sessions:/app/sessions
+    restart: unless-stopped
+
   ui-design:
     build:
       context: .
@@ -65,3 +77,6 @@ services:
     ports:
       - "5999:80"
     restart: unless-stopped
+
+volumes:
+  alert-connector-sessions:

@@ -95,6 +95,23 @@ services:
     ports:
       - "5993:5993"
 
+  alert-connectors:
+    <<: *base
+    depends_on:
+      install:
+        condition: service_completed_successfully
+    command:
+      - |
+        corepack enable &&
+        corepack prepare pnpm@9.15.0 --activate &&
+        pnpm --filter @repo/alert-connectors dev
+    ports:
+      - "6075:6075"
+    volumes:
+      - .:/app
+      - pnpm-store:/app/.pnpm-store
+      - alert-connector-sessions:/app/apps/alert-connectors/sessions
+
   ui-design:
     <<: *base
     depends_on:
@@ -110,3 +127,4 @@ services:
 
 volumes:
   pnpm-store:
+  alert-connector-sessions:

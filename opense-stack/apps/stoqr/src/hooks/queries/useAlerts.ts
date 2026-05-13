@@ -1,11 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  createAlertConnector,
+  createAlertConnectorTarget,
   createAlertRule,
   dispatchAlertEmails,
+  dispatchAlertNotifications,
+  fetchAlertRule,
+  fetchAlertConnectors,
   fetchAlertDeliveryLogs,
   fetchAlertEvents,
   fetchAlertProducts,
   fetchAlertRules,
+  startWhatsAppPairing,
+  testAlertConnectorTarget,
+  testAlertEmailRecipients,
   updateAlertRule,
   updateAlertEventStatus,
   updateAlertRuleEnabled,
@@ -15,6 +23,8 @@ const alertsKeys = {
   root: (companyId: string | null) => ['stoqr', 'alerts', companyId] as const,
   products: (companyId: string | null) => ['stoqr', 'alerts', 'products', companyId] as const,
   rules: (companyId: string | null) => ['stoqr', 'alerts', 'rules', companyId] as const,
+  rule: (companyId: string | null, ruleId: string | null) => ['stoqr', 'alerts', 'rules', companyId, ruleId] as const,
+  connectors: (companyId: string | null) => ['stoqr', 'alerts', 'connectors', companyId] as const,
   events: (companyId: string | null) => ['stoqr', 'alerts', 'events', companyId] as const,
   deliveries: (companyId: string | null) => ['stoqr', 'alerts', 'deliveries', companyId] as const,
 }
@@ -30,6 +40,20 @@ export const useAlertRules = (companyId: string | null) =>
   useQuery({
     queryKey: alertsKeys.rules(companyId),
     queryFn: () => fetchAlertRules(companyId as string),
+    enabled: !!companyId,
+  })
+
+export const useAlertRule = (companyId: string | null, ruleId: string | null) =>
+  useQuery({
+    queryKey: alertsKeys.rule(companyId, ruleId),
+    queryFn: () => fetchAlertRule(companyId as string, ruleId as string),
+    enabled: !!companyId && !!ruleId,
+  })
+
+export const useAlertConnectors = (companyId: string | null) =>
+  useQuery({
+    queryKey: alertsKeys.connectors(companyId),
+    queryFn: () => fetchAlertConnectors(companyId as string),
     enabled: !!companyId,
   })
 
@@ -55,8 +79,9 @@ export const useCreateAlertRule = (companyId: string | null) => {
       name: string
       alertType: 'low_stock' | 'reorder_point' | 'expiration' | 'custom'
       condition: Record<string, unknown>
-      deliveryChannels: Array<'in_app' | 'email' | 'push'>
+      deliveryChannels: Array<'in_app' | 'email' | 'push' | 'telegram' | 'mattermost' | 'whatsapp'>
       recipients: string[]
+      connectorTargetIds?: string[]
       enabled?: boolean
     }) => {
       if (!companyId) throw new Error('No company selected')
@@ -77,8 +102,9 @@ export const useUpdateAlertRule = (companyId: string | null) => {
       name: string
       alertType: 'low_stock' | 'reorder_point' | 'expiration' | 'custom'
       condition: Record<string, unknown>
-      deliveryChannels: Array<'in_app' | 'email' | 'push'>
+      deliveryChannels: Array<'in_app' | 'email' | 'push' | 'telegram' | 'mattermost' | 'whatsapp'>
       recipients: string[]
+      connectorTargetIds?: string[]
       enabled: boolean
     }) => {
       if (!companyId) throw new Error('No company selected')
@@ -132,3 +158,83 @@ export const useDispatchAlertEmails = (companyId: string | null) => {
     },
   })
 }
+
+export const useDispatchAlertNotifications = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!companyId) throw new Error('No company selected')
+      return dispatchAlertNotifications(companyId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alertsKeys.root(companyId) })
+    },
+  })
+}
+
+export const useCreateAlertConnector = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: {
+      provider: 'telegram' | 'mattermost' | 'whatsapp'
+      displayName: string
+      status?: 'disconnected' | 'pairing' | 'connected' | 'error'
+    }) => {
+      if (!companyId) throw new Error('No company selected')
+      return createAlertConnector(companyId, payload)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alertsKeys.connectors(companyId) })
+    },
+  })
+}
+
+export const useCreateAlertConnectorTarget = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: {
+      connectorId: string
+      payload: {
+        targetType: 'chat' | 'group' | 'channel' | 'webhook'
+        targetName: string
+        providerTargetId: string
+      }
+    }) => createAlertConnectorTarget(payload.connectorId, payload.payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alertsKeys.connectors(companyId) })
+    },
+  })
+}
+
+export const useStartWhatsAppPairing = (companyId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (connectorId: string) => {
+      if (!companyId) throw new Error('No company selected')
+      return startWhatsAppPairing(companyId, connectorId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: alertsKeys.connectors(companyId) })
+    },
+  })
+}
+
+export const useTestAlertConnectorTarget = (companyId: string | null) =>
+  useMutation({
+    mutationFn: async (targetId: string) => {
+      if (!companyId) throw new Error('No company selected')
+      return testAlertConnectorTarget(companyId, targetId)
+    },
+  })
+
+export const useTestAlertEmailRecipients = (companyId: string | null) =>
+  useMutation({
+    mutationFn: async (roleIds: string[]) => {
+      if (!companyId) throw new Error('No company selected')
+      return testAlertEmailRecipients(companyId, roleIds)
+    },
+  })

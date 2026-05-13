@@ -78,3 +78,6 @@ enable_confirmations = false
 enabled = false
 port = 54327
 backend = "postgres"
+
+[functions.send-stoqr-alert-notifications]
+verify_jwt = false
