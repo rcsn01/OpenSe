@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockDbFrom = vi.fn()
 const mockSupabaseRpc = vi.fn()
+const mockSupabaseInvoke = vi.fn()
 
 vi.mock('../../supabaseClient', () => ({
   db: {
@@ -9,15 +10,22 @@ vi.mock('../../supabaseClient', () => ({
   },
   supabase: {
     rpc: (...args: unknown[]) => mockSupabaseRpc(...args),
+    functions: {
+      invoke: (...args: unknown[]) => mockSupabaseInvoke(...args),
+    },
   },
 }))
 
 import {
   createAlertRule,
+  dispatchAlertNotifications,
+  fetchAlertConnectors,
   fetchAlertDeliveryLogs,
   fetchAlertEvents,
   fetchAlertProducts,
   fetchAlertRules,
+  testAlertConnectorTarget,
+  testAlertEmailRecipients,
   updateAlertEventStatus,
   updateAlertRuleEnabled,
 } from '../alerts'
@@ -40,7 +48,11 @@ describe('alerts api', () => {
   })
 
   it('creates and toggles alert rules', async () => {
-    const insert = vi.fn().mockResolvedValue({ error: null })
+    const single = vi.fn().mockResolvedValue({ data: { id: 'rule-1' }, error: null })
+    const select = vi.fn(() => ({ single }))
+    const insert = vi.fn(() => ({ select }))
+    const deleteEq = vi.fn().mockResolvedValue({ error: null })
+    const deleteFromRuleTargets = vi.fn(() => ({ eq: deleteEq }))
     const eqCompany = vi.fn().mockResolvedValue({ error: null })
     const eqRule = vi.fn(() => ({ eq: eqCompany }))
 
@@ -54,6 +66,12 @@ describe('alerts api', () => {
               order: vi.fn().mockResolvedValue({ data: [], error: null }),
             })),
           })),
+        }
+      }
+      if (table === 'alert_rule_connector_targets') {
+        return {
+          delete: deleteFromRuleTargets,
+          insert: vi.fn().mockResolvedValue({ error: null }),
         }
       }
       throw new Error(`Unexpected table: ${table}`)
@@ -130,6 +148,32 @@ describe('alerts api', () => {
       ],
       error: null,
     })
+    const connectorsOrder = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'connector-1',
+          company_id: 'company-1',
+          provider: 'telegram',
+          display_name: 'Telegram alerts',
+          status: 'connected',
+          health_status: null,
+          last_error: null,
+          created_at: '2026-02-24T00:00:00Z',
+          alert_connector_targets: [
+            {
+              id: 'target-1',
+              connector_id: 'connector-1',
+              target_type: 'chat',
+              target_name: 'Ops',
+              provider_target_id: '-1001',
+              enabled: true,
+              created_at: '2026-02-24T00:00:00Z',
+            },
+          ],
+        },
+      ],
+      error: null,
+    })
 
     mockSupabaseRpc.mockImplementation((fn: string) => {
       if (fn === 'get_stoqr_delivered_alert_events') {
@@ -186,20 +230,58 @@ describe('alerts api', () => {
         }
       }
 
+      if (table === 'alert_connectors') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ order: connectorsOrder })),
+          })),
+        }
+      }
+
       throw new Error(`Unexpected table: ${table}`)
     })
 
-    const [rules, events, deliveries] = await Promise.all([
+    const [rules, events, deliveries, connectors] = await Promise.all([
       fetchAlertRules('company-1'),
       fetchAlertEvents('company-1'),
       fetchAlertDeliveryLogs('company-1'),
+      fetchAlertConnectors('company-1'),
     ])
 
     expect(rules).toHaveLength(1)
     expect(events).toHaveLength(1)
     expect(deliveries).toHaveLength(1)
+    expect(connectors[0].alert_connector_targets[0].target_name).toBe('Ops')
     expect(events[0].products?.sku).toBe('MLK')
     expect(deliveries[0].alert_events?.alert_type).toBe('expiration')
+  })
+
+  it('dispatches queued alert notifications', async () => {
+    mockSupabaseInvoke.mockResolvedValue({
+      data: { claimed: 1, sent: 1, failed: 0, results: [] },
+      error: null,
+    })
+
+    await expect(dispatchAlertNotifications('company-1')).resolves.toMatchObject({ sent: 1 })
+    expect(mockSupabaseInvoke).toHaveBeenCalledWith('send-stoqr-alert-notifications', {
+      body: { companyId: 'company-1', batchSize: 25 },
+    })
+  })
+
+  it('tests alert integrations through connector management function', async () => {
+    mockSupabaseInvoke.mockResolvedValue({ data: { messageId: 'message-1' }, error: null })
+
+    await expect(testAlertConnectorTarget('company-1', 'target-1')).resolves.toMatchObject({ messageId: 'message-1' })
+    expect(mockSupabaseInvoke).toHaveBeenCalledWith('manage-stoqr-alert-connectors', {
+      body: { action: 'test_connector_target', companyId: 'company-1', targetId: 'target-1' },
+    })
+
+    mockSupabaseInvoke.mockResolvedValue({ data: { recipients: ['ops@example.com'] }, error: null })
+
+    await expect(testAlertEmailRecipients('company-1', ['role-1'])).resolves.toMatchObject({ recipients: ['ops@example.com'] })
+    expect(mockSupabaseInvoke).toHaveBeenCalledWith('manage-stoqr-alert-connectors', {
+      body: { action: 'test_email_recipients', companyId: 'company-1', roleIds: ['role-1'] },
+    })
   })
 
   it('updates alert event status scoped by company', async () => {

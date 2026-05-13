@@ -183,14 +183,35 @@ npx supabase secrets set --project-ref sllrsicziiasebqhytfr \
   ALERT_SMTP_TLS_REJECT_UNAUTHORIZED=true \
   ALERT_SMTP_TLS_SERVERNAME=mail.rcsn01.com \
   ALERT_SMTP_IGNORE_TLS=false \
-  ALERT_SMTP_REQUIRE_TLS=false
+  ALERT_SMTP_REQUIRE_TLS=false \
+  STOQR_ALERT_DISPATCH_TOKEN='change-me-too' \
+  ALERT_EMAIL_DISPATCH_TOKEN='change-me-too'
 ```
 
 Deploy the function:
 
 ```bash
 npx supabase functions deploy send-stoqr-alert-emails --project-ref sllrsicziiasebqhytfr
+npx supabase functions deploy send-stoqr-alert-notifications --project-ref sllrsicziiasebqhytfr
+npx supabase functions deploy manage-stoqr-alert-connectors --project-ref sllrsicziiasebqhytfr
 ```
+
+For automatic low-stock dispatch, configure the database to call the generic notification function:
+
+```sql
+INSERT INTO stoqr.alert_dispatch_config (singleton, function_url, dispatch_token)
+VALUES (
+  true,
+  'https://sllrsicziiasebqhytfr.functions.supabase.co/send-stoqr-alert-notifications',
+  'change-me-too'
+)
+ON CONFLICT (singleton) DO UPDATE
+SET function_url = EXCLUDED.function_url,
+    dispatch_token = EXCLUDED.dispatch_token,
+    updated_at = timezone('utc'::text, now());
+```
+
+The repo root `./setup.sh` helper can perform the reset, deploy the alert functions, set both dispatch-token secret names, and reinsert this config row automatically.
 
 ## Verification
 

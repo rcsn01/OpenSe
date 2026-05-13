@@ -1,0 +1,23 @@
+{
+  "name": "@repo/alert-connectors",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run src",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.18",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

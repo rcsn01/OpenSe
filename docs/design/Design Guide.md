@@ -148,15 +148,17 @@ All pages live inside the standard app layout (top bar, sidebar, content area). 
 
 Content inside the content area should use the shared grid system. Grids are simple 2-column and 3-column systems with standard gutter widths. Do not use custom grid fractions.
 
-### Maximum widths
+### Page width
 
-Content blocks have standard maximum widths depending on their purpose. Do not stretch forms, dashboards, or cards to full screen on wide displays.
+Every app page should use the full available content width inside the standard app layout. Do not center forms, detail views, dashboards, or settings screens in narrow columns when there is usable page space available.
 
-| Block type | Approximate max width |
+Use the shared grid system to distribute content across the full page. A form can still have readable field widths by placing fields in 2-column or 3-column groups, using side panels, summaries, preview areas, empty states, or supporting context. The page container itself should not impose a narrow maximum width.
+
+| Do this | Not this |
 |---|---|
-| Forms | ~980px |
-| Detail views | ~1220px |
-| Dashboard cards | Flexible within the grid system |
+| Use the full content area with intentional grids and side panels | Center a form in a narrow column with unused space on both sides |
+| Keep individual fields readable through column layout | Stretch a single text input to an unreadably wide line |
+| Fill secondary space with relevant status, preview, help, or queue/context panels | Leave wide blank zones around the primary workflow |
 
 ---
 

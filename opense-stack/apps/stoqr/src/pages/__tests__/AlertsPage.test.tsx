@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +9,10 @@ const mockCreateRule = vi.fn();
 const mockUpdateRule = vi.fn();
 const mockUpdateRuleEnabled = vi.fn();
 const mockUpdateEventStatus = vi.fn();
-const mockDispatchEmails = vi.fn();
+const mockDispatchNotifications = vi.fn();
+const mockCreateConnector = vi.fn();
+const mockCreateConnectorTarget = vi.fn();
+const mockStartWhatsAppPairing = vi.fn();
 
 let mockOrganisationPageSettings = {
   reportsEnabled: true,
@@ -76,6 +79,30 @@ let mockDeliveries = [
   },
 ];
 
+let mockConnectors = [
+  {
+    id: "connector-telegram",
+    company_id: "company-1",
+    provider: "telegram" as const,
+    display_name: "Telegram alerts",
+    status: "connected" as const,
+    health_status: null,
+    last_error: null,
+    created_at: "2026-05-10T00:00:00Z",
+    alert_connector_targets: [
+      {
+        id: "target-telegram",
+        connector_id: "connector-telegram",
+        target_type: "chat" as const,
+        target_name: "Warehouse ops",
+        provider_target_id: "-1001",
+        enabled: true,
+        created_at: "2026-05-10T00:00:00Z",
+      },
+    ],
+  },
+];
+
 const mockRoles = [
   {
     id: "role-manager",
@@ -120,6 +147,7 @@ vi.mock("../../hooks/queries/useAlerts", () => ({
   useAlertEvents: () => ({ data: mockEvents, isLoading: false }),
   useAlertDeliveryLogs: () => ({ data: mockDeliveries, isLoading: false }),
   useAlertRules: () => ({ data: mockRules, isLoading: false }),
+  useAlertConnectors: () => ({ data: mockConnectors, isLoading: false }),
   useCreateAlertRule: () => ({
     mutateAsync: mockCreateRule,
     isPending: false,
@@ -134,8 +162,20 @@ vi.mock("../../hooks/queries/useAlerts", () => ({
   useUpdateAlertEventStatus: () => ({
     mutateAsync: mockUpdateEventStatus,
   }),
-  useDispatchAlertEmails: () => ({
-    mutateAsync: mockDispatchEmails,
+  useDispatchAlertNotifications: () => ({
+    mutateAsync: mockDispatchNotifications,
+    isPending: false,
+  }),
+  useCreateAlertConnector: () => ({
+    mutateAsync: mockCreateConnector,
+    isPending: false,
+  }),
+  useCreateAlertConnectorTarget: () => ({
+    mutateAsync: mockCreateConnectorTarget,
+    isPending: false,
+  }),
+  useStartWhatsAppPairing: () => ({
+    mutateAsync: mockStartWhatsAppPairing,
     isPending: false,
   }),
 }));
@@ -193,15 +233,18 @@ const renderAlertsRoute = (initialEntry: string, withAppLayout = false) =>
             />
           </Route>
         ) : (
-          <Route
-            path="/alerts/:tab"
-            element={
-              <>
-                <AlertsPage />
-                <LocationProbe />
-              </>
-            }
-          />
+          <>
+            <Route
+              path="/alerts/:tab"
+              element={
+                <>
+                  <AlertsPage />
+                  <LocationProbe />
+                </>
+              }
+            />
+            <Route path="*" element={<LocationProbe />} />
+          </>
         )}
       </Routes>
     </MemoryRouter>,
@@ -273,7 +316,32 @@ describe("AlertsPage", () => {
         },
       },
     ];
-    mockDispatchEmails.mockResolvedValue({ claimed: 1, sent: 1, failed: 0, results: [] });
+    mockConnectors = [
+      {
+        id: "connector-telegram",
+        company_id: "company-1",
+        provider: "telegram",
+        display_name: "Telegram alerts",
+        status: "connected",
+        health_status: null,
+        last_error: null,
+        created_at: "2026-05-10T00:00:00Z",
+        alert_connector_targets: [
+          {
+            id: "target-telegram",
+            connector_id: "connector-telegram",
+            target_type: "chat",
+            target_name: "Warehouse ops",
+            provider_target_id: "-1001",
+            enabled: true,
+            created_at: "2026-05-10T00:00:00Z",
+          },
+        ],
+      },
+    ];
+    mockDispatchNotifications.mockResolvedValue({ claimed: 1, sent: 1, failed: 0, results: [] });
+    mockCreateConnector.mockResolvedValue("connector-new");
+    mockStartWhatsAppPairing.mockResolvedValue({ connectorId: "connector-whatsapp", status: "pairing", qr: "qr-code" });
 
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -328,55 +396,45 @@ describe("AlertsPage", () => {
     expect(screen.getByText("Buffer expires soon.")).toBeInTheDocument();
   });
 
-  it("renders alert rules with organisation-role recipients", async () => {
+  it("renders alert rules as a full-width list", async () => {
     renderAlertsRoute("/alerts/rules");
 
     expect(screen.getByRole("heading", { name: "Alert Triggers" })).toBeInTheDocument();
     expect(screen.getAllByText("Low stock alert").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Manager").length).toBeGreaterThan(0);
     expect(screen.getAllByText("In-app").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Notify Manager")).toBeChecked();
-    expect(screen.getByRole("switch", { name: "Email notifications enabled" })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
+    expect(screen.queryByLabelText("Notify Manager")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /edit low-stock trigger/i })).not.toBeInTheDocument();
   });
 
-  it("updates a low-stock rule with multiple selected roles and email delivery", async () => {
+  it("navigates to the rule editor from rows and the new trigger action", async () => {
     const user = userEvent.setup();
 
     renderAlertsRoute("/alerts/rules");
 
-    await user.click(screen.getByLabelText("Notify Viewer"));
-    await user.click(screen.getByRole("switch", { name: "Email notifications enabled" }));
-    await user.click(screen.getByRole("button", { name: "Save Trigger" }));
+    await user.click(screen.getByText("Low stock alert"));
 
-    await waitFor(() => {
-      expect(mockUpdateRule).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ruleId: "rule-1",
-          alertType: "low_stock",
-          deliveryChannels: ["in_app", "email"],
-          recipients: ["role:role-manager", "role:role-viewer"],
-          condition: { thresholdSource: "product_reorder_point" },
-        }),
-      );
-    });
+    expect(screen.getByTestId("location-path")).toHaveTextContent("/alerts/rules/rule-1");
+
+    cleanup();
+    renderAlertsRoute("/alerts/rules");
+    await user.click(screen.getByRole("button", { name: "New Trigger" }));
+
+    expect(screen.getByTestId("location-path")).toHaveTextContent("/alerts/rules/new");
   });
 
-  it("dispatches queued alert emails from the rules page", async () => {
+  it("toggles a rule without navigating to the editor", async () => {
     const user = userEvent.setup();
 
     renderAlertsRoute("/alerts/rules");
 
-    expect(screen.getByText("1 queued, 0 sending, 0 sent, 0 failed")).toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: "Toggle Low stock alert" }));
 
-    await user.click(screen.getByRole("button", { name: "Send queued" }));
-
-    await waitFor(() => {
-      expect(mockDispatchEmails).toHaveBeenCalled();
+    expect(mockUpdateRuleEnabled).toHaveBeenCalledWith({
+      ruleId: "rule-1",
+      enabled: false,
     });
-    expect(screen.getByText("Email dispatch finished: 1 sent, 0 failed.")).toBeInTheDocument();
+    expect(screen.getByTestId("location-path")).toHaveTextContent("/alerts/rules");
   });
 
   it("redirects legacy notifications routes to feed and switches into alert rules", async () => {
