@@ -190,7 +190,7 @@ const sendConnectorTest = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text: [
-          'StoQR integration test',
+          '@all StoQR integration test',
           '',
           `Target: ${target.target_name}`,
           `Sent: ${new Date().toLocaleString('en-AU', { timeZone: 'Australia/Sydney' })}`,
@@ -209,6 +209,10 @@ const sendConnectorTest = async (
   if (!gatewayUrl || !gatewayToken) {
     throw new Error('Connector gateway environment is not configured')
   }
+
+  const testMessage = connector.provider === 'mattermost'
+    ? `@all StoQR test message for ${target.target_name}.`
+    : `StoQR test message for ${target.target_name}.`
 
   const response = await fetch(`${gatewayUrl}/dispatch`, {
     method: 'POST',
@@ -229,12 +233,12 @@ const sendConnectorTest = async (
         id: `test-${crypto.randomUUID()}`,
         type: 'integration_test',
         severity: 'low',
-        message: `StoQR test message for ${target.target_name}.`,
+        message: testMessage,
         triggeredAt: new Date().toISOString(),
         productName: null,
         productSku: null,
         organisationName: 'StoQR',
-        text: `StoQR test message for ${target.target_name}.`,
+        text: testMessage,
       },
     }),
   })

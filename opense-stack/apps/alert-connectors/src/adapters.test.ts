@@ -28,6 +28,8 @@ describe('alert connector adapters', () => {
     expect(formatChatMessage(payload)).toContain('StoQR low stock alert')
     expect(formatChatMessage(payload)).toContain('PCR Tips is low.')
     expect(formatChatMessage(payload)).toContain('Product: PCR Tips (TIP-001)')
+    expect(formatChatMessage(payload)).not.toContain('@all')
+    expect(formatChatMessage({ ...payload, channel: 'mattermost' })).toContain('@all StoQR low stock alert')
   })
 
   it('dispatches Telegram messages through the Bot API', async () => {
@@ -77,7 +79,7 @@ describe('alert connector adapters', () => {
       'https://mattermost.example/hooks/direct',
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('PCR Tips is low.'),
+        body: expect.stringContaining('@all StoQR low stock alert'),
       }),
     )
   })
