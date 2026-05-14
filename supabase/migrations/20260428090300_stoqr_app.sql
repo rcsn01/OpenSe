@@ -2301,10 +2301,13 @@ BEGIN
       ac.provider,
       act.id::text,
       'pending'
-    FROM stoqr.alert_connectors ac
-    JOIN stoqr.alert_connector_targets act ON act.connector_id = ac.id
-    WHERE ac.company_id = NEW.company_id
-      AND ac.provider = ANY(v_rule.delivery_channels)
+    FROM stoqr.alert_rule_connector_targets arct
+    JOIN stoqr.alert_connector_targets act ON act.id = arct.target_id
+    JOIN stoqr.alert_connectors ac
+      ON ac.id = act.connector_id
+     AND ac.company_id = NEW.company_id
+     AND ac.provider = ANY(v_rule.delivery_channels)
+    WHERE arct.rule_id = v_rule.id
       AND ac.provider IN ('telegram', 'mattermost', 'whatsapp')
       AND ac.status = 'connected'
       AND act.enabled = true;

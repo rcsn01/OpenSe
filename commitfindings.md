@@ -65,3 +65,67 @@ Suggested fix:
 - Dispatch recovery for stale `sending` rows.
 - SMTP misconfiguration should not strand delivery rows.
 - Mattermost webhook URL validation/allowlist behavior.
+
+---
+
+Reviewed commits:
+- `bec24846` Prefix Mattermost messages with @all
+- `35f133b4` Create commitfindings.md
+- `61b9d88c` Add alert connectors and setup helper
+
+## Additional Findings From Three-Commit Review
+
+### P1: Rule-selected connector targets are ignored at dispatch creation
+
+`stoqr.evaluate_low_stock_alerts()` stores pending chat deliveries for every enabled organisation target matching the rule's enabled provider. It does not join through `stoqr.alert_rule_connector_targets`, so the per-rule connector target selection made by the editor is ignored.
+
+Impact: a rule intended to notify one Telegram, Mattermost, or WhatsApp destination can fan out to all enabled organisation targets for that provider.
+
+Suggested fix:
+- Join `stoqr.alert_rule_connector_targets` when creating chat delivery rows.
+- Keep `alert_rules.delivery_channels` as the provider-level enable/disable switch.
+- Treat `alert_rule_connector_targets` as the destination allowlist for the rule.
+- Add SQL or API coverage proving a rule only creates deliveries for selected targets.
+
+### P1: Documentation uses shared placeholder dispatch and gateway tokens
+
+The chat connector and email setup docs show `CONNECTOR_GATEWAY_TOKEN='change-me'` and `STOQR_ALERT_DISPATCH_TOKEN='change-me-too'` in deployable command snippets.
+
+Impact: because `send-stoqr-alert-notifications` has JWT verification disabled and relies on the dispatch token, copy-pasted placeholder tokens would expose alert dispatch to anyone who learns or guesses the placeholder. The setup script generates a dispatch token, but it does not generate or enforce a gateway token.
+
+Suggested fix:
+- Replace deployable placeholder token snippets with generated-token commands.
+- Extend setup automation to generate and set `CONNECTOR_GATEWAY_TOKEN`.
+- Add a startup check or docs warning that production must not run with placeholder tokens.
+
+### P2: New Edge Functions lack direct tests
+
+Frontend API tests assert calls to `send-stoqr-alert-notifications` and `manage-stoqr-alert-connectors`, but there are no direct tests for the Edge Function auth, claim/mark behavior, provider failure paths, Mattermost webhook handling, or returned errors.
+
+Impact: regressions in the dispatch and connector management boundary can ship with only frontend invocation coverage.
+
+Suggested fix:
+- Add direct function tests with mocked `fetch`, `Deno.env`, and SMTP/gateway behavior.
+- Cover authorized and unauthorized calls, successful dispatch, provider failure, and marking failed rows.
+
+### P2: Connector gateway accepts unbounded bodies and returns raw errors
+
+The connector gateway buffers request bodies without a size limit and returns raw provider/library error messages in 500 responses.
+
+Impact: a public gateway has a memory pressure risk and can leak operational/provider details through API responses.
+
+Suggested fix:
+- Add a modest JSON body limit.
+- Return generic client-safe errors while logging detailed provider errors server-side.
+- Validate dispatch payload shape before provider calls.
+
+### P3: WhatsApp dependency brings maintenance and supply-chain risk
+
+The connector app depends on deprecated `@whiskeysockets/baileys`, which pulls GitHub tarball transitive dependencies.
+
+Impact: this increases maintenance and supply-chain risk for a production service that stores WhatsApp linked-device sessions.
+
+Suggested fix:
+- Evaluate migration to the renamed `baileys` package.
+- Pin and audit transitive dependencies.
+- Document that WhatsApp support is operationally sensitive and session storage must be protected.
