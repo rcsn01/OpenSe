@@ -14,7 +14,7 @@ Low-stock alert rule
 
 Provider secrets and WhatsApp session files live in the connector gateway, not the browser or Supabase tables.
 
-Email recipients are selected by organisation role on each alert rule. Telegram, Mattermost, and WhatsApp targets are organisation-wide: once a provider is enabled on a rule, the alert is sent to every enabled connector target for that provider.
+Email recipients are selected by organisation role on each alert rule. Telegram, Mattermost, and WhatsApp targets are organisation-wide destinations, but each alert rule chooses the exact targets it sends to. A rule sends one message to each selected connector target.
 
 ## Gateway
 
