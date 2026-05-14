@@ -176,6 +176,9 @@ const buildText = (alert: PendingAlertNotification) => [
   `Triggered: ${new Date(alert.triggered_at).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' })}`,
 ].filter(Boolean).join('\n')
 
+const buildChatText = (alert: PendingAlertNotification) =>
+  alert.channel === 'mattermost' ? `@all ${buildText(alert)}` : buildText(alert)
+
 const buildHtml = (alert: PendingAlertNotification) => {
   const product = alert.product_name
     ? `<p><strong>Product:</strong> ${escapeHtml(alert.product_name)}${alert.product_sku ? ` (${escapeHtml(alert.product_sku)})` : ''}</p>`
@@ -218,7 +221,7 @@ const sendGatewayNotification = async (alert: PendingAlertNotification) => {
     const response = await fetch(alert.provider_target_id, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: buildText(alert) }),
+      body: JSON.stringify({ text: buildChatText(alert) }),
     })
 
     if (!response.ok) {
@@ -264,7 +267,7 @@ const sendGatewayNotification = async (alert: PendingAlertNotification) => {
         productName: alert.product_name,
         productSku: alert.product_sku,
         organisationName: alert.organisation_name,
-        text: buildText(alert),
+        text: buildChatText(alert),
       },
     }),
   })

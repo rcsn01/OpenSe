@@ -37,13 +37,15 @@ export const formatChatMessage = (payload: DispatchPayload) => {
     ? `\nProduct: ${payload.alert.productName}${payload.alert.productSku ? ` (${payload.alert.productSku})` : ''}`
     : ''
 
-  return [
+  const message = [
     `StoQR ${payload.alert.type.replace(/_/g, ' ')} alert`,
     payload.alert.message,
     `Organisation: ${payload.alert.organisationName}`,
     `Severity: ${payload.alert.severity}`,
     `Triggered: ${new Date(payload.alert.triggeredAt).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' })}`,
   ].join('\n') + product
+
+  return payload.channel === 'mattermost' ? `@all ${message}` : message
 }
 
 export const dispatchTelegram = async (
