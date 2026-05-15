@@ -14,6 +14,7 @@ import { useScanHistory } from '../hooks/queries/useQuickScan'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { defaultInventoryUrlState } from './inventoryUrlState'
 import { normalizePageSearchTerm } from '../lib/pageSearch'
+import type { Product } from '../types'
 import '../components/Scan/ScanSurface.css'
 
 export const ScanPage = () => {
@@ -83,6 +84,16 @@ export const ScanPage = () => {
     setScanValue(suggestion.value)
     setEntryMethod('manual')
   }, [])
+  const handleProductResolved = useCallback((product: Product, context: { scanValue: string; entryMethod: 'camera' | 'manual' }) => {
+    const params = new URLSearchParams()
+    if (context.scanValue.trim()) {
+      params.set('barcode', context.scanValue.trim())
+    }
+    params.set('entryMethod', context.entryMethod)
+    params.set('returnTo', '/scan/scan-actions')
+
+    navigate(`/inventory/${product.id}/adjust?${params.toString()}`)
+  }, [navigate])
 
   const searchConfig = useMemo(() => (
     activeTab === 'scan-actions'
@@ -203,6 +214,7 @@ export const ScanPage = () => {
                 companyId={companyId || ''}
                 entryMethod={entryMethod}
                 onResetSearch={handleResetSearch}
+                onProductResolved={handleProductResolved}
                 cameraContent={
                   <div className="scan-camera-panel">
                     <div className={`scan-camera-frame${isScanning ? ' is-active' : ''}`}>

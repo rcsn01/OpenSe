@@ -79,10 +79,7 @@ export const ProductOverviewTab = ({
           <div className={sx('product-detail-inventory-grid')}>
             <div className={sx('product-detail-stat-block')}>
               <span className={sx('product-detail-stat-label')}>Current Stock</span>
-              <div className={sx('product-detail-stat-line')}>
-                <strong className={sx('product-detail-stat-value')}>{product.quantity_on_hand}</strong>
-                <button type="button" className={sx('product-detail-inline-link')}>Adjust</button>
-              </div>
+              <strong className={sx('product-detail-stat-value')}>{product.quantity_on_hand}</strong>
             </div>
             <div className={sx('product-detail-stat-block')}>
               <span className={sx('product-detail-stat-label')}>Low Stock Alert Level</span>

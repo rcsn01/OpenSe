@@ -9,6 +9,7 @@ import { InventoryImportPage } from './pages/InventoryImportPage'
 import { InventoryListPage } from './pages/InventoryPage'
 import { CreateProductPage } from './pages/product/CreateProductPage'
 import { EditProductPage } from './pages/product/EditProductPage'
+import { ProductAdjustPage } from './pages/product/ProductAdjustPage'
 import { ScanPage } from './pages/ScanPage'
 import { LabelStudioPage } from './pages/LabelStudioPage'
 import { LabelDesignerPage } from './pages/LabelDesignerPage'
@@ -91,6 +92,7 @@ export function App() {
               <Route path="/inventory/new" element={<CreateProductPage />} />
               <Route path="/inventory/:tab" element={<InventoryListPage />} />
               <Route path="/inventory/:id/edit" element={<EditProductPage />} />
+              <Route path="/inventory/:id/adjust" element={<ProductAdjustPage />} />
               <Route path="/inventory/:id" element={<Navigate to="overview" replace />} />
               <Route path="/inventory/:id/:tab" element={<ProductDetailPage />} />
               <Route path="/scan" element={<Navigate to="/scan/scan-actions" replace />} />
