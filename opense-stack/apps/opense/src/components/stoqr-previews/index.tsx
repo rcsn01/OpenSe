@@ -1,16 +1,27 @@
 import { Badge } from '@repo/ui'
+import {
+  Bell,
+  Boxes,
+  Building2,
+  FileText,
+  LayoutDashboard,
+  Printer,
+  ScanLine,
+  Search,
+  ShoppingCart,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 import './StoqrPreviews.css'
 
 type MenuItem =
   | 'Dashboard'
   | 'Inventory'
-  | 'Scan'
-  | 'Labels'
+  | 'Scanner'
+  | 'Label Studio'
   | 'Reports'
   | 'Procurement'
   | 'Alerts'
-  | 'Organisation'
+  | 'Organisations'
 
 type StoqrPreviewFrameProps = {
   active: MenuItem
@@ -19,15 +30,15 @@ type StoqrPreviewFrameProps = {
   children: ReactNode
 }
 
-const menuItems: MenuItem[] = [
-  'Dashboard',
-  'Inventory',
-  'Scan',
-  'Labels',
-  'Reports',
-  'Procurement',
-  'Alerts',
-  'Organisation',
+const menuItems: Array<{ label: MenuItem; icon: typeof LayoutDashboard; group: 'main' | 'configuration' }> = [
+  { label: 'Dashboard', icon: LayoutDashboard, group: 'main' },
+  { label: 'Inventory', icon: Boxes, group: 'main' },
+  { label: 'Scanner', icon: ScanLine, group: 'main' },
+  { label: 'Label Studio', icon: Printer, group: 'main' },
+  { label: 'Reports', icon: FileText, group: 'main' },
+  { label: 'Procurement', icon: ShoppingCart, group: 'main' },
+  { label: 'Alerts', icon: Bell, group: 'configuration' },
+  { label: 'Organisations', icon: Building2, group: 'configuration' },
 ]
 
 const StoqrPreviewFrame = ({ active, eyebrow, title, children }: StoqrPreviewFrameProps) => (
@@ -36,23 +47,40 @@ const StoqrPreviewFrame = ({ active, eyebrow, title, children }: StoqrPreviewFra
       <aside className="stoqr-preview-nav">
         <div className="stoqr-preview-brand">
           <span className="stoqr-preview-brand-mark" />
-          <span>StoQR</span>
+          <span>
+            <strong>Open StoQR</strong>
+            <small>v1.0</small>
+          </span>
         </div>
-        <div className="stoqr-preview-menu">
-          {menuItems.map((item) => (
-            <span key={item} className={item === active ? 'is-active' : undefined}>
-              {item}
-            </span>
-          ))}
-        </div>
+        {(['main', 'configuration'] as const).map((group) => (
+          <div key={group} className="stoqr-preview-menu">
+            <p className="stoqr-preview-menu-heading">{group}</p>
+            {menuItems.filter((item) => item.group === group).map((item) => {
+              const Icon = item.icon
+
+              return (
+                <span key={item.label} className={item.label === active ? 'is-active' : undefined}>
+                  <Icon className="stoqr-preview-nav-icon" />
+                  {item.label}
+                </span>
+              )
+            })}
+          </div>
+        ))}
       </aside>
       <main className="stoqr-preview-main">
         <div className="stoqr-preview-topbar">
+          <div className="stoqr-preview-search">
+            <Search className="stoqr-preview-search-icon" />
+            <span>Search items...</span>
+          </div>
+          <div className="stoqr-preview-user-dot">I</div>
+        </div>
+        <div className="stoqr-preview-page-heading">
           <div>
             <p className="stoqr-preview-eyebrow">{eyebrow}</p>
             <h3 className="stoqr-preview-title">{title}</h3>
           </div>
-          <div className="stoqr-preview-search">Search SKU, bin, supplier...</div>
         </div>
         {children}
       </main>
@@ -130,20 +158,22 @@ export const DashboardPreview = () => (
 export const InventoryPreview = () => (
   <StoqrPreviewFrame active="Inventory" eyebrow="Products, bins, and stock" title="Inventory">
     <div className="stoqr-preview-toolbar">
-      <span className="stoqr-preview-tab is-active">All products</span>
-      <span className="stoqr-preview-tab">Low stock</span>
-      <span className="stoqr-preview-tab">Out of stock</span>
-      <span className="stoqr-preview-button">Add item</span>
+      <span className="stoqr-preview-tab is-active">All Statuses</span>
+      <span className="stoqr-preview-tab">Low Stock</span>
+      <span className="stoqr-preview-tab">Out of Stock</span>
+      <span className="stoqr-preview-tab">+ Filter</span>
+      <span className="stoqr-preview-button">+ New Product</span>
     </div>
     <div className="stoqr-preview-split">
       <aside className="stoqr-preview-card stoqr-preview-sidebar-panel">
         {[
-          ['All inventory', '1.2k'],
-          ['Lab stores', '438'],
-          ['Cold room', '96'],
-          ['Dispatch', '284'],
+          ['All Products', ''],
+          ['Uncategorised', ''],
+          ['Dispatch & Returns', ''],
+          ['Warehouse Network', ''],
+          ['PCR Consumables', ''],
         ].map(([folder, count], index) => (
-          <div key={folder} className={`stoqr-preview-folder ${index === 1 ? 'is-active' : ''}`}>
+          <div key={folder} className={`stoqr-preview-folder ${index === 0 ? 'is-active' : ''}`}>
             <span>{folder}</span>
             <span>{count}</span>
           </div>
@@ -156,16 +186,17 @@ export const InventoryPreview = () => (
           </thead>
           <tbody>
             {[
-              ['Nitrile gloves', 'PPE-442', '1,240', 'Healthy'],
-              ['PCR tubes', 'LAB-188', '84', 'Low'],
-              ['Barcode labels', 'LBL-024', '0', 'Out'],
-              ['Freezer racks', 'FRZ-912', '37', 'Healthy'],
-            ].map(([name, sku, qty, status]) => (
-              <tr key={sku}>
+              ['0.5mL Eppendorf Safe-Lock Tubes PCR clean, 500 tubes', 'PCR Consumables', '$19.84', '0 / 10'],
+              ['1.5mL Eppendorf Safe-Lock Tubes PCR clean, 1,000 tubes', 'PCR Consumables', '$22.30', '72 / 11'],
+              ['10 x 2ml Nuclease Free Water.', 'PCR Consumables', '$115.66', '24 / 9'],
+              ['3% Bleach, 5L', 'Safety & Sanitation', '$105.83', '0 / 13'],
+              ['Dualfilter 0.1-10 uL tips PCR clean and sterile, 960 tips', 'PCR Consumables', '$12.47', '32 / 7'],
+            ].map(([name, folder, price, available], index) => (
+              <tr key={name}>
                 <td>{name}</td>
-                <td>{sku}</td>
-                <td>{qty}</td>
-                <td><span className={`stoqr-preview-pill ${status === 'Low' ? 'is-warning' : status === 'Out' ? 'is-danger' : ''}`}>{status}</span></td>
+                <td>{folder}</td>
+                <td>{price}</td>
+                <td><span className={`stoqr-preview-availability ${index === 0 || index === 3 ? 'is-danger' : ''}`}>{available}</span></td>
               </tr>
             ))}
           </tbody>
@@ -176,21 +207,29 @@ export const InventoryPreview = () => (
 )
 
 export const ScannerPreview = () => (
-  <StoqrPreviewFrame active="Scan" eyebrow="Floor-ready scan actions" title="Scanner">
-    <div className="stoqr-preview-scanner">
-      <section className="stoqr-preview-camera">
-        <div className="stoqr-preview-scan-corners" />
-        <div className="stoqr-preview-scan-line" />
+  <StoqrPreviewFrame active="Scanner" eyebrow="Floor-ready scan actions" title="Scanner">
+    <div className="stoqr-preview-phone-scanner">
+      <section className="stoqr-preview-phone">
+        <div className="stoqr-preview-phone-speaker" />
+        <div className="stoqr-preview-phone-screen">
+          <div className="stoqr-preview-phone-camera">
+            <div className="stoqr-preview-scan-corners" />
+            <div className="stoqr-preview-scan-line" />
+          </div>
+          <div className="stoqr-preview-phone-result">
+            <span className="stoqr-preview-pill">Found</span>
+            <p className="stoqr-preview-list-title">PCR tubes</p>
+            <p className="stoqr-preview-meta">LAB-188 · Cold room B2</p>
+          </div>
+        </div>
       </section>
-      <section className="stoqr-preview-card">
+      <section className="stoqr-preview-card stoqr-preview-scan-sidecard">
         <div className="stoqr-preview-card-header">
-          <p className="stoqr-preview-card-title">Matched item</p>
-          <span className="stoqr-preview-pill">Found</span>
+          <p className="stoqr-preview-card-title">Quick actions</p>
+          <span className="stoqr-preview-pill is-neutral">Mobile</span>
         </div>
         <Barcode />
-        <p className="stoqr-preview-value" style={{ fontSize: '0.9rem' }}>PCR tubes</p>
-        <p className="stoqr-preview-meta">SKU LAB-188 · Cold room B2</p>
-        <div className="stoqr-preview-grid is-two" style={{ marginTop: '0.75rem' }}>
+        <div className="stoqr-preview-grid is-two" style={{ marginTop: '0.9rem' }}>
           <span className="stoqr-preview-button">Add stock</span>
           <span className="stoqr-preview-tab">Remove</span>
         </div>
@@ -200,7 +239,7 @@ export const ScannerPreview = () => (
 )
 
 export const LabelStudioPreview = () => (
-  <StoqrPreviewFrame active="Labels" eyebrow="Template library and print prep" title="Label Studio">
+  <StoqrPreviewFrame active="Label Studio" eyebrow="Template library and print prep" title="Label Studio">
     <div className="stoqr-preview-label-canvas">
       <section className="stoqr-preview-card">
         <p className="stoqr-preview-card-title">Templates</p>
@@ -331,7 +370,7 @@ export const AlertsPreview = () => (
 )
 
 export const OrganisationRbacPreview = () => (
-  <StoqrPreviewFrame active="Organisation" eyebrow="Teams, roles, auditability" title="Organisation RBAC">
+  <StoqrPreviewFrame active="Organisations" eyebrow="Teams, roles, auditability" title="Organisation RBAC">
     <div className="stoqr-preview-grid is-two">
       <section className="stoqr-preview-card">
         <div className="stoqr-preview-card-header">
