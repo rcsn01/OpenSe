@@ -536,8 +536,8 @@
   position: absolute;
   z-index: 1;
   left: 4.5rem;
-  right: 16rem;
   top: 3.1rem;
+  width: 28.4rem;
   display: grid;
   gap: 1rem;
   transform: perspective(900px) rotateY(-8deg) rotateX(1deg);
@@ -547,7 +547,7 @@
 .stoqr-scanner-shelf-row {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, 5.45rem);
   gap: 0.9rem;
   padding: 0 0.2rem 1.1rem;
 }
@@ -566,7 +566,8 @@
 
 .stoqr-scanner-box {
   position: relative;
-  min-height: 5.7rem;
+  width: 5.45rem;
+  height: 5.7rem;
   border-radius: 0.5rem;
   border: 1px solid rgb(148 163 184 / 38%);
   background: linear-gradient(180deg, #ffffff, #e2e8f0);
