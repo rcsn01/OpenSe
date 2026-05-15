@@ -10,6 +10,12 @@
   gap: 16px;
 }
 
+.product-detail-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: 18px;
+}
+
 .product-detail-link,
 .product-detail-inline-link,
 .product-section-link {
@@ -556,6 +562,10 @@
   .product-detail-topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .product-detail-actions {
+    align-self: flex-end;
   }
 
   .product-detail-hero-image,
