@@ -207,35 +207,43 @@ export const InventoryPreview = () => (
 )
 
 export const ScannerPreview = () => (
-  <StoqrPreviewFrame active="Scanner" eyebrow="Floor-ready scan actions" title="Scanner">
-    <div className="stoqr-preview-phone-scanner">
-      <section className="stoqr-preview-phone">
-        <div className="stoqr-preview-phone-speaker" />
-        <div className="stoqr-preview-phone-screen">
-          <div className="stoqr-preview-phone-camera">
-            <div className="stoqr-preview-scan-corners" />
-            <div className="stoqr-preview-scan-line" />
-          </div>
-          <div className="stoqr-preview-phone-result">
-            <span className="stoqr-preview-pill">Found</span>
-            <p className="stoqr-preview-list-title">PCR tubes</p>
-            <p className="stoqr-preview-meta">LAB-188 · Cold room B2</p>
-          </div>
+  <div className="stoqr-scanner-scene" data-testid="stoqr-feature-preview" aria-hidden="true">
+    <div className="stoqr-scanner-shelf">
+      {[0, 1, 2].map((shelf) => (
+        <div key={shelf} className="stoqr-scanner-shelf-row">
+          {[0, 1, 2, 3].map((box) => (
+            <div key={`${shelf}-${box}`} className={`stoqr-scanner-box stoqr-scanner-box--${(box + shelf) % 3}`}>
+              <span className="stoqr-scanner-box-label" />
+              <span className="stoqr-scanner-qr">
+                {Array.from({ length: 9 }).map((_, index) => (
+                  <i key={index} className={index % 2 === 0 ? 'is-dark' : undefined} />
+                ))}
+              </span>
+            </div>
+          ))}
         </div>
-      </section>
-      <section className="stoqr-preview-card stoqr-preview-scan-sidecard">
-        <div className="stoqr-preview-card-header">
-          <p className="stoqr-preview-card-title">Quick actions</p>
-          <span className="stoqr-preview-pill is-neutral">Mobile</span>
-        </div>
-        <Barcode />
-        <div className="stoqr-preview-grid is-two" style={{ marginTop: '0.9rem' }}>
-          <span className="stoqr-preview-button">Add stock</span>
-          <span className="stoqr-preview-tab">Remove</span>
-        </div>
-      </section>
+      ))}
     </div>
-  </StoqrPreviewFrame>
+    <div className="stoqr-scanner-phone">
+      <div className="stoqr-scanner-phone-speaker" />
+      <div className="stoqr-scanner-phone-screen">
+        <div className="stoqr-scanner-camera-view">
+          <div className="stoqr-scanner-view-shelf">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="stoqr-scanner-target-qr">
+            {Array.from({ length: 16 }).map((_, index) => (
+              <i key={index} className={[0, 1, 4, 6, 9, 11, 14, 15].includes(index) ? 'is-dark' : undefined} />
+            ))}
+          </div>
+          <div className="stoqr-scanner-focus-frame" />
+          <div className="stoqr-scanner-laser" />
+        </div>
+      </div>
+    </div>
+  </div>
 )
 
 export const LabelStudioPreview = () => (
