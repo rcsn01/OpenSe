@@ -35,6 +35,7 @@ export const useQuickScanTransaction = () => {
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['stoqr', 'scan', 'lookup', variables.companyId] })
       queryClient.invalidateQueries({ queryKey: ['stoqr', 'scan', 'history', variables.companyId] })
+      queryClient.invalidateQueries({ queryKey: ['stoqr', 'products', 'detail', variables.companyId, variables.productId] })
       queryClient.invalidateQueries({ queryKey: ['stoqr', 'inventory'] })
       queryClient.invalidateQueries({ queryKey: ['stoqr', 'dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['stoqr', 'alerts'] })
