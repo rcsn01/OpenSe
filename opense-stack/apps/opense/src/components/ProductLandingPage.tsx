@@ -98,6 +98,8 @@ export const ProductLandingPage = ({
               >
                 {card.preview ? (
                   <div
+                    data-testid="product-feature-preview"
+                    aria-hidden="true"
                     className="mb-8 h-64 overflow-hidden rounded-[1.1rem] border p-4"
                     style={{
                       borderColor: 'color-mix(in srgb, var(--color-secondary, var(--color-heading)) 10%, transparent)',

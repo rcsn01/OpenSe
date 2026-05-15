@@ -1,515 +1,313 @@
-import { BellRing, Boxes, LayoutDashboard, Printer, QrCode, TrendingUp, UserRoundCog } from 'lucide-react'
-import { ProductLandingPage, type ProductLandingFeature } from '../components/ProductLandingPage'
+import { LANDING_NAVBAR_OFFSET } from '@repo/ui'
+import {
+  ArrowRight,
+  BellRing,
+  Boxes,
+  CheckCircle2,
+  ClipboardList,
+  LayoutDashboard,
+  PackageSearch,
+  Printer,
+  QrCode,
+  ShieldCheck,
+  ShoppingCart,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import type { CSSProperties, ReactNode } from 'react'
+import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { MarketingFooter } from '../components/MarketingFooter'
+import { MarketingPageFrame } from '../components/MarketingPageFrame'
+import {
+  AlertsPreview,
+  DashboardPreview,
+  InventoryPreview,
+  LabelStudioPreview,
+  OrganisationRbacPreview,
+  ProcurementPreview,
+  ReportsPreview,
+  ScannerPreview,
+} from '../components/stoqr-previews'
+import { buildNavbarGetStartedPath, setActiveLandingContext } from '../lib/authRedirect'
 
-const previewClassName = 'stoqr-preview h-full w-full'
+type StoqrShowcaseFeature = {
+  title: string
+  eyebrow: string
+  description: string
+  icon: LucideIcon
+  preview: ReactNode
+  tone: 'warm' | 'cool' | 'plain'
+  bullets: string[]
+}
 
-const StoqrDashboardPreview = () => (
-  <svg viewBox="0 0 400 300" className={previewClassName} fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <rect x="50" y="40" width="300" height="200" rx="12" fill="#ffffff" stroke="#f1f5f9" strokeWidth="4" />
-    <path d="M50 80h300" stroke="#f1f5f9" strokeWidth="4" />
-    <circle cx="70" cy="60" r="4" fill="#cbd5e1" />
-    <circle cx="85" cy="60" r="4" fill="#cbd5e1" />
-    <circle cx="100" cy="60" r="4" fill="#cbd5e1" />
-
-    <g transform="translate(130, 150)">
-      <circle cx="0" cy="0" r="35" stroke="#ffedd5" strokeWidth="14" fill="none" />
-      <circle
-        cx="0"
-        cy="0"
-        r="35"
-        stroke="#f97316"
-        strokeWidth="14"
-        fill="none"
-        strokeDasharray="220"
-        strokeLinecap="round"
-        className="stoqr-preview__donut-main"
-      />
-      <circle
-        cx="0"
-        cy="0"
-        r="35"
-        stroke="#fbbf24"
-        strokeWidth="14"
-        fill="none"
-        strokeDasharray="220"
-        strokeLinecap="round"
-        className="stoqr-preview__donut-sec"
-      />
-    </g>
-
-    <g transform="translate(200, 190)">
-      <rect x="0" y="-40" width="18" height="40" rx="4" fill="#fbbf24" className="stoqr-preview__bar stoqr-preview__bar--1" />
-      <rect x="30" y="-70" width="18" height="70" rx="4" fill="#f97316" className="stoqr-preview__bar stoqr-preview__bar--2" />
-      <rect x="60" y="-55" width="18" height="55" rx="4" fill="#ea580c" className="stoqr-preview__bar stoqr-preview__bar--3" />
-    </g>
-
-    <g transform="translate(200, 190)">
-      <path
-        d="M10 -50 L40 -90 L70 -70 L100 -110"
-        stroke="#334155"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="stoqr-preview__trend"
-      />
-      <circle cx="100" cy="-110" r="6" fill="#334155" className="stoqr-preview__trend-dot" />
-    </g>
-  </svg>
-)
-
-const StoqrScannerPreview = () => (
-  <svg viewBox="0 0 400 300" className={previewClassName} fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <line x1="80" y1="230" x2="320" y2="230" stroke="#e2e8f0" strokeWidth="4" strokeDasharray="8 12" strokeLinecap="round" />
-
-    <g className="stoqr-preview__scanner-barcode">
-      <rect x="100" y="100" width="60" height="50" rx="6" fill="#fff" stroke="#cbd5e1" strokeWidth="3" />
-      <rect x="110" y="112" width="4" height="26" fill="#334155" />
-      <rect x="118" y="112" width="8" height="26" fill="#334155" />
-      <rect x="130" y="112" width="4" height="26" fill="#334155" />
-      <rect x="138" y="112" width="6" height="26" fill="#334155" />
-      <rect x="148" y="112" width="4" height="26" fill="#334155" />
-    </g>
-
-    <g transform="translate(240, 70)">
-      <rect x="0" y="0" width="80" height="130" rx="12" fill="#fff" stroke="#334155" strokeWidth="4" />
-      <path
-        d="M20 25 L15 25 L15 30 M60 25 L65 25 L65 30 M20 65 L15 65 L15 60 M60 65 L65 65 L65 60"
-        stroke="#ea580c"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <polygon points="15,70 65,70 85,160 -5,160" fill="#ef4444" opacity="0.9" className="stoqr-preview__laser" />
-      <rect x="15" y="68" width="50" height="4" fill="#ef4444" className="stoqr-preview__laser" />
-    </g>
-  </svg>
-)
-
-const StoqrLabelPreview = () => (
-  <svg viewBox="0 0 400 300" className={previewClassName} fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <rect x="40" y="60" width="60" height="170" rx="8" fill="#fff" stroke="#e2e8f0" strokeWidth="3" />
-    <rect x="55" y="80" width="30" height="4" rx="2" fill="#94a3b8" />
-    <rect x="55" y="90" width="20" height="4" rx="2" fill="#94a3b8" />
-    <path d="M55 120 v16 M60 120 v16 M65 120 v16 M73 120 v16 M80 120 v16 M85 120 v16" stroke="#cbd5e1" strokeWidth="2" />
-    <rect x="55" y="160" width="25" height="15" rx="2" stroke="#cbd5e1" strokeWidth="3" fill="none" />
-
-    <rect x="140" y="80" width="220" height="130" rx="6" fill="#fff" stroke="#f97316" strokeWidth="3" strokeDasharray="8 8" />
-
-    <g className="stoqr-preview__label-content">
-      <g transform="translate(160, 100)">
-        <rect x="0" y="0" width="100" height="30" rx="4" fill="#fff" stroke="#94a3b8" strokeWidth="2" />
-        <path d="M10 6 v18 M16 6 v18 M20 6 v18 M28 6 v18 M34 6 v18 M40 6 v18 M48 6 v18 M56 6 v18 M60 6 v18 M68 6 v18 M74 6 v18 M80 6 v18 M88 6 v18 M92 6 v18" stroke="#334155" strokeWidth="2" />
-      </g>
-
-      <g transform="translate(180, 150)">
-        <rect x="0" y="0" width="140" height="30" rx="4" fill="#fef3c7" />
-        <text
-          x="70"
-          y="20"
-          fill="#ea580c"
-          fontFamily="ui-sans-serif, system-ui, sans-serif"
-          fontSize="14"
-          fontWeight="700"
-          textAnchor="middle"
-        >
-          ITEM-A1B2C3
-        </text>
-      </g>
-    </g>
-
-    <g className="stoqr-preview__cursor">
-      <path d="M220 170 l 8 20 l 5 -7 l 7 8 l 4 -3 l -7 -8 l 8 -3 z" fill="#1e293b" />
-    </g>
-  </svg>
-)
-
-const StoqrProcurementPreview = () => (
-  <svg viewBox="0 0 400 300" className={previewClassName} fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <path d="M120 150 Q 160 150 180 150" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="4 4" />
-    <path d="M240 150 Q 260 150 280 150" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="4 4" />
-
-    <g transform="translate(60, 110)">
-      <path d="M0 70 L0 30 L20 10 L20 30 L40 10 L40 70 Z" fill="#fff" stroke="#475569" strokeWidth="4" strokeLinejoin="round" />
-      <rect x="12" y="40" width="16" height="30" fill="#475569" />
-    </g>
-
-    <g transform="translate(280, 105)">
-      <path d="M0 0 H35 L50 15 V75 H0 Z" fill="#fff" stroke="#1e293b" strokeWidth="4" strokeLinejoin="round" />
-      <path d="M35 0 V15 H50" stroke="#1e293b" strokeWidth="4" strokeLinejoin="round" />
-      <circle cx="25" cy="50" r="6" fill="#22c55e" className="stoqr-preview__doc-check" />
-    </g>
-
-    <g className="stoqr-preview__box-transit">
-      <rect x="180" y="125" width="50" height="50" rx="4" fill="#fde68a" stroke="#f59e0b" strokeWidth="3" />
-      <line x1="205" y1="125" x2="205" y2="175" stroke="#f59e0b" strokeWidth="3" />
-      <line x1="180" y1="140" x2="230" y2="140" stroke="#f59e0b" strokeWidth="3" />
-    </g>
-  </svg>
-)
-
-const StoqrAlertsPreview = () => (
-  <svg viewBox="0 0 400 300" className={previewClassName} fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <line x1="60" y1="130" x2="160" y2="130" stroke="#ef4444" strokeWidth="4" strokeDasharray="10 8" />
-
-    <rect x="70" y="150" width="80" height="30" rx="6" fill="#fbbf24" stroke="#d97706" strokeWidth="3" className="stoqr-preview__alert-box" />
-
-    <g transform="translate(180, 145)">
-      <path d="M0 -30 Q 30 0 0 30" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" fill="none" className="stoqr-preview__wave stoqr-preview__wave--1" />
-      <path d="M15 -50 Q 55 0 15 50" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" fill="none" className="stoqr-preview__wave stoqr-preview__wave--2" />
-      <path d="M30 -70 Q 80 0 30 70" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" fill="none" className="stoqr-preview__wave stoqr-preview__wave--3" />
-    </g>
-
-    <g transform="translate(260, 100)">
-      <rect x="0" y="0" width="60" height="100" rx="10" fill="#1e293b" />
-      <rect x="5" y="10" width="50" height="80" rx="6" fill="#fff" />
-      <rect x="10" y="20" width="40" height="20" rx="4" fill="#fef2f2" stroke="#fca5a5" strokeWidth="2" className="stoqr-preview__toast" />
-      <circle cx="16" cy="30" r="3" fill="#ef4444" className="stoqr-preview__toast" />
-      <line x1="22" y1="28" x2="42" y2="28" stroke="#f87171" strokeWidth="2" strokeLinecap="round" className="stoqr-preview__toast" />
-      <line x1="22" y1="32" x2="35" y2="32" stroke="#f87171" strokeWidth="2" strokeLinecap="round" className="stoqr-preview__toast" />
-    </g>
-  </svg>
-)
-
-const StoqrRolesPreview = () => (
-  <svg viewBox="0 0 400 300" className={previewClassName} fill="none" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <path d="M 120 70 Q 200 70 260 140" stroke="#22c55e" strokeWidth="3" fill="none" />
-    <path d="M 120 150 Q 180 150 250 160" stroke="#eab308" strokeWidth="3" strokeDasharray="6 6" fill="none" />
-    <path d="M 120 230 Q 200 230 250 180" stroke="#cbd5e1" strokeWidth="3" strokeDasharray="2 6" fill="none" strokeLinecap="round" />
-
-    <g transform="translate(270, 130)">
-      <ellipse cx="40" cy="15" rx="30" ry="10" fill="#fff" stroke="#1e293b" strokeWidth="3" />
-      <path d="M10 15 v25 c0 5.5 13.4 10 30 10 s30 -4.5 30 -10 v-25" fill="#fff" stroke="#1e293b" strokeWidth="3" />
-      <ellipse cx="40" cy="28" rx="30" ry="10" stroke="#3b82f6" strokeWidth="2" strokeDasharray="4 4" className="stoqr-preview__server-scan" />
-    </g>
-
-    <g transform="translate(80, 50)">
-      <circle cx="20" cy="15" r="10" fill="#fff" stroke="#ea580c" strokeWidth="3" />
-      <path d="M0 45 c0 -10 8 -15 20 -15 s20 5 20 15" fill="#fff" stroke="#ea580c" strokeWidth="3" />
-      <polygon points="20,8 23,13 28,13 24,16 25,21 20,18 15,21 16,16 12,13 17,13" fill="#ea580c" />
-    </g>
-
-    <circle cx="0" cy="0" r="4" fill="#22c55e" className="stoqr-preview__packet stoqr-preview__packet--1" />
-    <circle cx="0" cy="0" r="4" fill="#eab308" className="stoqr-preview__packet stoqr-preview__packet--2" />
-    <circle cx="0" cy="0" r="4" fill="#94a3b8" className="stoqr-preview__packet stoqr-preview__packet--3" />
-
-    <g transform="translate(80, 130)">
-      <circle cx="20" cy="15" r="10" fill="#fff" stroke="#334155" strokeWidth="3" />
-      <path d="M0 45 c0 -10 8 -15 20 -15 s20 5 20 15" fill="#fff" stroke="#334155" strokeWidth="3" />
-      <rect x="15" y="10" width="10" height="10" fill="#334155" />
-    </g>
-
-    <g transform="translate(80, 210)">
-      <circle cx="20" cy="15" r="10" fill="#fff" stroke="#94a3b8" strokeWidth="3" />
-      <path d="M0 45 c0 -10 8 -15 20 -15 s20 5 20 15" fill="#fff" stroke="#94a3b8" strokeWidth="3" />
-      <circle cx="20" cy="15" r="4" fill="#94a3b8" />
-    </g>
-  </svg>
-)
-
-const featureCards: ProductLandingFeature[] = [
+const showcaseFeatures: StoqrShowcaseFeature[] = [
   {
-    title: 'Intelligent Dashboard',
+    title: 'Dashboard',
+    eyebrow: 'Know what needs attention now.',
     description:
-      'Monitor total inventory value, stock levels, and pending orders at a glance. Visual charts track inventory trends and usage depletion over time.',
+      'Watch inventory value, stock health, pending purchase orders, and critical alerts from one calm command center built for daily operational review.',
     icon: LayoutDashboard,
-    preview: <StoqrDashboardPreview />,
+    preview: <DashboardPreview />,
+    tone: 'warm',
+    bullets: [
+      'See urgent stock risk before it becomes a stockout.',
+      'Track value, movement, and purchase order pressure together.',
+      'Give managers one place to start the day.',
+    ],
   },
   {
-    title: 'Built-in Scanner',
+    title: 'Inventory',
+    eyebrow: 'Every item, folder, SKU, and quantity in reach.',
     description:
-      'Camera-based barcode and QR code scanning right from your web browser. Do quick stock lookups, add, or remove inventory efficiently on the floor.',
+      'Browse products, locations, low-stock states, and custom fields without leaving the working surface your team uses to keep shelves accurate.',
+    icon: PackageSearch,
+    preview: <InventoryPreview />,
+    tone: 'plain',
+    bullets: [
+      'Organize products by location, bin, type, or custom workflow.',
+      'Filter low-stock and out-of-stock items without hunting.',
+      'Keep SKU, quantity, and status details visible at once.',
+    ],
+  },
+  {
+    title: 'Scanner',
+    eyebrow: 'Move faster on the floor.',
+    description:
+      'Scan barcode and QR labels from the browser, match the right product instantly, then add or remove stock while the item is still in your hand.',
     icon: QrCode,
-    preview: <StoqrScannerPreview />,
+    preview: <ScannerPreview />,
+    tone: 'cool',
+    bullets: [
+      'Use the camera scanner without installing a native app.',
+      'Match the scanned item to its product record immediately.',
+      'Adjust stock from the same scan action surface.',
+    ],
   },
   {
     title: 'Label Studio',
+    eyebrow: 'Print labels that match the way you work.',
     description:
-      'Design custom labels with variable fields (Barcode, SKU, Price). Use template libraries for products, shelves, or bins, and export to PDF/PNG for batch printing.',
+      'Build product, shelf, and batch label templates with variable fields, SKU data, and barcode output ready for day-to-day printing.',
     icon: Printer,
-    preview: <StoqrLabelPreview />,
+    preview: <LabelStudioPreview />,
+    tone: 'warm',
+    bullets: [
+      'Create reusable templates for products, shelves, and batches.',
+      'Include barcode, SKU, location, and quantity fields.',
+      'Prepare consistent labels for batch printing.',
+    ],
   },
   {
-    title: 'Procurement & Reporting',
+    title: 'Reports',
+    eyebrow: 'Turn stock movement into decisions.',
     description:
-      'Create purchase orders, manage suppliers, and track receiving workflows. Generate dead stock identification and inventory valuation reports.',
-    icon: TrendingUp,
-    preview: <StoqrProcurementPreview />,
+      'Review valuation, velocity, shrinkage, reorder candidates, supplier movement, and exports without rebuilding reports in spreadsheets.',
+    icon: ClipboardList,
+    preview: <ReportsPreview />,
+    tone: 'plain',
+    bullets: [
+      'Review valuation and movement without rebuilding sheets.',
+      'Find slow-moving and reorder candidate products.',
+      'Export operational views when finance or suppliers need them.',
+    ],
   },
   {
-    title: 'Automated Alerts',
+    title: 'Procurement',
+    eyebrow: 'Replenishment without the scramble.',
     description:
-      'Set custom rules for low stock notifications, reorder point triggers, and expiration warnings. Receive alerts via email or push notifications.',
+      'Create purchase orders, manage suppliers, follow receiving workflows, and spot delayed replenishment before it slows down operations.',
+    icon: ShoppingCart,
+    preview: <ProcurementPreview />,
+    tone: 'cool',
+    bullets: [
+      'Track supplier, approval, receiving, and delay status.',
+      'Connect reorder pressure to purchase order workflows.',
+      'Keep inbound replenishment visible to the inventory team.',
+    ],
+  },
+  {
+    title: 'Alerts',
+    eyebrow: 'Let the system raise its hand first.',
+    description:
+      'Configure low-stock, expiry, reorder, delivery, and connector notifications so the right people see problems early enough to act.',
     icon: BellRing,
-    preview: <StoqrAlertsPreview />,
+    preview: <AlertsPreview />,
+    tone: 'warm',
+    bullets: [
+      'Trigger alerts for low stock, expiry, delivery, and connectors.',
+      'Separate critical events from ordinary operational noise.',
+      'Route the right issue to the right team sooner.',
+    ],
   },
   {
-    title: 'Role-Based Access',
+    title: 'Organisation RBAC',
+    eyebrow: 'Access control that stays understandable.',
     description:
-      'Granular user management. Invite team members with specific roles (admin, editor, scanner). Maintain full audit trails and activity logs for accountability.',
-    icon: UserRoundCog,
-    preview: <StoqrRolesPreview />,
+      'Invite members, assign roles, control operational permissions, and keep team access clear as your inventory workflow grows.',
+    icon: ShieldCheck,
+    preview: <OrganisationRbacPreview />,
+    tone: 'plain',
+    bullets: [
+      'Invite members with roles that match their work.',
+      'Restrict sensitive settings and procurement controls.',
+      'Keep permissions readable as the organization grows.',
+    ],
   },
 ]
 
-const featureIconClass =
-  'inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_14%,transparent)] bg-[color:color-mix(in_srgb,var(--color-warning-light)_44%,white)] text-[var(--color-secondary)]'
+const toneBackground: Record<StoqrShowcaseFeature['tone'], string> = {
+  warm:
+    'linear-gradient(180deg, color-mix(in srgb, var(--color-warning-light) 36%, white) 0%, color-mix(in srgb, var(--color-background) 86%, white) 100%)',
+  cool:
+    'linear-gradient(180deg, color-mix(in srgb, var(--color-info-light) 34%, white) 0%, color-mix(in srgb, var(--color-background) 88%, white) 100%)',
+  plain:
+    'linear-gradient(180deg, white 0%, color-mix(in srgb, var(--color-background) 88%, white) 100%)',
+}
 
-const stoqrAnimationStyles = `
-  @keyframes stoqr-preview-draw-donut-main {
-    0%, 10% { stroke-dashoffset: 220; }
-    40%, 100% { stroke-dashoffset: 80; }
-  }
-
-  @keyframes stoqr-preview-draw-donut-sec {
-    0%, 30% { stroke-dashoffset: 220; }
-    60%, 100% { stroke-dashoffset: 160; }
-  }
-
-  @keyframes stoqr-preview-grow-bar {
-    0%, 20% { transform: scaleY(0); }
-    50%, 100% { transform: scaleY(1); }
-  }
-
-  @keyframes stoqr-preview-draw-trend {
-    0%, 40% { stroke-dasharray: 200; stroke-dashoffset: 200; }
-    70%, 100% { stroke-dashoffset: 0; }
-  }
-
-  @keyframes stoqr-preview-pop-dot {
-    0%, 60% { opacity: 0; transform: scale(0); }
-    75%, 100% { opacity: 1; transform: scale(1); }
-  }
-
-  @keyframes stoqr-preview-slide-barcode {
-    0%, 20% { transform: translateX(120px); opacity: 0; }
-    30%, 80% { transform: translateX(0); opacity: 1; }
-    90%, 100% { transform: translateX(-50px); opacity: 0; }
-  }
-
-  @keyframes stoqr-preview-pulse-laser {
-    0%, 30%, 80%, 100% { opacity: 0; transform: scaleY(0.5); }
-    40%, 70% { opacity: 0.9; transform: scaleY(1); }
-  }
-
-  @keyframes stoqr-preview-assemble-label {
-    0%, 10% { transform: translate(-80px, -20px); opacity: 0; }
-    25%, 85% { transform: translate(0, 0); opacity: 1; }
-    95%, 100% { transform: translate(0, 0); opacity: 0; }
-  }
-
-  @keyframes stoqr-preview-cursor-move {
-    0%, 10% { transform: translate(-120px, -20px); }
-    25%, 50% { transform: translate(0, 0); }
-    60%, 85% { transform: translate(40px, 30px); }
-    95%, 100% { transform: translate(20px, 80px); opacity: 0; }
-  }
-
-  @keyframes stoqr-preview-box-transit {
-    0% { transform: translateX(-120px); opacity: 0; }
-    15%, 25% { transform: translateX(-120px); opacity: 1; }
-    45%, 55% { transform: translateX(0); opacity: 1; }
-    75%, 85% { transform: translateX(120px); opacity: 1; }
-    90%, 100% { transform: translateX(120px); opacity: 0; }
-  }
-
-  @keyframes stoqr-preview-pop-check {
-    0%, 70% { transform: scale(0); opacity: 0; }
-    80%, 95% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(0); opacity: 0; }
-  }
-
-  @keyframes stoqr-preview-box-drop {
-    0%, 20% { transform: translateY(-40px); opacity: 0; }
-    30%, 80% { transform: translateY(0); opacity: 1; }
-    90%, 100% { transform: translateY(20px); opacity: 0; }
-  }
-
-  @keyframes stoqr-preview-wave-pulse {
-    0%, 35% { opacity: 0; transform: scale(0.8) translateX(-10px); }
-    50% { opacity: 1; }
-    80%, 100% { opacity: 0; transform: scale(1.2) translateX(10px); }
-  }
-
-  @keyframes stoqr-preview-toast-pop {
-    0%, 45% { opacity: 0; transform: translateY(10px); }
-    55%, 85% { opacity: 1; transform: translateY(0); }
-    95%, 100% { opacity: 0; transform: translateY(-5px); }
-  }
-
-  @keyframes stoqr-preview-packet-fly-1 {
-    0% { transform: translate(120px, 70px) scale(0); opacity: 0; }
-    10% { transform: translate(120px, 70px) scale(1); opacity: 1; }
-    90% { transform: translate(260px, 140px) scale(1); opacity: 1; }
-    100% { transform: translate(260px, 140px) scale(0); opacity: 0; }
-  }
-
-  @keyframes stoqr-preview-packet-fly-2 {
-    0% { transform: translate(120px, 150px) scale(0); opacity: 0; }
-    10% { transform: translate(120px, 150px) scale(1); opacity: 1; }
-    90% { transform: translate(250px, 160px) scale(1); opacity: 1; }
-    100% { transform: translate(250px, 160px) scale(0); opacity: 0; }
-  }
-
-  @keyframes stoqr-preview-packet-fly-3 {
-    0% { transform: translate(120px, 230px) scale(0); opacity: 0; }
-    10% { transform: translate(120px, 230px) scale(1); opacity: 1; }
-    90% { transform: translate(250px, 180px) scale(1); opacity: 1; }
-    100% { transform: translate(250px, 180px) scale(0); opacity: 0; }
-  }
-
-  @keyframes stoqr-preview-server-blink {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 1; }
-  }
-
-  .stoqr-preview__donut-main {
-    stroke-dashoffset: 220;
-    animation: stoqr-preview-draw-donut-main 4s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
-  }
-
-  .stoqr-preview__donut-sec {
-    stroke-dashoffset: 220;
-    animation: stoqr-preview-draw-donut-sec 4s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
-  }
-
-  .stoqr-preview__bar,
-  .stoqr-preview__trend-dot,
-  .stoqr-preview__laser,
-  .stoqr-preview__label-content,
-  .stoqr-preview__cursor,
-  .stoqr-preview__box-transit,
-  .stoqr-preview__doc-check,
-  .stoqr-preview__alert-box,
-  .stoqr-preview__wave,
-  .stoqr-preview__toast,
-  .stoqr-preview__packet {
-    transform-box: fill-box;
-  }
-
-  .stoqr-preview__bar {
-    transform-origin: center bottom;
-    animation: stoqr-preview-grow-bar 4s ease-out infinite alternate;
-  }
-
-  .stoqr-preview__bar--1 { animation-delay: 0.1s; }
-  .stoqr-preview__bar--2 { animation-delay: 0.2s; }
-  .stoqr-preview__bar--3 { animation-delay: 0.3s; }
-
-  .stoqr-preview__trend {
-    stroke-dasharray: 200;
-    stroke-dashoffset: 200;
-    animation: stoqr-preview-draw-trend 4s ease-out infinite alternate;
-  }
-
-  .stoqr-preview__trend-dot {
-    transform-origin: center;
-    animation: stoqr-preview-pop-dot 4s ease-out infinite alternate;
-  }
-
-  .stoqr-preview__scanner-barcode {
-    animation: stoqr-preview-slide-barcode 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
-
-  .stoqr-preview__laser {
-    transform-origin: center top;
-    animation: stoqr-preview-pulse-laser 5s ease-in-out infinite;
-  }
-
-  .stoqr-preview__label-content {
-    transform-origin: center;
-    animation: stoqr-preview-assemble-label 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
-  }
-
-  .stoqr-preview__cursor {
-    animation: stoqr-preview-cursor-move 6s ease-in-out infinite;
-  }
-
-  .stoqr-preview__box-transit {
-    animation: stoqr-preview-box-transit 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
-
-  .stoqr-preview__doc-check {
-    transform-origin: center;
-    animation: stoqr-preview-pop-check 5s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
-  }
-
-  .stoqr-preview__alert-box {
-    animation: stoqr-preview-box-drop 4s ease-in-out infinite;
-  }
-
-  .stoqr-preview__wave {
-    transform-origin: center;
-    animation: stoqr-preview-wave-pulse 4s ease-out infinite;
-  }
-
-  .stoqr-preview__wave--2 { animation-delay: 0.15s; }
-  .stoqr-preview__wave--3 { animation-delay: 0.3s; }
-
-  .stoqr-preview__toast {
-    animation: stoqr-preview-toast-pop 4s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite;
-  }
-
-  .stoqr-preview__packet {
-    transform-origin: center;
-  }
-
-  .stoqr-preview__packet--1 {
-    animation: stoqr-preview-packet-fly-1 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
-
-  .stoqr-preview__packet--2 {
-    animation: stoqr-preview-packet-fly-2 3s cubic-bezier(0.4, 0, 0.2, 1) infinite 1s;
-  }
-
-  .stoqr-preview__packet--3 {
-    animation: stoqr-preview-packet-fly-3 3s cubic-bezier(0.4, 0, 0.2, 1) infinite 2s;
-  }
-
-  .stoqr-preview__server-scan {
-    animation: stoqr-preview-server-blink 1.5s ease-in-out infinite;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .stoqr-preview [class*='stoqr-preview__'] {
-      animation: none !important;
-    }
-  }
-`
+const ctaHref = buildNavbarGetStartedPath('stoqr')
 
 export const OpenStoqrLandingPage = () => {
-  return (
-    <>
-      <style>{stoqrAnimationStyles}</style>
+  useEffect(() => {
+    setActiveLandingContext('stoqr')
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [])
 
-      <ProductLandingPage
-        landingContext="stoqr"
-        background={(
-          <>
-            <div className="absolute inset-0 bg-[var(--color-background)]" />
+  return (
+    <MarketingPageFrame background={(
+      <>
+        <div className="absolute inset-0 bg-[var(--color-background)]" />
+        <div
+          className="absolute left-[-10rem] top-[-4rem] h-[28rem] w-[28rem] rounded-full blur-3xl"
+          style={{ backgroundColor: 'color-mix(in srgb, var(--color-warning-light) 52%, white)' }}
+        />
+        <div
+          className="absolute right-[-9rem] top-[22rem] h-[22rem] w-[22rem] rounded-full blur-3xl"
+          style={{ backgroundColor: 'color-mix(in srgb, var(--color-info-light) 34%, white)' }}
+        />
+      </>
+    )}>
+      <section
+        className="mx-auto flex min-h-[92vh] max-w-7xl flex-col items-center justify-center px-6 pb-16 text-center"
+        style={{ paddingTop: `calc(${LANDING_NAVBAR_OFFSET} + 4rem)` }}
+      >
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_18%,transparent)] bg-[color:color-mix(in_srgb,var(--color-warning-light)_48%,white)] text-[var(--color-secondary)]">
+          <Boxes className="h-6 w-6" />
+        </span>
+        <h1 className="mt-7 text-6xl font-semibold leading-none tracking-[-0.06em] text-[var(--color-heading)] md:text-8xl">
+          Open-StoQr
+        </h1>
+        <p className="mt-5 text-2xl font-semibold text-[color:color-mix(in_srgb,var(--color-secondary)_82%,#8e5f2b)] md:text-3xl">
+          Physical inventory, digitally mastered.
+        </p>
+        <p className="mx-auto mt-6 max-w-4xl text-lg leading-8 text-[var(--color-body)] md:text-xl">
+          Track, scan, procure, report, and govern inventory operations from an open source product suite your team can actually see before they deploy it.
+        </p>
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+          <Link
+            to={ctaHref}
+            data-testid="stoqr-deploy-open-stoqr"
+            className="inline-flex min-w-44 items-center justify-center whitespace-nowrap rounded-full bg-[var(--color-foreground)] px-7 py-3 text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
+            style={{ color: 'white' }}
+          >
+            Deploy Open-StoQr
+          </Link>
+          <a
+            href="#stoqr-dashboard"
+            className="inline-flex items-center justify-center rounded-full border border-[var(--opense-shell-border-strong)] bg-white/72 px-7 py-3 text-sm font-semibold text-[var(--color-heading)] transition-transform duration-200 hover:-translate-y-0.5"
+          >
+            See the UI
+          </a>
+        </div>
+      </section>
+
+      {showcaseFeatures.map((feature, index) => {
+        const Icon = feature.icon
+
+        return (
+          <section
+            key={feature.title}
+            id={`stoqr-${feature.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+            className="overflow-hidden border-t border-[color:var(--opense-shell-border)] px-6 py-20 md:py-28"
+            style={{ background: toneBackground[feature.tone] }}
+          >
             <div
-              className="absolute left-[-9rem] top-[-2rem] h-[22rem] w-[22rem] rounded-full blur-3xl"
-              style={{ backgroundColor: 'color-mix(in srgb, var(--color-warning-light) 52%, white)' }}
-            />
-            <div
-              className="absolute right-[-8rem] top-[18rem] h-[18rem] w-[18rem] rounded-full blur-3xl"
-              style={{ backgroundColor: 'color-mix(in srgb, var(--color-secondary) 12%, white)' }}
-            />
-          </>
-        )}
-        heroIcon={Boxes}
-        iconClassName={featureIconClass}
-        title="Open-StoQr"
-        subtitle="Physical inventory, digitally mastered."
-        subtitleStyle={{ color: 'color-mix(in srgb, var(--color-secondary) 82%, #8e5f2b)' }}
-        description="Track, scan, and manage your inventory operations with high customization and accessibility. Perfect for modern warehouses, retail backrooms, and distributed asset management."
-        features={featureCards}
-        ctaPanelStyle={{ backgroundColor: 'color-mix(in srgb, var(--color-secondary) 34%, #2f1707)' }}
-        ctaIcon={QrCode}
-        ctaTitle="Ready to Organize Your Assets?"
-        ctaDescription="Upgrade your team's efficiency with Open-StoQr. Open source, highly customizable, and easy to deploy for your organization."
-        ctaLabel="Deploy Open-StoQr"
-        ctaTestId="stoqr-deploy-open-stoqr"
-      />
-    </>
+              className={`mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-16 ${
+                index % 2 === 1 ? 'lg:grid-cols-[1.18fr_0.82fr]' : ''
+              }`}
+            >
+              <div className={`max-w-xl ${index % 2 === 1 ? 'lg:order-2' : ''}`}>
+                <div className="flex items-center gap-4">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_16%,transparent)] bg-white/72 text-[var(--color-secondary)]">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--color-secondary)]">
+                    {feature.eyebrow}
+                  </p>
+                </div>
+                <h2 className="mt-7 text-4xl font-semibold leading-[1.03] tracking-[-0.055em] text-[var(--color-heading)] md:text-6xl">
+                  {feature.title}
+                </h2>
+                <p className="mt-5 text-lg leading-8 text-[var(--color-body)] md:text-xl">
+                  {feature.description}
+                </p>
+                <ul className="mt-10 space-y-6">
+                  {feature.bullets.map((bullet) => (
+                    <li key={bullet} className="flex gap-4 text-left text-base leading-7 text-[var(--color-foreground)]">
+                      <span className="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--color-secondary)]">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </span>
+                      <span>{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-10 flex flex-wrap items-center gap-5">
+                  <Link
+                    to={ctaHref}
+                    className="inline-flex min-w-40 items-center justify-center whitespace-nowrap rounded-full bg-[var(--color-foreground)] px-6 py-3 text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
+                    style={{ color: 'white' }}
+                  >
+                    Deploy Open-StoQr
+                  </Link>
+                  <a
+                    href="#stoqr-reports"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-secondary)]"
+                  >
+                    See all workflows
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+              <div
+                data-testid="product-feature-preview"
+                aria-hidden="true"
+                className={`stoqr-showcase-preview w-full ${index % 2 === 1 ? 'is-left' : 'is-right'}`}
+                style={{
+                  '--stoqr-showcase-delay': `${index * 80}ms`,
+                } as CSSProperties}
+              >
+                {feature.preview}
+              </div>
+            </div>
+          </section>
+        )
+      })}
+
+      <section className="border-t border-[color:var(--opense-shell-border)] bg-[var(--color-foreground)] px-6 py-24 text-center text-white">
+        <h2 className="mx-auto max-w-4xl text-5xl font-semibold tracking-[-0.06em] md:text-7xl">
+          Ready to organize your assets?
+        </h2>
+        <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-white/76">
+          Upgrade your team's efficiency with Open-StoQr. Open source, highly customizable, and easy to deploy for your organization.
+        </p>
+        <Link
+          to={ctaHref}
+          className="mt-9 inline-flex min-w-44 items-center justify-center whitespace-nowrap rounded-full bg-white px-7 py-3 text-sm font-semibold text-[var(--color-heading)] transition-transform duration-200 hover:-translate-y-0.5"
+        >
+          Deploy Open-StoQr
+        </Link>
+      </section>
+
+      <MarketingFooter />
+    </MarketingPageFrame>
   )
 }
