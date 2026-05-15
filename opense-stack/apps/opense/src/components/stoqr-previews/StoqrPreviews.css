@@ -456,3 +456,86 @@
     animation: none;
   }
 }
+
+.stoqr-showcase-preview {
+  display: flex;
+  justify-content: flex-start;
+  overflow: hidden;
+  border-radius: 1.45rem;
+  filter: drop-shadow(0 1.8rem 3.2rem color-mix(in srgb, var(--color-foreground) 16%, transparent));
+  animation: stoqr-showcase-rise 520ms ease both;
+  animation-delay: var(--stoqr-showcase-delay, 0ms);
+}
+
+.stoqr-showcase-preview.is-left {
+  justify-content: flex-end;
+}
+
+.stoqr-showcase-preview .stoqr-preview-frame {
+  width: min(62rem, 122%);
+  height: clamp(24rem, 36vw, 34rem);
+  min-height: 24rem;
+  border-radius: 1.45rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--color-background) 92%, white), white 58%),
+    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--color-secondary) 16%, transparent), transparent 30%);
+}
+
+.stoqr-showcase-preview .stoqr-preview-shell {
+  min-width: 56rem;
+  transform: scale(1);
+}
+
+.stoqr-showcase-preview .stoqr-preview-nav {
+  width: 9rem;
+}
+
+.stoqr-showcase-preview .stoqr-preview-main {
+  padding: 1.25rem;
+}
+
+.stoqr-showcase-preview .stoqr-preview-search {
+  width: 11rem;
+}
+
+.stoqr-showcase-preview .stoqr-preview-sidebar-panel {
+  width: 9.5rem;
+}
+
+.stoqr-showcase-preview .stoqr-preview-scanner {
+  grid-template-columns: 1fr 13rem;
+}
+
+@keyframes stoqr-showcase-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 860px) {
+  .stoqr-showcase-preview,
+  .stoqr-showcase-preview.is-left {
+    justify-content: center;
+  }
+
+  .stoqr-showcase-preview .stoqr-preview-frame {
+    height: 24rem;
+    width: 100%;
+  }
+
+  .stoqr-showcase-preview .stoqr-preview-shell {
+    min-width: 46rem;
+    transform: scale(0.78);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stoqr-showcase-preview {
+    animation: none;
+  }
+}
