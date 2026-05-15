@@ -41,7 +41,7 @@ import type { Role } from "../api/teamSettings";
 type AlertsTab = "feed" | "rules";
 type FeedCategory = "all" | "stock" | "procurement" | "system";
 type FeedSeverity = AlertEvent["severity"];
-type AlertSortKey = "message" | "severity" | "category" | "status";
+type AlertSortKey = "message" | "triggered_at" | "severity" | "category" | "status";
 
 const legacyTabRedirects: Record<string, AlertsTab> = {
   notifications: "feed",
@@ -97,6 +97,7 @@ const getAlertSortValue = (event: AlertEvent, sortKey: AlertSortKey) => {
   if (sortKey === "severity") return severityLabel[event.severity];
   if (sortKey === "category") return alertCategoryLabel[getEventCategory(event)];
   if (sortKey === "status") return event.status;
+  if (sortKey === "triggered_at") return event.triggered_at;
   return event.message;
 };
 
@@ -374,26 +375,21 @@ export const AlertsPage = () => {
       id: "message",
       header: "Alert",
       sortKey: "message",
-      width: "52%",
+      width: "40%",
       renderCell: (event) => (
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
-            <span className="font-semibold uppercase tracking-[0.08em] text-[var(--color-foreground)]">
-              {event.products?.sku ?? "No SKU"}
-            </span>
-            <span aria-hidden="true">•</span>
-            <span>{formatDateTime(event.triggered_at)}</span>
-          </div>
-          <div className="text-base font-semibold text-[var(--color-foreground)]">
+          <div className="truncate text-base font-semibold text-[var(--color-foreground)]">
             {event.message}
           </div>
-          {event.products?.name ? (
-            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              {event.products.name}
-            </p>
-          ) : null}
         </div>
       ),
+    },
+    {
+      id: "triggered_at",
+      header: "Date / Time",
+      sortKey: "triggered_at",
+      width: "16%",
+      renderCell: (event) => formatDateTime(event.triggered_at),
     },
     {
       id: "severity",
@@ -415,14 +411,14 @@ export const AlertsPage = () => {
       id: "category",
       header: "Category",
       sortKey: "category",
-      width: "20%",
+      width: "18%",
       renderCell: (event) => alertCategoryLabel[getEventCategory(event)],
     },
     {
       id: "status",
       header: "Status",
       sortKey: "status",
-      width: "14%",
+      width: "12%",
       renderCell: (event) => (
         <Badge
           variant={event.status === "open" ? "success" : "secondary"}
