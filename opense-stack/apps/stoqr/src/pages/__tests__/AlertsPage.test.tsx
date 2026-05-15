@@ -357,7 +357,8 @@ describe("AlertsPage", () => {
     const alertsFeedTab = screen.getByRole("button", { name: /alerts feed/i });
     expect(within(alertsFeedTab).getByText("1")).toBeInTheDocument();
     expect(screen.getByText(/PCR Tips is at 4 units/i)).toBeInTheDocument();
-    expect(screen.getByText("TIP-001")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /date \/ time/i })).toBeInTheDocument();
+    expect(screen.queryByText("TIP-001")).not.toBeInTheDocument();
 
     await user.click(screen.getByLabelText("Select all visible alerts"));
     await user.click(screen.getAllByRole("button", { name: "Acknowledge" })[0]);
