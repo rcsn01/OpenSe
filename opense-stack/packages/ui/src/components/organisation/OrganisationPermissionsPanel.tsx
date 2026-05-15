@@ -59,6 +59,7 @@ type OrganisationPermissionsPanelProps = {
   loadingPermissions?: boolean;
   canManage: boolean;
   isRoleEditable?: (role: OrganisationRole) => boolean;
+  onEditRole?: (roleId: string) => void;
   onCreateRole: (payload: RolePayload) => Promise<void> | void;
   onUpdateRole: (roleId: string, payload: RolePayload) => Promise<void> | void;
   onDeleteRole?: (roleId: string) => Promise<void> | void;
@@ -90,6 +91,7 @@ export function OrganisationPermissionsPanel({
   loadingPermissions = false,
   canManage,
   isRoleEditable,
+  onEditRole,
   onCreateRole,
   onUpdateRole,
   onDeleteRole,
@@ -379,6 +381,7 @@ export function OrganisationPermissionsPanel({
   const roleTableHeaderClassName =
     "border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase";
   const roleTableCellClassName = "border-b border-[#d9e2ef] px-4 py-3";
+  const usesRoutedEdit = Boolean(onEditRole);
 
   const roleColumns = useMemo<DataTableColumn<RoleTableRow, RoleSortField>[]>(
     () => [
@@ -386,7 +389,7 @@ export function OrganisationPermissionsPanel({
         id: "name",
         header: "Role Name",
         sortKey: "name",
-        width: "26%",
+        width: usesRoutedEdit ? "32%" : "26%",
         headerClassName: roleTableHeaderClassName,
         cellClassName: `${roleTableCellClassName} font-medium text-[var(--color-foreground)]`,
         renderCell: (row) => row.name,
@@ -395,7 +398,7 @@ export function OrganisationPermissionsPanel({
         id: "description",
         header: "Description",
         sortKey: "description",
-        width: "44%",
+        width: usesRoutedEdit ? "50%" : "44%",
         headerClassName: roleTableHeaderClassName,
         cellClassName: `${roleTableCellClassName} text-[var(--color-muted-foreground)]`,
         renderCell: (row) => row.description || "—",
@@ -404,49 +407,53 @@ export function OrganisationPermissionsPanel({
         id: "role-rank",
         header: "Role Rank",
         sortKey: "role-rank",
-        width: "14%",
+        width: usesRoutedEdit ? "18%" : "14%",
         headerClassName: roleTableHeaderClassName,
         cellClassName: `${roleTableCellClassName} text-[var(--color-muted-foreground)]`,
         renderCell: (row) => row.roleRank ?? "—",
       },
-      {
-        id: "actions",
-        header: "Actions",
-        sortable: false,
-        align: "right",
-        width: "16%",
-        headerClassName: roleTableHeaderClassName,
-        cellClassName: `${roleTableCellClassName} text-right`,
-        renderCell: (row) => (
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => openEditRole(row.id)}
-              disabled={!canManage || saving || !row.editable}
-            >
-              <Pencil className="h-4 w-4" />
-              Edit
-            </Button>
-            {onDeleteRole && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => handleDeleteRole(row.id)}
-                disabled={!canManage || saving || !row.editable}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete
-              </Button>
-            )}
-          </div>
-        ),
-      },
+      ...(!usesRoutedEdit
+        ? [
+            {
+              id: "actions",
+              header: "Actions",
+              sortable: false,
+              align: "right" as const,
+              width: "16%",
+              headerClassName: roleTableHeaderClassName,
+              cellClassName: `${roleTableCellClassName} text-right`,
+              renderCell: (row: RoleTableRow) => (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEditRole(row.id)}
+                    disabled={!canManage || saving || !row.editable}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </Button>
+                  {onDeleteRole && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteRole(row.id)}
+                      disabled={!canManage || saving || !row.editable}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  )}
+                </div>
+              ),
+            },
+          ]
+        : []),
     ],
-    [canManage, onDeleteRole, openEditRole, saving],
+    [canManage, onDeleteRole, openEditRole, saving, usesRoutedEdit],
   );
 
   return (
@@ -484,6 +491,16 @@ export function OrganisationPermissionsPanel({
                 sortField={roleSortField}
                 sortDirection={roleSortDirection}
                 onSortChange={handleRoleSortChange}
+                getRowProps={(row) => {
+                  const canEditRow = usesRoutedEdit && canManage && row.editable && !saving;
+
+                  return canEditRow
+                    ? {
+                        className: "cursor-pointer hover:bg-[var(--color-muted)]",
+                        onClick: () => onEditRole?.(row.id),
+                      }
+                    : {};
+                }}
                 tableWrapClassName="border-0 bg-white"
                 tableClassName="bg-white"
                 pagination={{

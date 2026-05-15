@@ -298,6 +298,7 @@ export const TeamSettingsPage = () => {
                 canManage={true}
                 onCreateRole={handleCreateRole}
                 onUpdateRole={handleUpdateRole}
+                onEditRole={(roleId) => navigate(`/settings/organisations/permissions/${roleId}`)}
                 searchTerm={permissionsSearchTerm}
               />
             ),

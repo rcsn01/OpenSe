@@ -396,6 +396,16 @@ describe("AlertsPage", () => {
     expect(screen.getByText("Buffer expires soon.")).toBeInTheDocument();
   });
 
+  it("opens the alert detail page from feed rows", async () => {
+    const user = userEvent.setup();
+
+    renderAlertsRoute("/alerts/feed");
+
+    await user.click(screen.getByText(/PCR Tips is at 4 units/i));
+
+    expect(screen.getByTestId("location-path")).toHaveTextContent("/alerts/feed/event-1");
+  });
+
   it("renders alert rules as a full-width list", async () => {
     renderAlertsRoute("/alerts/rules");
 
