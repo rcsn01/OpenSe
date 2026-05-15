@@ -287,6 +287,12 @@
   align-self: center;
 }
 
+.scan-update-shell--product-adjust {
+  align-self: stretch;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 520px);
+  width: 100%;
+}
+
 .scan-update-main,
 .scan-update-controls {
   padding: 28px 0 0;
@@ -413,6 +419,14 @@
 
 .scan-update-fields-row {
   display: block;
+}
+
+.product-adjust-page .scan-update-fields-row {
+  display: block;
+}
+
+.product-adjust-page .scan-update-fields-row .scan-update-section {
+  min-width: 0;
 }
 
 .scan-update-label {

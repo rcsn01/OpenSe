@@ -170,9 +170,11 @@ export const ProductAdjustPage = () => {
       loadingMessage="Loading product..."
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to adjust stock."
+      contentClassName="flex h-full min-h-0 overflow-hidden px-2 pb-8 pt-[18px]"
+      containerClassName="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
     >
       {product ? (
-        <section className="scan-update-view" aria-label="Adjust inventory">
+        <section className="scan-update-view product-adjust-page" aria-label="Adjust inventory">
           <header className="scan-update-topbar">
             <button
               type="button"
@@ -187,7 +189,7 @@ export const ProductAdjustPage = () => {
             </button>
           </header>
 
-          <div className="scan-update-shell">
+          <div className="scan-update-shell scan-update-shell--product-adjust">
             <section className="scan-update-main">
               <div className="scan-product-summary">
                 <section className="scan-product-photo-card" aria-label="Product photo">

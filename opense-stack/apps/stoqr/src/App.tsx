@@ -15,10 +15,12 @@ import { LabelStudioPage } from './pages/LabelStudioPage'
 import { LabelDesignerPage } from './pages/LabelDesignerPage'
 import { ProductDetailPage } from './pages/product/ProductDetailPage'
 import { TeamSettingsPage } from './pages/TeamSettingsPage'
+import { RolePermissionsEditPage } from './pages/RolePermissionsEditPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ProcurementPage } from './pages/ProcurementPage'
 import { AlertsPage } from './pages/AlertsPage'
 import { AlertRuleEditorPage } from './pages/AlertRuleEditorPage'
+import { AlertDetailPage } from './pages/AlertDetailPage'
 import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { Toaster } from 'sonner'
 
@@ -105,12 +107,14 @@ export function App() {
               <Route path="/settings/team" element={<Navigate to="/settings/organisations/teams" replace />} />
               <Route path="/settings/team/:tab" element={<LegacyTeamSettingsRedirect />} />
               <Route path="/settings/organisations" element={<Navigate to="/settings/organisations/teams" replace />} />
+              <Route path="/settings/organisations/permissions/:roleId" element={<RolePermissionsEditPage />} />
               <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
               <Route path="/reports" element={<Navigate to="/reports/stock-health" replace />} />
               <Route path="/reports/:tab" element={<ReportsPage />} />
               <Route path="/procurement" element={<Navigate to="/procurement/purchase-orders" replace />} />
               <Route path="/procurement/:tab" element={<ProcurementPage />} />
               <Route path="/alerts" element={<Navigate to="/alerts/feed" replace />} />
+              <Route path="/alerts/feed/:eventId" element={<AlertDetailPage />} />
               <Route path="/alerts/rules/new" element={<AlertRuleEditorPage />} />
               <Route path="/alerts/rules/:ruleId" element={<AlertRuleEditorPage />} />
               <Route path="/alerts/:tab" element={<AlertsPage />} />
