@@ -112,13 +112,22 @@ export const ProductDetailPage = () => {
                 Back to Inventory
               </button>
 
-              <button
-                type="button"
-                className={sx('product-detail-link', 'product-detail-link--strong')}
-                onClick={() => navigate(`/inventory/${product.id}/edit`)}
-              >
-                Edit Product
-              </button>
+              <div className={sx('product-detail-actions')}>
+                <button
+                  type="button"
+                  className={sx('product-detail-link', 'product-detail-link--strong')}
+                  onClick={() => navigate(`/inventory/${product.id}/adjust`)}
+                >
+                  Adjust
+                </button>
+                <button
+                  type="button"
+                  className={sx('product-detail-link', 'product-detail-link--strong')}
+                  onClick={() => navigate(`/inventory/${product.id}/edit`)}
+                >
+                  Edit Product
+                </button>
+              </div>
             </div>
 
             <header className={sx('product-detail-heading')}>

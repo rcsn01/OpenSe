@@ -369,20 +369,12 @@ export const AlertsPage = () => {
     setSelectedEventIds([]);
   };
 
-  const updateSingleStatus = async (
-    eventId: string,
-    status: AlertEvent["status"],
-  ) => {
-    await updateEventStatusMutation.mutateAsync({ eventId, status });
-  };
-
-
   const alertColumns: Array<DataTableColumn<AlertEvent, AlertSortKey>> = [
     {
       id: "message",
       header: "Alert",
       sortKey: "message",
-      width: "46%",
+      width: "52%",
       renderCell: (event) => (
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
@@ -423,14 +415,14 @@ export const AlertsPage = () => {
       id: "category",
       header: "Category",
       sortKey: "category",
-      width: "16%",
+      width: "20%",
       renderCell: (event) => alertCategoryLabel[getEventCategory(event)],
     },
     {
       id: "status",
       header: "Status",
       sortKey: "status",
-      width: "12%",
+      width: "14%",
       renderCell: (event) => (
         <Badge
           variant={event.status === "open" ? "success" : "secondary"}
@@ -442,30 +434,6 @@ export const AlertsPage = () => {
               ? "Acknowledged"
               : "Resolved"}
         </Badge>
-      ),
-    },
-    {
-      id: "action",
-      header: "",
-      align: "right",
-      width: "12%",
-      sortable: false,
-      renderCell: (event) => (
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          className="shadow-none"
-          onClick={(clickEvent) => {
-            clickEvent.stopPropagation();
-            void updateSingleStatus(
-              event.id,
-              event.status === "open" ? "acknowledged" : "resolved",
-            );
-          }}
-        >
-          {event.status === "open" ? "Acknowledge" : "Resolve"}
-        </Button>
       ),
     },
   ];
@@ -601,6 +569,7 @@ export const AlertsPage = () => {
             ? "bg-[var(--color-primary-light)]"
             : undefined
         }
+        onRowClick={(event) => navigate(`/alerts/feed/${event.id}`)}
         pagination={{
           currentPage: currentTablePage,
           totalItems: visibleEvents.length,

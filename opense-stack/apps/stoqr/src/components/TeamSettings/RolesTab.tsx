@@ -21,6 +21,7 @@ export const RolesTab = ({
   canManage,
   onCreateRole,
   onUpdateRole,
+  onEditRole,
   searchTerm = '',
 }: {
   roles: OrganisationRole[]
@@ -30,6 +31,7 @@ export const RolesTab = ({
   canManage: boolean
   onCreateRole: (payload: RolePayload) => Promise<void>
   onUpdateRole: (roleId: string, payload: RolePayload) => Promise<void>
+  onEditRole?: (roleId: string) => void
   searchTerm?: string
 }) => {
   const filteredRoles = useMemo(
@@ -76,6 +78,7 @@ export const RolesTab = ({
       isRoleEditable={(role) => role.name.trim().toLowerCase() !== 'owner'}
       onCreateRole={onCreateRole}
       onUpdateRole={onUpdateRole}
+      onEditRole={onEditRole}
     />
   )
 }
