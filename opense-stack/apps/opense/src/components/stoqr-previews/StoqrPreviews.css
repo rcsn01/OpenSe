@@ -1,70 +1,82 @@
 .stoqr-preview-frame {
-  --stoqr-preview-accent: var(--color-secondary);
-  --stoqr-preview-ink: var(--color-heading);
-  --stoqr-preview-muted: var(--color-muted-foreground);
-  --stoqr-preview-line: color-mix(in srgb, var(--color-border) 76%, transparent);
-  --stoqr-preview-panel: color-mix(in srgb, var(--color-card) 92%, white);
-  --stoqr-preview-soft: color-mix(in srgb, var(--color-secondary) 10%, white);
+  --stoqr-preview-accent: #cdd8ad;
+  --stoqr-preview-accent-strong: #bfc996;
+  --stoqr-preview-ink: #111827;
+  --stoqr-preview-muted: #64748b;
+  --stoqr-preview-soft-muted: #94a3b8;
+  --stoqr-preview-line: #d6deeb;
+  --stoqr-preview-panel: #ffffff;
+  --stoqr-preview-soft: #f8fafc;
+  --stoqr-preview-blue: #4f66ff;
   position: relative;
   height: 100%;
   min-height: 14rem;
   overflow: hidden;
-  border-radius: 0.95rem;
+  border-radius: 0.55rem;
   border: 1px solid var(--stoqr-preview-line);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--color-background) 86%, white), white 58%),
-    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--color-secondary) 18%, transparent), transparent 30%);
+  background: #ffffff;
   color: var(--stoqr-preview-ink);
 }
 
 .stoqr-preview-frame::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--stoqr-preview-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--stoqr-preview-line) 1px, transparent 1px);
-  background-size: 2.25rem 2.25rem;
-  mask-image: linear-gradient(180deg, black, transparent 72%);
-  opacity: 0.24;
-  pointer-events: none;
+  content: none;
 }
 
 .stoqr-preview-shell {
   position: relative;
   display: flex;
   height: 100%;
-  min-width: 34rem;
+  min-width: 54rem;
   transform: scale(0.62);
   transform-origin: top left;
 }
 
 .stoqr-preview-nav {
-  width: 7rem;
+  width: 11rem;
   border-right: 1px solid var(--stoqr-preview-line);
-  background: color-mix(in srgb, var(--color-foreground) 94%, black);
-  color: white;
-  padding: 1rem 0.7rem;
+  background: #ffffff;
+  color: var(--stoqr-preview-ink);
+  padding: 0.65rem 0.5rem;
 }
 
 .stoqr-preview-brand {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.74rem;
+  gap: 0.55rem;
+  font-size: 0.76rem;
   font-weight: 700;
+}
+
+.stoqr-preview-brand small {
+  display: block;
+  margin-top: 0.08rem;
+  color: var(--stoqr-preview-muted);
+  font-size: 0.52rem;
+  font-weight: 600;
 }
 
 .stoqr-preview-brand-mark,
 .stoqr-preview-dot {
   display: inline-flex;
-  border-radius: 999px;
-  background: var(--stoqr-preview-accent);
+  border-radius: 0.42rem;
+  background: var(--stoqr-preview-blue);
 }
 
 .stoqr-preview-brand-mark {
-  height: 1.25rem;
-  width: 1.25rem;
+  position: relative;
+  height: 1.55rem;
+  width: 1.55rem;
+}
+
+.stoqr-preview-brand-mark::after {
+  content: "OS";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 0.58rem;
+  font-weight: 800;
 }
 
 .stoqr-preview-dot {
@@ -74,41 +86,80 @@
 
 .stoqr-preview-menu {
   display: grid;
-  gap: 0.32rem;
-  margin-top: 1.25rem;
+  gap: 0.18rem;
+  margin-top: 0.9rem;
+}
+
+.stoqr-preview-menu-heading {
+  margin: 0.5rem 0 0.26rem;
+  color: var(--stoqr-preview-muted);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .stoqr-preview-menu span {
-  border-radius: 0.55rem;
-  padding: 0.42rem 0.55rem;
-  color: rgb(226 232 240 / 78%);
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  border-radius: 0.32rem;
+  padding: 0.42rem 0.44rem;
+  color: var(--stoqr-preview-ink);
   font-size: 0.62rem;
   font-weight: 650;
 }
 
 .stoqr-preview-menu span.is-active {
-  background: rgb(255 255 255 / 12%);
-  color: white;
+  background: var(--stoqr-preview-accent);
+  color: var(--stoqr-preview-ink);
+}
+
+.stoqr-preview-nav-icon {
+  height: 0.78rem;
+  width: 0.78rem;
+  color: currentColor;
 }
 
 .stoqr-preview-main {
   flex: 1;
   min-width: 0;
-  padding: 1rem;
+  padding: 0;
 }
 
 .stoqr-preview-topbar,
 .stoqr-preview-row,
 .stoqr-preview-card-header,
+.stoqr-preview-page-heading,
 .stoqr-preview-split {
   display: flex;
   align-items: center;
 }
 
 .stoqr-preview-topbar {
+  min-height: 2.45rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--stoqr-preview-line);
+  padding: 0.38rem 0.7rem;
+}
+
+.stoqr-preview-page-heading {
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0.85rem;
+  padding: 0.6rem 0.75rem 0.45rem;
+}
+
+.stoqr-preview-user-dot {
+  display: grid;
+  height: 1.25rem;
+  width: 1.25rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: var(--stoqr-preview-muted);
+  font-size: 0.55rem;
+  font-weight: 800;
 }
 
 .stoqr-preview-eyebrow {
@@ -121,19 +172,27 @@
 
 .stoqr-preview-title {
   margin: 0.1rem 0 0;
-  font-size: 1.16rem;
+  font-size: 1rem;
   font-weight: 780;
   letter-spacing: 0;
 }
 
 .stoqr-preview-search {
-  width: 8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  width: 18rem;
   border: 1px solid var(--stoqr-preview-line);
-  border-radius: 999px;
+  border-radius: 0.36rem;
   background: white;
   color: var(--stoqr-preview-muted);
   font-size: 0.64rem;
-  padding: 0.45rem 0.7rem;
+  padding: 0.38rem 0.56rem;
+}
+
+.stoqr-preview-search-icon {
+  height: 0.78rem;
+  width: 0.78rem;
 }
 
 .stoqr-preview-grid {
@@ -155,9 +214,9 @@
 
 .stoqr-preview-card {
   border: 1px solid var(--stoqr-preview-line);
-  border-radius: 0.8rem;
+  border-radius: 0.36rem;
   background: var(--stoqr-preview-panel);
-  box-shadow: 0 0.75rem 1.9rem color-mix(in srgb, var(--color-foreground) 8%, transparent);
+  box-shadow: none;
   padding: 0.75rem;
 }
 
@@ -291,35 +350,54 @@
 .stoqr-preview-table th,
 .stoqr-preview-table td {
   border-bottom: 1px solid var(--stoqr-preview-line);
-  padding: 0.45rem 0.35rem;
+  padding: 0.6rem 0.45rem;
   text-align: left;
 }
 
 .stoqr-preview-table th {
-  color: var(--stoqr-preview-muted);
+  color: var(--stoqr-preview-soft-muted);
   font-size: 0.52rem;
+  font-weight: 600;
   text-transform: uppercase;
+}
+
+.stoqr-preview-table td:first-child {
+  color: var(--stoqr-preview-ink);
+  font-weight: 750;
+}
+
+.stoqr-preview-table td:nth-child(2) {
+  color: var(--stoqr-preview-soft-muted);
 }
 
 .stoqr-preview-toolbar {
   display: flex;
   align-items: center;
   gap: 0.42rem;
-  margin-bottom: 0.65rem;
+  border-bottom: 1px solid var(--stoqr-preview-line);
+  margin: -0.45rem 0 0;
+  padding: 0.45rem 0.75rem;
 }
 
 .stoqr-preview-tab {
-  border: 1px solid var(--stoqr-preview-line);
-  background: white;
-  color: var(--stoqr-preview-muted);
+  border: 0;
+  background: transparent;
+  color: var(--stoqr-preview-ink);
   padding: 0.34rem 0.58rem;
 }
 
-.stoqr-preview-tab.is-active,
-.stoqr-preview-button {
+.stoqr-preview-tab.is-active {
   border-color: transparent;
-  background: var(--color-foreground);
-  color: white;
+  background: var(--stoqr-preview-accent);
+  color: var(--stoqr-preview-ink);
+  border-radius: 0.22rem;
+}
+
+.stoqr-preview-button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--stoqr-preview-ink);
 }
 
 .stoqr-preview-button {
@@ -328,31 +406,28 @@
 
 .stoqr-preview-split {
   align-items: stretch;
-  gap: 0.7rem;
+  gap: 0;
 }
 
 .stoqr-preview-sidebar-panel {
-  width: 7.6rem;
+  width: 12rem;
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+  padding: 0.5rem;
 }
 
 .stoqr-preview-folder {
   display: flex;
   justify-content: space-between;
-  border-radius: 0.48rem;
-  padding: 0.4rem 0.46rem;
+  border-radius: 0.22rem;
+  padding: 0.44rem 0.48rem;
   font-size: 0.62rem;
   font-weight: 720;
 }
 
 .stoqr-preview-folder.is-active {
-  background: color-mix(in srgb, var(--color-secondary) 12%, white);
-  color: var(--color-secondary);
-}
-
-.stoqr-preview-scanner {
-  display: grid;
-  grid-template-columns: 1fr 10rem;
-  gap: 0.8rem;
+  background: var(--stoqr-preview-accent);
+  color: var(--stoqr-preview-ink);
 }
 
 .stoqr-preview-camera {
@@ -382,6 +457,66 @@
   background: var(--color-destructive);
   box-shadow: 0 0 1rem var(--color-destructive);
   animation: stoqr-preview-scan 2.8s ease-in-out infinite;
+}
+
+.stoqr-preview-availability {
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.stoqr-preview-availability.is-danger {
+  color: #dc2626;
+}
+
+.stoqr-preview-phone-scanner {
+  display: grid;
+  grid-template-columns: 15rem 16rem;
+  align-items: center;
+  gap: 1.3rem;
+  padding: 0.7rem 1rem 1.2rem;
+}
+
+.stoqr-preview-phone {
+  width: 12.6rem;
+  border-radius: 1.45rem;
+  border: 0.42rem solid #111827;
+  background: #111827;
+  box-shadow: 0 1.25rem 2.8rem rgb(15 23 42 / 18%);
+  justify-self: center;
+}
+
+.stoqr-preview-phone-speaker {
+  height: 0.28rem;
+  width: 3rem;
+  margin: 0.42rem auto;
+  border-radius: 999px;
+  background: #334155;
+}
+
+.stoqr-preview-phone-screen {
+  overflow: hidden;
+  border-radius: 1rem;
+  background: #ffffff;
+}
+
+.stoqr-preview-phone-camera {
+  position: relative;
+  height: 12rem;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 30% 24%, rgb(255 255 255 / 12%), transparent 24%),
+    linear-gradient(135deg, #111827, #1e293b);
+}
+
+.stoqr-preview-phone-result {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+}
+
+.stoqr-preview-scan-sidecard {
+  align-self: center;
+  width: 16rem;
 }
 
 .stoqr-preview-barcode {
@@ -472,38 +607,32 @@
 }
 
 .stoqr-showcase-preview .stoqr-preview-frame {
-  width: min(62rem, 122%);
+  width: min(66rem, 126%);
   height: clamp(24rem, 36vw, 34rem);
   min-height: 24rem;
   border-radius: 1.45rem;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--color-background) 92%, white), white 58%),
-    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--color-secondary) 16%, transparent), transparent 30%);
+  background: #ffffff;
 }
 
 .stoqr-showcase-preview .stoqr-preview-shell {
-  min-width: 56rem;
-  transform: scale(1);
+  min-width: 72rem;
+  transform: scale(0.86);
 }
 
 .stoqr-showcase-preview .stoqr-preview-nav {
-  width: 9rem;
+  width: 11.2rem;
 }
 
 .stoqr-showcase-preview .stoqr-preview-main {
-  padding: 1.25rem;
+  padding: 0;
 }
 
 .stoqr-showcase-preview .stoqr-preview-search {
-  width: 11rem;
+  width: 19rem;
 }
 
 .stoqr-showcase-preview .stoqr-preview-sidebar-panel {
-  width: 9.5rem;
-}
-
-.stoqr-showcase-preview .stoqr-preview-scanner {
-  grid-template-columns: 1fr 13rem;
+  width: 12.5rem;
 }
 
 @keyframes stoqr-showcase-rise {
