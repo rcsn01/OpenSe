@@ -29,6 +29,7 @@ type PendingAlertNotification = {
   triggered_at: string
   product_name: string | null
   product_sku: string | null
+  folder_name: string | null
   organisation_name: string
 }
 
@@ -172,6 +173,7 @@ const buildText = (alert: PendingAlertNotification) => [
   '',
   `Organisation: ${alert.organisation_name}`,
   alert.product_name ? `Product: ${alert.product_name}${alert.product_sku ? ` (${alert.product_sku})` : ''}` : null,
+  alert.folder_name ? `Folder: ${alert.folder_name}` : null,
   `Severity: ${alert.severity}`,
   `Triggered: ${new Date(alert.triggered_at).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' })}`,
 ].filter(Boolean).join('\n')
@@ -183,6 +185,7 @@ const buildHtml = (alert: PendingAlertNotification) => {
   const product = alert.product_name
     ? `<p><strong>Product:</strong> ${escapeHtml(alert.product_name)}${alert.product_sku ? ` (${escapeHtml(alert.product_sku)})` : ''}</p>`
     : ''
+  const folder = alert.folder_name ? `<p><strong>Folder:</strong> ${escapeHtml(alert.folder_name)}</p>` : ''
 
   return `
     <div style="font-family: Inter, Arial, sans-serif; line-height: 1.5; color: #111827;">
@@ -190,6 +193,7 @@ const buildHtml = (alert: PendingAlertNotification) => {
       <p>${escapeHtml(alert.message)}</p>
       <p><strong>Organisation:</strong> ${escapeHtml(alert.organisation_name)}</p>
       ${product}
+      ${folder}
       <p><strong>Severity:</strong> ${escapeHtml(alert.severity)}</p>
       <p><strong>Triggered:</strong> ${escapeHtml(new Date(alert.triggered_at).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' }))}</p>
     </div>
@@ -266,6 +270,7 @@ const sendGatewayNotification = async (alert: PendingAlertNotification) => {
         triggeredAt: alert.triggered_at,
         productName: alert.product_name,
         productSku: alert.product_sku,
+        folderName: alert.folder_name,
         organisationName: alert.organisation_name,
         text: buildChatText(alert),
       },

@@ -28,12 +28,14 @@ export type AlertEvent = {
   company_id: string;
   rule_id: string | null;
   product_id: string | null;
+  folder_id?: string | null;
   alert_type: "low_stock" | "reorder_point" | "expiration" | "custom";
   severity: "low" | "medium" | "high" | "critical";
   status: "open" | "acknowledged" | "resolved";
   message: string;
   triggered_at: string;
   products: { name: string; sku: string } | null;
+  folder_name?: string | null;
 };
 
 export type AlertDeliveryLog = {
@@ -116,7 +118,7 @@ export const fetchAlertProducts = async (
     description: null,
     cost_price: null,
     selling_price: null,
-    folder_id: null,
+    folder_id: product.folder_id ?? null,
     image_urls: [],
     custom_fields: {},
   }));
@@ -155,6 +157,8 @@ type DeliveredAlertEventRow = AlertEventRow & {
   delivery_id: string | null;
   product_name: string | null;
   product_sku: string | null;
+  folder_id: string | null;
+  folder_name: string | null;
 };
 
 export const fetchAlertRules = async (
@@ -319,11 +323,13 @@ export const fetchAlertEvents = async (
     company_id: row.company_id,
     rule_id: row.rule_id,
     product_id: row.product_id,
+    folder_id: row.folder_id,
     alert_type: row.alert_type,
     severity: row.severity,
     status: row.status,
     message: row.message,
     triggered_at: row.triggered_at,
+    folder_name: row.folder_name,
     products:
       row.product_name || row.product_sku
         ? {

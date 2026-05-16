@@ -79,20 +79,30 @@ export const ProductAdjustPage = () => {
   const returnTo = searchParams.get('returnTo')
 
   const [draftQuantity, setDraftQuantity] = useState(0)
+  const [selectedFolderId, setSelectedFolderId] = useState('')
   const [reason, setReason] = useState<ScanUpdateReason>('new_delivery')
   const [note, setNote] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (product) {
-      setDraftQuantity(product.quantity_on_hand)
+      const initialFolderId = product.folder_stocks?.[0]?.folder_id ?? product.folder_id ?? ''
+      const initialFolderStock = product.folder_stocks?.find((stock) => stock.folder_id === initialFolderId)
+      setSelectedFolderId(initialFolderId)
+      setDraftQuantity(initialFolderStock?.quantity_on_hand ?? product.quantity_on_hand)
       setMessage(null)
     }
   }, [product])
 
+  const selectedFolderStock = useMemo(
+    () => product?.folder_stocks?.find((stock) => stock.folder_id === selectedFolderId) ?? null,
+    [product?.folder_stocks, selectedFolderId],
+  )
+  const currentFolderQuantity = selectedFolderStock?.quantity_on_hand ?? product?.quantity_on_hand ?? 0
+
   const locationLabel = useMemo(
-    () => buildFolderPathLabel(product?.folder_id ?? null, folders),
-    [folders, product?.folder_id],
+    () => buildFolderPathLabel(selectedFolderId || product?.folder_id || null, folders),
+    [folders, product?.folder_id, selectedFolderId],
   )
 
   const primaryImageUrl = useMemo(() => {
@@ -100,8 +110,8 @@ export const ProductAdjustPage = () => {
     return imagePath ? getPublicImageUrl(imagePath) : ''
   }, [product?.image_urls])
 
-  const hasQuantityChange = product ? draftQuantity !== product.quantity_on_hand : false
-  const canConfirm = !!product && !transactionMutation.isPending && (hasQuantityChange || reason === 'inventory_audit')
+  const hasQuantityChange = product ? draftQuantity !== currentFolderQuantity : false
+  const canConfirm = !!product && !!selectedFolderId && !transactionMutation.isPending && (hasQuantityChange || reason === 'inventory_audit')
 
   const handleBack = () => {
     if (returnTo) {
@@ -130,7 +140,12 @@ export const ProductAdjustPage = () => {
   const handleConfirm = async () => {
     if (!companyId || !product || !userId) return
 
-    const quantityDiff = draftQuantity - product.quantity_on_hand
+    if (!selectedFolderId) {
+      setMessage('Select a folder before adjusting stock.')
+      return
+    }
+
+    const quantityDiff = draftQuantity - currentFolderQuantity
     if (quantityDiff === 0 && reason !== 'inventory_audit') {
       setMessage('Adjust the quantity or choose Inventory Audit to log a no-change check.')
       return
@@ -150,6 +165,7 @@ export const ProductAdjustPage = () => {
         reason,
         note,
         stockAfter: draftQuantity,
+        folderId: selectedFolderId,
       })
       setMessage(reason === 'inventory_audit' && quantityDiff === 0 ? 'Inventory audit logged.' : 'Inventory updated.')
       setNote('')
@@ -216,7 +232,28 @@ export const ProductAdjustPage = () => {
               <dl className="scan-product-meta-grid">
                 <div className="scan-product-meta-row">
                   <dt>Location</dt>
-                  <dd>{locationLabel}</dd>
+                  <dd>
+                    <select
+                      className="scan-reason-select"
+                      aria-label="Stock folder"
+                      value={selectedFolderId}
+                      onChange={(event) => {
+                        const nextFolderId = event.target.value
+                        const nextStock = product.folder_stocks?.find((stock) => stock.folder_id === nextFolderId)
+                        setSelectedFolderId(nextFolderId)
+                        setDraftQuantity(nextStock?.quantity_on_hand ?? 0)
+                        setMessage(null)
+                      }}
+                    >
+                      <option value="">Select folder</option>
+                      {folders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {buildFolderPathLabel(folder.id, folders)}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="sr-only">{locationLabel}</span>
+                  </dd>
                 </div>
                 <div className="scan-product-meta-row">
                   <dt>Last updated</dt>
@@ -280,7 +317,7 @@ export const ProductAdjustPage = () => {
             <section className="scan-update-controls">
               <div className="scan-current-stock-row">
                 <span className="scan-update-label">Current Stock</span>
-                <strong className="scan-current-stock-value">{product.quantity_on_hand}</strong>
+                <strong className="scan-current-stock-value">{currentFolderQuantity}</strong>
               </div>
 
               <div className="scan-quantity-stage">

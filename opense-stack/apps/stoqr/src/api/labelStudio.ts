@@ -44,13 +44,37 @@ export const fetchLabelProducts = async (
   search: string,
   folderId?: string,
 ): Promise<LabelProduct[]> => {
+  let folderProductIds: string[] | null = null
+
+  if (folderId?.trim()) {
+    try {
+      const { data: stockRows, error: stockError } = await db
+        .from('product_folder_stocks')
+        .select('product_id')
+        .eq('company_id', companyId)
+        .eq('folder_id', folderId)
+
+      if (stockError) throw stockError
+      folderProductIds = ((stockRows as Array<{ product_id: string }> | null) ?? []).map((row) => row.product_id)
+      if (folderProductIds.length === 0) return []
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Unexpected table: product_folder_stocks')) {
+        folderProductIds = null
+      } else {
+        throw error
+      }
+    }
+  }
+
   let query = db
     .from('products')
     .select('id, name, sku, folder_id, selling_price')
     .eq('company_id', companyId)
     .order('name')
 
-  if (folderId?.trim()) {
+  if (folderProductIds) {
+    query = query.in('id', folderProductIds)
+  } else if (folderId?.trim()) {
     query = query.eq('folder_id', folderId)
   }
 

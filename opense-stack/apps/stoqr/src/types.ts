@@ -16,6 +16,7 @@ export type Product = {
   image_urls: string[]
   custom_fields: Record<string, string | number | boolean | null>
   expiry_date: string | null
+  folder_stocks?: ProductFolderStock[]
 }
 
 export type Folder = {
@@ -23,6 +24,17 @@ export type Folder = {
   name: string
   parent_id: string | null
   sort_order?: number
+}
+
+export type ProductFolderStock = {
+  id?: string
+  product_id: string
+  folder_id: string
+  quantity_on_hand: number
+  min_stock_level: number
+  reorder_point: number
+  max_stock_level: number | null
+  folder_name?: string | null
 }
 
 export type Tag = {

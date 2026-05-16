@@ -191,6 +191,29 @@ export const createProduct = async (
 
   const uploadedImagePaths = await uploadProductImages(companyId, insertedProduct.id, images)
 
+  const initialFolderId = payload.folderId === '' ? null : payload.folderId
+  const initialQuantity = toNumber(payload.quantity)
+
+  if (initialFolderId) {
+    try {
+      const { error: stockError } = await db.from('product_folder_stocks').upsert({
+        company_id: companyId,
+        product_id: insertedProduct.id,
+        folder_id: initialFolderId,
+        quantity_on_hand: initialQuantity,
+        min_stock_level: 0,
+        reorder_point: toNumber(payload.reorderPoint),
+        max_stock_level: null,
+      }, { onConflict: 'company_id,product_id,folder_id' })
+
+      if (stockError) throw stockError
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.startsWith('Unexpected table: product_folder_stocks')) {
+        throw error
+      }
+    }
+  }
+
   if (uploadedImagePaths.length > 0) {
     const { error: updateError } = await db
       .from('products')
@@ -228,6 +251,27 @@ export const updateProduct = async (
     .eq('id', productId)
 
   if (updateError) throw updateError
+
+  const updatedFolderId = payload.folderId === '' ? null : payload.folderId
+  if (updatedFolderId) {
+    try {
+      const { error: stockError } = await db.from('product_folder_stocks').upsert({
+        company_id: companyId,
+        product_id: productId,
+        folder_id: updatedFolderId,
+        quantity_on_hand: toNumber(payload.quantity),
+        min_stock_level: 0,
+        reorder_point: toNumber(payload.reorderPoint),
+        max_stock_level: null,
+      }, { onConflict: 'company_id,product_id,folder_id' })
+
+      if (stockError) throw stockError
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.startsWith('Unexpected table: product_folder_stocks')) {
+        throw error
+      }
+    }
+  }
 
   const uploadedImagePaths = await uploadProductImages(companyId, productId, images)
   const mergedImageUrls = [...retainedImageUrls, ...uploadedImagePaths]
@@ -276,6 +320,32 @@ export const fetchProductDetail = async (
     }
   }
 
+  let folderStocksData: Product['folder_stocks'] | null = null
+  try {
+    const { data, error: folderStocksError } = await db
+      .from('product_folder_stocks')
+      .select('id, product_id, folder_id, quantity_on_hand, min_stock_level, reorder_point, max_stock_level')
+      .eq('company_id', companyId)
+      .eq('product_id', productId)
+      .order('quantity_on_hand', { ascending: false })
+
+    if (folderStocksError) {
+      console.warn('Product detail folder stock query failed', folderStocksError)
+    }
+    folderStocksData = data as Product['folder_stocks'] | null
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.startsWith('Unexpected table: product_folder_stocks')) {
+      throw error
+    }
+  }
+
+  const folderStockRows = (folderStocksData as Product['folder_stocks'] | null) ?? []
+  const folderIds = folderStockRows.map((stock) => stock.folder_id)
+  const { data: folderRows } = folderIds.length
+    ? await db.from('folders').select('id, name').eq('company_id', companyId).in('id', folderIds)
+    : { data: [] as Array<{ id: string; name: string }> }
+  const folderNameById = new Map(((folderRows as Array<{ id: string; name: string }> | null) ?? []).map((folder) => [folder.id, folder.name]))
+
   const transactionRows = ((transactionsData as ProductTransactionRow[] | null) ?? [])
   const profileIds = Array.from(
     new Set(transactionRows.map((transaction) => transaction.performed_by).filter((value): value is string => !!value)),
@@ -308,7 +378,20 @@ export const fetchProductDetail = async (
   })) as InventoryTransaction[]
 
   return {
-    product: normalizeFetchedProduct((productData as Product | null) ?? null),
+    product: (() => {
+      const normalized = normalizeFetchedProduct((productData as Product | null) ?? null)
+      return normalized
+        ? folderStockRows.length > 0
+          ? {
+              ...normalized,
+              folder_stocks: folderStockRows.map((stock) => ({
+                ...stock,
+                folder_name: folderNameById.get(stock.folder_id) ?? stock.folder_id,
+              })),
+            }
+          : normalized
+        : null
+    })(),
     transactions: normalizedTransactions,
   }
 }

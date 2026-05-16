@@ -223,10 +223,34 @@ SET
   received_at = EXCLUDED.received_at,
   notes = EXCLUDED.notes;
 
+INSERT INTO stoqr.product_folder_stocks (
+  company_id,
+  product_id,
+  folder_id,
+  quantity_on_hand,
+  min_stock_level,
+  reorder_point,
+  max_stock_level,
+  updated_at
+)
+VALUES
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '72727272-7272-7272-7272-727272727272', 20, 8, 12, 40, timezone('utc'::text, now())),
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', 20, 18, 20, 90, timezone('utc'::text, now())),
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000017', '74747474-7474-7474-7474-747474747474', 15, 6, 8, 24, timezone('utc'::text, now())),
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000029', '73737373-7373-7373-7373-737373737373', 100, 20, 25, 140, timezone('utc'::text, now()))
+ON CONFLICT (company_id, product_id, folder_id) DO UPDATE
+SET
+  quantity_on_hand = EXCLUDED.quantity_on_hand,
+  min_stock_level = EXCLUDED.min_stock_level,
+  reorder_point = EXCLUDED.reorder_point,
+  max_stock_level = EXCLUDED.max_stock_level,
+  updated_at = EXCLUDED.updated_at;
+
 INSERT INTO stoqr.inventory_transactions (
   id,
   company_id,
   product_id,
+  folder_id,
   performed_by,
   transaction_type,
   source,
@@ -236,25 +260,26 @@ INSERT INTO stoqr.inventory_transactions (
   created_at
 )
 VALUES
-  ('c1919191-c191-c191-c191-c19191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '11111111-1111-1111-1111-111111111111', 'purchase', 'receiving', 40, 100, 'Initial replenishment', timezone('utc'::text, now()) - interval '25 days'),
-  ('c2929292-c292-c292-c292-c29292929292', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '11111111-1111-1111-1111-111111111111', 'sale', 'manual', -12, 88, 'Outbound shipment', timezone('utc'::text, now()) - interval '18 days'),
-  ('c3939393-c393-c393-c393-c39393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '33333333-3333-3333-3333-333333333333', 'return', 'manual', 2, 90, 'Customer return', timezone('utc'::text, now()) - interval '14 days'),
-  ('c4949494-c494-c494-c494-c49494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '33333333-3333-3333-3333-333333333333', 'purchase', 'receiving', 30, 120, 'Weekly inbound pallet', timezone('utc'::text, now()) - interval '6 days'),
-  ('c5959595-c595-c595-c595-c59595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -9, 111, 'Rush dispatch', timezone('utc'::text, now()) - interval '2 days'),
-  ('c6969696-c696-c696-c696-c69696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '11111111-1111-1111-1111-111111111111', 'purchase', 'receiving', 20, 70, 'Restock East Coast', timezone('utc'::text, now()) - interval '20 days'),
-  ('c7979797-c797-c797-c797-c79797979797', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -15, 55, 'Routine outbound', timezone('utc'::text, now()) - interval '10 days'),
-  ('c8989898-c898-c898-c898-c89898989898', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '33333333-3333-3333-3333-333333333333', 'adjustment', 'manual', -15, 40, 'Expired reagent batch', timezone('utc'::text, now()) - interval '5 days'),
-  ('ca999999-ca99-ca99-ca99-ca9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000008', '11111111-1111-1111-1111-111111111111', 'scan_in', 'scan', 18, 32, 'Transfer from staging', timezone('utc'::text, now()) - interval '7 days'),
-  ('cb999999-cb99-cb99-cb99-cb9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000008', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -6, 26, 'Project allocation', timezone('utc'::text, now()) - interval '3 days'),
-  ('cc999999-cc99-cc99-cc99-cc9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000017', '33333333-3333-3333-3333-333333333333', 'loss', 'receiving', -3, 12, 'Damaged in transit during receiving', timezone('utc'::text, now()) - interval '2 days'),
-  ('cd999999-cd99-cd99-cd99-cd9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000017', '33333333-3333-3333-3333-333333333333', 'adjustment', 'manual', 1, 13, 'Counting error correction', timezone('utc'::text, now()) - interval '1 day'),
-  ('ce999999-ce99-ce99-ce99-ce9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000029', '11111111-1111-1111-1111-111111111111', 'sale', 'manual', -20, 80, 'Bulk issue to production', timezone('utc'::text, now()) - interval '4 days'),
-  ('cf999999-cf99-cf99-cf99-cf9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000039', '33333333-3333-3333-3333-333333333333', 'purchase', 'receiving', 8, 18, 'Safety stock top-up', timezone('utc'::text, now()) - interval '9 days'),
-  ('d0919191-d091-d091-d091-d09191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000039', '33333333-3333-3333-3333-333333333333', 'loss', 'manual', -4, 14, 'Missing item after shelf audit', timezone('utc'::text, now()) - interval '8 days')
+  ('c1919191-c191-c191-c191-c19191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '71717171-7171-7171-7171-717171717171', '11111111-1111-1111-1111-111111111111', 'purchase', 'receiving', 40, 100, 'Initial replenishment', timezone('utc'::text, now()) - interval '25 days'),
+  ('c2929292-c292-c292-c292-c29292929292', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '71717171-7171-7171-7171-717171717171', '11111111-1111-1111-1111-111111111111', 'sale', 'manual', -12, 88, 'Outbound shipment', timezone('utc'::text, now()) - interval '18 days'),
+  ('c3939393-c393-c393-c393-c39393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'return', 'manual', 2, 90, 'Customer return', timezone('utc'::text, now()) - interval '14 days'),
+  ('c4949494-c494-c494-c494-c49494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '71717171-7171-7171-7171-717171717171', '33333333-3333-3333-3333-333333333333', 'purchase', 'receiving', 30, 120, 'Weekly inbound pallet', timezone('utc'::text, now()) - interval '6 days'),
+  ('c5959595-c595-c595-c595-c59595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -9, 111, 'Rush dispatch', timezone('utc'::text, now()) - interval '2 days'),
+  ('c6969696-c696-c696-c696-c69696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', '11111111-1111-1111-1111-111111111111', 'purchase', 'receiving', 20, 70, 'Restock East Coast', timezone('utc'::text, now()) - interval '20 days'),
+  ('c7979797-c797-c797-c797-c79797979797', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -15, 55, 'Routine outbound', timezone('utc'::text, now()) - interval '10 days'),
+  ('c8989898-c898-c898-c898-c89898989898', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'adjustment', 'manual', -15, 40, 'Expired reagent batch', timezone('utc'::text, now()) - interval '5 days'),
+  ('ca999999-ca99-ca99-ca99-ca9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000008', '73737373-7373-7373-7373-737373737373', '11111111-1111-1111-1111-111111111111', 'scan_in', 'scan', 18, 32, 'Transfer from staging', timezone('utc'::text, now()) - interval '7 days'),
+  ('cb999999-cb99-cb99-cb99-cb9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000008', '73737373-7373-7373-7373-737373737373', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -6, 26, 'Project allocation', timezone('utc'::text, now()) - interval '3 days'),
+  ('cc999999-cc99-cc99-cc99-cc9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000017', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'loss', 'receiving', -3, 12, 'Damaged in transit during receiving', timezone('utc'::text, now()) - interval '2 days'),
+  ('cd999999-cd99-cd99-cd99-cd9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000017', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'adjustment', 'manual', 1, 13, 'Counting error correction', timezone('utc'::text, now()) - interval '1 day'),
+  ('ce999999-ce99-ce99-ce99-ce9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000029', '73737373-7373-7373-7373-737373737373', '11111111-1111-1111-1111-111111111111', 'sale', 'manual', -20, 80, 'Bulk issue to production', timezone('utc'::text, now()) - interval '4 days'),
+  ('cf999999-cf99-cf99-cf99-cf9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000039', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'purchase', 'receiving', 8, 18, 'Safety stock top-up', timezone('utc'::text, now()) - interval '9 days'),
+  ('d0919191-d091-d091-d091-d09191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000039', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'loss', 'manual', -4, 14, 'Missing item after shelf audit', timezone('utc'::text, now()) - interval '8 days')
 ON CONFLICT (id) DO UPDATE
 SET
   company_id = EXCLUDED.company_id,
   product_id = EXCLUDED.product_id,
+  folder_id = EXCLUDED.folder_id,
   performed_by = EXCLUDED.performed_by,
   transaction_type = EXCLUDED.transaction_type,
   source = EXCLUDED.source,
@@ -299,6 +324,94 @@ SET
   updated_at = timezone('utc'::text, now())
 FROM ranked_products
 WHERE p.id = ranked_products.id;
+
+INSERT INTO stoqr.product_folder_stocks (
+  company_id,
+  product_id,
+  folder_id,
+  quantity_on_hand,
+  min_stock_level,
+  reorder_point,
+  max_stock_level,
+  updated_at
+)
+SELECT
+  p.company_id,
+  p.id,
+  p.folder_id,
+  CASE
+    WHEN p.id = '84848484-8484-8484-8484-a00000000017' THEN 5
+    WHEN p.id = '84848484-8484-8484-8484-a00000000001' THEN GREATEST(COALESCE(p.quantity_on_hand, 0) - 18, 0)
+    ELSE COALESCE(p.quantity_on_hand, 0)
+  END,
+  COALESCE(p.min_stock_level, 0),
+  COALESCE(p.reorder_point, 0),
+  p.max_stock_level,
+  timezone('utc'::text, now())
+FROM stoqr.products p
+WHERE p.company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  AND p.folder_id IS NOT NULL
+ON CONFLICT (company_id, product_id, folder_id) DO UPDATE
+SET
+  quantity_on_hand = EXCLUDED.quantity_on_hand,
+  min_stock_level = EXCLUDED.min_stock_level,
+  reorder_point = EXCLUDED.reorder_point,
+  max_stock_level = EXCLUDED.max_stock_level,
+  updated_at = EXCLUDED.updated_at;
+
+INSERT INTO stoqr.product_folder_stocks (
+  company_id,
+  product_id,
+  folder_id,
+  quantity_on_hand,
+  min_stock_level,
+  reorder_point,
+  max_stock_level,
+  updated_at
+)
+VALUES
+  (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '84848484-8484-8484-8484-a00000000001',
+    '72727272-7272-7272-7272-727272727272',
+    18,
+    8,
+    12,
+    40,
+    timezone('utc'::text, now())
+  ),
+  (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    '84848484-8484-8484-8484-a00000000008',
+    '73737373-7373-7373-7373-737373737373',
+    4,
+    10,
+    12,
+    60,
+    timezone('utc'::text, now())
+  )
+ON CONFLICT (company_id, product_id, folder_id) DO UPDATE
+SET
+  quantity_on_hand = EXCLUDED.quantity_on_hand,
+  min_stock_level = EXCLUDED.min_stock_level,
+  reorder_point = EXCLUDED.reorder_point,
+  max_stock_level = EXCLUDED.max_stock_level,
+  updated_at = EXCLUDED.updated_at;
+
+UPDATE stoqr.products p
+SET
+  quantity_on_hand = COALESCE(stock_totals.total_quantity, 0),
+  updated_at = timezone('utc'::text, now())
+FROM (
+  SELECT
+    product_id,
+    SUM(quantity_on_hand)::integer AS total_quantity
+  FROM stoqr.product_folder_stocks
+  WHERE company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  GROUP BY product_id
+) stock_totals
+WHERE p.id = stock_totals.product_id
+  AND p.company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 WITH supplier_names AS (
   SELECT DISTINCT
@@ -438,6 +551,7 @@ SET
 WITH product_seed AS (
   SELECT
     p.id AS product_id,
+    p.folder_id,
     CAST(row_number() OVER (ORDER BY p.id) AS integer) AS product_number,
     18 + ((CAST(row_number() OVER (ORDER BY p.id) AS integer) - 1) % 7) * 7 AS received_quantity,
     round((5.50 + CAST(row_number() OVER (ORDER BY p.id) AS integer) * 1.35)::numeric, 2) AS seeded_cost_price
@@ -447,6 +561,7 @@ WITH product_seed AS (
 item_seed AS (
   SELECT
     product_seed.product_id,
+    product_seed.folder_id,
     product_seed.product_number,
     product_seed.received_quantity,
     product_seed.seeded_cost_price,
@@ -565,6 +680,7 @@ SET
 WITH product_seed AS (
   SELECT
     p.id AS product_id,
+    p.folder_id,
     CAST(row_number() OVER (ORDER BY p.id) AS integer) AS product_number,
     18 + ((CAST(row_number() OVER (ORDER BY p.id) AS integer) - 1) % 7) * 7 AS received_quantity,
     2 + ((CAST(row_number() OVER (ORDER BY p.id) AS integer) - 1) % 5) * 2 AS sale_quantity
@@ -574,6 +690,7 @@ WITH product_seed AS (
 transaction_seed AS (
   SELECT
     product_seed.product_id,
+    product_seed.folder_id,
     product_seed.product_number,
     product_seed.received_quantity,
     product_seed.sale_quantity,
@@ -606,6 +723,7 @@ INSERT INTO stoqr.inventory_transactions (
   id,
   company_id,
   product_id,
+  folder_id,
   performed_by,
   transaction_type,
   source,
@@ -618,6 +736,7 @@ SELECT
   transaction_seed.purchase_tx_id,
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
   transaction_seed.product_id,
+  transaction_seed.folder_id,
   CASE WHEN transaction_seed.product_number % 2 = 0 THEN '11111111-1111-1111-1111-111111111111'::uuid ELSE '33333333-3333-3333-3333-333333333333'::uuid END,
   'purchase',
   'receiving',
@@ -631,6 +750,7 @@ SELECT
   transaction_seed.sale_tx_id,
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
   transaction_seed.product_id,
+  transaction_seed.folder_id,
   CASE WHEN transaction_seed.product_number % 2 = 0 THEN '33333333-3333-3333-3333-333333333333'::uuid ELSE '11111111-1111-1111-1111-111111111111'::uuid END,
   'sale',
   'manual',
@@ -643,6 +763,7 @@ ON CONFLICT (id) DO UPDATE
 SET
   company_id = EXCLUDED.company_id,
   product_id = EXCLUDED.product_id,
+  folder_id = EXCLUDED.folder_id,
   performed_by = EXCLUDED.performed_by,
   transaction_type = EXCLUDED.transaction_type,
   source = EXCLUDED.source,
@@ -795,6 +916,7 @@ INSERT INTO stoqr.alert_events (
   company_id,
   rule_id,
   product_id,
+  folder_id,
   alert_type,
   severity,
   status,
@@ -808,17 +930,19 @@ VALUES
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     'f1919191-f191-f191-f191-f19191919191',
     '84848484-8484-8484-8484-a00000000008',
+    '73737373-7373-7373-7373-737373737373',
     'low_stock',
     'high',
     'open',
-    'Gown Isolation Disposable is at 4 units, at or below its Low Stock Alert level of 12.',
-    '{"quantity_on_hand":4,"reorder_point":12,"recipient_roles":["role:20202020-2020-2020-2020-202020202020"]}'::jsonb,
+    'Gown Isolation Disposable in Warehouse Network / PCR Consumables is at 4 units, at or below its Low Stock Alert level of 12.',
+    '{"folder_id":"73737373-7373-7373-7373-737373737373","folder_name":"Warehouse Network / PCR Consumables","quantity_on_hand":4,"reorder_point":12,"recipient_roles":["role:20202020-2020-2020-2020-202020202020"]}'::jsonb,
     timezone('utc'::text, now()) - interval '45 minutes'
   )
 ON CONFLICT (id) DO UPDATE
 SET
   rule_id = EXCLUDED.rule_id,
   product_id = EXCLUDED.product_id,
+  folder_id = EXCLUDED.folder_id,
   alert_type = EXCLUDED.alert_type,
   severity = EXCLUDED.severity,
   status = EXCLUDED.status,
