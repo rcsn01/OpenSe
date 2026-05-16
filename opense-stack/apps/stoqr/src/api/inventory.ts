@@ -147,43 +147,109 @@ export const fetchInventoryProducts = async ({
     query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`)
   }
 
-  if (folderId === '__uncategorised__') {
-    query = query.is('folder_id', null)
-  } else if (folderId) {
-    query = query.eq('folder_id', folderId)
-  }
-
-  if (stockFilter === 'out') {
-    query = query.eq('quantity_on_hand', 0)
-  }
-
   if (customFieldFilters) {
     for (const filter of customFieldFilters) {
       query = query.contains('custom_fields', { [filter.key]: filter.value })
     }
   }
 
-  query = query.order(sortField, { ascending: sortDir === 'asc' })
-
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
-  query = query.range(from, to)
+  query = query.order(sortField === 'folder_id' ? 'name' : sortField, { ascending: sortDir === 'asc' })
+  const legacyFrom = (page - 1) * pageSize
+  const legacyTo = legacyFrom + pageSize - 1
 
   const { data, count, error } = await query
 
   if (error) throw error
 
+  if (folderId === '__uncategorised__') {
+    query.is('folder_id', null)
+  } else if (folderId) {
+    query.eq('folder_id', folderId)
+  }
+  query.range(legacyFrom, legacyTo)
+
   let products = (data as InventoryProduct[] | null) ?? []
 
   products = products.map((product) => normalizeDisplaySku(product))
+
+  const productIds = products.map((product) => product.id)
+  let stockRows: Array<{ product_id: string; folder_id: string; quantity_on_hand: number; reorder_point: number }> = []
+
+  if (productIds.length > 0) {
+    try {
+      const stockQuery = db
+        .from('product_folder_stocks')
+        .select('product_id, folder_id, quantity_on_hand, reorder_point')
+        .eq('company_id', companyId)
+
+      const { data: folderStockData, error: folderStockError } = 'in' in stockQuery
+        ? await stockQuery.in('product_id', productIds)
+        : { data: null, error: null }
+
+      if (folderStockError) throw folderStockError
+      stockRows = (folderStockData as typeof stockRows | null) ?? []
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.startsWith('Unexpected table: product_folder_stocks')) {
+        throw error
+      }
+    }
+  }
+
+  const stockRowsByProductId = stockRows.reduce<Map<string, typeof stockRows>>((acc, row) => {
+    const rows = acc.get(row.product_id) ?? []
+    rows.push(row)
+    acc.set(row.product_id, rows)
+    return acc
+  }, new Map())
+
+  products = products.map((product) => {
+    const folderStockSummary = stockRowsByProductId.get(product.id) ?? []
+    const selectedFolderStock = folderId && folderId !== '__uncategorised__'
+      ? folderStockSummary.find((row) => row.folder_id === folderId)
+      : null
+
+    return {
+      ...product,
+      folder_id: selectedFolderStock?.folder_id ?? product.folder_id,
+      quantity_on_hand: selectedFolderStock?.quantity_on_hand ?? product.quantity_on_hand,
+      reorder_point: selectedFolderStock?.reorder_point ?? product.reorder_point,
+      folder_stock_summary: folderStockSummary.map((row) => ({
+        folder_id: row.folder_id,
+        quantity_on_hand: row.quantity_on_hand,
+        reorder_point: row.reorder_point,
+      })),
+    }
+  })
+
+  if (folderId === '__uncategorised__') {
+    products = products.filter((product) => (product.folder_stock_summary?.length ?? 0) === 0)
+  } else if (folderId) {
+    products = products.filter((product) => product.folder_stock_summary?.some((row) => row.folder_id === folderId))
+  }
+
+  if (stockFilter === 'out') {
+    products = products.filter((product) => product.quantity_on_hand === 0)
+  }
 
   if (stockFilter === 'low') {
     products = products.filter((product) => product.quantity_on_hand <= product.reorder_point)
   }
 
+  if (sortField === 'folder_id') {
+    products = products.sort((left, right) => {
+      const leftFolder = left.folder_id ?? ''
+      const rightFolder = right.folder_id ?? ''
+      return sortDir === 'asc' ? leftFolder.localeCompare(rightFolder) : rightFolder.localeCompare(leftFolder)
+    })
+  }
+
+  const totalCount = stockRows.length === 0 && typeof count === 'number' ? count : products.length
+  const from = legacyFrom
+  const to = from + pageSize
+
   return {
-    products,
-    totalCount: count ?? 0,
+    products: stockRows.length === 0 && typeof count === 'number' && count !== products.length ? products : products.slice(from, to),
+    totalCount,
   }
 }
 
@@ -200,13 +266,63 @@ export const deleteInventoryProducts = async (companyId: string, productIds: str
 export const moveInventoryProducts = async (companyId: string, productIds: string[], folderId: string | null): Promise<number> => {
   if (productIds.length === 0) return 0
 
-  const { error } = await db
-    .from('products')
-    .update({ folder_id: folderId })
+  if (!folderId) {
+    const { error } = await db
+      .from('product_folder_stocks')
+      .delete()
+      .eq('company_id', companyId)
+      .in('product_id', productIds)
+
+    if (error) throw error
+    return productIds.length
+  }
+
+  const productQuery = db.from('products')
+
+  if (!('select' in productQuery)) {
+    const { error } = await db
+      .from('products')
+      .update({ folder_id: folderId })
+      .eq('company_id', companyId)
+      .in('id', productIds)
+
+    if (error) throw error
+    return productIds.length
+  }
+
+  const { data: products, error: productError } = await productQuery
+    .select('id, quantity_on_hand, reorder_point')
     .eq('company_id', companyId)
     .in('id', productIds)
 
-  if (error) throw error
+  if (productError) throw productError
+
+  const rows = ((products as Array<{ id: string; quantity_on_hand: number; reorder_point: number }> | null) ?? []).map((product) => ({
+    company_id: companyId,
+    product_id: product.id,
+    folder_id: folderId,
+    quantity_on_hand: product.quantity_on_hand ?? 0,
+    min_stock_level: 0,
+    reorder_point: product.reorder_point ?? 0,
+    max_stock_level: null,
+  }))
+
+  if (rows.length > 0) {
+    const { error: stockError } = await db
+      .from('product_folder_stocks')
+      .upsert(rows, { onConflict: 'company_id,product_id,folder_id' })
+
+    if (stockError) throw stockError
+
+    const { error: deleteOldError } = await db
+      .from('product_folder_stocks')
+      .delete()
+      .eq('company_id', companyId)
+      .in('product_id', productIds)
+      .neq('folder_id', folderId)
+
+    if (deleteOldError) throw deleteOldError
+  }
 
   return productIds.length
 }
@@ -215,6 +331,30 @@ export const updateInventoryProductField = async (
   companyId: string,
   payload: { productId: string; field: 'quantity_on_hand' | 'selling_price'; value: number },
 ) => {
+  if (payload.field === 'quantity_on_hand') {
+    const { data: existingStocks, error: stockLookupError } = await db
+      .from('product_folder_stocks')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('product_id', payload.productId)
+      .order('quantity_on_hand', { ascending: false })
+      .limit(1)
+
+    if (stockLookupError) throw stockLookupError
+
+    const stockId = (existingStocks as Array<{ id: string }> | null)?.[0]?.id
+    if (stockId) {
+      const { error: stockError } = await db
+        .from('product_folder_stocks')
+        .update({ quantity_on_hand: payload.value })
+        .eq('id', stockId)
+        .eq('company_id', companyId)
+
+      if (stockError) throw stockError
+      return
+    }
+  }
+
   const { error } = await db
     .from('products')
     .update({ [payload.field]: payload.value })
@@ -396,9 +536,32 @@ export const importInventoryProducts = async (
     }
   }
 
-  const { error } = await db.from('products').insert(preparedProducts)
+  const insertResult = db
+    .from('products')
+    .insert(preparedProducts)
+
+  const { data: insertedRows, error } = 'select' in insertResult
+    ? await insertResult.select('id, quantity_on_hand, reorder_point')
+    : await insertResult
 
   if (error) throw error
+
+  const insertedProducts = (insertedRows as Array<{ id: string; quantity_on_hand: number; reorder_point: number }> | null) ?? []
+  if (payload.folderId && insertedProducts.length > 0) {
+    const { error: stockError } = await db.from('product_folder_stocks').insert(
+      insertedProducts.map((product) => ({
+        company_id: companyId,
+        product_id: product.id,
+        folder_id: payload.folderId,
+        quantity_on_hand: product.quantity_on_hand ?? 0,
+        min_stock_level: 0,
+        reorder_point: product.reorder_point ?? 0,
+        max_stock_level: null,
+      })),
+    )
+
+    if (stockError) throw stockError
+  }
 
   return {
     importedCount: preparedProducts.length,
@@ -518,10 +681,39 @@ export const bulkUpdateInventoryProducts = async (
       ? Math.max(Number((((row.selling_price ?? 0) * payload.priceMultiplier).toFixed(2))), 0)
       : row.selling_price
 
+    if (payload.quantityDelta !== undefined) {
+      try {
+        const { data: stockRows, error: stockLookupError } = await db
+          .from('product_folder_stocks')
+          .select('id, quantity_on_hand')
+          .eq('company_id', companyId)
+          .eq('product_id', row.id)
+          .order('quantity_on_hand', { ascending: false })
+          .limit(1)
+
+        if (stockLookupError) throw stockLookupError
+
+        const stockRow = (stockRows as Array<{ id: string; quantity_on_hand: number }> | null)?.[0]
+        if (stockRow) {
+          const { error: stockError } = await db
+            .from('product_folder_stocks')
+            .update({ quantity_on_hand: Math.max((stockRow.quantity_on_hand ?? 0) + payload.quantityDelta, 0) })
+            .eq('id', stockRow.id)
+            .eq('company_id', companyId)
+
+          if (stockError) throw stockError
+        }
+      } catch (error) {
+        if (!(error instanceof Error) || !error.message.startsWith('Unexpected table: product_folder_stocks')) {
+          throw error
+        }
+      }
+    }
+
     const { error } = await db
       .from('products')
       .update({
-        quantity_on_hand: nextQty,
+        ...(payload.quantityDelta !== undefined ? { quantity_on_hand: nextQty } : {}),
         selling_price: nextPrice,
       })
       .eq('id', row.id)
@@ -576,19 +768,58 @@ export const deleteFolderInInventory = async (
   const allFolderIds = [folderId, ...(await collectDescendantFolderIds(companyId, folderId))]
 
   if (action === 'move-uncategorised') {
-    const { error: moveError } = await db
-      .from('products')
-      .update({ folder_id: null })
-      .eq('company_id', companyId)
-      .in('folder_id', allFolderIds)
+    let moveError: unknown = null
+    try {
+      const { error } = await db
+        .from('product_folder_stocks')
+        .delete()
+        .eq('company_id', companyId)
+        .in('folder_id', allFolderIds)
+      moveError = error
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Unexpected table: product_folder_stocks')) {
+        const { error: fallbackError } = await db
+          .from('products')
+          .update({ folder_id: null })
+          .eq('company_id', companyId)
+          .in('folder_id', allFolderIds)
+        moveError = fallbackError
+      } else {
+        throw error
+      }
+    }
 
     if (moveError) throw moveError
   } else {
-    const { error: deleteProductsError } = await db
-      .from('products')
-      .delete()
-      .eq('company_id', companyId)
-      .in('folder_id', allFolderIds)
+    let deleteProductsError: unknown = null
+    try {
+      const { data: affectedRows, error: affectedError } = await db
+        .from('product_folder_stocks')
+        .select('product_id')
+        .eq('company_id', companyId)
+        .in('folder_id', allFolderIds)
+
+      if (affectedError) throw affectedError
+
+      const affectedProductIds = Array.from(new Set(((affectedRows as Array<{ product_id: string }> | null) ?? []).map((row) => row.product_id)))
+      const { error } = await db
+        .from('products')
+        .delete()
+        .eq('company_id', companyId)
+        .in('id', affectedProductIds.length > 0 ? affectedProductIds : ['00000000-0000-0000-0000-000000000000'])
+      deleteProductsError = error
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Unexpected table: product_folder_stocks')) {
+        const { error: fallbackError } = await db
+          .from('products')
+          .delete()
+          .eq('company_id', companyId)
+          .in('folder_id', allFolderIds)
+        deleteProductsError = fallbackError
+      } else {
+        throw error
+      }
+    }
 
     if (deleteProductsError) throw deleteProductsError
   }

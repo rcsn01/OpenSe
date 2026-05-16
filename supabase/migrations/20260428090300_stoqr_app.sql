@@ -109,15 +109,31 @@ CREATE TABLE stoqr.product_tags (
   PRIMARY KEY (product_id, tag_id)
 );
 
+CREATE TABLE stoqr.product_folder_stocks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES stoqr.products(id) ON DELETE CASCADE,
+  folder_id UUID NOT NULL REFERENCES stoqr.folders(id) ON DELETE CASCADE,
+  quantity_on_hand INTEGER NOT NULL DEFAULT 0 CHECK (quantity_on_hand >= 0),
+  min_stock_level INTEGER NOT NULL DEFAULT 0 CHECK (min_stock_level >= 0),
+  reorder_point INTEGER NOT NULL DEFAULT 0 CHECK (reorder_point >= 0),
+  max_stock_level INTEGER CHECK (max_stock_level IS NULL OR max_stock_level >= 0),
+  updated_at TIMESTAMPTZ,
+  CONSTRAINT product_folder_stocks_max_stock_gte_min CHECK (max_stock_level IS NULL OR max_stock_level >= min_stock_level),
+  UNIQUE (company_id, product_id, folder_id)
+);
+
 CREATE TABLE stoqr.inventory_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   product_id UUID NOT NULL REFERENCES stoqr.products(id) ON DELETE RESTRICT,
+  folder_id UUID REFERENCES stoqr.folders(id) ON DELETE SET NULL,
   performed_by UUID REFERENCES public.profiles(id),
-  transaction_type TEXT NOT NULL CHECK (transaction_type IN ('purchase', 'sale', 'adjustment', 'return', 'loss', 'scan_in', 'scan_out')),
+  transaction_type TEXT NOT NULL CHECK (transaction_type IN ('purchase', 'sale', 'adjustment', 'return', 'loss', 'scan_in', 'scan_out', 'transfer_in', 'transfer_out')),
   source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'scan', 'import', 'api', 'receiving')),
   quantity_change INTEGER NOT NULL,
   stock_after INTEGER,
+  transfer_group_id UUID,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -139,6 +155,7 @@ CREATE TABLE stoqr.scan_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   product_id UUID REFERENCES stoqr.products(id) ON DELETE SET NULL,
+  folder_id UUID REFERENCES stoqr.folders(id) ON DELETE SET NULL,
   barcode TEXT,
   scan_type TEXT NOT NULL CHECK (scan_type IN ('lookup', 'stock_in', 'stock_out')),
   quantity INTEGER,
@@ -244,6 +261,7 @@ CREATE TABLE stoqr.alert_events (
   company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   rule_id UUID REFERENCES stoqr.alert_rules(id) ON DELETE SET NULL,
   product_id UUID REFERENCES stoqr.products(id) ON DELETE SET NULL,
+  folder_id UUID REFERENCES stoqr.folders(id) ON DELETE SET NULL,
   alert_type TEXT NOT NULL CHECK (alert_type IN ('low_stock', 'reorder_point', 'expiration', 'custom')),
   severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low', 'medium', 'high', 'critical')),
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'acknowledged', 'resolved')),
@@ -477,6 +495,9 @@ CREATE INDEX idx_folders_company ON stoqr.folders (company_id);
 CREATE INDEX idx_folders_parent ON stoqr.folders (parent_id);
 CREATE INDEX idx_product_tags_product ON stoqr.product_tags (product_id);
 CREATE INDEX idx_product_tags_tag ON stoqr.product_tags (tag_id);
+CREATE INDEX idx_product_folder_stocks_company_folder ON stoqr.product_folder_stocks (company_id, folder_id);
+CREATE INDEX idx_product_folder_stocks_company_product ON stoqr.product_folder_stocks (company_id, product_id);
+CREATE INDEX idx_product_folder_stocks_company_levels ON stoqr.product_folder_stocks (company_id, quantity_on_hand, min_stock_level, reorder_point);
 CREATE INDEX idx_organisation_page_settings_updated_at ON stoqr.organisation_page_settings (updated_at DESC);
 CREATE INDEX idx_report_schedules_company ON stoqr.report_schedules (company_id);
 CREATE INDEX idx_products_company_stock_levels ON stoqr.products (company_id, quantity_on_hand, min_stock_level, reorder_point);
@@ -490,6 +511,7 @@ CREATE INDEX idx_purchase_orders_company_status_created_at ON stoqr.purchase_ord
 CREATE INDEX idx_alert_rules_company_type ON stoqr.alert_rules (company_id, alert_type);
 CREATE INDEX idx_alert_events_company_status ON stoqr.alert_events (company_id, status, triggered_at DESC);
 CREATE INDEX idx_alert_events_product ON stoqr.alert_events (product_id, triggered_at DESC);
+CREATE INDEX idx_alert_events_product_folder ON stoqr.alert_events (product_id, folder_id, triggered_at DESC);
 CREATE INDEX idx_alert_delivery_logs_event ON stoqr.alert_delivery_logs (alert_event_id);
 CREATE INDEX idx_alert_connectors_company_provider ON stoqr.alert_connectors (company_id, provider);
 CREATE INDEX idx_alert_connector_targets_connector ON stoqr.alert_connector_targets (connector_id);
@@ -504,6 +526,8 @@ CREATE INDEX idx_inventory_transactions_company_created_at
   ON stoqr.inventory_transactions (company_id, created_at DESC);
 CREATE INDEX idx_inventory_transactions_company_product_created_at
   ON stoqr.inventory_transactions (company_id, product_id, created_at DESC);
+CREATE INDEX idx_inventory_transactions_company_folder_created_at
+  ON stoqr.inventory_transactions (company_id, folder_id, created_at DESC);
 CREATE INDEX idx_inventory_transactions_company_type_created_at
   ON stoqr.inventory_transactions (company_id, transaction_type, created_at DESC);
 CREATE INDEX idx_products_company_deleted_at
@@ -519,6 +543,7 @@ ALTER TABLE stoqr.tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.product_barcodes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.product_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stoqr.product_folder_stocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.inventory_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.inventory_bulk_operations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stoqr.scan_events ENABLE ROW LEVEL SECURITY;
@@ -974,12 +999,36 @@ SECURITY DEFINER
 SET search_path = stoqr, public
 AS $$
 DECLARE
-  current_qty INTEGER;
+  current_folder_qty INTEGER;
   qty_delta INTEGER;
+  v_total_qty INTEGER;
 BEGIN
-  IF NEW.transaction_type IN ('purchase', 'return', 'adjustment') THEN
+  IF NEW.folder_id IS NULL THEN
+    RAISE EXCEPTION 'folder_id is required for inventory transactions';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM stoqr.products p
+    WHERE p.id = NEW.product_id
+      AND p.company_id = NEW.company_id
+      AND p.deleted_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Product not found for company';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM stoqr.folders f
+    WHERE f.id = NEW.folder_id
+      AND f.company_id = NEW.company_id
+  ) THEN
+    RAISE EXCEPTION 'Folder not found for company';
+  END IF;
+
+  IF NEW.transaction_type IN ('purchase', 'return', 'adjustment', 'transfer_in') THEN
     qty_delta := NEW.quantity_change;
-  ELSIF NEW.transaction_type IN ('sale', 'loss', 'scan_out') THEN
+  ELSIF NEW.transaction_type IN ('sale', 'loss', 'scan_out', 'transfer_out') THEN
     qty_delta := -ABS(NEW.quantity_change);
   ELSIF NEW.transaction_type = 'scan_in' THEN
     qty_delta := ABS(NEW.quantity_change);
@@ -987,20 +1036,195 @@ BEGIN
     RAISE EXCEPTION 'Unsupported transaction_type: %', NEW.transaction_type;
   END IF;
 
+  INSERT INTO stoqr.product_folder_stocks (
+    company_id,
+    product_id,
+    folder_id,
+    quantity_on_hand,
+    min_stock_level,
+    reorder_point,
+    max_stock_level,
+    updated_at
+  )
+  SELECT
+    NEW.company_id,
+    NEW.product_id,
+    NEW.folder_id,
+    0,
+    COALESCE(p.min_stock_level, 0),
+    COALESCE(p.reorder_point, 0),
+    p.max_stock_level,
+    timezone('utc'::text, now())
+  FROM stoqr.products p
+  WHERE p.id = NEW.product_id
+  ON CONFLICT (company_id, product_id, folder_id) DO NOTHING;
+
   SELECT quantity_on_hand
-  INTO current_qty
-  FROM stoqr.products
-  WHERE id = NEW.product_id
+  INTO current_folder_qty
+  FROM stoqr.product_folder_stocks
+  WHERE company_id = NEW.company_id
+    AND product_id = NEW.product_id
+    AND folder_id = NEW.folder_id
   FOR UPDATE;
 
-  UPDATE stoqr.products
-  SET quantity_on_hand = current_qty + qty_delta
-  WHERE id = NEW.product_id;
+  IF current_folder_qty + qty_delta < 0 THEN
+    RAISE EXCEPTION 'Insufficient stock in folder';
+  END IF;
 
-  NEW.stock_after := current_qty + qty_delta;
+  UPDATE stoqr.product_folder_stocks
+  SET quantity_on_hand = current_folder_qty + qty_delta,
+      updated_at = timezone('utc'::text, now())
+  WHERE company_id = NEW.company_id
+    AND product_id = NEW.product_id
+    AND folder_id = NEW.folder_id;
+
+  SELECT COALESCE(SUM(quantity_on_hand), 0)::INTEGER
+  INTO v_total_qty
+  FROM stoqr.product_folder_stocks
+  WHERE company_id = NEW.company_id
+    AND product_id = NEW.product_id;
+
+  UPDATE stoqr.products
+  SET quantity_on_hand = v_total_qty,
+      folder_id = COALESCE(folder_id, NEW.folder_id),
+      updated_at = timezone('utc'::text, now())
+  WHERE id = NEW.product_id
+    AND company_id = NEW.company_id;
+
+  NEW.stock_after := current_folder_qty + qty_delta;
   NEW.quantity_change := qty_delta;
 
   RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION stoqr.folder_path_name(target_folder_id UUID)
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SET search_path = stoqr
+AS $$
+  WITH RECURSIVE folder_path AS (
+    SELECT id, parent_id, name, 1 AS depth
+    FROM stoqr.folders
+    WHERE id = target_folder_id
+    UNION ALL
+    SELECT parent.id, parent.parent_id, parent.name, folder_path.depth + 1
+    FROM stoqr.folders parent
+    JOIN folder_path ON folder_path.parent_id = parent.id
+  )
+  SELECT string_agg(name, ' / ' ORDER BY depth DESC)
+  FROM folder_path;
+$$;
+
+CREATE FUNCTION stoqr.sync_product_stock_total()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = stoqr, public
+AS $$
+DECLARE
+  v_product_id UUID;
+  v_company_id UUID;
+BEGIN
+  v_product_id := COALESCE(NEW.product_id, OLD.product_id);
+  v_company_id := COALESCE(NEW.company_id, OLD.company_id);
+
+  UPDATE stoqr.products p
+  SET quantity_on_hand = COALESCE((
+        SELECT SUM(pfs.quantity_on_hand)::INTEGER
+        FROM stoqr.product_folder_stocks pfs
+        WHERE pfs.company_id = v_company_id
+          AND pfs.product_id = v_product_id
+      ), 0),
+      updated_at = timezone('utc'::text, now())
+  WHERE p.id = v_product_id
+    AND p.company_id = v_company_id;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.transfer_stoqr_product_stock(
+  target_company_id UUID,
+  target_product_id UUID,
+  from_folder_id UUID,
+  to_folder_id UUID,
+  transfer_quantity INTEGER,
+  transfer_notes TEXT DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+DECLARE
+  v_transfer_group_id UUID := gen_random_uuid();
+  v_user_id UUID := auth.uid();
+BEGIN
+  IF NOT public.has_permission(target_company_id, 'transactions.create') THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
+  IF from_folder_id = to_folder_id THEN
+    RAISE EXCEPTION 'Source and destination folders must be different';
+  END IF;
+
+  IF COALESCE(transfer_quantity, 0) <= 0 THEN
+    RAISE EXCEPTION 'Transfer quantity must be greater than zero';
+  END IF;
+
+  INSERT INTO stoqr.inventory_transactions (
+    company_id,
+    product_id,
+    folder_id,
+    performed_by,
+    transaction_type,
+    source,
+    quantity_change,
+    transfer_group_id,
+    notes
+  )
+  VALUES (
+    target_company_id,
+    target_product_id,
+    from_folder_id,
+    v_user_id,
+    'transfer_out',
+    'manual',
+    -ABS(transfer_quantity),
+    v_transfer_group_id,
+    transfer_notes
+  );
+
+  INSERT INTO stoqr.inventory_transactions (
+    company_id,
+    product_id,
+    folder_id,
+    performed_by,
+    transaction_type,
+    source,
+    quantity_change,
+    transfer_group_id,
+    notes
+  )
+  VALUES (
+    target_company_id,
+    target_product_id,
+    to_folder_id,
+    v_user_id,
+    'transfer_in',
+    'manual',
+    ABS(transfer_quantity),
+    v_transfer_group_id,
+    transfer_notes
+  );
+
+  RETURN v_transfer_group_id;
 END;
 $$;
 
@@ -1148,6 +1372,11 @@ CREATE TRIGGER on_inventory_transaction
   BEFORE INSERT ON stoqr.inventory_transactions
   FOR EACH ROW
   EXECUTE FUNCTION stoqr.update_inventory_count();
+
+CREATE TRIGGER trg_sync_product_stock_total
+  AFTER INSERT OR UPDATE OR DELETE ON stoqr.product_folder_stocks
+  FOR EACH ROW
+  EXECUTE FUNCTION stoqr.sync_product_stock_total();
 
 CREATE TRIGGER trg_activity_inventory_transactions
   AFTER INSERT OR UPDATE OR DELETE ON stoqr.inventory_transactions
@@ -1409,6 +1638,35 @@ CREATE POLICY "Staff can manage product tags" ON stoqr.product_tags
     )
   );
 
+CREATE POLICY "Members can view product folder stocks" ON stoqr.product_folder_stocks
+  FOR SELECT USING (public.has_permission(company_id, 'products.view'));
+
+CREATE POLICY "Staff can manage product folder stocks" ON stoqr.product_folder_stocks
+  FOR ALL USING (
+    public.has_permission(company_id, 'products.manage')
+    OR public.has_permission(company_id, 'transactions.create')
+    OR public.has_permission(company_id, 'inventory.bulk_manage')
+  )
+  WITH CHECK (
+    (
+      public.has_permission(company_id, 'products.manage')
+      OR public.has_permission(company_id, 'transactions.create')
+      OR public.has_permission(company_id, 'inventory.bulk_manage')
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM stoqr.products p
+      WHERE p.id = product_folder_stocks.product_id
+        AND p.company_id = product_folder_stocks.company_id
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM stoqr.folders f
+      WHERE f.id = product_folder_stocks.folder_id
+        AND f.company_id = product_folder_stocks.company_id
+    )
+  );
+
 CREATE POLICY "Members can view transactions" ON stoqr.inventory_transactions
   FOR SELECT USING (public.has_permission(company_id, 'transactions.view'));
 
@@ -1420,6 +1678,15 @@ CREATE POLICY "Staff can create transactions" ON stoqr.inventory_transactions
       FROM stoqr.products p
       WHERE p.id = inventory_transactions.product_id
         AND p.company_id = inventory_transactions.company_id
+    )
+    AND (
+      folder_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.folders f
+        WHERE f.id = inventory_transactions.folder_id
+          AND f.company_id = inventory_transactions.company_id
+      )
     )
   );
 
@@ -1446,6 +1713,15 @@ CREATE POLICY "Staff can create scan events" ON stoqr.scan_events
         FROM stoqr.products p
         WHERE p.id = scan_events.product_id
           AND p.company_id = scan_events.company_id
+      )
+    )
+    AND (
+      folder_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.folders f
+        WHERE f.id = scan_events.folder_id
+          AND f.company_id = scan_events.company_id
       )
     )
   );
@@ -2137,7 +2413,9 @@ RETURNS TABLE (
   sku TEXT,
   quantity_on_hand INTEGER,
   reorder_point INTEGER,
-  expiry_date DATE
+  expiry_date DATE,
+  folder_id UUID,
+  folder_name TEXT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -2156,13 +2434,18 @@ BEGIN
     p.id,
     p.name,
     p.sku,
-    COALESCE(p.quantity_on_hand, 0)::INTEGER,
-    COALESCE(p.reorder_point, 0)::INTEGER,
-    p.expiry_date
+    COALESCE(pfs.quantity_on_hand, p.quantity_on_hand, 0)::INTEGER,
+    COALESCE(NULLIF(pfs.reorder_point, 0), p.reorder_point, 0)::INTEGER,
+    p.expiry_date,
+    pfs.folder_id,
+    stoqr.folder_path_name(pfs.folder_id)
   FROM stoqr.products p
+  LEFT JOIN stoqr.product_folder_stocks pfs
+    ON pfs.product_id = p.id
+   AND pfs.company_id = p.company_id
   WHERE p.company_id = target_company_id
     AND p.deleted_at IS NULL
-  ORDER BY p.name;
+  ORDER BY p.name, folder_name;
 END;
 $$;
 
@@ -2177,10 +2460,20 @@ DECLARE
   v_event_id UUID;
   v_old_low BOOLEAN := false;
   v_new_low BOOLEAN := false;
+  v_product stoqr.products%ROWTYPE;
+  v_folder_name TEXT;
 BEGIN
-  IF NEW.deleted_at IS NOT NULL THEN
+  SELECT *
+  INTO v_product
+  FROM stoqr.products
+  WHERE id = NEW.product_id
+    AND company_id = NEW.company_id;
+
+  IF v_product.id IS NULL OR v_product.deleted_at IS NOT NULL THEN
     RETURN NEW;
   END IF;
+
+  v_folder_name := COALESCE(stoqr.folder_path_name(NEW.folder_id), 'Unassigned');
 
   v_new_low := COALESCE(NEW.reorder_point, 0) > 0
     AND COALESCE(NEW.quantity_on_hand, 0) <= COALESCE(NEW.reorder_point, 0);
@@ -2207,7 +2500,8 @@ BEGIN
       FROM stoqr.alert_events existing
       WHERE existing.company_id = NEW.company_id
         AND existing.rule_id = v_rule.id
-        AND existing.product_id = NEW.id
+        AND existing.product_id = NEW.product_id
+        AND existing.folder_id = NEW.folder_id
         AND existing.status = 'open'
     ) THEN
       CONTINUE;
@@ -2217,6 +2511,7 @@ BEGIN
       company_id,
       rule_id,
       product_id,
+      folder_id,
       alert_type,
       severity,
       status,
@@ -2226,17 +2521,21 @@ BEGIN
     VALUES (
       NEW.company_id,
       v_rule.id,
-      NEW.id,
+      NEW.product_id,
+      NEW.folder_id,
       'low_stock',
       CASE WHEN COALESCE(NEW.quantity_on_hand, 0) <= 0 THEN 'critical' ELSE 'high' END,
       'open',
       format(
-        '%s is at %s units, at or below its Low Stock Alert level of %s.',
-        NEW.name,
+        '%s in %s is at %s units, at or below its Low Stock Alert level of %s.',
+        v_product.name,
+        v_folder_name,
         COALESCE(NEW.quantity_on_hand, 0),
         COALESCE(NEW.reorder_point, 0)
       ),
       jsonb_build_object(
+        'folder_id', NEW.folder_id,
+        'folder_name', v_folder_name,
         'quantity_on_hand', COALESCE(NEW.quantity_on_hand, 0),
         'reorder_point', COALESCE(NEW.reorder_point, 0),
         'recipient_roles', COALESCE(v_rule.recipients, ARRAY[]::text[])
@@ -2320,7 +2619,7 @@ END;
 $$;
 
 CREATE TRIGGER trg_evaluate_low_stock_alerts
-  AFTER INSERT OR UPDATE OF quantity_on_hand, reorder_point ON stoqr.products
+  AFTER INSERT OR UPDATE OF quantity_on_hand, reorder_point ON stoqr.product_folder_stocks
   FOR EACH ROW
   EXECUTE FUNCTION stoqr.evaluate_low_stock_alerts();
 
@@ -2336,6 +2635,7 @@ RETURNS TABLE (
   triggered_at TIMESTAMPTZ,
   product_name TEXT,
   product_sku TEXT,
+  folder_name TEXT,
   organisation_name TEXT
 )
 LANGUAGE plpgsql
@@ -2379,6 +2679,7 @@ BEGIN
     ae.triggered_at,
     p.name,
     p.sku,
+    stoqr.folder_path_name(ae.folder_id),
     o.name
   FROM updated
   JOIN stoqr.alert_events ae ON ae.id = updated.alert_event_id
@@ -2474,6 +2775,7 @@ RETURNS TABLE (
   triggered_at TIMESTAMPTZ,
   product_name TEXT,
   product_sku TEXT,
+  folder_name TEXT,
   organisation_name TEXT
 )
 LANGUAGE plpgsql
@@ -2524,6 +2826,7 @@ BEGIN
     ae.triggered_at,
     p.name,
     p.sku,
+    stoqr.folder_path_name(ae.folder_id),
     o.name
   FROM updated
   JOIN stoqr.alert_events ae ON ae.id = updated.alert_event_id
@@ -2584,7 +2887,9 @@ RETURNS TABLE (
   triggered_at TIMESTAMPTZ,
   delivery_id UUID,
   product_name TEXT,
-  product_sku TEXT
+  product_sku TEXT,
+  folder_id UUID,
+  folder_name TEXT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -2613,7 +2918,9 @@ BEGIN
       ae.triggered_at,
       adl.id AS delivery_id,
       p.name AS product_name,
-      p.sku AS product_sku
+      p.sku AS product_sku,
+      ae.folder_id,
+      stoqr.folder_path_name(ae.folder_id) AS folder_name
     FROM stoqr.alert_events ae
     LEFT JOIN stoqr.alert_delivery_logs adl
       ON adl.alert_event_id = ae.id
@@ -2688,6 +2995,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.tags TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.products TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.product_barcodes TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.product_tags TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.product_folder_stocks TO authenticated;
 GRANT SELECT, INSERT ON TABLE stoqr.inventory_transactions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE stoqr.inventory_bulk_operations TO authenticated;
 GRANT SELECT, INSERT ON TABLE stoqr.scan_events TO authenticated;
@@ -2718,6 +3026,7 @@ GRANT ALL PRIVILEGES ON TABLE stoqr.tags TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.products TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.product_barcodes TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.product_tags TO service_role;
+GRANT ALL PRIVILEGES ON TABLE stoqr.product_folder_stocks TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.inventory_transactions TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.inventory_bulk_operations TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.scan_events TO service_role;
@@ -2749,6 +3058,9 @@ REVOKE ALL ON FUNCTION public.grant_new_permission_to_owner_roles() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ensure_org_owner_member_and_default_seats() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.has_permission(UUID, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION stoqr.update_inventory_count() FROM PUBLIC;
+REVOKE ALL ON FUNCTION stoqr.folder_path_name(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION stoqr.sync_product_stock_total() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.transfer_stoqr_product_stock(UUID, UUID, UUID, UUID, INTEGER, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION stoqr.evaluate_low_stock_alerts() FROM PUBLIC;
 REVOKE ALL ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION stoqr.capture_activity_event() FROM PUBLIC;
@@ -2774,6 +3086,8 @@ GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO a
 GRANT EXECUTE ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.ensure_owner_app_roles(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.has_permission(UUID, TEXT) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION stoqr.folder_path_name(UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.transfer_stoqr_product_stock(UUID, UUID, UUID, UUID, INTEGER, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_inventory_stats(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_stoqr_dashboard_snapshot(UUID, INTEGER, INTEGER) TO authenticated, service_role;

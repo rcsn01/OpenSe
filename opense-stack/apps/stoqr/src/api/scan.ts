@@ -37,6 +37,7 @@ const normalizeProduct = (row: Partial<Product>): Product => ({
   image_urls: row.image_urls ?? [],
   custom_fields: row.custom_fields ?? {},
   expiry_date: row.expiry_date ?? null,
+  folder_stocks: row.folder_stocks ?? [],
 })
 
 export const fetchCurrentUserId = async (): Promise<string | null> => {
@@ -121,6 +122,24 @@ export const lookupProductByScanValue = async (
     return { product: null, lastHandledBy: '—', lastUpdatedAt: null, notFoundSku: cleanValue }
   }
 
+  try {
+    const { data: folderStocksData } = await db
+      .from('product_folder_stocks')
+      .select('id, product_id, folder_id, quantity_on_hand, min_stock_level, reorder_point, max_stock_level')
+      .eq('company_id', companyId)
+      .eq('product_id', resolvedProduct.id)
+      .order('quantity_on_hand', { ascending: false })
+
+    resolvedProduct = {
+      ...resolvedProduct,
+      folder_stocks: (folderStocksData as Product['folder_stocks'] | null) ?? [],
+    }
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.startsWith('Unexpected table: product_folder_stocks')) {
+      throw error
+    }
+  }
+
   const { data: transactionData } = await db
     .from('inventory_transactions')
     .select('performed_by, created_at')
@@ -163,6 +182,7 @@ export const createQuickScanTransaction = async (params: {
   reason?: ScanUpdateReason | null
   note?: string | null
   stockAfter?: number | null
+  folderId?: string | null
 }) => {
   const metadata: ScanEventMetadata = {
     reason: params.reason ?? null,
@@ -198,6 +218,7 @@ export const createQuickScanTransaction = async (params: {
   const { data: transactionRow, error } = await db.from('inventory_transactions').insert({
     company_id: params.companyId,
     product_id: params.productId,
+    folder_id: params.folderId ?? null,
     performed_by: params.userId,
     transaction_type: params.transactionType,
     quantity_change: quantityChange,
@@ -211,6 +232,7 @@ export const createQuickScanTransaction = async (params: {
   const { error: scanEventError } = await db.from('scan_events').insert({
     company_id: params.companyId,
     product_id: params.productId,
+    folder_id: params.folderId ?? null,
     barcode: params.barcode ?? null,
     scan_type: params.transactionType === 'scan_in' ? 'stock_in' : 'stock_out',
     quantity: Math.abs(params.quantity),

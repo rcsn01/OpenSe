@@ -18,5 +18,6 @@
 --   60_admin_audit.sql
 --   90_synthetic_volume.sql
 --
--- Note: StoQR product categories are no longer a dedicated table.
--- Optional categorization should be stored in products.custom_fields JSONB.
+-- Note: StoQR folders are the storage hierarchy. Product stock membership and
+-- per-folder limits live in stoqr.product_folder_stocks; products retain a
+-- derived quantity_on_hand total for compatibility.

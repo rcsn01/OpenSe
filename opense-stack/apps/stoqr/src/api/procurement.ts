@@ -297,25 +297,60 @@ export const recordPurchaseOrderReceipt = async (
 
   const { data: product, error: readError } = await db
     .from('products')
-    .select('quantity_on_hand')
+    .select('folder_id')
     .eq('id', payload.productId)
     .eq('company_id', companyId)
     .maybeSingle()
 
   if (readError) throw readError
 
-  const nextQty = (product?.quantity_on_hand ?? 0) + payload.quantityReceived
-  const { error: updateProductError } = await db
-    .from('products')
-    .update({ quantity_on_hand: nextQty })
-    .eq('id', payload.productId)
-    .eq('company_id', companyId)
+  let folderId = product?.folder_id
+  let folderStocksAvailable = true
+  try {
+    const { data: stockRows, error: stockLookupError } = await db
+      .from('product_folder_stocks')
+      .select('folder_id')
+      .eq('company_id', companyId)
+      .eq('product_id', payload.productId)
+      .order('quantity_on_hand', { ascending: false })
+      .limit(1)
 
-  if (updateProductError) throw updateProductError
+    if (stockLookupError) throw stockLookupError
+    folderId = (stockRows as Array<{ folder_id: string }> | null)?.[0]?.folder_id ?? folderId
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Unexpected table: product_folder_stocks')) {
+      folderStocksAvailable = false
+    } else {
+      throw error
+    }
+  }
+  if (!folderId) {
+    if (folderStocksAvailable) {
+      throw new Error('Select a folder for this product before receiving stock')
+    }
+
+    const { data: currentProduct, error: currentProductError } = await db
+      .from('products')
+      .select('quantity_on_hand')
+      .eq('id', payload.productId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+
+    if (currentProductError) throw currentProductError
+
+    const { error: updateProductError } = await db
+      .from('products')
+      .update({ quantity_on_hand: ((currentProduct as { quantity_on_hand?: number } | null)?.quantity_on_hand ?? 0) + payload.quantityReceived })
+      .eq('id', payload.productId)
+      .eq('company_id', companyId)
+
+    if (updateProductError) throw updateProductError
+  }
 
   const { error: txError } = await db.from('inventory_transactions').insert({
     company_id: companyId,
     product_id: payload.productId,
+    ...(folderId ? { folder_id: folderId } : {}),
     transaction_type: 'purchase',
     source: 'receiving',
     quantity_change: payload.quantityReceived,

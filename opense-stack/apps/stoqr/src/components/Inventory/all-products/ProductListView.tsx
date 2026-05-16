@@ -29,6 +29,15 @@ export const ProductListView = ({
   onRefresh,
 }: ProductListViewProps) => {
   const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name ?? '—'
+  const folderSummary = (product: { folder_id: string | null; folder_stock_summary?: Array<{ folder_id: string; quantity_on_hand: number }> }) => {
+    const rows = product.folder_stock_summary ?? []
+    if (rows.length === 0) return folderName(product.folder_id)
+    if (rows.length === 1) return `${folderName(rows[0].folder_id)} · ${rows[0].quantity_on_hand}`
+    return rows
+      .slice(0, 2)
+      .map((row) => `${folderName(row.folder_id)} ${row.quantity_on_hand}`)
+      .join(', ') + (rows.length > 2 ? ` +${rows.length - 2}` : '')
+  }
   const { editingCell, editingValue, isSaving, setEditingValue, startEdit, commitEdit, cancelEdit } = useInlineProductEdit(companyId, onRefresh)
 
   const handleColumnSort = (field: SortField) => {
@@ -85,7 +94,7 @@ export const ProductListView = ({
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-[var(--color-muted-foreground)]">Folder</span>
-                        <span>{folderName(product.folder_id)}</span>
+                        <span>{folderSummary(product)}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-[var(--color-muted-foreground)]">Price</span>
@@ -98,6 +107,7 @@ export const ProductListView = ({
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-[var(--color-muted-foreground)]">Available</span>
                         <span
+                          style={{ color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}
                           className={cn(
                             'font-semibold',
                             product.quantity_on_hand >= product.reorder_point
@@ -157,7 +167,7 @@ export const ProductListView = ({
               width: 220,
               headerClassName: inventoryTableHeaderClassName,
               cellClassName: inventoryTableCellClassName,
-              renderCell: (product) => <span className="text-sm text-[var(--color-muted-foreground)]">{folderName(product.folder_id)}</span>,
+              renderCell: (product) => <span className="text-sm text-[var(--color-muted-foreground)]">{folderSummary(product)}</span>,
             },
             {
               id: 'selling_price',
@@ -219,6 +229,7 @@ export const ProductListView = ({
               cellClassName: inventoryTableCellClassName,
               renderCell: (product) => (
                 <span
+                  style={{ color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}
                   className={cn(
                     'font-semibold',
                     product.quantity_on_hand >= product.reorder_point

@@ -17,6 +17,12 @@ const toSentenceCase = (value: string) => value
   .replace(/_/g, ' ')
   .replace(/\b\w/g, (character) => character.toUpperCase())
 
+const getStockStatus = (quantity: number, reorderPoint: number) => {
+  if (quantity <= 0) return 'Out of stock'
+  if (quantity <= reorderPoint) return 'Low stock'
+  return 'In stock'
+}
+
 export const ProductOverviewTab = ({
   product,
   images,
@@ -29,6 +35,10 @@ export const ProductOverviewTab = ({
 }) => {
   const customFields = product.custom_fields ?? {}
   const primaryImage = images[0] ?? null
+  const locationStocks = useMemo(
+    () => [...(product.folder_stocks ?? [])].sort((a, b) => b.quantity_on_hand - a.quantity_on_hand),
+    [product.folder_stocks],
+  )
   const attributeEntries = useMemo(
     () => Object.entries(customFields).filter(([key, value]) => {
       if (value === null || value === undefined) return false
@@ -87,6 +97,51 @@ export const ProductOverviewTab = ({
               <span className={sx('product-detail-stat-note')}>Units</span>
             </div>
           </div>
+        </section>
+
+        <section className={sx('product-detail-section', 'product-detail-section--wide')}>
+          <div className={sx('product-detail-section-heading')}>
+            <div>
+              <p className={sx('product-detail-kicker')}>Stock by location</p>
+              <p className={sx('product-detail-section-summary')}>
+                {locationStocks.length > 0
+                  ? `${product.quantity_on_hand} units across ${locationStocks.length} ${locationStocks.length === 1 ? 'location' : 'locations'}`
+                  : 'No location stock has been recorded for this product.'}
+              </p>
+            </div>
+          </div>
+
+          {locationStocks.length > 0 ? (
+            <div className={sx('product-location-stock-list')}>
+              {locationStocks.map((stock) => {
+                const reorderPoint = stock.reorder_point || product.reorder_point || 0
+                const status = getStockStatus(stock.quantity_on_hand, reorderPoint)
+                return (
+                  <div key={stock.folder_id} className={sx('product-location-stock-row')}>
+                    <div className={sx('product-location-stock-location')}>
+                      <span className={sx('product-location-stock-name')}>{stock.folder_name ?? stock.folder_id}</span>
+                      <span className={sx('product-location-stock-path')}>Location</span>
+                    </div>
+                    <div className={sx('product-location-stock-metric')}>
+                      <span className={sx('product-location-stock-label')}>On hand</span>
+                      <strong>{stock.quantity_on_hand}</strong>
+                    </div>
+                    <div className={sx('product-location-stock-metric')}>
+                      <span className={sx('product-location-stock-label')}>Reorder point</span>
+                      <strong>{reorderPoint}</strong>
+                    </div>
+                    <span className={sx(
+                      'product-location-stock-status',
+                      status === 'Low stock' && 'product-location-stock-status--warning',
+                      status === 'Out of stock' && 'product-location-stock-status--danger',
+                    )}>
+                      {status}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
         </section>
 
         <section className={sx('product-detail-section')}>
