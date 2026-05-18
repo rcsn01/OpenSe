@@ -44,11 +44,22 @@ export const ProcurementSuppliersTab = ({
     return Array.from(byId.values());
   }, [allOrders, allHistory]);
 
-  // Pending PO value: sum of total_cost for orders that are draft/sent/partial
+  // Pending PO value: sum of total_cost for non-terminal workflow orders.
   const pendingPoValue = useMemo(() => {
     const pendingOrderIds = new Set(
       allOrders
-        .filter((o) => ["draft", "sent", "partial"].includes(o.status))
+        .filter((o) =>
+          [
+            "pending_approval",
+            "approved",
+            "not_started",
+            "awaiting_supplier",
+            "in_transit",
+            "partial_receipt",
+            "awaiting_return",
+            "shipped_to_vendor",
+          ].includes(o.status),
+        )
         .map((o) => o.id),
     );
     return allItems
@@ -56,19 +67,19 @@ export const ProcurementSuppliersTab = ({
       .reduce((sum, item) => sum + item.quantity_ordered * item.unit_cost, 0);
   }, [allOrders, allItems]);
 
-  // Completed POs (30d): sum of total_cost for closed orders in last 30d
+  // Completed POs (30d): sum of total_cost for received orders in last 30d
   const completedPoValue = useMemo(() => {
     const cutoff = Date.now() - 30 * 86_400_000;
-    const closedIds = new Set(
+    const receivedIds = new Set(
       mergedOrders
         .filter(
           (o) =>
-            o.status === "closed" && new Date(o.created_at).getTime() >= cutoff,
+            o.status === "received" && new Date(o.created_at).getTime() >= cutoff,
         )
         .map((o) => o.id),
     );
     return allItems
-      .filter((item) => closedIds.has(item.po_id))
+      .filter((item) => receivedIds.has(item.po_id))
       .reduce((sum, item) => sum + item.quantity_received * item.unit_cost, 0);
   }, [mergedOrders, allItems]);
 
@@ -115,8 +126,8 @@ export const ProcurementSuppliersTab = ({
         supplierOrderIds.has(item.po_id),
       );
 
-      // On-time %: closed orders where received before/on expected_date
-      const closedOrders = supplierOrders.filter((o) => o.status === "closed");
+      // On-time %: received orders where received before/on expected_date
+      const closedOrders = supplierOrders.filter((o) => o.status === "received");
       let onTimeCount = 0;
       for (const order of closedOrders) {
         if (!order.expected_date) {
@@ -228,7 +239,18 @@ export const ProcurementSuppliersTab = ({
   // Sparkline data for pending PO
   const pendingSparkline = useMemo(() => {
     const pendingOrders = allOrders
-      .filter((o) => ["draft", "sent", "partial"].includes(o.status))
+      .filter((o) =>
+        [
+          "pending_approval",
+          "approved",
+          "not_started",
+          "awaiting_supplier",
+          "in_transit",
+          "partial_receipt",
+          "awaiting_return",
+          "shipped_to_vendor",
+        ].includes(o.status),
+      )
       .sort(
         (a, b) =>
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),

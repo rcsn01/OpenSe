@@ -2,23 +2,14 @@
 
 UPDATE stoqr.purchase_orders
 SET
-	approval_status = CASE id
-		WHEN '91919191-9191-9191-9191-919191919191' THEN 'approved'
-		WHEN '92929292-9292-9292-9292-929292929292' THEN 'approved'
-		WHEN '93939393-9393-9393-9393-939393939393' THEN 'approved'
-		WHEN '94949494-9494-9494-9494-949494949494' THEN 'approved'
-		WHEN '95959595-9595-9595-9595-959595959595' THEN 'approved'
-		WHEN '96969696-9696-9696-9696-969696969696' THEN 'pending'
-		ELSE approval_status
-	END,
-	return_status = CASE id
-		WHEN '91919191-9191-9191-9191-919191919191' THEN 'none'
-		WHEN '92929292-9292-9292-9292-929292929292' THEN 'resolved'
-		WHEN '93939393-9393-9393-9393-939393939393' THEN 'none'
+	status = CASE id
+		WHEN '91919191-9191-9191-9191-919191919191' THEN 'received'
+		WHEN '92929292-9292-9292-9292-929292929292' THEN 'return_resolved'
+		WHEN '93939393-9393-9393-9393-939393939393' THEN 'received'
 		WHEN '94949494-9494-9494-9494-949494949494' THEN 'awaiting_return'
-		WHEN '95959595-9595-9595-9595-959595959595' THEN 'none'
-		WHEN '96969696-9696-9696-9696-969696969696' THEN 'none'
-		ELSE return_status
+		WHEN '95959595-9595-9595-9595-959595959595' THEN 'in_transit'
+		WHEN '96969696-9696-9696-9696-969696969696' THEN 'pending_approval'
+		ELSE status
 	END
 WHERE id IN (
 	'91919191-9191-9191-9191-919191919191',
@@ -35,8 +26,6 @@ INSERT INTO stoqr.purchase_orders (
 	supplier_id,
 	po_number,
 	status,
-	approval_status,
-	return_status,
 	expected_date,
 	notes,
 	created_by,
@@ -49,9 +38,7 @@ VALUES
 		'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
 		'81818181-8181-8181-8181-818181818181',
 		1207,
-		'cancelled',
 		'denied',
-		'none',
 		(timezone('utc'::text, now()) + interval '6 days')::date,
 		'Budget request denied before release.',
 		'33333333-3333-3333-3333-333333333333',
@@ -63,9 +50,7 @@ VALUES
 		'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
 		'82828282-8282-8282-8282-828282828282',
 		1208,
-		'closed',
-		'approved',
-		'shipped',
+		'shipped_to_vendor',
 		(timezone('utc'::text, now()) - interval '5 days')::date,
 		'Vendor return dispatched after inspection completed.',
 		'11111111-1111-1111-1111-111111111111',
@@ -77,8 +62,6 @@ SET
 	supplier_id = EXCLUDED.supplier_id,
 	po_number = EXCLUDED.po_number,
 	status = EXCLUDED.status,
-	approval_status = EXCLUDED.approval_status,
-	return_status = EXCLUDED.return_status,
 	expected_date = EXCLUDED.expected_date,
 	notes = EXCLUDED.notes,
 	created_by = EXCLUDED.created_by,

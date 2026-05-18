@@ -211,9 +211,7 @@ CREATE TABLE stoqr.purchase_orders (
   company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   supplier_id UUID REFERENCES stoqr.suppliers(id) ON DELETE SET NULL,
   po_number SERIAL,
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'partial', 'closed', 'cancelled')),
-  approval_status TEXT NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'denied')),
-  return_status TEXT NOT NULL DEFAULT 'none' CHECK (return_status IN ('none', 'awaiting_return', 'shipped', 'resolved')),
+  status TEXT NOT NULL DEFAULT 'pending_approval' CHECK (status IN ('pending_approval', 'approved', 'not_started', 'awaiting_supplier', 'in_transit', 'partial_receipt', 'received', 'cancelled', 'denied', 'awaiting_return', 'shipped_to_vendor', 'return_resolved')),
   expected_date DATE,
   notes TEXT,
   created_by UUID REFERENCES public.profiles(id),
@@ -2011,7 +2009,7 @@ BEGIN
     SELECT COUNT(*)::BIGINT AS pending_orders
     FROM stoqr.purchase_orders po
     WHERE po.company_id = target_company_id
-      AND po.status IN ('draft', 'sent', 'partial')
+      AND po.status IN ('pending_approval', 'approved', 'not_started', 'awaiting_supplier', 'in_transit', 'partial_receipt', 'awaiting_return', 'shipped_to_vendor')
   ),
   alert_counts AS (
     SELECT

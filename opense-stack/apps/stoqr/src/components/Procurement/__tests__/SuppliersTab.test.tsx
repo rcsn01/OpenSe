@@ -30,13 +30,13 @@ vi.mock('../../../hooks/queries/useProcurementTabs', () => ({
       {
         id: 'po-1',
         supplier_id: 'sup-1',
-        status: 'closed',
+        status: 'received',
         expected_date: '2026-05-01',
       },
       {
         id: 'po-2',
         supplier_id: 'sup-2',
-        status: 'sent',
+        status: 'in_transit',
         expected_date: '2026-05-04',
       },
     ],
