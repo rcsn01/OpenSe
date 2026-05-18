@@ -27,8 +27,6 @@ import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../
 import { formatCurrency } from '../../utils'
 
 type StatusFilter = 'all' | PurchaseOrder['status']
-type ApprovalStatus = NonNullable<PurchaseOrder['approval_status']>
-type ReturnStatus = NonNullable<PurchaseOrder['return_status']>
 type PurchaseOrderSortField = 'poNumber' | 'supplier' | 'created' | 'expected' | 'total' | 'workflow'
 
 type WorkflowBadge = {
@@ -37,65 +35,60 @@ type WorkflowBadge = {
 }
 
 type OrderWorkflowSummary = {
-  request: WorkflowBadge
-  order: WorkflowBadge
-  returnStatus: WorkflowBadge | null
+  status: WorkflowBadge
   orderedUnits: number
   receivedUnits: number
 }
 
 const statusLabels: Record<PurchaseOrder['status'], string> = {
-  draft: 'Awaiting Supplier',
-  sent: 'In Transit',
-  partial: 'Partial Receipt',
-  closed: 'Received',
+  pending_approval: 'Pending Approval',
+  approved: 'Approved',
+  not_started: 'Not Started',
+  awaiting_supplier: 'Awaiting Supplier',
+  in_transit: 'In Transit',
+  partial_receipt: 'Partial Receipt',
+  received: 'Received',
   cancelled: 'Cancelled',
+  denied: 'Denied',
+  awaiting_return: 'Awaiting Return',
+  shipped_to_vendor: 'Shipped to Vendor',
+  return_resolved: 'Return Resolved',
 }
 
 const statusVariants: Record<PurchaseOrder['status'], 'warning' | 'info' | 'secondary' | 'success' | 'destructive'> = {
-  draft: 'warning',
-  sent: 'info',
-  partial: 'secondary',
-  closed: 'success',
+  pending_approval: 'warning',
+  approved: 'success',
+  not_started: 'secondary',
+  awaiting_supplier: 'warning',
+  in_transit: 'info',
+  partial_receipt: 'secondary',
+  received: 'success',
   cancelled: 'destructive',
+  denied: 'destructive',
+  awaiting_return: 'warning',
+  shipped_to_vendor: 'info',
+  return_resolved: 'success',
 }
 
 const statusOptions: Array<{ value: StatusFilter; label: string }> = [
   { value: 'all', label: 'All' },
-  { value: 'draft', label: statusLabels.draft },
-  { value: 'sent', label: statusLabels.sent },
-  { value: 'partial', label: statusLabels.partial },
-  { value: 'closed', label: statusLabels.closed },
+  { value: 'pending_approval', label: statusLabels.pending_approval },
+  { value: 'approved', label: statusLabels.approved },
+  { value: 'not_started', label: statusLabels.not_started },
+  { value: 'awaiting_supplier', label: statusLabels.awaiting_supplier },
+  { value: 'in_transit', label: statusLabels.in_transit },
+  { value: 'partial_receipt', label: statusLabels.partial_receipt },
+  { value: 'received', label: statusLabels.received },
   { value: 'cancelled', label: statusLabels.cancelled },
+  { value: 'denied', label: statusLabels.denied },
+  { value: 'awaiting_return', label: statusLabels.awaiting_return },
+  { value: 'shipped_to_vendor', label: statusLabels.shipped_to_vendor },
+  { value: 'return_resolved', label: statusLabels.return_resolved },
 ]
 
 const purchaseOrderPageSizeOptions = [10, 20, 30, 50]
 const purchaseOrderTableHeaderClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
 const purchaseOrderTableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
-
-const approvalStatusLabels: Record<ApprovalStatus, string> = {
-  pending: 'Pending Approval',
-  approved: 'Approved',
-  denied: 'Denied',
-}
-
-const approvalStatusVariants: Record<ApprovalStatus, WorkflowBadge['variant']> = {
-  pending: 'warning',
-  approved: 'success',
-  denied: 'destructive',
-}
-
-const returnStatusLabels: Record<Exclude<ReturnStatus, 'none'>, string> = {
-  awaiting_return: 'Awaiting Return',
-  shipped: 'Shipped to Vendor',
-  resolved: 'Resolved',
-}
-
-const returnStatusVariants: Record<Exclude<ReturnStatus, 'none'>, WorkflowBadge['variant']> = {
-  awaiting_return: 'warning',
-  shipped: 'info',
-  resolved: 'success',
-}
 
 const formatPurchaseOrderNumber = (order: PurchaseOrder) => {
   const year = new Date(order.created_at).getFullYear()
@@ -112,28 +105,10 @@ const formatDateLabel = (value: string | null | undefined) => {
   }).format(new Date(value))
 }
 
-const getApprovalWorkflow = (approvalStatus: ApprovalStatus): WorkflowBadge => {
-  return {
-    label: approvalStatusLabels[approvalStatus],
-    variant: approvalStatusVariants[approvalStatus],
-  }
-}
-
-const getOrderWorkflow = (status: PurchaseOrder['status']): WorkflowBadge => {
+const getWorkflowStatus = (status: PurchaseOrder['status']): WorkflowBadge => {
   return {
     label: statusLabels[status],
     variant: statusVariants[status],
-  }
-}
-
-const getReturnWorkflow = (returnStatus: ReturnStatus): WorkflowBadge | null => {
-  if (returnStatus === 'none') {
-    return null
-  }
-
-  return {
-    label: returnStatusLabels[returnStatus],
-    variant: returnStatusVariants[returnStatus],
   }
 }
 
@@ -186,13 +161,9 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
 
     return purchaseOrders.reduce<Record<string, OrderWorkflowSummary>>((acc, order) => {
       const totals = unitTotals[order.id] ?? { ordered: 0, received: 0 }
-      const approvalStatus = order.approval_status ?? 'pending'
-      const returnStatus = order.return_status ?? 'none'
 
       acc[order.id] = {
-        request: getApprovalWorkflow(approvalStatus),
-        order: getOrderWorkflow(order.status),
-        returnStatus: getReturnWorkflow(returnStatus),
+        status: getWorkflowStatus(order.status),
         orderedUnits: totals.ordered,
         receivedUnits: totals.received,
       }
@@ -213,7 +184,7 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
       {
         key: (order) => {
           const workflow = workflowByPo[order.id]
-          return workflow ? [workflow.request.label, workflow.order.label, workflow.returnStatus?.label ?? ''] : []
+          return workflow ? workflow.status.label : statusLabels[order.status]
         },
         maxRanking: fuzzyRankings.CONTAINS,
       },
@@ -249,8 +220,8 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
             (right.total_amount ?? totalsByPo[right.id] ?? 0)
           break
         case 'workflow':
-          comparison = (workflowByPo[left.id]?.order.label ?? statusLabels[left.status]).localeCompare(
-            workflowByPo[right.id]?.order.label ?? statusLabels[right.status],
+          comparison = (workflowByPo[left.id]?.status.label ?? statusLabels[left.status]).localeCompare(
+            workflowByPo[right.id]?.status.label ?? statusLabels[right.status],
           )
           break
         default:
@@ -361,47 +332,20 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
         cellClassName: purchaseOrderTableCellClassName,
         renderCell: (order) => {
           const workflow = workflowByPo[order.id] ?? {
-            request: { label: 'Pending Approval', variant: 'warning' as const },
-            order: { label: statusLabels[order.status], variant: statusVariants[order.status] },
-            returnStatus: null,
+            status: { label: statusLabels[order.status], variant: statusVariants[order.status] },
             orderedUnits: 0,
             receivedUnits: 0,
           }
 
           return (
-            <div className="flex min-w-[280px] flex-col gap-2.5">
+            <div className="flex min-w-[280px] flex-wrap items-center gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                  Request
-                </span>
-                <Badge variant={workflow.request.variant} size="md">
-                  {workflow.request.label}
-                </Badge>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                  Order
-                </span>
-                <Badge variant={workflow.order.variant} size="md">
-                  {workflow.order.label}
+                <Badge variant={workflow.status.variant} size="md">
+                  {workflow.status.label}
                 </Badge>
                 <span className="text-xs text-[var(--color-muted-foreground)]">
                   {workflow.receivedUnits}/{workflow.orderedUnits} units received
                 </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                  Return
-                </span>
-                {workflow.returnStatus ? (
-                  <Badge variant={workflow.returnStatus.variant} size="md">
-                    {workflow.returnStatus.label}
-                  </Badge>
-                ) : (
-                  <span className="text-xs text-[var(--color-muted-foreground)]">No return</span>
-                )}
               </div>
             </div>
           )
@@ -419,9 +363,7 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
       value: formatPurchaseOrderNumber(order),
       keywords: [
         order.suppliers?.name ?? '',
-        workflowByPo[order.id]?.request.label ?? '',
-        workflowByPo[order.id]?.order.label ?? '',
-        workflowByPo[order.id]?.returnStatus?.label ?? '',
+        workflowByPo[order.id]?.status.label ?? statusLabels[order.status],
       ],
       badge: 'PO',
     })),
@@ -432,9 +374,9 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
     searchKey: 'procurement-purchase-orders',
     placeholder: 'Search POs...',
     defaultSuggestions: [
-      { id: 'procurement-po-drafts', title: 'Draft Purchase Orders', subtitle: 'POs awaiting supplier confirmation', value: 'draft', badge: 'PO' },
+      { id: 'procurement-po-approval', title: 'Pending Approval', subtitle: 'POs waiting for request approval', value: 'pending approval', badge: 'PO' },
       { id: 'procurement-po-transit', title: 'In Transit', subtitle: 'Open orders currently on the way', value: 'in transit', badge: 'PO' },
-      { id: 'procurement-po-returns', title: 'Vendor Returns', subtitle: 'Orders with return workflows', value: 'return', badge: 'PO' },
+      { id: 'procurement-po-returns', title: 'Return Resolved', subtitle: 'Completed vendor return workflows', value: 'return resolved', badge: 'PO' },
     ],
     suggestions: purchaseOrderSuggestions,
   }), [purchaseOrderSuggestions]))
@@ -451,7 +393,7 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
       setIsCreating(false)
       setNewPoSupplier('')
       setNewPoDate('')
-      setMessage({ tone: 'success', text: 'Purchase order draft created.' })
+      setMessage({ tone: 'success', text: 'Purchase order request created.' })
     } catch (error) {
       setMessage({
         tone: 'error',
@@ -547,7 +489,7 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
           <div className="border-b border-dashed border-[var(--color-border-hover)]">
             <CardHeader className="border-b border-[var(--color-border)] px-6 py-5">
               <CardTitle className="text-lg">Create Purchase Order</CardTitle>
-              <CardDescription>Start a new draft order and assign the expected receiving date.</CardDescription>
+            <CardDescription>Start a new purchase order request and assign the expected receiving date.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-5 px-6 py-5">
               {loadingSuppliers ? (
@@ -587,7 +529,7 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
                   onClick={handleCreatePO}
                 >
                   <CheckCircle2 size={16} />
-                  Create Draft
+                  Create Request
                 </Button>
               </div>
             </CardContent>

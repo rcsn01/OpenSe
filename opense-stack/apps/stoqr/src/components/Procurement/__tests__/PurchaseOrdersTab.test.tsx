@@ -57,9 +57,7 @@ describe('PurchaseOrdersTab', () => {
           id: 'po-pending',
           po_number: 1206,
           supplier_id: 'sup-1',
-          status: 'draft',
-          approval_status: 'pending',
-          return_status: 'none',
+          status: 'pending_approval',
           expected_date: '2026-04-20',
           created_at: '2026-04-10T00:00:00Z',
           suppliers: { name: 'TechGlobal Inc.' },
@@ -68,9 +66,7 @@ describe('PurchaseOrdersTab', () => {
           id: 'po-return',
           po_number: 1204,
           supplier_id: 'sup-2',
-          status: 'partial',
-          approval_status: 'approved',
-          return_status: 'awaiting_return',
+          status: 'awaiting_return',
           expected_date: '2026-04-18',
           created_at: '2026-04-06T00:00:00Z',
           suppliers: { name: 'Apex Materials' },
@@ -79,9 +75,7 @@ describe('PurchaseOrdersTab', () => {
           id: 'po-shipped',
           po_number: 1208,
           supplier_id: 'sup-2',
-          status: 'closed',
-          approval_status: 'approved',
-          return_status: 'shipped',
+          status: 'shipped_to_vendor',
           expected_date: '2026-04-09',
           created_at: '2026-04-02T00:00:00Z',
           suppliers: { name: 'Apex Materials' },
@@ -90,9 +84,7 @@ describe('PurchaseOrdersTab', () => {
           id: 'po-denied',
           po_number: 1207,
           supplier_id: 'sup-1',
-          status: 'cancelled',
-          approval_status: 'denied',
-          return_status: 'resolved',
+          status: 'denied',
           expected_date: '2026-04-17',
           created_at: '2026-04-03T00:00:00Z',
           suppliers: { name: 'TechGlobal Inc.' },
@@ -110,17 +102,14 @@ describe('PurchaseOrdersTab', () => {
     })
   })
 
-  it('renders approval and return statuses from purchase order columns', () => {
+  it('renders single workflow statuses from purchase order status', () => {
     renderPurchaseOrdersTab()
 
-    expect(screen.getByText('Pending Approval')).toBeInTheDocument()
-    expect(screen.getAllByText('Approved')).toHaveLength(2)
-    expect(screen.getByText('Denied')).toBeInTheDocument()
-    expect(screen.getByText('Awaiting Return')).toBeInTheDocument()
-    expect(screen.getByText('Shipped to Vendor')).toBeInTheDocument()
-    expect(screen.getByText('Resolved')).toBeInTheDocument()
+    expect(screen.getAllByText('Pending Approval').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Denied').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Awaiting Return').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Shipped to Vendor').length).toBeGreaterThan(0)
     expect(screen.getByText('12/18 units received')).toBeInTheDocument()
-    expect(screen.getByText('No return')).toBeInTheDocument()
   })
 
   it('filters rows from the shared top bar search term', async () => {
@@ -150,7 +139,7 @@ describe('PurchaseOrdersTab', () => {
 
     renderPurchaseOrdersTab()
 
-    await user.click(screen.getByRole('button', { name: 'Received' }))
+    await user.click(screen.getByRole('button', { name: 'Shipped to Vendor' }))
 
     expect(screen.getByText('PO-2026-1208')).toBeInTheDocument()
     expect(screen.queryByText('PO-2026-1206')).not.toBeInTheDocument()

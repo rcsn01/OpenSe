@@ -156,12 +156,12 @@ INSERT INTO stoqr.purchase_orders (
   updated_at
 )
 VALUES
-  ('91919191-9191-9191-9191-919191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '81818181-8181-8181-8181-818181818181', 1201, 'closed', (date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '16 days')::date, 'January replenishment', '11111111-1111-1111-1111-111111111111', date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '7 days', date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '14 days'),
-  ('92929292-9292-9292-9292-929292929292', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '82828282-8282-8282-8282-828282828282', 1202, 'closed', (date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '15 days')::date, 'February reagents top-up', '11111111-1111-1111-1111-111111111111', date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '6 days', date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '13 days'),
-  ('93939393-9393-9393-9393-939393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84818181-8481-8481-8481-848181818181', 1203, 'closed', (date_trunc('month', timezone('utc'::text, now())) - interval '20 days')::date, 'Quarterly bulk replenishment', '33333333-3333-3333-3333-333333333333', timezone('utc'::text, now()) - interval '24 days', timezone('utc'::text, now()) - interval '18 days'),
-  ('94949494-9494-9494-9494-949494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '83838383-8383-8383-8383-838383838383', 1204, 'partial', (timezone('utc'::text, now()) + interval '4 days')::date, 'Partial PPE restock', '33333333-3333-3333-3333-333333333333', timezone('utc'::text, now()) - interval '12 days', timezone('utc'::text, now()) - interval '4 days'),
-  ('95959595-9595-9595-9595-959595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '82828282-8282-8282-8282-828282828282', 1205, 'sent', (timezone('utc'::text, now()) + interval '9 days')::date, 'April fast follow order', '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '7 days', timezone('utc'::text, now()) - interval '7 days'),
-  ('96969696-9696-9696-9696-969696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '81818181-8181-8181-8181-818181818181', 1206, 'draft', (timezone('utc'::text, now()) + interval '12 days')::date, 'Template-driven replenishment draft', '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '3 days', timezone('utc'::text, now()) - interval '3 days')
+  ('91919191-9191-9191-9191-919191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '81818181-8181-8181-8181-818181818181', 1201, 'received', (date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '16 days')::date, 'January replenishment', '11111111-1111-1111-1111-111111111111', date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '7 days', date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '14 days'),
+  ('92929292-9292-9292-9292-929292929292', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '82828282-8282-8282-8282-828282828282', 1202, 'received', (date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '15 days')::date, 'February reagents top-up', '11111111-1111-1111-1111-111111111111', date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '6 days', date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '13 days'),
+  ('93939393-9393-9393-9393-939393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84818181-8481-8481-8481-848181818181', 1203, 'received', (date_trunc('month', timezone('utc'::text, now())) - interval '20 days')::date, 'Quarterly bulk replenishment', '33333333-3333-3333-3333-333333333333', timezone('utc'::text, now()) - interval '24 days', timezone('utc'::text, now()) - interval '18 days'),
+  ('94949494-9494-9494-9494-949494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '83838383-8383-8383-8383-838383838383', 1204, 'partial_receipt', (timezone('utc'::text, now()) + interval '4 days')::date, 'Partial PPE restock', '33333333-3333-3333-3333-333333333333', timezone('utc'::text, now()) - interval '12 days', timezone('utc'::text, now()) - interval '4 days'),
+  ('95959595-9595-9595-9595-959595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '82828282-8282-8282-8282-828282828282', 1205, 'in_transit', (timezone('utc'::text, now()) + interval '9 days')::date, 'April fast follow order', '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '7 days', timezone('utc'::text, now()) - interval '7 days'),
+  ('96969696-9696-9696-9696-969696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '81818181-8181-8181-8181-818181818181', 1206, 'pending_approval', (timezone('utc'::text, now()) + interval '12 days')::date, 'Template-driven replenishment draft', '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '3 days', timezone('utc'::text, now()) - interval '3 days')
 ON CONFLICT (id) DO UPDATE
 SET
   supplier_id = EXCLUDED.supplier_id,
@@ -513,8 +513,6 @@ INSERT INTO stoqr.purchase_orders (
   supplier_id,
   po_number,
   status,
-  approval_status,
-  return_status,
   expected_date,
   notes,
   created_by,
@@ -526,9 +524,7 @@ SELECT
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
   po_seed.supplier_id,
   3000 + po_seed.product_number,
-  CASE WHEN po_seed.product_number % 9 = 0 THEN 'partial' ELSE 'closed' END,
-  'approved',
-  'none',
+  CASE WHEN po_seed.product_number % 9 = 0 THEN 'partial_receipt' ELSE 'received' END,
   (po_seed.po_created_at + interval '5 days')::date,
   'Seeded replenishment for ' || po_seed.product_name,
   CASE WHEN po_seed.product_number % 2 = 0 THEN '11111111-1111-1111-1111-111111111111'::uuid ELSE '33333333-3333-3333-3333-333333333333'::uuid END,
@@ -540,8 +536,6 @@ SET
   supplier_id = EXCLUDED.supplier_id,
   po_number = EXCLUDED.po_number,
   status = EXCLUDED.status,
-  approval_status = EXCLUDED.approval_status,
-  return_status = EXCLUDED.return_status,
   expected_date = EXCLUDED.expected_date,
   notes = EXCLUDED.notes,
   created_by = EXCLUDED.created_by,

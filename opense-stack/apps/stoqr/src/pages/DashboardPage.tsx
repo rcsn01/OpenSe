@@ -237,8 +237,10 @@ const buildAttentionItems = (
     .filter(
       (order) =>
         !!order.expected_date &&
-        order.status !== "closed" &&
+        order.status !== "received" &&
         order.status !== "cancelled" &&
+        order.status !== "denied" &&
+        order.status !== "return_resolved" &&
         getDaysFromToday(order.expected_date) < 0,
     )
     .map((order) => {
@@ -300,7 +302,11 @@ const buildDeliveryRows = (
 
   return purchaseOrders
     .filter(
-      (order) => order.status !== "closed" && order.status !== "cancelled",
+      (order) =>
+        order.status !== "received" &&
+        order.status !== "cancelled" &&
+        order.status !== "denied" &&
+        order.status !== "return_resolved",
     )
     .map((order): DeliveryRow => {
       const lineItems = itemsByOrder.get(order.id) ?? [];
@@ -316,12 +322,12 @@ const buildDeliveryRows = (
         !!order.expected_date && getDaysFromToday(order.expected_date) < 0;
       const statusLabel = overdue
         ? "Delayed"
-        : order.status === "partial"
+        : order.status === "partial_receipt"
           ? "Pending"
           : "On Time";
       const statusTone: DeliveryRow["statusTone"] = overdue
         ? "delayed"
-        : order.status === "partial"
+        : order.status === "partial_receipt"
           ? "pending"
           : "on-time";
 

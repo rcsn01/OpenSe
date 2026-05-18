@@ -22,16 +22,14 @@ beforeEach(() => {
 })
 
 describe('procurement api', () => {
-  it('fetches purchase orders with approval and return statuses', async () => {
+  it('fetches purchase orders with a single workflow status', async () => {
     const order = vi.fn().mockResolvedValue({
       data: [
         {
           id: 'po-1',
           po_number: 1001,
           supplier_id: 'sup-1',
-          status: 'closed',
-          approval_status: 'approved',
-          return_status: 'resolved',
+          status: 'return_resolved',
           expected_date: '2026-03-01',
           created_at: '2026-02-20T00:00:00Z',
           suppliers: { name: 'TechGlobal Inc.' },
@@ -57,13 +55,12 @@ describe('procurement api', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
       id: 'po-1',
-      approval_status: 'approved',
-      return_status: 'resolved',
+      status: 'return_resolved',
     })
     expect(eq).toHaveBeenCalledWith('company_id', 'company-1')
   })
 
-  it('creates purchase orders with default approval and return statuses', async () => {
+  it('creates purchase orders pending approval', async () => {
     const insert = vi.fn().mockResolvedValue({ error: null })
 
     mockDbFrom.mockImplementation((table: string) => {
@@ -83,9 +80,7 @@ describe('procurement api', () => {
       company_id: 'company-1',
       supplier_id: 'sup-1',
       expected_date: '2026-04-20',
-      status: 'draft',
-      approval_status: 'pending',
-      return_status: 'none',
+      status: 'pending_approval',
     })
   })
 
@@ -100,7 +95,7 @@ describe('procurement api', () => {
           quantity_received: 4,
           unit_cost: 2.5,
           products: { id: 'p-1', name: 'Widget', sku: 'W-1' },
-          purchase_orders: { id: 'po-1', po_number: 1001, status: 'partial', expected_date: '2026-03-01' },
+          purchase_orders: { id: 'po-1', po_number: 1001, status: 'partial_receipt', expected_date: '2026-03-01' },
         },
       ],
       error: null,
@@ -170,7 +165,7 @@ describe('procurement api', () => {
     })
   })
 
-  it('records partial receipt and updates item status', async () => {
+  it('records partial receipt and updates order status to partial receipt', async () => {
     const itemMaybeSingle = vi.fn().mockResolvedValue({
       data: { id: 'item-1', quantity_ordered: 10, quantity_received: 4 },
       error: null,
@@ -187,6 +182,7 @@ describe('procurement api', () => {
     })
 
     const poUpdateEq = vi.fn().mockResolvedValue({ error: null })
+    const poUpdate = vi.fn(() => ({ eq: poUpdateEq }))
 
     const insertReceiving = vi.fn().mockResolvedValue({ error: null })
     const insertTx = vi.fn().mockResolvedValue({ error: null })
@@ -194,14 +190,16 @@ describe('procurement api', () => {
     mockDbFrom.mockImplementation((table: string) => {
       if (table === 'purchase_order_items') {
         return {
-          select: vi
-            .fn()
-            .mockReturnValueOnce({
-              eq: vi.fn(() => ({
-                eq: vi.fn(() => ({ maybeSingle: itemMaybeSingle })),
-              })),
-            })
-            .mockReturnValueOnce({ eq: poItemsForStatusEq }),
+          select: vi.fn((columns: string) => {
+            if (columns.includes('id,')) {
+              return {
+                eq: vi.fn(() => ({
+                  eq: vi.fn(() => ({ maybeSingle: itemMaybeSingle })),
+                })),
+              }
+            }
+            return { eq: poItemsForStatusEq }
+          }),
           update: vi.fn(() => ({ eq: itemUpdateEq })),
         }
       }
@@ -227,7 +225,7 @@ describe('procurement api', () => {
 
       if (table === 'purchase_orders') {
         return {
-          update: vi.fn(() => ({ eq: poUpdateEq })),
+          update: poUpdate,
         }
       }
 
@@ -255,12 +253,81 @@ describe('procurement api', () => {
       source: 'receiving',
       quantity_change: 3,
     }))
+    expect(poUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: 'partial_receipt' }))
     expect(poUpdateEq).toHaveBeenCalledWith('id', 'po-1')
   })
 
-  it('fetches only closed/cancelled purchase order history', async () => {
+  it('records full receipt and updates order status to received', async () => {
+    const itemMaybeSingle = vi.fn().mockResolvedValue({
+      data: { id: 'item-1', quantity_ordered: 10, quantity_received: 4 },
+      error: null,
+    })
+    const itemUpdateEq = vi.fn().mockResolvedValue({ error: null })
+    const productMaybeSingle = vi.fn().mockResolvedValue({ data: { quantity_on_hand: 7 }, error: null })
+    const productUpdateEqCompany = vi.fn().mockResolvedValue({ error: null })
+    const productUpdateEqId = vi.fn(() => ({ eq: productUpdateEqCompany }))
+    const poItemsForStatusEq = vi.fn().mockResolvedValue({
+      data: [{ quantity_ordered: 10, quantity_received: 10 }],
+      error: null,
+    })
+    const poUpdateEq = vi.fn().mockResolvedValue({ error: null })
+    const poUpdate = vi.fn(() => ({ eq: poUpdateEq }))
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'purchase_order_items') {
+        return {
+          select: vi.fn((columns: string) => {
+            if (columns.includes('id,')) {
+              return {
+                eq: vi.fn(() => ({
+                  eq: vi.fn(() => ({ maybeSingle: itemMaybeSingle })),
+                })),
+              }
+            }
+            return { eq: poItemsForStatusEq }
+          }),
+          update: vi.fn(() => ({ eq: itemUpdateEq })),
+        }
+      }
+
+      if (table === 'receiving_logs') {
+        return { insert: vi.fn().mockResolvedValue({ error: null }) }
+      }
+
+      if (table === 'products') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({ maybeSingle: productMaybeSingle })),
+            })),
+          })),
+          update: vi.fn(() => ({ eq: productUpdateEqId })),
+        }
+      }
+
+      if (table === 'inventory_transactions') {
+        return { insert: vi.fn().mockResolvedValue({ error: null }) }
+      }
+
+      if (table === 'purchase_orders') {
+        return { update: poUpdate }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await recordPurchaseOrderReceipt('company-1', {
+      poId: 'po-1',
+      productId: 'p-1',
+      quantityReceived: 6,
+    })
+
+    expect(poUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: 'received' }))
+  })
+
+  it('fetches terminal purchase order history', async () => {
     const order = vi.fn().mockResolvedValue({
-      data: [{ id: 'po-2', po_number: 1002, status: 'closed', created_at: '2026-02-24T00:00:00Z' }],
+      data: [{ id: 'po-2', po_number: 1002, status: 'received', created_at: '2026-02-24T00:00:00Z' }],
       error: null,
     })
 
@@ -280,7 +347,7 @@ describe('procurement api', () => {
 
     expect(rows).toHaveLength(1)
     expect(eqCompany).toHaveBeenCalledWith('company_id', 'company-1')
-    expect(inStatus).toHaveBeenCalledWith('status', ['closed', 'cancelled'])
+    expect(inStatus).toHaveBeenCalledWith('status', ['received', 'cancelled', 'denied', 'return_resolved'])
     expect(order).toHaveBeenCalledWith('updated_at', { ascending: false })
   })
 })

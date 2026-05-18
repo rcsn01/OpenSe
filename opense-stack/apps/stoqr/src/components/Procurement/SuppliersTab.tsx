@@ -197,7 +197,7 @@ export const SuppliersTab = ({
         ),
       );
       const closedOrders = supplierOrders
-        .filter((order) => order.status === "closed")
+        .filter((order) => order.status === "received")
         .map((order) => ({ id: order.id, expected_date: order.expected_date }));
       const performance = getSupplierPerformance(
         supplier,
@@ -213,7 +213,16 @@ export const SuppliersTab = ({
         trackedSkus,
         purchaseOrderCount: supplierOrders.length,
         openOrderCount: supplierOrders.filter((order) =>
-          ["draft", "sent", "partial"].includes(order.status),
+          [
+            "pending_approval",
+            "approved",
+            "not_started",
+            "awaiting_supplier",
+            "in_transit",
+            "partial_receipt",
+            "awaiting_return",
+            "shipped_to_vendor",
+          ].includes(order.status),
         ).length,
         onTimePct: performance.onTimePct,
         accuracyPct: performance.accuracyPct,

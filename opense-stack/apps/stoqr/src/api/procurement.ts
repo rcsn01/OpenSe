@@ -9,16 +9,25 @@ export type Supplier = {
   phone: string | null
 }
 
-export type PurchaseOrderApprovalStatus = 'pending' | 'approved' | 'denied'
-export type PurchaseOrderReturnStatus = 'none' | 'awaiting_return' | 'shipped' | 'resolved'
+export type PurchaseOrderWorkflowStatus =
+  | 'pending_approval'
+  | 'approved'
+  | 'not_started'
+  | 'awaiting_supplier'
+  | 'in_transit'
+  | 'partial_receipt'
+  | 'received'
+  | 'cancelled'
+  | 'denied'
+  | 'awaiting_return'
+  | 'shipped_to_vendor'
+  | 'return_resolved'
 
 export type PurchaseOrder = {
   id: string
   po_number: number
   supplier_id: string | null
-  status: 'draft' | 'sent' | 'partial' | 'closed' | 'cancelled'
-  approval_status?: PurchaseOrderApprovalStatus
-  return_status?: PurchaseOrderReturnStatus
+  status: PurchaseOrderWorkflowStatus
   expected_date: string | null
   created_at: string
   suppliers?: { name: string }
@@ -104,9 +113,7 @@ export const createPurchaseOrder = async (
     company_id: companyId,
     supplier_id: payload.supplierId,
     expected_date: payload.expectedDate || null,
-    status: 'draft',
-    approval_status: 'pending',
-    return_status: 'none',
+    status: 'pending_approval',
   })
 
   if (error) throw error
@@ -232,14 +239,14 @@ const updatePurchaseOrderStatusFromItems = async (poId: string) => {
   if (itemsError) throw itemsError
 
   const rows = (items as Array<{ quantity_ordered: number; quantity_received: number }> | null) ?? []
-  let status: PurchaseOrder['status'] = 'sent'
+  let status: PurchaseOrder['status'] = 'in_transit'
 
   if (rows.length > 0) {
     const allReceived = rows.every((item) => item.quantity_received >= item.quantity_ordered && item.quantity_ordered > 0)
     const anyReceived = rows.some((item) => item.quantity_received > 0)
 
-    if (allReceived) status = 'closed'
-    else if (anyReceived) status = 'partial'
+    if (allReceived) status = 'received'
+    else if (anyReceived) status = 'partial_receipt'
   }
 
   const { error: updateError } = await db
@@ -367,7 +374,7 @@ export const fetchPurchaseOrderHistory = async (companyId: string): Promise<Purc
     .from('purchase_orders')
     .select('*, suppliers(name)')
     .eq('company_id', companyId)
-    .in('status', ['closed', 'cancelled'])
+    .in('status', ['received', 'cancelled', 'denied', 'return_resolved'])
     .order('updated_at', { ascending: false })
 
   if (error) throw error
