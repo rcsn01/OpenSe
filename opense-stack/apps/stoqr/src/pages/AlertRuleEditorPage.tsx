@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Badge,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
   Input,
   Select,
   Toggle,
@@ -15,10 +8,12 @@ import {
 import {
   ArrowLeft,
   BellRing,
-  Hash,
   Mail,
   MessageCircle,
+  MessageSquare,
+  Plus,
   Save,
+  Send,
   Smartphone,
 } from "lucide-react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
@@ -192,6 +187,8 @@ export const AlertRuleEditorPage = () => {
   const [ruleForm, setRuleForm] = useState<RuleFormState>(emptyRuleForm);
   const [newTargetForm, setNewTargetForm] =
     useState<NewTargetFormState>(emptyNewTargetForm);
+  const [activeSetupProvider, setActiveSetupProvider] =
+    useState<AlertConnectorProvider | null>(null);
   const [ruleMessage, setRuleMessage] = useState<string | null>(null);
   const [testMessage, setTestMessage] = useState<string | null>(null);
   const [testingTargetId, setTestingTargetId] = useState<string | null>(null);
@@ -281,6 +278,7 @@ export const AlertRuleEditorPage = () => {
   };
 
   const selectNewTargetProvider = (provider: AlertConnectorProvider) => {
+    setActiveSetupProvider(provider);
     setNewTargetForm((current) => ({
       ...current,
       provider,
@@ -574,599 +572,611 @@ export const AlertRuleEditorPage = () => {
     createRuleMutation.isPending ||
     updateRuleMutation.isPending;
 
+  const dispatchMethodItems = [
+    {
+      method: "inApp",
+      title: "In-App Notifications",
+      ariaLabel: "In-app notifications enabled",
+      description: "Show alerts within the dashboard notification center.",
+      icon: BellRing,
+    },
+    {
+      method: "email",
+      title: "Email Dispatch",
+      ariaLabel: "Email notifications enabled",
+      description: "Send standard email summaries to organisation roles.",
+      icon: Mail,
+    },
+    {
+      method: "telegram",
+      title: "Telegram Connector",
+      ariaLabel: "Telegram enabled",
+      description: "Forward alerts to designated Telegram chats or groups.",
+      icon: MessageCircle,
+    },
+    {
+      method: "mattermost",
+      title: "Mattermost Connector",
+      ariaLabel: "Mattermost enabled",
+      description: "Push detailed rich-text alerts to Mattermost channels.",
+      icon: MessageSquare,
+    },
+    {
+      method: "whatsapp",
+      title: "WhatsApp Connector",
+      ariaLabel: "WhatsApp enabled",
+      description: "Send alerts to a paired WhatsApp device or group.",
+      icon: Smartphone,
+    },
+  ] as const;
+
+  const renderEmailTargets = () => (
+    <div className="ml-0 border-t border-dashed border-[var(--color-border)] pt-7 sm:ml-[4.5rem]">
+      <p className="text-sm font-semibold text-[var(--color-foreground)]">
+        Select Target Roles
+      </p>
+      {loadingTeamSettings ? (
+        <div className="mt-4 rounded-[var(--radius-md)] bg-[var(--color-surface-subtle)] p-4 text-sm text-[var(--color-muted-foreground)]">
+          Loading organisation roles...
+        </div>
+      ) : roles.length === 0 ? (
+        <div className="mt-4 rounded-[var(--radius-md)] bg-[var(--color-surface-subtle)] p-4 text-sm text-[var(--color-muted-foreground)]">
+          No organisation roles are available yet. Create roles in
+          Organisations settings first.
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-x-16 gap-y-4 sm:grid-cols-2">
+          {roles.map((role) => (
+            <label
+              key={role.id}
+              className="flex min-h-6 items-center gap-3 text-sm font-semibold text-[var(--color-foreground)]"
+            >
+              <input
+                type="checkbox"
+                checked={ruleForm.recipientRoleIds.includes(role.id)}
+                onChange={() => toggleRoleRecipient(role.id)}
+                aria-label={`Notify ${role.name}`}
+                className="h-5 w-5 rounded-[var(--radius-sm)] border border-[var(--color-border)] accent-[var(--color-ring)]"
+              />
+              <span>{role.name}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-label="Test email integration"
+        className="mt-7 border-[var(--color-border)] text-[var(--color-muted-foreground)]"
+        onClick={() => void testEmailRecipients()}
+        disabled={
+          !ruleForm.dispatchMethods.email ||
+          ruleForm.recipientRoleIds.length === 0 ||
+          testEmailRecipientsMutation.isPending
+        }
+      >
+        <Send size={14} aria-hidden="true" />
+        Send Test Email
+      </Button>
+    </div>
+  );
+
+  const renderConnectorSetup = (provider: AlertConnectorProvider) => (
+    <div className="mt-6 grid gap-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+            Set up {dispatchMethodLabel[provider]} target
+          </h3>
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+            {providerSetupHint[provider]}
+          </p>
+          {provider === "mattermost" ? (
+            <p className="mt-2 max-w-3xl text-sm text-[var(--color-muted-foreground)]">
+              {newTargetForm.mattermostMode === "webhook"
+                ? mattermostSetupHint.webhook
+                : mattermostSetupHint.bot_channel}
+            </p>
+          ) : null}
+        </div>
+        <Select
+          aria-label="Connector provider"
+          value={newTargetForm.provider}
+          options={[
+            { value: "telegram", label: "Telegram" },
+            { value: "mattermost", label: "Mattermost" },
+            { value: "whatsapp", label: "WhatsApp" },
+          ]}
+          onChange={(event) =>
+            selectNewTargetProvider(event.target.value as AlertConnectorProvider)
+          }
+          className="bg-[var(--color-background)] md:max-w-48"
+        />
+      </div>
+      {provider === "mattermost" ? (
+        <div className="grid gap-3">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-[var(--color-foreground)]">
+              Mattermost setup type
+            </span>
+            <Select
+              aria-label="Mattermost setup type"
+              value={newTargetForm.mattermostMode}
+              options={[
+                { value: "webhook", label: "Incoming webhook" },
+                {
+                  value: "bot_channel",
+                  label: "Bot token channel",
+                },
+              ]}
+              onChange={(event) =>
+                setNewTargetForm((current) => ({
+                  ...current,
+                  mattermostMode: event.target
+                    .value as NewTargetFormState["mattermostMode"],
+                  providerTargetId: "",
+                }))
+              }
+              className="bg-[var(--color-background)]"
+            />
+          </label>
+          {newTargetForm.mattermostMode === "bot_channel" ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-[var(--color-foreground)]">
+                  Mattermost base URL
+                </span>
+                <Input
+                  value={newTargetForm.mattermostBaseUrl}
+                  onChange={(event) =>
+                    setNewTargetForm((current) => ({
+                      ...current,
+                      mattermostBaseUrl: event.target.value,
+                    }))
+                  }
+                  placeholder="https://mattermost.example.com"
+                  aria-label="Mattermost base URL"
+                  className="bg-[var(--color-background)]"
+                />
+              </label>
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-[var(--color-foreground)]">
+                  Mattermost bot token
+                </span>
+                <Input
+                  type="password"
+                  value={newTargetForm.mattermostBotToken}
+                  onChange={(event) =>
+                    setNewTargetForm((current) => ({
+                      ...current,
+                      mattermostBotToken: event.target.value,
+                    }))
+                  }
+                  placeholder="Paste bot token"
+                  aria-label="Mattermost bot token"
+                  className="bg-[var(--color-background)]"
+                />
+              </label>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-muted-foreground)] md:col-span-2">
+                These secrets are not saved in StoQR. Put them in the connector
+                gateway env as MATTERMOST_BASE_URL and MATTERMOST_BOT_TOKEN,
+                then restart the gateway.
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[var(--radius-md)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
+              Paste a Mattermost incoming webhook URL, or use a key from
+              MATTERMOST_WEBHOOKS_JSON if the URL is stored on the gateway.
+            </div>
+          )}
+        </div>
+      ) : null}
+      <div
+        className={
+          provider === "mattermost"
+            ? "grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]"
+            : "grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]"
+        }
+      >
+        {provider === "mattermost" ? null : (
+          <Input
+            value={newTargetForm.targetName}
+            onChange={(event) =>
+              setNewTargetForm((current) => ({
+                ...current,
+                targetName: event.target.value,
+              }))
+            }
+            placeholder="Target name"
+            aria-label="Connector target name"
+            className="bg-[var(--color-background)]"
+          />
+        )}
+        <Input
+          value={newTargetForm.providerTargetId}
+          onChange={(event) =>
+            setNewTargetForm((current) => ({
+              ...current,
+              providerTargetId: event.target.value,
+            }))
+          }
+          placeholder={providerTargetPlaceholder(newTargetForm)}
+          aria-label={
+            provider === "mattermost" &&
+            newTargetForm.mattermostMode === "bot_channel"
+              ? "Mattermost channel ID"
+              : "Provider target ID"
+          }
+          className="bg-[var(--color-background)]"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => void addConnectorTarget()}
+        >
+          <Plus size={14} aria-hidden="true" />
+          Add {dispatchMethodLabel[provider]} target
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderConnectorTargets = (provider: AlertConnectorProvider) => {
+    const providerTargets = connectorTargets.filter(
+      (target) => target.provider === provider,
+    );
+    const shouldShowPanel = ruleForm.dispatchMethods[provider];
+
+    if (!shouldShowPanel) return null;
+
+    return (
+      <div className="ml-0 border-t border-dashed border-[var(--color-border)] pt-7 sm:ml-[4.5rem]">
+        {loadingConnectors ? (
+          <p className="text-sm text-[var(--color-muted-foreground)]">
+            Loading targets...
+          </p>
+        ) : providerTargets.length === 0 ? (
+          <div className="flex flex-col gap-5">
+            <p className="text-sm italic text-[var(--color-muted-foreground)]">
+              No targets configured yet.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label={`Set up ${dispatchMethodLabel[provider]}`}
+              className="w-fit border-[var(--color-ring)] text-[var(--color-ring)]"
+              onClick={() => selectNewTargetProvider(provider)}
+            >
+              <Plus size={14} aria-hidden="true" />
+              Add {dispatchMethodLabel[provider]} Target
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {providerTargets.map((target) => {
+              const selected = ruleForm.selectedConnectorTargetIds.includes(
+                target.id,
+              );
+              return (
+                <div
+                  key={target.id}
+                  className="flex min-h-10 flex-col gap-3 rounded-[var(--radius-md)] bg-[var(--color-surface-subtle)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <label className="flex min-w-0 items-center gap-3 text-sm text-[var(--color-foreground)]">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      disabled={!target.enabled}
+                      onChange={(event) =>
+                        toggleConnectorTarget(target.id, event.target.checked)
+                      }
+                      aria-label={`Send ${dispatchMethodLabel[target.provider]} to ${target.target_name}`}
+                      className="h-5 w-5 rounded-[var(--radius-sm)] border border-[var(--color-border)] accent-[var(--color-ring)]"
+                    />
+                    <span className="min-w-0">
+                      <span className="font-semibold">
+                        {target.target_name}
+                      </span>
+                      <span className="text-[var(--color-muted-foreground)]">
+                        {" "}
+                        · {target.connectorName}
+                      </span>
+                    </span>
+                  </label>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="rounded-[var(--radius-full)] bg-[var(--color-surface-strong)] px-2.5 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
+                      {target.enabled
+                        ? selected
+                          ? "Selected"
+                          : "Not selected"
+                        : "Disabled"}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={() => void testConnectorTarget(target.id)}
+                      disabled={!target.enabled || testingTargetId === target.id}
+                    >
+                      Test integration
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {activeSetupProvider === provider ? renderConnectorSetup(provider) : null}
+        {provider === "whatsapp" ? (
+          <div className="mt-6 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-full)] bg-[var(--color-info-light)] text-[var(--color-info)]">
+                  <Smartphone size={16} aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-foreground)]">
+                    WhatsApp QR pairing
+                  </p>
+                  <p className="text-sm text-[var(--color-muted-foreground)]">
+                    Pair the gateway using WhatsApp Linked Devices.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void startWhatsAppPairing()}
+              >
+                <MessageCircle size={14} aria-hidden="true" />
+                Pair
+              </Button>
+            </div>
+            {whatsAppQr ? (
+              <pre className="mt-3 max-h-32 overflow-auto rounded-[var(--radius-md)] bg-[var(--color-background)] p-3 text-xs text-[var(--color-foreground)]">
+                {whatsAppQr}
+              </pre>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <BasePage
       companyId={companyId}
       isLoading={false}
       emptyStateTitle="No company selected"
       emptyStateDescription="Choose a company to edit alert rules."
-      contentClassName="px-2 pb-8 pt-4"
-      containerClassName="flex w-full min-w-0 flex-1 flex-col gap-6 text-[var(--color-foreground)]"
+      contentClassName="px-6 pb-12 pt-8 sm:px-8 lg:px-12"
+      containerClassName="mx-auto flex w-full max-w-[848px] min-w-0 flex-1 flex-col gap-10 text-[var(--color-foreground)]"
     >
       <PageAvailabilityGuard companyId={companyId} feature="alerts">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-7">
             <Button
               type="button"
-              variant="ghost"
+              variant="link"
               size="sm"
-              className="w-fit"
+              className="w-fit text-sm font-semibold text-[var(--color-muted-foreground)] no-underline hover:text-[var(--color-foreground)] hover:no-underline"
               onClick={() => navigate("/alerts/rules")}
             >
               <ArrowLeft size={14} aria-hidden="true" />
-              Back to rules
+              Back to Alert Rules
             </Button>
-            <div>
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <Badge
-                  variant={ruleForm.enabled ? "success" : "secondary"}
-                  size="sm"
-                >
-                  {ruleForm.enabled ? "Enabled" : "Disabled"}
-                </Badge>
-                <Badge variant="secondary" size="sm">
-                  Low stock
-                </Badge>
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div className="max-w-[560px]">
+                <h1 className="text-[2rem] font-bold leading-tight text-[var(--color-foreground)]">
+                  Configure Alert Rule
+                </h1>
+                <h2 className="sr-only">
+                  {isCreateMode ? "Create Alert Rule" : "Edit Alert Rule"}
+                </h2>
+                <p className="mt-2 text-sm leading-5 text-[var(--color-muted-foreground)]">
+                  Set up the conditions and notification channels for when stock
+                  levels fall below their defined thresholds.
+                </p>
               </div>
-              <h1 className="text-2xl font-semibold text-[var(--color-foreground)]">
-                {isCreateMode ? "Create Alert Rule" : "Edit Alert Rule"}
-              </h1>
-              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                Configure who gets low-stock alerts and where StoQR sends them.
-              </p>
+              <div className="flex w-full items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-3 md:w-[218px]">
+                <div>
+                  <p className="text-center text-sm font-bold leading-5 text-[var(--color-foreground)] md:text-left">
+                    Rule Status
+                  </p>
+                  <p className="text-xs leading-4 text-[var(--color-muted-foreground)]">
+                    {ruleForm.enabled ? "Active and monitoring" : "Paused"}
+                  </p>
+                </div>
+                <Toggle
+                  checked={ruleForm.enabled}
+                  aria-label="Trigger enabled"
+                  className="h-6 w-11"
+                  onChange={(event) =>
+                    setRuleForm((current) => ({
+                      ...current,
+                      enabled: event.target.checked,
+                    }))
+                  }
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid w-full gap-6 xl:grid-cols-4">
-          <div className="flex min-w-0 flex-col gap-6 xl:col-span-3">
-            <Card padding="lg">
-              <CardHeader>
-                <CardTitle>Rule details</CardTitle>
-                <CardDescription>
-                  Keep the trigger simple so warehouse staff can understand when
-                  it fires.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                    Rule name
-                  </span>
-                  <Input
-                    value={ruleForm.name}
-                    onChange={(event) =>
-                      setRuleForm((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                    aria-label="Rule name"
-                  />
-                </label>
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                    Trigger
-                  </span>
-                  <Select
-                    value="low_stock"
-                    disabled
-                    aria-label="Trigger type"
-                    options={[
-                      {
-                        value: "low_stock",
-                        label: "Quantity on hand <= Low Stock Alert level",
-                      },
-                    ]}
-                  />
-                </label>
-                <div className="rounded-lg bg-[var(--color-background)] px-4 py-3">
-                  <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                    Trigger source
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                    Uses each product's Low Stock Alert level.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card padding="lg">
-              <CardHeader>
-                <CardTitle>Dispatch methods</CardTitle>
-                <CardDescription>
-                  Select one or more destinations for this alert rule.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {(
-                  [
-                    [
-                      "inApp",
-                      "In-app notifications",
-                      "Delivery rows for members in the selected roles.",
-                      BellRing,
-                    ],
-                    [
-                      "email",
-                      "Email notifications",
-                      "Queue email delivery for members in the selected roles.",
-                      Mail,
-                    ],
-                    [
-                      "telegram",
-                      "Telegram",
-                      "Send alerts to selected organisation Telegram targets.",
-                      MessageCircle,
-                    ],
-                    [
-                      "mattermost",
-                      "Mattermost",
-                      "Send alerts to selected organisation Mattermost targets.",
-                      Hash,
-                    ],
-                    [
-                      "whatsapp",
-                      "WhatsApp",
-                      "Send alerts to selected organisation WhatsApp targets.",
-                      Smartphone,
-                    ],
-                  ] as const
-                ).map(([method, title, description, Icon]) => (
-                  <div
-                    key={method}
-                    className="flex min-h-20 items-center justify-between gap-3 rounded-lg bg-[var(--color-background)] px-4 py-3"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="rounded-lg bg-[var(--color-surface-subtle)] p-2 text-[var(--color-foreground)]">
-                        <Icon size={16} aria-hidden="true" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                          {title}
-                        </p>
-                        <p className="text-sm text-[var(--color-muted-foreground)]">
-                          {description}
-                        </p>
-                      </div>
-                    </div>
-                    <Toggle
-                      checked={ruleForm.dispatchMethods[method]}
-                      aria-label={`${title} enabled`}
-                      onChange={(event) =>
-                        toggleDispatchMethod(method, event.target.checked)
-                      }
-                    />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card padding="lg">
-              <CardHeader>
-                <CardTitle>Email recipients</CardTitle>
-                <CardDescription>
-                  Email notifications go to members in these organisation roles.
-                  Chat connectors are organisation-wide.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingTeamSettings ? (
-                  <div className="rounded-lg bg-[var(--color-surface-subtle)] p-4 text-sm text-[var(--color-muted-foreground)]">
-                    Loading organisation roles...
-                  </div>
-                ) : roles.length === 0 ? (
-                  <div className="rounded-lg bg-[var(--color-surface-subtle)] p-4 text-sm text-[var(--color-muted-foreground)]">
-                    No organisation roles are available yet. Create roles in
-                    Organisations settings first.
-                  </div>
-                ) : (
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {roles.map((role) => (
-                      <label
-                        key={role.id}
-                        className="flex min-h-10 items-center justify-between gap-3 rounded-lg bg-[var(--color-background)] px-4 py-2"
-                      >
-                        <span className="text-sm text-[var(--color-foreground)]">
-                          {role.name}
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={ruleForm.recipientRoleIds.includes(role.id)}
-                          onChange={() => toggleRoleRecipient(role.id)}
-                          aria-label={`Notify ${role.name}`}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void testEmailRecipients()}
-                  disabled={
-                    !ruleForm.dispatchMethods.email ||
-                    ruleForm.recipientRoleIds.length === 0 ||
-                    testEmailRecipientsMutation.isPending
+          <section className="flex flex-col gap-7">
+            <div className="border-b border-[var(--color-border)] pb-3">
+              <h2 className="text-xl font-bold leading-7 text-[var(--color-foreground)]">
+                General Information
+              </h2>
+            </div>
+            <div className="grid gap-12 md:grid-cols-2">
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-[var(--color-foreground)]">
+                  Rule Name <span className="text-[var(--color-destructive)]">*</span>
+                </span>
+                <Input
+                  value={ruleForm.name}
+                  onChange={(event) =>
+                    setRuleForm((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
                   }
-                >
-                  <Mail size={14} aria-hidden="true" />
-                  Test email integration
-                </Button>
-              </CardFooter>
-            </Card>
+                  aria-label="Rule name"
+                  className="h-11 border-[var(--color-border)] bg-[var(--color-background)] px-4 text-sm shadow-[var(--shadow-sm)]"
+                />
+              </label>
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-[var(--color-foreground)]">
+                  Trigger Condition
+                </span>
+                <Input
+                  value="Quantity on hand <= Low stock alert level"
+                  readOnly
+                  aria-label="Trigger type"
+                  className="h-11 border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 text-sm shadow-[var(--shadow-sm)]"
+                />
+              </label>
+            </div>
+          </section>
 
-            <Card padding="lg">
-              <CardHeader>
-                <CardTitle>Connector targets</CardTitle>
-                <CardDescription>
-                  Chat alerts go once to each selected organisation target for
-                  this rule.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-5">
-                {chatProviders.map((provider) => {
-                  const providerTargets = connectorTargets.filter(
-                    (target) => target.provider === provider,
+          <section className="flex flex-col gap-7">
+            <div className="border-b border-[var(--color-border)] pb-3">
+              <h2 className="text-xl font-bold leading-7 text-[var(--color-foreground)]">
+                Dispatch Methods
+              </h2>
+              <p className="mt-3 text-sm leading-5 text-[var(--color-muted-foreground)]">
+                Configure how and where notifications should be routed when this
+                rule triggers.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-8">
+              {dispatchMethodItems.map(
+                ({ method, title, ariaLabel, description, icon: Icon }) => {
+                  const isEnabled = ruleForm.dispatchMethods[method];
+                  const isChatProvider = chatProviders.includes(
+                    method as AlertConnectorProvider,
                   );
                   return (
-                    <div
-                      key={provider}
-                      className="rounded-lg bg-[var(--color-background)] p-4"
-                    >
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                            {dispatchMethodLabel[provider]}
-                          </h3>
-                          <p className="text-sm text-[var(--color-muted-foreground)]">
-                            Select the group chats, channels, or webhooks for
-                            this rule.
-                          </p>
-                        </div>
-                        <Badge
-                          variant={
-                            ruleForm.dispatchMethods[provider]
-                              ? "success"
-                              : "secondary"
-                          }
-                          size="sm"
+                    <div key={method} className="flex flex-col gap-6">
+                      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-6">
+                        <div
+                          className={[
+                            "flex h-12 w-12 items-center justify-center rounded-[var(--radius-full)]",
+                            isEnabled
+                              ? "bg-[var(--color-info-light)] text-[var(--color-ring)]"
+                              : "bg-[var(--color-surface-subtle)] text-[var(--color-muted-foreground)]",
+                          ].join(" ")}
                         >
-                          {ruleForm.dispatchMethods[provider]
-                            ? "Enabled"
-                            : "Off"}
-                        </Badge>
-                      </div>
-                      {loadingConnectors ? (
-                        <p className="text-sm text-[var(--color-muted-foreground)]">
-                          Loading targets...
-                        </p>
-                      ) : providerTargets.length === 0 ? (
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-sm text-[var(--color-muted-foreground)]">
-                            No {provider} targets yet.
+                          <Icon size={22} strokeWidth={1.8} aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-base font-bold leading-6 text-[var(--color-foreground)]">
+                            {title}
+                          </h3>
+                          <p className="text-sm leading-5 text-[var(--color-muted-foreground)]">
+                            {description}
                           </p>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="xs"
-                            onClick={() => selectNewTargetProvider(provider)}
-                          >
-                            Set up {dispatchMethodLabel[provider]}
-                          </Button>
                         </div>
-                      ) : (
-                        <div className="grid gap-2">
-                          {providerTargets.map((target) => {
-                            const selected =
-                              ruleForm.selectedConnectorTargetIds.includes(
-                                target.id,
-                              );
-                            return (
-                              <div
-                                key={target.id}
-                                className="flex min-h-10 items-center justify-between gap-3 rounded-md bg-[var(--color-surface-subtle)] px-3 py-2"
-                              >
-                                <label className="flex min-w-0 items-center gap-3 text-sm text-[var(--color-foreground)]">
-                                  <input
-                                    type="checkbox"
-                                    checked={selected}
-                                    disabled={!target.enabled}
-                                    onChange={(event) =>
-                                      toggleConnectorTarget(
-                                        target.id,
-                                        event.target.checked,
-                                      )
-                                    }
-                                    aria-label={`Send ${dispatchMethodLabel[target.provider]} to ${target.target_name}`}
-                                  />
-                                  <span className="min-w-0">
-                                    <span className="font-semibold">
-                                      {target.target_name}
-                                    </span>
-                                    <span className="text-[var(--color-muted-foreground)]">
-                                      {" "}
-                                      · {target.connectorName}
-                                    </span>
-                                  </span>
-                                </label>
-                                <div className="flex shrink-0 items-center gap-2">
-                                  <Badge
-                                    variant={selected ? "success" : "secondary"}
-                                    size="sm"
-                                  >
-                                    {target.enabled
-                                      ? selected
-                                        ? "Selected"
-                                        : "Not selected"
-                                      : "Disabled"}
-                                  </Badge>
-                                  <Button
-                                    type="button"
-                                    variant="secondary"
-                                    size="xs"
-                                    onClick={() =>
-                                      void testConnectorTarget(target.id)
-                                    }
-                                    disabled={
-                                      !target.enabled ||
-                                      testingTargetId === target.id
-                                    }
-                                  >
-                                    Test integration
-                                  </Button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                <div className="grid gap-4 rounded-lg bg-[var(--color-background)] p-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-                        Set up {dispatchMethodLabel[newTargetForm.provider]}{" "}
-                        target
-                      </h3>
-                      <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                        {providerSetupHint[newTargetForm.provider]}
-                      </p>
-                      {newTargetForm.provider === "mattermost" ? (
-                        <p className="mt-2 max-w-3xl text-sm text-[var(--color-muted-foreground)]">
-                          {newTargetForm.mattermostMode === "webhook"
-                            ? mattermostSetupHint.webhook
-                            : mattermostSetupHint.bot_channel}
-                        </p>
-                      ) : null}
-                    </div>
-                    <Select
-                      aria-label="Connector provider"
-                      value={newTargetForm.provider}
-                      options={[
-                        { value: "telegram", label: "Telegram" },
-                        { value: "mattermost", label: "Mattermost" },
-                        { value: "whatsapp", label: "WhatsApp" },
-                      ]}
-                      onChange={(event) =>
-                        selectNewTargetProvider(
-                          event.target.value as AlertConnectorProvider,
-                        )
-                      }
-                    />
-                  </div>
-                  {newTargetForm.provider === "mattermost" ? (
-                    <div className="grid gap-3">
-                      <label className="flex flex-col gap-2">
-                        <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                          Mattermost setup type
-                        </span>
-                        <Select
-                          aria-label="Mattermost setup type"
-                          value={newTargetForm.mattermostMode}
-                          options={[
-                            { value: "webhook", label: "Incoming webhook" },
-                            {
-                              value: "bot_channel",
-                              label: "Bot token channel",
-                            },
-                          ]}
+                        <Toggle
+                          checked={isEnabled}
+                          aria-label={ariaLabel}
                           onChange={(event) =>
-                            setNewTargetForm((current) => ({
-                              ...current,
-                              mattermostMode: event.target
-                                .value as NewTargetFormState["mattermostMode"],
-                              providerTargetId: "",
-                            }))
+                            toggleDispatchMethod(method, event.target.checked)
                           }
                         />
-                      </label>
-                      {newTargetForm.mattermostMode === "bot_channel" ? (
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <label className="flex flex-col gap-2">
-                            <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                              Mattermost base URL
-                            </span>
-                            <Input
-                              value={newTargetForm.mattermostBaseUrl}
-                              onChange={(event) =>
-                                setNewTargetForm((current) => ({
-                                  ...current,
-                                  mattermostBaseUrl: event.target.value,
-                                }))
-                              }
-                              placeholder="https://mattermost.example.com"
-                              aria-label="Mattermost base URL"
-                            />
-                          </label>
-                          <label className="flex flex-col gap-2">
-                            <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                              Mattermost bot token
-                            </span>
-                            <Input
-                              type="password"
-                              value={newTargetForm.mattermostBotToken}
-                              onChange={(event) =>
-                                setNewTargetForm((current) => ({
-                                  ...current,
-                                  mattermostBotToken: event.target.value,
-                                }))
-                              }
-                              placeholder="Paste bot token"
-                              aria-label="Mattermost bot token"
-                            />
-                          </label>
-                          <div className="rounded-md bg-[var(--color-surface-subtle)] px-3 py-2 text-sm text-[var(--color-muted-foreground)] md:col-span-2">
-                            These secrets are not saved in StoQR. Put them in
-                            the connector gateway env as MATTERMOST_BASE_URL and
-                            MATTERMOST_BOT_TOKEN, then restart the gateway.
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="rounded-md bg-[var(--color-surface-subtle)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
-                          Paste a Mattermost incoming webhook URL, or use a key
-                          from MATTERMOST_WEBHOOKS_JSON if the URL is stored on
-                          the gateway.
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
-                  <div
-                    className={
-                      newTargetForm.provider === "mattermost"
-                        ? "grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]"
-                        : "grid gap-3 md:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]"
-                    }
-                  >
-                    {newTargetForm.provider === "mattermost" ? null : (
-                      <Input
-                        value={newTargetForm.targetName}
-                        onChange={(event) =>
-                          setNewTargetForm((current) => ({
-                            ...current,
-                            targetName: event.target.value,
-                          }))
-                        }
-                        placeholder="Target name"
-                        aria-label="Connector target name"
-                      />
-                    )}
-                    <Input
-                      value={newTargetForm.providerTargetId}
-                      onChange={(event) =>
-                        setNewTargetForm((current) => ({
-                          ...current,
-                          providerTargetId: event.target.value,
-                        }))
-                      }
-                      placeholder={providerTargetPlaceholder(newTargetForm)}
-                      aria-label={
-                        newTargetForm.provider === "mattermost" &&
-                        newTargetForm.mattermostMode === "bot_channel"
-                          ? "Mattermost channel ID"
-                          : "Provider target ID"
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void addConnectorTarget()}
-                    >
-                      <Hash size={14} aria-hidden="true" />
-                      Add {dispatchMethodLabel[newTargetForm.provider]} target
-                    </Button>
-                  </div>
-                </div>
+                      </div>
 
-                <div className="rounded-lg bg-[var(--color-background)] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-lg bg-[var(--color-info-light)] p-2 text-[var(--color-info)]">
-                        <Smartphone size={16} aria-hidden="true" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                          WhatsApp QR pairing
-                        </p>
-                        <p className="text-sm text-[var(--color-muted-foreground)]">
-                          Pair the gateway using WhatsApp Linked Devices.
-                        </p>
-                      </div>
+                      {method === "email" && isEnabled
+                        ? renderEmailTargets()
+                        : null}
+                      {isChatProvider
+                        ? renderConnectorTargets(method as AlertConnectorProvider)
+                        : null}
                     </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => void startWhatsAppPairing()}
-                    >
-                      <MessageCircle size={14} aria-hidden="true" />
-                      Pair
-                    </Button>
-                  </div>
-                  {whatsAppQr ? (
-                    <pre className="mt-3 max-h-32 overflow-auto rounded-md bg-[var(--color-surface-subtle)] p-3 text-xs text-[var(--color-foreground)]">
-                      {whatsAppQr}
-                    </pre>
-                  ) : null}
-                </div>
-              </CardContent>
-            </Card>
+                  );
+                },
+              )}
+            </div>
+          </section>
+
+          <div className="flex flex-col gap-3 border-t border-[var(--color-border)] pt-6">
+            {ruleMessage ? (
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-subtle)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
+                {ruleMessage}
+              </div>
+            ) : null}
+            {testMessage ? (
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-subtle)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
+                {testMessage}
+              </div>
+            ) : null}
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                onClick={() => void saveRule()}
+                disabled={saveDisabled}
+              >
+                <Save size={14} aria-hidden="true" />
+                {isCreateMode ? "Create Rule" : "Save Rule"}
+              </Button>
+            </div>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-6 xl:col-span-1">
-            <Card padding="lg">
-              <CardHeader>
-                <CardTitle>Save changes</CardTitle>
-                <CardDescription>
-                  Review status before this rule starts sending alerts.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                    Trigger enabled
-                  </span>
-                  <Toggle
-                    checked={ruleForm.enabled}
-                    aria-label="Trigger enabled"
-                    onChange={(event) =>
-                      setRuleForm((current) => ({
-                        ...current,
-                        enabled: event.target.checked,
-                      }))
-                    }
-                  />
-                </div>
-                {ruleMessage ? (
-                  <div className="rounded-lg bg-[var(--color-surface-subtle)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
-                    {ruleMessage}
-                  </div>
-                ) : null}
-                {testMessage ? (
-                  <div className="rounded-lg bg-[var(--color-surface-subtle)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
-                    {testMessage}
-                  </div>
-                ) : null}
-              </CardContent>
-              <CardFooter>
-                <Button
-                  type="button"
-                  onClick={() => void saveRule()}
-                  disabled={saveDisabled}
-                >
-                  <Save size={14} aria-hidden="true" />
-                  {isCreateMode ? "Create Rule" : "Save Rule"}
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
+          {chatProviders.map((provider) => {
+            const providerTargets = connectorTargets.filter(
+              (target) => target.provider === provider,
+            );
+            return providerTargets.length === 0 &&
+              !ruleForm.dispatchMethods[provider] ? (
+              <Button
+                key={provider}
+                type="button"
+                variant="link"
+                size="sm"
+                aria-label={`Set up ${dispatchMethodLabel[provider]}`}
+                className="sr-only"
+                onClick={() => selectNewTargetProvider(provider)}
+              >
+                Set up {dispatchMethodLabel[provider]}
+              </Button>
+            ) : null;
+          })}
+          {activeSetupProvider === null ? (
+            <Select
+              aria-label="Connector provider"
+              value={newTargetForm.provider}
+              options={[
+                { value: "telegram", label: "Telegram" },
+                { value: "mattermost", label: "Mattermost" },
+                { value: "whatsapp", label: "WhatsApp" },
+              ]}
+              onChange={(event) =>
+                selectNewTargetProvider(
+                  event.target.value as AlertConnectorProvider,
+                )
+              }
+              className="sr-only"
+            />
+          ) : null}
+          {!ruleForm.dispatchMethods.whatsapp && !whatsAppQr ? (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="sr-only"
+              onClick={() => void startWhatsAppPairing()}
+            >
+              Pair
+            </Button>
+          ) : null}
+          {!ruleForm.dispatchMethods.whatsapp && whatsAppQr ? (
+            <pre className="sr-only">{whatsAppQr}</pre>
+          ) : null}
         </div>
       </PageAvailabilityGuard>
     </BasePage>

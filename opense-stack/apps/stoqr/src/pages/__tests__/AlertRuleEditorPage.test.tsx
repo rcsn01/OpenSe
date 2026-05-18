@@ -219,7 +219,7 @@ describe("AlertRuleEditorPage", () => {
       screen.getByRole("heading", { name: "Edit Alert Rule" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Rule name")).toHaveValue("Low stock alert");
-    expect(screen.getByLabelText("Notify Manager")).toBeChecked();
+    expect(screen.queryByLabelText("Notify Manager")).not.toBeInTheDocument();
     expect(
       screen.getByRole("switch", { name: "In-app notifications enabled" }),
     ).toHaveAttribute("aria-checked", "true");
@@ -453,10 +453,13 @@ describe("AlertRuleEditorPage", () => {
     renderEditorRoute("/alerts/rules/rule-1");
 
     expect(
-      screen.getByRole("button", { name: "Set up Mattermost" }),
-    ).toBeInTheDocument();
+      screen.queryByText("No targets configured yet."),
+    ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Set up Mattermost" }));
+    await user.click(screen.getByRole("switch", { name: "Mattermost enabled" }));
+    await user.click(
+      screen.getByRole("button", { name: "Set up Mattermost" }),
+    );
 
     expect(
       screen.getByRole("heading", { name: "Set up Mattermost target" }),
@@ -502,9 +505,9 @@ describe("AlertRuleEditorPage", () => {
 
     renderEditorRoute("/alerts/rules/rule-1");
 
-    await user.selectOptions(
-      screen.getByLabelText("Connector provider"),
-      "mattermost",
+    await user.click(screen.getByRole("switch", { name: "Mattermost enabled" }));
+    await user.click(
+      screen.getByRole("button", { name: "Set up Mattermost" }),
     );
     await user.selectOptions(
       screen.getByLabelText("Mattermost setup type"),

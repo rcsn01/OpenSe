@@ -8,14 +8,12 @@ import { StockHealthValuationTab } from "../components/Reports/StockHealthValuat
 import { MovementVelocityTab } from "../components/Reports/MovementVelocityTab";
 import { ProcurementSuppliersTab } from "../components/Reports/ProcurementSuppliersTab";
 import { AuditsShrinkageTab } from "../components/Reports/AuditsShrinkageTab";
-import { CustomSavedReportsTab } from "../components/Reports/CustomSavedReportsTab";
 
 const reportDestinationBySuggestionId: Record<string, string> = {
   "report-stock-health": "stock-health",
   "report-movement": "movement-velocity",
   "report-procurement": "procurement-suppliers",
   "report-audits": "audits-shrinkage",
-  "report-custom": "custom-saved",
 };
 
 export const ReportsPage = () => {
@@ -27,7 +25,6 @@ export const ReportsPage = () => {
     "movement-velocity",
     "procurement-suppliers",
     "audits-shrinkage",
-    "custom-saved",
   ] as const;
   const activeTab = validTabs.includes(
     (tab ?? "") as (typeof validTabs)[number],
@@ -73,13 +70,6 @@ export const ReportsPage = () => {
         value: "stock accuracy audits shrinkage",
         badge: "Report",
       },
-      {
-        id: "report-custom",
-        title: "Saved Reports",
-        subtitle: "Templates and scheduled delivery",
-        value: "saved reports custom reports",
-        badge: "Report",
-      },
     ],
     onSuggestionSelect: handleSuggestionSelect,
   }), [handleSuggestionSelect]);
@@ -96,6 +86,7 @@ export const ReportsPage = () => {
           activeTab={activeTab}
           onTabChange={(nextTab) => navigate(`/reports/${nextTab}`)}
           bottomSpacing
+          contentClassName="min-h-0 flex-1 overflow-y-auto pr-2 pb-2"
           tabs={[
             {
               id: "stock-health",
@@ -116,11 +107,6 @@ export const ReportsPage = () => {
               id: "audits-shrinkage",
               label: "Stock Accuracy",
               content: <AuditsShrinkageTab companyId={companyId} />,
-            },
-            {
-              id: "custom-saved",
-              label: "Saved Reports",
-              content: <CustomSavedReportsTab companyId={companyId} />,
             },
           ]}
         />

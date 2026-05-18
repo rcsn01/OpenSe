@@ -4,7 +4,6 @@ import { StockHealthValuationTab } from "../StockHealthValuationTab";
 import { MovementVelocityTab } from "../MovementVelocityTab";
 import { ProcurementSuppliersTab } from "../ProcurementSuppliersTab";
 import { AuditsShrinkageTab } from "../AuditsShrinkageTab";
-import { CustomSavedReportsTab } from "../CustomSavedReportsTab";
 
 const mocks = vi.hoisted(() => ({
   useReportsData: vi.fn(),
@@ -477,24 +476,4 @@ describe("report tabs", () => {
     expect(screen.queryByText("ELC-112")).not.toBeInTheDocument();
   });
 
-  it("renders custom reports builder and saves a new template locally", () => {
-    render(<CustomSavedReportsTab companyId="company-1" />);
-
-    expect(screen.getByText("Saved Templates")).toBeInTheDocument();
-    expect(screen.getAllByText("Report Builder").length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText("Weekly Stockout Warning").length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getAllByText("Every Monday at 8:00 AM").length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByText("Selected Output")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Blank Report" }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Save Template" }));
-
-    expect(screen.getByText("Custom Report 1")).toBeInTheDocument();
-  });
 });
