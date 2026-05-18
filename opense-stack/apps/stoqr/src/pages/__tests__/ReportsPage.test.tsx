@@ -53,10 +53,6 @@ vi.mock('../../components/Reports/AuditsShrinkageTab', () => ({
   AuditsShrinkageTab: () => <div>Audits Shrinkage Content</div>,
 }))
 
-vi.mock('../../components/Reports/CustomSavedReportsTab', () => ({
-  CustomSavedReportsTab: () => <div>Custom Saved Content</div>,
-}))
-
 const SearchShell = () => (
   <TopBarSearchProvider>
     <TopBarSearchContent />
@@ -91,7 +87,7 @@ describe('ReportsPage', () => {
     expect(screen.getByText('Stock Movement')).toBeInTheDocument()
     expect(screen.getByText('Purchasing')).toBeInTheDocument()
     expect(screen.getByText('Stock Accuracy')).toBeInTheDocument()
-    expect(screen.getByText('Saved Reports')).toBeInTheDocument()
+    expect(screen.queryByText('Saved Reports')).not.toBeInTheDocument()
     expect(screen.getByText('Stock Health Content')).toBeInTheDocument()
   })
 
@@ -135,10 +131,10 @@ describe('ReportsPage', () => {
       </MemoryRouter>,
     )
 
-    await user.type(screen.getByRole('combobox', { name: 'Search reports...' }), 'custom')
+    await user.type(screen.getByRole('combobox', { name: 'Search reports...' }), 'purchasing')
     await user.keyboard('{Enter}')
 
-    expect(screen.getByTestId('location-path')).toHaveTextContent('/reports/custom-saved')
-    expect(screen.getByText('Custom Saved Content')).toBeInTheDocument()
+    expect(screen.getByTestId('location-path')).toHaveTextContent('/reports/procurement-suppliers')
+    expect(screen.getByText('Procurement Suppliers Content')).toBeInTheDocument()
   })
 })
