@@ -1,7 +1,11 @@
 {
   "name": "opense-stack",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@11.1.3",
+  "engines": {
+    "node": "22.x",
+    "pnpm": "11.1.3"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"

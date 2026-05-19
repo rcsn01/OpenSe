@@ -1,3 +1,13 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+nodeLinker: hoisted
+autoInstallPeers: true
+linkWorkspacePackages: true
+injectWorkspacePackages: true
+dedupeInjectedDeps: false
+blockExoticSubdeps: false
+allowBuilds:
+  esbuild: true
+  protobufjs: true
+  supabase: true

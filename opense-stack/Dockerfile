@@ -16,7 +16,7 @@
 # ── Stage 1: install deps ────────────────────────────────────
 FROM node:22-alpine AS deps
 
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
 
 WORKDIR /app
 
