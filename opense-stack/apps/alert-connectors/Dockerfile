@@ -1,6 +1,6 @@
 FROM node:22-alpine AS deps
 
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ RUN pnpm --filter @repo/alert-connectors build
 
 FROM node:22-alpine AS runner
 
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
 
 WORKDIR /app
 ENV NODE_ENV=production

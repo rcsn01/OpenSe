@@ -1,6 +1,6 @@
 ## Prerequisites to Download/Install
-1. Node.js (LTS version)
-2. pnpm v9.15.0 (install via: npm install -g pnpm@9)
+1. Node.js 22 LTS
+2. pnpm v11.1.3 (install via: npm install -g pnpm@11.1.3)
 3. Docker (required for Supabase local - must be running)
 4. Supabase CLI (npm install -g supabase)
 ## Step-by-Step Setup
@@ -9,6 +9,8 @@
 cd opense-stack
 pnpm install
 ```
+
+This workspace uses the hoisted pnpm linker so installs also work on filesystems without symlink support, such as exFAT.
 # 2. Copy Environment Template
 ```bash
 cp .env.example .env
