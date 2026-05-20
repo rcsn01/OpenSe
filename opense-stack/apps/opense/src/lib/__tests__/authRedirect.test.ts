@@ -1,15 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+const setRuntimeConfig = (values: Record<string, string>) => {
+  ;(window as typeof window & { __OPENSE_CONFIG__?: Record<string, string> }).__OPENSE_CONFIG__ =
+    values
+}
+
 afterEach(() => {
-  vi.unstubAllEnvs()
+  delete (window as typeof window & { __OPENSE_CONFIG__?: Record<string, string> })
+    .__OPENSE_CONFIG__
   vi.resetModules()
 })
 
 describe('OpenSe auth redirects', () => {
   it('prefers the OpenSe public URL for Accounts return targets', async () => {
-    vi.stubEnv('VITE_ACCOUNTS_URL', 'http://localhost:5991')
-    vi.stubEnv('VITE_OPENSE_PUBLIC_URL', 'http://localhost:5994')
-    vi.stubEnv('VITE_UI_PUBLIC_URL', 'http://localhost:5999')
+    setRuntimeConfig({
+      VITE_ACCOUNTS_URL: 'http://localhost:5991',
+      VITE_OPENSE_PUBLIC_URL: 'http://localhost:5994',
+      VITE_UI_PUBLIC_URL: 'http://localhost:5999',
+    })
 
     const { buildOpenSeAccountsAuthUrl } = await import('../authRedirect')
     const url = new URL(buildOpenSeAccountsAuthUrl('signin'))
@@ -21,8 +29,10 @@ describe('OpenSe auth redirects', () => {
   })
 
   it('falls back to the default OpenSe local URL when no explicit OpenSe public URL is set', async () => {
-    vi.stubEnv('VITE_ACCOUNTS_URL', 'http://localhost:5991')
-    vi.stubEnv('VITE_UI_PUBLIC_URL', 'http://localhost:5999')
+    setRuntimeConfig({
+      VITE_ACCOUNTS_URL: 'http://localhost:5991',
+      VITE_UI_PUBLIC_URL: 'http://localhost:5999',
+    })
 
     const { buildOpenSeAccountsAuthUrl } = await import('../authRedirect')
     const url = new URL(buildOpenSeAccountsAuthUrl('signup'))

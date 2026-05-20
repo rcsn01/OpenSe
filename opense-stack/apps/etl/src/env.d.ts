@@ -1,14 +1,6 @@
-interface ImportMetaEnv {
-  readonly VITE_SUPABASE_URL: string
-  readonly VITE_SUPABASE_ANON_KEY: string
-  readonly VITE_ACCOUNTS_URL?: string
-  readonly VITE_ETL_PUBLIC_URL?: string
-  readonly VITE_AUTH_COOKIE_DOMAIN?: string
-  readonly DEV: boolean
-}
+/// <reference types="vite/client" />
 
 interface ImportMeta {
-  readonly env: ImportMetaEnv
   readonly hot?: {
     dispose: (callback: () => void) => void
   }

@@ -26,13 +26,13 @@ type WorkerFixtures = {
   stoqrStorageStatePath: string;
 };
 
-const STOQR_BASE_URL = process.env.BASE_URL_STOQR || process.env.VITE_STOQR_PUBLIC_URL || 'http://localhost:5993';
-const ACCOUNTS_BASE_URL = process.env.BASE_URL_ACCOUNTS || process.env.VITE_ACCOUNTS_URL || 'http://localhost:5991';
+const STOQR_BASE_URL = process.env.BASE_URL_STOQR || 'http://localhost:5993';
+const ACCOUNTS_BASE_URL = process.env.BASE_URL_ACCOUNTS || 'http://localhost:5991';
 
 export const hasStoqrCredentials = () => Boolean(TEST_USER.email && TEST_USER.password);
 
 const getSupabaseServiceConfig = () => {
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {

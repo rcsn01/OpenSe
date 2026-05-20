@@ -21,12 +21,15 @@ For Telegram and Mattermost alert connectors, see [StoQR Chat Connector Setup](.
 
 - [Docker Engine](https://docs.docker.com/engine/install/) ≥ 24
 - [Docker Compose](https://docs.docker.com/compose/install/) v2 (ships with Docker Desktop)
-- A valid `.env` file in `opense-stack/` (copy from `.env.example`)
+- Per-app runtime config files in `apps/*/public/config.js`
 
 ```bash
-cp .env.example .env
-# Fill in the Supabase keys and other values
+for app in accounts admin etl opense stoqr ui-design; do
+  cp "apps/$app/public/config.example.js" "apps/$app/public/config.js"
+done
 ```
+
+Edit the generated `config.js` files before running the apps. These files are ignored by git and are served to browsers as `/config.js`, so they must contain only browser-safe values such as the Supabase URL, anon key, and public app URLs.
 
 ---
 
@@ -48,6 +51,7 @@ docker compose -f docker-compose.dev.yml down
 **How it works:**
 - The entire `opense-stack/` directory is bind-mounted into each container at `/app`.
 - Each container runs `pnpm install` then starts the Vite dev server for its app.
+- Each app serves its own `apps/<app>/public/config.js` at `/config.js`.
 - A named Docker volume (`pnpm-store`) caches the pnpm store across restarts.
 
 **Tips:**
@@ -77,19 +81,32 @@ docker build --build-arg APP_NAME=ui-design -t opense/ui-design .
 docker compose -f docker-compose.prod.yml build
 ```
 
-### Passing Vite environment variables at build time
+### Runtime config
 
-Vite bakes `VITE_*` variables into the JS bundle at build time. To set them during the Docker build:
+The frontend images are environment-neutral. Do not pass public URLs or Supabase keys as Docker build args. Instead, mount a runtime `config.js` file into nginx:
 
-```bash
-docker build \
-  --build-arg APP_NAME=admin \
-  --build-arg VITE_SUPABASE_URL=https://your-project.supabase.co \
-  --build-arg VITE_SUPABASE_ANON_KEY=eyJ... \
-  -t opense/admin .
+```yaml
+volumes:
+  - ./apps/admin/public/config.js:/usr/share/nginx/html/config.js:ro
 ```
 
-> **Note:** The Dockerfile copies `.env` from the monorepo root during build, so Vite will pick up those values automatically. Explicit `--build-arg` overrides take precedence.
+`docker-compose.prod.yml` already mounts the matching config file for each app. The nginx image serves `/config.js` with `Cache-Control: no-store` so URL/key changes do not require rebuilding the image.
+
+Example config:
+
+```js
+window.__OPENSE_CONFIG__ = {
+  VITE_SUPABASE_URL: 'https://supabase.example.com',
+  VITE_SUPABASE_ANON_KEY: 'replace-with-supabase-anon-key',
+  VITE_AUTH_COOKIE_DOMAIN: '.example.com',
+  VITE_ACCOUNTS_URL: 'https://accounts.example.com',
+  VITE_ADMIN_PUBLIC_URL: 'https://admin.example.com',
+  VITE_ETL_PUBLIC_URL: 'https://etl.example.com',
+  VITE_OPENSE_PUBLIC_URL: 'https://opense.example.com',
+  VITE_STOQR_PUBLIC_URL: 'https://stoqr.example.com',
+  VITE_UI_PUBLIC_URL: 'https://ui.example.com',
+};
+```
 
 ---
 
@@ -140,4 +157,5 @@ The `Dockerfile` uses three stages for optimal layer caching:
 | Port already in use | Stop local dev servers or change the host port in the compose file |
 | Changes not reflected (dev mode) | Ensure the bind mount path is correct; restart the container |
 | Build fails for one app | Run `pnpm turbo run build --filter=apps/<name>` locally to see the full error |
-| `VITE_*` vars missing in production build | Pass them as `--build-arg` or ensure `.env` is present at build time |
+| App says runtime config is missing | Create `apps/<app>/public/config.js` from `config.example.js` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` |
+| Config changes do not appear in production | Confirm the `config.js` volume is mounted to `/usr/share/nginx/html/config.js`; then hard refresh the browser |

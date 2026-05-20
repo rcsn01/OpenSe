@@ -9,10 +9,27 @@
 cd opense-stack
 pnpm install
 ```
-# 2. Copy Environment Template
+# 2. Create Runtime Config Files
+
+Frontend apps read browser runtime config from each app's `public/config.js`.
+Real `config.js` files are ignored by git; commit only `config.example.js`.
+
 ```bash
-cp .env.example .env
+for app in accounts admin etl opense stoqr ui-design; do
+  cp "apps/$app/public/config.example.js" "apps/$app/public/config.js"
+done
 ```
+
+Edit each `apps/<app>/public/config.js` as needed. For local development, the defaults should usually point at:
+
+- Accounts: `http://localhost:5991`
+- Admin: `http://localhost:5990`
+- ETL: `http://localhost:5992`
+- OpenSe: `http://localhost:5994`
+- StoQR: `http://localhost:5993`
+- UI Design: `http://localhost:5999`
+
+Do not put service-role keys or server-only secrets in `config.js`; it is served to browsers.
 
 # 3. Local Supabase Backend Dev
 Location: Open-ETL/ (Root)
@@ -55,10 +72,11 @@ pnpm dev:stoqr      # StoQR app
 # 5. Ports
 | App             | Port  | URL                    |
 | --------------- | ----- | ---------------------- |
-| Accounts        | 5990  | http://localhost:5990  |
-| ETL             | 5991  | http://localhost:5991  |
-| StoQR           | 5992  | http://localhost:5992  |
-| Admin           | 5993  | http://localhost:5993  |
+| Admin           | 5990  | http://localhost:5990  |
+| Accounts        | 5991  | http://localhost:5991  |
+| ETL             | 5992  | http://localhost:5992  |
+| StoQR           | 5993  | http://localhost:5993  |
+| OpenSe          | 5994  | http://localhost:5994  |
 | UI-Design       | 5999  | http://localhost:5999  |
 | Supabase API    | 54321 | http://127.0.0.1:54321 |
 | Supabase Studio | 54323 | http://127.0.0.1:54323 |

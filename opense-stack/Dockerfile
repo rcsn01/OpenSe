@@ -6,8 +6,8 @@
 # Build args:
 #   APP_NAME  – folder name under apps/ (e.g. admin, accounts, etl, stoqr)
 #
-# Build-time env vars (baked into the static JS bundle):
-#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, etc.
+# Runtime env config:
+#   mount or replace /usr/share/nginx/html/config.js to set window.__OPENSE_CONFIG__.
 #
 # Usage:
 #   docker build --build-arg APP_NAME=admin -t opense/admin .
@@ -25,6 +25,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY apps/admin/package.json       apps/admin/package.json
 COPY apps/accounts/package.json    apps/accounts/package.json
 COPY apps/etl/package.json         apps/etl/package.json
+COPY apps/opense/package.json      apps/opense/package.json
 COPY apps/stoqr/package.json       apps/stoqr/package.json
 COPY apps/ui-design/package.json   apps/ui-design/package.json
 COPY packages/shared/package.json  packages/shared/package.json
@@ -57,6 +58,10 @@ RUN printf 'server {\n\
   listen 80;\n\
   root /usr/share/nginx/html;\n\
   index index.html;\n\
+  location = /config.js {\n\
+    add_header Cache-Control "no-store";\n\
+    try_files /config.js =404;\n\
+  }\n\
   location / {\n\
     try_files $uri $uri/ /index.html;\n\
   }\n\

@@ -1,3 +1,5 @@
+import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
+
 const isSafeHttpUrl = (value: string) => {
   try {
     const parsed = new URL(value)
@@ -24,7 +26,7 @@ const APP_PUBLIC_URL_KEYS = [
 ] as const
 
 const getAccountsUrl = () =>
-  (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? ''
+  getRuntimeConfigValue('VITE_ACCOUNTS_URL') ?? ''
 
 const getOriginIfSafe = (value: string): string | null => {
   if (!isSafeHttpUrl(value)) {
@@ -54,7 +56,7 @@ const getAllowedReturnOrigins = () => {
   const origins = new Set<string>()
 
   for (const key of APP_PUBLIC_URL_KEYS) {
-    const value = import.meta.env[key] as string | undefined
+    const value = getRuntimeConfigValue(key)
     const origin = value ? getOriginIfSafe(value) : null
     if (origin && !isAccountsOrigin(origin)) {
       origins.add(origin)

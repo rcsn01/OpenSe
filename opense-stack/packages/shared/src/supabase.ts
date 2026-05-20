@@ -2,23 +2,24 @@
  * @repo/shared - Shared Supabase client for the OpenSe monorepo.
  *
  * Both ETL and StoQR apps share a single Supabase project and client instance.
- * Environment variables VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set.
+ * Runtime config values VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set.
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { getRuntimeConfigValue } from './runtime-config'
 
 type Database = any
 type SupabaseClientType = SupabaseClient<Database>
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const authCookieDomainOverride = import.meta.env.VITE_AUTH_COOKIE_DOMAIN as
-  | string
-  | undefined
+const supabaseUrl = getRuntimeConfigValue('VITE_SUPABASE_URL')
+const supabaseAnonKey = getRuntimeConfigValue('VITE_SUPABASE_ANON_KEY')
+const authCookieDomainOverride = getRuntimeConfigValue(
+  'VITE_AUTH_COOKIE_DOMAIN',
+)
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    'Missing Supabase environment variables. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.',
+    'Missing runtime config. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in /config.js.',
   )
 }
 
@@ -26,7 +27,7 @@ function getAuthCookieDomain(hostname: string): string | undefined {
   if (authCookieDomainOverride) return authCookieDomainOverride
 
   // Derive from VITE_ACCOUNTS_URL so auth is shared across accounts + ETL + StoQR (same host, different ports)
-  const accountsUrl = import.meta.env.VITE_ACCOUNTS_URL as string | undefined
+  const accountsUrl = getRuntimeConfigValue('VITE_ACCOUNTS_URL')
   if (accountsUrl) {
     try {
       const host = new URL(accountsUrl).hostname

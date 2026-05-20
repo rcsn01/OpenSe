@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@repo/shared/auth/context'
 import { buildAccountsSettingsUrl } from '@repo/shared/utils'
+import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
 import {
   LayoutDashboard,
   Package,
@@ -50,7 +51,8 @@ export const AppLayout = () => {
   })
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
   const accountsUrl =
-    (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
+    getRuntimeConfigValue('VITE_ACCOUNTS_URL', 'https://accounts.rcsn01.com') ??
+    'https://accounts.rcsn01.com'
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)')

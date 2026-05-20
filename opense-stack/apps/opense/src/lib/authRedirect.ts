@@ -2,20 +2,21 @@ import {
   buildAccountsAuthUrl as buildSharedAccountsAuthUrl,
   type AuthMode,
 } from '@repo/shared/utils'
+import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
 
 export type LandingContext = 'opense' | 'etl' | 'stoqr'
 
 const ACCOUNTS_URL =
-  (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ??
+  getRuntimeConfigValue('VITE_ACCOUNTS_URL', 'http://localhost:5991') ??
   'http://localhost:5991'
 const OPENSE_PUBLIC_URL =
-  (import.meta.env.VITE_OPENSE_PUBLIC_URL as string | undefined) ??
+  getRuntimeConfigValue('VITE_OPENSE_PUBLIC_URL', 'http://localhost:5994') ??
   'http://localhost:5994'
 const ETL_PUBLIC_URL =
-  (import.meta.env.VITE_ETL_PUBLIC_URL as string | undefined) ??
+  getRuntimeConfigValue('VITE_ETL_PUBLIC_URL', 'http://localhost:5992') ??
   'http://localhost:5992'
 const STOQR_PUBLIC_URL =
-  (import.meta.env.VITE_STOQR_PUBLIC_URL as string | undefined) ??
+  getRuntimeConfigValue('VITE_STOQR_PUBLIC_URL', 'http://localhost:5993') ??
   'http://localhost:5993'
 
 const LANDING_CONTEXT_KEY = 'opense-active-landing-context'

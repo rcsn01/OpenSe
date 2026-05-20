@@ -13,6 +13,7 @@ import {
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
 import { buildAccountsSettingsUrl } from '@repo/shared/utils'
+import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
 import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations'
 
 const mainNavItems = [
@@ -33,7 +34,8 @@ export const AppLayout = () => {
   const location = useLocation()
   const [pendingRedirect, setPendingRedirect] = useState(false)
   const accountsUrl =
-    (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
+    getRuntimeConfigValue('VITE_ACCOUNTS_URL', 'https://accounts.rcsn01.com') ??
+    'https://accounts.rcsn01.com'
   const redirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null)

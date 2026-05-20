@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
@@ -9,7 +8,6 @@ export default defineConfig({
     host: true,
     allowedHosts: true,
   },
-  envDir: resolve(__dirname, '../..'),
   test: {
     globals: true,
     environment: 'node',

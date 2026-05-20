@@ -20,6 +20,8 @@ services:
     image: opense/admin
     ports:
       - "5990:80"
+    volumes:
+      - ./apps/admin/public/config.js:/usr/share/nginx/html/config.js:ro
     restart: unless-stopped
 
   accounts:
@@ -31,6 +33,8 @@ services:
     image: opense/accounts
     ports:
       - "5991:80"
+    volumes:
+      - ./apps/accounts/public/config.js:/usr/share/nginx/html/config.js:ro
     restart: unless-stopped
 
   etl:
@@ -42,6 +46,8 @@ services:
     image: opense/etl
     ports:
       - "5992:80"
+    volumes:
+      - ./apps/etl/public/config.js:/usr/share/nginx/html/config.js:ro
     restart: unless-stopped
 
   stoqr:
@@ -53,6 +59,8 @@ services:
     image: opense/stoqr
     ports:
       - "5993:80"
+    volumes:
+      - ./apps/stoqr/public/config.js:/usr/share/nginx/html/config.js:ro
     restart: unless-stopped
 
   ui-design:
@@ -64,4 +72,6 @@ services:
     image: opense/ui-design
     ports:
       - "5999:80"
+    volumes:
+      - ./apps/ui-design/public/config.js:/usr/share/nginx/html/config.js:ro
     restart: unless-stopped
