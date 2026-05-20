@@ -2,11 +2,13 @@
 
 Seed execution order is recorded in `supabase/config.toml` (`[db.seed].sql_paths`), but CLI auto-seeding is disabled (`[db.seed].enabled = false`) so `supabase db reset --linked` stays schema-only. Use `./setup.sh` option 2 to insert seed data manually.
 
+Runtime catalog rows required by schema triggers, including `public.apps` and app permission codes, are migration-owned. Manual seeds should only load demo, reference, and test data.
+
 When run manually, seeds execute in this order:
 
 1. `00_cleanup.sql` — destructive table cleanup (`TRUNCATE ... CASCADE`)
 2. `10_auth_users.sql` — canonical auth users + identities
-3. `20_public_core.sql` — public org/app/subscription core
+3. `20_public_core.sql` — public organisation/subscription core
 4. `30_etl_core.sql` — ETL roles/workflows/executions core
 5. `40_stoqr_reference_membership.sql` — StoQR roles + membership + shared linkage
 6. `50_stoqr_catalog_inventory.sql` — StoQR catalog/inventory/purchasing/reporting

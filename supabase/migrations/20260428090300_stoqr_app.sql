@@ -1,13 +1,36 @@
 -- StoQR application baseline.
 --
--- Baseline app permission rows are inserted by the corrective app catalog
--- migration. Demo system label templates are seeded from
+-- Demo system label templates are seeded from
 -- supabase/seeds/40_stoqr_reference_membership.sql.
 
 CREATE TABLE stoqr.app_permissions (
   code TEXT PRIMARY KEY,
   description TEXT
 );
+
+INSERT INTO stoqr.app_permissions (code, description)
+VALUES
+  ('company.manage', 'Manage company details and settings'),
+  ('billing.manage', 'Manage subscription and billing'),
+  ('members.view', 'View company members'),
+  ('members.manage', 'Invite and manage members'),
+  ('roles.manage', 'Create and edit custom roles'),
+  ('dashboard.view', 'View dashboard KPIs, trends, and alerts summary'),
+  ('products.view', 'View inventory and products'),
+  ('products.manage', 'Create, edit, and delete products'),
+  ('inventory.bulk_manage', 'Import, export, and bulk update inventory records'),
+  ('scanner.use', 'Use scanner workflows and scan history'),
+  ('labels.manage', 'Manage label templates and print jobs'),
+  ('reports.view', 'View reports and analytics data'),
+  ('reports.export', 'Export reports to CSV/PDF/PNG'),
+  ('procurement.manage', 'Manage suppliers, purchase orders, and receiving'),
+  ('alerts.view', 'View inventory and system alerts'),
+  ('alerts.manage', 'Manage alert rules and delivery settings'),
+  ('activity.view', 'View company activity logs'),
+  ('transactions.view', 'View stock history'),
+  ('transactions.create', 'Create stock in/out transactions')
+ON CONFLICT (code) DO UPDATE
+SET description = EXCLUDED.description;
 
 CREATE TABLE stoqr.roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -252,7 +275,9 @@ CREATE TABLE stoqr.alert_rules (
   recipients TEXT[] NOT NULL DEFAULT '{}'::text[],
   created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-  updated_at TIMESTAMPTZ
+  updated_at TIMESTAMPTZ,
+  CONSTRAINT alert_rules_delivery_channels_check
+    CHECK (delivery_channels <@ ARRAY['in_app', 'email', 'push', 'telegram', 'mattermost']::text[])
 );
 
 CREATE TABLE stoqr.alert_events (
@@ -276,7 +301,7 @@ CREATE TABLE stoqr.alert_delivery_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   alert_event_id UUID NOT NULL REFERENCES stoqr.alert_events(id) ON DELETE CASCADE,
-  channel TEXT NOT NULL CHECK (channel IN ('in_app', 'email', 'push', 'telegram', 'mattermost', 'whatsapp')),
+  channel TEXT NOT NULL CHECK (channel IN ('in_app', 'email', 'push', 'telegram', 'mattermost')),
   recipient TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sending', 'sent', 'failed')),
   provider_message_id TEXT,
@@ -287,7 +312,7 @@ CREATE TABLE stoqr.alert_delivery_logs (
 CREATE TABLE stoqr.alert_connectors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
-  provider TEXT NOT NULL CHECK (provider IN ('telegram', 'mattermost', 'whatsapp')),
+  provider TEXT NOT NULL CHECK (provider IN ('telegram', 'mattermost')),
   display_name TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'disconnected' CHECK (status IN ('disconnected', 'pairing', 'connected', 'error')),
   health_status TEXT,
@@ -1417,7 +1442,7 @@ CREATE TRIGGER trg_activity_label_print_jobs
   FOR EACH ROW
   EXECUTE FUNCTION stoqr.capture_activity_event();
 
--- Permission catalog rows are seed-managed; direct writes are intentionally denied.
+-- Permission catalog rows are migration-owned; direct writes are intentionally denied.
 CREATE POLICY "Public read app permissions" ON stoqr.app_permissions
   FOR SELECT USING (true);
 
@@ -2492,7 +2517,7 @@ BEGIN
     WHERE company_id = NEW.company_id
       AND alert_type = 'low_stock'
       AND enabled = true
-      AND delivery_channels && ARRAY['in_app', 'email', 'telegram', 'mattermost', 'whatsapp']::text[]
+      AND delivery_channels && ARRAY['in_app', 'email', 'telegram', 'mattermost']::text[]
   LOOP
     IF EXISTS (
       SELECT 1
@@ -2606,7 +2631,7 @@ BEGIN
      AND ac.company_id = NEW.company_id
      AND ac.provider = ANY(v_rule.delivery_channels)
     WHERE arct.rule_id = v_rule.id
-      AND ac.provider IN ('telegram', 'mattermost', 'whatsapp')
+      AND ac.provider IN ('telegram', 'mattermost')
       AND ac.status = 'connected'
       AND act.enabled = true;
 
@@ -2792,7 +2817,7 @@ BEGIN
     FROM stoqr.alert_delivery_logs adl
     JOIN stoqr.alert_events ae ON ae.id = adl.alert_event_id
     WHERE adl.company_id = target_company_id
-      AND adl.channel IN ('email', 'telegram', 'mattermost', 'whatsapp')
+      AND adl.channel IN ('email', 'telegram', 'mattermost')
       AND adl.status = 'pending'
       AND NULLIF(adl.recipient, '') IS NOT NULL
     ORDER BY ae.triggered_at ASC, adl.id ASC
@@ -2833,7 +2858,7 @@ BEGIN
   LEFT JOIN stoqr.products p ON p.id = ae.product_id
   LEFT JOIN stoqr.alert_connector_targets act
     ON act.id = CASE
-      WHEN updated.channel IN ('telegram', 'mattermost', 'whatsapp')
+      WHEN updated.channel IN ('telegram', 'mattermost')
        AND updated.recipient ~* '^[0-9a-f-]{36}$'
       THEN updated.recipient::uuid
       ELSE NULL::uuid
@@ -2869,7 +2894,7 @@ BEGIN
       error_message = mark_stoqr_alert_notification_delivery.error_message,
       sent_at = CASE WHEN next_status = 'sent' THEN timezone('utc'::text, now()) ELSE sent_at END
   WHERE id = target_delivery_id
-    AND channel IN ('email', 'telegram', 'mattermost', 'whatsapp');
+    AND channel IN ('email', 'telegram', 'mattermost');
 END;
 $$;
 

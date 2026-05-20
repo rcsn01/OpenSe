@@ -20,7 +20,6 @@ TRUNCATE TABLE
   public.platform_admin_audit_events,
   public.subscriptions,
   public.organisations,
-  public.apps,
   public.admin_app_health_snapshots,
   public.admin_pricing_plans,
   public.admin_coupons,

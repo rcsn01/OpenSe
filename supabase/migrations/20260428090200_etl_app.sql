@@ -1,12 +1,20 @@
 -- ETL application baseline.
---
--- Baseline etl.app_permissions rows are inserted by the corrective app catalog
--- migration so reset-without-seeds can still create onboarded owner roles.
 
 CREATE TABLE etl.app_permissions (
   code TEXT PRIMARY KEY,
   description TEXT
 );
+
+INSERT INTO etl.app_permissions (code, description)
+VALUES
+  ('workflows.view', 'View ETL workflows'),
+  ('workflows.manage', 'Create and edit ETL workflows'),
+  ('executions.view', 'View workflow execution history'),
+  ('executions.run', 'Run workflows'),
+  ('notifications.manage', 'Manage workflow notifications'),
+  ('roles.manage', 'Manage ETL custom roles')
+ON CONFLICT (code) DO UPDATE
+SET description = EXCLUDED.description;
 
 CREATE TABLE etl.roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -169,7 +177,7 @@ CREATE TRIGGER trg_enforce_template_immutability
   FOR EACH ROW
   EXECUTE FUNCTION etl.enforce_template_immutability();
 
--- Permission catalog rows are seed-managed; direct writes are intentionally denied.
+-- Permission catalog rows are migration-owned; direct writes are intentionally denied.
 CREATE POLICY etl_app_permissions_select ON etl.app_permissions
   FOR SELECT USING (true);
 

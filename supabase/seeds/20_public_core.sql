@@ -1,12 +1,6 @@
 -- 1) Core public tables
 -- ------------------------------------------------------------
 
-INSERT INTO public.apps (code, name)
-VALUES
-  ('etl', 'ETL'),
-  ('stoqr', 'StoQR')
-ON CONFLICT (code) DO NOTHING;
-
 INSERT INTO public.organisations (
   id,
   name,
