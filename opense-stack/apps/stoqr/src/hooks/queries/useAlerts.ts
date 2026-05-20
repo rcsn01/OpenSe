@@ -11,7 +11,6 @@ import {
   fetchAlertEvents,
   fetchAlertProducts,
   fetchAlertRules,
-  startWhatsAppPairing,
   testAlertConnectorTarget,
   testAlertEmailRecipients,
   updateAlertRule,
@@ -79,7 +78,7 @@ export const useCreateAlertRule = (companyId: string | null) => {
       name: string
       alertType: 'low_stock' | 'reorder_point' | 'expiration' | 'custom'
       condition: Record<string, unknown>
-      deliveryChannels: Array<'in_app' | 'email' | 'push' | 'telegram' | 'mattermost' | 'whatsapp'>
+      deliveryChannels: Array<'in_app' | 'email' | 'push' | 'telegram' | 'mattermost'>
       recipients: string[]
       connectorTargetIds?: string[]
       enabled?: boolean
@@ -102,7 +101,7 @@ export const useUpdateAlertRule = (companyId: string | null) => {
       name: string
       alertType: 'low_stock' | 'reorder_point' | 'expiration' | 'custom'
       condition: Record<string, unknown>
-      deliveryChannels: Array<'in_app' | 'email' | 'push' | 'telegram' | 'mattermost' | 'whatsapp'>
+      deliveryChannels: Array<'in_app' | 'email' | 'push' | 'telegram' | 'mattermost'>
       recipients: string[]
       connectorTargetIds?: string[]
       enabled: boolean
@@ -178,7 +177,7 @@ export const useCreateAlertConnector = (companyId: string | null) => {
 
   return useMutation({
     mutationFn: async (payload: {
-      provider: 'telegram' | 'mattermost' | 'whatsapp'
+      provider: 'telegram' | 'mattermost'
       displayName: string
       status?: 'disconnected' | 'pairing' | 'connected' | 'error'
     }) => {
@@ -203,20 +202,6 @@ export const useCreateAlertConnectorTarget = (companyId: string | null) => {
         providerTargetId: string
       }
     }) => createAlertConnectorTarget(payload.connectorId, payload.payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: alertsKeys.connectors(companyId) })
-    },
-  })
-}
-
-export const useStartWhatsAppPairing = (companyId: string | null) => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (connectorId: string) => {
-      if (!companyId) throw new Error('No company selected')
-      return startWhatsAppPairing(companyId, connectorId)
-    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: alertsKeys.connectors(companyId) })
     },

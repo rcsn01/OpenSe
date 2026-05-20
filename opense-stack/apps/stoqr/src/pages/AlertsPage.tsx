@@ -128,7 +128,6 @@ const getRuleChannelsLabel = (rule: AlertRule) => {
   if (rule.delivery_channels.includes("push")) channels.push("Push");
   if (rule.delivery_channels.includes("telegram")) channels.push("Telegram");
   if (rule.delivery_channels.includes("mattermost")) channels.push("Mattermost");
-  if (rule.delivery_channels.includes("whatsapp")) channels.push("WhatsApp");
   return channels.length ? channels.join(", ") : "No channels";
 };
 

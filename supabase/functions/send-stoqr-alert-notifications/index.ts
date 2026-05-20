@@ -1,5 +1,6 @@
 // @ts-ignore Deno edge runtime resolves npm modules at deploy/runtime.
 import nodemailer from 'npm:nodemailer@6.9.16'
+import { dispatchChatAlert } from '../_shared/chat-alerts.ts'
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
 
 declare const Deno: {
@@ -9,7 +10,7 @@ declare const Deno: {
   }
 }
 
-type AlertChannel = 'email' | 'telegram' | 'mattermost' | 'whatsapp'
+type AlertChannel = 'email' | 'telegram' | 'mattermost'
 
 type PendingAlertNotification = {
   delivery_id: string
@@ -178,9 +179,6 @@ const buildText = (alert: PendingAlertNotification) => [
   `Triggered: ${new Date(alert.triggered_at).toLocaleString('en-AU', { timeZone: 'Australia/Sydney' })}`,
 ].filter(Boolean).join('\n')
 
-const buildChatText = (alert: PendingAlertNotification) =>
-  alert.channel === 'mattermost' ? `@all ${buildText(alert)}` : buildText(alert)
-
 const buildHtml = (alert: PendingAlertNotification) => {
   const product = alert.product_name
     ? `<p><strong>Product:</strong> ${escapeHtml(alert.product_name)}${alert.product_sku ? ` (${escapeHtml(alert.product_sku)})` : ''}</p>`
@@ -219,71 +217,6 @@ const createMailTransporter = (smtpPort: number) => nodemailer.createTransport({
   logger: parseBoolean(Deno.env.get('ALERT_SMTP_DEBUG'), false),
   debug: parseBoolean(Deno.env.get('ALERT_SMTP_DEBUG'), false),
 })
-
-const sendGatewayNotification = async (alert: PendingAlertNotification) => {
-  if (alert.channel === 'mattermost' && alert.provider_target_id && /^https?:\/\//i.test(alert.provider_target_id)) {
-    const response = await fetch(alert.provider_target_id, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: buildChatText(alert) }),
-    })
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      throw new Error(text || 'Mattermost webhook dispatch failed')
-    }
-
-    return alert.delivery_id
-  }
-
-  const gatewayUrl = Deno.env.get('CONNECTOR_GATEWAY_URL')?.replace(/\/$/, '')
-  const gatewayToken = Deno.env.get('CONNECTOR_GATEWAY_TOKEN')
-
-  if (!gatewayUrl || !gatewayToken) {
-    throw new Error('Connector gateway environment is not configured')
-  }
-
-  if (!alert.connector_id || !alert.target_id || !alert.provider_target_id) {
-    throw new Error(`Missing ${alert.channel} connector target metadata`)
-  }
-
-  const response = await fetch(`${gatewayUrl}/dispatch`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${gatewayToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      deliveryId: alert.delivery_id,
-      companyId: alert.company_id,
-      channel: alert.channel,
-      connectorId: alert.connector_id,
-      targetId: alert.target_id,
-      targetName: alert.target_name,
-      targetType: alert.target_type,
-      providerTargetId: alert.provider_target_id,
-      alert: {
-        id: alert.alert_event_id,
-        type: alert.alert_type,
-        severity: alert.severity,
-        message: alert.message,
-        triggeredAt: alert.triggered_at,
-        productName: alert.product_name,
-        productSku: alert.product_sku,
-        folderName: alert.folder_name,
-        organisationName: alert.organisation_name,
-        text: buildChatText(alert),
-      },
-    }),
-  })
-
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    throw new Error(data?.error ?? `${alert.channel} connector dispatch failed`)
-  }
-
-  return data?.messageId ?? null
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -350,7 +283,27 @@ Deno.serve(async (req: Request) => {
         })
         providerMessageId = info.messageId ?? null
       } else {
-        providerMessageId = await sendGatewayNotification(alert)
+        providerMessageId = (await dispatchChatAlert({
+          deliveryId: alert.delivery_id,
+          companyId: alert.company_id,
+          channel: alert.channel,
+          connectorId: alert.connector_id,
+          targetId: alert.target_id,
+          targetName: alert.target_name,
+          targetType: alert.target_type,
+          providerTargetId: alert.provider_target_id,
+          alert: {
+            id: alert.alert_event_id,
+            type: alert.alert_type,
+            severity: alert.severity,
+            message: alert.message,
+            triggeredAt: alert.triggered_at,
+            productName: alert.product_name,
+            productSku: alert.product_sku,
+            folderName: alert.folder_name,
+            organisationName: alert.organisation_name,
+          },
+        })).messageId
       }
 
       await rpc(supabaseUrl, serviceRoleKey, 'mark_stoqr_alert_notification_delivery', {

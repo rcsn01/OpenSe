@@ -162,10 +162,10 @@ deploy_alert_functions() {
   success "Alert dispatch secrets configured."
 
   info "Deploying alert Edge Functions..."
-  run_supabase functions deploy send-stoqr-alert-notifications --project-ref "$project_ref"
-  run_supabase functions deploy manage-stoqr-alert-connectors --project-ref "$project_ref"
+  run_supabase functions deploy send-stoqr-alert-notifications --project-ref "$project_ref" --use-api
+  run_supabase functions deploy manage-stoqr-alert-connectors --project-ref "$project_ref" --use-api
   if [[ -d "$SUPABASE_DIR/functions/send-stoqr-alert-emails" ]]; then
-    run_supabase functions deploy send-stoqr-alert-emails --project-ref "$project_ref"
+    run_supabase functions deploy send-stoqr-alert-emails --project-ref "$project_ref" --use-api
   fi
   success "Alert Edge Functions deployed."
 }

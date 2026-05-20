@@ -14,7 +14,6 @@ import {
   Plus,
   Save,
   Send,
-  Smartphone,
 } from "lucide-react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { BasePage } from "../components/BasePage";
@@ -26,7 +25,6 @@ import {
   useCreateAlertConnector,
   useCreateAlertConnectorTarget,
   useCreateAlertRule,
-  useStartWhatsAppPairing,
   useTestAlertConnectorTarget,
   useTestAlertEmailRecipients,
   useUpdateAlertRule,
@@ -44,7 +42,6 @@ type DispatchMethods = {
   email: boolean;
   telegram: boolean;
   mattermost: boolean;
-  whatsapp: boolean;
 };
 
 type RuleFormState = {
@@ -76,7 +73,6 @@ const LOW_STOCK_RULE_CONDITION = { thresholdSource: "product_reorder_point" };
 const chatProviders: AlertConnectorProvider[] = [
   "telegram",
   "mattermost",
-  "whatsapp",
 ];
 
 const emptyRuleForm: RuleFormState = {
@@ -89,7 +85,6 @@ const emptyRuleForm: RuleFormState = {
     email: false,
     telegram: false,
     mattermost: false,
-    whatsapp: false,
   },
 };
 
@@ -121,7 +116,6 @@ const formFromRule = (rule: AlertRule): RuleFormState => ({
     email: rule.delivery_channels.includes("email"),
     telegram: rule.delivery_channels.includes("telegram"),
     mattermost: rule.delivery_channels.includes("mattermost"),
-    whatsapp: rule.delivery_channels.includes("whatsapp"),
   },
 });
 
@@ -130,7 +124,6 @@ const dispatchMethodLabel: Record<keyof DispatchMethods, string> = {
   email: "Email",
   telegram: "Telegram",
   mattermost: "Mattermost",
-  whatsapp: "WhatsApp",
 };
 
 const providerSetupHint: Record<AlertConnectorProvider, string> = {
@@ -138,8 +131,6 @@ const providerSetupHint: Record<AlertConnectorProvider, string> = {
     "Use a Telegram Bot API chat ID discovered from bot updates or entered manually.",
   mattermost:
     "Use either a simple incoming webhook or a bot token channel target from your Mattermost server.",
-  whatsapp:
-    "Pair WhatsApp first, then add the chat or group JID returned by the gateway.",
 };
 
 const mattermostSetupHint = {
@@ -152,8 +143,6 @@ const mattermostSetupHint = {
 const providerTargetPlaceholder = (form: NewTargetFormState) => {
   if (form.provider === "telegram")
     return "Telegram chat ID, e.g. -1001234567890";
-  if (form.provider === "whatsapp")
-    return "WhatsApp chat/group JID after pairing";
   return form.mattermostMode === "bot_channel"
     ? "Mattermost Channel ID, e.g. abc123def456ghi789jkl012mn"
     : "Mattermost webhook URL or MATTERMOST_WEBHOOKS_JSON key";
@@ -179,7 +168,6 @@ export const AlertRuleEditorPage = () => {
   const createConnectorMutation = useCreateAlertConnector(companyId);
   const createConnectorTargetMutation =
     useCreateAlertConnectorTarget(companyId);
-  const startWhatsAppPairingMutation = useStartWhatsAppPairing(companyId);
   const testConnectorTargetMutation = useTestAlertConnectorTarget(companyId);
   const testEmailRecipientsMutation = useTestAlertEmailRecipients(companyId);
 
@@ -192,7 +180,6 @@ export const AlertRuleEditorPage = () => {
   const [ruleMessage, setRuleMessage] = useState<string | null>(null);
   const [testMessage, setTestMessage] = useState<string | null>(null);
   const [testingTargetId, setTestingTargetId] = useState<string | null>(null);
-  const [whatsAppQr, setWhatsAppQr] = useState<string | null>(null);
   const [localConnectorTargets, setLocalConnectorTargets] = useState<
     ConnectorTargetOption[]
   >([]);
@@ -352,8 +339,7 @@ export const AlertRuleEditorPage = () => {
         displayName:
           newTargetForm.connectorName.trim() ||
           `${newTargetForm.provider} alerts`,
-        status:
-          newTargetForm.provider === "whatsapp" ? "disconnected" : "connected",
+        status: "connected",
       });
       connector = {
         id: connectorId,
@@ -362,8 +348,7 @@ export const AlertRuleEditorPage = () => {
         display_name:
           newTargetForm.connectorName.trim() ||
           `${newTargetForm.provider} alerts`,
-        status:
-          newTargetForm.provider === "whatsapp" ? "disconnected" : "connected",
+        status: "connected",
         health_status: null,
         last_error: null,
         created_at: new Date().toISOString(),
@@ -415,36 +400,6 @@ export const AlertRuleEditorPage = () => {
       targetName: "",
       providerTargetId: "",
     }));
-  };
-
-  const startWhatsAppPairing = async () => {
-    let connector = connectors.find((item) => item.provider === "whatsapp");
-    if (!connector) {
-      const connectorId = await createConnectorMutation.mutateAsync({
-        provider: "whatsapp",
-        displayName: "WhatsApp alerts",
-        status: "disconnected",
-      });
-      connector = {
-        id: connectorId,
-        company_id: companyId ?? "",
-        provider: "whatsapp",
-        display_name: "WhatsApp alerts",
-        status: "disconnected",
-        health_status: null,
-        last_error: null,
-        created_at: new Date().toISOString(),
-        alert_connector_targets: [],
-      };
-    }
-
-    const result = await startWhatsAppPairingMutation.mutateAsync(connector.id);
-    setWhatsAppQr(result.qr);
-    setRuleMessage(
-      result.qr
-        ? "Scan the WhatsApp QR code using Linked Devices."
-        : (result.message ?? "WhatsApp pairing started."),
-    );
   };
 
   const saveRule = async () => {
@@ -601,13 +556,6 @@ export const AlertRuleEditorPage = () => {
       description: "Push detailed rich-text alerts to Mattermost channels.",
       icon: MessageSquare,
     },
-    {
-      method: "whatsapp",
-      title: "WhatsApp Connector",
-      ariaLabel: "WhatsApp enabled",
-      description: "Send alerts to a paired WhatsApp device or group.",
-      icon: Smartphone,
-    },
   ] as const;
 
   const renderEmailTargets = () => (
@@ -686,7 +634,6 @@ export const AlertRuleEditorPage = () => {
           options={[
             { value: "telegram", label: "Telegram" },
             { value: "mattermost", label: "Mattermost" },
-            { value: "whatsapp", label: "WhatsApp" },
           ]}
           onChange={(event) =>
             selectNewTargetProvider(event.target.value as AlertConnectorProvider)
@@ -910,39 +857,6 @@ export const AlertRuleEditorPage = () => {
           </div>
         )}
         {activeSetupProvider === provider ? renderConnectorSetup(provider) : null}
-        {provider === "whatsapp" ? (
-          <div className="mt-6 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-full)] bg-[var(--color-info-light)] text-[var(--color-info)]">
-                  <Smartphone size={16} aria-hidden="true" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[var(--color-foreground)]">
-                    WhatsApp QR pairing
-                  </p>
-                  <p className="text-sm text-[var(--color-muted-foreground)]">
-                    Pair the gateway using WhatsApp Linked Devices.
-                  </p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => void startWhatsAppPairing()}
-              >
-                <MessageCircle size={14} aria-hidden="true" />
-                Pair
-              </Button>
-            </div>
-            {whatsAppQr ? (
-              <pre className="mt-3 max-h-32 overflow-auto rounded-[var(--radius-md)] bg-[var(--color-background)] p-3 text-xs text-[var(--color-foreground)]">
-                {whatsAppQr}
-              </pre>
-            ) : null}
-          </div>
-        ) : null}
       </div>
     );
   };
@@ -1153,7 +1067,6 @@ export const AlertRuleEditorPage = () => {
               options={[
                 { value: "telegram", label: "Telegram" },
                 { value: "mattermost", label: "Mattermost" },
-                { value: "whatsapp", label: "WhatsApp" },
               ]}
               onChange={(event) =>
                 selectNewTargetProvider(
@@ -1162,20 +1075,6 @@ export const AlertRuleEditorPage = () => {
               }
               className="sr-only"
             />
-          ) : null}
-          {!ruleForm.dispatchMethods.whatsapp && !whatsAppQr ? (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="sr-only"
-              onClick={() => void startWhatsAppPairing()}
-            >
-              Pair
-            </Button>
-          ) : null}
-          {!ruleForm.dispatchMethods.whatsapp && whatsAppQr ? (
-            <pre className="sr-only">{whatsAppQr}</pre>
           ) : null}
         </div>
       </PageAvailabilityGuard>

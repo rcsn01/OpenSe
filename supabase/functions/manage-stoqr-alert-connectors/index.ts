@@ -1,4 +1,5 @@
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
+import { dispatchChatAlert } from '../_shared/chat-alerts.ts'
 // @ts-ignore Deno edge runtime resolves npm modules at deploy/runtime.
 import nodemailer from 'npm:nodemailer@6.9.16'
 
@@ -12,7 +13,6 @@ declare const Deno: {
 type ConnectorRequestBody = {
   action?: string
   companyId?: string
-  connectorId?: string
   targetId?: string
   roleIds?: string[]
 }
@@ -29,7 +29,7 @@ type AlertConnectorTargetRow = {
 type AlertConnectorRow = {
   id: string
   company_id: string
-  provider: 'telegram' | 'mattermost' | 'whatsapp'
+  provider: 'telegram' | 'mattermost'
   display_name: string
   status: 'disconnected' | 'pairing' | 'connected' | 'error'
 }
@@ -113,30 +113,6 @@ const userCanManageAlerts = async (
   return Boolean(await response.json().catch(() => false))
 }
 
-const updateConnectorStatus = async (
-  supabaseUrl: string,
-  serviceRoleKey: string,
-  connectorId: string,
-  payload: Record<string, unknown>,
-) => {
-  const response = await fetch(`${supabaseUrl}/rest/v1/alert_connectors?id=eq.${connectorId}`, {
-    method: 'PATCH',
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-      'Content-Profile': 'stoqr',
-      Prefer: 'return=minimal',
-    },
-    body: JSON.stringify(payload),
-  })
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.message ?? 'Failed to update connector status')
-  }
-}
-
 const createMailTransporter = (smtpPort: number) => nodemailer.createTransport({
   host: Deno.env.get('ALERT_SMTP_PUBLIC_HOST') ?? Deno.env.get('ALERT_SMTP_HOST'),
   port: smtpPort,
@@ -160,8 +136,6 @@ const createMailTransporter = (smtpPort: number) => nodemailer.createTransport({
 const sendConnectorTest = async (
   supabaseUrl: string,
   serviceRoleKey: string,
-  gatewayUrl: string | undefined,
-  gatewayToken: string | undefined,
   companyId: string,
   targetId: string,
 ) => {
@@ -184,71 +158,31 @@ const sendConnectorTest = async (
   if (!connector) throw new Error('Connector was not found for this organisation')
   if (connector.status !== 'connected') throw new Error(`${connector.display_name} is not connected`)
 
-  if (connector.provider === 'mattermost' && /^https?:\/\//i.test(target.provider_target_id)) {
-    const response = await fetch(target.provider_target_id, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: [
-          '@all StoQR integration test',
-          '',
-          `Target: ${target.target_name}`,
-          `Sent: ${new Date().toLocaleString('en-AU', { timeZone: 'Australia/Sydney' })}`,
-        ].join('\n'),
-      }),
-    })
+  const testMessage = `StoQR test message for ${target.target_name}.`
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      throw new Error(text || 'Mattermost webhook test failed')
-    }
-
-    return { provider: connector.provider, targetName: target.target_name, messageId: target.id }
-  }
-
-  if (!gatewayUrl || !gatewayToken) {
-    throw new Error('Connector gateway environment is not configured')
-  }
-
-  const testMessage = connector.provider === 'mattermost'
-    ? `@all StoQR test message for ${target.target_name}.`
-    : `StoQR test message for ${target.target_name}.`
-
-  const response = await fetch(`${gatewayUrl}/dispatch`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${gatewayToken}`,
-      'Content-Type': 'application/json',
+  const result = await dispatchChatAlert({
+    deliveryId: `test-${crypto.randomUUID()}`,
+    companyId,
+    channel: connector.provider,
+    connectorId: connector.id,
+    targetId: target.id,
+    targetName: target.target_name,
+    targetType: target.target_type,
+    providerTargetId: target.provider_target_id,
+    alert: {
+      id: `test-${crypto.randomUUID()}`,
+      type: 'integration_test',
+      severity: 'low',
+      message: testMessage,
+      triggeredAt: new Date().toISOString(),
+      productName: null,
+      productSku: null,
+      folderName: null,
+      organisationName: 'StoQR',
     },
-    body: JSON.stringify({
-      deliveryId: `test-${crypto.randomUUID()}`,
-      companyId,
-      channel: connector.provider,
-      connectorId: connector.id,
-      targetId: target.id,
-      targetName: target.target_name,
-      targetType: target.target_type,
-      providerTargetId: target.provider_target_id,
-      alert: {
-        id: `test-${crypto.randomUUID()}`,
-        type: 'integration_test',
-        severity: 'low',
-        message: testMessage,
-        triggeredAt: new Date().toISOString(),
-        productName: null,
-        productSku: null,
-        organisationName: 'StoQR',
-        text: testMessage,
-      },
-    }),
   })
 
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    throw new Error(data?.error ?? `${connector.provider} test dispatch failed`)
-  }
-
-  return { provider: connector.provider, targetName: target.target_name, messageId: data?.messageId ?? null }
+  return { provider: connector.provider, targetName: target.target_name, messageId: result.messageId }
 }
 
 const sendEmailTest = async (
@@ -314,14 +248,12 @@ Deno.serve(async (req: Request) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  const gatewayUrl = Deno.env.get('CONNECTOR_GATEWAY_URL')?.replace(/\/$/, '')
-  const gatewayToken = Deno.env.get('CONNECTOR_GATEWAY_TOKEN')
 
   if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
     return json(req, 500, { error: 'Supabase environment is not configured' })
   }
 
-  const { action, companyId, connectorId, targetId, roleIds } = await parseBody(req)
+  const { action, companyId, targetId, roleIds } = await parseBody(req)
   if (!companyId) {
     return json(req, 400, { error: 'companyId is required' })
   }
@@ -336,7 +268,7 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-      return json(req, 200, await sendConnectorTest(supabaseUrl, serviceRoleKey, gatewayUrl, gatewayToken, companyId, targetId))
+      return json(req, 200, await sendConnectorTest(supabaseUrl, serviceRoleKey, companyId, targetId))
     } catch (error) {
       return json(req, 500, { error: error instanceof Error ? error.message : 'Connector integration test failed' })
     }
@@ -350,45 +282,5 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  if (action !== 'start_whatsapp_pairing') {
-    return json(req, 400, { error: 'Unsupported connector action' })
-  }
-
-  if (!gatewayUrl || !gatewayToken) {
-    return json(req, 500, { error: 'Connector gateway environment is not configured' })
-  }
-
-  if (!connectorId) {
-    return json(req, 400, { error: 'connectorId is required' })
-  }
-
-  const response = await fetch(`${gatewayUrl}/connectors/whatsapp/start-pairing`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${gatewayToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ companyId, connectorId }),
-  })
-
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    await updateConnectorStatus(supabaseUrl, serviceRoleKey, connectorId, {
-      status: 'error',
-      last_error: data?.error ?? 'WhatsApp pairing failed',
-    })
-    return json(req, response.status, { error: data?.error ?? 'WhatsApp pairing failed' })
-  }
-
-  await updateConnectorStatus(supabaseUrl, serviceRoleKey, connectorId, {
-    status: data.status ?? 'pairing',
-    last_error: null,
-  })
-
-  return json(req, 200, {
-    connectorId,
-    status: data.status ?? 'pairing',
-    qr: data.qr ?? null,
-    message: data.message,
-  })
+  return json(req, 400, { error: 'Unsupported connector action' })
 })
