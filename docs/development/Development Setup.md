@@ -50,10 +50,12 @@ npx supabase migration up
 npx supabase db reset --linked
 npx supabase db reset
 ```
+Supabase CLI auto-seeding is disabled in `supabase/config.toml`, so resets apply schema migrations without inserting seed data.
 # 3.3 Running seeding
 ```
-npx ts-node scripts/seed.ts
+./setup.sh
 ```
+Choose `Insert DB seed data only` when you intentionally want to load the configured seed files.
 # 3.4 Push to Supabase server
 ```
 npx supabase db push

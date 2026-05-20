@@ -1,6 +1,7 @@
 -- ETL application baseline.
 --
--- Reference rows for etl.app_permissions are seeded from supabase/seeds/30_etl_core.sql.
+-- Baseline etl.app_permissions rows are inserted by the corrective app catalog
+-- migration so reset-without-seeds can still create onboarded owner roles.
 
 CREATE TABLE etl.app_permissions (
   code TEXT PRIMARY KEY,

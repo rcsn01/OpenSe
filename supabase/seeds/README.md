@@ -1,6 +1,8 @@
 # Seed file layout
 
-Seed execution is configured in `supabase/config.toml` (`[db.seed].sql_paths`) and runs in this order:
+Seed execution order is recorded in `supabase/config.toml` (`[db.seed].sql_paths`), but CLI auto-seeding is disabled (`[db.seed].enabled = false`) so `supabase db reset --linked` stays schema-only. Use `./setup.sh` option 2 to insert seed data manually.
+
+When run manually, seeds execute in this order:
 
 1. `00_cleanup.sql` — destructive table cleanup (`TRUNCATE ... CASCADE`)
 2. `10_auth_users.sql` — canonical auth users + identities

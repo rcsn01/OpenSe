@@ -1,6 +1,7 @@
 -- StoQR application baseline.
 --
--- Reference rows for app permissions and system label templates are seeded from
+-- Baseline app permission rows are inserted by the corrective app catalog
+-- migration. Demo system label templates are seeded from
 -- supabase/seeds/40_stoqr_reference_membership.sql.
 
 CREATE TABLE stoqr.app_permissions (

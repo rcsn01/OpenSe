@@ -143,7 +143,7 @@ choose_target() {
 confirm_destructive_reset() {
   local target="$1"
 
-  warn "Full reset will drop and recreate the ${target} database, then insert seed data."
+  warn "Full reset will drop and recreate the ${target} database without inserting seed data."
   read -r -p "Type RESET to continue: " confirmation
   if [[ "$confirmation" != "RESET" ]]; then
     fail "Reset cancelled."
@@ -221,13 +221,13 @@ full_reset() {
 
     info "Resetting linked remote database..."
     run_supabase db reset --linked --yes
-    success "Linked remote database reset."
+    success "Linked remote database reset without auto-seeding."
 
     configure_alert_dispatch "$target" "$token" "$project_ref"
   else
     info "Resetting local database..."
     run_supabase db reset --yes
-    success "Local database reset."
+    success "Local database reset without auto-seeding."
 
     configure_alert_dispatch "$target" "$token"
   fi

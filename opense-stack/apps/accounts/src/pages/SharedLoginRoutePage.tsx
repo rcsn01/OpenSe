@@ -19,6 +19,10 @@ export const SharedLoginRoutePage = () => {
   const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const success =
+    typeof (location.state as { success?: unknown } | null)?.success === 'string'
+      ? ((location.state as { success: string }).success)
+      : null
   const isRedirecting = useRef(false)
   const query = buildQueryString()
   const querySuffix = query ? `?${query}` : ''
@@ -116,6 +120,7 @@ export const SharedLoginRoutePage = () => {
       description="Continue to your workspace."
       loading={loading || authLoading}
       error={error}
+      success={success}
       onEmailSignIn={handleLogin}
       onGoogleSignIn={handleGoogleLogin}
       googleLabel="Continue with Google"
