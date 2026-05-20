@@ -1,29 +1,6 @@
 -- 3) StoQR reference + membership
 -- ------------------------------------------------------------
 
-INSERT INTO stoqr.app_permissions (code, description)
-VALUES
-  ('company.manage', 'Manage company details and settings'),
-  ('billing.manage', 'Manage subscription and billing'),
-  ('members.view', 'View company members'),
-  ('members.manage', 'Invite and manage members'),
-  ('roles.manage', 'Create and edit custom roles'),
-  ('dashboard.view', 'View dashboard KPIs, trends, and alerts summary'),
-  ('products.view', 'View inventory and products'),
-  ('products.manage', 'Create, edit, and delete products'),
-  ('inventory.bulk_manage', 'Import, export, and bulk update inventory records'),
-  ('scanner.use', 'Use scanner workflows and scan history'),
-  ('labels.manage', 'Manage label templates and print jobs'),
-  ('reports.view', 'View reports and analytics data'),
-  ('reports.export', 'Export reports to CSV/PDF/PNG'),
-  ('procurement.manage', 'Manage suppliers, purchase orders, and receiving'),
-  ('alerts.view', 'View inventory and system alerts'),
-  ('alerts.manage', 'Manage alert rules and delivery settings'),
-  ('activity.view', 'View company activity logs'),
-  ('transactions.view', 'View stock history'),
-  ('transactions.create', 'Create stock in/out transactions')
-ON CONFLICT (code) DO NOTHING;
-
 INSERT INTO stoqr.roles (id, company_id, name, description, role_rank)
 VALUES
   ('20202020-2020-2020-2020-202020202020', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Manager', 'Operational manager role for Acme', 800),

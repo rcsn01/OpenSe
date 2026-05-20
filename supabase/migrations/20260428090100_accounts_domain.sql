@@ -696,7 +696,7 @@ CREATE POLICY organisation_members_delete ON public.organisation_members
     )
   );
 
--- The app catalog is seed-managed reference data; direct writes are intentionally denied.
+-- The app catalog is migration-owned runtime data; direct writes are intentionally denied.
 CREATE POLICY apps_select ON public.apps
   FOR SELECT USING (auth.role() = 'authenticated');
 

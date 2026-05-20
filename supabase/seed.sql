@@ -6,6 +6,8 @@
 --   [db.seed].sql_paths
 -- Automatic CLI seeding is disabled with [db.seed].enabled = false.
 -- Use `./setup.sh` option 2 to insert these seed files manually.
+-- Runtime app catalog rows and app permission codes are migration-owned;
+-- these files load demo/reference/test data only.
 --
 -- Files currently executed:
 --   00_cleanup.sql

@@ -74,6 +74,13 @@ CREATE TABLE public.apps (
   name TEXT NOT NULL
 );
 
+INSERT INTO public.apps (code, name)
+VALUES
+  ('etl', 'ETL'),
+  ('stoqr', 'StoQR')
+ON CONFLICT (code) DO UPDATE
+SET name = EXCLUDED.name;
+
 CREATE TABLE public.organisation_app_seats (
   org_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   app_code TEXT NOT NULL REFERENCES public.apps(code) ON DELETE CASCADE,

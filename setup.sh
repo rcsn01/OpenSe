@@ -234,7 +234,7 @@ full_reset() {
 }
 
 insert_seed_data() {
-  local target seed_file sql_payload
+  local target seed_file seed_path
 
   target="$(choose_target)"
   warn "Seed insertion runs the seed files in order. The first seed file cleans existing seeded rows."
@@ -244,13 +244,13 @@ insert_seed_data() {
   fi
 
   for seed_file in "${SEED_FILES[@]}"; do
-    [[ -f "$ROOT_DIR/$seed_file" ]] || fail "Missing seed file: $seed_file"
+    seed_path="$ROOT_DIR/$seed_file"
+    [[ -f "$seed_path" ]] || fail "Missing seed file: $seed_file"
     info "Running $seed_file"
-    sql_payload="$(cat "$ROOT_DIR/$seed_file")"
     if [[ "$target" == "remote" ]]; then
-      run_supabase db query --linked "$sql_payload"
+      run_supabase db query --linked --file "$seed_path"
     else
-      run_supabase db query "$sql_payload"
+      run_supabase db query --file "$seed_path"
     fi
   done
 
