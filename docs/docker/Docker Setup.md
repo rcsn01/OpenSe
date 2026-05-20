@@ -11,6 +11,7 @@ For Telegram and Mattermost alert connectors, see [StoQR Chat Connector Setup](.
 | Accounts | `@repo/accounts` | 5991 | 5991 |
 | ETL | `@repo/etl` | 5992 | 5992 |
 | StoQR | `@repo/stoqr` | 5993 | 5993 |
+| OpenSe | `@repo/opense` | 5994 | 5994 |
 | UI Design | `@repo/ui-design` | 5999 | 5999 |
 
 > All commands are run from the `opense-stack/` directory.
@@ -71,6 +72,7 @@ The multi-stage `Dockerfile` compiles any app into a tiny nginx image (~25 MB).
 docker build --build-arg APP_NAME=admin    -t opense/admin    .
 docker build --build-arg APP_NAME=accounts -t opense/accounts .
 docker build --build-arg APP_NAME=etl      -t opense/etl      .
+docker build --build-arg APP_NAME=opense   -t opense/opense   .
 docker build --build-arg APP_NAME=stoqr    -t opense/stoqr    .
 docker build --build-arg APP_NAME=ui-design -t opense/ui-design .
 ```
@@ -110,7 +112,50 @@ window.__OPENSE_CONFIG__ = {
 
 ---
 
-## 3. Run production images
+## 3. Publish images to GitHub Container Registry
+
+This repository includes a GitHub Actions workflow at `.github/workflows/publish-ghcr.yml`.
+On pushes to `main`, it builds and publishes these images:
+
+```text
+ghcr.io/rcsn01/opense-accounts
+ghcr.io/rcsn01/opense-admin
+ghcr.io/rcsn01/opense-etl
+ghcr.io/rcsn01/opense-opense
+ghcr.io/rcsn01/opense-stoqr
+ghcr.io/rcsn01/opense-ui-design
+```
+
+Each image gets:
+
+- `sha-<short-sha>`
+- `main`
+- `latest` on the `main` branch
+
+For Kubernetes deployments, prefer the immutable `sha-<short-sha>` tag or a digest. Avoid relying on `latest` outside quick smoke tests.
+
+For private packages, create an image pull secret in the target namespace:
+
+```bash
+kubectl create namespace opense --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n opense create secret docker-registry ghcr-pull-secret \
+  --docker-server=ghcr.io \
+  --docker-username=<github-username> \
+  --docker-password=<github-token-with-read-packages> \
+  --docker-email=<email>
+```
+
+Then reference the secret from each Deployment:
+
+```yaml
+imagePullSecrets:
+  - name: ghcr-pull-secret
+```
+
+---
+
+## 4. Run production images
 
 ```bash
 # Start all production containers (detached)

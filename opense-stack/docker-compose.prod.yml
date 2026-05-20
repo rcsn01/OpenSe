@@ -50,6 +50,19 @@ services:
       - ./apps/etl/public/config.js:/usr/share/nginx/html/config.js:ro
     restart: unless-stopped
 
+  opense:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: opense
+    image: opense/opense
+    ports:
+      - "5994:80"
+    volumes:
+      - ./apps/opense/public/config.js:/usr/share/nginx/html/config.js:ro
+    restart: unless-stopped
+
   stoqr:
     build:
       context: .
