@@ -6,9 +6,8 @@ export type AlertChannel =
   | "email"
   | "push"
   | "telegram"
-  | "mattermost"
-  | "whatsapp";
-export type AlertConnectorProvider = "telegram" | "mattermost" | "whatsapp";
+  | "mattermost";
+export type AlertConnectorProvider = "telegram" | "mattermost";
 
 export type AlertRule = {
   id: string;
@@ -89,13 +88,6 @@ export type AlertEmailDispatchResult = {
 };
 
 export type AlertNotificationDispatchResult = AlertEmailDispatchResult;
-
-export type WhatsAppPairingResult = {
-  connectorId: string;
-  status: "disconnected" | "pairing" | "connected" | "error";
-  qr: string | null;
-  message?: string;
-};
 
 export type AlertIntegrationTestResult = {
   provider?: AlertConnectorProvider;
@@ -407,9 +399,7 @@ export const createAlertConnector = async (
       company_id: companyId,
       provider: payload.provider,
       display_name: payload.displayName,
-      status:
-        payload.status ??
-        (payload.provider === "whatsapp" ? "disconnected" : "connected"),
+      status: payload.status ?? "connected",
     })
     .select("id")
     .single();
@@ -480,22 +470,6 @@ export const dispatchAlertNotifications = async (
     failed: 0,
     results: [],
   }) as AlertNotificationDispatchResult;
-};
-
-export const startWhatsAppPairing = async (
-  companyId: string,
-  connectorId: string,
-): Promise<WhatsAppPairingResult> => {
-  const { data, error } = await supabase.functions.invoke(
-    "manage-stoqr-alert-connectors",
-    {
-      body: { action: "start_whatsapp_pairing", companyId, connectorId },
-    },
-  );
-
-  if (error) throw error;
-
-  return data as WhatsAppPairingResult;
 };
 
 export const testAlertConnectorTarget = async (

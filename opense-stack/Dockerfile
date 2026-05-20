@@ -26,7 +26,6 @@ COPY apps/admin/package.json       apps/admin/package.json
 COPY apps/accounts/package.json    apps/accounts/package.json
 COPY apps/etl/package.json         apps/etl/package.json
 COPY apps/stoqr/package.json       apps/stoqr/package.json
-COPY apps/alert-connectors/package.json apps/alert-connectors/package.json
 COPY apps/ui-design/package.json   apps/ui-design/package.json
 COPY packages/shared/package.json  packages/shared/package.json
 COPY packages/ui/package.json      packages/ui/package.json

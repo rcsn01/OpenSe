@@ -12,7 +12,6 @@ const mockUpdateEventStatus = vi.fn();
 const mockDispatchNotifications = vi.fn();
 const mockCreateConnector = vi.fn();
 const mockCreateConnectorTarget = vi.fn();
-const mockStartWhatsAppPairing = vi.fn();
 
 let mockOrganisationPageSettings = {
   reportsEnabled: true,
@@ -172,10 +171,6 @@ vi.mock("../../hooks/queries/useAlerts", () => ({
   }),
   useCreateAlertConnectorTarget: () => ({
     mutateAsync: mockCreateConnectorTarget,
-    isPending: false,
-  }),
-  useStartWhatsAppPairing: () => ({
-    mutateAsync: mockStartWhatsAppPairing,
     isPending: false,
   }),
 }));
@@ -341,7 +336,6 @@ describe("AlertsPage", () => {
     ];
     mockDispatchNotifications.mockResolvedValue({ claimed: 1, sent: 1, failed: 0, results: [] });
     mockCreateConnector.mockResolvedValue("connector-new");
-    mockStartWhatsAppPairing.mockResolvedValue({ connectorId: "connector-whatsapp", status: "pairing", qr: "qr-code" });
 
     Object.defineProperty(window, "matchMedia", {
       writable: true,

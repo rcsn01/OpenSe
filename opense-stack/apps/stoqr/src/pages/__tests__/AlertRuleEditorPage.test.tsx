@@ -8,7 +8,6 @@ const mockCreateRule = vi.fn();
 const mockUpdateRule = vi.fn();
 const mockCreateConnector = vi.fn();
 const mockCreateConnectorTarget = vi.fn();
-const mockStartWhatsAppPairing = vi.fn();
 const mockTestConnectorTarget = vi.fn();
 const mockTestEmailRecipients = vi.fn();
 
@@ -111,10 +110,6 @@ vi.mock("../../hooks/queries/useAlerts", () => ({
     mutateAsync: mockCreateConnectorTarget,
     isPending: false,
   }),
-  useStartWhatsAppPairing: () => ({
-    mutateAsync: mockStartWhatsAppPairing,
-    isPending: false,
-  }),
   useTestAlertConnectorTarget: () => ({
     mutateAsync: mockTestConnectorTarget,
     isPending: false,
@@ -195,13 +190,8 @@ describe("AlertRuleEditorPage", () => {
         ],
       },
     ];
-    mockCreateConnector.mockResolvedValue("connector-whatsapp");
+    mockCreateConnector.mockResolvedValue("connector-new");
     mockCreateConnectorTarget.mockResolvedValue("target-created");
-    mockStartWhatsAppPairing.mockResolvedValue({
-      connectorId: "connector-whatsapp",
-      status: "pairing",
-      qr: "qr-code",
-    });
     mockTestConnectorTarget.mockResolvedValue({
       targetName: "Warehouse ops",
       messageId: "message-1",
@@ -396,26 +386,6 @@ describe("AlertRuleEditorPage", () => {
         }),
       );
     });
-  });
-
-  it("starts WhatsApp QR pairing from the editor", async () => {
-    const user = userEvent.setup();
-
-    renderEditorRoute("/alerts/rules/rule-1");
-
-    await user.click(screen.getByRole("button", { name: "Pair" }));
-
-    await waitFor(() => {
-      expect(mockCreateConnector).toHaveBeenCalledWith({
-        provider: "whatsapp",
-        displayName: "WhatsApp alerts",
-        status: "disconnected",
-      });
-      expect(mockStartWhatsAppPairing).toHaveBeenCalledWith(
-        "connector-whatsapp",
-      );
-    });
-    expect(screen.getByText("qr-code")).toBeInTheDocument();
   });
 
   it("sends real integration tests for email and connector targets", async () => {
