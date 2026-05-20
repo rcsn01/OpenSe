@@ -43,7 +43,7 @@ ARG APP_NAME
 COPY . .
 
 # Build the target app (turbo handles shared package deps)
-RUN pnpm turbo run build --filter=apps/${APP_NAME}
+RUN pnpm turbo run build --filter=@repo/${APP_NAME}
 
 # ── Stage 3: serve with nginx ───────────────────────────────
 FROM nginx:1.27-alpine AS runner
