@@ -6,6 +6,7 @@ import {
   declineOrganisationInvite,
   inviteOrganisationMember,
 } from '@repo/shared/organisation-invites'
+import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
 
 const parseResponseBody = async (response: Response): Promise<any> => {
   const contentType = response.headers.get('content-type') ?? ''
@@ -142,8 +143,8 @@ export const updateOrganisationTier = async (
   // Get fresh session for edge function calls
   const { data: sessionData } = await supabase.auth.getSession()
   const accessToken = sessionData?.session?.access_token
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  const supabaseUrl = getRuntimeConfigValue('VITE_SUPABASE_URL')
+  const anonKey = getRuntimeConfigValue('VITE_SUPABASE_ANON_KEY')
 
   if (!accessToken) {
     throw new Error('Missing authenticated session. Please sign in again and retry.')
@@ -205,5 +206,4 @@ export const updateOrganisationTier = async (
   if (updateResult.data?.error) throw new Error(updateResult.data.error)
   return updateResult.data
 }
-
 

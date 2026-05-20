@@ -15,7 +15,6 @@ x-base: &base
   volumes:
     - .:/app
     - pnpm-store:/app/.pnpm-store
-  env_file: .env
   # Install deps on first run, then start the dev server
   entrypoint: ["/bin/sh", "-c"]
 

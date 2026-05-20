@@ -5,6 +5,9 @@ dist
 .turbo
 **/.turbo
 .git
+.env
+.env.*
+apps/*/public/config.js
 *.md
 tests
 playwright-report

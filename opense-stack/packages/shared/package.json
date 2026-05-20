@@ -11,6 +11,7 @@
     "./auth/context": "./src/auth/AuthContext.tsx",
     "./auth/validation": "./src/auth/validation.ts",
     "./auth/demo": "./src/auth/demo.ts",
+    "./runtime-config": "./src/runtime-config.ts",
     "./hooks": "./src/hooks/index.ts",
     "./types": "./src/types/index.ts",
     "./utils": "./src/utils/index.ts"

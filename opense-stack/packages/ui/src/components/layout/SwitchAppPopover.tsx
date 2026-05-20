@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Boxes, Palette, ShieldCheck, Workflow } from "lucide-react";
+import { getRuntimeConfigValue } from "@repo/shared/runtime-config";
 import { cn } from "../../lib/cn";
 
 type CloseOptions = {
@@ -45,20 +46,22 @@ export function SwitchAppPopover({
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
   const apps = useMemo(() => {
-    const env = import.meta.env as unknown as Record<
-      string,
-      string | undefined
-    >;
     const etlUrl =
-      env.VITE_ETL_PUBLIC_URL || env.VITE_ETL_URL || DEFAULT_APP_URLS.etl;
+      getRuntimeConfigValue("VITE_ETL_PUBLIC_URL") ||
+      getRuntimeConfigValue("VITE_ETL_URL") ||
+      DEFAULT_APP_URLS.etl;
     const stoqrUrl =
-      env.VITE_STOQR_PUBLIC_URL || env.VITE_STOQR_URL || DEFAULT_APP_URLS.stoqr;
+      getRuntimeConfigValue("VITE_STOQR_PUBLIC_URL") ||
+      getRuntimeConfigValue("VITE_STOQR_URL") ||
+      DEFAULT_APP_URLS.stoqr;
     const uiDesignUrl =
-      env.VITE_UI_PUBLIC_URL ||
-      env.VITE_UI_DESIGN_URL ||
+      getRuntimeConfigValue("VITE_UI_PUBLIC_URL") ||
+      getRuntimeConfigValue("VITE_UI_DESIGN_URL") ||
       DEFAULT_APP_URLS["ui-design"];
     const adminUrl =
-      env.VITE_ADMIN_PUBLIC_URL || env.VITE_ADMIN_URL || DEFAULT_APP_URLS.admin;
+      getRuntimeConfigValue("VITE_ADMIN_PUBLIC_URL") ||
+      getRuntimeConfigValue("VITE_ADMIN_URL") ||
+      DEFAULT_APP_URLS.admin;
 
     return [
       {

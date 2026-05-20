@@ -27,7 +27,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
-  vi.unstubAllEnvs()
+  delete (window as typeof window & { __OPENSE_CONFIG__?: Record<string, string> })
+    .__OPENSE_CONFIG__
 })
 
 describe('updateOrganisationTier', () => {
@@ -38,8 +39,11 @@ describe('updateOrganisationTier', () => {
       },
     })
 
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co')
-    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
+    ;(window as typeof window & { __OPENSE_CONFIG__?: Record<string, string> })
+      .__OPENSE_CONFIG__ = {
+      VITE_SUPABASE_URL: 'https://example.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'anon-key',
+    }
 
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)

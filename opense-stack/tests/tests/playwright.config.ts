@@ -31,7 +31,6 @@ const loadEnvFromFile = (filePath: string) => {
 
 loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test'));
 loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test.local'));
-loadEnvFromFile(resolve(workspaceRoot, '.env'));
 
 const withAccounts = process.env.E2E_WITH_ACCOUNTS !== 'false';
 const reuseExistingServer = process.env.E2E_REUSE_SERVER === 'true';

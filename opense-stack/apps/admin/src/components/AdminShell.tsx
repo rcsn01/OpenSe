@@ -10,6 +10,7 @@ import {
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
 import { buildAccountsSettingsUrl } from '@repo/shared/utils'
+import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
 import { Building2, LayoutDashboard, ShieldCheck, Settings2, Wallet, UserCog } from 'lucide-react'
 
 const navItems = [
@@ -30,7 +31,8 @@ export const AdminShell = () => {
     return window.matchMedia('(max-width: 767px)').matches
   })
   const accountsUrl =
-    (import.meta.env.VITE_ACCOUNTS_URL as string | undefined) ?? 'https://accounts.rcsn01.com'
+    getRuntimeConfigValue('VITE_ACCOUNTS_URL', 'https://accounts.rcsn01.com') ??
+    'https://accounts.rcsn01.com'
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)')
