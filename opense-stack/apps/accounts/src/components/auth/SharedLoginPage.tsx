@@ -13,6 +13,7 @@ export type SharedLoginPageProps = {
   description?: string
   loading?: boolean
   error?: string | null
+  success?: string | null
   submitLabel?: string
   googleLabel?: string
   demoLabel?: string
@@ -34,6 +35,7 @@ export const SharedLoginPage = ({
   description = 'Continue to your workspace.',
   loading = false,
   error = null,
+  success = null,
   submitLabel = 'Sign in',
   googleLabel = 'Google',
   demoLabel = 'Try Demo Mode',
@@ -88,6 +90,12 @@ export const SharedLoginPage = ({
                 {error && (
                   <div className="rounded-lg border border-[var(--color-destructive)] bg-[var(--color-destructive-light)] px-4 py-3 text-sm text-[var(--color-destructive)]">
                     {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="rounded-lg border border-[var(--color-success)] bg-[var(--color-success-light)] px-4 py-3 text-sm text-[var(--color-success)]">
+                    {success}
                   </div>
                 )}
 

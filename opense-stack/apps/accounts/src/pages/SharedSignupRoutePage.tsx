@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { signUp } from '@repo/shared/auth'
+import { Link, useNavigate } from 'react-router-dom'
+import { signOut, signUp } from '@repo/shared/auth'
 import { SharedSignupPage } from '../components/auth/SharedSignupPage'
 import { buildQueryString, getAppNameFromQuery } from '../lib/redirect'
 
+const SIGNUP_CONFIRMATION_MESSAGE = 'Please check your email to confirm your account, then sign in.'
+
 export const SharedSignupRoutePage = () => {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
   const query = buildQueryString()
   const querySuffix = query ? `?${query}` : ''
 
@@ -23,7 +25,6 @@ export const SharedSignupRoutePage = () => {
     confirmPassword: string
   }) => {
     setError(null)
-    setSuccess(null)
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -33,7 +34,11 @@ export const SharedSignupRoutePage = () => {
     setLoading(true)
     try {
       await signUp(email, password, { fullName })
-      setSuccess('Check your email to confirm your account, then sign in.')
+      await signOut()
+      navigate(`/login${querySuffix}`, {
+        replace: true,
+        state: { success: SIGNUP_CONFIRMATION_MESSAGE },
+      })
     } catch (err: any) {
       setError(err?.message ?? 'Failed to sign up')
     } finally {
@@ -48,7 +53,6 @@ export const SharedSignupRoutePage = () => {
       description="Create your OpenSe account to continue."
       loading={loading}
       error={error}
-      success={success}
       onSignUp={handleSignUp}
       footer={
         <div className="text-center">

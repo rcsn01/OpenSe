@@ -41,7 +41,8 @@ After launch, do not edit the five baseline files in place.
 Schema migrations must not contain application, demo, synthetic, or test seed data.
 
 - Seed and reference data belong in the configured seed entrypoints under `supabase/seeds/`.
-- The baseline intentionally leaves catalog rows such as app permissions, system label templates, and admin demo data to seeds.
+- Minimal runtime catalog rows required by schema triggers, such as `public.apps` and app permission codes, belong in migrations so `supabase db reset --linked` works with auto-seeding disabled.
+- Demo organisations, users, system label templates, synthetic volume, and admin demo data belong to seeds.
 - The only operational bootstrap DML that remains in migrations is the StoQR `product-images` storage bucket, because every environment needs that bucket before runtime uploads can succeed.
 
 ## Local Validation

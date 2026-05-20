@@ -19,7 +19,9 @@ shadow_port = 54320
 major_version = 17
 
 [db.seed]
-enabled = true
+# Keep reset/push flows schema-only by default, especially for linked remotes.
+# Run seed files explicitly through ./setup.sh when demo/reference data is needed.
+enabled = false
 sql_paths = [
 	"./seeds/00_cleanup.sql",
 	"./seeds/10_auth_users.sql",

@@ -4,6 +4,8 @@
 -- Seed data is now split by domain under `supabase/seeds/`.
 -- Execution order is configured in `supabase/config.toml` under:
 --   [db.seed].sql_paths
+-- Automatic CLI seeding is disabled with [db.seed].enabled = false.
+-- Use `./setup.sh` option 2 to insert these seed files manually.
 --
 -- Files currently executed:
 --   00_cleanup.sql
