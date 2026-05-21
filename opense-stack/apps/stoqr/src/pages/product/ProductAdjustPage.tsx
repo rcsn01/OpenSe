@@ -7,16 +7,8 @@ import { BasePage } from '../../components/BasePage'
 import { useCompany } from '../../contexts/CompanyContext'
 import { useProductDetail, useProductFolders } from '../../hooks/queries/useProducts'
 import { useQuickScanTransaction, useQuickScanUser } from '../../hooks/queries/useQuickScan'
-import { SCAN_REASON_LABELS, type ScanUpdateReason } from '../../lib/scanReason'
 import { getPublicImageUrl } from '../../utils'
 import '../../components/Scan/ScanSurface.css'
-
-const REASON_OPTIONS: Array<{ value: ScanUpdateReason; label: string }> = [
-  { value: 'new_delivery', label: SCAN_REASON_LABELS.new_delivery },
-  { value: 'consumed', label: SCAN_REASON_LABELS.consumed },
-  { value: 'sold', label: SCAN_REASON_LABELS.sold },
-  { value: 'inventory_audit', label: SCAN_REASON_LABELS.inventory_audit },
-]
 
 const QUICK_ADJUSTMENTS = [5, 10, 25, 50]
 
@@ -80,7 +72,6 @@ export const ProductAdjustPage = () => {
 
   const [draftQuantity, setDraftQuantity] = useState(0)
   const [selectedFolderId, setSelectedFolderId] = useState('')
-  const [reason, setReason] = useState<ScanUpdateReason>('new_delivery')
   const [note, setNote] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
@@ -111,7 +102,8 @@ export const ProductAdjustPage = () => {
   }, [product?.image_urls])
 
   const hasQuantityChange = product ? draftQuantity !== currentFolderQuantity : false
-  const canConfirm = !!product && !!selectedFolderId && !transactionMutation.isPending && (hasQuantityChange || reason === 'inventory_audit')
+  const canConfirm = !!product && !!selectedFolderId && !transactionMutation.isPending && hasQuantityChange
+  const statusMessage = message ?? (product && selectedFolderId && !hasQuantityChange ? 'Adjust the quantity before confirming.' : null)
 
   const handleBack = () => {
     if (returnTo) {
@@ -146,12 +138,12 @@ export const ProductAdjustPage = () => {
     }
 
     const quantityDiff = draftQuantity - currentFolderQuantity
-    if (quantityDiff === 0 && reason !== 'inventory_audit') {
-      setMessage('Adjust the quantity or choose Inventory Audit to log a no-change check.')
+    if (quantityDiff === 0) {
+      setMessage('Adjust the quantity before confirming.')
       return
     }
 
-    const transactionType = quantityDiff > 0 ? 'scan_in' : quantityDiff < 0 ? 'scan_out' : 'lookup'
+    const transactionType = quantityDiff > 0 ? 'scan_in' : 'scan_out'
 
     try {
       await transactionMutation.mutateAsync({
@@ -162,12 +154,11 @@ export const ProductAdjustPage = () => {
         quantity: Math.abs(quantityDiff),
         barcode,
         entryMethod,
-        reason,
         note,
         stockAfter: draftQuantity,
         folderId: selectedFolderId,
       })
-      setMessage(reason === 'inventory_audit' && quantityDiff === 0 ? 'Inventory audit logged.' : 'Inventory updated.')
+      setMessage('Inventory updated.')
       setNote('')
       await refetch()
     } catch (error) {
@@ -263,41 +254,6 @@ export const ProductAdjustPage = () => {
 
               <div className="scan-update-fields-row">
                 <div className="scan-update-section">
-                  <p className="scan-update-label">Reason for update</p>
-                  <select
-                    className="scan-reason-select"
-                    aria-label="Reason for update"
-                    value={reason}
-                    onChange={(event) => {
-                      setReason(event.target.value as ScanUpdateReason)
-                      setMessage(null)
-                    }}
-                  >
-                    {REASON_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="scan-reason-grid" role="radiogroup" aria-label="Reason for update">
-                    {REASON_OPTIONS.map((option) => (
-                      <label key={option.value} className="scan-reason-option">
-                        <input
-                          type="radio"
-                          name="adjust-reason"
-                          checked={reason === option.value}
-                          onChange={() => {
-                            setReason(option.value)
-                            setMessage(null)
-                          }}
-                        />
-                        <span>{option.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="scan-update-section">
                   <p className="scan-update-label">Optional Notes</p>
                   <textarea
                     className="scan-update-notes"
@@ -376,7 +332,7 @@ export const ProductAdjustPage = () => {
                 </div>
               </div>
 
-              {message ? <p className="scan-update-message">{message}</p> : null}
+              {statusMessage ? <p className="scan-update-message">{statusMessage}</p> : null}
 
               <button
                 type="button"

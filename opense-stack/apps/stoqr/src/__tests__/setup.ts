@@ -14,6 +14,10 @@ const storage: Storage = {
   get length() { return store.size },
 }
 Object.defineProperty(window, 'localStorage', { value: storage, writable: true, configurable: true })
+window.__OPENSE_CONFIG__ = {
+  VITE_SUPABASE_URL: 'https://supabase.example.com',
+  VITE_SUPABASE_ANON_KEY: 'test-anon-key',
+}
 
 afterEach(() => {
   store.clear()

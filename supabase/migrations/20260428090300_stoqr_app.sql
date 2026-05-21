@@ -186,7 +186,6 @@ CREATE TABLE stoqr.scan_events (
   entry_method TEXT NOT NULL DEFAULT 'camera' CHECK (entry_method IN ('camera', 'manual')),
   scanned_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   transaction_id UUID REFERENCES stoqr.inventory_transactions(id) ON DELETE SET NULL,
-  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 

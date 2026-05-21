@@ -31,7 +31,7 @@ type ScanHistoryRow = {
   id: string
   productLabel: string
   skuLabel: string
-  reasonLabel: string
+  movementLabel: string
   dateLabel: string
   changeLabel: string
   changeTone: ReturnType<typeof getChangeTone>
@@ -52,7 +52,7 @@ export const ScanHistoryTab = ({ companyId, searchTerm = '' }: { companyId: stri
         maxRanking: fuzzyRankings.STARTS_WITH,
       },
       {
-        key: (event) => [event.reasonLabel, event.scan_type, event.entry_method, event.actorName],
+        key: (event) => [event.movementLabel, event.scan_type, event.entry_method, event.actorName],
         maxRanking: fuzzyRankings.CONTAINS,
       },
     ]),
@@ -62,7 +62,7 @@ export const ScanHistoryTab = ({ companyId, searchTerm = '' }: { companyId: stri
     id: event.id,
     productLabel: event.product?.name ?? 'Unknown item',
     skuLabel: event.product?.sku ?? event.barcode ?? '—',
-    reasonLabel: event.reasonLabel,
+    movementLabel: event.movementLabel,
     dateLabel: formatHistoryTimestamp(event.created_at),
     changeLabel: formatSignedChange(event.change),
     changeTone: getChangeTone(event.change),
@@ -80,9 +80,9 @@ export const ScanHistoryTab = ({ companyId, searchTerm = '' }: { companyId: stri
       renderCell: (row) => row.skuLabel,
     },
     {
-      id: 'reason',
-      header: 'Reason',
-      renderCell: (row) => row.reasonLabel,
+      id: 'movement',
+      header: 'Movement',
+      renderCell: (row) => row.movementLabel,
     },
     {
       id: 'date',
@@ -127,7 +127,7 @@ export const ScanHistoryTab = ({ companyId, searchTerm = '' }: { companyId: stri
                 <div className="scan-history-mobile-copy">
                   <p className="scan-history-mobile-sku">{event.product?.sku ?? event.barcode ?? '—'}</p>
                   <h3 className="scan-history-mobile-name">{event.product?.name ?? 'Unknown item'}</h3>
-                  <p className="scan-history-mobile-meta">{formatHistoryTimestamp(event.created_at)} • {event.reasonLabel}</p>
+                  <p className="scan-history-mobile-meta">{formatHistoryTimestamp(event.created_at)} • {event.movementLabel}</p>
                 </div>
                 <div className={`scan-history-change scan-history-change--${getChangeTone(event.change)}`}>
                   {formatSignedChange(event.change)}
