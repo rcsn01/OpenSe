@@ -12,13 +12,14 @@ type ModernTeamSettingsProps = {
   currentUserId?: string;
   canManageTeam: boolean;
   inviteError: string | null;
+  searchValue?: string;
   onInvite: (email: string, role: 'admin' | 'editor' | 'member') => Promise<void> | void;
   
   // Member Logic
   onUpdateRole: (memberId: string, newRole: 'admin' | 'editor' | 'member') => Promise<void> | void;
 };
 
-export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => {
+export const ModernTeamSettings = (props: ModernTeamSettingsProps) => {
   const [roleChangeMessage, setRoleChangeMessage] = useState<string | null>(null);
 
   const sharedMembers: OrganisationTeamsTabMember[] = props.members.map((member) => ({
@@ -60,6 +61,7 @@ export const ModernTeamSettings: React.FC<ModernTeamSettingsProps> = (props) => 
         isRoleEditable={(member) => member.roleId !== 'owner' && member.userId !== props.currentUserId}
         onRoleChange={handleRoleChange}
         onInvite={handleInvite}
+        searchValue={props.searchValue}
         inviteMessage={inviteMessage ?? undefined}
         roleChangeMessage={roleChangeMessage}
         emptyStateTitle={`No members in ${props.organisation.name}`}

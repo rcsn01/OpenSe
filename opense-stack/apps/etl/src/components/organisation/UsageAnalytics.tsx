@@ -8,14 +8,14 @@ import { OrgSimple } from '../../types/organisation';
 import { useOutletContext } from 'react-router-dom';
 import { useOrgUsageStats, useOrgActiveUsers } from '../../hooks/queries/useUsageStats';
 import { UsageSummary, ActiveUser } from '../../api/usage';
-import { Card } from '@repo/ui';
+import { Card, DataTable, type DataTableColumn } from '@repo/ui';
 
 const COLORS = {
-  success: '#10b981',
-  failed: '#ef4444',
-  running: '#f59e0b',
-  primary: '#3b82f6',
-  muted: '#94a3b8',
+  success: 'var(--color-success)',
+  failed: 'var(--color-destructive)',
+  running: 'var(--color-warning)',
+  primary: 'var(--color-primary)',
+  muted: 'var(--color-muted-foreground)',
 };
 
 const PIE_COLORS = [COLORS.success, COLORS.failed, COLORS.running];
@@ -48,13 +48,46 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
       { name: 'Failed', value: usageStats.failed },
     ].filter((d) => d.value > 0);
   }, [usageStats]);
+  const activeUserColumns = useMemo<Array<DataTableColumn<ActiveUser>>>(() => [
+    {
+      id: 'user',
+      header: 'User',
+      renderCell: (user) => (
+        <div className="min-w-0">
+          <p className="truncate font-medium text-[var(--color-foreground)]">{user.full_name || 'No name'}</p>
+          <p className="truncate text-xs text-[var(--color-muted-foreground)]">{user.email}</p>
+        </div>
+      ),
+    },
+    {
+      id: 'executions',
+      header: 'Executions',
+      renderCell: (user) => (
+        <span className="text-sm font-medium text-[var(--color-foreground)]">{user.execution_count}</span>
+      ),
+    },
+    {
+      id: 'lastActive',
+      header: 'Last Active',
+      renderCell: (user) => (
+        <span className="text-sm text-[var(--color-muted-foreground)]">
+          {new Date(user.last_active).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
+      ),
+    },
+  ], []);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-500 mr-2" />
-          <span className="text-slate-500 text-sm">Loading analytics...</span>
+          <Loader2 className="mr-2 h-6 w-6 animate-spin text-[var(--color-primary)]" />
+          <span className="text-sm text-[var(--color-muted-foreground)]">Loading analytics...</span>
         </div>
       )}
 
@@ -64,20 +97,20 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
           <div className={`grid grid-cols-1 md:grid-cols-2 ${hideActiveUsers ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-5`}>
             <MetricCard
               icon={Activity}
-              iconColor="bg-blue-50 text-blue-600"
+              iconColor="bg-[var(--color-muted)] text-[var(--color-primary)]"
               label="Total Executions (30d)"
               value={usageStats?.total?.toLocaleString() || '0'}
             />
             <MetricCard
               icon={CheckCircle}
-              iconColor="bg-green-50 text-green-600"
+              iconColor="bg-[var(--color-success-light)] text-[var(--color-success)]"
               label="Success Rate"
               value={usageStats ? `${usageStats.successRate}%` : '—'}
               subtitle={usageStats ? `${usageStats.success.toLocaleString()} successful` : undefined}
             />
             <MetricCard
               icon={XCircle}
-              iconColor="bg-red-50 text-red-600"
+              iconColor="bg-[var(--color-destructive-light)] text-[var(--color-destructive)]"
               label="Failed Runs"
               value={usageStats?.failed?.toLocaleString() || '0'}
               subtitle={usageStats && usageStats.total > 0
@@ -88,7 +121,7 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
             {!hideActiveUsers && (
               <MetricCard
                 icon={Users}
-                iconColor="bg-purple-50 text-purple-600"
+                iconColor="bg-[var(--color-muted)] text-[var(--color-secondary)]"
                 label="Active Users (30d)"
                 value={activeUsers.length.toString()}
                 subtitle={activeUsers.length > 0 ? `Top: ${activeUsers[0]?.full_name || activeUsers[0]?.email || 'N/A'}` : undefined}
@@ -101,16 +134,16 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
             {/* Execution Volume */}
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-6">
-                <BarChart3 className="w-5 h-5 text-slate-600" />
-                <h3 className="text-base font-bold text-slate-900">Execution Volume</h3>
+                <BarChart3 className="w-5 h-5 text-[var(--color-muted-foreground)]" />
+                <h3 className="text-base font-semibold text-[var(--color-foreground)]">Execution Volume</h3>
               </div>
               {chartData.length > 0 ? (
                 <div className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} barCategoryGap="20%">
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 'var(--type-size-xs)' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 'var(--type-size-xs)' }} allowDecimals={false} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--color-muted-foreground)', fontSize: 'var(--type-size-xs)' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--color-muted-foreground)', fontSize: 'var(--type-size-xs)' }} allowDecimals={false} />
                       <Tooltip
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.1)', fontSize: 'var(--type-size-xs)' }}
                         cursor={{ fill: '#F1F5F9' }}
@@ -128,8 +161,8 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
             {/* Execution Status Breakdown */}
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-6">
-                <TrendingUp className="w-5 h-5 text-slate-600" />
-                <h3 className="text-base font-bold text-slate-900">Status Breakdown</h3>
+                <TrendingUp className="w-5 h-5 text-[var(--color-muted-foreground)]" />
+                <h3 className="text-base font-semibold text-[var(--color-foreground)]">Status Breakdown</h3>
               </div>
               {statusData.length > 0 ? (
                 <div className="h-[280px] flex items-center justify-center">
@@ -151,7 +184,7 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
                       <Tooltip
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.1)', fontSize: 'var(--type-size-xs)' }}
                       />
-                      <Legend verticalAlign="bottom" height={36} formatter={(value) => <span className="text-xs text-slate-600">{value}</span>} />
+                      <Legend verticalAlign="bottom" height={36} formatter={(value) => <span className="text-xs text-[var(--color-muted-foreground)]">{value}</span>} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -165,8 +198,8 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
           {chartData.length > 1 && (
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-6">
-                <TrendingUp className="w-5 h-5 text-slate-600" />
-                <h3 className="text-base font-bold text-slate-900">Execution Trend</h3>
+                <TrendingUp className="w-5 h-5 text-[var(--color-muted-foreground)]" />
+                <h3 className="text-base font-semibold text-[var(--color-foreground)]">Execution Trend</h3>
               </div>
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -177,9 +210,9 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
                         <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 'var(--type-size-xs)' }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 'var(--type-size-xs)' }} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--color-muted-foreground)', fontSize: 'var(--type-size-xs)' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--color-muted-foreground)', fontSize: 'var(--type-size-xs)' }} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px -2px rgb(0 0 0 / 0.1)', fontSize: 'var(--type-size-xs)' }}
                     />
@@ -192,49 +225,20 @@ export const UsageCharts = ({ usageStats, activeUsers = [], isLoading, hideActiv
 
           {/* ── Active Users Table ── */}
           {!hideActiveUsers && activeUsers.length > 0 && (
-            <Card className="overflow-hidden" padding="none">
-              <div className="p-6 border-b border-slate-100">
+            <Card className="overflow-hidden border border-[var(--color-border)] bg-[var(--color-card)]" padding="none">
+              <div className="border-b border-[var(--color-border)] p-5">
                 <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-slate-600" />
-                  <h3 className="text-base font-bold text-slate-900">Active Users (Last 30 Days)</h3>
+                  <Users className="w-5 h-5 text-[var(--color-muted-foreground)]" />
+                  <h3 className="text-base font-semibold text-[var(--color-foreground)]">Active Users (Last 30 Days)</h3>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                    <tr>
-                      <th className="text-left px-6 py-3 font-semibold">User</th>
-                      <th className="text-left px-6 py-3 font-semibold">Executions</th>
-                      <th className="text-left px-6 py-3 font-semibold">Last Active</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {activeUsers.map((u) => (
-                      <tr key={u.user_id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-3">
-                          <div>
-                            <p className="font-medium text-slate-800">{u.full_name || 'No name'}</p>
-                            <p className="text-xs text-slate-400">{u.email}</p>
-                          </div>
-                        </td>
-                        <td className="px-6 py-3">
-                          <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
-                            {u.execution_count}
-                          </span>
-                        </td>
-                        <td className="px-6 py-3 text-slate-500 text-xs">
-                          {new Date(u.last_active).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={activeUserColumns}
+                rows={activeUsers}
+                getRowId={(user) => user.user_id}
+                variant="operational"
+                minTableWidth={620}
+              />
             </Card>
           )}
         </>
@@ -290,15 +294,15 @@ const MetricCard = ({
       <div className={`p-2 rounded-lg ${iconColor}`}>
         <Icon className="w-4 h-4" />
       </div>
-      <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider">{label}</h3>
+      <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">{label}</h3>
     </div>
-    <p className="text-2xl font-bold text-slate-900">{value}</p>
-    {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
+    <p className="text-2xl font-semibold text-[var(--color-foreground)]">{value}</p>
+    {subtitle && <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{subtitle}</p>}
   </Card>
 );
 
 const EmptyChart = ({ message }: { message: string }) => (
-  <div className="h-[280px] flex flex-col items-center justify-center text-slate-400">
+  <div className="h-[280px] flex flex-col items-center justify-center text-[var(--color-muted-foreground)]">
     <BarChart3 className="w-10 h-10 mb-2 opacity-30" />
     <p className="text-sm">{message}</p>
   </div>

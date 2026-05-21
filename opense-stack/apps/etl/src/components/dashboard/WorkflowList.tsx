@@ -1,6 +1,17 @@
 import { Plus } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@repo/shared/auth/context';
+import {
+    Alert,
+    Button,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@repo/ui';
 import { WorkflowTable } from './WorkflowTable';
 import { useDeleteWorkflow, useWorkflows } from '../../hooks/queries/useWorkflows';
 import { OrgSimple } from '../../types/organisation';
@@ -8,7 +19,6 @@ import { OrgSimple } from '../../types/organisation';
 type DashboardContextType = {
     currentOrg: OrgSimple | null;
     dashboardSearch?: string;
-    setDashboardSearch?: (value: string) => void;
 };
 
 type WorkflowListProps = {
@@ -18,11 +28,12 @@ type WorkflowListProps = {
 export const WorkflowList = ({ mode }: WorkflowListProps) => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const { currentOrg, dashboardSearch = '', setDashboardSearch } = useOutletContext<DashboardContextType>() || {
+    const { currentOrg, dashboardSearch = '' } = useOutletContext<DashboardContextType>() || {
         currentOrg: null,
         dashboardSearch: '',
-        setDashboardSearch: () => {},
     };
+    const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     const {
         data: workflows = [],
@@ -36,43 +47,91 @@ export const WorkflowList = ({ mode }: WorkflowListProps) => {
 
     const deleteMutation = useDeleteWorkflow();
     const errorMessage = queryError instanceof Error ? queryError.message : null;
+    const createHref = mode === 'org' && currentOrg ? `/editor/new?orgId=${currentOrg.id}` : '/editor/new';
+    const pendingDeleteWorkflow = workflows.find((workflow) => workflow.id === pendingDeleteId) ?? null;
 
-    const handleDelete = (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this workflow?')) return;
+    const handleDelete = () => {
+        if (!pendingDeleteId) return;
 
-        deleteMutation.mutate(id, {
+        setDeleteError(null);
+        deleteMutation.mutate(pendingDeleteId, {
+            onSuccess: () => {
+                setPendingDeleteId(null);
+            },
             onError: (err) => {
-                alert(err instanceof Error ? err.message : 'Failed to delete workflow');
+                setDeleteError(err instanceof Error ? err.message : 'Failed to delete workflow');
             },
         });
     };
 
     return (
         <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <h1 className="text-lg font-semibold text-[var(--color-foreground)]">
+                        {mode === 'org' && currentOrg ? `${currentOrg.name} workflows` : 'Personal workflows'}
+                    </h1>
+                    <p className="text-sm text-[var(--color-muted-foreground)]">
+                        {mode === 'org' && currentOrg
+                            ? 'Shared drafts and operational workflows for this organisation.'
+                            : 'Private drafts and workflows owned by you.'}
+                    </p>
+                </div>
+
+                <Link
+                    to={createHref}
+                    className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 text-sm font-medium text-[var(--color-primary-foreground)] shadow-[var(--shadow-sm)] transition-colors hover:bg-[var(--color-primary-hover)]"
+                >
+                    <Plus className="h-4 w-4" />
+                    New workflow
+                </Link>
+            </div>
+
+            {deleteError ? (
+                <Alert variant="destructive" dismissible onDismiss={() => setDeleteError(null)}>
+                    {deleteError}
+                </Alert>
+            ) : null}
+
             <WorkflowTable
                 workflows={workflows}
                 loading={isLoading}
                 error={errorMessage}
                 search={dashboardSearch}
-                onSearchChange={setDashboardSearch ?? (() => {})}
                 onEdit={(id) => navigate(`/editor/${id}`)}
-                onDelete={handleDelete}
+                onDelete={(id) => setPendingDeleteId(id)}
             />
 
-            <Link
-                to={mode === 'org' && currentOrg ? `/editor/new?orgId=${currentOrg.id}` : '/editor/new'}
-                className="mt-6 block w-full rounded-xl border-2 border-dashed border-slate-300 p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 transition-all group bg-white/50"
-            >
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 group-hover:bg-blue-100 transition-colors">
-                    <Plus className="h-6 w-6 text-slate-500 group-hover:text-blue-600 transition-colors" />
-                </div>
-                <h3 className="mt-3 text-sm font-semibold text-slate-900 group-hover:text-blue-700">Create a new workflow</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                    {mode === 'org' && currentOrg
-                        ? `Start a new shared workflow in ${currentOrg.name}`
-                        : 'Start a new private workflow'}
-                </p>
-            </Link>
+            <Dialog open={Boolean(pendingDeleteId)} onClose={() => setPendingDeleteId(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete workflow</DialogTitle>
+                        <DialogDescription>
+                            {pendingDeleteWorkflow
+                                ? `Delete "${pendingDeleteWorkflow.name}"? This action cannot be undone.`
+                                : 'Delete this workflow? This action cannot be undone.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setPendingDeleteId(null)}
+                            disabled={deleteMutation.isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={handleDelete}
+                            loading={deleteMutation.isPending}
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 };

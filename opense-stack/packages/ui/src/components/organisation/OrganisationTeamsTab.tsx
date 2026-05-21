@@ -28,6 +28,7 @@ type OrganisationTeamsTabProps = {
   onRoleChange: (memberId: string, roleId: string) => Promise<void> | void
   isRoleEditable?: (member: OrganisationTeamsTabMember) => boolean
   onInvite?: (email: string, roleId: string) => void
+  searchValue?: string
   inviteMessage?: string | null
   roleChangeMessage?: string | null
   emptyStateTitle?: string
@@ -41,6 +42,7 @@ export function OrganisationTeamsTab({
   onRoleChange,
   isRoleEditable,
   onInvite,
+  searchValue = '',
   inviteMessage,
   roleChangeMessage,
   emptyStateTitle = 'No members',
@@ -58,12 +60,25 @@ export function OrganisationTeamsTab({
   }, [roles, inviteRole])
 
   const filteredMembers = useMemo(() => {
-    if (roleFilter === 'all') {
-      return members
+    const roleFilteredMembers = roleFilter === 'all'
+      ? members
+      : members.filter((member) => member.roleId === roleFilter)
+    const normalizedSearchValue = searchValue.trim().toLowerCase()
+
+    if (!normalizedSearchValue) {
+      return roleFilteredMembers
     }
 
-    return members.filter((member) => member.roleId === roleFilter)
-  }, [members, roleFilter])
+    return roleFilteredMembers.filter((member) => {
+      const roleLabel = roles.find((role) => role.id === member.roleId)?.name ?? member.roleId ?? 'Member'
+
+      return [
+        member.displayName,
+        member.subtitle,
+        roleLabel,
+      ].some((value) => value.toLowerCase().includes(normalizedSearchValue))
+    })
+  }, [members, roleFilter, roles, searchValue])
 
   const rows: OrganisationMembersTableRow[] = filteredMembers.map((member) => {
     const editable = canManageTeam && (isRoleEditable ? isRoleEditable(member) : true)
@@ -126,7 +141,7 @@ export function OrganisationTeamsTab({
       />
 
       {(roleChangeMessage || inviteMessage) && (
-        <div className="text-sm text-slate-600 px-1">
+        <div className="px-1 text-sm text-[var(--color-muted-foreground)]">
           {roleChangeMessage ?? inviteMessage}
         </div>
       )}
