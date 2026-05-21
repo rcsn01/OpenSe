@@ -92,6 +92,12 @@ export { ThemeProvider, useTheme } from "./ui/ThemeProvider";
 export { Container, VStack, HStack, Grid } from "./layout/Layout";
 export { StackLayout } from "./layout/StackLayout";
 export { AppLayout, type AppLayoutProps } from "./layout/AppLayout";
+export {
+  AppShellLayout,
+  type AppShellLayoutProps,
+  type AppShellNavGroup,
+  type AppShellNavItem,
+} from "./layout/AppShellLayout";
 export { BasePage, type BasePageProps } from "./layout/BasePage";
 export {
   LANDING_NAVBAR_OFFSET,
