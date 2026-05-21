@@ -6,8 +6,6 @@ import type { ProductListViewProps } from './types'
 import type { SortField } from '../types'
 
 const inventoryPageSizeOptions = [10, 20, 50]
-const inventoryTableHeaderClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
-const inventoryTableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
 
 export const ProductListView = ({
   companyId,
@@ -107,7 +105,6 @@ export const ProductListView = ({
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-[var(--color-muted-foreground)]">Available</span>
                         <span
-                          style={{ color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}
                           className={cn(
                             'font-semibold',
                             product.quantity_on_hand >= product.reorder_point
@@ -139,6 +136,7 @@ export const ProductListView = ({
         </>
       ) : (
         <DataTable
+          variant="operational"
           className="flex-1"
           tableWrapClassName="flex-1 min-h-0"
           columns={[
@@ -146,8 +144,6 @@ export const ProductListView = ({
               id: 'name',
               header: 'Name / SKU',
               sortKey: 'name',
-              headerClassName: inventoryTableHeaderClassName,
-              cellClassName: inventoryTableCellClassName,
               renderCell: (product) => (
                 <Link
                   to={`/inventory/${product.id}/overview`}
@@ -165,8 +161,6 @@ export const ProductListView = ({
               header: 'Folder',
               sortKey: 'folder_id',
               width: 220,
-              headerClassName: inventoryTableHeaderClassName,
-              cellClassName: inventoryTableCellClassName,
               renderCell: (product) => <span className="text-sm text-[var(--color-muted-foreground)]">{folderSummary(product)}</span>,
             },
             {
@@ -175,8 +169,6 @@ export const ProductListView = ({
               sortKey: 'selling_price',
               width: 100,
               align: 'right',
-              headerClassName: inventoryTableHeaderClassName,
-              cellClassName: inventoryTableCellClassName,
               renderCell: (product) => {
                 const isEditingPrice = editingCell?.id === product.id && editingCell.field === 'selling_price'
 
@@ -225,11 +217,8 @@ export const ProductListView = ({
               sortKey: 'quantity_on_hand',
               width: 110,
               align: 'right',
-              headerClassName: inventoryTableHeaderClassName,
-              cellClassName: inventoryTableCellClassName,
               renderCell: (product) => (
                 <span
-                  style={{ color: product.quantity_on_hand >= product.reorder_point ? 'var(--success)' : 'var(--danger)' }}
                   className={cn(
                     'font-semibold',
                     product.quantity_on_hand >= product.reorder_point
@@ -258,8 +247,6 @@ export const ProductListView = ({
             selectAllLabel: 'Select all visible products',
             getRowLabel: (product) => product.name,
             columnWidth: 44,
-            headerClassName: inventoryTableHeaderClassName,
-            cellClassName: inventoryTableCellClassName,
           }}
           onRowClick={(product) => toggleSelection(product.id)}
           rowClassName={(product) => (

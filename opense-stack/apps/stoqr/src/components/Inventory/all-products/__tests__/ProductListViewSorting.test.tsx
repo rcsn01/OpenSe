@@ -4,6 +4,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { ProductListView } from '../ProductListView'
 import type { ProductListViewProps } from '../types'
 
+vi.mock('../../../../utils', () => ({
+  formatCurrency: (value: number | null | undefined) => `$${Number(value ?? 0).toFixed(2)}`,
+}))
+
 vi.mock('../useInlineProductEdit', () => ({
   useInlineProductEdit: () => ({
     editingCell: null,

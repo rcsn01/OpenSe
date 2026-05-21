@@ -4,7 +4,7 @@ import { cn } from "../../lib/cn";
 import { Pagination } from "./Pagination";
 
 type DataTableAlign = "left" | "center" | "right";
-type DataTableVariant = "default" | "boxed" | "dashboard";
+type DataTableVariant = "default" | "boxed" | "dashboard" | "operational";
 
 const alignmentClassNames: Record<DataTableAlign, string> = {
   left: "text-left",
@@ -62,6 +62,16 @@ const dataTableVariantClassNames: Record<
       "border-b border-[var(--color-shell-border)] px-3 py-2.5 align-top",
     emptyStateCell: "px-3 py-6 text-center",
     footer: "px-3 py-3 bg-transparent",
+  },
+  operational: {
+    tableWrap: "border-0 bg-[var(--color-table-row-bg)]",
+    table: "bg-[var(--color-table-row-bg)]",
+    headerCell:
+      "border-b border-[var(--color-table-border)] bg-[var(--color-table-header-bg)] px-4 py-4 uppercase",
+    bodyCell:
+      "border-b border-[var(--color-table-border)] bg-[var(--color-table-row-bg)] px-4 py-3 align-middle",
+    emptyStateCell: "px-4 py-6 text-center",
+    footer: "bg-[var(--color-table-row-bg)] px-4 py-3",
   },
 };
 

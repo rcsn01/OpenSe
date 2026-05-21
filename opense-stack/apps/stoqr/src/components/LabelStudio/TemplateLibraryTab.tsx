@@ -31,9 +31,6 @@ type TemplateTableRow = {
 
 type TemplateSortField = 'templateName' | 'dimensions' | 'activeFields' | 'lastModified'
 
-const templateTableHeaderClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
-const templateTableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
-
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return ''
   const date = new Date(dateString)
@@ -156,8 +153,6 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       header: 'Template Name',
       sortKey: 'templateName',
       width: '34%',
-      headerClassName: templateTableHeaderClassName,
-      cellClassName: templateTableCellClassName,
       renderCell: (row) => (
         <div className="label-template-name-cell">
           <span className="label-template-name-icon" aria-hidden="true">
@@ -183,8 +178,6 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       header: 'Dimensions',
       sortKey: 'dimensions',
       width: '14%',
-      headerClassName: templateTableHeaderClassName,
-      cellClassName: templateTableCellClassName,
       renderCell: (row) => row.dimensionsLabel,
     },
     {
@@ -192,8 +185,6 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       header: 'Active Fields',
       sortKey: 'activeFields',
       width: '28%',
-      headerClassName: templateTableHeaderClassName,
-      cellClassName: templateTableCellClassName,
       renderCell: (row) => (
         <div className="label-template-field-list">
           {row.activeFields.map((field) => (
@@ -207,8 +198,6 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       header: 'Last Modified',
       sortKey: 'lastModified',
       width: '16%',
-      headerClassName: templateTableHeaderClassName,
-      cellClassName: templateTableCellClassName,
       renderCell: (row) => row.lastModifiedLabel,
     },
     {
@@ -217,8 +206,6 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       sortable: false,
       width: '8%',
       align: 'right',
-      headerClassName: templateTableHeaderClassName,
-      cellClassName: templateTableCellClassName,
       renderCell: (row) => (
         <button
           type="button"
@@ -274,6 +261,7 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       <div className="label-template-table-shell">
         {!isCompactView ? (
           <DataTable
+            variant="operational"
             columns={columns}
             rows={sortedTableRows}
             getRowId={(row) => row.id}
@@ -283,8 +271,6 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
             sortField={tableSortField}
             sortDirection={tableSortDirection}
             onSortChange={handleTableSort}
-            tableWrapClassName="border-0 bg-white"
-            tableClassName="bg-white"
             rowClassName={(row) => row.isSelected ? 'label-template-table-row is-editing' : 'label-template-table-row'}
           />
         ) : null}

@@ -154,6 +154,8 @@ Use `@repo/ui` first for primitives and shared patterns:
 - `Pagination`
 - Form inputs and controls
 
+Use `DataTable variant="operational"` for compact app tables that match the current StoQR table language: white rows, white headers, subtle `#d9e2ef`-equivalent row dividers, uppercase headers, and tight operational cell padding.
+
 Cards in StoQR are not decorative containers for every section. Use them for repeated items, framed panels, modals, and true surfaces. Many StoQR screens should instead use plain panels, tables, split panes, and whitespace.
 
 ### Owner-Scoped Surfaces

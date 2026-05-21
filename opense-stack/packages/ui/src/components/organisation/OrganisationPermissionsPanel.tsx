@@ -378,9 +378,6 @@ export function OrganisationPermissionsPanel({
     setRoleSortDirection("asc");
   };
 
-  const roleTableHeaderClassName =
-    "border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase";
-  const roleTableCellClassName = "border-b border-[#d9e2ef] px-4 py-3";
   const usesRoutedEdit = Boolean(onEditRole);
 
   const roleColumns = useMemo<DataTableColumn<RoleTableRow, RoleSortField>[]>(
@@ -390,8 +387,7 @@ export function OrganisationPermissionsPanel({
         header: "Role Name",
         sortKey: "name",
         width: usesRoutedEdit ? "32%" : "26%",
-        headerClassName: roleTableHeaderClassName,
-        cellClassName: `${roleTableCellClassName} font-medium text-[var(--color-foreground)]`,
+        cellClassName: "font-medium text-[var(--color-foreground)]",
         renderCell: (row) => row.name,
       },
       {
@@ -399,8 +395,7 @@ export function OrganisationPermissionsPanel({
         header: "Description",
         sortKey: "description",
         width: usesRoutedEdit ? "50%" : "44%",
-        headerClassName: roleTableHeaderClassName,
-        cellClassName: `${roleTableCellClassName} text-[var(--color-muted-foreground)]`,
+        cellClassName: "text-[var(--color-muted-foreground)]",
         renderCell: (row) => row.description || "—",
       },
       {
@@ -408,8 +403,7 @@ export function OrganisationPermissionsPanel({
         header: "Role Rank",
         sortKey: "role-rank",
         width: usesRoutedEdit ? "18%" : "14%",
-        headerClassName: roleTableHeaderClassName,
-        cellClassName: `${roleTableCellClassName} text-[var(--color-muted-foreground)]`,
+        cellClassName: "text-[var(--color-muted-foreground)]",
         renderCell: (row) => row.roleRank ?? "—",
       },
       ...(!usesRoutedEdit
@@ -420,8 +414,7 @@ export function OrganisationPermissionsPanel({
               sortable: false,
               align: "right" as const,
               width: "16%",
-              headerClassName: roleTableHeaderClassName,
-              cellClassName: `${roleTableCellClassName} text-right`,
+              cellClassName: "text-right",
               renderCell: (row: RoleTableRow) => (
                 <div className="flex justify-end gap-2">
                   <Button
@@ -481,6 +474,7 @@ export function OrganisationPermissionsPanel({
           ) : (
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
               <DataTable
+                variant="operational"
                 columns={roleColumns}
                 rows={paginatedRoleRows}
                 getRowId={(row) => row.id}
@@ -501,8 +495,6 @@ export function OrganisationPermissionsPanel({
                       }
                     : {};
                 }}
-                tableWrapClassName="border-0 bg-white"
-                tableClassName="bg-white"
                 pagination={{
                   currentPage: rolePage,
                   totalPages: roleTotalPages,
@@ -566,13 +558,13 @@ export function OrganisationPermissionsPanel({
                     size="sm"
                     onClick={() => setIsAddingRole(true)}
                     disabled={!canManage || saving}
-                    className="w-full justify-center border border-dashed border-[#d9e2ef] py-5"
+                    className="w-full justify-center border border-dashed border-[var(--color-table-border)] py-5"
                   >
                     <Plus className="h-4 w-4" />
                     Add Role
                   </Button>
                 )}
-                bottomRowCellClassName="bg-white px-4 py-3"
+                bottomRowCellClassName="bg-[var(--color-table-row-bg)] px-4 py-3"
               />
             </div>
           )}

@@ -31,7 +31,9 @@ const rows: TestRow[] = [
 type DataTableTestProps = {
   rows?: TestRow[]
   topRow?: ReactNode
+  bottomRow?: ReactNode
   emptyState?: ReactNode
+  variant?: 'default' | 'boxed' | 'dashboard' | 'operational'
 }
 
 const renderTable = (props: DataTableTestProps = {}) =>
@@ -158,5 +160,26 @@ describe('DataTable', () => {
     expect(screen.getByText('Top controls').closest('td')).toHaveAttribute('colspan', String(columns.length + 1))
     expect(screen.getByText('Nothing here yet.')).toHaveAttribute('colspan', String(columns.length + 1))
     expect(screen.getByText('Bottom controls').closest('td')).toHaveAttribute('colspan', String(columns.length + 1))
+  })
+
+  it('applies the operational table chrome variant', () => {
+    renderTable({ variant: 'operational' })
+
+    const nameHeader = screen.getByText('Name').closest('th')
+    const alphaCell = screen.getByText('Alpha').closest('td')
+
+    expect(nameHeader).toHaveClass(
+      'border-[var(--color-table-border)]',
+      'bg-[var(--color-table-header-bg)]',
+      'px-4',
+      'py-4',
+      'uppercase',
+    )
+    expect(alphaCell).toHaveClass(
+      'border-[var(--color-table-border)]',
+      'bg-[var(--color-table-row-bg)]',
+      'px-4',
+      'py-3',
+    )
   })
 })
