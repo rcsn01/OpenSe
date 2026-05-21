@@ -1,6 +1,6 @@
 import { db, supabase } from '../supabaseClient'
 import type { Product } from '../types'
-import { inferScanReasonLabel, toSignedScanChange, type ScanUpdateReason } from '../lib/scanReason'
+import { inferScanMovementLabel, toSignedScanChange } from '../lib/scanMovement'
 
 type ScanHistoryItem = {
   id: string
@@ -12,16 +12,10 @@ type ScanHistoryItem = {
   product: { id: string; name: string; sku: string } | null
   actorName: string
   transactionType: string | null
-  reason: string | null
-  reasonLabel: string
+  movementLabel: string
   note: string | null
   change: number
   stockAfter: number | null
-}
-
-type ScanEventMetadata = {
-  reason?: string | null
-  note?: string | null
 }
 
 const normalizeProduct = (row: Partial<Product>): Product => ({
@@ -179,15 +173,11 @@ export const createQuickScanTransaction = async (params: {
   quantity: number
   barcode?: string | null
   entryMethod?: 'camera' | 'manual'
-  reason?: ScanUpdateReason | null
   note?: string | null
   stockAfter?: number | null
   folderId?: string | null
 }) => {
-  const metadata: ScanEventMetadata = {
-    reason: params.reason ?? null,
-    note: params.note?.trim() ? params.note.trim() : null,
-  }
+  const transactionNote = params.note?.trim() || null
 
   if (params.transactionType === 'lookup') {
     const { error: lookupEventError } = await db.from('scan_events').insert({
@@ -198,7 +188,6 @@ export const createQuickScanTransaction = async (params: {
       quantity: 0,
       entry_method: params.entryMethod ?? 'manual',
       scanned_by: params.userId,
-      metadata,
     })
 
     if (lookupEventError) throw lookupEventError
@@ -208,12 +197,6 @@ export const createQuickScanTransaction = async (params: {
   const quantityChange = params.transactionType === 'scan_out'
     ? -Math.abs(params.quantity)
     : Math.abs(params.quantity)
-
-  const transactionNote = params.note?.trim() || inferScanReasonLabel({
-    reason: params.reason ?? null,
-    scanType: params.transactionType === 'scan_in' ? 'stock_in' : 'stock_out',
-    transactionType: params.transactionType,
-  })
 
   const { data: transactionRow, error } = await db.from('inventory_transactions').insert({
     company_id: params.companyId,
@@ -239,7 +222,6 @@ export const createQuickScanTransaction = async (params: {
     entry_method: params.entryMethod ?? 'manual',
     scanned_by: params.userId,
     transaction_id: transactionRow?.id,
-    metadata,
   })
 
   if (scanEventError) throw scanEventError
@@ -256,7 +238,6 @@ export const fetchScanHistory = async (companyId: string): Promise<ScanHistoryIt
       quantity,
       entry_method,
       scanned_by,
-      metadata,
       products (id, name, sku),
       inventory_transactions (transaction_type, notes, stock_after)
     `)
@@ -274,7 +255,6 @@ export const fetchScanHistory = async (companyId: string): Promise<ScanHistoryIt
     quantity: number | null
     entry_method: 'camera' | 'manual'
     scanned_by: string | null
-    metadata?: ScanEventMetadata | null
     products?: { id: string; name: string; sku: string } | { id: string; name: string; sku: string }[] | null
     inventory_transactions?:
       | { transaction_type: string; notes: string | null; stock_after: number | null }
@@ -305,7 +285,6 @@ export const fetchScanHistory = async (companyId: string): Promise<ScanHistoryIt
     const product = Array.isArray(row.products) ? row.products[0] : row.products
     const tx = Array.isArray(row.inventory_transactions) ? row.inventory_transactions[0] : row.inventory_transactions
     const actor = row.scanned_by ? profilesById.get(row.scanned_by) : null
-    const metadata = row.metadata ?? null
 
     return {
       id: row.id,
@@ -317,13 +296,11 @@ export const fetchScanHistory = async (companyId: string): Promise<ScanHistoryIt
       product: product ? { id: product.id, name: product.name, sku: product.sku } : null,
       actorName: actor?.full_name ?? actor?.username ?? 'System',
       transactionType: tx?.transaction_type ?? null,
-      reason: metadata?.reason ?? null,
-      reasonLabel: inferScanReasonLabel({
-        reason: metadata?.reason ?? null,
+      movementLabel: inferScanMovementLabel({
         scanType: row.scan_type,
         transactionType: tx?.transaction_type ?? null,
       }),
-      note: metadata?.note ?? tx?.notes ?? null,
+      note: tx?.notes ?? null,
       change: toSignedScanChange(row.scan_type, row.quantity),
       stockAfter: tx?.stock_after ?? null,
     }
