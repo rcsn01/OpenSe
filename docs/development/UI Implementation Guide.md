@@ -2,422 +2,424 @@
 
 ## Purpose
 
-This document explains the right way to build, edit, and verify UI across OpenSe, with StoQR as the main reference implementation.
+This document explains how to build, edit, and verify UI across OpenSe. StoQR is the current reference implementation for authenticated app screens: compact, data-dense, search-first, tab-driven, and built around the shared app shell.
 
-The design rules live in [../design/Design Guide.md](../design/Design%20Guide.md). This guide is the engineering counterpart: how to turn those rules into code that is maintainable, testable, and consistent with the current codebase.
+The visual rules live in [../design/Design Guide.md](../design/Design%20Guide.md). This guide explains how to turn those rules into maintainable code.
 
 ---
 
-## 1. The implementation hierarchy
+## 1. Implementation Hierarchy
 
-When building UI, always work from the top of this stack downward:
+Work from the top of this stack downward:
 
-1. **Design tokens and primitives in `@repo/ui`**
+1. **Shared tokens and primitives in `@repo/ui`**
 2. **Shared app patterns and layout wrappers**
-3. **Page-owned composition**
-4. **Feature-specific styling**
+3. **Route-owned page composition**
+4. **Feature-owned component composition**
+5. **Owner-scoped styling for complex surfaces**
 
-That hierarchy matters.
-
-If a problem can be solved by reusing `@repo/ui`, do that first. If it needs app-specific composition, solve it in the page or owner component. Only add custom styling when the shared primitives and normal utility classes cannot express the layout cleanly.
-
----
-
-## 2. The default decision tree
-
-### Use `@repo/ui` first
-
-Reach for `@repo/ui` when you need:
-
-- Buttons
-- Cards and surfaces
-- Dialogs
-- Badges
-- Empty states
-- Pagination
-- Tabs
-- Data tables
-- Shared layout wrappers
-
-If the UI you need is a new reusable primitive, add or extend it in `packages/ui` instead of cloning the component inside an app.
-
-### Use inline Tailwind classes second
-
-For page-specific layout, spacing, typography, alignment, and state styling, prefer inline utility classes in `.tsx`.
-
-This is the default for:
-
-- Flex and grid layout
-- Spacing
-- Alignment
-- Width and height constraints
-- Token-based colour usage
-- Responsive layout changes at standard breakpoints
-- Simple selected/open/active states
-
-### Use owner-scoped CSS only when it is genuinely the better tool
-
-Use app-owned CSS when the surface has one or more of these properties:
-
-- Large selector-heavy legacy markup
-- Complex responsive table/list switching
-- Print or export-specific rendering
-- Deeply nested preview/editor surfaces
-- A migration bridge where rewriting everything to utilities in one pass is too risky
-
-If you need custom CSS, it must be:
-
-- Owned by the page or feature that renders it
-- Imported by that owner
-- Namespaced to that surface
-- Treated as transitional unless there is a strong reason for it to remain
+If a problem can be solved by reusing `@repo/ui`, do that first. If it needs app-specific composition, solve it in the route page or feature owner. Use owner-scoped CSS only when the surface is too complex for shared primitives and utility classes to express clearly.
 
 ---
 
-## 3. What not to do
+## 2. Canonical App Shell
 
-Do **not**:
+Authenticated product apps should follow StoQR's shell structure:
 
-- Add new feature styles to a global app stylesheet
-- Recreate `App.css` under a different filename
-- Introduce new global utility classes like `.button`, `.card`, or `.input` as a long-term pattern
-- Copy-paste a component from an app when the right fix is to extend `@repo/ui`
-- Hardcode hex colours in app code when a token exists
-- Use inline `style={{ ... }}` objects for static UI styling
-- Implement a second version of a shared interaction pattern when one already exists
-- Verify a UI change only by reading code
+- `AppShellLayout` from `@repo/ui` owns the sidebar, brand slot, grouped navigation, mobile sidebar behavior, top bar, profile menu, and scrollable main content area.
+- Apps pass nav groups, current path, brand details, profile actions, and route-specific children.
+- The app shell should stay mounted while child routes change.
+- Route content renders through `Outlet`.
 
----
+Current reference:
 
-## 4. Current styling rules for StoQR
+- `apps/stoqr/src/layouts/AppLayout.tsx`
+- `packages/ui/src/components/layout/AppShellLayout.tsx`
+- `packages/ui/src/components/layout/AppLayout.tsx`
+- `packages/ui/src/components/ui/SideNav.tsx`
 
-### The real rule
-
-**`@repo/ui` first, Tailwind second, owner-scoped CSS only when necessary.**
-
-### What exists today
-
-StoQR still has some large owner-scoped surface styles for complex and migrated areas, including:
-
-- `InventorySurface.css`
-- `LabelStudioSurface.css`
-- `ScanSurface.css`
-- `CustomReportsSurface.css`
-
-These files exist because those surfaces were too risky to rewrite blindly in one pass. They are valid bridge files, but they are not the ideal default for new UI.
-
-### How to treat those bridge files
-
-If you are editing one of those surfaces today:
-
-- Keep changes inside the owner surface file if the surface is still primarily driven by that file
-- Keep selectors namespaced to that feature
-- Do not move shared primitive styles into those files
-- Do not let one surface file silently become a styling dependency for another route
-- Prefer moving new work toward `@repo/ui` and Tailwind instead of expanding the bridge unnecessarily
-
-If you are building a brand-new screen, do **not** create another bridge stylesheet just because one exists elsewhere.
+Do not build a second sidebar/topbar system inside an app. If Accounts, Admin, ETL, or another app needs the same shell behavior, extend `AppShellLayout` instead of cloning StoQR's layout.
 
 ---
 
-## 5. Tokens, colours, icons, and spacing
+## 3. Page Shells
 
-### Colours
+StoQR route pages usually use one of these wrappers:
 
-Use semantic tokens from `@repo/ui` or the token aliases already exposed in app CSS variables.
+- `StoqrPageShell` for normal StoQR pages that need company empty-state handling and optional top-bar search registration.
+- `BasePage` for older/simple pages or pages that need more direct layout control.
+- A feature-owned surface component for complex internals, rendered inside the route page.
 
-Good:
+Default StoQR page surfaces are tight and full-height:
 
+- content area uses compact padding.
+- tabbed pages are usually `flex`, `min-h-0`, and `overflow-hidden`.
+- scroll belongs to the content pane that needs it, not random descendants.
+
+Prefer this shape for new StoQR-like pages:
+
+```tsx
+<StoqrPageShell companyId={companyId} search={searchConfig}>
+  <ContentTabs
+    activeTab={activeTab}
+    onTabChange={(nextTab) => navigate(`/route/${nextTab}`)}
+    bottomSpacing
+    tabs={tabs}
+  />
+</StoqrPageShell>
+```
+
+---
+
+## 4. Search Pattern
+
+StoQR uses shared page-owned top-bar search. The layout renders the control; each page owns search meaning.
+
+Use:
+
+- `usePageTopBarSearch(...)` to register the active page search config.
+- `useTopBarSearchValue()` when a page or tab needs the current query.
+- `StoqrPageShell search={searchConfig}` when the page-level shell can register search for you.
+
+The page owns:
+
+- placeholder text.
+- default suggestions.
+- dynamic suggestions.
+- selection behavior.
+- whether search filters visible data or navigates to another route.
+
+Do not:
+
+- add a second top-bar search implementation.
+- pass search state through unrelated layout props.
+- add duplicate local page search bars when top-bar search is the intended pattern.
+
+---
+
+## 5. Route Tabs
+
+Route-level tabs should use `ContentTabs` from `@repo/ui`. In StoQR, major tabs are usually backed by the URL so refreshes, deep links, tests, and search suggestions land on the right view.
+
+Use route-backed tabs for:
+
+- Inventory views.
+- Scanner actions/history.
+- Label Studio templates/preview.
+- Reports.
+- Procurement.
+- Alerts.
+- Organisation settings.
+
+Use local state tabs only for small internal panels that do not need a shareable URL.
+
+---
+
+## 6. Styling Decision Tree
+
+### Use `@repo/ui` First
+
+Use shared primitives for:
+
+- App shell layout.
+- Buttons.
+- Cards and panels.
+- Dialogs and sheets.
+- Badges and status labels.
+- Empty states.
+- Pagination.
+- Tabs.
+- Data tables.
+- Inputs and controls.
+- Analytics primitives when they fit the design.
+
+If a reusable primitive is missing, add or extend it in `packages/ui` instead of cloning a component inside an app.
+
+### Use Tailwind Utilities Second
+
+For page-level composition, utility classes are the default:
+
+- flex/grid layout.
+- spacing.
+- alignment.
+- min/max sizing.
+- overflow behavior.
+- responsive layout.
+- simple active/open/selected states.
+- token-based colour usage.
+
+### Use Owner-Scoped CSS When Necessary
+
+Owner-scoped CSS is appropriate for:
+
+- large selector-heavy migrated surfaces.
+- complex responsive table/list switching.
+- scanner/camera surfaces.
+- label preview/designer/print surfaces.
+- dense analytics layouts that are not yet covered by shared primitives.
+- a migration bridge where rewriting everything at once is too risky.
+
+Owner-scoped CSS must be:
+
+- imported by the owning route or feature component.
+- namespaced to that feature.
+- treated as feature-owned, not a global dependency.
+- kept aligned with the existing local visual rhythm.
+
+---
+
+## 7. Current StoQR Surface Ownership
+
+These current StoQR surfaces are intentionally owner-scoped:
+
+- `apps/stoqr/src/components/Inventory/InventorySurface.css`
+- `apps/stoqr/src/components/LabelStudio/LabelStudioSurface.css`
+- `apps/stoqr/src/components/Scan/ScanSurface.css`
+- `apps/stoqr/src/pages/DashboardPage.module.css`
+
+These files are valid current design sources for their screens. Do not copy them into new features by default, and do not rewrite them during unrelated changes just because they contain raw colours or non-token spacing.
+
+When editing one:
+
+- identify the owning route and feature component first.
+- keep selectors namespaced.
+- preserve the compact StoQR visual rhythm.
+- move repeated patterns into `@repo/ui` only when the extraction is clear and tested.
+
+---
+
+## 8. Visual Implementation Rules
+
+### Typography
+
+New shared components should use typography tokens or existing `@repo/ui` typography primitives. Existing StoQR surfaces often use direct compact sizes. Match the local pattern before migrating.
+
+Typical app scale:
+
+- KPI values: large but not hero-style, often 24-32px.
+- Section labels: 11-12px uppercase, muted, wider tracking.
+- Table and body text: 13-14px.
+- Metadata: 11-12px muted.
+- Controls: 13-14px medium.
+
+Avoid marketing-scale headings inside authenticated app pages.
+
+### Colour
+
+Use tokens for new shared code. Existing StoQR CSS may use raw slate/status values. Preserve current design unless the task is specifically a token migration.
+
+Common token targets:
+
+- `var(--color-background)`
 - `var(--color-foreground)`
 - `var(--color-muted-foreground)`
 - `var(--color-border)`
 - `var(--color-primary)`
-
-Bad:
-
-- `#3b82f6`
-- `#0f172a`
-- `#e2e8f0`
-
-If a raw colour seems necessary, stop and ask whether the token system is missing something that should be added properly.
-
-### Icons
-
-Icons should inherit `currentColor` unless a deliberately semantic token is required.
-
-This keeps icon colour aligned with nearby text and avoids one-off visual drift.
+- `var(--color-card)`
+- `var(--color-surface-subtle)`
 
 ### Spacing
 
-Use the existing spacing scale through utilities whenever possible. If a surface file is already authoritative for a legacy layout, keep spacing changes aligned with its established rhythm rather than adding arbitrary values in multiple places.
+Shared primitives should use token spacing. StoQR pages use compact operational spacing:
+
+- tight page padding.
+- 24-28px major dashboard/report gaps.
+- 16-18px section internals.
+- 8-12px dense table/control spacing.
+
+Do not add arbitrary spacing in many places to chase a screenshot. Find the owner and adjust the page or shared primitive coherently.
 
 ---
 
-## 6. Page ownership rules
-
-### Pages own route-level composition
-
-The route page should own:
-
-- The main layout wrapper
-- Tabs at the route level
-- Search registration for the top bar
-- High-level empty/loading/error handling
-- Which feature components are shown
-
-Feature components should own:
-
-- Their domain interactions
-- Their local derived state
-- Their internal layout
-- Their route-owned or feature-owned styling
-
-### Example: top-bar search
-
-StoQR now uses a shared page-owned top-bar search system. The layout renders the search UI, but each page registers its own behavior.
-
-Use:
-
-- `usePageTopBarSearch(...)` to register the page’s search config
-- `useTopBarSearchValue()` when the page needs the current query to filter visible content
+## 9. What Not To Do
 
 Do **not**:
 
-- Add a second top-bar search implementation for a page
-- Pass search state down through unrelated layout props
-- Recreate per-page layout search bars when the shared top bar already exists
-
-Example:
-
-```tsx
-const filteredItems = useMemo(
-  () => filterProducts(products, searchValue),
-  [products, searchValue],
-)
-
-usePageTopBarSearch({
-  searchKey: 'inventory-products',
-  placeholder: 'Search items...',
-  suggestions,
-  onSuggestionSelect: handleSuggestionSelect,
-})
-```
-
-The page owns the suggestions and selection behavior. The layout only renders the control.
+- create another app shell when `AppShellLayout` can be extended.
+- wrap every section in a card by default.
+- add marketing-style page heroes inside operational apps.
+- create global feature styles in an app stylesheet.
+- introduce generic global classes such as `.button`, `.card`, or `.input`.
+- copy-paste a component from StoQR when the right fix is to make the shared version reusable.
+- hardcode new colours when a token already represents the role.
+- use inline `style={{ ... }}` for static styling unless the existing owner surface already does this and a wider cleanup is out of scope.
+- verify visual work only by reading code.
 
 ---
 
-## 7. How to build a new UI the right way
+## 10. Building New UI
 
-### Step 1: start with states, not styling
+### Step 1: Identify States
 
-Before writing classes, identify:
+Before styling, identify:
 
-- Default state
-- Loading state
-- Empty state
-- Error state
-- Success state
-- Mobile state
-- Search/filter state
-- Selected/active state
+- default state.
+- loading state.
+- empty state.
+- error state.
+- mobile state.
+- search/filter state.
+- selected/active state.
+- permission-disabled state, when relevant.
 
-If you do not know all meaningful states, you are not ready to style the UI yet.
+### Step 2: Choose the Page Shape
 
-### Step 2: compose with shared primitives
+Pick the StoQR page shape that fits:
 
-Build the structure using:
+- metric strip + analytic panels.
+- toolbar + table.
+- routed tabs + tab content.
+- split explorer/detail layout.
+- editor surface.
+- scanner/action surface.
 
-- `BasePage`
+### Step 3: Compose With Shared Pieces
+
+Start with:
+
+- `AppShellLayout`
+- `StoqrPageShell` or `BasePage`
 - `ContentTabs`
-- `Card`
-- `Dialog`
 - `DataTable`
+- `Button`
+- `Dialog`
+- `Card`
 - `Badge`
 - `EmptyState`
 - `Pagination`
 
-Only after the structure is correct should you add feature-specific layout and spacing.
+Then add page-owned layout and feature-owned internals.
 
-### Step 3: choose the smallest styling tool that works
-
-- If Tailwind utilities are enough, stop there
-- If the surface is already owned by a namespaced CSS file, keep related changes there
-- If a new shared primitive is clearly emerging, move it to `@repo/ui`
-
-### Step 4: wire the interaction pattern the same way the app already does it
+### Step 4: Match Existing Interaction Patterns
 
 Examples:
 
-- Searchable pages use the shared top-bar search API
-- Route tabs use `ContentTabs`
-- Tables use `DataTable`
-- Confirmations use `Dialog`
+- Searchable pages register top-bar search.
+- Route-level tabs use `ContentTabs` and navigate on tab change.
+- Confirmations use `Dialog`.
+- Tables use `DataTable` unless a feature-specific surface already owns the table pattern.
+- Toasts use the existing app toast system.
 
-The right implementation is usually the one that matches the rest of the app, not the one with the fewest lines.
-
----
-
-## 8. How to edit an existing UI safely
-
-### Find the true owner first
-
-Before editing, identify:
-
-1. The route page
-2. The feature component rendered by that route
-3. The stylesheet or shared primitive actually controlling the surface
-
-For StoQR, that often means:
-
-- Route page in `apps/stoqr/src/pages/...`
-- Feature component in `apps/stoqr/src/components/...`
-- Shared primitives in `packages/ui`
-- Search behavior in `components/Search/TopBarSearch.tsx`
-
-### Do not edit blind
-
-Before changing styling:
-
-- Open the route in the browser
-- Confirm what is visually broken
-- Search for the actual owner classes/components
-- Make the smallest coherent change at the owner level
-
-Do not patch random descendants until the page “looks right”. That is how styling ownership becomes impossible to reason about.
-
-### If the surface is already mid-migration
-
-When a surface is partly legacy and partly modern:
-
-- Preserve the existing owner boundary
-- Avoid mixing a major layout rewrite with a folder restructure
-- Prefer one clear migration step over many half-patterns in the same file
+The right implementation is the one that matches the product's established behavior, not necessarily the shortest code.
 
 ---
 
-## 9. The right way to migrate legacy UI
+## 11. Editing Existing UI Safely
 
-When moving a legacy surface away from old global styling:
+Before changing a StoQR UI surface:
 
-1. Identify the owner page/component
-2. Extract only the selectors that belong to that owner
-3. Validate the extracted CSS before relying on it
-4. Reconnect the owner to the new file
-5. Replace old generic primitives with `@repo/ui` or local owner classes
-6. Verify the real route in the browser
+1. Open the route in the browser when practical.
+2. Identify the route page.
+3. Identify the feature component rendered by the route.
+4. Identify whether styling comes from `@repo/ui`, Tailwind utilities, a CSS module, or an owner surface file.
+5. Make the smallest coherent change at the owner level.
+6. Verify the actual route.
 
-### Never do this
+Do not patch random descendants until the page looks close. That makes ownership impossible to reason about.
 
-- Copy a chunk of legacy CSS and assume it is still valid
-- Move rules without confirming the selector contract still matches the markup
-- Keep unrelated feature selectors together because “they used to live in the same file”
-- Skip parser/build validation for extracted CSS
+If the surface is mid-migration:
 
-### If you extract CSS from a legacy source
-
-You must verify:
-
-- The file parses cleanly
-- The owner route imports it
-- The route renders correctly in the browser
-- No unrelated route silently depends on it
+- preserve the owner boundary.
+- avoid mixing a major visual rewrite with a folder restructure.
+- prefer one clear migration step over many half-patterns in the same file.
 
 ---
 
-## 10. Responsive UI rules for engineers
+## 12. Migration Rules
 
-Do not treat “responsive” as an afterthought.
+When moving a legacy or owner-scoped surface toward shared UI:
+
+1. Identify repeated patterns, not just similar class names.
+2. Extract one coherent primitive or wrapper at a time.
+3. Keep the old route visually stable.
+4. Add tests for behavior and the shared contract.
+5. Verify the real route in the browser.
+
+Do not:
+
+- move raw CSS into `@repo/ui` without a clear component API.
+- change the compact StoQR visual language as a side effect of cleanup.
+- remove owner-scoped CSS before the shared replacement covers the same states and responsive behavior.
+
+---
+
+## 13. Responsive Rules
 
 Every UI change should answer:
 
 - What happens on narrow screens?
-- What collapses?
 - What stacks?
-- What becomes scrollable?
-- Does the empty state still fit?
-- Are actions still reachable?
+- What scrolls?
+- What remains visible?
+- Are primary actions reachable?
+- Does the empty state fit?
+- Do table rows become scrollable, simplified, or card-like?
 
-For dense surfaces like inventory, reports, and label tools:
+For dense surfaces like inventory, reports, scanner, and label tools:
 
-- Prefer intentional layout changes over simply shrinking everything
-- Stack complex secondary panels earlier than you think
-- Switch grids from 3 columns to 2 or 1 when the content starts to compress
-- Keep important actions visible without forcing horizontal overflow
-
-The best responsive implementation preserves meaning, not just geometry.
+- stack complex secondary panels earlier than expected.
+- preserve workflow meaning, not just geometry.
+- keep action controls reachable without forcing awkward horizontal overflow.
 
 ---
 
-## 11. Testing and verification rules for UI work
+## 14. Verification
 
-### Test the implementation, not the code structure
+### Tests
 
 Good tests assert:
 
-- The user sees the right content
-- The right route renders
-- Search filters the visible results
-- Selecting an item navigates correctly
-- Tabs show the right content
-- Empty states appear when expected
+- the user sees the right content.
+- the right route renders.
+- search filters or navigates correctly.
+- selecting a row/item navigates correctly.
+- tabs show the right content.
+- empty/loading/error states appear when expected.
 
-Bad tests assert:
+Avoid tests that assert class names or internal implementation details unless the class is part of a deliberate styling contract.
 
-- Specific class names for no user-facing reason
-- Internal state implementation details
-- That copied JSX structure exists unchanged
-
-### Every meaningful UI change should include these checks
-
-1. Focused unit/integration tests for the affected route or component
-2. A production build
-3. Browser verification of the actual route
-
-For visually sensitive changes, browser verification is required even when tests pass.
-
-### For StoQR UI changes, the usual verification flow is
+### Usual StoQR UI Checks
 
 ```bash
 pnpm --dir opense-stack/apps/stoqr test -- --run <affected tests>
-pnpm --dir opense-stack/apps/stoqr build
 pnpm --dir opense-stack/apps/stoqr typecheck
+pnpm --dir opense-stack/apps/stoqr build
 ```
 
-Then verify the actual page in the browser.
-
-If `typecheck` fails only because of a known unrelated pre-existing issue, document that explicitly in your change summary.
+Then verify the changed route in the browser. For visually sensitive changes, browser verification is required even when tests pass.
 
 ---
 
-## 12. Examples of good patterns in the current codebase
+## 15. Reference Patterns
 
-Use these as starting references:
+Use these as starting points:
 
+- Shared app shell: `packages/ui/src/components/layout/AppShellLayout.tsx`
+- StoQR app layout: `apps/stoqr/src/layouts/AppLayout.tsx`
+- Page shell/search registration: `apps/stoqr/src/components/StoqrPageShell.tsx`
 - Shared route-level search: `apps/stoqr/src/components/Search/TopBarSearch.tsx`
-- Route-level tabs and composition: `apps/stoqr/src/pages/LabelStudioPage.tsx`
-- Shared product page search adapter: `apps/stoqr/src/hooks/useProductPageSearch.ts`
-- Inventory explorer surface ownership: `apps/stoqr/src/components/Inventory/*`
-- Scanner route ownership: `apps/stoqr/src/pages/ScanPage.tsx`
-- Shared UI primitives: `packages/ui/src/components`
+- Route-level tabs: `apps/stoqr/src/pages/ReportsPage.tsx`
+- Label Studio routed tabs: `apps/stoqr/src/pages/LabelStudioPage.tsx`
+- Scanner surface: `apps/stoqr/src/pages/ScanPage.tsx`
+- Inventory surface ownership: `apps/stoqr/src/components/Inventory/*`
+- Shared primitives: `packages/ui/src/components`
 
-When implementing something new, copy the pattern, not just the code.
+Copy the pattern and behavior, not only the JSX.
 
 ---
 
-## 13. Engineer checklist
+## 16. Engineer Checklist
 
 Before opening a UI PR, confirm:
 
-- The design uses existing tokens and primitives
-- The route/page ownership is clear
-- Shared patterns were reused instead of duplicated
-- No new global feature stylesheet was introduced
-- No hardcoded hex values were added without a strong reason
-- The responsive behavior was intentionally handled
-- Focused tests passed
-- The route was checked in the browser
-- Build passed
-- Any remaining `typecheck` failures are pre-existing and documented
-
-If you cannot say yes to those points, the UI change is not ready.
+- The page matches StoQR's compact app visual language.
+- The shared app shell is reused.
+- The route/page ownership is clear.
+- Search and tabs use existing patterns where applicable.
+- Shared primitives were reused before adding feature-owned styling.
+- Any owner-scoped CSS is justified and namespaced.
+- No unrelated visual migration was mixed into the change.
+- Responsive behavior was intentionally handled.
+- Focused tests passed.
+- Typecheck/build passed or unrelated failures were documented.
+- The route was checked in the browser for visual changes.
