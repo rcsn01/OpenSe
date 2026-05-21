@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { RootRedirect } from '../App';
+import { RootRedirect } from '../RootRedirect';
 
 const mockUseAuth = vi.fn();
 

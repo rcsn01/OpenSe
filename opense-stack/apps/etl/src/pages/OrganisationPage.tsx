@@ -1,19 +1,18 @@
 import { useMemo } from 'react';
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Loader2, Users, Activity, FileText, ShieldCheck } from 'lucide-react';
-import { BasePage, StackLayout } from '@repo/ui';
+import { Users, Activity, FileText, ShieldCheck } from 'lucide-react';
+import { ContentTabs, Spinner } from '@repo/ui';
 import { useAuth } from '@repo/shared/auth/context';
 import { Member } from '../components/settings/types';
 
 import { useOrganisationMembers, useUserOrganisations } from '../hooks/queries/useOrganisations';
 import { OrgSimple } from '../types/organisation';
-import { Tabs } from '../components/ui/Tabs';
+import { ETLPageShell } from '../components/ETLPageShell';
+import { useTopBarSearchValue } from '../components/Search/TopBarSearch';
 
 // Context for AppLayout
 type OrganisationPageContext = {
     currentOrg: OrgSimple | null;
-    teamSearch?: string;
-    setTeamSearch?: (value: string) => void;
 };
 
 // Context passed to child routes
@@ -23,14 +22,15 @@ type OutletContextType = {
     refetchMembers: () => Promise<any>;
     userRole: string | null;
     teamSearch?: string;
-    setTeamSearch?: (value: string) => void;
 };
 
 export const OrganisationPage = () => {
     const { user } = useAuth();
-    const { currentOrg: contextOrg, teamSearch, setTeamSearch } = useOutletContext<OrganisationPageContext>();
+    const { currentOrg: contextOrg } = useOutletContext<OrganisationPageContext>();
     const location = useLocation();
     const navigate = useNavigate();
+    const activeTab = location.pathname.split('/').pop() || 'team';
+    const { searchValue: teamSearch } = useTopBarSearchValue();
 
     const { data: userOrgs = [], isLoading: orgsLoading } = useUserOrganisations(user?.id);
     const organisation = contextOrg ?? userOrgs[0] ?? null;
@@ -43,46 +43,101 @@ export const OrganisationPage = () => {
         return members.find((m) => m.user_id === user.id)?.role ?? 'member';
     }, [organisation, user, members]);
 
+    const searchConfig = useMemo(() => ({
+        searchKey: 'organisation-team',
+        enabled: activeTab === 'team',
+        placeholder: 'Search members...',
+        emptyMessage: 'No members found.',
+        suggestions: members.map((member) => ({
+            id: member.id,
+            title: member.profiles?.full_name || member.profiles?.email || 'Unknown Member',
+            value: member.profiles?.full_name || member.profiles?.email || member.user_id,
+            subtitle: member.profiles?.email || member.user_id,
+            badge: member.role,
+            keywords: [member.role],
+        })),
+    }), [activeTab, members]);
+
 
     // --- Render Loading ---
     if (orgsLoading || (!!organisation && membersLoading)) {
         return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-slate-400">
-                <Loader2 className="w-10 h-10 animate-spin mb-4 text-blue-600" />
-                <p>Loading organisation details...</p>
-            </div>
+            <ETLPageShell search={{ ...searchConfig, enabled: false }}>
+                <div className="flex min-h-[60vh] flex-col items-center justify-center p-8 text-[var(--color-muted-foreground)]">
+                    <Spinner size="lg" className="mb-4" />
+                    <p>Loading organisation details...</p>
+                </div>
+            </ETLPageShell>
         );
     }
 
     // --- Render Main View ---
     return (
-        <BasePage>
-            <StackLayout>
-                {/* Page Tabs (Navigation) */}
-                <Tabs
-                    tabs={[
-                        { id: 'team', label: 'Teams', icon: <Users className="w-4 h-4" /> },
-                        { id: 'permissions', label: 'Permissions', icon: <ShieldCheck className="w-4 h-4" /> },
-                        { id: 'usage', label: 'Usage', icon: <Activity className="w-4 h-4" /> },
-                        { id: 'logs', label: 'Logs', icon: <FileText className="w-4 h-4" /> },
-                    ]}
-                    activeTab={location.pathname.split('/').pop() || 'team'}
-                    onTabChange={(id) => navigate(id)}
-                    bottomSpacing
-                />
-
-                {/* Tab Content */}
-                <Outlet
-                    context={{
-                        currentOrg: organisation,
-                        members,
-                        refetchMembers,
-                        userRole: membershipRole,
-                        teamSearch,
-                        setTeamSearch,
-                    } satisfies OutletContextType}
-                />
-            </StackLayout>
-        </BasePage>
+        <ETLPageShell search={searchConfig}>
+            <ContentTabs
+                tabs={[
+                    {
+                        id: 'team',
+                        label: 'Teams',
+                        icon: <Users className="w-4 h-4" />,
+                        content: <Outlet
+                            context={{
+                                currentOrg: organisation,
+                                members,
+                                refetchMembers,
+                                userRole: membershipRole,
+                                teamSearch,
+                            } satisfies OutletContextType}
+                        />,
+                    },
+                    {
+                        id: 'permissions',
+                        label: 'Permissions',
+                        icon: <ShieldCheck className="w-4 h-4" />,
+                        content: <Outlet
+                            context={{
+                                currentOrg: organisation,
+                                members,
+                                refetchMembers,
+                                userRole: membershipRole,
+                                teamSearch,
+                            } satisfies OutletContextType}
+                        />,
+                    },
+                    {
+                        id: 'usage',
+                        label: 'Usage',
+                        icon: <Activity className="w-4 h-4" />,
+                        content: <Outlet
+                            context={{
+                                currentOrg: organisation,
+                                members,
+                                refetchMembers,
+                                userRole: membershipRole,
+                                teamSearch,
+                            } satisfies OutletContextType}
+                        />,
+                    },
+                    {
+                        id: 'logs',
+                        label: 'Logs',
+                        icon: <FileText className="w-4 h-4" />,
+                        content: <Outlet
+                            context={{
+                                currentOrg: organisation,
+                                members,
+                                refetchMembers,
+                                userRole: membershipRole,
+                                teamSearch,
+                            } satisfies OutletContextType}
+                        />,
+                    },
+                ]}
+                activeTab={activeTab}
+                onTabChange={(id) => navigate(`/organisation/${id}`)}
+                bottomSpacing
+                contentClassName="overflow-hidden"
+            />
+        </ETLPageShell>
     );
 };

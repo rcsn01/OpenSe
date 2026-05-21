@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { Copy, LayoutTemplate, Loader2, GitFork, AlertCircle } from 'lucide-react';
+import { Copy, Loader2, GitFork } from 'lucide-react';
 import { useAuth } from '@repo/shared/auth/context';
 import { useGalleryTemplates } from '../hooks/gallery/useGalleryTemplates';
-import { Button, BasePage } from '@repo/ui';
+import { Alert, Badge, Button, Card, EmptyState, Spinner } from '@repo/ui';
 import { cloneWorkflowFromTemplate } from '../api/workflows';
 import type { GalleryWorkflow } from '../api/gallery';
+import { ETLPageShell } from '../components/ETLPageShell';
+import { useTopBarSearchValue } from '../components/Search/TopBarSearch';
 
 const getNodeCount = (graphData: any) => {
   if (!graphData) return 0;
@@ -19,8 +21,6 @@ const getNodeCount = (graphData: any) => {
 
 type AppContextType = {
   currentOrg: { id: string; name: string } | null;
-  gallerySearch?: string;
-  setGallerySearch?: (value: string) => void;
 };
 
 export const GalleryPage = () => {
@@ -28,8 +28,22 @@ export const GalleryPage = () => {
   const error = queryError instanceof Error ? queryError.message : null;
   const { user, isDemoUser } = useAuth();
   const navigate = useNavigate();
-  const { currentOrg, gallerySearch = '' } = useOutletContext<AppContextType>() || {};
+  const { currentOrg } = useOutletContext<AppContextType>() || {};
+  const { searchValue: gallerySearch } = useTopBarSearchValue();
   const [cloningId, setCloningId] = useState<string | null>(null);
+  const [cloneError, setCloneError] = useState<string | null>(null);
+  const searchConfig = useMemo(() => ({
+    searchKey: 'gallery-templates',
+    placeholder: 'Search templates...',
+    emptyMessage: 'No templates found.',
+    suggestions: templates.map((template) => ({
+      id: template.id,
+      title: template.name,
+      value: template.name,
+      subtitle: template.description ?? undefined,
+      badge: `${getNodeCount(template.graph_data)} nodes`,
+    })),
+  }), [templates]);
 
   const filteredTemplates = templates.filter(
     (t) =>
@@ -40,6 +54,7 @@ export const GalleryPage = () => {
   const handleClone = async (template: GalleryWorkflow) => {
     if (!user) return;
     setCloningId(template.id);
+    setCloneError(null);
 
     try {
       const newId = await cloneWorkflowFromTemplate({
@@ -51,65 +66,73 @@ export const GalleryPage = () => {
       navigate(`/editor/${newId}`);
     } catch (err: any) {
       console.error('Failed to clone workflow:', err);
-      alert('Failed to clone workflow: ' + (err?.message || '')); 
+      setCloneError('Failed to clone workflow: ' + (err?.message || 'Unknown error'));
     } finally {
       setCloningId(null);
     }
   };
 
   return (
-    <BasePage>
+    <ETLPageShell search={searchConfig}>
       {error && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-md border border-red-200 mb-6 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
+        <Alert variant="destructive" title="Error loading gallery">
           Error loading gallery: {error}
-        </div>
+        </Alert>
       )}
 
       {isDemoUser && (
-        <div className="p-4 bg-amber-50 text-amber-800 rounded-md border border-amber-200 mb-6 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
+        <Alert variant="warning">
           Demo mode is enabled. Workflow Gallery shows demo workflows, not admin-configured workflows.
-        </div>
+        </Alert>
+      )}
+
+      {cloneError && (
+        <Alert variant="destructive" dismissible onDismiss={() => setCloneError(null)}>
+          {cloneError}
+        </Alert>
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-          <Loader2 className="w-10 h-10 animate-spin mb-4" />
+        <div className="flex flex-col items-center justify-center py-20 text-[var(--color-muted-foreground)]">
+          <Spinner size="lg" className="mb-4" />
           <p>Loading workflows...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredTemplates.map((template) => (
-            <div
+            <Card
               key={template.id}
-              className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden group"
+              className="flex min-h-[13rem] flex-col overflow-hidden border border-[var(--color-border)] bg-[var(--color-card)]"
+              padding="none"
+              hoverable
             >
-              <div className="p-6 flex-1">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-colors">
+              <div className="flex flex-1 flex-col gap-4 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-muted)] text-[var(--color-primary)]">
                     <GitFork className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200">
+                  <Badge variant="outline">
                     {getNodeCount(template.graph_data)} Nodes
-                  </span>
+                  </Badge>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
-                  {template.name}
-                </h3>
-                <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">
-                  {template.description || 'No description provided for this workflow.'}
-                </p>
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-semibold text-[var(--color-foreground)]">
+                    {template.name}
+                  </h3>
+                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-[var(--color-muted-foreground)]">
+                    {template.description || 'No description provided for this workflow.'}
+                  </p>
+                </div>
               </div>
 
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <div className="text-xs text-slate-500 flex flex-col">
+              <div className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] px-5 py-3">
+                <div className="min-w-0 text-xs text-[var(--color-muted-foreground)]">
                   <span>Author</span>
-                  <span className="font-medium text-slate-700">{template.owner?.full_name || 'System'}</span>
+                  <p className="truncate font-medium text-[var(--color-foreground)]">{template.owner?.full_name || 'System'}</p>
                 </div>
                 <Button
                   variant="secondary"
-                  className="text-xs px-3 py-1.5 h-auto"
+                  size="sm"
                   onClick={() => handleClone(template)}
                   disabled={!!cloningId}
                 >
@@ -121,18 +144,19 @@ export const GalleryPage = () => {
                   Clone
                 </Button>
               </div>
-            </div>
+            </Card>
           ))}
 
           {filteredTemplates.length === 0 && (
-            <div className="col-span-full text-center py-16 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-              <LayoutTemplate className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No workflows found matching "{gallerySearch}"</p>
-              <p className="text-slate-400 text-sm">Try adjusting your search terms.</p>
+            <div className="col-span-full rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)] py-14">
+              <EmptyState
+                title="No templates found"
+                description={gallerySearch ? `No results for "${gallerySearch}".` : 'No workflow templates are available.'}
+              />
             </div>
           )}
         </div>
       )}
-    </BasePage>
+    </ETLPageShell>
   );
 };

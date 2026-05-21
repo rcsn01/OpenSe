@@ -1,11 +1,15 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@repo/ui';
 import { AuthRedirectPage } from '@repo/shared/auth';
-import { AuthProvider, useAuth } from '@repo/shared/auth/context';
+import { AuthProvider } from '@repo/shared/auth/context';
+import { buildAccountsSettingsUrl } from '@repo/shared/utils';
+import { getRuntimeConfigValue } from '@repo/shared/runtime-config';
 import { DemoProvider } from './context/DemoContext';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { ReactFlowProvider } from 'reactflow';
 import { buildAccountsAuthUrl } from './lib/authRedirect';
+import { RootRedirect } from './RootRedirect';
 
 // Layouts
 import { AppLayout } from './layouts/AppLayout';
@@ -15,7 +19,6 @@ import { AuthLayout } from './layouts/AuthLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { WorkflowEditorPage } from './pages/WorkflowEditorPage';
 import { OrganisationPage } from './pages/OrganisationPage';
-import { UserSettingsPage } from './pages/UserSettingsPage';
 import { SystemCheck } from './components/guards/SystemCheck';
 import { GalleryPage } from './pages/GalleryPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
@@ -31,18 +34,20 @@ const DashboardIndexRedirect = () => {
   return <Navigate to={target} replace />;
 };
 
-export const RootRedirect = () => {
-  const { loading, session, user, isDemoUser } = useAuth();
+const AccountsProfileRedirect = () => {
+  const accountsUrl =
+    getRuntimeConfigValue('VITE_ACCOUNTS_URL', 'https://accounts.rcsn01.com') ??
+    'https://accounts.rcsn01.com';
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-100 text-slate-500">Loading...</div>;
-  }
+  useEffect(() => {
+    window.location.assign(buildAccountsSettingsUrl({ accountsUrl }));
+  }, [accountsUrl]);
 
-  if (session || user || isDemoUser) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <Navigate to="/login" replace />;
+  return (
+    <div className="min-h-[50vh] flex items-center justify-center text-[var(--color-muted-foreground)]">
+      Redirecting to account profile...
+    </div>
+  );
 };
 
 function AppContent() {
@@ -88,7 +93,7 @@ function AppContent() {
                     <Route path="/gallery" element={<GalleryPage />} />
                     <Route path="/activity" element={<Navigate to="usage" replace />} />
                     <Route path="/activity/:tab" element={<ActivitiesPage />} />
-                    <Route path="/settings/profile" element={<UserSettingsPage />} />
+                    <Route path="/settings/profile" element={<AccountsProfileRedirect />} />
                   </Route>
 
                   {/* Editor (Separate Layout or No Layout) */}

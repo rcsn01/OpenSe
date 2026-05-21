@@ -18,7 +18,6 @@ type OrganisationPageContext = {
     refetchMembers: () => Promise<any>;
     userRole: string | null;
     teamSearch?: string;
-    setTeamSearch?: (value: string) => void;
 };
 
 export const TeamTab = () => {
@@ -28,6 +27,7 @@ export const TeamTab = () => {
         members,
         refetchMembers,
         userRole,
+        teamSearch = '',
     } = useOutletContext<OrganisationPageContext>();
     const queryClient = useQueryClient();
 
@@ -66,13 +66,9 @@ export const TeamTab = () => {
     };
 
     const handleUpdateRole = async (memberId: string, newRole: 'admin' | 'editor' | 'member') => {
-        try {
-            await updateOrganisationMemberRole(memberId, newRole);
-            await refetchMembers();
-            queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
-        } catch (err: any) {
-            alert(err?.message ?? 'Failed to update member role.');
-        }
+        await updateOrganisationMemberRole(memberId, newRole);
+        await refetchMembers();
+        queryClient.invalidateQueries({ queryKey: ['userOrganisations', user?.id] });
     };
 
     if (!organisation) return null;
@@ -84,6 +80,7 @@ export const TeamTab = () => {
             currentUserId={user?.id}
             canManageTeam={canManageTeam}
             inviteError={inviteError}
+            searchValue={teamSearch}
             onInvite={handleInvite}
             onUpdateRole={handleUpdateRole}
         />

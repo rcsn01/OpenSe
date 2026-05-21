@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cn, formatCurrency, parseCsv, toNumber } from '../index'
+import { buildAccountsSettingsUrl, cn, formatCurrency, parseCsv, toNumber } from '../index'
 
 describe('utils/index', () => {
   describe('formatCurrency', () => {
@@ -30,6 +30,14 @@ describe('utils/index', () => {
   describe('cn', () => {
     it('omits falsy values and joins remaining classes', () => {
       expect(cn('base', false, undefined, null, '', 'active')).toBe('base active')
+    })
+  })
+
+  describe('buildAccountsSettingsUrl', () => {
+    it('points app settings actions to the Accounts profile center', () => {
+      expect(buildAccountsSettingsUrl({ accountsUrl: 'https://accounts.example.com/' })).toBe(
+        'https://accounts.example.com/account/profile',
+      )
     })
   })
 })

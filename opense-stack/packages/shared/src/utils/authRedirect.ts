@@ -32,5 +32,5 @@ interface BuildAccountsSettingsUrlOptions {
 
 export const buildAccountsSettingsUrl = ({ accountsUrl }: BuildAccountsSettingsUrlOptions): string => {
   const normalizedAccountsUrl = accountsUrl.replace(/\/$/, '')
-  return `${normalizedAccountsUrl}/settings`
+  return `${normalizedAccountsUrl}/account/profile`
 }
