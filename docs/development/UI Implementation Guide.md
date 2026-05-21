@@ -133,6 +133,8 @@ Use shared primitives for:
 - Inputs and controls.
 - Analytics primitives when they fit the design.
 
+For compact StoQR-style app tables, use `DataTable variant="operational"` instead of repeating raw table chrome classes such as white uppercase headers, `#d9e2ef` row borders, and `px-4` cell padding in every feature.
+
 If a reusable primitive is missing, add or extend it in `packages/ui` instead of cloning a component inside an app.
 
 ### Use Tailwind Utilities Second

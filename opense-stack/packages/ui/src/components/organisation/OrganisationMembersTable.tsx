@@ -35,8 +35,7 @@ export function OrganisationMembersTable({
   const [sortField, setSortField] = useState<OrganisationMembersSortField | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
-  const headerClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
-  const cellClassName = 'border-b border-[#d9e2ef] px-4 py-3 whitespace-nowrap'
+  const cellClassName = 'whitespace-nowrap'
   const hasRoleSortValues = rows.some((row) => row.roleSortValue)
   const hasPermissionsRoleSortValues = rows.some((row) => row.permissionsRoleSortValue)
   const hasStatusSortValues = rows.some((row) => row.statusSortValue)
@@ -86,7 +85,6 @@ export function OrganisationMembersTable({
       header: 'Member',
       sortKey: 'member',
       width: showPermissionsRole || showStatus || showActions ? '34%' : '58%',
-      headerClassName,
       cellClassName,
       renderCell: (row) => {
         const initials = (row.initials ?? row.displayName.charAt(0)).toUpperCase()
@@ -114,7 +112,6 @@ export function OrganisationMembersTable({
       sortKey: 'role',
       sortable: hasRoleSortValues,
       width: showPermissionsRole || showStatus || showActions ? '22%' : '42%',
-      headerClassName,
       cellClassName,
       renderCell: (row) => row.roleContent,
     },
@@ -125,7 +122,6 @@ export function OrganisationMembersTable({
           sortKey: 'permissions-role',
           sortable: hasPermissionsRoleSortValues,
           width: '22%',
-          headerClassName,
           cellClassName,
           renderCell: (row: OrganisationMembersTableRow) => row.permissionsRoleContent,
         } satisfies DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>]
@@ -137,7 +133,6 @@ export function OrganisationMembersTable({
           sortKey: 'status',
           sortable: hasStatusSortValues,
           width: '12%',
-          headerClassName,
           cellClassName,
           renderCell: (row: OrganisationMembersTableRow) => row.statusContent,
         } satisfies DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>]
@@ -149,7 +144,6 @@ export function OrganisationMembersTable({
           align: 'right' as const,
           sortable: false,
           width: '10%',
-          headerClassName,
           cellClassName: `${cellClassName} text-right`,
           renderCell: (row: OrganisationMembersTableRow) => row.actionsContent,
         } satisfies DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>]
@@ -159,6 +153,7 @@ export function OrganisationMembersTable({
   return (
     <div className={containerClassName}>
       <DataTable
+        variant="operational"
         columns={columns}
         rows={sortedRows}
         getRowId={(row) => row.id}
@@ -168,8 +163,6 @@ export function OrganisationMembersTable({
         sortField={sortField}
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
-        tableWrapClassName="border-0 bg-white"
-        tableClassName="bg-white"
       />
     </div>
   )

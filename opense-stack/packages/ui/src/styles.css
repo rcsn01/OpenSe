@@ -106,6 +106,9 @@
   --color-shell: var(--shade-white-1);
   --color-shell-border: var(--shade-white-9);
   --color-overlay: color-mix(in srgb, var(--shade-black-1) 35%, transparent);
+  --color-table-border: #d9e2ef;
+  --color-table-header-bg: var(--shade-white-1);
+  --color-table-row-bg: var(--shade-white-1);
 
   /* Sidebar */
   --sidebar-bg: #0f172a;
@@ -233,6 +236,13 @@
     transparent
   );
   --color-overlay: color-mix(in srgb, var(--shade-black-1) 52%, transparent);
+  --color-table-border: color-mix(
+    in srgb,
+    var(--shade-white-1) 16%,
+    transparent
+  );
+  --color-table-header-bg: var(--shade-black-2);
+  --color-table-row-bg: var(--shade-black-2);
 
   /* Sidebar dark */
   --sidebar-bg: #020617;

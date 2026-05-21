@@ -4,6 +4,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { ProductListView } from '../ProductListView'
 import type { ProductListViewProps } from '../types'
 
+vi.mock('../../../../utils', () => ({
+  formatCurrency: (value: number | null | undefined) => `$${Number(value ?? 0).toFixed(2)}`,
+}))
+
 vi.mock('../useInlineProductEdit', () => ({
   useInlineProductEdit: () => ({
     editingCell: null,
@@ -77,19 +81,19 @@ describe('ProductListView – AVAILABLE column shows stock/min format', () => {
   it('applies green color when available >= reorder_point', () => {
     renderWithRouter(createProps())
     const cell = screen.getByText('50 / 10')
-    expect(cell).toHaveStyle({ color: 'var(--success)' })
+    expect(cell).toHaveClass('text-[var(--color-success)]')
   })
 
   it('applies red color when available < reorder_point', () => {
     renderWithRouter(createProps())
     const cell = screen.getByText('3 / 5')
-    expect(cell).toHaveStyle({ color: 'var(--danger)' })
+    expect(cell).toHaveClass('text-[var(--color-destructive)]')
   })
 
   it('applies red color when stock is zero', () => {
     renderWithRouter(createProps())
     const cell = screen.getByText('0 / 2')
-    expect(cell).toHaveStyle({ color: 'var(--danger)' })
+    expect(cell).toHaveClass('text-[var(--color-destructive)]')
   })
 })
 
@@ -135,12 +139,12 @@ describe('ProductListView – grid view AVAILABLE display', () => {
   it('applies green color in grid when stock >= reorder_point', () => {
     renderWithRouter(createProps({ view: 'grid' }))
     const cell = screen.getByText('50 / 10')
-    expect(cell).toHaveStyle({ color: 'var(--success)' })
+    expect(cell).toHaveClass('text-[var(--color-success)]')
   })
 
   it('applies red color in grid when stock < reorder_point', () => {
     renderWithRouter(createProps({ view: 'grid' }))
     const cell = screen.getByText('3 / 5')
-    expect(cell).toHaveStyle({ color: 'var(--danger)' })
+    expect(cell).toHaveClass('text-[var(--color-destructive)]')
   })
 })
