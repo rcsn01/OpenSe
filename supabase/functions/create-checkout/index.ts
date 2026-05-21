@@ -157,8 +157,8 @@ Deno.serve(async (req: Request) => {
         return json(req, 403, { error: 'Org context mismatch for checkout' })
       }
 
-      if (context.member_role !== 'owner') {
-        return json(req, 403, { error: 'Only organisation owners can manage subscription checkout' })
+      if (context.member_role !== 'owner' && context.member_role !== 'admin') {
+        return json(req, 403, { error: 'Only organisation owners and admins can manage subscription checkout' })
       }
 
       customerName = context.org_name

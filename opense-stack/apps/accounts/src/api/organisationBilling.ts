@@ -8,6 +8,9 @@ export interface OrgContext {
   role: 'owner' | 'admin' | 'editor' | 'member'
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
+  billingName: string | null
+  billingEmail: string | null
+  billingPhone: string | null
 }
 
 export interface AppSeatBillingSummary {
@@ -28,6 +31,9 @@ interface OrgContextRow {
   member_role: OrgContext['role']
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
+  billing_name: string | null
+  billing_email: string | null
+  billing_phone: string | null
 }
 
 interface AppSeatSummaryRow {
@@ -57,6 +63,9 @@ const getCurrentOrgContext = async (): Promise<OrgContext> => {
     role: contextRow.member_role,
     stripeCustomerId: contextRow.stripe_customer_id,
     stripeSubscriptionId: contextRow.stripe_subscription_id,
+    billingName: contextRow.billing_name,
+    billingEmail: contextRow.billing_email,
+    billingPhone: contextRow.billing_phone,
   }
 }
 
@@ -102,8 +111,8 @@ export const updateSeatLimit = async (appCode: AppCode, seatLimit: number): Prom
 export const createCheckoutForSeatLimit = async (appCode: AppCode, seatLimit: number): Promise<string> => {
   const organisation = await getCurrentOrgContext()
 
-  const successUrl = `${window.location.origin}/billing?success=true`
-  const cancelUrl = `${window.location.origin}/billing?canceled=true`
+  const successUrl = `${window.location.origin}/account/billing?success=true`
+  const cancelUrl = `${window.location.origin}/account/billing?canceled=true`
 
   const { data, error } = await supabase.functions.invoke('create-checkout', {
     body: {
@@ -119,6 +128,20 @@ export const createCheckoutForSeatLimit = async (appCode: AppCode, seatLimit: nu
   if (error) throw error
   if (!data?.url) {
     throw new Error(data?.error ?? 'Checkout URL not returned')
+  }
+
+  return data.url as string
+}
+
+export const createBillingPortalSession = async (): Promise<string> => {
+  const returnUrl = `${window.location.origin}/account/billing`
+  const { data, error } = await supabase.functions.invoke('create-billing-portal', {
+    body: { returnUrl },
+  })
+
+  if (error) throw error
+  if (!data?.url) {
+    throw new Error(data?.error ?? 'Billing portal URL not returned')
   }
 
   return data.url as string

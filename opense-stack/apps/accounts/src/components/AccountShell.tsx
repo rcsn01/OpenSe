@@ -4,17 +4,19 @@ import {
   type AppShellNavItem,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
-import { Building2, CreditCard, Settings, ShieldCheck, SlidersHorizontal, Users } from 'lucide-react'
+import { Activity, Building2, CreditCard, ShieldCheck, SlidersHorizontal, UserRound, Users } from 'lucide-react'
 import {
   accountNavigationItems,
 } from './accountNavigation'
 
 const navIconsByPath = {
-  '/account/general': SlidersHorizontal,
-  '/account/settings': Settings,
+  '/account/profile': UserRound,
+  '/account/security': ShieldCheck,
   '/account/organisation': Building2,
   '/account/billing': CreditCard,
   '/account/seats': Users,
+  '/account/activity': Activity,
+  '/account/preferences': SlidersHorizontal,
 } as const
 
 export const AccountShell = () => {
@@ -41,7 +43,7 @@ export const AccountShell = () => {
           {children}
         </NavLink>
       )}
-      onSettingsClick={() => navigate('/account/settings')}
+      onSettingsClick={() => navigate('/account/preferences')}
       onLogout={() => void logout()}
     >
       <Outlet />

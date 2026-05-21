@@ -1,7 +1,7 @@
 // @ts-ignore Deno edge runtime resolves remote module at deploy/runtime.
 import Stripe from 'https://esm.sh/stripe@18.4.0?target=deno'
 import { getCorsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
-import { parseAppCode, parseSeatLimit } from '../_shared/request-validation.ts'
+import { parseAllowedRedirectUrl } from '../_shared/request-validation.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void
@@ -65,8 +65,8 @@ Deno.serve(async (req: Request) => {
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return json(req, 500, { error: 'Supabase environment is not configured' })
+  if (!supabaseUrl || !supabaseAnonKey || !stripeSecretKey) {
+    return json(req, 500, { error: 'Supabase or Stripe environment is not configured' })
   }
 
   const authHeader = req.headers.get('Authorization')
@@ -76,10 +76,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await parseBody(req)
-
-    const appCode = parseAppCode(body.appCode)
-    const seatLimit = parseSeatLimit(body.seatLimit, body.tier)
-
+    const returnUrl = parseAllowedRedirectUrl(body.returnUrl, 'returnUrl')
     const contextRows = await rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_get_my_org_context')
     const context = Array.isArray(contextRows) ? contextRows[0] : null
 
@@ -88,35 +85,20 @@ Deno.serve(async (req: Request) => {
     }
 
     if (context.member_role !== 'owner' && context.member_role !== 'admin') {
-      return json(req, 403, { error: 'Only organisation owners and admins can update billing limits' })
+      return json(req, 403, { error: 'Only organisation owners and admins can access the billing portal' })
     }
 
-    if (stripeSecretKey && context.stripe_subscription_id) {
-      try {
-        const stripe = new Stripe(stripeSecretKey)
-        await stripe.subscriptions.update(context.stripe_subscription_id, {
-          metadata: {
-            org_id: context.org_id,
-            app_code: appCode,
-            seat_limit: String(seatLimit),
-          },
-        })
-      } catch {
-      }
+    if (!context.stripe_customer_id) {
+      return json(req, 400, { error: 'Stripe customer is not linked for this organisation' })
     }
 
-    await rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_update_org_seat_limit', {
-      p_app_code: appCode,
-      p_seat_limit: seatLimit,
+    const stripe = new Stripe(stripeSecretKey)
+    const session = await stripe.billingPortal.sessions.create({
+      customer: context.stripe_customer_id,
+      return_url: returnUrl,
     })
 
-    return json(req, 200, {
-      success: true,
-      orgId: context.org_id,
-      appCode,
-      seatLimit,
-      message: 'Subscription metadata and seat limit synchronized',
-    })
+    return json(req, 200, { url: session.url })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return json(req, 400, { error: message })

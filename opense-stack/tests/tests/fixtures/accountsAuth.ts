@@ -32,7 +32,7 @@ const buildHeaders = (serviceRoleKey: string, extra?: Record<string, string>) =>
   ...extra,
 });
 
-const isAuthenticatedUrl = (url: string) => /\/(billing|general|onboarding)/.test(url) && !/\/login$/.test(url);
+const isAuthenticatedUrl = (url: string) => /\/(account|billing|onboarding)/.test(url) && !/\/login$/.test(url);
 
 const getAccountsCredentialCandidates = (): AccountsUser[] => {
   const candidates: AccountsUser[] = [
@@ -76,7 +76,7 @@ const attemptAccountsLogin = async (page: Page, user: AccountsUser) => {
       await submit.click();
     }
 
-    await page.waitForURL(/\/(billing|general|onboarding|login)/, { timeout: 15000 });
+    await page.waitForURL(/\/(account|billing|onboarding|login)/, { timeout: 15000 });
     if (isAuthenticatedUrl(page.url())) {
       return true;
     }
@@ -114,13 +114,13 @@ const createAccountsUserViaSignup = async (page: Page): Promise<AccountsUser | n
 
 const ensureAccountsGeneralPageAccess = async (page: Page) => {
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    await page.goto('/general');
-    await page.waitForURL(/\/(general|onboarding\/create-organisation|onboarding\/invite-members|onboarding\/invitations|login)/, {
+    await page.goto('/account/profile');
+    await page.waitForURL(/\/(account\/profile|onboarding\/create-organisation|onboarding\/invite-members|onboarding\/invitations|login)/, {
       timeout: 15000,
     });
 
     const currentUrl = page.url();
-    if (/\/general$/.test(currentUrl)) return true;
+    if (/\/account\/profile$/.test(currentUrl)) return true;
     if (/\/login$/.test(currentUrl)) return false;
 
     if (/\/onboarding\/create-organisation$/.test(currentUrl)) {
@@ -320,7 +320,7 @@ export const test = base.extend<AccountsAuthFixtures>({
     await loginToAccounts(page, ACCOUNTS_USER, { requireAuthenticated: true });
     const hasGeneralAccess = await ensureAccountsGeneralPageAccess(page);
     if (!hasGeneralAccess) {
-      throw new Error('Authenticated mobile fixture could not reach /general.');
+      throw new Error('Authenticated mobile fixture could not reach /account/profile.');
     }
     await use(page);
   },
