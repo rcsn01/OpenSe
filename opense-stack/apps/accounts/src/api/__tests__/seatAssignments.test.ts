@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockRpc = vi.fn()
+const mockGetOrganisationInvitesForOrg = vi.fn()
+const mockInviteOrganisationMember = vi.fn()
+const mockCancelOrganisationInviteForOrg = vi.fn()
 
 vi.mock('@repo/shared/supabase', () => ({
   supabase: {
@@ -8,21 +11,30 @@ vi.mock('@repo/shared/supabase', () => ({
   },
 }))
 
+vi.mock('@repo/shared/organisation-invites', () => ({
+  cancelOrganisationInviteForOrg: (...args: unknown[]) => mockCancelOrganisationInviteForOrg(...args),
+  getOrganisationInvitesForOrg: (...args: unknown[]) => mockGetOrganisationInvitesForOrg(...args),
+  inviteOrganisationMember: (...args: unknown[]) => mockInviteOrganisationMember(...args),
+}))
+
 import {
   assignSeat,
+  cancelSeatInvite,
   getSeatAssignmentSnapshot,
+  inviteSeatMembers,
   unassignSeat,
 } from '../seatAssignments'
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockGetOrganisationInvitesForOrg.mockResolvedValue([])
 })
 
 describe('seatAssignments api', () => {
   it('builds seat assignment snapshot and filters unsupported app codes', async () => {
     mockRpc
       .mockResolvedValueOnce({
-        data: [{ org_id: 'org-1' }],
+        data: [{ org_id: 'org-1', member_role: 'admin' }],
         error: null,
       })
       .mockResolvedValueOnce({
@@ -38,11 +50,20 @@ describe('seatAssignments api', () => {
         ],
         error: null,
       })
+    mockGetOrganisationInvitesForOrg.mockResolvedValue([
+      {
+        id: 'inv-1',
+        org_id: 'org-1',
+        email: 'pending@example.com',
+        created_at: '2026-05-20T00:00:00.000Z',
+      },
+    ])
 
     const snapshot = await getSeatAssignmentSnapshot()
 
     expect(snapshot).toEqual({
       orgId: 'org-1',
+      currentRole: 'admin',
       members: [
         {
           orgMemberId: 'member-1',
@@ -53,10 +74,19 @@ describe('seatAssignments api', () => {
           assignedApps: ['etl', 'stoqr'],
         },
       ],
+      pendingInvites: [
+        {
+          id: 'inv-1',
+          orgId: 'org-1',
+          email: 'pending@example.com',
+          createdAt: '2026-05-20T00:00:00.000Z',
+        },
+      ],
     })
 
     expect(mockRpc).toHaveBeenNthCalledWith(1, 'accounts_get_my_org_context')
     expect(mockRpc).toHaveBeenNthCalledWith(2, 'accounts_get_org_member_app_assignments')
+    expect(mockGetOrganisationInvitesForOrg).toHaveBeenCalledWith('org-1')
   })
 
   it('throws when no membership context exists', async () => {
@@ -90,6 +120,29 @@ describe('seatAssignments api', () => {
       p_org_member_id: 'member-1',
       p_app_code: 'stoqr',
     })
+  })
+
+  it('inviteSeatMembers normalizes and de-duplicates emails before inviting', async () => {
+    mockInviteOrganisationMember.mockResolvedValue(undefined)
+
+    await inviteSeatMembers('org-1', [
+      ' MEMBER@Example.com ',
+      'member@example.com',
+      'second@example.com',
+      '',
+    ])
+
+    expect(mockInviteOrganisationMember).toHaveBeenCalledTimes(2)
+    expect(mockInviteOrganisationMember).toHaveBeenNthCalledWith(1, 'org-1', 'member@example.com', 'member')
+    expect(mockInviteOrganisationMember).toHaveBeenNthCalledWith(2, 'org-1', 'second@example.com', 'member')
+  })
+
+  it('cancelSeatInvite delegates to shared org invite cancellation', async () => {
+    mockCancelOrganisationInviteForOrg.mockResolvedValue(undefined)
+
+    await cancelSeatInvite('org-1', 'inv-1')
+
+    expect(mockCancelOrganisationInviteForOrg).toHaveBeenCalledWith('org-1', 'inv-1')
   })
 
   it('propagates RPC errors from seat assignment operations', async () => {

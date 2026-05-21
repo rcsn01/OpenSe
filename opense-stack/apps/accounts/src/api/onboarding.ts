@@ -165,6 +165,11 @@ export const createOrganisationForOnboarding = async (input: {
     throw new Error(`Unsupported app code: ${invalidApp}`)
   }
 
+  const pendingInvites = await getPendingOrganisationInvites()
+  for (const invite of pendingInvites) {
+    await declineOrganisationInvite(invite.id)
+  }
+
   const { data, error } = await supabase
     .from('organisations')
     .insert({

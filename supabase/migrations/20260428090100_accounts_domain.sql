@@ -163,7 +163,7 @@ AS $$
 DECLARE
   v_invite public.organisation_invites%ROWTYPE;
   v_user_id UUID := auth.uid();
-  v_user_email TEXT := auth.jwt() ->> 'email';
+  v_user_email TEXT := LOWER(BTRIM(auth.jwt() ->> 'email'));
 BEGIN
   IF v_user_id IS NULL OR v_user_email IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
@@ -178,19 +178,103 @@ BEGIN
     RAISE EXCEPTION 'Invite not found';
   END IF;
 
-  IF v_invite.email <> v_user_email THEN
+  IF LOWER(v_invite.email::TEXT) <> v_user_email THEN
     RAISE EXCEPTION 'This invite does not belong to you';
   END IF;
 
+  IF EXISTS (
+    SELECT 1
+    FROM public.organisation_members om
+    WHERE om.user_id = v_user_id
+  ) THEN
+    RAISE EXCEPTION 'User already belongs to an organisation';
+  END IF;
+
   INSERT INTO public.organisation_members (org_id, user_id, role)
-  VALUES (v_invite.org_id, v_user_id, 'member')
-  ON CONFLICT (org_id, user_id) DO UPDATE
-    SET role = public.pick_higher_org_role(public.organisation_members.role, 'member');
+  VALUES (v_invite.org_id, v_user_id, 'member');
 
   DELETE FROM public.organisation_invites
   WHERE id = invite_id;
 
   RETURN true;
+END;
+$$;
+
+CREATE FUNCTION public.accounts_invite_organisation_member(p_org_id UUID, p_email TEXT)
+RETURNS TABLE (
+  id UUID,
+  org_id UUID,
+  email TEXT,
+  created_at TIMESTAMPTZ
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_email TEXT := LOWER(BTRIM(p_email));
+  v_invite public.organisation_invites%ROWTYPE;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  IF p_org_id IS NULL THEN
+    RAISE EXCEPTION 'Organisation id is required';
+  END IF;
+
+  IF v_email IS NULL OR v_email = '' THEN
+    RAISE EXCEPTION 'Invite email is required';
+  END IF;
+
+  IF NOT (
+    public.is_org_admin(p_org_id, v_user_id)
+    OR public.is_org_owner(p_org_id, v_user_id)
+    OR public.is_app_super_admin()
+  ) THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    JOIN public.organisation_members om ON om.user_id = p.id
+    WHERE LOWER(p.email) = v_email
+      AND om.org_id = p_org_id
+  ) THEN
+    RAISE EXCEPTION 'User is already a member of this organisation';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    JOIN public.organisation_members om ON om.user_id = p.id
+    WHERE LOWER(p.email) = v_email
+  ) THEN
+    RAISE EXCEPTION 'User already belongs to an organisation';
+  END IF;
+
+  SELECT *
+  INTO v_invite
+  FROM public.organisation_invites oi
+  WHERE oi.org_id = p_org_id
+    AND LOWER(oi.email::TEXT) = v_email
+  LIMIT 1;
+
+  IF v_invite.id IS NULL THEN
+    INSERT INTO public.organisation_invites (org_id, email, invited_by)
+    VALUES (p_org_id, v_email, v_user_id)
+    RETURNING *
+    INTO v_invite;
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    v_invite.id,
+    v_invite.org_id,
+    v_invite.email::TEXT,
+    v_invite.created_at;
 END;
 $$;
 
@@ -803,6 +887,7 @@ REVOKE ALL ON FUNCTION public.get_primary_org_for_user(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.prevent_owner_member_mutation() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.enforce_org_app_seat_limit() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.accept_invite(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.accounts_invite_organisation_member(UUID, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.accounts_get_my_org_context() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.accounts_get_org_app_seat_summary() FROM PUBLIC;
@@ -816,6 +901,7 @@ GRANT EXECUTE ON FUNCTION public.can_manage_org_app_seat_limits(UUID, UUID) TO a
 GRANT EXECUTE ON FUNCTION public.can_manage_org_member_app_seats(UUID, UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_primary_org_for_user(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accept_invite(UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.accounts_invite_organisation_member(UUID, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_my_org_context() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_org_app_seat_summary() TO authenticated, service_role;

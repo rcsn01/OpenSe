@@ -19,6 +19,13 @@ export interface PendingOrganisationInvite {
   created_at: string
 }
 
+export interface OrganisationInviteForOrg {
+  id: string
+  org_id: string
+  email: string
+  created_at: string
+}
+
 const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
   if (!value) return null
   return Array.isArray(value) ? (value[0] ?? null) : value
@@ -82,26 +89,45 @@ export const declineOrganisationInvite = async (inviteId: string): Promise<void>
 export const inviteOrganisationMember = async (
   orgId: string,
   email: string,
-  _role: OrganisationInviteRole,
+  _role: OrganisationInviteRole = 'member',
 ): Promise<void> => {
   const normalizedEmail = email.trim().toLowerCase()
   if (!normalizedEmail) {
     throw new Error('Invite email is required.')
   }
 
-  const { data, error: userError } = await supabase.auth.getUser()
-  if (userError) throw userError
+  const { error } = await supabase.rpc('accounts_invite_organisation_member', {
+    p_org_id: orgId,
+    p_email: normalizedEmail,
+  })
 
+  if (error) throw error
+}
+
+export const getOrganisationInvitesForOrg = async (orgId: string): Promise<OrganisationInviteForOrg[]> => {
+  const { data, error } = await supabase
+    .from('organisation_invites')
+    .select('id, org_id, email, created_at')
+    .eq('org_id', orgId)
+    .is('accepted_at', null)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+
+  return ((data ?? []) as OrganisationInviteForOrg[]).map((invite) => ({
+    id: invite.id,
+    org_id: invite.org_id,
+    email: invite.email.trim().toLowerCase(),
+    created_at: invite.created_at,
+  }))
+}
+
+export const cancelOrganisationInviteForOrg = async (orgId: string, inviteId: string): Promise<void> => {
   const { error } = await supabase
     .from('organisation_invites')
-    .upsert(
-      {
-        org_id: orgId,
-        email: normalizedEmail,
-        invited_by: data.user?.id ?? null,
-      },
-      { onConflict: 'org_id,email', ignoreDuplicates: false },
-    )
+    .delete()
+    .eq('org_id', orgId)
+    .eq('id', inviteId)
 
   if (error) throw error
 }
