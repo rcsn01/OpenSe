@@ -16,7 +16,9 @@ vi.mock('../supabase', () => ({
 
 import {
   acceptOrganisationInvite,
+  cancelOrganisationInviteForOrg,
   declineOrganisationInvite,
+  getOrganisationInvitesForOrg,
   inviteOrganisationMember,
 } from '../organisation-invites'
 
@@ -43,24 +45,63 @@ describe('organisation invites', () => {
     expect(mockFrom).not.toHaveBeenCalled()
   })
 
-  it('inviteOrganisationMember normalizes email before upsert', async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: 'user-1', email: 'owner@example.com' } },
-      error: null,
-    })
-
-    const upsert = vi.fn().mockResolvedValue({ error: null })
-    mockFrom.mockReturnValue({ upsert })
+  it('inviteOrganisationMember normalizes email before calling invite RPC', async () => {
+    mockRpc.mockResolvedValue({ error: null })
 
     await inviteOrganisationMember('org-1', ' MEMBER@Example.com ', 'member')
 
-    expect(upsert).toHaveBeenCalledWith(
+    expect(mockRpc).toHaveBeenCalledWith('accounts_invite_organisation_member', {
+      p_org_id: 'org-1',
+      p_email: 'member@example.com',
+    })
+  })
+
+  it('getOrganisationInvitesForOrg lists pending invites for an org', async () => {
+    const chain = {
+      select: vi.fn(() => chain),
+      eq: vi.fn(() => chain),
+      is: vi.fn(() => chain),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'inv-1',
+            org_id: 'org-1',
+            email: ' MEMBER@Example.com ',
+            created_at: '2026-05-20T00:00:00.000Z',
+          },
+        ],
+        error: null,
+      }),
+    }
+    mockFrom.mockReturnValue(chain)
+
+    await expect(getOrganisationInvitesForOrg('org-1')).resolves.toEqual([
       {
+        id: 'inv-1',
         org_id: 'org-1',
         email: 'member@example.com',
-        invited_by: 'user-1',
+        created_at: '2026-05-20T00:00:00.000Z',
       },
-      { onConflict: 'org_id,email', ignoreDuplicates: false },
-    )
+    ])
+
+    expect(mockFrom).toHaveBeenCalledWith('organisation_invites')
+    expect(chain.eq).toHaveBeenCalledWith('org_id', 'org-1')
+    expect(chain.is).toHaveBeenCalledWith('accepted_at', null)
+  })
+
+  it('cancelOrganisationInviteForOrg deletes only the org invite row', async () => {
+    const chain: any = {
+      delete: vi.fn(() => chain),
+      eq: vi.fn(() => chain),
+    }
+    chain.eq
+      .mockReturnValueOnce(chain)
+      .mockResolvedValueOnce({ error: null })
+    mockFrom.mockReturnValue(chain)
+
+    await cancelOrganisationInviteForOrg('org-1', 'inv-1')
+
+    expect(chain.eq).toHaveBeenNthCalledWith(1, 'org_id', 'org-1')
+    expect(chain.eq).toHaveBeenNthCalledWith(2, 'id', 'inv-1')
   })
 })
