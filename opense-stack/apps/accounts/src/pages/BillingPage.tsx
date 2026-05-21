@@ -1,45 +1,45 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Alert, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Spinner } from '@repo/ui'
+import { Badge, Button, Input } from '@repo/ui'
+import { CreditCard, ExternalLink, Save } from 'lucide-react'
+import { AccountsAlert, AccountsField, AccountsPageShell, AccountsSection } from '../components/AccountsPageShell'
 import {
+  createBillingPortalSession,
   createCheckoutForSeatLimit,
   getOrganisationBillingSummary,
+  updateSeatLimit,
   type AppCode,
   type AppSeatBillingSummary,
-  updateSeatLimit,
+  type OrgContext,
 } from '../api/organisationBilling'
-import { listOrgAuditEvents, type OrgAuditEvent } from '../api/auditEvents'
-
-const actionLabelMap: Record<string, string> = {
-  seat_limit_updated: 'Seat limit updated',
-  seat_assigned: 'Seat assigned',
-  seat_unassigned: 'Seat unassigned',
-}
+import { canManageOrganisation, updateBillingContact } from '../api/organisation'
 
 export const BillingPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
-  const [activityLoading, setActivityLoading] = useState(true)
-  const [savingApp, setSavingApp] = useState<AppCode | null>(null)
-  const [checkoutApp, setCheckoutApp] = useState<AppCode | null>(null)
+  const [savingKey, setSavingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [orgName, setOrgName] = useState('')
+  const [organisation, setOrganisation] = useState<OrgContext | null>(null)
   const [apps, setApps] = useState<AppSeatBillingSummary[]>([])
-  const [auditEvents, setAuditEvents] = useState<OrgAuditEvent[]>([])
   const [seatLimitDrafts, setSeatLimitDrafts] = useState<Record<AppCode, string>>({ etl: '0', stoqr: '0' })
+  const [billingName, setBillingName] = useState('')
+  const [billingEmail, setBillingEmail] = useState('')
+  const [billingPhone, setBillingPhone] = useState('')
 
-  const hasSubscription = useMemo(() => apps.some((app) => app.seatLimit > 0), [apps])
+  const canManageBilling = canManageOrganisation(organisation?.role)
+  const hasSubscription = useMemo(() => apps.some((app) => app.seatLimit > 0 || app.assignedSeats > 0), [apps])
 
   const loadSummary = async () => {
     try {
       setLoading(true)
-      setActivityLoading(true)
       setError(null)
-      const [summary, events] = await Promise.all([getOrganisationBillingSummary(), listOrgAuditEvents(12)])
-      setOrgName(summary.organisation.orgName)
+      const summary = await getOrganisationBillingSummary()
+      setOrganisation(summary.organisation)
       setApps(summary.apps)
-      setAuditEvents(events)
+      setBillingName(summary.organisation.billingName ?? '')
+      setBillingEmail(summary.organisation.billingEmail ?? '')
+      setBillingPhone(summary.organisation.billingPhone ?? '')
       setSeatLimitDrafts({
         etl: String(summary.apps.find((app) => app.appCode === 'etl')?.seatLimit ?? 0),
         stoqr: String(summary.apps.find((app) => app.appCode === 'stoqr')?.seatLimit ?? 0),
@@ -48,7 +48,6 @@ export const BillingPage = () => {
       setError(err?.message ?? 'Failed to load billing information.')
     } finally {
       setLoading(false)
-      setActivityLoading(false)
     }
   }
 
@@ -74,16 +73,14 @@ export const BillingPage = () => {
   }, [searchParams, setSearchParams])
 
   const handleSaveLimit = async (appCode: AppCode) => {
-    const rawValue = seatLimitDrafts[appCode]?.trim() ?? ''
-    const parsed = Number(rawValue)
-
+    const parsed = Number(seatLimitDrafts[appCode]?.trim() ?? '')
     if (!Number.isInteger(parsed) || parsed < 0) {
       setError('Seat limit must be a non-negative integer.')
       return
     }
 
     try {
-      setSavingApp(appCode)
+      setSavingKey(`limit:${appCode}`)
       setError(null)
       setSuccess(null)
       await updateSeatLimit(appCode, parsed)
@@ -92,134 +89,134 @@ export const BillingPage = () => {
     } catch (err: any) {
       setError(err?.message ?? 'Failed to update seat limit.')
     } finally {
-      setSavingApp(null)
+      setSavingKey(null)
     }
   }
 
   const handleStartCheckout = async (appCode: AppCode) => {
-    const rawValue = seatLimitDrafts[appCode]?.trim() ?? ''
-    const parsed = Number(rawValue)
-
+    const parsed = Number(seatLimitDrafts[appCode]?.trim() ?? '')
     if (!Number.isInteger(parsed) || parsed < 0) {
       setError('Seat limit must be a non-negative integer.')
       return
     }
 
     try {
-      setCheckoutApp(appCode)
+      setSavingKey(`checkout:${appCode}`)
       setError(null)
       const url = await createCheckoutForSeatLimit(appCode, parsed)
       window.location.href = url
     } catch (err: any) {
       setError(err?.message ?? 'Failed to start checkout.')
-      setCheckoutApp(null)
+      setSavingKey(null)
+    }
+  }
+
+  const handlePortal = async () => {
+    try {
+      setSavingKey('portal')
+      setError(null)
+      const url = await createBillingPortalSession()
+      window.location.href = url
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to open billing portal.')
+      setSavingKey(null)
+    }
+  }
+
+  const handleSaveBillingContact = async () => {
+    try {
+      setSavingKey('billing-contact')
+      setError(null)
+      setSuccess(null)
+      const nextOrganisation = await updateBillingContact({ billingName, billingEmail, billingPhone })
+      setOrganisation((previous) => previous ? {
+        ...previous,
+        billingName: nextOrganisation.billingName,
+        billingEmail: nextOrganisation.billingEmail,
+        billingPhone: nextOrganisation.billingPhone,
+      } : previous)
+      setSuccess('Billing contact updated.')
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to update billing contact.')
+    } finally {
+      setSavingKey(null)
     }
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">Billing & Limits</h1>
-        <p className="text-sm text-[var(--color-muted-foreground)]">Manage your organisation subscription seats for ETL and StoQR.</p>
-      </div>
+    <AccountsPageShell
+      title="Billing"
+      description="Manage subscription status, app seat limits, billing contacts, invoices, and payment methods."
+      loading={loading}
+      loadingLabel="Loading billing..."
+      alert={<AccountsAlert error={error} success={success} errorTitle="Billing action failed" />}
+      actions={
+        <Button variant="outline" size="sm" onClick={() => void handlePortal()} disabled={!canManageBilling || savingKey === 'portal' || !organisation?.stripeCustomerId}>
+          <ExternalLink className="h-4 w-4" />
+          Billing portal
+        </Button>
+      }
+    >
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <AccountsSection title={`${organisation?.orgName ?? 'Organisation'} subscription`} description={canManageBilling ? 'Owners and admins can update limits and checkout.' : 'Your role can view billing context but cannot manage subscription settings.'}>
+          <div className="grid gap-4 md:grid-cols-3">
+            <AccountsField label="Status" value={<Badge variant={hasSubscription ? 'success' : 'neutral'}>{hasSubscription ? 'Active' : 'No seats'}</Badge>} />
+            <AccountsField label="Stripe customer" value={organisation?.stripeCustomerId ?? 'Not linked'} />
+            <AccountsField label="Subscription" value={organisation?.stripeSubscriptionId ?? 'Not linked'} />
+          </div>
+        </AccountsSection>
 
-      {error ? <Alert variant="destructive" title="Billing action failed">{error}</Alert> : null}
-      {success ? <Alert variant="success" title="Saved">{success}</Alert> : null}
+        <AccountsSection title="Billing contact" actions={canManageBilling ? (
+          <Button size="sm" onClick={() => void handleSaveBillingContact()} disabled={savingKey === 'billing-contact'}>
+            <Save className="h-4 w-4" />
+            Save
+          </Button>
+        ) : null}>
+          <div className="grid gap-3">
+            <Input value={billingName} onChange={(event) => setBillingName(event.target.value)} placeholder="Billing name" disabled={!canManageBilling} />
+            <Input value={billingEmail} onChange={(event) => setBillingEmail(event.target.value)} placeholder="billing@example.com" disabled={!canManageBilling} />
+            <Input value={billingPhone} onChange={(event) => setBillingPhone(event.target.value)} placeholder="Phone" disabled={!canManageBilling} />
+            {!canManageBilling ? <p className="text-sm text-[var(--color-muted-foreground)]">Only owners and admins can update billing contacts.</p> : null}
+          </div>
+        </AccountsSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{orgName || 'Organisation'} subscription</CardTitle>
-          <CardDescription>Single organisation subscription with app-specific seat limits.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
-              <Spinner size="sm" />
-              Loading billing summary...
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-[var(--color-body)]">Subscription status:</span>
-              <Badge variant={hasSubscription ? 'success' : 'neutral'}>{hasSubscription ? 'Active' : 'No seats'}</Badge>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {apps.map((app) => (
-          <Card key={app.appCode}>
-            <CardHeader>
-              <CardTitle>{app.appName}</CardTitle>
-              <CardDescription>
-                Assigned {app.assignedSeats} / {app.seatLimit} seats
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <label className="block text-sm font-medium text-[var(--color-body)]" htmlFor={`seat-limit-${app.appCode}`}>
-                Seat limit
-              </label>
-              <Input
-                id={`seat-limit-${app.appCode}`}
-                inputMode="numeric"
-                value={seatLimitDrafts[app.appCode] ?? '0'}
-                onChange={(event) => {
-                  const nextValue = event.target.value.replace(/[^0-9]/g, '')
-                  setSeatLimitDrafts((previous) => ({ ...previous, [app.appCode]: nextValue }))
-                }}
-              />
-              <Button
-                onClick={() => {
-                  void handleSaveLimit(app.appCode)
-                }}
-                disabled={savingApp === app.appCode}
-              >
-                {savingApp === app.appCode ? 'Saving...' : 'Update limit'}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  void handleStartCheckout(app.appCode)
-                }}
-                disabled={checkoutApp === app.appCode}
-              >
-                {checkoutApp === app.appCode ? 'Opening...' : 'Checkout'}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent activity</CardTitle>
-          <CardDescription>Latest billing and seat assignment actions in your organisation.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {activityLoading ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
-              <Spinner size="sm" />
-              Loading activity...
-            </div>
-          ) : auditEvents.length === 0 ? (
-            <p className="text-sm text-[var(--color-muted-foreground)]">No recent activity.</p>
-          ) : (
-            <div className="space-y-3">
-              {auditEvents.map((event) => (
-                <div key={event.id} className="rounded-md border border-[var(--color-border)] p-3">
-                  <p className="text-sm font-medium text-[var(--color-heading)]">
-                    {actionLabelMap[event.action] ?? event.action}
-                    {event.appCode ? ` (${event.appCode.toUpperCase()})` : ''}
-                  </p>
-                  <p className="text-xs text-[var(--color-muted-foreground)]">
-                    By {event.actorFullName ?? event.actorEmail ?? 'Unknown user'} • {new Date(event.createdAt).toLocaleString()}
-                  </p>
+        <div className="grid gap-4 xl:col-span-2 md:grid-cols-2">
+          {apps.map((app) => (
+            <AccountsSection
+              key={app.appCode}
+              title={app.appName}
+              description={`Assigned ${app.assignedSeats} of ${app.seatLimit} seats`}
+              actions={<Badge variant={app.assignedSeats <= app.seatLimit ? 'success' : 'warning'}>{app.assignedSeats}/{app.seatLimit}</Badge>}
+            >
+              <div className="grid gap-3">
+                <label className="text-sm font-medium text-[var(--color-body)]" htmlFor={`seat-limit-${app.appCode}`}>
+                  Seat limit
+                </label>
+                <Input
+                  id={`seat-limit-${app.appCode}`}
+                  inputMode="numeric"
+                  value={seatLimitDrafts[app.appCode] ?? '0'}
+                  onChange={(event) => {
+                    const nextValue = event.target.value.replace(/[^0-9]/g, '')
+                    setSeatLimitDrafts((previous) => ({ ...previous, [app.appCode]: nextValue }))
+                  }}
+                  disabled={!canManageBilling}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => void handleSaveLimit(app.appCode)} disabled={!canManageBilling || savingKey === `limit:${app.appCode}`}>
+                    <Save className="h-4 w-4" />
+                    {savingKey === `limit:${app.appCode}` ? 'Saving...' : 'Update limit'}
+                  </Button>
+                  <Button onClick={() => void handleStartCheckout(app.appCode)} disabled={!canManageBilling || savingKey === `checkout:${app.appCode}`}>
+                    <CreditCard className="h-4 w-4" />
+                    {savingKey === `checkout:${app.appCode}` ? 'Opening...' : 'Checkout'}
+                  </Button>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+              </div>
+            </AccountsSection>
+          ))}
+        </div>
+      </div>
+    </AccountsPageShell>
   )
 }

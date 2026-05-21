@@ -3,20 +3,9 @@ import {
   Alert,
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Spinner,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableHeader,
-  TableRow,
+  DataTable,
   Textarea,
+  type DataTableColumn,
 } from '@repo/ui'
 import {
   assignSeat,
@@ -29,6 +18,7 @@ import {
   type SeatMemberRole,
 } from '../api/seatAssignments'
 import type { AppCode } from '../api/organisationBilling'
+import { AccountsPageShell, AccountsSection } from '../components/AccountsPageShell'
 
 const appCodes: AppCode[] = ['etl', 'stoqr']
 
@@ -52,6 +42,76 @@ export const SeatManagementPage = () => {
   const [pendingInvites, setPendingInvites] = useState<PendingSeatInvite[]>([])
 
   const canManage = useMemo(() => currentRole === 'owner' || currentRole === 'admin', [currentRole])
+
+  const inviteColumns: Array<DataTableColumn<PendingSeatInvite>> = [
+    {
+      id: 'email',
+      header: 'Email',
+      renderCell: (invite) => <span className="font-medium text-[var(--color-heading)]">{invite.email}</span>,
+    },
+    {
+      id: 'created',
+      header: 'Created',
+      renderCell: (invite) => <span className="text-sm text-[var(--color-muted-foreground)]">{new Date(invite.createdAt).toLocaleDateString()}</span>,
+    },
+    {
+      id: 'action',
+      header: 'Action',
+      renderCell: (invite) => {
+        const key = `invite:${invite.id}`
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={savingKey === key || !canManage}
+            onClick={() => {
+              void handleCancelInvite(invite)
+            }}
+          >
+            {savingKey === key ? 'Cancelling...' : 'Cancel'}
+          </Button>
+        )
+      },
+    },
+  ]
+
+  const memberColumns: Array<DataTableColumn<SeatMember>> = [
+    {
+      id: 'member',
+      header: 'Member',
+      renderCell: (member) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-[var(--color-heading)]">{member.fullName ?? 'Unnamed user'}</span>
+          <span className="text-xs text-[var(--color-muted-foreground)]">{member.email ?? member.userId}</span>
+        </div>
+      ),
+    },
+    {
+      id: 'role',
+      header: 'Role',
+      renderCell: (member) => <Badge variant="neutral">{member.role}</Badge>,
+    },
+    ...appCodes.map((appCode): DataTableColumn<SeatMember> => ({
+      id: appCode,
+      header: appCode.toUpperCase(),
+      renderCell: (member) => {
+        const assigned = member.assignedApps.includes(appCode)
+        const key = `${member.orgMemberId}:${appCode}`
+        return (
+          <Button
+            variant={assigned ? 'outline' : 'primary'}
+            size="sm"
+            disabled={savingKey === key || !canManage}
+            onClick={() => {
+              void handleToggleSeat(member, appCode)
+            }}
+          >
+            {savingKey === key ? 'Saving...' : assigned ? 'Remove' : 'Assign'}
+          </Button>
+        )
+      },
+    })),
+  ]
 
   const loadMembers = async () => {
     try {
@@ -150,21 +210,24 @@ export const SeatManagementPage = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">Seat Assignments</h1>
-        <p className="text-sm text-[var(--color-muted-foreground)]">Assign ETL and StoQR subscription seats to members in your organisation.</p>
-      </div>
+    <AccountsPageShell
+      title="Seat Assignments"
+      description="Invite members and assign ETL and StoQR subscription seats in your organisation."
+      loading={loading}
+      loadingLabel="Loading seat assignments..."
+      alert={
+        <>
+          {error ? <Alert variant="destructive" title="Seat management failed">{error}</Alert> : null}
+          {success ? <Alert variant="success" title="Saved">{success}</Alert> : null}
+        </>
+      }
+    >
+      <div className="grid gap-5">
+        {!canManage ? (
+          <Alert variant="info" title="Read-only seat access">Your role does not allow inviting members or assigning seats.</Alert>
+        ) : null}
 
-      {error ? <Alert variant="destructive" title="Seat management failed">{error}</Alert> : null}
-      {success ? <Alert variant="success" title="Saved">{success}</Alert> : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Invite members</CardTitle>
-          <CardDescription>Invitations create pending organisation memberships. Seats can be assigned after members accept.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <AccountsSection title="Invite members" description="Invitations create pending organisation memberships. Seats can be assigned after members accept.">
           <div className="space-y-2">
             <label className="text-sm font-medium text-[var(--color-body)]" htmlFor="seat-invite-emails">
               Invite emails
@@ -188,123 +251,30 @@ export const SeatManagementPage = () => {
           >
             {inviting ? 'Sending...' : 'Send invitations'}
           </Button>
-        </CardContent>
-      </Card>
+        </AccountsSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending invitations</CardTitle>
-          <CardDescription>Cancel invitations that have not been accepted.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
-              <Spinner size="sm" />
-              Loading invitations...
-            </div>
-          ) : pendingInvites.length === 0 ? (
-            <p className="text-sm text-[var(--color-muted-foreground)]">No pending invitations.</p>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendingInvites.map((invite) => {
-                    const key = `invite:${invite.id}`
-                    return (
-                      <TableRow key={invite.id}>
-                        <TableCell>
-                          <span className="font-medium text-[var(--color-heading)]">{invite.email}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm text-[var(--color-muted-foreground)]">{new Date(invite.createdAt).toLocaleDateString()}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            disabled={savingKey === key || !canManage}
-                            onClick={() => {
-                              void handleCancelInvite(invite)
-                            }}
-                          >
-                            {savingKey === key ? 'Cancelling...' : 'Cancel'}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
+        <AccountsSection title="Pending invitations" description="Cancel invitations that have not been accepted.">
+          <DataTable
+            variant="operational"
+            rows={pendingInvites}
+            columns={inviteColumns}
+            getRowId={(invite) => invite.id}
+            emptyState="No pending invitations."
+            minTableWidth="42rem"
+          />
+        </AccountsSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Organisation members</CardTitle>
-          <CardDescription>Owner and admins can assign seats. Owner controls seat limits in Billing & Limits.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
-              <Spinner size="sm" />
-              Loading members...
-            </div>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>ETL</TableHead>
-                    <TableHead>StoQR</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map((member) => (
-                    <TableRow key={member.orgMemberId}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-[var(--color-heading)]">{member.fullName ?? 'Unnamed user'}</span>
-                          <span className="text-xs text-[var(--color-muted-foreground)]">{member.email ?? member.userId}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="neutral">{member.role}</Badge>
-                      </TableCell>
-                      {appCodes.map((appCode) => {
-                        const assigned = member.assignedApps.includes(appCode)
-                        const key = `${member.orgMemberId}:${appCode}`
-                        return (
-                          <TableCell key={appCode}>
-                            <Button
-                              variant={assigned ? 'outline' : 'primary'}
-                              disabled={savingKey === key || !canManage}
-                              onClick={() => {
-                                void handleToggleSeat(member, appCode)
-                              }}
-                            >
-                              {savingKey === key ? 'Saving...' : assigned ? 'Remove' : 'Assign'}
-                            </Button>
-                          </TableCell>
-                        )
-                      })}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        <AccountsSection title="Organisation members" description="Owners and admins can assign seats. Seat limits are managed in Billing.">
+          <DataTable
+            variant="operational"
+            rows={members}
+            columns={memberColumns}
+            getRowId={(member) => member.orgMemberId}
+            emptyState="No organisation members found."
+            minTableWidth="48rem"
+          />
+        </AccountsSection>
+      </div>
+    </AccountsPageShell>
   )
 }

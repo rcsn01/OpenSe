@@ -200,6 +200,56 @@ describe('onboarding api', () => {
     expect(mockFrom).not.toHaveBeenCalled()
   })
 
+  it('assigns 5 free-tier seats to selected apps and 0 seats to unselected apps', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'user-1', user_metadata: {} } },
+      error: null,
+    })
+    mockGetPendingOrganisationInvites.mockResolvedValue([])
+
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: { id: 'org-1', name: 'Acme' },
+      error: null,
+    })
+    const insertSelect = vi.fn(() => ({ single: insertSingle }))
+    const insert = vi.fn(() => ({ select: insertSelect }))
+    const seatUpdates: Array<Record<string, unknown>> = []
+    const makeSeatChain = () => {
+      const chain: { eq: ReturnType<typeof vi.fn> } = { eq: vi.fn() }
+      chain.eq.mockReturnValueOnce(chain).mockResolvedValueOnce({ error: null })
+      return chain
+    }
+    const update = vi.fn((payload: Record<string, unknown>) => {
+      seatUpdates.push(payload)
+      return makeSeatChain()
+    })
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'organisations') {
+        return { insert }
+      }
+      if (table === 'organisation_app_seats') {
+        return { update }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await createOrganisationForOnboarding({
+      name: 'Acme',
+      selectedApps: ['etl'],
+    })
+
+    expect(insert).toHaveBeenCalledWith({
+      name: 'Acme',
+      owner_id: 'user-1',
+    })
+    expect(seatUpdates).toEqual([
+      { seat_limit: 5 },
+      { seat_limit: 0 },
+    ])
+  })
+
   it('normalizes and de-duplicates emails before inviting members', async () => {
     mockInviteOrganisationMember.mockResolvedValue(undefined)
 

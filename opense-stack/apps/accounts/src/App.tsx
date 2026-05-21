@@ -5,22 +5,25 @@ import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { SharedLoginRoutePage } from './pages/SharedLoginRoutePage'
 import { SharedSignupRoutePage } from './pages/SharedSignupRoutePage'
 import { AccountShell } from './components/AccountShell'
-import { GeneralSettingsPage } from './pages/GeneralSettingsPage'
-import { AccountSettingsPage } from './pages/AccountSettingsPage'
-import { OrganisationSettingsPage } from './pages/OrganisationSettingsPage'
+import { ProfilePage } from './pages/ProfilePage'
+import { SecurityPage } from './pages/SecurityPage'
+import { OrganisationPage } from './pages/OrganisationPage'
 import { BillingPage } from './pages/BillingPage'
 import { SeatManagementPage } from './pages/SeatManagementPage'
+import { ActivityLogPage } from './pages/ActivityLogPage'
+import { PreferencesPage } from './pages/PreferencesPage'
 import { getOnboardingStatus, type OnboardingStatus } from './api/onboarding'
 import { OnboardingStartPage } from './pages/OnboardingStartPage'
 import { OnboardingInvitationChoicePage } from './pages/OnboardingInvitationChoicePage'
 import { OnboardingCreateOrganisationPage } from './pages/OnboardingCreateOrganisationPage'
 import { OnboardingInviteMembersPage } from './pages/OnboardingInviteMembersPage'
+import { getOnboardingCompletedFallbackPath } from './lib/onboardingUi'
 
 const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
   if (status.step === 'invites') return '/onboarding/invitations'
   if (status.step === 'create') return '/onboarding/create-organisation'
   if (status.step === 'invite-members') return '/onboarding/invite-members'
-  return '/account/general'
+  return getOnboardingCompletedFallbackPath()
 }
 
 const LoadingSession = () => <EmptyState title="Loading session..." description="" />
@@ -90,7 +93,7 @@ const OnboardingGate = () => {
   }
 
   if (!onboardingStatus?.needsOnboarding && isOnboardingRoute) {
-    return <Navigate to="/account/general" replace />
+    return <Navigate to={getOnboardingCompletedFallbackPath()} replace />
   }
 
   return <Outlet />
@@ -140,28 +143,33 @@ function App() {
     >
       <Routes>
         <Route element={<OnboardingGate />}>
-          <Route path="/" element={<Navigate to="/account/general" replace />} />
+          <Route path="/" element={<Navigate to="/account/profile" replace />} />
           <Route path="/onboarding" element={<OnboardingStartPage />} />
           <Route path="/onboarding/invitations" element={<OnboardingInvitationChoicePage />} />
           <Route path="/onboarding/create-organisation" element={<OnboardingCreateOrganisationPage />} />
           <Route path="/onboarding/invite-members" element={<OnboardingInviteMembersPage />} />
 
           <Route element={<AccountShell />}>
-            <Route path="/account" element={<Navigate to="/account/general" replace />} />
-            <Route path="/account/general" element={<GeneralSettingsPage />} />
-            <Route path="/account/settings" element={<AccountSettingsPage />} />
-            <Route path="/account/organisation" element={<OrganisationSettingsPage />} />
+            <Route path="/account" element={<Navigate to="/account/profile" replace />} />
+            <Route path="/account/profile" element={<ProfilePage />} />
+            <Route path="/account/security" element={<SecurityPage />} />
+            <Route path="/account/organisation" element={<OrganisationPage />} />
             <Route path="/account/billing" element={<BillingPage />} />
             <Route path="/account/seats" element={<SeatManagementPage />} />
+            <Route path="/account/activity" element={<ActivityLogPage />} />
+            <Route path="/account/preferences" element={<PreferencesPage />} />
 
-            <Route path="/general" element={<Navigate to="/account/general" replace />} />
-            <Route path="/settings" element={<Navigate to="/account/settings" replace />} />
+            <Route path="/account/general" element={<Navigate to="/account/preferences" replace />} />
+            <Route path="/account/settings" element={<Navigate to="/account/profile" replace />} />
+
+            <Route path="/general" element={<Navigate to="/account/preferences" replace />} />
+            <Route path="/settings" element={<Navigate to="/account/profile" replace />} />
             <Route path="/organisation" element={<Navigate to="/account/organisation" replace />} />
             <Route path="/billing" element={<Navigate to="/account/billing" replace />} />
             <Route path="/seats" element={<Navigate to="/account/seats" replace />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/account/general" replace />} />
+          <Route path="*" element={<Navigate to="/account/profile" replace />} />
         </Route>
       </Routes>
     </ThemeProvider>

@@ -1,21 +1,20 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, Input, Select } from '@repo/ui'
+import { Alert, Badge, Button, Checkbox, Input, Select } from '@repo/ui'
+import { AppWindow, Building2, CheckCircle2, Users } from 'lucide-react'
 import { createOrganisationForOnboarding, type AppCode } from '../api/onboarding'
+import { AccountsField, AccountsSection } from '../components/AccountsPageShell'
+import { OnboardingShell } from '../components/OnboardingShell'
 import { buildPathWithQuery } from '../lib/redirect'
-
-const appOptions: { code: AppCode; name: string }[] = [
-  { code: 'etl', name: 'ETL' },
-  { code: 'stoqr', name: 'StoQR' },
-]
-
-const sizeOptions = [
-  { value: '1-5', label: '1-5 people' },
-  { value: '6-20', label: '6-20 people' },
-  { value: '21-50', label: '21-50 people' },
-  { value: '51+', label: '51+ people' },
-]
+import {
+  FREE_TIER_ONBOARDING_SEATS,
+  getOnboardingAppSeatSummary,
+  getOnboardingSelectedSeatTotal,
+  onboardingAppOptions,
+  onboardingSizeOptions,
+  validateOnboardingOrganisationForm,
+} from '../lib/onboardingUi'
 
 export const OnboardingCreateOrganisationPage = () => {
   const navigate = useNavigate()
@@ -38,18 +37,13 @@ export const OnboardingCreateOrganisationPage = () => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (!orgName.trim()) {
-      setError('Organisation name is required.')
-      return
-    }
-
-    if (!estimatedPeople) {
-      setError('Please choose an estimated team size.')
-      return
-    }
-
-    if (selectedApps.length === 0) {
-      setError('Select at least one app for free-tier seats.')
+    const validationError = validateOnboardingOrganisationForm({
+      orgName,
+      estimatedPeople,
+      selectedApps,
+    })
+    if (validationError) {
+      setError(validationError)
       return
     }
 
@@ -68,24 +62,23 @@ export const OnboardingCreateOrganisationPage = () => {
     }
   }
 
+  const seatSummary = getOnboardingAppSeatSummary(selectedApps)
+  const seatTotal = getOnboardingSelectedSeatTotal(selectedApps)
+  const selectedAppNames = seatSummary.filter((app) => app.selected).map((app) => app.name)
+
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--color-heading)]">Create your organisation</h1>
-        <p className="text-sm text-[var(--color-muted-foreground)]">Set up your organisation and choose app seat allocation. Free tier includes 5 seats per selected app.</p>
-      </div>
-
-      {error ? <Alert variant="destructive" title="Unable to create organisation">{error}</Alert> : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Organisation details</CardTitle>
-          <CardDescription>These details are used to set up your primary organisation.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+    <OnboardingShell
+      title="Create your organisation"
+      description={`Set up your workspace identity and choose the apps that should receive ${FREE_TIER_ONBOARDING_SEATS} free-tier seats.`}
+      currentStep="create"
+      alert={error ? <Alert variant="destructive" title="Unable to create organisation">{error}</Alert> : null}
+    >
+      <form className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]" onSubmit={handleSubmit}>
+        <div className="grid gap-5">
+          <AccountsSection title="Organisation identity" description="This name appears in Accounts and connected OpenSe apps.">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[var(--color-body)]" htmlFor="onboarding-org-name">
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-body)]" htmlFor="onboarding-org-name">
+                <Building2 className="h-4 w-4 text-[var(--color-muted-foreground)]" />
                 Organisation name
               </label>
               <Input
@@ -96,42 +89,91 @@ export const OnboardingCreateOrganisationPage = () => {
                 disabled={saving}
               />
             </div>
+          </AccountsSection>
 
+          <AccountsSection title="Estimated team size" description="Used only to tailor setup guidance during onboarding.">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-[var(--color-body)]" htmlFor="onboarding-estimated-people">
+              <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-body)]" htmlFor="onboarding-estimated-people">
+                <Users className="h-4 w-4 text-[var(--color-muted-foreground)]" />
                 Estimated number of people
               </label>
               <Select
                 id="onboarding-estimated-people"
                 value={estimatedPeople}
                 onChange={(event) => setEstimatedPeople(event.target.value)}
-                options={sizeOptions}
+                options={onboardingSizeOptions}
                 placeholder="Select size"
                 disabled={saving}
               />
             </div>
+          </AccountsSection>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-[var(--color-body)]">App seat allocation (free tier = 5 seats per app)</p>
-              <div className="space-y-2">
-                {appOptions.map((app) => (
-                  <Checkbox
+          <AccountsSection title="App access" description={`Selected apps receive ${FREE_TIER_ONBOARDING_SEATS} free-tier seats. Unselected apps start with 0 seats.`}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {onboardingAppOptions.map((app) => {
+                const checked = selectedApps.includes(app.code)
+                return (
+                  <div
                     key={app.code}
-                    checked={selectedApps.includes(app.code)}
-                    onChange={(event) => toggleApp(app.code, event.target.checked)}
-                    label={`${app.name} (5 seats)`}
-                    disabled={saving}
-                  />
+                    className="flex min-h-24 flex-col justify-between gap-4 border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <AppWindow className="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                          <span className="text-sm font-semibold text-[var(--color-heading)]">{app.name}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                          {checked ? `${FREE_TIER_ONBOARDING_SEATS} seats enabled` : 'No seats allocated'}
+                        </p>
+                      </div>
+                      <Badge variant={checked ? 'success' : 'neutral'}>{checked ? 'Selected' : '0 seats'}</Badge>
+                    </div>
+                    <Checkbox
+                      id={`onboarding-app-${app.code}`}
+                      checked={checked}
+                      onChange={(event) => toggleApp(app.code, event.target.checked)}
+                      label={`Enable ${app.name}`}
+                      disabled={saving}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </AccountsSection>
+        </div>
+
+        <aside className="space-y-5">
+          <AccountsSection title="Setup summary">
+            <dl className="grid gap-4">
+              <AccountsField label="Organisation" value={orgName.trim() || 'Not set'} />
+              <AccountsField label="Team size" value={onboardingSizeOptions.find((option) => option.value === estimatedPeople)?.label ?? 'Not set'} />
+              <AccountsField label="Selected apps" value={selectedAppNames.length > 0 ? selectedAppNames.join(', ') : 'None'} />
+              <AccountsField label="Free seats" value={`${seatTotal} total`} />
+            </dl>
+          </AccountsSection>
+
+          <AccountsSection title="Next step">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                {seatSummary.map((app) => (
+                  <div key={app.code} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-[var(--color-body)]">{app.name}</span>
+                    <span className="font-medium text-[var(--color-heading)]">{app.seats} seats</span>
+                  </div>
                 ))}
               </div>
+              <div className="flex items-start gap-2 border-t border-[var(--color-border)] pt-4 text-sm text-[var(--color-muted-foreground)]">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-success)]" />
+                <span>After creation, invite members or finish onboarding.</span>
+              </div>
+              <Button type="submit" className="w-full" disabled={saving}>
+                {saving ? 'Creating...' : 'Create organisation'}
+              </Button>
             </div>
-
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Creating...' : 'Create organisation'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          </AccountsSection>
+        </aside>
+      </form>
+    </OnboardingShell>
   )
 }

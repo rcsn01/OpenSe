@@ -1,7 +1,15 @@
 import { test as baseTest, expect as baseExpect } from '@playwright/test';
 import { test as authTest, expect as authExpect } from '../../fixtures/accountsAuth';
 
-const protectedRoutes = ['/account/general', '/account/settings', '/account/organisation', '/account/billing', '/account/seats'];
+const protectedRoutes = [
+  '/account/profile',
+  '/account/security',
+  '/account/organisation',
+  '/account/billing',
+  '/account/seats',
+  '/account/activity',
+  '/account/preferences',
+];
 const onboardingRoutes = [
   '/onboarding',
   '/onboarding/invitations',
@@ -9,9 +17,11 @@ const onboardingRoutes = [
   '/onboarding/invite-members',
 ];
 const accountAliasRoutes: Array<[string, string]> = [
-  ['/account', '/account/general'],
-  ['/general', '/account/general'],
-  ['/settings', '/account/settings'],
+  ['/account', '/account/profile'],
+  ['/account/general', '/account/preferences'],
+  ['/account/settings', '/account/profile'],
+  ['/general', '/account/preferences'],
+  ['/settings', '/account/profile'],
   ['/organisation', '/account/organisation'],
   ['/billing', '/account/billing'],
   ['/seats', '/account/seats'],
@@ -43,7 +53,7 @@ authTest.describe('Accounts Protected Route Coverage', () => {
   for (const route of onboardingRoutes) {
     authTest(`onboarding route ${route} resolves`, async ({ authenticatedAccountsPage }) => {
       await authenticatedAccountsPage.goto(route);
-      await authExpect(authenticatedAccountsPage).toHaveURL(/\/(onboarding|settings|login)/);
+      await authExpect(authenticatedAccountsPage).toHaveURL(/\/(onboarding|profile|login)/);
     });
   }
 
@@ -56,6 +66,6 @@ authTest.describe('Accounts Protected Route Coverage', () => {
 
   authTest('root route resolves to protected shell', async ({ authenticatedAccountsPage }) => {
     await authenticatedAccountsPage.goto('/');
-    await authExpect(authenticatedAccountsPage).toHaveURL(/\/(account\/general|login|onboarding)/);
+    await authExpect(authenticatedAccountsPage).toHaveURL(/\/(account\/profile|login|onboarding)/);
   });
 });

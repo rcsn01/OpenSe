@@ -5,12 +5,13 @@ import { useAuth } from '@repo/shared/auth/context'
 import { getOnboardingStatus, type OnboardingStatus } from '../api/onboarding'
 import { SharedLoginPage } from '../components/auth/SharedLoginPage'
 import { buildPathWithQuery, buildQueryString, getAppNameFromQuery, redirectBackToApp } from '../lib/redirect'
+import { getOnboardingCompletedFallbackPath } from '../lib/onboardingUi'
 
 const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
   if (status.step === 'invites') return '/onboarding/invitations'
   if (status.step === 'create') return '/onboarding/create-organisation'
   if (status.step === 'invite-members') return '/onboarding/invite-members'
-  return '/general'
+  return getOnboardingCompletedFallbackPath()
 }
 
 export const SharedLoginRoutePage = () => {
@@ -59,7 +60,7 @@ export const SharedLoginRoutePage = () => {
       return
     }
 
-    navigate('/general', { replace: true })
+    navigate(getOnboardingCompletedFallbackPath(), { replace: true })
   }, [getInternalNextPath, navigate])
 
   // Primary: redirect immediately when user becomes available (from any source)
@@ -77,7 +78,7 @@ export const SharedLoginRoutePage = () => {
     const id = setTimeout(() => {
       const path = window.location.pathname
       if (path === '/login' || path === '/signin') {
-        window.location.replace('/general')
+        window.location.replace(getOnboardingCompletedFallbackPath())
       }
     }, 3000)
     return () => clearTimeout(id)

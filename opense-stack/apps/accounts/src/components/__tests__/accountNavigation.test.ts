@@ -8,17 +8,17 @@ import {
 } from '../accountNavigation'
 
 describe('account navigation', () => {
-  it('keeps General as the first navigation entry', () => {
+  it('keeps Profile as the first navigation entry', () => {
     expect(accountNavigationItems[0]).toMatchObject({
-      to: '/account/general',
-      label: 'General',
+      to: '/account/profile',
+      label: 'Profile',
     })
   })
 
   it('matches active route including nested paths', () => {
-    expect(isAccountNavItemActive('/account/general', '/account/general')).toBe(true)
-    expect(isAccountNavItemActive('/account/general/preferences', '/account/general')).toBe(true)
-    expect(isAccountNavItemActive('/account/settings', '/account/general')).toBe(false)
+    expect(isAccountNavItemActive('/account/profile', '/account/profile')).toBe(true)
+    expect(isAccountNavItemActive('/account/profile/avatar', '/account/profile')).toBe(true)
+    expect(isAccountNavItemActive('/account/security', '/account/profile')).toBe(false)
   })
 
   it('returns layout class by mobile nav open state', () => {
