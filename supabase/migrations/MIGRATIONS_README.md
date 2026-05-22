@@ -15,6 +15,8 @@ This directory contains the pre-launch production baseline for the unified OpenS
   Creates StoQR tables, StoQR permission helpers and triggers, StoQR RLS policies, reporting RPCs, and the required `product-images` storage bucket bootstrap.
 - `20260428090400_admin_domain.sql`
   Creates admin-facing tables, admin select-only policies, and admin RPCs for oversight and controlled mutations.
+- `20260522000000_remove_super_admin_db_auth.sql`
+  Renames platform-owned tables, removes database-level admin membership/RPCs, and leaves platform administration to the local service-role API.
 
 ## Future Migration Naming
 

@@ -116,8 +116,6 @@ Current local functions:
 
 ```text
 account-self-service
-admin-billing-sync
-admin-user-management
 create-billing-portal
 create-checkout
 manage-stoqr-alert-connectors

@@ -8,7 +8,6 @@ const mockGetSession = vi.fn()
 const mockGetUser = vi.fn()
 const mockOnAuthStateChange = vi.fn()
 const mockSignOut = vi.fn()
-const mockRpc = vi.fn()
 const mockUnsubscribe = vi.fn()
 let authStateChangeCallback: ((event: string, session: Session | null) => void) | undefined
 
@@ -20,7 +19,6 @@ vi.mock('../../supabase', () => ({
       onAuthStateChange: (...args: unknown[]) => mockOnAuthStateChange(...args),
       signOut: (...args: unknown[]) => mockSignOut(...args),
     },
-    rpc: (...args: unknown[]) => mockRpc(...args),
   },
 }))
 
@@ -40,7 +38,6 @@ describe('AuthProvider', () => {
     mockGetSession.mockResolvedValue({ data: { session: null } })
     mockGetUser.mockResolvedValue({ data: { user: null }, error: null })
     mockSignOut.mockResolvedValue({ error: null })
-    mockRpc.mockResolvedValue({ data: true, error: null })
     mockOnAuthStateChange.mockImplementation((callback: (_event: string, session: Session | null) => void) => {
       authStateChangeCallback = callback
       return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
@@ -58,7 +55,6 @@ describe('AuthProvider', () => {
     expect(latestAuth?.session).toBeNull()
     expect(latestAuth?.user).toBeNull()
     expect(latestAuth?.isDemoUser).toBeUndefined()
-    expect(latestAuth?.isSuperAdmin).toBeUndefined()
   })
 
   it('enables demo mode fields only when demoMode is true', async () => {
@@ -78,37 +74,6 @@ describe('AuthProvider', () => {
 
     expect(latestAuth?.isDemoUser).toBe(true)
     expect(latestAuth?.user?.id).toBe(DEMO_USER_ID)
-  })
-
-  it('enables super admin checks only when superAdmin is true', async () => {
-    mockGetSession.mockResolvedValue({
-      data: {
-        session: {
-          user: { id: 'user-1', email: 'test@example.com' },
-        },
-      },
-    })
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: 'user-1',
-          email: 'test@example.com',
-        },
-      },
-      error: null,
-    })
-
-    render(
-      <AuthProvider superAdmin>
-        <Probe />
-      </AuthProvider>,
-    )
-
-    await waitFor(() => {
-      expect(mockRpc).toHaveBeenCalledWith('get_super_admin_status')
-      expect(latestAuth?.superAdminChecked).toBe(true)
-      expect(latestAuth?.isSuperAdmin).toBe(true)
-    })
   })
 
   it('clears stale cached sessions that fail server validation on initialization', async () => {

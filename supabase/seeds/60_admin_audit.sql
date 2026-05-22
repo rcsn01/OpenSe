@@ -34,7 +34,7 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.admin_app_health_snapshots (
+INSERT INTO public.platform_app_health_snapshots (
   id,
   app_code,
   uptime_percent,
@@ -64,7 +64,7 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.admin_pricing_plans (
+INSERT INTO public.platform_pricing_plans (
   id,
   app_code,
   plan_name,
@@ -82,7 +82,7 @@ VALUES
   ('adadadad-adad-adad-adad-adadadadad04', NULL, 'OpenSe Bundle', 'yearly', 3900, true, 'prod_opense_bundle', 'price_opense_bundle_yearly', true)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.admin_coupons (
+INSERT INTO public.platform_coupons (
   id,
   code,
   discount_percent,
@@ -115,7 +115,7 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.platform_admin_audit_events (id, actor_user_id, action, metadata, created_at)
+INSERT INTO public.platform_audit_events (id, actor_user_id, action, metadata, created_at)
 VALUES
   (
     'afafafaf-afaf-afaf-afaf-afafafafaf01',
@@ -133,13 +133,13 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.admin_feature_flags (id, app_code, flag_key, rollout_status, audience)
+INSERT INTO public.platform_feature_flags (id, app_code, flag_key, rollout_status, audience)
 VALUES
   ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b101', 'etl', 'etl.enhanced-lineage-graph', 'beta', 'Selected enterprise orgs'),
   ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b102', 'stoqr', 'stoqr.smart-reorder-assistant', 'enabled', 'All organisations')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.admin_feature_flags (id, app_code, flag_key, rollout_status, audience)
+INSERT INTO public.platform_feature_flags (id, app_code, flag_key, rollout_status, audience)
 VALUES
   ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b103', 'etl', 'etl.ai-assisted-transformations', 'beta', 'Beta cohort'),
   ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b104', 'etl', 'etl.bulk-template-publish', 'enabled', 'All organisations'),
@@ -150,31 +150,31 @@ SET
   rollout_status = EXCLUDED.rollout_status,
   audience = EXCLUDED.audience;
 
-INSERT INTO public.admin_default_configurations (id, app_code, config_key, config_value)
+INSERT INTO public.platform_default_configurations (id, app_code, config_key, config_value)
 VALUES
   ('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b201', 'etl', 'default_workflow_timeout_seconds', '900'),
   ('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b202', 'stoqr', 'default_alert_severity', 'medium')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.admin_default_configurations (app_code, config_key, config_value)
+INSERT INTO public.platform_default_configurations (app_code, config_key, config_value)
 SELECT NULL, 'default_sso_provider', 'google-workspace'
 WHERE NOT EXISTS (
   SELECT 1
-  FROM public.admin_default_configurations
+  FROM public.platform_default_configurations
   WHERE app_code IS NULL
     AND config_key = 'default_sso_provider'
 );
 
-INSERT INTO public.admin_default_configurations (app_code, config_key, config_value)
+INSERT INTO public.platform_default_configurations (app_code, config_key, config_value)
 SELECT NULL, 'default_data_retention_days', '365'
 WHERE NOT EXISTS (
   SELECT 1
-  FROM public.admin_default_configurations
+  FROM public.platform_default_configurations
   WHERE app_code IS NULL
     AND config_key = 'default_data_retention_days'
 );
 
-INSERT INTO public.admin_release_notes (id, app_code, version, summary, published_at)
+INSERT INTO public.platform_release_notes (id, app_code, version, summary, published_at)
 VALUES
   (
     'b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b301',
@@ -192,7 +192,7 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.admin_release_notes (id, app_code, version, summary, published_at)
+INSERT INTO public.platform_release_notes (id, app_code, version, summary, published_at)
 VALUES
   (
     'b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b303',

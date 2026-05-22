@@ -250,8 +250,4 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.super_admin_members (id, user_id)
-VALUES ('91111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111')
-ON CONFLICT (user_id) DO NOTHING;
-
 -- ------------------------------------------------------------
