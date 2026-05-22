@@ -18,3 +18,4 @@ tests/playwright-report
 tests/test-results
 apps/*/public/config.js
 !apps/*/public/config.example.js
+apps/admin/
