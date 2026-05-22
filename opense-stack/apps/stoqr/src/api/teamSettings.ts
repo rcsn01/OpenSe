@@ -49,6 +49,8 @@ type CompanyInvitationRow = {
   created_at: string
 }
 
+const isSystemRoleName = (name: string) => ['owner', 'guest'].includes(name.trim().toLowerCase())
+
 export type TwoFactorStatus = {
   currentLevel: string | null
   nextLevel: string | null
@@ -185,6 +187,14 @@ export const saveRoleWithPermissions = async (
   desiredPermissions: string[],
   initialPermissions: string[],
 ) => {
+  if (isSystemRoleName(role.name)) {
+    throw new Error(`${role.name} role is system-managed and cannot be changed directly.`)
+  }
+
+  if (role.role_rank <= 0) {
+    throw new Error('Role rank must be a positive integer.')
+  }
+
   const { error: roleError } = await db
     .from('roles')
     .update({ name: role.name, description: role.description, role_rank: role.role_rank })
@@ -218,6 +228,14 @@ export const createRoleWithPermissions = async (
   companyId: string,
   payload: { name: string; description: string; roleRank: number; perms: string[] },
 ) => {
+  if (isSystemRoleName(payload.name)) {
+    throw new Error(`${payload.name.trim()} is reserved for a system-managed role.`)
+  }
+
+  if (payload.roleRank <= 0) {
+    throw new Error('Role rank must be a positive integer.')
+  }
+
   const { data: duplicateRanks, error: duplicateCheckError } = await db
     .from('roles')
     .select('id')
@@ -253,11 +271,19 @@ export const updateRoleWithPermissions = async (
 ) => {
   const { data: existingRole, error: existingRoleError } = await db
     .from('roles')
-    .select('company_id')
+    .select('company_id, name')
     .eq('id', roleId)
     .single()
 
   if (existingRoleError) throw existingRoleError
+
+  if (isSystemRoleName(existingRole.name) || isSystemRoleName(payload.name)) {
+    throw new Error('System-managed roles cannot be changed directly.')
+  }
+
+  if (payload.roleRank <= 0) {
+    throw new Error('Role rank must be a positive integer.')
+  }
 
   const { data: duplicateRanks, error: duplicateCheckError } = await db
     .from('roles')

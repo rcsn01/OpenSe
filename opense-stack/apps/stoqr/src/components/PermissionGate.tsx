@@ -3,6 +3,16 @@ import { EmptyState } from '@repo/ui'
 import { useCompany } from '../contexts/CompanyContext'
 import { useMyPermissions } from '../hooks/queries/usePermissions'
 
+const formatPermissionLabel = (permissionCode: string) =>
+  permissionCode
+    .split(/[._]/g)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+
+export const missingPermissionMessage = (permissionCode: string) =>
+  `Your role does not include ${formatPermissionLabel(permissionCode)}.`
+
 export const useHasPermission = (permissionCode: string) => {
   const { companyId } = useCompany()
   const { data: permissions = [], isLoading } = useMyPermissions(companyId)
@@ -35,7 +45,7 @@ export const PermissionRoute = ({
     return (
       <EmptyState
         title="No access"
-        description="Your role does not include permission to open this page."
+        description={missingPermissionMessage(permission)}
       />
     )
   }

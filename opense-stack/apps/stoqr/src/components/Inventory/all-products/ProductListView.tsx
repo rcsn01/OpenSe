@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Badge, DataTable, EmptyState, Heading, Label, Pagination, cn } from '@repo/ui'
 import { formatCurrency } from '../../../utils'
+import { missingPermissionMessage } from '../../PermissionGate'
 import { useInlineProductEdit } from './useInlineProductEdit'
 import type { ProductListViewProps } from './types'
 import type { SortField } from '../types'
@@ -25,6 +26,8 @@ export const ProductListView = ({
   setPage,
   folders,
   onRefresh,
+  canUseInventory,
+  canEditInventory,
 }: ProductListViewProps) => {
   const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name ?? '—'
   const folderSummary = (product: { folder_id: string | null; folder_stock_summary?: Array<{ folder_id: string; quantity_on_hand: number }> }) => {
@@ -68,7 +71,8 @@ export const ProductListView = ({
                       <input
                         type="checkbox"
                         checked={selectedRowIds.has(product.id)}
-                        disabled={isSaving}
+                        disabled={isSaving || !canUseInventory}
+                        title={!canUseInventory ? missingPermissionMessage('inventory.use') : undefined}
                         onChange={() => toggleSelection(product.id)}
                       />
                       {isOut ? (
@@ -81,11 +85,22 @@ export const ProductListView = ({
                     </div>
 
                     <div className="min-w-0">
-                      <Link to={`/inventory/${product.id}/overview`} className="block min-w-0">
-                        <Heading level="h6" className="m-0 leading-tight">
-                          {product.name}
-                        </Heading>
-                      </Link>
+                      {canUseInventory ? (
+                        <Link to={`/inventory/${product.id}/overview`} className="block min-w-0">
+                          <Heading level="h6" className="m-0 leading-tight">
+                            {product.name}
+                          </Heading>
+                        </Link>
+                      ) : (
+                        <div className="block min-w-0" title={missingPermissionMessage('inventory.use')}>
+                          <Heading level="h6" className="m-0 leading-tight text-[var(--color-muted-foreground)]">
+                            {product.name}
+                          </Heading>
+                          <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                            No permission to open detail
+                          </span>
+                        </div>
+                      )}
                       <Label className="block">{product.sku}</Label>
                     </div>
 
@@ -145,15 +160,24 @@ export const ProductListView = ({
               header: 'Name / SKU',
               sortKey: 'name',
               renderCell: (product) => (
-                <Link
-                  to={`/inventory/${product.id}/overview`}
-                  className="block min-w-0"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-normal text-[var(--color-foreground)]">
-                    {product.name}
-                  </span>
-                </Link>
+                canUseInventory ? (
+                  <Link
+                    to={`/inventory/${product.id}/overview`}
+                    className="block min-w-0"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-normal text-[var(--color-foreground)]">
+                      {product.name}
+                    </span>
+                  </Link>
+                ) : (
+                  <div className="block min-w-0" title={missingPermissionMessage('inventory.use')}>
+                    <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold leading-normal text-[var(--color-muted-foreground)]">
+                      {product.name}
+                    </span>
+                    <span className="block text-xs text-[var(--color-muted-foreground)]">No permission to open detail</span>
+                  </div>
+                )
               ),
             },
             {
@@ -197,12 +221,14 @@ export const ProductListView = ({
                   <span
                     onClick={(event) => {
                       event.stopPropagation()
+                      if (!canEditInventory) return
                       startEdit(product, 'selling_price')
                     }}
-                    aria-disabled={isSaving}
+                    aria-disabled={isSaving || !canEditInventory}
+                    title={!canEditInventory ? missingPermissionMessage('inventory.edit') : undefined}
                     className={cn(
                       'editable-cell',
-                      isSaving ? 'cursor-not-allowed opacity-70' : 'cursor-pointer',
+                      isSaving || !canEditInventory ? 'cursor-not-allowed opacity-70' : 'cursor-pointer',
                     )}
                   >
                     {formatCurrency(product.selling_price)}
@@ -243,12 +269,15 @@ export const ProductListView = ({
             selectedRowIds,
             onToggleAll: toggleAll,
             onToggleRow: (product) => toggleSelection(product.id),
-            isRowDisabled: isSaving,
+            isRowDisabled: isSaving || !canUseInventory,
             selectAllLabel: 'Select all visible products',
             getRowLabel: (product) => product.name,
             columnWidth: 44,
           }}
-          onRowClick={(product) => toggleSelection(product.id)}
+          onRowClick={(product) => {
+            if (!canUseInventory) return
+            toggleSelection(product.id)
+          }}
           rowClassName={(product) => (
             selectedRowIds.has(product.id) ? 'bg-[var(--color-primary-light)]' : undefined
           )}

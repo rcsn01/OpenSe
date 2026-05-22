@@ -48,6 +48,12 @@ export const AllProductsTab = ({
   handleBulkDelete,
   onClearSelection,
   onRefresh,
+  canUseInventory,
+  canCreateInventory,
+  canEditInventory,
+  canAdjustInventory,
+  canDeleteInventory,
+  canImportExportInventory,
 }: AllProductsTabProps) => {
   const isSelectionMode = selectedRowIds.size > 0
   const [view, setView] = useState<'list' | 'grid'>('list')
@@ -177,6 +183,7 @@ export const AllProductsTab = ({
   }
 
   const handleDeleteStepChoose = (folderId: string) => {
+    if (!canDeleteInventory) return
     setDeletingFolderId(folderId)
     setDeleteStep('choose')
     setDeleteAction(null)
@@ -214,7 +221,7 @@ export const AllProductsTab = ({
   }
 
   const handleOpenMoveDialog = () => {
-    if (selectedRowIds.size === 0) return
+    if (selectedRowIds.size === 0 || !canEditInventory) return
     setMoveTargetFolderId('__uncategorised__')
     setIsMoveDialogOpen(true)
   }
@@ -250,7 +257,7 @@ export const AllProductsTab = ({
   )
 
   const exportSelectedCsv = () => {
-    if (selectedProducts.length === 0) return
+    if (selectedProducts.length === 0 || !canImportExportInventory) return
     const toCsv = (rows: string[][]) =>
       rows.map((row) => row.map((cell) => `"${String(cell ?? '').replaceAll('"', '""')}"`).join(',')).join('\n')
     const rows = [
@@ -275,6 +282,7 @@ export const AllProductsTab = ({
   }
 
   const handleMoveFolder = async (folderId: string, newParentId: string | null, sortOrder: number) => {
+    if (!canEditInventory) return
     try {
       await moveFolderMutation.mutateAsync({ folderId, newParentId, sortOrder })
       onRefresh()
@@ -365,6 +373,12 @@ export const AllProductsTab = ({
             onBulkPriceAdjust={() => setBulkModalMode('price')}
             onBulkQuantityAdjust={() => setBulkModalMode('quantity')}
             onExportCsv={exportSelectedCsv}
+            canUseInventory={canUseInventory}
+            canCreateInventory={canCreateInventory}
+            canEditInventory={canEditInventory}
+            canAdjustInventory={canAdjustInventory}
+            canDeleteInventory={canDeleteInventory}
+            canImportExportInventory={canImportExportInventory}
           />
 
           <ProductListView
@@ -385,6 +399,8 @@ export const AllProductsTab = ({
             setPage={setPage}
             folders={folders}
             onRefresh={onRefresh}
+            canUseInventory={canUseInventory}
+            canEditInventory={canEditInventory}
           />
         </Card>
       </div>

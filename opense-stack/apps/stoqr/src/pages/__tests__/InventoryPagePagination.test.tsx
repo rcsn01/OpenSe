@@ -92,6 +92,21 @@ vi.mock('../../hooks/queries/useInventory', () => ({
   useInventoryRefresh: () => mocks.refreshInventory,
 }))
 
+vi.mock('../../hooks/queries/usePermissions', () => ({
+  useMyPermissions: () => ({
+    data: [
+      'inventory.view',
+      'inventory.use',
+      'inventory.create',
+      'inventory.edit',
+      'inventory.adjust',
+      'inventory.delete',
+      'inventory.import_export',
+    ],
+    isLoading: false,
+  }),
+}))
+
 const LocationDisplay = () => {
   const location = useLocation()
 

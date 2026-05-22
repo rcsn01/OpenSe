@@ -115,6 +115,32 @@ describe('OrganisationPermissionsPanel', () => {
     expect(screen.getByText(/role rank must be unique within your organisation/i)).toBeInTheDocument()
   })
 
+  it('renders system-managed roles without edit affordances', () => {
+    render(
+      <OrganisationPermissionsPanel
+        roles={[
+          ...roles,
+          {
+            id: 'role-guest',
+            name: 'Guest',
+            description: 'System-managed guest role',
+            roleRank: 0,
+            permissionCodes: ['dashboard.view', 'inventory.view'],
+          },
+        ]}
+        permissions={permissions}
+        canManage={true}
+        isRoleEditable={(role) => role.name !== 'Guest'}
+        onCreateRole={vi.fn()}
+        onUpdateRole={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Guest')).toBeInTheDocument()
+    expect(screen.getAllByText('System-managed').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: /^edit$/i })).toHaveLength(2)
+  })
+
   it('renders metadata grouped permissions and hides deprecated codes', async () => {
     const user = userEvent.setup()
 

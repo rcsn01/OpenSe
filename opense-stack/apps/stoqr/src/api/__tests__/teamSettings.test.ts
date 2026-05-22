@@ -170,7 +170,7 @@ describe('team settings api', () => {
         .mockImplementationOnce(() => ({
           eq: vi.fn(() => ({
             single: vi.fn().mockResolvedValue({
-              data: { company_id: 'company-1' },
+              data: { company_id: 'company-1', name: 'Admin' },
               error: null,
             }),
           })),

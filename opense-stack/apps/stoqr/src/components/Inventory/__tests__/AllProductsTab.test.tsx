@@ -95,6 +95,12 @@ const createProps = () => ({
   handleBulkDelete: vi.fn(),
   onClearSelection: vi.fn(),
   onRefresh: vi.fn(),
+  canUseInventory: true,
+  canCreateInventory: true,
+  canEditInventory: true,
+  canAdjustInventory: true,
+  canDeleteInventory: true,
+  canImportExportInventory: true,
 })
 
 describe('AllProductsTab', () => {
