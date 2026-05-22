@@ -132,10 +132,6 @@ STABLE
 SET search_path = public, etl
 AS $$
 BEGIN
-  IF public.is_app_super_admin() THEN
-    RETURN TRUE;
-  END IF;
-
   RETURN EXISTS (
     SELECT 1
     FROM public.organisation_members om
@@ -182,18 +178,15 @@ CREATE POLICY etl_app_permissions_select ON etl.app_permissions
   FOR SELECT USING (true);
 
 CREATE POLICY etl_roles_select ON etl.roles
-  FOR SELECT USING (
-    public.is_org_member(org_id, auth.uid())
-    OR public.is_app_super_admin()
-  );
+  FOR SELECT USING (public.is_org_member(org_id, auth.uid()));
 
 CREATE POLICY etl_roles_manage ON etl.roles
   FOR ALL USING (
-    (public.has_etl_permission(org_id, 'roles.manage') OR public.is_app_super_admin())
+    public.has_etl_permission(org_id, 'roles.manage')
     AND lower(name) <> 'owner'
   )
   WITH CHECK (
-    (public.has_etl_permission(org_id, 'roles.manage') OR public.is_app_super_admin())
+    public.has_etl_permission(org_id, 'roles.manage')
     AND lower(name) <> 'owner'
   );
 
@@ -203,7 +196,7 @@ CREATE POLICY etl_role_permissions_select ON etl.role_permissions
       SELECT 1
       FROM etl.roles r
       WHERE r.id = role_permissions.role_id
-        AND (public.is_org_member(r.org_id, auth.uid()) OR public.is_app_super_admin())
+        AND public.is_org_member(r.org_id, auth.uid())
     )
   );
 
@@ -213,7 +206,7 @@ CREATE POLICY etl_role_permissions_manage ON etl.role_permissions
       SELECT 1
       FROM etl.roles r
       WHERE r.id = role_permissions.role_id
-        AND (public.has_etl_permission(r.org_id, 'roles.manage') OR public.is_app_super_admin())
+        AND public.has_etl_permission(r.org_id, 'roles.manage')
         AND lower(r.name) <> 'owner'
     )
   )
@@ -222,7 +215,7 @@ CREATE POLICY etl_role_permissions_manage ON etl.role_permissions
       SELECT 1
       FROM etl.roles r
       WHERE r.id = role_permissions.role_id
-        AND (public.has_etl_permission(r.org_id, 'roles.manage') OR public.is_app_super_admin())
+        AND public.has_etl_permission(r.org_id, 'roles.manage')
         AND lower(r.name) <> 'owner'
     )
   );
@@ -236,7 +229,6 @@ CREATE POLICY etl_member_roles_select ON etl.organisation_member_roles
         AND (
           om.user_id = auth.uid()
           OR public.has_etl_permission(om.org_id, 'roles.manage')
-          OR public.is_app_super_admin()
         )
     )
   );
@@ -247,7 +239,7 @@ CREATE POLICY etl_member_roles_manage ON etl.organisation_member_roles
       SELECT 1
       FROM public.organisation_members om
       WHERE om.id = organisation_member_roles.org_member_id
-        AND (public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
+        AND public.has_etl_permission(om.org_id, 'roles.manage')
         AND NOT (om.user_id = auth.uid() AND om.role = 'owner')
         AND NOT (
           om.user_id = (
@@ -263,7 +255,7 @@ CREATE POLICY etl_member_roles_manage ON etl.organisation_member_roles
       SELECT 1
       FROM public.organisation_members om
       WHERE om.id = organisation_member_roles.org_member_id
-        AND (public.has_etl_permission(om.org_id, 'roles.manage') OR public.is_app_super_admin())
+        AND public.has_etl_permission(om.org_id, 'roles.manage')
         AND NOT (om.user_id = auth.uid() AND om.role = 'owner')
         AND NOT (
           om.user_id = (
@@ -290,20 +282,16 @@ CREATE POLICY workflows_select_unified ON etl.workflows
     is_template = true
     OR (org_id IS NULL AND owner_id = auth.uid())
     OR public.has_etl_permission(org_id, 'workflows.view')
-    OR public.is_app_super_admin()
   );
 
 CREATE POLICY workflows_insert_owned_or_managed ON etl.workflows
   FOR INSERT WITH CHECK (
-    (
-      COALESCE(is_template, false) = false
-      AND owner_id = auth.uid()
-      AND (
-        org_id IS NULL
-        OR public.has_etl_permission(org_id, 'workflows.manage')
-      )
+    COALESCE(is_template, false) = false
+    AND owner_id = auth.uid()
+    AND (
+      org_id IS NULL
+      OR public.has_etl_permission(org_id, 'workflows.manage')
     )
-    OR public.is_app_super_admin()
   );
 
 CREATE POLICY workflows_update_non_template_owner_or_member ON etl.workflows
@@ -312,7 +300,6 @@ CREATE POLICY workflows_update_non_template_owner_or_member ON etl.workflows
     AND (
       (org_id IS NULL AND owner_id = auth.uid())
       OR (org_id IS NOT NULL AND (owner_id = auth.uid() OR public.has_etl_permission(org_id, 'workflows.manage')))
-      OR public.is_app_super_admin()
     )
   )
   WITH CHECK (
@@ -320,16 +307,8 @@ CREATE POLICY workflows_update_non_template_owner_or_member ON etl.workflows
     AND (
       (org_id IS NULL AND owner_id = auth.uid())
       OR (org_id IS NOT NULL AND (owner_id = auth.uid() OR public.has_etl_permission(org_id, 'workflows.manage')))
-      OR public.is_app_super_admin()
     )
   );
-
-CREATE POLICY workflows_update_template_super_admin_toggle ON etl.workflows
-  FOR UPDATE USING (
-    is_template = true
-    AND public.is_app_super_admin()
-  )
-  WITH CHECK (public.is_app_super_admin());
 
 CREATE POLICY workflows_delete_non_template_owner_or_member ON etl.workflows
   FOR DELETE USING (
@@ -337,30 +316,30 @@ CREATE POLICY workflows_delete_non_template_owner_or_member ON etl.workflows
     AND (
       (org_id IS NULL AND owner_id = auth.uid())
       OR (org_id IS NOT NULL AND (owner_id = auth.uid() OR public.has_etl_permission(org_id, 'workflows.manage')))
-      OR public.is_app_super_admin()
     )
-  );
-
-CREATE POLICY workflows_delete_template_super_admin_only ON etl.workflows
-  FOR DELETE USING (
-    is_template = true
-    AND public.is_app_super_admin()
   );
 
 CREATE POLICY workflow_executions_select_unified ON etl.workflow_executions
   FOR SELECT USING (
     user_id = auth.uid()
     OR public.has_etl_permission(org_id, 'executions.view')
-    OR public.is_app_super_admin()
   );
 
 CREATE POLICY workflow_executions_insert_self ON etl.workflow_executions
   FOR INSERT WITH CHECK (
     user_id = auth.uid()
-    AND (
-      org_id IS NULL
-      OR public.has_etl_permission(org_id, 'executions.run')
-      OR public.is_app_super_admin()
+    AND EXISTS (
+      SELECT 1
+      FROM etl.workflows w
+      WHERE w.id = workflow_executions.workflow_id
+        AND (
+          (w.org_id IS NULL AND workflow_executions.org_id IS NULL AND w.owner_id = auth.uid())
+          OR (
+            w.org_id IS NOT NULL
+            AND workflow_executions.org_id = w.org_id
+            AND public.has_etl_permission(w.org_id, 'executions.run')
+          )
+        )
     )
   );
 
@@ -373,7 +352,6 @@ CREATE POLICY versions_select ON etl.workflow_versions
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
           OR public.has_etl_permission(w.org_id, 'workflows.view')
-          OR public.is_app_super_admin()
         )
     )
   );
@@ -387,7 +365,6 @@ CREATE POLICY versions_insert ON etl.workflow_versions
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
           OR public.has_etl_permission(w.org_id, 'workflows.manage')
-          OR public.is_app_super_admin()
         )
     )
   );
@@ -401,7 +378,6 @@ CREATE POLICY notifications_select ON etl.notification_settings
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
           OR public.has_etl_permission(w.org_id, 'notifications.manage')
-          OR public.is_app_super_admin()
         )
     )
   );
@@ -415,7 +391,6 @@ CREATE POLICY notifications_insert ON etl.notification_settings
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
           OR public.has_etl_permission(w.org_id, 'notifications.manage')
-          OR public.is_app_super_admin()
         )
     )
   );
@@ -429,7 +404,6 @@ CREATE POLICY notifications_update ON etl.notification_settings
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
           OR public.has_etl_permission(w.org_id, 'notifications.manage')
-          OR public.is_app_super_admin()
         )
     )
   )
@@ -441,7 +415,6 @@ CREATE POLICY notifications_update ON etl.notification_settings
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
           OR public.has_etl_permission(w.org_id, 'notifications.manage')
-          OR public.is_app_super_admin()
         )
     )
   );
@@ -455,99 +428,9 @@ CREATE POLICY notifications_delete ON etl.notification_settings
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
           OR public.has_etl_permission(w.org_id, 'notifications.manage')
-          OR public.is_app_super_admin()
         )
     )
   );
-
-CREATE FUNCTION public.get_org_usage_stats(target_org_id UUID)
-RETURNS TABLE (success_count BIGINT, failed_count BIGINT, total_count BIGINT)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, etl
-AS $$
-BEGIN
-  IF NOT public.is_app_super_admin() THEN
-    RAISE EXCEPTION 'Access denied: Super Admin only';
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    COUNT(*) FILTER (WHERE status = 'success') AS success_count,
-    COUNT(*) FILTER (WHERE status = 'failed') AS failed_count,
-    COUNT(*) AS total_count
-  FROM etl.workflow_executions
-  WHERE org_id = target_org_id;
-END;
-$$;
-
-CREATE FUNCTION public.get_user_usage_stats(target_user_id UUID)
-RETURNS TABLE (personal_success BIGINT, personal_failed BIGINT, org_success BIGINT, org_failed BIGINT)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, etl
-AS $$
-BEGIN
-  IF NOT public.is_app_super_admin() THEN
-    RAISE EXCEPTION 'Access denied: Super Admin only';
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    COUNT(*) FILTER (WHERE org_id IS NULL AND status = 'success'),
-    COUNT(*) FILTER (WHERE org_id IS NULL AND status = 'failed'),
-    COUNT(*) FILTER (WHERE org_id IS NOT NULL AND status = 'success'),
-    COUNT(*) FILTER (WHERE org_id IS NOT NULL AND status = 'failed')
-  FROM etl.workflow_executions
-  WHERE user_id = target_user_id;
-END;
-$$;
-
-CREATE FUNCTION public.get_all_orgs_usage_stats()
-RETURNS TABLE (org_id UUID, success_count BIGINT, failed_count BIGINT, total_count BIGINT)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, etl
-AS $$
-BEGIN
-  IF NOT public.is_app_super_admin() THEN
-    RAISE EXCEPTION 'Access denied: Super Admin only';
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    we.org_id,
-    COUNT(*) FILTER (WHERE we.status = 'success'),
-    COUNT(*) FILTER (WHERE we.status = 'failed'),
-    COUNT(*)
-  FROM etl.workflow_executions we
-  WHERE we.org_id IS NOT NULL
-  GROUP BY we.org_id;
-END;
-$$;
-
-CREATE FUNCTION public.get_all_users_usage_stats()
-RETURNS TABLE (user_id UUID, personal_success BIGINT, personal_failed BIGINT, org_success BIGINT, org_failed BIGINT)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, etl
-AS $$
-BEGIN
-  IF NOT public.is_app_super_admin() THEN
-    RAISE EXCEPTION 'Access denied: Super Admin only';
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    we.user_id,
-    COUNT(*) FILTER (WHERE we.org_id IS NULL AND we.status = 'success'),
-    COUNT(*) FILTER (WHERE we.org_id IS NULL AND we.status = 'failed'),
-    COUNT(*) FILTER (WHERE we.org_id IS NOT NULL AND we.status = 'success'),
-    COUNT(*) FILTER (WHERE we.org_id IS NOT NULL AND we.status = 'failed')
-  FROM etl.workflow_executions we
-  GROUP BY we.user_id;
-END;
-$$;
 
 CREATE FUNCTION public.get_org_member_usage_stats(target_org_id UUID)
 RETURNS TABLE (
@@ -565,8 +448,7 @@ SET search_path = public, etl
 AS $$
 BEGIN
   IF NOT public.is_org_member(target_org_id, auth.uid())
-     AND NOT public.is_org_owner(target_org_id, auth.uid())
-     AND NOT public.is_app_super_admin() THEN
+     AND NOT public.is_org_owner(target_org_id, auth.uid()) THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
 
@@ -596,8 +478,7 @@ SET search_path = public, etl
 AS $$
 BEGIN
   IF NOT public.is_org_member(target_org_id, auth.uid())
-     AND NOT public.is_org_owner(target_org_id, auth.uid())
-     AND NOT public.is_app_super_admin() THEN
+     AND NOT public.is_org_owner(target_org_id, auth.uid()) THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
 
@@ -659,23 +540,15 @@ GRANT ALL PRIVILEGES ON TABLE etl.workflow_executions TO service_role;
 GRANT ALL PRIVILEGES ON TABLE etl.workflow_versions TO service_role;
 GRANT ALL PRIVILEGES ON TABLE etl.notification_settings TO service_role;
 
-REVOKE ALL ON FUNCTION public.pick_next_etl_role(UUID, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.has_etl_permission(UUID, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION etl.enforce_template_immutability() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_org_usage_stats(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_user_usage_stats(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_all_orgs_usage_stats() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_all_users_usage_stats() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_org_member_usage_stats(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_org_active_users(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_personal_usage_stats() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.pick_next_etl_role(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.has_etl_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION etl.enforce_template_immutability() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_org_member_usage_stats(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_org_active_users(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_personal_usage_stats() FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.pick_next_etl_role(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.pick_next_etl_role(UUID, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.has_etl_permission(UUID, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_org_usage_stats(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_user_usage_stats(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_all_orgs_usage_stats() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_all_users_usage_stats() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_org_member_usage_stats(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_org_active_users(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_personal_usage_stats() TO authenticated, service_role;

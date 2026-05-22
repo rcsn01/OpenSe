@@ -33,20 +33,20 @@ CREATE TRIGGER handle_account_preferences_updated_at
 ALTER TABLE public.account_preferences ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY account_preferences_select_self ON public.account_preferences
-  FOR SELECT USING (user_id = auth.uid() OR public.is_app_super_admin());
+  FOR SELECT USING (user_id = auth.uid());
 
 CREATE POLICY account_preferences_insert_self ON public.account_preferences
-  FOR INSERT WITH CHECK (user_id = auth.uid() OR public.is_app_super_admin());
+  FOR INSERT WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY account_preferences_update_self ON public.account_preferences
-  FOR UPDATE USING (user_id = auth.uid() OR public.is_app_super_admin())
-  WITH CHECK (user_id = auth.uid() OR public.is_app_super_admin());
+  FOR UPDATE USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
 GRANT SELECT, INSERT, UPDATE ON TABLE public.account_preferences TO authenticated;
 GRANT ALL PRIVILEGES ON TABLE public.account_preferences TO service_role;
 
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('account-avatars', 'account-avatars', true)
+VALUES ('account-avatars', 'account-avatars', false)
 ON CONFLICT (id) DO UPDATE
 SET public = EXCLUDED.public;
 
@@ -73,12 +73,22 @@ BEGIN
     SELECT 1 FROM pg_policies
     WHERE schemaname = 'storage'
       AND tablename = 'objects'
-      AND policyname = 'Authenticated users can view account avatars'
+      AND policyname = 'Users can view account avatars from their organisations'
   ) THEN
-    CREATE POLICY "Authenticated users can view account avatars" ON storage.objects
+    CREATE POLICY "Users can view account avatars from their organisations" ON storage.objects
       FOR SELECT USING (
         bucket_id = 'account-avatars'
-        AND auth.role() = 'authenticated'
+        AND (
+          (storage.foldername(name))[1] = auth.uid()::text
+          OR EXISTS (
+            SELECT 1
+            FROM public.organisation_members viewer_membership
+            JOIN public.organisation_members avatar_owner_membership
+              ON avatar_owner_membership.org_id = viewer_membership.org_id
+            WHERE viewer_membership.user_id = auth.uid()
+              AND avatar_owner_membership.user_id::text = (storage.foldername(name))[1]
+          )
+        )
       );
   END IF;
 END $$;
@@ -90,8 +100,7 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT public.is_org_admin(p_org_id, p_user_id)
-      OR public.is_app_super_admin();
+  SELECT public.is_org_admin(p_org_id, p_user_id);
 $$;
 
 CREATE OR REPLACE FUNCTION public.log_my_account_audit_event(
@@ -614,17 +623,17 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.log_my_account_audit_event(TEXT, JSONB) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_get_profile() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_update_profile(TEXT, TEXT, TEXT, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_update_recovery_email(TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_get_preferences() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_upsert_preferences(TEXT, TEXT, TEXT, JSONB, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_get_my_org_context() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_get_organisation_profile() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_update_organisation_profile(TEXT, TEXT, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_update_billing_contact(TEXT, TEXT, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_transfer_organisation_ownership(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.log_my_account_audit_event(TEXT, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_get_profile() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_update_profile(TEXT, TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_update_recovery_email(TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_get_preferences() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_upsert_preferences(TEXT, TEXT, TEXT, JSONB, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_get_my_org_context() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_get_organisation_profile() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_update_organisation_profile(TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_update_billing_contact(TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_transfer_organisation_ownership(UUID) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.log_my_account_audit_event(TEXT, JSONB) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_profile() TO authenticated, service_role;

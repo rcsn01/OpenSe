@@ -29,8 +29,7 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT public.is_org_owner_strictly(p_org_id, p_user_id)
-      OR public.is_app_super_admin();
+  SELECT public.is_org_admin(p_org_id, p_user_id);
 $$;
 
 CREATE FUNCTION public.can_manage_org_member_app_seats(p_org_id UUID, p_user_id UUID)
@@ -40,8 +39,7 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT public.is_org_admin(p_org_id, p_user_id)
-      OR public.is_app_super_admin();
+  SELECT public.is_org_admin(p_org_id, p_user_id);
 $$;
 
 CREATE FUNCTION public.get_primary_org_for_user(p_user_id UUID DEFAULT auth.uid())
@@ -59,6 +57,7 @@ AS $$
       om.created_at
     FROM public.organisation_members om
     WHERE om.user_id = p_user_id
+      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
   ) AS candidate
   ORDER BY candidate.precedence, candidate.created_at
   LIMIT 1;
@@ -231,7 +230,6 @@ BEGIN
   IF NOT (
     public.is_org_admin(p_org_id, v_user_id)
     OR public.is_org_owner(p_org_id, v_user_id)
-    OR public.is_app_super_admin()
   ) THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
@@ -291,6 +289,11 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  IF auth.role() <> 'service_role'
+     AND NOT public.is_org_member(p_org_id, auth.uid()) THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
   INSERT INTO public.organisation_audit_events (
     org_id,
     actor_user_id,
@@ -679,75 +682,56 @@ CREATE TRIGGER trg_enforce_org_app_seat_limit
   EXECUTE FUNCTION public.enforce_org_app_seat_limit();
 
 CREATE POLICY profiles_select_authenticated ON public.profiles
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT USING (
+    id = auth.uid()
+    OR EXISTS (
+      SELECT 1
+      FROM public.organisation_members viewer_membership
+      JOIN public.organisation_members profile_membership
+        ON profile_membership.org_id = viewer_membership.org_id
+      WHERE viewer_membership.user_id = auth.uid()
+        AND profile_membership.user_id = profiles.id
+    )
+  );
 
 CREATE POLICY profiles_update_self ON public.profiles
   FOR UPDATE USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
 
-CREATE POLICY super_admin_members_select ON public.super_admin_members
-  FOR SELECT USING (
-    user_id = auth.uid()
-    OR public.is_app_super_admin()
-  );
-
-CREATE POLICY super_admin_members_insert ON public.super_admin_members
-  FOR INSERT WITH CHECK (public.is_app_super_admin());
-
-CREATE POLICY super_admin_members_update ON public.super_admin_members
-  FOR UPDATE USING (public.is_app_super_admin())
-  WITH CHECK (public.is_app_super_admin());
-
-CREATE POLICY super_admin_members_delete ON public.super_admin_members
-  FOR DELETE USING (public.is_app_super_admin());
-
 CREATE POLICY organisations_select ON public.organisations
   FOR SELECT USING (
     owner_id = auth.uid()
     OR public.is_org_member(id, auth.uid())
-    OR public.is_app_super_admin()
   );
 
 CREATE POLICY organisations_insert ON public.organisations
-  FOR INSERT WITH CHECK (
-    owner_id = auth.uid()
-    OR public.is_app_super_admin()
-  );
+  FOR INSERT WITH CHECK (owner_id = auth.uid());
 
 CREATE POLICY organisations_update ON public.organisations
   FOR UPDATE USING (
     owner_id = auth.uid()
     OR public.is_org_admin(id, auth.uid())
-    OR public.is_app_super_admin()
   )
   WITH CHECK (
     owner_id = auth.uid()
     OR public.is_org_admin(id, auth.uid())
-    OR public.is_app_super_admin()
   );
 
 CREATE POLICY organisations_delete ON public.organisations
-  FOR DELETE USING (
-    owner_id = auth.uid()
-    OR public.is_app_super_admin()
-  );
+  FOR DELETE USING (owner_id = auth.uid());
 
 CREATE POLICY organisation_members_select ON public.organisation_members
   FOR SELECT USING (
     user_id = auth.uid()
     OR public.is_org_member(org_id, auth.uid())
-    OR public.is_app_super_admin()
   );
 
 CREATE POLICY organisation_members_insert ON public.organisation_members
-  FOR INSERT WITH CHECK (
-    public.is_org_admin(org_id, auth.uid())
-    OR public.is_app_super_admin()
-  );
+  FOR INSERT WITH CHECK (public.is_org_admin(org_id, auth.uid()));
 
 CREATE POLICY organisation_members_update ON public.organisation_members
   FOR UPDATE USING (
-    (public.is_org_admin(org_id, auth.uid()) OR public.is_app_super_admin())
+    public.is_org_admin(org_id, auth.uid())
     AND NOT (
       user_id = (
         SELECT o.owner_id
@@ -757,7 +741,7 @@ CREATE POLICY organisation_members_update ON public.organisation_members
     )
   )
   WITH CHECK (
-    (public.is_org_admin(org_id, auth.uid()) OR public.is_app_super_admin())
+    public.is_org_admin(org_id, auth.uid())
     AND NOT (
       user_id = (
         SELECT o.owner_id
@@ -770,7 +754,7 @@ CREATE POLICY organisation_members_update ON public.organisation_members
 
 CREATE POLICY organisation_members_delete ON public.organisation_members
   FOR DELETE USING (
-    (public.is_org_admin(org_id, auth.uid()) OR public.is_app_super_admin())
+    public.is_org_admin(org_id, auth.uid())
     AND NOT (
       user_id = (
         SELECT o.owner_id
@@ -785,10 +769,7 @@ CREATE POLICY apps_select ON public.apps
   FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY app_seats_select ON public.organisation_app_seats
-  FOR SELECT USING (
-    public.is_org_member(org_id, auth.uid())
-    OR public.is_app_super_admin()
-  );
+  FOR SELECT USING (public.is_org_member(org_id, auth.uid()));
 
 CREATE POLICY app_seats_manage ON public.organisation_app_seats
   FOR ALL USING (
@@ -807,7 +788,6 @@ CREATE POLICY member_app_seats_select ON public.organisation_member_app_seats
         AND (
           om.user_id = auth.uid()
           OR public.is_org_member(om.org_id, auth.uid())
-          OR public.is_app_super_admin()
         )
     )
   );
@@ -837,72 +817,57 @@ CREATE POLICY organisation_invites_select_admin ON public.organisation_invites
   FOR SELECT USING (
     public.is_org_admin(org_id, auth.uid())
     OR public.is_org_owner(org_id, auth.uid())
-    OR public.is_app_super_admin()
   );
 
 CREATE POLICY organisation_invites_insert_admin ON public.organisation_invites
   FOR INSERT WITH CHECK (
     public.is_org_admin(org_id, auth.uid())
     OR public.is_org_owner(org_id, auth.uid())
-    OR public.is_app_super_admin()
   );
 
 CREATE POLICY organisation_invites_delete_admin_or_user ON public.organisation_invites
   FOR DELETE USING (
     public.is_org_admin(org_id, auth.uid())
     OR public.is_org_owner(org_id, auth.uid())
-    OR public.is_app_super_admin()
     OR email = auth.jwt() ->> 'email'
   );
 
 CREATE POLICY subscriptions_select ON public.subscriptions
-  FOR SELECT USING (
-    public.is_org_member(org_id, auth.uid())
-    OR public.is_app_super_admin()
-  );
+  FOR SELECT USING (public.is_org_member(org_id, auth.uid()));
 
 CREATE POLICY subscriptions_manage ON public.subscriptions
-  FOR ALL USING (
-    public.is_org_owner_strictly(org_id, auth.uid())
-    OR public.is_app_super_admin()
-  )
-  WITH CHECK (
-    public.is_org_owner_strictly(org_id, auth.uid())
-    OR public.is_app_super_admin()
-  );
+  FOR ALL USING (public.is_org_owner_strictly(org_id, auth.uid()))
+  WITH CHECK (public.is_org_owner_strictly(org_id, auth.uid()));
 
 -- Organisation audit history is intentionally append-only through SECURITY DEFINER RPCs.
 CREATE POLICY organisation_audit_events_select ON public.organisation_audit_events
-  FOR SELECT USING (
-    public.is_org_member(org_id, auth.uid())
-    OR public.is_app_super_admin()
-  );
+  FOR SELECT USING (public.is_org_member(org_id, auth.uid()));
 
 GRANT SELECT ON TABLE public.organisation_audit_events TO authenticated;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_audit_events TO service_role;
 
-REVOKE ALL ON FUNCTION public.can_manage_org_app_seat_limits(UUID, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.can_manage_org_member_app_seats(UUID, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_primary_org_for_user(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.prevent_owner_member_mutation() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.enforce_org_app_seat_limit() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accept_invite(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_invite_organisation_member(UUID, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_get_my_org_context() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_get_org_app_seat_summary() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_get_org_member_app_assignments() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_assign_org_member_app_seat(UUID, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_unassign_org_member_app_seat(UUID, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.accounts_list_org_audit_events(INTEGER) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.can_manage_org_app_seat_limits(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.can_manage_org_member_app_seats(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_primary_org_for_user(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.prevent_owner_member_mutation() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.enforce_org_app_seat_limit() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accept_invite(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_invite_organisation_member(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_get_my_org_context() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_get_org_app_seat_summary() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_get_org_member_app_assignments() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_assign_org_member_app_seat(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_unassign_org_member_app_seat(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_list_org_audit_events(INTEGER) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.can_manage_org_app_seat_limits(UUID, UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.can_manage_org_member_app_seats(UUID, UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_primary_org_for_user(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accept_invite(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_invite_organisation_member(UUID, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) TO service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_my_org_context() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_org_app_seat_summary() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_org_member_app_assignments() TO authenticated, service_role;

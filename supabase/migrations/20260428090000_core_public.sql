@@ -1,6 +1,6 @@
 -- Core platform baseline.
 --
--- Accounts and Admin remain logical domains implemented in the public schema.
+-- Accounts and platform administration remain logical domains implemented in the public schema.
 -- Only etl and stoqr are physical application schemas.
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -24,12 +24,6 @@ CREATE TABLE public.profiles (
   avatar_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ
-);
-
-CREATE TABLE public.super_admin_members (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
 CREATE TABLE public.organisations (
@@ -125,7 +119,6 @@ CREATE TRIGGER handle_organisation_app_seats_updated_at
   EXECUTE FUNCTION moddatetime(updated_at);
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.super_admin_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_invites ENABLE ROW LEVEL SECURITY;
@@ -133,30 +126,6 @@ ALTER TABLE public.apps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_app_seats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_member_app_seats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
-
-CREATE FUNCTION public.is_app_super_admin()
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.super_admin_members
-    WHERE user_id = auth.uid()
-  );
-$$;
-
-CREATE FUNCTION public.get_super_admin_status()
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-SET search_path = public
-AS $$
-  SELECT public.is_app_super_admin();
-$$;
 
 CREATE FUNCTION public.has_users()
 RETURNS BOOLEAN
@@ -184,12 +153,6 @@ BEGIN
     NEW.raw_user_meta_data->>'avatar_url'
   )
   ON CONFLICT (id) DO NOTHING;
-
-  IF NOT EXISTS (SELECT 1 FROM public.super_admin_members) THEN
-    INSERT INTO public.super_admin_members (user_id)
-    VALUES (NEW.id)
-    ON CONFLICT (user_id) DO NOTHING;
-  END IF;
 
   RETURN NEW;
 END;
@@ -237,6 +200,7 @@ AS $$
     FROM public.organisations
     WHERE id = p_org_id
       AND owner_id = p_user_id
+      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
   );
 $$;
 
@@ -252,6 +216,7 @@ AS $$
     FROM public.organisation_members
     WHERE org_id = p_org_id
       AND user_id = p_user_id
+      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
   );
 $$;
 
@@ -268,6 +233,7 @@ AS $$
     WHERE org_id = p_org_id
       AND user_id = p_user_id
       AND role IN ('owner', 'admin')
+      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
   );
 $$;
 
@@ -283,6 +249,7 @@ AS $$
     FROM public.organisations
     WHERE id = p_org_id
       AND owner_id = p_user_id
+      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
   );
 $$;
 
@@ -292,7 +259,6 @@ CREATE TRIGGER on_auth_user_created
   EXECUTE FUNCTION public.handle_new_user();
 
 GRANT SELECT, UPDATE ON TABLE public.profiles TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.super_admin_members TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.organisations TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.organisation_members TO authenticated;
 GRANT SELECT, INSERT, DELETE ON TABLE public.organisation_invites TO authenticated;
@@ -302,7 +268,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.organisation_member_app_sea
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.subscriptions TO authenticated;
 
 GRANT ALL PRIVILEGES ON TABLE public.profiles TO service_role;
-GRANT ALL PRIVILEGES ON TABLE public.super_admin_members TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.organisations TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_members TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_invites TO service_role;
@@ -311,19 +276,15 @@ GRANT ALL PRIVILEGES ON TABLE public.organisation_app_seats TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_member_app_seats TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.subscriptions TO service_role;
 
-REVOKE ALL ON FUNCTION public.is_app_super_admin() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_super_admin_status() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.has_users() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.demote_org_role(TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.is_org_owner(UUID, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.is_org_member(UUID, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.is_org_admin(UUID, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.is_org_owner_strictly(UUID, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.has_users() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.demote_org_role(TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.is_org_owner(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.is_org_member(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.is_org_admin(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.is_org_owner_strictly(UUID, UUID) FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.is_app_super_admin() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_super_admin_status() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.has_users() TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.demote_org_role(TEXT) TO authenticated, service_role;
