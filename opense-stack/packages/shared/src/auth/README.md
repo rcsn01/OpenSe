@@ -12,17 +12,16 @@ This folder contains reusable auth building blocks for all apps in the monorepo.
 ## AuthProvider options
 
 ```ts
-<AuthProvider demoMode superAdmin>
+<AuthProvider demoMode>
   <App />
 </AuthProvider>
 ```
 
 - `demoMode`: enables `isDemoUser`, `loginAsDemo`, `logoutDemo`
-- `superAdmin`: enables `isSuperAdmin`, `superAdminChecked` via `get_super_admin_status`
 
 ## Current app usage
 
-- `apps/etl`: uses `<AuthProvider demoMode superAdmin>`
+- `apps/etl`: uses `<AuthProvider demoMode>`
 - `apps/stoqr`: uses `<AuthProvider>`
 
 ## Migration notes

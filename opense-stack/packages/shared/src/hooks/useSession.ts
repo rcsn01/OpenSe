@@ -3,8 +3,7 @@
  *
  * @deprecated Use `useAuth` from `@repo/shared/auth/context` instead.
  *
- * Provides a simple session hook that works for both ETL and StoQR apps.
- * ETL's full AuthContext extends this with demo mode and super admin support.
+ * Provides a simple session hook that works for app-level auth consumers.
  */
 
 import { useEffect, useState } from 'react'

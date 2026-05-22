@@ -6,7 +6,6 @@ import { reportAuthError } from './errorReporting'
 
 export interface AuthProviderOptions {
   demoMode?: boolean
-  superAdmin?: boolean
 }
 
 export interface AuthContextType {
@@ -17,8 +16,6 @@ export interface AuthContextType {
   isDemoUser?: boolean
   loginAsDemo?: () => void
   logoutDemo?: () => void
-  isSuperAdmin?: boolean
-  superAdminChecked?: boolean
 }
 
 interface AuthProviderProps extends AuthProviderOptions {
@@ -30,40 +27,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider = ({
   children,
   demoMode = false,
-  superAdmin = false,
 }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   const [isDemoUser, setIsDemoUser] = useState(false)
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
-  const [superAdminChecked, setSuperAdminChecked] = useState(false)
-
-  const loadSuperAdmin = useCallback(async (userId: string | null | undefined) => {
-    if (!superAdmin) return false
-
-    setSuperAdminChecked(false)
-    if (!userId || userId === DEMO_USER_ID) {
-      setIsSuperAdmin(false)
-      setSuperAdminChecked(true)
-      return false
-    }
-
-    const { data, error } = await supabase.rpc('get_super_admin_status')
-    if (error) {
-      reportAuthError('Failed to fetch super admin status', error)
-      setIsSuperAdmin(false)
-      setSuperAdminChecked(true)
-      return false
-    }
-
-    const isAdmin = Boolean(data)
-    setIsSuperAdmin(isAdmin)
-    setSuperAdminChecked(true)
-    return isAdmin
-  }, [superAdmin])
-
   const loginAsDemo = useCallback(() => {
     if (!demoMode) return
 
@@ -71,8 +40,6 @@ export const AuthProvider = ({
     setUser(demoUser)
     setSession(null)
     setIsDemoUser(true)
-    setIsSuperAdmin(false)
-    setSuperAdminChecked(true)
     setLoading(false)
   }, [demoMode])
 
@@ -82,8 +49,6 @@ export const AuthProvider = ({
     setUser(null)
     setSession(null)
     setIsDemoUser(false)
-    setIsSuperAdmin(false)
-    setSuperAdminChecked(false)
   }, [demoMode])
 
   const logout = useCallback(async () => {
@@ -121,10 +86,6 @@ export const AuthProvider = ({
 
           setSession(null)
           setUser(null)
-          setIsSuperAdmin(false)
-          if (superAdmin) {
-            setSuperAdminChecked(true)
-          }
           setLoading(false)
           return
         }
@@ -132,17 +93,10 @@ export const AuthProvider = ({
         setIsDemoUser(false)
         setSession(data.session)
         setUser(userData.user)
-        if (superAdmin) {
-          void loadSuperAdmin(userData.user.id)
-        }
       } else if (demoMode && isDemoUser) {
       } else {
         setSession(null)
         setUser(null)
-        setIsSuperAdmin(false)
-        if (superAdmin) {
-          setSuperAdminChecked(true)
-        }
       }
       setLoading(false)
     }
@@ -157,16 +111,9 @@ export const AuthProvider = ({
         setIsDemoUser(false)
         setSession(nextSession)
         setUser(nextSession.user)
-        if (superAdmin) {
-          void loadSuperAdmin(nextSession.user.id)
-        }
       } else if (!(demoMode && isDemoUser)) {
         setSession(null)
         setUser(null)
-        setIsSuperAdmin(false)
-        if (superAdmin) {
-          setSuperAdminChecked(true)
-        }
       }
       setLoading(false)
     })
@@ -175,7 +122,7 @@ export const AuthProvider = ({
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [clearInvalidLocalSession, demoMode, isDemoUser, loadSuperAdmin, superAdmin])
+  }, [clearInvalidLocalSession, demoMode, isDemoUser])
 
   const value = useMemo<AuthContextType>(() => ({
     session,
@@ -189,12 +136,6 @@ export const AuthProvider = ({
           logoutDemo,
         }
       : {}),
-    ...(superAdmin
-      ? {
-          isSuperAdmin,
-          superAdminChecked,
-        }
-      : {}),
   }), [
     session,
     user,
@@ -204,9 +145,6 @@ export const AuthProvider = ({
     isDemoUser,
     loginAsDemo,
     logoutDemo,
-    superAdmin,
-    isSuperAdmin,
-    superAdminChecked,
   ])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
