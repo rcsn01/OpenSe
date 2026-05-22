@@ -21,6 +21,8 @@ export type ProductListViewProps = {
   setPage: (page: number) => void
   folders: Folder[]
   onRefresh: () => void
+  canUseInventory: boolean
+  canEditInventory: boolean
 }
 
 export type InventoryFiltersBarProps = {
@@ -46,6 +48,12 @@ export type InventoryFiltersBarProps = {
   onBulkPriceAdjust: () => void
   onBulkQuantityAdjust: () => void
   onExportCsv: () => void
+  canCreateInventory: boolean
+  canEditInventory: boolean
+  canAdjustInventory: boolean
+  canDeleteInventory: boolean
+  canImportExportInventory: boolean
+  canUseInventory: boolean
 }
 
 export type AllProductsTabProps = {
@@ -81,4 +89,10 @@ export type AllProductsTabProps = {
   handleBulkDelete: () => void
   onClearSelection: () => void
   onRefresh: () => void
+  canUseInventory: boolean
+  canCreateInventory: boolean
+  canEditInventory: boolean
+  canAdjustInventory: boolean
+  canDeleteInventory: boolean
+  canImportExportInventory: boolean
 }

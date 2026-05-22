@@ -742,6 +742,19 @@ BEGIN
   INTO v_role_id
   FROM stoqr.roles r
   WHERE r.company_id = _org_id
+    AND lower(r.name) = 'guest'
+  ORDER BY r.created_at
+  LIMIT 1;
+
+  IF v_role_id IS NOT NULL THEN
+    RETURN v_role_id;
+  END IF;
+
+  SELECT r.id
+  INTO v_role_id
+  FROM stoqr.roles r
+  WHERE r.company_id = _org_id
+    AND lower(r.name) <> 'owner'
   ORDER BY r.role_rank DESC, r.created_at
   LIMIT 1;
 
@@ -761,8 +774,76 @@ AS $$
   WHERE r.company_id = p_company_id
     AND lower(r.name) <> 'owner'
     AND (p_excluded_role_id IS NULL OR r.id <> p_excluded_role_id)
-  ORDER BY r.role_rank DESC, r.created_at
+  ORDER BY CASE WHEN lower(r.name) = 'guest' THEN 0 ELSE 1 END, r.role_rank DESC, r.created_at
   LIMIT 1;
+$$;
+
+CREATE FUNCTION public.ensure_stoqr_guest_role(p_org_id UUID)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+DECLARE
+  v_guest_role_id UUID;
+  v_conflicting_rank_role_id UUID;
+BEGIN
+  SELECT r.id
+  INTO v_guest_role_id
+  FROM stoqr.roles r
+  WHERE r.company_id = p_org_id
+    AND lower(r.name) = 'guest'
+  ORDER BY r.created_at
+  LIMIT 1;
+
+  SELECT r.id
+  INTO v_conflicting_rank_role_id
+  FROM stoqr.roles r
+  WHERE r.company_id = p_org_id
+    AND lower(r.name) <> 'guest'
+    AND r.role_rank = 0
+  ORDER BY r.created_at
+  LIMIT 1;
+
+  IF v_conflicting_rank_role_id IS NOT NULL THEN
+    UPDATE stoqr.roles r
+    SET role_rank = COALESCE((
+      SELECT max(existing.role_rank) + 1
+      FROM stoqr.roles existing
+      WHERE existing.company_id = p_org_id
+        AND existing.id <> v_conflicting_rank_role_id
+    ), 100)
+    WHERE r.id = v_conflicting_rank_role_id;
+  END IF;
+
+  IF v_guest_role_id IS NULL THEN
+    INSERT INTO stoqr.roles (company_id, name, description, role_rank)
+    VALUES (p_org_id, 'Guest', 'System-managed guest role', 0)
+    RETURNING id INTO v_guest_role_id;
+  ELSE
+    PERFORM set_config('app.stoqr_repair_system_role', 'on', true);
+
+    UPDATE stoqr.roles
+    SET name = 'Guest',
+        description = 'System-managed guest role',
+        role_rank = 0
+    WHERE id = v_guest_role_id;
+  END IF;
+
+  PERFORM set_config('app.stoqr_repair_guest_permissions', 'on', true);
+
+  DELETE FROM stoqr.role_permissions
+  WHERE role_id = v_guest_role_id
+    AND permission_code NOT IN ('dashboard.view', 'inventory.view');
+
+  INSERT INTO stoqr.role_permissions (role_id, permission_code)
+  VALUES
+    (v_guest_role_id, 'dashboard.view'),
+    (v_guest_role_id, 'inventory.view')
+  ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+  RETURN v_guest_role_id;
+END;
 $$;
 
 CREATE FUNCTION public.ensure_owner_app_roles(p_org_id UUID)
@@ -790,6 +871,8 @@ BEGIN
   SELECT owner_stoqr_role_id, ap.code
   FROM stoqr.app_permissions ap
   ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+  PERFORM public.ensure_stoqr_guest_role(p_org_id);
 
   SELECT r.id
   INTO owner_etl_role_id
@@ -822,11 +905,67 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF lower(OLD.name) = 'owner' THEN
+  IF TG_TABLE_SCHEMA = 'stoqr' THEN
+    IF TG_OP = 'INSERT' THEN
+      IF lower(NEW.name) NOT IN ('owner', 'guest') AND NEW.role_rank <= 0 THEN
+        RAISE EXCEPTION 'Custom StoQR roles must use a positive role rank';
+      END IF;
+
+      RETURN NEW;
+    END IF;
+
+    IF lower(OLD.name) IN ('owner', 'guest')
+      AND current_setting('app.stoqr_repair_system_role', true) IS DISTINCT FROM 'on'
+    THEN
+      RAISE EXCEPTION 'The % role is system-managed and cannot be modified or deleted', OLD.name;
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND lower(OLD.name) NOT IN ('owner', 'guest') AND lower(NEW.name) IN ('owner', 'guest') THEN
+      RAISE EXCEPTION 'Owner and Guest are reserved system role names';
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND lower(NEW.name) NOT IN ('owner', 'guest') AND NEW.role_rank <= 0 THEN
+      RAISE EXCEPTION 'Custom StoQR roles must use a positive role rank';
+    END IF;
+  ELSIF lower(OLD.name) = 'owner' THEN
     RAISE EXCEPTION 'The Owner role is system-managed and cannot be modified or deleted';
   END IF;
 
   RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+CREATE FUNCTION public.prevent_stoqr_guest_permission_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+DECLARE
+  v_role_name TEXT;
+BEGIN
+  SELECT lower(r.name)
+  INTO v_role_name
+  FROM stoqr.roles r
+  WHERE r.id = COALESCE(NEW.role_id, OLD.role_id);
+
+  IF v_role_name <> 'guest' THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.permission_code IN ('dashboard.view', 'inventory.view') THEN
+      RETURN NEW;
+    END IF;
+
+    RAISE EXCEPTION 'The Guest role can only have dashboard.view and inventory.view permissions';
+  END IF;
+
+  IF current_setting('app.stoqr_repair_guest_permissions', true) = 'on' THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  RAISE EXCEPTION 'The Guest role permissions are system-managed';
 END;
 $$;
 
@@ -860,6 +999,41 @@ BEGIN
   END IF;
 
   RETURN OLD;
+END;
+$$;
+
+CREATE FUNCTION public.assign_stoqr_guest_role_for_seat()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+DECLARE
+  v_org_id UUID;
+  v_user_id UUID;
+  v_guest_role_id UUID;
+BEGIN
+  IF NEW.app_code <> 'stoqr' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT om.org_id, om.user_id
+  INTO v_org_id, v_user_id
+  FROM public.organisation_members om
+  WHERE om.id = NEW.org_member_id;
+
+  IF v_org_id IS NULL OR v_user_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT public.ensure_stoqr_guest_role(v_org_id)
+  INTO v_guest_role_id;
+
+  INSERT INTO stoqr.organisation_member_roles (user_id, company_id, role_id)
+  VALUES (v_user_id, v_org_id, v_guest_role_id)
+  ON CONFLICT (user_id, company_id) DO NOTHING;
+
+  RETURN NEW;
 END;
 $$;
 
@@ -1581,7 +1755,7 @@ CREATE TRIGGER trg_ensure_org_owner_member_and_default_seats
   EXECUTE FUNCTION public.ensure_org_owner_member_and_default_seats();
 
 CREATE TRIGGER trg_prevent_owner_role_mutation_stoqr
-  BEFORE UPDATE OR DELETE ON stoqr.roles
+  BEFORE INSERT OR UPDATE OR DELETE ON stoqr.roles
   FOR EACH ROW
   EXECUTE FUNCTION public.prevent_owner_role_mutation();
 
@@ -1594,6 +1768,11 @@ CREATE TRIGGER trg_prevent_owner_role_permission_delete_stoqr
   BEFORE DELETE ON stoqr.role_permissions
   FOR EACH ROW
   EXECUTE FUNCTION public.prevent_owner_role_permission_delete();
+
+CREATE TRIGGER trg_prevent_stoqr_guest_permission_mutation
+  BEFORE INSERT OR UPDATE OR DELETE ON stoqr.role_permissions
+  FOR EACH ROW
+  EXECUTE FUNCTION public.prevent_stoqr_guest_permission_mutation();
 
 CREATE TRIGGER trg_prevent_owner_role_permission_delete_etl
   BEFORE DELETE ON etl.role_permissions
@@ -1609,6 +1788,11 @@ CREATE TRIGGER trg_grant_new_permission_to_owner_roles_etl
   AFTER INSERT ON etl.app_permissions
   FOR EACH ROW
   EXECUTE FUNCTION public.grant_new_permission_to_owner_roles();
+
+CREATE TRIGGER trg_assign_stoqr_guest_role_for_seat
+  AFTER INSERT ON public.organisation_member_app_seats
+  FOR EACH ROW
+  EXECUTE FUNCTION public.assign_stoqr_guest_role_for_seat();
 
 CREATE TRIGGER on_inventory_transaction
   BEFORE INSERT ON stoqr.inventory_transactions
@@ -1673,11 +1857,12 @@ CREATE POLICY "Members can view company roles" ON stoqr.roles
 CREATE POLICY "Admins can manage roles" ON stoqr.roles
   FOR ALL USING (
     public.has_permission(company_id, 'organisation.roles.manage')
-    AND lower(name) <> 'owner'
+    AND lower(name) NOT IN ('owner', 'guest')
   )
   WITH CHECK (
     public.has_permission(company_id, 'organisation.roles.manage')
-    AND lower(name) <> 'owner'
+    AND lower(name) NOT IN ('owner', 'guest')
+    AND role_rank > 0
   );
 
 CREATE POLICY "Members can view role permissions" ON stoqr.role_permissions
@@ -1697,7 +1882,7 @@ CREATE POLICY "Admins can manage role permissions" ON stoqr.role_permissions
       FROM stoqr.roles r
       WHERE r.id = role_permissions.role_id
         AND public.has_permission(r.company_id, 'organisation.roles.manage')
-        AND lower(r.name) <> 'owner'
+        AND lower(r.name) NOT IN ('owner', 'guest')
     )
   )
   WITH CHECK (
@@ -1706,7 +1891,7 @@ CREATE POLICY "Admins can manage role permissions" ON stoqr.role_permissions
       FROM stoqr.roles r
       WHERE r.id = role_permissions.role_id
         AND public.has_permission(r.company_id, 'organisation.roles.manage')
-        AND lower(r.name) <> 'owner'
+        AND lower(r.name) NOT IN ('owner', 'guest')
     )
   );
 
@@ -3356,9 +3541,12 @@ GRANT ALL PRIVILEGES ON SEQUENCE stoqr.purchase_orders_po_number_seq TO service_
 REVOKE ALL ON FUNCTION public.map_stoqr_role_to_org_role(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ensure_stoqr_guest_role(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ensure_owner_app_roles(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.prevent_owner_role_mutation() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.prevent_stoqr_guest_permission_mutation() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.prevent_owner_role_permission_delete() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.assign_stoqr_guest_role_for_seat() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.grant_new_permission_to_owner_roles() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ensure_org_owner_member_and_default_seats() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.has_permission(UUID, TEXT) FROM PUBLIC;
@@ -3390,6 +3578,7 @@ REVOKE ALL ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TE
 GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.ensure_stoqr_guest_role(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.ensure_owner_app_roles(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.has_permission(UUID, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_stoqr_my_permissions(UUID) TO authenticated, service_role;

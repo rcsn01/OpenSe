@@ -7,6 +7,7 @@ import {
   DropdownItem,
   InventoryViewToggle,
 } from '@repo/ui'
+import { missingPermissionMessage } from '../../PermissionGate'
 import type { InventoryFiltersBarProps } from './types'
 
 const formatCustomFieldValue = (value: string | number | boolean): string => {
@@ -43,6 +44,12 @@ export const InventoryFiltersBar = ({
   onBulkPriceAdjust,
   onBulkQuantityAdjust,
   onExportCsv,
+  canUseInventory,
+  canCreateInventory,
+  canEditInventory,
+  canAdjustInventory,
+  canDeleteInventory,
+  canImportExportInventory,
 }: InventoryFiltersBarProps) => {
   const activeKeys = useMemo(
     () => new Set(activeCustomFieldFilters.map((f) => f.key)),
@@ -93,14 +100,48 @@ export const InventoryFiltersBar = ({
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-1">
-            <button className="inventory-toolbar-button inventory-toolbar-button--ghost" type="button" onClick={onBulkPriceAdjust}>Adjust Price</button>
-            <button className="inventory-toolbar-button inventory-toolbar-button--ghost" type="button" onClick={onBulkQuantityAdjust}>Adjust Qty</button>
-            <button className="inventory-toolbar-button inventory-toolbar-button--ghost" type="button" onClick={onExportCsv}>Export CSV</button>
-            <button className="inventory-toolbar-button inventory-toolbar-button--ghost" type="button" onClick={onMoveSelected}>Move</button>
+            <button
+              className="inventory-toolbar-button inventory-toolbar-button--ghost"
+              type="button"
+              onClick={onBulkPriceAdjust}
+              disabled={!canEditInventory}
+              title={!canEditInventory ? missingPermissionMessage('inventory.edit') : undefined}
+            >
+              Adjust Price
+            </button>
+            <button
+              className="inventory-toolbar-button inventory-toolbar-button--ghost"
+              type="button"
+              onClick={onBulkQuantityAdjust}
+              disabled={!canAdjustInventory}
+              title={!canAdjustInventory ? missingPermissionMessage('inventory.adjust') : undefined}
+            >
+              Adjust Qty
+            </button>
+            <button
+              className="inventory-toolbar-button inventory-toolbar-button--ghost"
+              type="button"
+              onClick={onExportCsv}
+              disabled={!canImportExportInventory}
+              title={!canImportExportInventory ? missingPermissionMessage('inventory.import_export') : undefined}
+            >
+              Export CSV
+            </button>
+            <button
+              className="inventory-toolbar-button inventory-toolbar-button--ghost"
+              type="button"
+              onClick={onMoveSelected}
+              disabled={!canEditInventory}
+              title={!canEditInventory ? missingPermissionMessage('inventory.edit') : undefined}
+            >
+              Move
+            </button>
             <button
               type="button"
               className="inventory-toolbar-button inventory-toolbar-button--ghost inventory-toolbar-button--danger"
               onClick={handleBulkDelete}
+              disabled={!canDeleteInventory}
+              title={!canDeleteInventory ? missingPermissionMessage('inventory.delete') : undefined}
             >
               Delete
             </button>
@@ -198,6 +239,8 @@ export const InventoryFiltersBar = ({
               variant="ghost"
               size="sm"
               onClick={onCreateOpen}
+              disabled={!canCreateInventory}
+              title={!canCreateInventory ? missingPermissionMessage('inventory.create') : undefined}
             >
               <Plus className="h-4 w-4" />
               New Product
@@ -207,6 +250,14 @@ export const InventoryFiltersBar = ({
               variant="ghost"
               size="sm"
               onClick={onImportOpen}
+              disabled={!canImportExportInventory || !canUseInventory}
+              title={
+                !canImportExportInventory
+                  ? missingPermissionMessage('inventory.import_export')
+                  : !canUseInventory
+                    ? missingPermissionMessage('inventory.use')
+                    : undefined
+              }
             >
               <Upload className="h-4 w-4" />
               Import CSV

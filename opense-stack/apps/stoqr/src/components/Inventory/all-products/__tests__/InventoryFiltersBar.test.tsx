@@ -26,6 +26,12 @@ const createProps = () => ({
   onBulkPriceAdjust: vi.fn(),
   onBulkQuantityAdjust: vi.fn(),
   onExportCsv: vi.fn(),
+  canUseInventory: true,
+  canCreateInventory: true,
+  canEditInventory: true,
+  canAdjustInventory: true,
+  canDeleteInventory: true,
+  canImportExportInventory: true,
 })
 
 describe('InventoryFiltersBar', () => {
@@ -119,6 +125,23 @@ describe('InventoryFiltersBar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'New Product' }))
     expect(props.onCreateOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('disables inventory actions with permission-specific feedback', () => {
+    const props = {
+      ...createProps(),
+      canCreateInventory: false,
+      canImportExportInventory: false,
+    }
+    render(<InventoryFiltersBar {...props} />)
+
+    const createButton = screen.getByRole('button', { name: 'New Product' })
+    const importButton = screen.getByRole('button', { name: 'Import CSV' })
+
+    expect(createButton).toBeDisabled()
+    expect(createButton).toHaveAttribute('title', 'Your role does not include Inventory Create.')
+    expect(importButton).toBeDisabled()
+    expect(importButton).toHaveAttribute('title', 'Your role does not include Inventory Import Export.')
   })
 
   it('renders view toggle buttons beside the action buttons and switches views', () => {

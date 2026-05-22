@@ -6,6 +6,8 @@ import {
 } from '@repo/ui'
 import { fuzzyRankings, fuzzySearchItems } from '../../lib/pageSearch'
 
+const isSystemRole = (role: OrganisationRole) => ['owner', 'guest'].includes(role.name.trim().toLowerCase())
+
 type RolePayload = {
   name: string
   description: string
@@ -75,7 +77,7 @@ export const RolesTab = ({
       loadingRoles={loadingRoles}
       loadingPermissions={loadingPermissions}
       canManage={canManage}
-      isRoleEditable={(role) => role.name.trim().toLowerCase() !== 'owner'}
+      isRoleEditable={(role) => !isSystemRole(role)}
       onCreateRole={onCreateRole}
       onUpdateRole={onUpdateRole}
       onEditRole={onEditRole}

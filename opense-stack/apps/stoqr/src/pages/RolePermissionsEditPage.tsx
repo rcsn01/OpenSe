@@ -35,9 +35,11 @@ const formatLabel = (value: string) =>
 const parseRoleRank = (value: string): number | null => {
   if (!value.trim()) return null
   const parsed = Number(value)
-  if (!Number.isInteger(parsed) || parsed < 0) return null
+  if (!Number.isInteger(parsed) || parsed <= 0) return null
   return parsed
 }
+
+const isSystemRoleName = (name: string) => ['owner', 'guest'].includes(name.trim().toLowerCase())
 
 type PermissionGroup = {
   key: string
@@ -120,7 +122,7 @@ export const RolePermissionsEditPage = () => {
   const visiblePermissionCodeSet = useMemo(() => new Set(permissions.map((permission) => permission.code)), [permissions])
   const rolePermissions = data?.rolePermissions ?? {}
   const role = roles.find((item) => item.id === roleId) ?? null
-  const isOwnerRole = role?.name.trim().toLowerCase() === 'owner'
+  const isSystemRole = role ? isSystemRoleName(role.name) : false
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -164,7 +166,7 @@ export const RolePermissionsEditPage = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!role || !roleId || isOwnerRole) return
+    if (!role || !roleId || isSystemRole) return
 
     const trimmedName = name.trim()
     if (!trimmedName) {
@@ -174,7 +176,7 @@ export const RolePermissionsEditPage = () => {
 
     const parsedRoleRank = parseRoleRank(roleRank)
     if (parsedRoleRank === null) {
-      setMessage('Role rank must be a non-negative integer.')
+      setMessage('Role rank must be a positive integer.')
       return
     }
 
@@ -210,8 +212,11 @@ export const RolePermissionsEditPage = () => {
     >
       {!role ? (
         <EmptyState title="Role not found" description="Return to permissions and choose a role again." />
-      ) : isOwnerRole ? (
-        <EmptyState title="Owner role is system-managed" description="The owner role cannot be edited directly." />
+      ) : isSystemRole ? (
+        <EmptyState
+          title={`${role.name} role is system-managed`}
+          description={`The ${role.name.toLowerCase()} role cannot be edited directly.`}
+        />
       ) : (
         <form className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden" onSubmit={handleSubmit}>
           <header className="flex shrink-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -305,7 +310,7 @@ export const RolePermissionsEditPage = () => {
                   </label>
                   <Input
                     type="number"
-                    min={0}
+                    min={1}
                     step={1}
                     value={roleRank}
                     onChange={(event) => {

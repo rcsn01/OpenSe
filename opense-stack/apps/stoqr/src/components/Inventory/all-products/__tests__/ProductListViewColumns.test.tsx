@@ -42,6 +42,8 @@ const createProps = (overrides: Partial<ProductListViewProps> = {}): ProductList
   setPage: vi.fn(),
   folders: [{ id: 'f-1', name: 'Electronics', parent_id: null }],
   onRefresh: vi.fn(),
+  canUseInventory: true,
+  canEditInventory: true,
   ...overrides,
 })
 
@@ -94,6 +96,13 @@ describe('ProductListView – AVAILABLE column shows stock/min format', () => {
     renderWithRouter(createProps())
     const cell = screen.getByText('0 / 2')
     expect(cell).toHaveClass('text-[var(--color-destructive)]')
+  })
+
+  it('shows no-permission feedback instead of product detail links when inventory use is missing', () => {
+    renderWithRouter(createProps({ canUseInventory: false }))
+
+    expect(screen.getAllByText('No permission to open detail')).toHaveLength(3)
+    expect(screen.queryByRole('link', { name: 'Widget' })).not.toBeInTheDocument()
   })
 })
 

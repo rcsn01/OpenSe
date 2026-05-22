@@ -221,7 +221,7 @@ export function OrganisationPermissionsPanel({
   const parseRoleRank = (value: string): number | null => {
     if (!value.trim()) return null;
     const parsed = Number(value);
-    if (!Number.isInteger(parsed) || parsed < 0) return null;
+    if (!Number.isInteger(parsed) || parsed <= 0) return null;
     return parsed;
   };
 
@@ -268,7 +268,7 @@ export function OrganisationPermissionsPanel({
 
     const parsedRoleRank = parseRoleRank(addRoleRank);
     if (parsedRoleRank === null) {
-      setError("Role rank must be a non-negative integer.");
+      setError("Role rank must be a positive integer.");
       return;
     }
 
@@ -309,7 +309,7 @@ export function OrganisationPermissionsPanel({
 
     const parsedRoleRank = parseRoleRank(editRoleRank);
     if (parsedRoleRank === null) {
-      setError("Role rank must be a non-negative integer.");
+      setError("Role rank must be a positive integer.");
       return;
     }
 
@@ -442,7 +442,16 @@ export function OrganisationPermissionsPanel({
         sortKey: "name",
         width: usesRoutedEdit ? "32%" : "26%",
         cellClassName: "font-medium text-[var(--color-foreground)]",
-        renderCell: (row) => row.name,
+        renderCell: (row) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate">{row.name}</span>
+            {!row.editable ? (
+              <span className="shrink-0 rounded border border-[var(--color-border)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)]">
+                System-managed
+              </span>
+            ) : null}
+          </div>
+        ),
       },
       {
         id: "description",
@@ -471,28 +480,36 @@ export function OrganisationPermissionsPanel({
               cellClassName: "text-right",
               renderCell: (row: RoleTableRow) => (
                 <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openEditRole(row.id)}
-                    disabled={!canManage || saving || !row.editable}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Edit
-                  </Button>
-                  {onDeleteRole && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDeleteRole(row.id)}
-                      disabled={!canManage || saving || !row.editable}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </Button>
+                  {!row.editable ? (
+                    <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+                      System-managed
+                    </span>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditRole(row.id)}
+                        disabled={!canManage || saving}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </Button>
+                      {onDeleteRole && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteRole(row.id)}
+                          disabled={!canManage || saving}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               ),
@@ -576,7 +593,7 @@ export function OrganisationPermissionsPanel({
                     />
                     <Input
                       type="number"
-                      min={0}
+                      min={1}
                       step={1}
                       value={addRoleRank}
                       onChange={(event) => setAddRoleRank(event.target.value)}
@@ -670,7 +687,7 @@ export function OrganisationPermissionsPanel({
                   </label>
                   <Input
                     type="number"
-                    min={0}
+                    min={1}
                     step={1}
                     value={editRoleRank}
                     onChange={(event) => setEditRoleRank(event.target.value)}

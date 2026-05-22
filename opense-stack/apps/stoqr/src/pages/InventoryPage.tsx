@@ -24,7 +24,9 @@ import {
   useInventoryProducts,
   useInventoryRefresh,
 } from '../hooks/queries/useInventory'
+import { useMyPermissions } from '../hooks/queries/usePermissions'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { missingPermissionMessage } from '../components/PermissionGate'
 
 export const getNextSelectedRowIdsForVisibleToggle = (current: Set<string>, visibleProductIds: string[]) => {
   const visibleProductIdSet = new Set(visibleProductIds)
@@ -63,6 +65,15 @@ export const InventoryListPage = () => {
       : undefined
 
   const filtersQuery = useInventoryFilters(companyId)
+  const permissionsQuery = useMyPermissions(companyId)
+  const permissions = permissionsQuery.data ?? []
+  const hasPermission = useCallback((permissionCode: string) => permissions.includes(permissionCode), [permissions])
+  const canUseInventory = hasPermission('inventory.use')
+  const canCreateInventory = hasPermission('inventory.create')
+  const canEditInventory = hasPermission('inventory.edit')
+  const canAdjustInventory = hasPermission('inventory.adjust')
+  const canDeleteInventory = hasPermission('inventory.delete')
+  const canImportExportInventory = hasPermission('inventory.import_export')
   const customFieldFilters = filtersQuery.data?.customFieldFilters ?? []
   const canResolveCustomFieldSearchParams = !hasCustomFieldSearchParams || !!filtersQuery.data || filtersQuery.isError
   const canCanonicalizeInventoryUrl = !hasCustomFieldSearchParams || !!filtersQuery.data
@@ -242,6 +253,10 @@ export const InventoryListPage = () => {
 
   const handleBulkDelete = async () => {
     if (!companyId) return
+    if (!canDeleteInventory) {
+      toast.error(missingPermissionMessage('inventory.delete'))
+      return
+    }
     if (!confirm(`Are you sure you want to delete ${selectedRowIds.size} items?`)) return
     try {
       await deleteProductsMutation.mutateAsync(Array.from(selectedRowIds))
@@ -253,8 +268,13 @@ export const InventoryListPage = () => {
   }
 
   const handleImportOpen = useCallback(() => {
+    if (!canImportExportInventory || !canUseInventory) {
+      toast.error(missingPermissionMessage(canImportExportInventory ? 'inventory.use' : 'inventory.import_export'))
+      return
+    }
+
     importFileInputRef.current?.click()
-  }, [])
+  }, [canImportExportInventory, canUseInventory])
 
   const handleImportFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -333,6 +353,12 @@ export const InventoryListPage = () => {
         onRefresh={() => {
           refreshInventory()
         }}
+        canUseInventory={canUseInventory}
+        canCreateInventory={canCreateInventory}
+        canEditInventory={canEditInventory}
+        canAdjustInventory={canAdjustInventory}
+        canDeleteInventory={canDeleteInventory}
+        canImportExportInventory={canImportExportInventory}
       />
 
       <input

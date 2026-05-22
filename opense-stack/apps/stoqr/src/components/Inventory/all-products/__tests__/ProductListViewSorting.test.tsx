@@ -41,6 +41,8 @@ const createProps = (overrides: Partial<ProductListViewProps> = {}): ProductList
   setPage: vi.fn(),
   folders: [{ id: 'f-1', name: 'Electronics', parent_id: null }],
   onRefresh: vi.fn(),
+  canUseInventory: true,
+  canEditInventory: true,
   ...overrides,
 })
 
