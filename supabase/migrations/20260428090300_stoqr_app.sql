@@ -1184,10 +1184,6 @@ STABLE
 SET search_path = public, stoqr
 AS $$
 BEGIN
-  IF public.is_app_super_admin() THEN
-    RETURN TRUE;
-  END IF;
-
   RETURN EXISTS (
     WITH current_membership AS (
       SELECT om.org_id, om.user_id, om.role AS org_role, cm.role_id
@@ -1317,10 +1313,6 @@ AS $$
   ),
   assigned_permissions AS (
     SELECT ap.code AS permission_code
-    FROM stoqr.app_permissions ap
-    WHERE public.is_app_super_admin()
-    UNION
-    SELECT ap.code AS permission_code
     FROM current_membership cm
     JOIN stoqr.app_permissions ap ON TRUE
     WHERE cm.org_role = 'owner'
@@ -1329,7 +1321,6 @@ AS $$
     FROM current_membership cm
     JOIN stoqr.role_permissions rp ON rp.role_id = cm.role_id
     WHERE cm.org_role <> 'owner'
-      AND NOT public.is_app_super_admin()
   ),
   permission_edges(source_code, implied_code) AS (
     VALUES
@@ -1659,6 +1650,11 @@ SECURITY DEFINER
 SET search_path = stoqr, public
 AS $$
 BEGIN
+  IF auth.role() <> 'service_role'
+     AND NOT public.is_org_member(p_company_id, auth.uid()) THEN
+    RAISE EXCEPTION 'Access denied';
+  END IF;
+
   INSERT INTO stoqr.activity_events (
     company_id,
     actor_user_id,
@@ -1849,10 +1845,7 @@ CREATE POLICY "Public read app permissions" ON stoqr.app_permissions
   FOR SELECT USING (true);
 
 CREATE POLICY "Members can view company roles" ON stoqr.roles
-  FOR SELECT USING (
-    public.is_org_member(company_id, auth.uid())
-    OR public.is_app_super_admin()
-  );
+  FOR SELECT USING (public.is_org_member(company_id, auth.uid()));
 
 CREATE POLICY "Admins can manage roles" ON stoqr.roles
   FOR ALL USING (
@@ -1871,7 +1864,7 @@ CREATE POLICY "Members can view role permissions" ON stoqr.role_permissions
       SELECT 1
       FROM stoqr.roles r
       WHERE r.id = role_permissions.role_id
-        AND (public.is_org_member(r.company_id, auth.uid()) OR public.is_app_super_admin())
+        AND public.is_org_member(r.company_id, auth.uid())
     )
   );
 
@@ -1981,26 +1974,14 @@ CREATE POLICY "Managers can delete members" ON stoqr.organisation_member_roles
   );
 
 CREATE POLICY "Members can view organisation page settings" ON stoqr.organisation_page_settings
-  FOR SELECT USING (
-    public.has_permission(company_id, 'organisation.view')
-    OR public.is_app_super_admin()
-  );
+  FOR SELECT USING (public.has_permission(company_id, 'organisation.view'));
 
 CREATE POLICY "Admins can insert organisation page settings" ON stoqr.organisation_page_settings
-  FOR INSERT WITH CHECK (
-    public.has_permission(company_id, 'organisation.pages.manage')
-    OR public.is_app_super_admin()
-  );
+  FOR INSERT WITH CHECK (public.has_permission(company_id, 'organisation.pages.manage'));
 
 CREATE POLICY "Admins can update organisation page settings" ON stoqr.organisation_page_settings
-  FOR UPDATE USING (
-    public.has_permission(company_id, 'organisation.pages.manage')
-    OR public.is_app_super_admin()
-  )
-  WITH CHECK (
-    public.has_permission(company_id, 'organisation.pages.manage')
-    OR public.is_app_super_admin()
-  );
+  FOR UPDATE USING (public.has_permission(company_id, 'organisation.pages.manage'))
+  WITH CHECK (public.has_permission(company_id, 'organisation.pages.manage'));
 
 CREATE POLICY "Members can view folders" ON stoqr.folders
   FOR SELECT USING (public.has_permission(company_id, 'inventory.view'));
@@ -2162,6 +2143,15 @@ CREATE POLICY "Staff can create scan events" ON stoqr.scan_events
           AND f.company_id = scan_events.company_id
       )
     )
+    AND (
+      transaction_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.inventory_transactions it
+        WHERE it.id = scan_events.transaction_id
+          AND it.company_id = scan_events.company_id
+      )
+    )
   );
 
 CREATE POLICY "Members can view report schedules" ON stoqr.report_schedules
@@ -2174,7 +2164,10 @@ CREATE POLICY "Admins can manage report schedules" ON stoqr.report_schedules
 CREATE POLICY "Members can view report exports" ON stoqr.report_exports
   FOR SELECT USING (
     public.has_permission(company_id, 'reports.view')
-    OR requested_by = auth.uid()
+    OR (
+      requested_by = auth.uid()
+      AND public.is_org_member(company_id, auth.uid())
+    )
   );
 
 CREATE POLICY "Staff can manage report exports" ON stoqr.report_exports
@@ -2198,7 +2191,18 @@ CREATE POLICY "Members can view POs" ON stoqr.purchase_orders
   FOR SELECT USING (public.has_permission(company_id, 'procurement.view'));
 
 CREATE POLICY "Staff can create POs" ON stoqr.purchase_orders
-  FOR INSERT WITH CHECK (public.has_permission(company_id, 'procurement.create'));
+  FOR INSERT WITH CHECK (
+    public.has_permission(company_id, 'procurement.create')
+    AND (
+      supplier_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.suppliers s
+        WHERE s.id = purchase_orders.supplier_id
+          AND s.company_id = purchase_orders.company_id
+      )
+    )
+  );
 
 CREATE POLICY "Staff can manage POs" ON stoqr.purchase_orders
   FOR UPDATE USING (
@@ -2206,8 +2210,19 @@ CREATE POLICY "Staff can manage POs" ON stoqr.purchase_orders
     OR public.has_permission(company_id, 'procurement.receive')
   )
   WITH CHECK (
-    public.has_permission(company_id, 'procurement.manage')
-    OR public.has_permission(company_id, 'procurement.receive')
+    (
+      public.has_permission(company_id, 'procurement.manage')
+      OR public.has_permission(company_id, 'procurement.receive')
+    )
+    AND (
+      supplier_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.suppliers s
+        WHERE s.id = purchase_orders.supplier_id
+          AND s.company_id = purchase_orders.company_id
+      )
+    )
   );
 
 CREATE POLICY "Staff can delete POs" ON stoqr.purchase_orders
@@ -2230,6 +2245,15 @@ CREATE POLICY "Staff can create PO items" ON stoqr.purchase_order_items
       FROM stoqr.purchase_orders po
       WHERE po.id = purchase_order_items.po_id
         AND public.has_permission(po.company_id, 'procurement.create')
+        AND (
+          purchase_order_items.product_id IS NULL
+          OR EXISTS (
+            SELECT 1
+            FROM stoqr.products p
+            WHERE p.id = purchase_order_items.product_id
+              AND p.company_id = po.company_id
+          )
+        )
     )
   );
 
@@ -2254,6 +2278,15 @@ CREATE POLICY "Staff can manage PO items" ON stoqr.purchase_order_items
           public.has_permission(po.company_id, 'procurement.manage')
           OR public.has_permission(po.company_id, 'procurement.receive')
         )
+        AND (
+          purchase_order_items.product_id IS NULL
+          OR EXISTS (
+            SELECT 1
+            FROM stoqr.products p
+            WHERE p.id = purchase_order_items.product_id
+              AND p.company_id = po.company_id
+          )
+        )
     )
   );
 
@@ -2273,7 +2306,27 @@ CREATE POLICY "Staff can view receiving logs" ON stoqr.receiving_logs
   );
 
 CREATE POLICY "Staff can manage receiving logs" ON stoqr.receiving_logs
-  FOR INSERT WITH CHECK (public.has_permission(company_id, 'procurement.receive'));
+  FOR INSERT WITH CHECK (
+    public.has_permission(company_id, 'procurement.receive')
+    AND (
+      po_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.purchase_orders po
+        WHERE po.id = receiving_logs.po_id
+          AND po.company_id = receiving_logs.company_id
+      )
+    )
+    AND (
+      product_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.products p
+        WHERE p.id = receiving_logs.product_id
+          AND p.company_id = receiving_logs.company_id
+      )
+    )
+  );
 
 CREATE POLICY "Members can view alert rules" ON stoqr.alert_rules
   FOR SELECT USING (
@@ -2298,8 +2351,37 @@ CREATE POLICY "Staff can manage alert events" ON stoqr.alert_events
     OR public.has_permission(company_id, 'alerts.use')
   )
   WITH CHECK (
-    public.has_permission(company_id, 'alerts.manage')
-    OR public.has_permission(company_id, 'alerts.use')
+    (
+      public.has_permission(company_id, 'alerts.manage')
+      OR public.has_permission(company_id, 'alerts.use')
+    )
+    AND (
+      rule_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.alert_rules ar
+        WHERE ar.id = alert_events.rule_id
+          AND ar.company_id = alert_events.company_id
+      )
+    )
+    AND (
+      product_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.products p
+        WHERE p.id = alert_events.product_id
+          AND p.company_id = alert_events.company_id
+      )
+    )
+    AND (
+      folder_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.folders f
+        WHERE f.id = alert_events.folder_id
+          AND f.company_id = alert_events.company_id
+      )
+    )
   );
 
 CREATE POLICY "Staff can view alert deliveries" ON stoqr.alert_delivery_logs
@@ -2408,8 +2490,19 @@ CREATE POLICY "Staff can manage label print jobs" ON stoqr.label_print_jobs
     OR public.has_permission(company_id, 'labels.manage')
   )
   WITH CHECK (
-    public.has_permission(company_id, 'labels.use')
-    OR public.has_permission(company_id, 'labels.manage')
+    (
+      public.has_permission(company_id, 'labels.use')
+      OR public.has_permission(company_id, 'labels.manage')
+    )
+    AND (
+      template_id IS NULL
+      OR EXISTS (
+        SELECT 1
+        FROM stoqr.label_templates lt
+        WHERE lt.id = label_print_jobs.template_id
+          AND (lt.company_id IS NULL OR lt.company_id = label_print_jobs.company_id)
+      )
+    )
   );
 
 CREATE POLICY "Give users access to their company folder" ON storage.objects
@@ -2439,8 +2532,9 @@ CREATE POLICY "Users can view images from their company" ON storage.objects
 
 -- Operational bootstrap: StoQR product image uploads require this bucket in every environment.
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('product-images', 'product-images', true)
-ON CONFLICT (id) DO NOTHING;
+VALUES ('product-images', 'product-images', false)
+ON CONFLICT (id) DO UPDATE
+SET public = EXCLUDED.public;
 
 CREATE FUNCTION public.get_inventory_stats(target_company_id UUID)
 RETURNS TABLE (total_items BIGINT, low_stock_items BIGINT, total_value NUMERIC)
@@ -3538,53 +3632,53 @@ GRANT ALL PRIVILEGES ON TABLE stoqr.label_templates TO service_role;
 GRANT ALL PRIVILEGES ON TABLE stoqr.label_print_jobs TO service_role;
 GRANT ALL PRIVILEGES ON SEQUENCE stoqr.purchase_orders_po_number_seq TO service_role;
 
-REVOKE ALL ON FUNCTION public.map_stoqr_role_to_org_role(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.ensure_stoqr_guest_role(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.ensure_owner_app_roles(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.prevent_owner_role_mutation() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.prevent_stoqr_guest_permission_mutation() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.prevent_owner_role_permission_delete() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.assign_stoqr_guest_role_for_seat() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.grant_new_permission_to_owner_roles() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.ensure_org_owner_member_and_default_seats() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.has_permission(UUID, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_stoqr_my_permissions(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION stoqr.update_inventory_count() FROM PUBLIC;
-REVOKE ALL ON FUNCTION stoqr.folder_path_name(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION stoqr.sync_product_stock_total() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.transfer_stoqr_product_stock(UUID, UUID, UUID, UUID, INTEGER, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION stoqr.evaluate_low_stock_alerts() FROM PUBLIC;
-REVOKE ALL ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION stoqr.capture_activity_event() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_inventory_stats(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_stoqr_dashboard_snapshot(UUID, INTEGER, INTEGER) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_inventory_valuation(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_stock_movements(UUID, TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_usage_depletion(UUID, TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_reorder_analysis(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_dead_stock(UUID, INTEGER) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE, DATE, JSONB) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_stoqr_alert_products(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_stoqr_delivered_alert_events(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.map_stoqr_role_to_org_role(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ensure_stoqr_guest_role(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ensure_owner_app_roles(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.prevent_owner_role_mutation() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.prevent_stoqr_guest_permission_mutation() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.prevent_owner_role_permission_delete() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.assign_stoqr_guest_role_for_seat() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.grant_new_permission_to_owner_roles() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ensure_org_owner_member_and_default_seats() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.has_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_stoqr_my_permissions(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION stoqr.update_inventory_count() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION stoqr.folder_path_name(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION stoqr.sync_product_stock_total() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.transfer_stoqr_product_stock(UUID, UUID, UUID, UUID, INTEGER, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION stoqr.evaluate_low_stock_alerts() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION stoqr.capture_activity_event() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_inventory_stats(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_stoqr_dashboard_snapshot(UUID, INTEGER, INTEGER) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_stoqr_report_inventory_valuation(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_stoqr_report_stock_movements(UUID, TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_stoqr_report_usage_depletion(UUID, TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_stoqr_report_reorder_analysis(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_stoqr_report_dead_stock(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE, DATE, JSONB) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_stoqr_alert_products(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_stoqr_delivered_alert_events(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.ensure_stoqr_guest_role(UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.ensure_owner_app_roles(UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.ensure_owner_app_roles(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.has_permission(UUID, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_stoqr_my_permissions(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION stoqr.folder_path_name(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.transfer_stoqr_product_stock(UUID, UUID, UUID, UUID, INTEGER, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.get_inventory_stats(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_stoqr_dashboard_snapshot(UUID, INTEGER, INTEGER) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_stoqr_report_inventory_valuation(UUID) TO authenticated, service_role;
