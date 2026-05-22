@@ -141,6 +141,36 @@ describe('OrganisationPermissionsPanel', () => {
     expect(screen.getAllByRole('button', { name: /^edit$/i })).toHaveLength(2)
   })
 
+  it('allows routed navigation into system-managed roles', async () => {
+    const user = userEvent.setup()
+    const onEditRole = vi.fn()
+
+    render(
+      <OrganisationPermissionsPanel
+        roles={[
+          ...roles,
+          {
+            id: 'role-guest',
+            name: 'Guest',
+            description: 'System-managed guest role',
+            roleRank: 0,
+            permissionCodes: ['dashboard.view', 'inventory.view'],
+          },
+        ]}
+        permissions={permissions}
+        canManage={true}
+        isRoleEditable={(role) => role.name !== 'Guest'}
+        onCreateRole={vi.fn()}
+        onUpdateRole={vi.fn()}
+        onEditRole={onEditRole}
+      />,
+    )
+
+    await user.click(screen.getByText('Guest'))
+
+    expect(onEditRole).toHaveBeenCalledWith('role-guest')
+  })
+
   it('renders metadata grouped permissions and hides deprecated codes', async () => {
     const user = userEvent.setup()
 
