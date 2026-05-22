@@ -3,14 +3,17 @@
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "workspaces": [
-    "apps/*",
+    "apps/accounts",
+    "apps/etl",
+    "apps/opense",
+    "apps/stoqr",
+    "apps/ui-design",
     "packages/*"
   ],
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "dev:accounts": "pnpm --dir apps/accounts dev",
-    "dev:admin": "pnpm --dir apps/admin dev",
     "dev:etl": "pnpm --dir apps/etl dev",
     "dev:opense": "pnpm --dir apps/opense dev",
     "dev:stoqr": "pnpm --dir apps/stoqr dev",
@@ -19,7 +22,7 @@
     "test": "turbo run test",
     "test:e2e": "pnpm exec playwright test --config=tests/tests/playwright.config.ts",
     "test:e2e:ui": "pnpm exec playwright test --config=tests/tests/playwright.config.ts --ui",
-    "test:e2e:stop": "kill-port 5990 5991 5992 5993 5994 || true",
+    "test:e2e:stop": "kill-port 5991 5992 5993 5994 5999 || true",
     "security:check-secrets": "node scripts/check-secret-leaks.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "db:start": "supabase start",

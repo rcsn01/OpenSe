@@ -1,7 +1,12 @@
 import { supabase } from '@repo/shared/supabase'
 
 export type AccountThemePreference = 'light' | 'dark' | 'system'
-export type DefaultLandingApp = 'accounts' | 'etl' | 'stoqr' | 'admin'
+export type DefaultLandingApp = 'accounts' | 'etl' | 'stoqr'
+
+const defaultLandingApps = ['accounts', 'etl', 'stoqr'] as const
+
+const isDefaultLandingApp = (value: string | null | undefined): value is DefaultLandingApp =>
+  defaultLandingApps.includes(value as DefaultLandingApp)
 
 export interface AccountPreferences {
   theme: AccountThemePreference
@@ -43,7 +48,9 @@ const mapPreferences = (row: AccountPreferencesRow | undefined): AccountPreferen
     notifyProductUpdates: notifications.product_updates !== false,
     notifySecurityAlerts: notifications.security_alerts !== false,
     notifyBillingAlerts: notifications.billing_alerts !== false,
-    defaultLandingApp: row?.default_landing_app ?? defaultAccountPreferences.defaultLandingApp,
+    defaultLandingApp: isDefaultLandingApp(row?.default_landing_app)
+      ? row.default_landing_app
+      : defaultAccountPreferences.defaultLandingApp,
     updatedAt: row?.updated_at ?? null,
   }
 }

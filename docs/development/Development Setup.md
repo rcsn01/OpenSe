@@ -15,7 +15,7 @@ Frontend apps read browser runtime config from each app's `public/config.js`.
 Real `config.js` files are ignored by git; commit only `config.example.js`.
 
 ```bash
-for app in accounts admin etl opense stoqr ui-design; do
+for app in accounts etl opense stoqr ui-design; do
   cp "apps/$app/public/config.example.js" "apps/$app/public/config.js"
 done
 ```
@@ -23,7 +23,6 @@ done
 Edit each `apps/<app>/public/config.js` as needed. For local development, the defaults should usually point at:
 
 - Accounts: `http://localhost:5991`
-- Admin: `http://localhost:5990`
 - ETL: `http://localhost:5992`
 - OpenSe: `http://localhost:5994`
 - StoQR: `http://localhost:5993`
@@ -67,14 +66,14 @@ pnpm dev
 Or start a specific app:
 ```bash
 pnpm dev:accounts   # Accounts app
-pnpm dev:admin      # Admin app
 pnpm dev:etl        # ETL app
+pnpm dev:opense     # OpenSe app
 pnpm dev:stoqr      # StoQR app
+pnpm dev:ui-design  # UI design app
 ```
 # 5. Ports
 | App             | Port  | URL                    |
 | --------------- | ----- | ---------------------- |
-| Admin           | 5990  | http://localhost:5990  |
 | Accounts        | 5991  | http://localhost:5991  |
 | ETL             | 5992  | http://localhost:5992  |
 | StoQR           | 5993  | http://localhost:5993  |

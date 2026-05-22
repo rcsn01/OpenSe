@@ -37,13 +37,6 @@ const reuseExistingServer = process.env.E2E_REUSE_SERVER === 'true';
 
 const webServers = [
   {
-    command: 'pnpm dev:admin',
-    url: process.env.BASE_URL_ADMIN || 'http://localhost:5990',
-    reuseExistingServer,
-    timeout: 120000,
-    gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
-  },
-  {
     command: 'pnpm dev:etl',
     url: process.env.BASE_URL_ETL || 'http://localhost:5992',
     reuseExistingServer,
@@ -98,14 +91,6 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    {
-      name: 'admin-chromium',
-      testMatch: 'apps/admin/**/*.spec.ts',
-      use: {
-        ...devices['Desktop Chrome'],
-        baseURL: process.env.BASE_URL_ADMIN || 'http://localhost:5990',
-      },
-    },
     {
       name: 'etl-chromium',
       testMatch: 'apps/etl/**/*.spec.ts',

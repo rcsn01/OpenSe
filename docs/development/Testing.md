@@ -21,7 +21,6 @@ pnpm test:e2e:ui
 # Run specific app tests only
 ```bash
 npx playwright test --config=tests/tests/playwright.config.ts apps/stoqr
-npx playwright test --config=tests/tests/playwright.config.ts apps/admin
 npx playwright test --config=tests/tests/playwright.config.ts apps/etl
 npx playwright test --config=tests/tests/playwright.config.ts apps/accounts
 npx playwright test --config=tests/tests/playwright.config.ts apps/ui-design
@@ -31,7 +30,7 @@ Tests auto-load env vars from (in order, later overrides):
 1. tests/tests/.env.test
 2. tests/tests/.env.test.local (create this for local overrides)
 How It Works
-- Web servers: Playwright automatically starts the dev servers (pnpm dev:admin, pnpm dev:etl, pnpm dev:stoqr, pnpm dev:ui-design, and optionally pnpm dev:accounts) before running tests
+- Web servers: Playwright automatically starts the dev servers (`pnpm dev:etl`, `pnpm dev:opense`, `pnpm dev:stoqr`, `pnpm dev:ui-design`, and optionally `pnpm dev:accounts`) before running tests
 - Parallel: Tests run in parallel by default (use --workers=1 to disable)
 - Retries: 2 retries on CI, 0 locally
 - Tracing: On first retry, trace is captured for debugging
@@ -40,12 +39,11 @@ Test Structure
 ```
 tests/tests/
 ├── apps/
-│   ├── admin/      # Admin app tests
 │   ├── accounts/   # Accounts app tests
 │   ├── etl/       # ETL app tests
 │   ├── stoqr/     # StoQR app tests
 │   └── ui-design/ # UI design system app tests
-├── fixtures/       # Auth helpers (auth.ts, adminAuth.ts, etlAuth.ts, accountsAuth.ts)
+├── fixtures/       # Auth helpers (auth.ts, etlAuth.ts, accountsAuth.ts)
 ├── pages/         # Page objects (LoginPage, ETLDashboardPage, etc.)
 └── playwright.config.ts
 ```

@@ -1,3 +1,7 @@
 packages:
-  - 'apps/*'
+  - 'apps/accounts'
+  - 'apps/etl'
+  - 'apps/opense'
+  - 'apps/stoqr'
+  - 'apps/ui-design'
   - 'packages/*'

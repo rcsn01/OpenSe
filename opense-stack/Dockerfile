@@ -1,16 +1,16 @@
 # ─────────────────────────────────────────────────────────────
 # Dockerfile  (multi-stage, monorepo-aware)
 #
-# Builds any webapp in apps/* into a lightweight nginx image.
+# Builds any public webapp in apps/* into a lightweight nginx image.
 #
 # Build args:
-#   APP_NAME  – folder name under apps/ (e.g. admin, accounts, etl, stoqr)
+#   APP_NAME  – folder name under apps/ (e.g. accounts, etl, stoqr)
 #
 # Runtime env config:
 #   mount or replace /usr/share/nginx/html/config.js to set window.__OPENSE_CONFIG__.
 #
 # Usage:
-#   docker build --build-arg APP_NAME=admin -t opense/admin .
+#   docker build --build-arg APP_NAME=accounts -t opense/accounts .
 # ─────────────────────────────────────────────────────────────
 
 # ── Stage 1: install deps ────────────────────────────────────
@@ -22,7 +22,6 @@ WORKDIR /app
 
 # Copy lockfile + workspace manifests first (layer cache)
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
-COPY apps/admin/package.json       apps/admin/package.json
 COPY apps/accounts/package.json    apps/accounts/package.json
 COPY apps/etl/package.json         apps/etl/package.json
 COPY apps/opense/package.json      apps/opense/package.json

@@ -1,8 +1,8 @@
 ## Welcome to Open-SE
-Open-SE is a web-based B2B suite built to solve niche business problems. It's a monorepo containing 5 frontend applications that share authentication and UI components:
+Open-SE is a web-based B2B suite built to solve niche business problems. It's a monorepo containing public frontend applications that share authentication and UI components:
 - accounts - User login/signup
-- admin - Admin dashboard
 - etl - Data extraction/loading tools
+- opense - Product shell and landing app
 - stoqr - Inventory management with barcode scanning, labels, reports, and procurement
 - ui-design - Component library
 ## Tech Stack

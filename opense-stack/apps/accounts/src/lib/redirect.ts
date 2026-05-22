@@ -10,7 +10,6 @@ const isSafeHttpUrl = (value: string) => {
 }
 
 const LOCAL_APP_RETURN_URLS = [
-  'http://localhost:5990',
   'http://localhost:5992',
   'http://localhost:5993',
   'http://localhost:5994',
@@ -18,7 +17,6 @@ const LOCAL_APP_RETURN_URLS = [
 ]
 
 const APP_PUBLIC_URL_KEYS = [
-  'VITE_ADMIN_PUBLIC_URL',
   'VITE_ETL_PUBLIC_URL',
   'VITE_OPENSE_PUBLIC_URL',
   'VITE_STOQR_PUBLIC_URL',
