@@ -1,6 +1,7 @@
 import { db, supabase } from '../supabaseClient'
 import type { Product } from '../types'
 import { inferScanMovementLabel, toSignedScanChange } from '../lib/scanMovement'
+import { parseScanPayload } from '../lib/scanPayload'
 
 type ScanHistoryItem = {
   id: string
@@ -16,6 +17,14 @@ type ScanHistoryItem = {
   note: string | null
   change: number
   stockAfter: number | null
+}
+
+export type ScanLookupResult = {
+  product: Product | null
+  folderId: string | null
+  lastHandledBy: string
+  lastUpdatedAt: string | null
+  notFoundSku: string | null
 }
 
 const normalizeProduct = (row: Partial<Product>): Product => ({
@@ -45,15 +54,21 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export const lookupProductByScanValue = async (
   companyId: string,
   scanValue: string,
-): Promise<{ product: Product | null; lastHandledBy: string; lastUpdatedAt: string | null; notFoundSku: string | null }> => {
+): Promise<ScanLookupResult> => {
   const cleanValue = scanValue.trim()
   if (!cleanValue) {
-    return { product: null, lastHandledBy: '—', lastUpdatedAt: null, notFoundSku: null }
+    return { product: null, folderId: null, lastHandledBy: '—', lastUpdatedAt: null, notFoundSku: null }
   }
 
-  const orFilters = [`sku.eq."${cleanValue}"`, `primary_barcode.eq."${cleanValue}"`]
-  if (UUID_RE.test(cleanValue)) {
-    orFilters.push(`id.eq."${cleanValue}"`)
+  const parsedPayload = parseScanPayload(cleanValue)
+  if (parsedPayload.kind === 'unsupported') {
+    return { product: null, folderId: null, lastHandledBy: '—', lastUpdatedAt: null, notFoundSku: cleanValue }
+  }
+
+  const lookupValue = parsedPayload.productId
+  const orFilters = [`sku.eq."${lookupValue}"`, `primary_barcode.eq."${lookupValue}"`]
+  if (UUID_RE.test(lookupValue)) {
+    orFilters.push(`id.eq."${lookupValue}"`)
   }
 
   const { data, error } = await db
@@ -87,7 +102,7 @@ export const lookupProductByScanValue = async (
         )
       `)
       .eq('company_id', companyId)
-      .eq('barcode', cleanValue)
+      .eq('barcode', lookupValue)
       .maybeSingle()
 
     const nestedProduct = (barcodeRow as { products?: Partial<Product> | Partial<Product>[] } | null)?.products
@@ -102,7 +117,7 @@ export const lookupProductByScanValue = async (
       .from('products')
       .select('id, name, sku, quantity_on_hand, reorder_point, description, cost_price, selling_price, folder_id, image_urls, custom_fields, expiry_date, primary_barcode')
       .eq('company_id', companyId)
-      .ilike('name', `%${cleanValue}%`)
+      .ilike('name', `%${lookupValue}%`)
       .order('name', { ascending: true })
       .limit(1)
       .maybeSingle()
@@ -113,8 +128,10 @@ export const lookupProductByScanValue = async (
   }
 
   if (!resolvedProduct) {
-    return { product: null, lastHandledBy: '—', lastUpdatedAt: null, notFoundSku: cleanValue }
+    return { product: null, folderId: null, lastHandledBy: '—', lastUpdatedAt: null, notFoundSku: cleanValue }
   }
+
+  let resolvedFolderId: string | null = null
 
   try {
     const { data: folderStocksData } = await db
@@ -127,6 +144,14 @@ export const lookupProductByScanValue = async (
     resolvedProduct = {
       ...resolvedProduct,
       folder_stocks: (folderStocksData as Product['folder_stocks'] | null) ?? [],
+    }
+    const folderStocks = resolvedProduct.folder_stocks ?? []
+    if (
+      parsedPayload.kind === 'product-location' &&
+      parsedPayload.productId === resolvedProduct.id &&
+      folderStocks.some((stock) => stock.folder_id === parsedPayload.folderId)
+    ) {
+      resolvedFolderId = parsedPayload.folderId
     }
   } catch (error) {
     if (!(error instanceof Error) || !error.message.startsWith('Unexpected table: product_folder_stocks')) {
@@ -159,6 +184,7 @@ export const lookupProductByScanValue = async (
 
   return {
     product: resolvedProduct,
+    folderId: resolvedFolderId,
     lastHandledBy,
     lastUpdatedAt,
     notFoundSku: null,

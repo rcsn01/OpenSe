@@ -558,18 +558,42 @@
 
 .scan-transfer-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   padding-bottom: 28px;
   border-bottom: 1px solid #edf1f7;
 }
 
-.scan-transfer-field {
+.scan-transfer-field,
+.scan-transfer-tree-panel {
   display: grid;
   gap: 10px;
 }
 
 .scan-transfer-field .scan-update-label {
   margin-bottom: 0;
+}
+
+.scan-transfer-tree-panel {
+  min-width: 0;
+}
+
+.scan-transfer-tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scan-transfer-tree-header .scan-update-label {
+  margin-bottom: 0;
+}
+
+.scan-transfer-tree-panel .tree-content {
+  min-height: 220px;
+  max-height: 320px;
+  border: 1px solid #dfe6f0;
+  border-radius: 10px;
+  background: #fff;
 }
 
 .scan-current-stock-row {
@@ -952,6 +976,14 @@
 
   .scan-reason-grid {
     display: none;
+  }
+
+  .scan-transfer-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scan-transfer-tree-panel .tree-content {
+    max-height: 240px;
   }
 
   .scan-reason-select {

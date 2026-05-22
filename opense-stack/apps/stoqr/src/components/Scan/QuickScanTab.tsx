@@ -19,7 +19,7 @@ export const QuickScanTab = ({
   entryMethod: 'camera' | 'manual'
   cameraContent?: ReactNode
   onResetSearch?: () => void
-  onProductResolved?: (product: Product, context: { scanValue: string; entryMethod: 'camera' | 'manual' }) => void
+  onProductResolved?: (product: Product, context: { scanValue: string; entryMethod: 'camera' | 'manual'; folderId: string | null }) => void
 }) => {
   const lookupQuery = useQuickScanLookup(companyId, scanValue)
   const resolvedProductRef = useRef<string | null>(null)
@@ -36,12 +36,13 @@ export const QuickScanTab = ({
   useEffect(() => {
     if (!product || !onProductResolved) return
 
-    const resolvedKey = `${product.id}:${scanValue}:${entryMethod}`
+    const folderId = lookupQuery.data?.folderId ?? null
+    const resolvedKey = `${product.id}:${folderId ?? ''}:${scanValue}:${entryMethod}`
     if (resolvedProductRef.current === resolvedKey) return
 
     resolvedProductRef.current = resolvedKey
-    onProductResolved(product, { scanValue, entryMethod })
-  }, [entryMethod, onProductResolved, product, scanValue])
+    onProductResolved(product, { scanValue, entryMethod, folderId })
+  }, [entryMethod, lookupQuery.data?.folderId, onProductResolved, product, scanValue])
 
   const handleReturnToScanner = () => {
     setScanValue('')

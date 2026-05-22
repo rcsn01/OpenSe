@@ -182,7 +182,7 @@ test.describe('Stoqr Organisations Settings', () => {
       await expect(adminSession.page.getByRole('button', { name: 'Activity Logs' })).toBeVisible()
       await expect(adminSession.page.getByRole('button', { name: 'Pages' })).toBeVisible()
       await expect(adminSession.page.getByRole('button', { name: 'Two-Factor Authentication' })).toBeVisible()
-      await expect(adminSession.page.getByRole('button', { name: 'Invite Member' })).toBeVisible()
+      await expect(adminSession.page.getByRole('button', { name: /invite member/i })).toHaveCount(0)
 
       const ownerRow = adminSession.page.locator('tbody tr').filter({ hasText: 'Owner' }).first()
       await expect(ownerRow).toBeVisible()

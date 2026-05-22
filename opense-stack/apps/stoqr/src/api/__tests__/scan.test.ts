@@ -398,6 +398,187 @@ describe('scan api', () => {
     expect(orArg).toContain(`id.eq."${testUuid}"`)
   })
 
+  it('resolves product-only QR values without folder context', async () => {
+    const testUuid = '84848484-8484-8484-8484-a00000000004'
+    const productsQuery = {
+      select: vi.fn(() => productsQuery),
+      eq: vi.fn(() => productsQuery),
+      or: vi.fn(() => productsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: testUuid,
+          name: 'Found by QR',
+          sku: 'SKU-QR',
+          quantity_on_hand: 1,
+          reorder_point: 0,
+          description: null,
+          cost_price: null,
+          selling_price: null,
+          folder_id: null,
+          image_urls: [],
+          custom_fields: {},
+          expiry_date: null,
+          primary_barcode: null,
+        },
+        error: null,
+      }),
+    }
+    const folderStocksQuery = {
+      select: vi.fn(() => folderStocksQuery),
+      eq: vi.fn(() => folderStocksQuery),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    }
+    const transactionsQuery = {
+      select: vi.fn(() => transactionsQuery),
+      eq: vi.fn(() => transactionsQuery),
+      order: vi.fn(() => transactionsQuery),
+      limit: vi.fn(() => transactionsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') return productsQuery
+      if (table === 'product_folder_stocks') return folderStocksQuery
+      if (table === 'inventory_transactions') return transactionsQuery
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const result = await lookupProductByScanValue('company-1', testUuid)
+
+    expect(result.product?.id).toBe(testUuid)
+    expect(result.folderId).toBeNull()
+  })
+
+  it('resolves product-location QR values with validated folder context', async () => {
+    const productId = '84848484-8484-8484-8484-a00000000004'
+    const folderId = '11111111-1111-1111-1111-111111111111'
+    const productsQuery = {
+      select: vi.fn(() => productsQuery),
+      eq: vi.fn(() => productsQuery),
+      or: vi.fn(() => productsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: productId,
+          name: 'Location QR Product',
+          sku: 'SKU-LQR',
+          quantity_on_hand: 7,
+          reorder_point: 0,
+          description: null,
+          cost_price: null,
+          selling_price: null,
+          folder_id: null,
+          image_urls: [],
+          custom_fields: {},
+          expiry_date: null,
+          primary_barcode: null,
+        },
+        error: null,
+      }),
+    }
+    const folderStocksQuery = {
+      select: vi.fn(() => folderStocksQuery),
+      eq: vi.fn(() => folderStocksQuery),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'stock-1',
+            product_id: productId,
+            folder_id: folderId,
+            quantity_on_hand: 7,
+            min_stock_level: 0,
+            reorder_point: 0,
+            max_stock_level: null,
+          },
+        ],
+        error: null,
+      }),
+    }
+    const transactionsQuery = {
+      select: vi.fn(() => transactionsQuery),
+      eq: vi.fn(() => transactionsQuery),
+      order: vi.fn(() => transactionsQuery),
+      limit: vi.fn(() => transactionsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') return productsQuery
+      if (table === 'product_folder_stocks') return folderStocksQuery
+      if (table === 'inventory_transactions') return transactionsQuery
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const result = await lookupProductByScanValue('company-1', `stoqr:v1:product:${productId}:folder:${folderId}`)
+
+    expect(result.product?.id).toBe(productId)
+    expect(result.folderId).toBe(folderId)
+  })
+
+  it('does not return mismatched product-location folder context', async () => {
+    const productId = '84848484-8484-8484-8484-a00000000004'
+    const scannedFolderId = '11111111-1111-1111-1111-111111111111'
+    const productsQuery = {
+      select: vi.fn(() => productsQuery),
+      eq: vi.fn(() => productsQuery),
+      or: vi.fn(() => productsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: productId,
+          name: 'Location QR Product',
+          sku: 'SKU-LQR',
+          quantity_on_hand: 7,
+          reorder_point: 0,
+          description: null,
+          cost_price: null,
+          selling_price: null,
+          folder_id: null,
+          image_urls: [],
+          custom_fields: {},
+          expiry_date: null,
+          primary_barcode: null,
+        },
+        error: null,
+      }),
+    }
+    const folderStocksQuery = {
+      select: vi.fn(() => folderStocksQuery),
+      eq: vi.fn(() => folderStocksQuery),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'stock-1',
+            product_id: productId,
+            folder_id: '22222222-2222-2222-2222-222222222222',
+            quantity_on_hand: 7,
+            min_stock_level: 0,
+            reorder_point: 0,
+            max_stock_level: null,
+          },
+        ],
+        error: null,
+      }),
+    }
+    const transactionsQuery = {
+      select: vi.fn(() => transactionsQuery),
+      eq: vi.fn(() => transactionsQuery),
+      order: vi.fn(() => transactionsQuery),
+      limit: vi.fn(() => transactionsQuery),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'products') return productsQuery
+      if (table === 'product_folder_stocks') return folderStocksQuery
+      if (table === 'inventory_transactions') return transactionsQuery
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    const result = await lookupProductByScanValue('company-1', `stoqr:v1:product:${productId}:folder:${scannedFolderId}`)
+
+    expect(result.product?.id).toBe(productId)
+    expect(result.folderId).toBeNull()
+  })
+
   it('fetches scan history and enriches actor names', async () => {
     const historyQuery = {
       select: vi.fn(() => historyQuery),

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRightLeft, Check, Minus, Plus } from 'lucide-react'
 import { EmptyState } from '@repo/ui'
 
 import { BasePage } from '../../components/BasePage'
+import { FolderSelectionTree } from '../../components/Inventory/FolderSelectionTree'
 import { useCompany } from '../../contexts/CompanyContext'
 import { useProductDetail, useProductFolders, useTransferProductStock } from '../../hooks/queries/useProducts'
 import { useQuickScanTransaction, useQuickScanUser } from '../../hooks/queries/useQuickScan'
@@ -13,6 +14,9 @@ import '../../components/Scan/ScanSurface.css'
 const QUICK_ADJUSTMENTS = [5, 10, 25, 50]
 
 const clampQuantity = (value: number) => Math.max(0, Math.round(Number.isFinite(value) ? value : 0))
+const clampTransferQuantity = (value: number, maxQuantity: number) => (
+  Math.min(maxQuantity, clampQuantity(value))
+)
 
 const buildFolderPathLabel = (
   folderId: string | null,
@@ -70,6 +74,8 @@ export const ProductAdjustPage = () => {
   const barcode = searchParams.get('barcode') || product?.sku || null
   const entryMethod = getEntryMethod(searchParams.get('entryMethod'))
   const returnTo = searchParams.get('returnTo')
+  const requestedFolderId = searchParams.get('folderId') ?? ''
+  const isScannerFlow = returnTo?.startsWith('/scan') ?? false
   const mode = searchParams.get('mode') === 'transfer' ? 'transfer' : 'adjust'
 
   const [draftQuantity, setDraftQuantity] = useState(0)
@@ -83,17 +89,31 @@ export const ProductAdjustPage = () => {
 
   useEffect(() => {
     if (product) {
-      const initialFolderId = product.folder_stocks?.[0]?.folder_id ?? product.folder_id ?? ''
+      const requestedFolderStock = requestedFolderId
+        ? product.folder_stocks?.find((stock) => stock.folder_id === requestedFolderId)
+        : null
+      const hasValidRequestedFolder = !!requestedFolderStock
+      const defaultFolderId = product.folder_stocks?.[0]?.folder_id ?? product.folder_id ?? ''
+      const initialFolderId = hasValidRequestedFolder
+        ? requestedFolderId
+        : isScannerFlow
+          ? ''
+          : defaultFolderId
       const initialFolderStock = product.folder_stocks?.find((stock) => stock.folder_id === initialFolderId)
-      const initialTransferSourceId = product.folder_stocks?.find((stock) => stock.quantity_on_hand > 0)?.folder_id ?? ''
+      const defaultTransferSourceId = product.folder_stocks?.find((stock) => stock.quantity_on_hand > 0)?.folder_id ?? ''
+      const initialTransferSourceId = hasValidRequestedFolder
+        ? requestedFolderId
+        : isScannerFlow
+          ? ''
+          : defaultTransferSourceId
       setSelectedFolderId(initialFolderId)
-      setDraftQuantity(initialFolderStock?.quantity_on_hand ?? product.quantity_on_hand)
+      setDraftQuantity(initialFolderId ? (initialFolderStock?.quantity_on_hand ?? product.quantity_on_hand) : 0)
       setTransferSourceFolderId(initialTransferSourceId)
       setTransferDestinationFolderId('')
-      setTransferQuantity('')
+      setTransferQuantity('0')
       setMessage(null)
     }
-  }, [product])
+  }, [isScannerFlow, product, requestedFolderId])
 
   const selectedFolderStock = useMemo(
     () => product?.folder_stocks?.find((stock) => stock.folder_id === selectedFolderId) ?? null,
@@ -101,14 +121,14 @@ export const ProductAdjustPage = () => {
   )
   const currentFolderQuantity = selectedFolderStock?.quantity_on_hand ?? product?.quantity_on_hand ?? 0
 
-  const stockedFolderStocks = useMemo(
-    () => product?.folder_stocks?.filter((stock) => stock.quantity_on_hand > 0) ?? [],
+  const folderStockByFolderId = useMemo(
+    () => new Map((product?.folder_stocks ?? []).map((stock) => [stock.folder_id, stock])),
     [product?.folder_stocks],
   )
 
   const transferSourceStock = useMemo(
-    () => stockedFolderStocks.find((stock) => stock.folder_id === transferSourceFolderId) ?? null,
-    [stockedFolderStocks, transferSourceFolderId],
+    () => folderStockByFolderId.get(transferSourceFolderId) ?? null,
+    [folderStockByFolderId, transferSourceFolderId],
   )
   const transferAvailableQuantity = transferSourceStock?.quantity_on_hand ?? 0
   const transferQuantityNumber = Number(transferQuantity)
@@ -118,9 +138,22 @@ export const ProductAdjustPage = () => {
     transferQuantityNumber >= 1 &&
     transferQuantityNumber <= transferAvailableQuantity
   )
-  const destinationFolders = useMemo(
-    () => folders.filter((folder) => folder.id !== transferSourceFolderId),
-    [folders, transferSourceFolderId],
+  const disabledTransferSourceFolderIds = useMemo(
+    () => folders
+      .filter((folder) => (folderStockByFolderId.get(folder.id)?.quantity_on_hand ?? 0) <= 0)
+      .map((folder) => folder.id),
+    [folderStockByFolderId, folders],
+  )
+  const hiddenTransferDestinationFolderIds = useMemo(
+    () => (transferSourceFolderId ? [transferSourceFolderId] : []),
+    [transferSourceFolderId],
+  )
+  const getTransferSourceMetaLabel = useMemo(
+    () => (folderId: string) => {
+      const quantity = folderStockByFolderId.get(folderId)?.quantity_on_hand ?? 0
+      return `${quantity} available`
+    },
+    [folderStockByFolderId],
   )
 
   const locationLabel = useMemo(
@@ -143,9 +176,7 @@ export const ProductAdjustPage = () => {
     hasValidTransferQuantity &&
     !transferMutation.isPending
   )
-  const statusMessage = message ?? (
-    mode === 'adjust' && product && selectedFolderId && !hasQuantityChange ? 'Adjust the quantity before confirming.' : null
-  )
+  const statusMessage = message
 
   const handleModeChange = (nextMode: 'adjust' | 'transfer') => {
     const nextSearchParams = new URLSearchParams(searchParams)
@@ -179,6 +210,30 @@ export const ProductAdjustPage = () => {
 
   const handleDraftAdjust = (delta: number) => {
     setDraftQuantity((current) => clampQuantity(current + delta))
+    setMessage(null)
+  }
+
+  const handleTransferSourceSelect = (folderId: string) => {
+    setTransferSourceFolderId(folderId)
+    setTransferDestinationFolderId((current) => (current === folderId ? '' : current))
+    setTransferQuantity('0')
+    setMessage(null)
+  }
+
+  const handleTransferDestinationSelect = (folderId: string) => {
+    setTransferDestinationFolderId(folderId)
+    setMessage(null)
+  }
+
+  const handleTransferQuantityInput = (value: string) => {
+    setTransferQuantity(String(clampQuantity(Number(value || 0))))
+    setMessage(null)
+  }
+
+  const handleTransferQuantityAdjust = (delta: number) => {
+    setTransferQuantity((current) => (
+      String(clampTransferQuantity(Number(current || 0) + delta, transferAvailableQuantity))
+    ))
     setMessage(null)
   }
 
@@ -245,7 +300,7 @@ export const ProductAdjustPage = () => {
         notes: transferNote,
       })
       setMessage('Stock transferred.')
-      setTransferQuantity('')
+      setTransferQuantity('0')
       setTransferNote('')
       await refetch()
     } catch (error) {
@@ -381,47 +436,34 @@ export const ProductAdjustPage = () => {
               ) : (
                 <div className="scan-transfer-panel" aria-label="Transfer stock">
                   <div className="scan-transfer-grid">
-                    <label className="scan-transfer-field">
-                      <span className="scan-update-label">Source Location</span>
-                      <select
-                        className="product-adjust-select"
-                        aria-label="Source location"
-                        value={transferSourceFolderId}
-                        onChange={(event) => {
-                          setTransferSourceFolderId(event.target.value)
-                          setTransferDestinationFolderId((current) => (current === event.target.value ? '' : current))
-                          setTransferQuantity('')
-                          setMessage(null)
-                        }}
-                      >
-                        <option value="">Select source</option>
-                        {stockedFolderStocks.map((stock) => (
-                          <option key={stock.folder_id} value={stock.folder_id}>
-                            {buildFolderPathLabel(stock.folder_id, folders)} ({stock.quantity_on_hand} available)
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <section className="scan-transfer-tree-panel" aria-labelledby="transfer-source-heading">
+                      <div className="scan-transfer-tree-header">
+                        <h3 id="transfer-source-heading" className="scan-update-label">Source</h3>
+                      </div>
+                      <FolderSelectionTree
+                        folders={folders}
+                        selectedFolderId={transferSourceFolderId}
+                        onSelectFolder={handleTransferSourceSelect}
+                        disabledFolderIds={disabledTransferSourceFolderIds}
+                        getFolderMetaLabel={getTransferSourceMetaLabel}
+                        ariaLabel="Source folders"
+                        emptyMessage="No source folders available."
+                      />
+                    </section>
 
-                    <label className="scan-transfer-field">
-                      <span className="scan-update-label">Destination Location</span>
-                      <select
-                        className="product-adjust-select"
-                        aria-label="Destination location"
-                        value={transferDestinationFolderId}
-                        onChange={(event) => {
-                          setTransferDestinationFolderId(event.target.value)
-                          setMessage(null)
-                        }}
-                      >
-                        <option value="">Select destination</option>
-                        {destinationFolders.map((folder) => (
-                          <option key={folder.id} value={folder.id}>
-                            {buildFolderPathLabel(folder.id, folders)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <section className="scan-transfer-tree-panel" aria-labelledby="transfer-destination-heading">
+                      <div className="scan-transfer-tree-header">
+                        <h3 id="transfer-destination-heading" className="scan-update-label">Destination</h3>
+                      </div>
+                      <FolderSelectionTree
+                        folders={folders}
+                        selectedFolderId={transferDestinationFolderId}
+                        onSelectFolder={handleTransferDestinationSelect}
+                        hiddenFolderIds={hiddenTransferDestinationFolderIds}
+                        ariaLabel="Destination folders"
+                        emptyMessage="No destination folders available."
+                      />
+                    </section>
                   </div>
 
                   <div className="scan-update-section">
@@ -526,20 +568,59 @@ export const ProductAdjustPage = () => {
 
                 <div className="scan-quantity-stage">
                   <p className="scan-update-label scan-update-label--center">Transfer Quantity</p>
-                  <div className="scan-transfer-quantity-row">
+
+                  <div className="scan-quantity-row">
+                    <button
+                      type="button"
+                      className="scan-quantity-button"
+                      aria-label="Decrease transfer quantity"
+                      onClick={() => handleTransferQuantityAdjust(-1)}
+                    >
+                      <Minus size={22} />
+                    </button>
+
                     <input
                       className="scan-quantity-input"
                       type="number"
-                      min={1}
+                      min={0}
                       max={transferAvailableQuantity || undefined}
                       step={1}
                       value={transferQuantity}
                       aria-label="Transfer quantity"
-                      onChange={(event) => {
-                        setTransferQuantity(event.target.value)
-                        setMessage(null)
-                      }}
+                      onChange={(event) => handleTransferQuantityInput(event.target.value)}
                     />
+
+                    <button
+                      type="button"
+                      className="scan-quantity-button"
+                      aria-label="Increase transfer quantity"
+                      onClick={() => handleTransferQuantityAdjust(1)}
+                    >
+                      <Plus size={22} />
+                    </button>
+                  </div>
+
+                  <div className="scan-quick-adjust-grid">
+                    {QUICK_ADJUSTMENTS.map((adjustment) => (
+                      <button
+                        key={`transfer-plus-${adjustment}`}
+                        type="button"
+                        className="scan-chip-button"
+                        onClick={() => handleTransferQuantityAdjust(adjustment)}
+                      >
+                        +{adjustment}
+                      </button>
+                    ))}
+                    {QUICK_ADJUSTMENTS.map((adjustment) => (
+                      <button
+                        key={`transfer-minus-${adjustment}`}
+                        type="button"
+                        className="scan-chip-button"
+                        onClick={() => handleTransferQuantityAdjust(-adjustment)}
+                      >
+                        -{adjustment}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
