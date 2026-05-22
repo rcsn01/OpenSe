@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockDbFrom = vi.fn()
 const mockSupabaseFrom = vi.fn()
+const mockSupabaseRpc = vi.fn()
 const mockStorageFrom = vi.fn()
 
 vi.mock('../../supabaseClient', () => ({
@@ -10,13 +11,14 @@ vi.mock('../../supabaseClient', () => ({
   },
   supabase: {
     from: (...args: unknown[]) => mockSupabaseFrom(...args),
+    rpc: (...args: unknown[]) => mockSupabaseRpc(...args),
     storage: {
       from: (...args: unknown[]) => mockStorageFrom(...args),
     },
   },
 }))
 
-import { createProduct, fetchProductDetail, updateProduct } from '../products'
+import { createProduct, fetchProductDetail, transferProductStock, updateProduct } from '../products'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -383,6 +385,47 @@ describe('products api', () => {
 
     expect(update).toHaveBeenNthCalledWith(1, expect.objectContaining({
       sku: null,
+    }))
+  })
+
+  it('transfers product stock through the stock transfer RPC with normalized notes', async () => {
+    mockSupabaseRpc.mockResolvedValue({ data: 'transfer-group-1', error: null })
+
+    const result = await transferProductStock({
+      companyId: 'company-1',
+      productId: 'prod-1',
+      fromFolderId: 'folder-1',
+      toFolderId: 'folder-2',
+      quantity: 3,
+      notes: '  Move to front shelf  ',
+    })
+
+    expect(result).toBe('transfer-group-1')
+    expect(mockSupabaseRpc).toHaveBeenCalledWith('transfer_stoqr_product_stock', {
+      target_company_id: 'company-1',
+      target_product_id: 'prod-1',
+      from_folder_id: 'folder-1',
+      to_folder_id: 'folder-2',
+      transfer_quantity: 3,
+      transfer_notes: 'Move to front shelf',
+    })
+  })
+
+  it('sends null notes and throws stock transfer RPC errors', async () => {
+    const rpcError = { message: 'Insufficient stock' }
+    mockSupabaseRpc.mockResolvedValue({ data: null, error: rpcError })
+
+    await expect(transferProductStock({
+      companyId: 'company-1',
+      productId: 'prod-1',
+      fromFolderId: 'folder-1',
+      toFolderId: 'folder-2',
+      quantity: 99,
+      notes: '   ',
+    })).rejects.toEqual(rpcError)
+
+    expect(mockSupabaseRpc).toHaveBeenCalledWith('transfer_stoqr_product_stock', expect.objectContaining({
+      transfer_notes: null,
     }))
   })
 })

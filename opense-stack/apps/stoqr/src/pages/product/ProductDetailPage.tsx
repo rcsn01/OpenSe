@@ -123,6 +123,13 @@ export const ProductDetailPage = () => {
                 <button
                   type="button"
                   className={sx('product-detail-link', 'product-detail-link--strong')}
+                  onClick={() => navigate(`/inventory/${product.id}/adjust?mode=transfer`)}
+                >
+                  Transfer
+                </button>
+                <button
+                  type="button"
+                  className={sx('product-detail-link', 'product-detail-link--strong')}
                   onClick={() => navigate(`/inventory/${product.id}/edit`)}
                 >
                   Edit Product

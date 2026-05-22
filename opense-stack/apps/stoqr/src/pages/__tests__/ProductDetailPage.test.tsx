@@ -99,6 +99,30 @@ const LocationProbe = () => {
 }
 
 describe('ProductDetailPage', () => {
+  it('navigates to transfer mode from the product detail action', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/inventory/prod-1/overview']}>
+        <Routes>
+          <Route
+            path="/inventory/:id/:tab"
+            element={
+              <>
+                <ProductDetailPage />
+                <LocationProbe />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Transfer' }))
+
+    expect(screen.getByTestId('location-path')).toHaveTextContent('/inventory/prod-1/adjust?mode=transfer')
+  })
+
   it('navigates to another product overview from the shared top-bar search', async () => {
     const user = userEvent.setup()
 

@@ -14,12 +14,16 @@ const humanizeToken = (value: string | null | undefined) => {
 }
 
 const getTypeTone = (transactionType: string) => {
-  if (transactionType === 'purchase' || transactionType === 'return' || transactionType === 'scan_in') return 'positive'
-  if (transactionType === 'sale' || transactionType === 'loss' || transactionType === 'scan_out') return 'negative'
+  if (['purchase', 'return', 'scan_in', 'transfer_in'].includes(transactionType)) return 'positive'
+  if (['sale', 'loss', 'scan_out', 'transfer_out'].includes(transactionType)) return 'negative'
   return 'neutral'
 }
 
-const getSignedQuantity = (quantityChange: number) => (quantityChange > 0 ? `+${quantityChange}` : `${quantityChange}`)
+const getSignedQuantity = (transaction: InventoryTransaction) => {
+  if (transaction.transaction_type === 'transfer_in') return `+${Math.abs(transaction.quantity_change)}`
+  if (transaction.transaction_type === 'transfer_out') return `-${Math.abs(transaction.quantity_change)}`
+  return transaction.quantity_change > 0 ? `+${transaction.quantity_change}` : `${transaction.quantity_change}`
+}
 
 export const ProductBatchHistoryTab = ({ transactions }: { transactions: InventoryTransaction[] }) => {
   const historyRows = transactions.slice(0, 12)
@@ -54,7 +58,7 @@ export const ProductBatchHistoryTab = ({ transactions }: { transactions: Invento
                   </td>
                   <td>{humanizeToken(transaction.source)}</td>
                   <td className={sx('product-history-quantity', `product-history-quantity--${getTypeTone(transaction.transaction_type)}`)}>
-                    {getSignedQuantity(transaction.quantity_change)}
+                    {getSignedQuantity(transaction)}
                   </td>
                   <td>{transaction.stock_after ?? '—'}</td>
                   <td className={sx('product-detail-table-note')}>{transaction.notes?.trim() || '—'}</td>
