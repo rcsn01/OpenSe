@@ -246,7 +246,7 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       await createTemplateMutation.mutateAsync({
         name: name.trim(),
         layout: {},
-        variableFields: ['barcode', 'sku', 'name', 'price', 'qr'],
+        variableFields: ['barcode', 'sku', 'location', 'name', 'price', 'qr'],
       })
       setName('')
       setShowCreateForm(false)

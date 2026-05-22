@@ -28,6 +28,27 @@ const buildPdfFileName = (templateName: string | null | undefined, targetName: s
   return `${sanitizeFileNamePart(templateName)}-${sanitizeFileNamePart(targetName)}-${timestamp}.pdf`
 }
 
+const getFolderPathLabel = (
+  folderId: string,
+  folders: Array<{ id: string; name: string; parent_id: string | null }>,
+) => {
+  const folderById = new Map(folders.map((folder) => [folder.id, folder]))
+  const segments: string[] = []
+  const seen = new Set<string>()
+  let currentId: string | null = folderId
+
+  while (currentId && !seen.has(currentId)) {
+    const currentFolder = folderById.get(currentId)
+    if (!currentFolder) break
+
+    segments.unshift(currentFolder.name)
+    seen.add(currentId)
+    currentId = currentFolder.parent_id
+  }
+
+  return segments.join(' / ')
+}
+
 export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSelectedTemplateId, onSelectedTemplateChange }: LabelPreviewBatchTabProps) => {
   const { searchValue } = useTopBarSearchValue()
   const { data: templates = [], isLoading: loadingTemplates } = useLabelTemplates(companyId)
@@ -72,6 +93,13 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
     [products, selectedProductIds],
   )
   const selectedFolder = useMemo(() => folders.find((folder) => folder.id === folderId) ?? null, [folders, folderId])
+  const folderOptions = useMemo(
+    () => folders
+      .map((folder) => ({ value: folder.id, label: getFolderPathLabel(folder.id, folders) || folder.name }))
+      .sort((left, right) => left.label.localeCompare(right.label)),
+    [folders],
+  )
+  const selectedFolderLabel = selectedFolder ? getFolderPathLabel(selectedFolder.id, folders) || selectedFolder.name : null
   const productsToPreview = useMemo(
     () => {
       if (targetType === 'folder') {
@@ -262,7 +290,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
         buildPdfFileName(
           selectedTemplate?.name,
           targetType === 'folder'
-            ? selectedFolder?.name
+            ? selectedFolderLabel
             : targetType === 'multiple'
               ? `${selectedProducts.length}-item-batch`
               : selectedProduct?.sku ?? selectedProduct?.name,
@@ -337,14 +365,14 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
                   <>
                     <select className="label-batch-select" aria-label="Folder" value={folderId} onChange={(event) => setFolderId(event.target.value)}>
                       <option value="">Select folder</option>
-                      {folders.map((folder) => (
-                        <option key={folder.id} value={folder.id}>
-                          {folder.name}
+                      {folderOptions.map((folder) => (
+                        <option key={folder.value} value={folder.value}>
+                          {folder.label}
                         </option>
                       ))}
                     </select>
                     {selectedFolder && (
-                      <div className="label-batch-folder-summary">{selectedFolder.name} · {products.length} items</div>
+                      <div className="label-batch-folder-summary">{selectedFolderLabel} · {products.length} items</div>
                     )}
                   </>
                 ) : (

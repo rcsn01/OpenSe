@@ -1,12 +1,11 @@
 import { db, supabase } from '../supabaseClient'
-import type { Product } from '../types'
+import type { Folder, Product } from '../types'
 
-export type LabelProduct = Pick<Product, 'id' | 'name' | 'sku' | 'folder_id' | 'selling_price'>
-
-export type LabelProductFolder = {
-  id: string
-  name: string
+export type LabelProduct = Pick<Product, 'id' | 'name' | 'sku' | 'folder_id' | 'selling_price'> & {
+  location_label: string | null
 }
+
+export type LabelProductFolder = Pick<Folder, 'id' | 'name' | 'parent_id'>
 
 export type LabelTemplate = {
   id: string
@@ -38,6 +37,49 @@ export type LabelPrintJob = {
 const labelTemplateSelectFields = 'id, company_id, name, is_system, layout, variable_fields, created_at, updated_at'
 
 const normalizeTemplateName = (value: string) => value.trim().toLowerCase()
+
+const buildFolderPathMap = (folders: LabelProductFolder[]) => {
+  const folderById = new Map(folders.map((folder) => [folder.id, folder]))
+  const pathById = new Map<string, string>()
+
+  const resolvePath = (folderId: string | null | undefined) => {
+    if (!folderId) return null
+    const existingPath = pathById.get(folderId)
+    if (existingPath) return existingPath
+
+    const segments: string[] = []
+    const seen = new Set<string>()
+    let currentId: string | null = folderId
+
+    while (currentId && !seen.has(currentId)) {
+      const currentFolder = folderById.get(currentId)
+      if (!currentFolder) break
+
+      segments.unshift(currentFolder.name)
+      seen.add(currentId)
+      currentId = currentFolder.parent_id
+    }
+
+    const path = segments.length ? segments.join(' / ') : null
+    if (path) pathById.set(folderId, path)
+    return path
+  }
+
+  folders.forEach((folder) => resolvePath(folder.id))
+  return pathById
+}
+
+const fetchFolderPaths = async (companyId: string) => {
+  const { data, error } = await db
+    .from('folders')
+    .select('id, name, parent_id')
+    .eq('company_id', companyId)
+    .order('name')
+
+  if (error) throw error
+
+  return buildFolderPathMap((data as LabelProductFolder[] | null) ?? [])
+}
 
 export const fetchLabelProducts = async (
   companyId: string,
@@ -86,16 +128,22 @@ export const fetchLabelProducts = async (
 
   if (error) throw error
 
-  return (((data as LabelProduct[] | null) ?? []).map((product) => ({
+  const products = ((data as Array<Omit<LabelProduct, 'location_label'>> | null) ?? [])
+  const hasFolderContext = Boolean(folderId?.trim()) || products.some((product) => Boolean(product.folder_id))
+  const folderPathById = hasFolderContext ? await fetchFolderPaths(companyId) : new Map<string, string>()
+  const selectedFolderPath = folderId?.trim() ? folderPathById.get(folderId) ?? null : null
+
+  return products.map((product) => ({
     ...product,
     sku: product.sku ?? '',
-  })))
+    location_label: selectedFolderPath ?? (product.folder_id ? folderPathById.get(product.folder_id) ?? null : null),
+  }))
 }
 
 export const fetchLabelProductFolders = async (companyId: string): Promise<LabelProductFolder[]> => {
   const { data, error } = await db
     .from('folders')
-    .select('id, name')
+    .select('id, name, parent_id')
     .eq('company_id', companyId)
     .order('name')
 

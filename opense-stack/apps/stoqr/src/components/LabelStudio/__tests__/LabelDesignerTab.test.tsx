@@ -39,6 +39,7 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
           showBarcode: true,
           showQr: false,
           showSku: true,
+          showLocation: false,
           showName: true,
           showPrice: false,
         },
@@ -66,6 +67,8 @@ describe('LabelDesignerTab', () => {
     expect(screen.queryByText('Template Editor')).not.toBeInTheDocument()
     expect(screen.getByText('Live Canvas')).toBeInTheDocument()
     expect(screen.queryByText('Price: $299.00')).not.toBeInTheDocument()
+    expect(screen.queryByText('Location: Warehouse / Aisle 1')).not.toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: /Location/i })).toBeInTheDocument()
     expect(screen.getByLabelText('QR Scale (%)')).toHaveAttribute(
       'max',
       String(getMaxQrScale({ width: 100, height: 50, padding: 8 })),
@@ -76,8 +79,10 @@ describe('LabelDesignerTab', () => {
     fireEvent.change(screen.getByLabelText('Name Lines'), { target: { value: '3' } })
     fireEvent.change(screen.getByLabelText('Barcode Scale (%)'), { target: { value: '130' } })
     fireEvent.change(screen.getByLabelText('QR Scale (%)'), { target: { value: '110' } })
+    fireEvent.click(screen.getByRole('switch', { name: /Location/i }))
     fireEvent.click(screen.getByRole('switch', { name: /Price Field/i }))
 
+    expect(screen.getByText('Location: Warehouse / Aisle 1')).toBeInTheDocument()
     expect(screen.getByText('Price: $299.00')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
@@ -86,13 +91,14 @@ describe('LabelDesignerTab', () => {
       expect(mockMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({
           templateId: 'template-1',
-          variableFields: ['name', 'sku', 'price', 'barcode', 'qr'],
+          variableFields: ['name', 'sku', 'price', 'barcode', 'qr', 'location'],
           layout: expect.objectContaining({
             padding: 12,
             nameLines: 3,
             barcodeScale: 130,
             qrScale: 110,
             textAlign: 'center',
+            showLocation: true,
             showPrice: true,
           }),
         }),

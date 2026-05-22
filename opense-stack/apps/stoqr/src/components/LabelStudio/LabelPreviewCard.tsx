@@ -22,7 +22,7 @@ type LabelPreviewCardProps = {
   quantity?: number
   badgeText?: string
   emptyMessage: string
-  sampleProduct?: Partial<Pick<LabelProduct, 'id' | 'name' | 'sku' | 'selling_price'>> | null
+  sampleProduct?: Partial<Pick<LabelProduct, 'id' | 'name' | 'sku' | 'selling_price' | 'location_label'>> | null
   products?: LabelProduct[]
   previewMode?: 'label' | 'page'
   renderers?: LabelAssetRenderers
@@ -39,6 +39,7 @@ const defaultSample = {
   sku: 'SKU-001',
   selling_price: 24,
   folder_id: null,
+  location_label: 'Warehouse / Aisle 1',
 }
 
 const formatFieldName = (value: string) => {

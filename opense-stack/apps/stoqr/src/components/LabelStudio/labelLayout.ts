@@ -23,6 +23,7 @@ export type LabelLayoutControls = {
   showBarcode: boolean
   showQr: boolean
   showSku: boolean
+  showLocation: boolean
   showName: boolean
   showPrice: boolean
 }
@@ -40,6 +41,7 @@ export const defaultLabelLayout: LabelLayoutControls = {
   showBarcode: true,
   showQr: false,
   showSku: true,
+  showLocation: false,
   showName: true,
   showPrice: false,
 }
@@ -88,6 +90,7 @@ export const resolveLabelLayout = (layout: Record<string, unknown> | null | unde
   if (typeof layout.showBarcode === 'boolean') nextLayout.showBarcode = layout.showBarcode
   if (typeof layout.showQr === 'boolean') nextLayout.showQr = layout.showQr
   if (typeof layout.showSku === 'boolean') nextLayout.showSku = layout.showSku
+  if (typeof layout.showLocation === 'boolean') nextLayout.showLocation = layout.showLocation
   if (typeof layout.showName === 'boolean') nextLayout.showName = layout.showName
   if (typeof layout.showPrice === 'boolean') nextLayout.showPrice = layout.showPrice
 
@@ -102,6 +105,7 @@ export const getEnabledLabelFields = (controls: LabelLayoutControls) =>
   [
     controls.showName ? 'Name' : null,
     controls.showSku ? 'SKU' : null,
+    controls.showLocation ? 'Location' : null,
     controls.showPrice ? 'Price' : null,
     controls.showBarcode ? 'Barcode' : null,
     controls.showQr ? 'QR' : null,

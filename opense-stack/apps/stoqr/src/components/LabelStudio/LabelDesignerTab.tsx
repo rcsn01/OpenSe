@@ -1,4 +1,4 @@
-import { AlignCenter, AlignLeft, AlignRight, ArrowLeft, Eye, QrCode, ScanBarcode, Type } from 'lucide-react'
+import { AlignCenter, AlignLeft, AlignRight, ArrowLeft, Eye, MapPin, QrCode, ScanBarcode, Type } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Input } from '@repo/ui'
 import { useLabelTemplates, useUpdateLabelTemplateLayout } from '../../hooks/queries/useLabelStudio'
@@ -11,7 +11,7 @@ import {
   type LabelLayoutControls,
 } from './labelLayout'
 
-type ToggleField = 'showName' | 'showSku' | 'showPrice' | 'showBarcode' | 'showQr' | 'showBorder'
+type ToggleField = 'showName' | 'showSku' | 'showLocation' | 'showPrice' | 'showBarcode' | 'showQr' | 'showBorder'
 
 const alignmentOptions: Array<{
   value: LabelLayoutControls['textAlign']
@@ -23,11 +23,12 @@ const alignmentOptions: Array<{
   { value: 'right', label: 'Right aligned', icon: AlignRight },
 ]
 
-const visibilityOptions: Array<{ key: Extract<ToggleField, 'showName' | 'showSku' | 'showPrice' | 'showBorder'>; label: string; description: string }> = [
-  { key: 'showName', label: 'Product Name', description: 'Show the primary product title on label.' },
-  { key: 'showSku', label: 'SKU / Article No.', description: 'Show the stock code under the product name.' },
-  { key: 'showPrice', label: 'Price Field', description: 'Show the product selling price in the preview.' },
-  { key: 'showBorder', label: 'Label Border', description: 'Render the printed border around the label.' },
+const visibilityOptions: Array<{ key: Extract<ToggleField, 'showName' | 'showSku' | 'showLocation' | 'showPrice' | 'showBorder'>; label: string }> = [
+  { key: 'showName', label: 'Product Name' },
+  { key: 'showSku', label: 'SKU / Article No.' },
+  { key: 'showLocation', label: 'Location' },
+  { key: 'showPrice', label: 'Price Field' },
+  { key: 'showBorder', label: 'Label Border' },
 ]
 
 const identifierOptions: Array<{ key: Extract<ToggleField, 'showBarcode' | 'showQr'>; label: string; description: string }> = [
@@ -39,8 +40,13 @@ const previewSample = {
   id: 'premium-wireless-headphones',
   name: 'Premium Wireless Headphones',
   sku: 'AUDIO-WH-01',
+  location_label: 'Warehouse / Aisle 1',
   selling_price: 299,
 }
+
+const ensureLocationVariableField = (fields: string[]) => (
+  fields.some((field) => field.trim().toLowerCase() === 'location') ? fields : [...fields, 'location']
+)
 
 type LabelDesignerTabProps = {
   companyId: string
@@ -51,7 +57,7 @@ type LabelDesignerTabProps = {
 
 type SwitchRowProps = {
   label: string
-  description: string
+  description?: string
   checked: boolean
   onToggle: () => void
 }
@@ -66,7 +72,7 @@ const SwitchRow = ({ label, description, checked, onToggle }: SwitchRowProps) =>
   >
     <span className="label-studio-switch-copy">
       <span className="label-studio-switch-label">{label}</span>
-      <span className="label-studio-switch-description">{description}</span>
+      {description ? <span className="label-studio-switch-description">{description}</span> : null}
     </span>
     <span className="label-studio-switch-control" aria-hidden="true">
       <span className="label-studio-switch-thumb" />
@@ -149,7 +155,7 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
       const savedTemplate = await updateLayoutMutation.mutateAsync({
         templateId: selectedTemplate.id,
         layout: controlsToLayout(controls),
-        variableFields: selectedTemplate.variable_fields,
+        variableFields: ensureLocationVariableField(selectedTemplate.variable_fields),
       })
       onSavedTemplateChange?.(savedTemplate.id)
       setMessage(savedTemplate.id === selectedTemplate.id ? 'Design saved.' : 'Design saved as a company template.')
@@ -287,7 +293,6 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
                     <SwitchRow
                       key={option.key}
                       label={option.label}
-                      description={option.description}
                       checked={controls[option.key]}
                       onToggle={() => toggleControl(option.key)}
                     />
@@ -312,6 +317,13 @@ export const LabelDesignerTab = ({ companyId, selectedTemplateId: initialSelecte
                 <div className="label-studio-preview-data-item">
                   <span className="label-studio-preview-data-label">SKU</span>
                   <span className="label-studio-preview-data-value">{previewSample.sku}</span>
+                </div>
+                <div className="label-studio-preview-data-item">
+                  <span className="label-studio-preview-data-label">Location</span>
+                  <span className="label-studio-preview-data-value">
+                    <MapPin size={13} aria-hidden="true" />
+                    {previewSample.location_label}
+                  </span>
                 </div>
                 <div className="label-studio-preview-data-item">
                   <span className="label-studio-preview-data-label">Price</span>
