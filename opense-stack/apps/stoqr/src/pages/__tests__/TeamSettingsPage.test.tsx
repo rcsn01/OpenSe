@@ -15,6 +15,13 @@ vi.mock('@repo/shared/auth/context', () => ({
   useAuth: () => ({ user: { id: 'user-1' } }),
 }))
 
+vi.mock('../../hooks/queries/usePermissions', () => ({
+  useMyPermissions: () => ({
+    data: ['organisation.view', 'organisation.members.manage', 'organisation.roles.manage', 'organisation.pages.manage'],
+    isLoading: false,
+  }),
+}))
+
 vi.mock('../../components/BasePage', () => ({
   BasePage: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))

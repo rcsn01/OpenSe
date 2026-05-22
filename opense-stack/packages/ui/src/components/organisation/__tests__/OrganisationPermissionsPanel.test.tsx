@@ -21,10 +21,11 @@ const roles = [
 ]
 
 const permissions = [
-  { code: 'users.view', description: 'View users' },
-  { code: 'users.edit', description: 'Edit users' },
-  { code: 'users.manage', description: 'Manage users' },
-  { code: 'scanner.use', description: 'Use scanner' },
+  { code: 'users.view', description: 'View users', page_key: 'users', action_key: 'view', label: 'View', sort_order: 10 },
+  { code: 'users.edit', description: 'Edit users', page_key: 'users', action_key: 'edit', label: 'Edit', sort_order: 20 },
+  { code: 'users.manage', description: 'Manage users', page_key: 'users', action_key: 'manage', label: 'Manage', sort_order: 30 },
+  { code: 'scanner.use', description: 'Use scanner', page_key: 'scanner', action_key: 'use', label: 'Use', sort_order: 40 },
+  { code: 'legacy.hidden', description: 'Hidden legacy permission', hidden: true, deprecated: true },
 ]
 
 describe('OrganisationPermissionsPanel', () => {
@@ -114,7 +115,7 @@ describe('OrganisationPermissionsPanel', () => {
     expect(screen.getByText(/role rank must be unique within your organisation/i)).toBeInTheDocument()
   })
 
-  it('renders permission type columns in preferred order', async () => {
+  it('renders metadata grouped permissions and hides deprecated codes', async () => {
     const user = userEvent.setup()
 
     render(
@@ -130,9 +131,39 @@ describe('OrganisationPermissionsPanel', () => {
     await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0])
 
     const headers = screen.getAllByRole('columnheader').map((header) => header.textContent?.trim())
-    expect(headers).toContain('View')
-    expect(headers).toContain('Edit')
-    expect(headers).toContain('Manage')
-    expect(headers).toContain('Use')
+    expect(headers.slice(-3)).toEqual(['Permission', 'Action', 'Enabled'])
+    expect(screen.getByText('Users')).toBeInTheDocument()
+    expect(screen.getByText('Scanner')).toBeInTheDocument()
+    expect(screen.queryByText('Hidden legacy permission')).not.toBeInTheDocument()
+  })
+
+  it('selecting a child permission also selects the page view permission', async () => {
+    const user = userEvent.setup()
+    const onUpdateRole = vi.fn().mockResolvedValue(undefined)
+    const editOnlyRole = [{
+      id: 'role-3',
+      name: 'Editor',
+      description: 'Edit only role',
+      roleRank: 40,
+      permissionCodes: [],
+    }]
+
+    render(
+      <OrganisationPermissionsPanel
+        roles={editOnlyRole}
+        permissions={permissions}
+        canManage={true}
+        onCreateRole={vi.fn()}
+        onUpdateRole={onUpdateRole}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /^edit$/i }))
+    await user.click(screen.getAllByRole('checkbox')[1])
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    expect(onUpdateRole.mock.calls[0][1].permissionCodes).toEqual(
+      expect.arrayContaining(['users.view', 'users.edit']),
+    )
   })
 })

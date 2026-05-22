@@ -32,6 +32,23 @@ vi.mock("../../hooks/queries/useDashboard", () => ({
   useDashboard: (...args: unknown[]) => mockUseDashboard(...args),
 }));
 
+vi.mock("../../hooks/queries/usePermissions", () => ({
+  useMyPermissions: () => ({
+    data: [
+      "dashboard.view",
+      "inventory.view",
+      "inventory.use",
+      "scanner.view",
+      "labels.view",
+      "reports.view",
+      "procurement.view",
+      "alerts.view",
+      "organisation.view",
+    ],
+    isLoading: false,
+  }),
+}));
+
 vi.mock("../../hooks/queries/useAlerts", () => ({
   useAlertEvents: (...args: unknown[]) => mockUseAlertEvents(...args),
 }));

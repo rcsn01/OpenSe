@@ -18,7 +18,13 @@ export type Role = {
 
 export type Permission = {
   code: string
-  description: string
+  description: string | null
+  page_key: string | null
+  action_key: string | null
+  label: string | null
+  sort_order: number
+  hidden: boolean
+  deprecated: boolean
 }
 
 export type CompanyInvitation = {
@@ -62,7 +68,12 @@ export const fetchTeamSettingsData = async (companyId: string) => {
       .select('id, user_id, role_id, joined_at')
       .eq('company_id', companyId),
     db.from('roles').select('id, name, description, role_rank').eq('company_id', companyId),
-    db.from('app_permissions').select('code, description'),
+    db
+      .from('app_permissions')
+      .select('code, description, page_key, action_key, label, sort_order, hidden, deprecated')
+      .eq('hidden', false)
+      .eq('deprecated', false)
+      .order('sort_order', { ascending: true }),
     supabase
       .from('organisation_invites')
       .select('id, email, created_at')
