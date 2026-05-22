@@ -5,7 +5,6 @@ declare const Deno: {
 }
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  'http://localhost:5990',
   'http://localhost:5991',
   'http://localhost:5992',
   'http://localhost:5993',

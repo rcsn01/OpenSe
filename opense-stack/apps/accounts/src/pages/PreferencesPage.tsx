@@ -132,7 +132,6 @@ export const PreferencesPage = () => {
               { value: 'accounts', label: 'Accounts' },
               { value: 'etl', label: 'ETL' },
               { value: 'stoqr', label: 'StoQR' },
-              { value: 'admin', label: 'Admin' },
             ]}
           />
         </AccountsSection>

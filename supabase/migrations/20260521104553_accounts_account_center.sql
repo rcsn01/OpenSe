@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.account_preferences (
   timezone TEXT NOT NULL DEFAULT 'UTC',
   locale TEXT NOT NULL DEFAULT 'en-AU',
   notification_preferences JSONB NOT NULL DEFAULT '{"product_updates": true, "security_alerts": true, "billing_alerts": true}'::jsonb,
-  default_landing_app TEXT NOT NULL DEFAULT 'accounts' CHECK (default_landing_app IN ('accounts', 'etl', 'stoqr', 'admin')),
+  default_landing_app TEXT NOT NULL DEFAULT 'accounts' CHECK (default_landing_app IN ('accounts', 'etl', 'stoqr')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ
 );

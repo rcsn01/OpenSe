@@ -7,7 +7,6 @@ For Telegram and Mattermost alert connectors, see [StoQR Chat Connector Setup](.
 
 | App | Package | Dev port | Prod port |
 |---|---|---|---|
-| Admin | `@repo/admin` | 5990 | 5990 |
 | Accounts | `@repo/accounts` | 5991 | 5991 |
 | ETL | `@repo/etl` | 5992 | 5992 |
 | StoQR | `@repo/stoqr` | 5993 | 5993 |
@@ -25,7 +24,7 @@ For Telegram and Mattermost alert connectors, see [StoQR Chat Connector Setup](.
 - Per-app runtime config files in `apps/*/public/config.js`
 
 ```bash
-for app in accounts admin etl opense stoqr ui-design; do
+for app in accounts etl opense stoqr ui-design; do
   cp "apps/$app/public/config.example.js" "apps/$app/public/config.js"
 done
 ```
@@ -43,7 +42,7 @@ This mounts the monorepo source into stock `node:22-alpine` containers and runs 
 docker compose -f docker-compose.dev.yml up
 
 # Start only specific apps
-docker compose -f docker-compose.dev.yml up admin accounts
+docker compose -f docker-compose.dev.yml up accounts etl
 
 # Stop everything
 docker compose -f docker-compose.dev.yml down
@@ -69,7 +68,6 @@ The multi-stage `Dockerfile` compiles any app into a tiny nginx image (~25 MB).
 ### Build individual images
 
 ```bash
-docker build --build-arg APP_NAME=admin    -t opense/admin    .
 docker build --build-arg APP_NAME=accounts -t opense/accounts .
 docker build --build-arg APP_NAME=etl      -t opense/etl      .
 docker build --build-arg APP_NAME=opense   -t opense/opense   .
@@ -89,7 +87,7 @@ The frontend images are environment-neutral. Do not pass public URLs or Supabase
 
 ```yaml
 volumes:
-  - ./apps/admin/public/config.js:/usr/share/nginx/html/config.js:ro
+  - ./apps/accounts/public/config.js:/usr/share/nginx/html/config.js:ro
 ```
 
 `docker-compose.prod.yml` already mounts the matching config file for each app. The nginx image serves `/config.js` with `Cache-Control: no-store` so URL/key changes do not require rebuilding the image.
@@ -102,7 +100,6 @@ window.__OPENSE_CONFIG__ = {
   VITE_SUPABASE_ANON_KEY: 'replace-with-supabase-anon-key',
   VITE_AUTH_COOKIE_DOMAIN: '.example.com',
   VITE_ACCOUNTS_URL: 'https://accounts.example.com',
-  VITE_ADMIN_PUBLIC_URL: 'https://admin.example.com',
   VITE_ETL_PUBLIC_URL: 'https://etl.example.com',
   VITE_OPENSE_PUBLIC_URL: 'https://opense.example.com',
   VITE_STOQR_PUBLIC_URL: 'https://stoqr.example.com',
@@ -119,7 +116,6 @@ On pushes to `main`, it builds and publishes these images:
 
 ```text
 ghcr.io/rcsn01/opense-accounts
-ghcr.io/rcsn01/opense-admin
 ghcr.io/rcsn01/opense-etl
 ghcr.io/rcsn01/opense-opense
 ghcr.io/rcsn01/opense-stoqr
@@ -165,13 +161,13 @@ docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml ps
 
 # View logs
-docker compose -f docker-compose.prod.yml logs -f admin
+docker compose -f docker-compose.prod.yml logs -f accounts
 
 # Stop
 docker compose -f docker-compose.prod.yml down
 ```
 
-Each app is served by nginx on port 80 inside its container, mapped to the standard dev port on the host (5990–5999). The nginx config handles SPA client-side routing (`try_files ... /index.html`).
+Each app is served by nginx on port 80 inside its container, mapped to the standard dev port on the host. The nginx config handles SPA client-side routing (`try_files ... /index.html`).
 
 ---
 

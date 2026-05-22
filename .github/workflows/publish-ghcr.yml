@@ -22,7 +22,6 @@ jobs:
       matrix:
         app:
           - accounts
-          - admin
           - etl
           - opense
           - stoqr

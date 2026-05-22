@@ -7,10 +7,10 @@ OpenSe/
 │   └── functions/      # Supabase Edge Functions
 │
 └── opense-stack/       # Monorepo (Turbo + pnpm workspaces)
-    ├── apps/           # 5 frontend apps
+    ├── apps/           # Public frontend apps
     │   ├── accounts    # Shared auth (login/signup)
-    │   ├── admin       # Admin dashboard
     │   ├── etl         # ETL app
+    │   ├── opense      # OpenSe shell/landing app
     │   ├── stoqr       # StoQR app
     │   └── ui-design   # UI component library
     │

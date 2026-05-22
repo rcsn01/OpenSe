@@ -29,19 +29,6 @@ services:
         pnpm install --frozen-lockfile
 
   # ── web apps ───────────────────────────────────────────────
-  admin:
-    <<: *base
-    depends_on:
-      install:
-        condition: service_completed_successfully
-    command:
-      - |
-        corepack enable &&
-        corepack prepare pnpm@9.15.0 --activate &&
-        pnpm --filter @repo/admin dev
-    ports:
-      - "5990:5990"
-
   accounts:
     <<: *base
     depends_on:

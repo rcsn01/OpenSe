@@ -19,7 +19,7 @@ Use this skill/prompt context whenever instructing an agent to write Playwright 
 ## Playwright Conventions for Open-SE
 
 - **Use Page Object Model (POM):** Abstract selectors and common interactions into `tests/tests/pages/*Page.ts`. Tests should read like user stories, not CSS selector lists.
-- **Use Fixtures for Auth:** Leverage `tests/tests/fixtures/auth.ts` and role-based fixtures (e.g., `adminAuth`, `etlAuth`) to avoid repeating login flows in every test.
+- **Use Fixtures for Auth:** Leverage `tests/tests/fixtures/auth.ts` and role-based fixtures (e.g., `etlAuth`, `accountsAuth`) to avoid repeating login flows in every test.
 - **Assert on what the user sees:** Prefer `expect(page).toHaveURL()`, `toBeVisible()`, `toHaveText()`, and user-centric locators (`getByRole`, `getByLabel`) over implementation-specific selectors (`data-testid` is acceptable but avoid DOM structure coupling).
 - **Environment-driven:** Respect `.env.test` and `.env.test.local`. Do not hardcode URLs or secrets in test files.
 - **Idempotency:** Tests must not depend on each other. Each test should set up its own state via UI interactions, API seeding, or fixtures, and clean up after itself where necessary.

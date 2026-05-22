@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, Palette, ShieldCheck, Workflow } from "lucide-react";
+import { Boxes, Palette, Workflow } from "lucide-react";
 import { getRuntimeConfigValue } from "@repo/shared/runtime-config";
 import { cn } from "../../lib/cn";
 
@@ -14,7 +14,7 @@ export interface SwitchAppPopoverProps {
 }
 
 type AppSwitcherItem = {
-  key: "etl" | "stoqr" | "ui-design" | "admin";
+  key: "etl" | "stoqr" | "ui-design";
   label: string;
   url: string;
   /** Path to append to base URL when switching (e.g. /dashboard to skip landing) */
@@ -26,7 +26,6 @@ const DEFAULT_APP_URLS = {
   etl: "http://localhost:5992",
   stoqr: "http://localhost:5993",
   "ui-design": "http://localhost:5999",
-  admin: "http://localhost:5990",
 } as const;
 
 function buildAppUrl(base: string, path?: string): string {
@@ -58,11 +57,6 @@ export function SwitchAppPopover({
       getRuntimeConfigValue("VITE_UI_PUBLIC_URL") ||
       getRuntimeConfigValue("VITE_UI_DESIGN_URL") ||
       DEFAULT_APP_URLS["ui-design"];
-    const adminUrl =
-      getRuntimeConfigValue("VITE_ADMIN_PUBLIC_URL") ||
-      getRuntimeConfigValue("VITE_ADMIN_URL") ||
-      DEFAULT_APP_URLS.admin;
-
     return [
       {
         key: "etl",
@@ -83,12 +77,6 @@ export function SwitchAppPopover({
         label: "UI Design",
         url: uiDesignUrl,
         icon: <Palette className="h-5 w-5" />,
-      },
-      {
-        key: "admin",
-        label: "Admin",
-        url: adminUrl,
-        icon: <ShieldCheck className="h-5 w-5" />,
       },
     ] as AppSwitcherItem[];
   }, []);

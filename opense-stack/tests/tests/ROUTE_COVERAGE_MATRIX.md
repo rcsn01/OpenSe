@@ -1,6 +1,6 @@
 # Route Coverage Matrix (Playwright)
 
-This tracker maps each app router path to route-level Playwright coverage.
+This tracker maps each public app router path to route-level Playwright coverage.
 
 Status legend:
 - `covered-existing`: already covered by previous specs
@@ -19,18 +19,6 @@ Status legend:
 | `/account*` aliases | covered-new | `apps/accounts/route-coverage.spec.ts` |
 | `*` | covered-new | `apps/accounts/route-coverage.spec.ts` |
 | Billing + seats mutation flows | needs-deep | `apps/accounts/billing-seats.spec.ts` (`E2E_ACCOUNTS_DEEP=true`) |
-
-## Admin (`apps/admin/src/App.tsx`)
-
-| Route | Status | Spec |
-|---|---|---|
-| `/god-mode` | covered-existing | `apps/admin/god-mode.spec.ts` |
-| `/login` | covered-existing | `apps/admin/auth.spec.ts` |
-| `/platform` | covered-existing | `apps/admin/platform.spec.ts` |
-| `/organisations` | covered-existing | `apps/admin/etl-admin.spec.ts`, `apps/admin/lifecycle.spec.ts` |
-| `/stoqr` | covered-existing | `apps/admin/stoqr-admin.spec.ts` |
-| `/etl-admin`, `/super-admin` aliases | covered-new | `apps/admin/route-coverage.spec.ts` |
-| `/` and `*` redirect semantics | covered-new | `apps/admin/route-coverage.spec.ts` |
 
 ## ETL (`apps/etl/src/App.tsx`)
 

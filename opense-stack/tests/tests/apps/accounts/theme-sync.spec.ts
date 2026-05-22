@@ -4,13 +4,11 @@ import { test, expect } from '@playwright/test';
 const ACCOUNTS_BASE_URL = process.env.BASE_URL_ACCOUNTS || 'http://localhost:5991';
 const ETL_BASE_URL = process.env.BASE_URL_ETL || 'http://localhost:5992';
 const STOQR_BASE_URL = process.env.BASE_URL_STOQR || 'http://localhost:5993';
-const ADMIN_BASE_URL = process.env.BASE_URL_ADMIN || 'http://localhost:5990';
 
 const applications = [
   { name: 'Accounts', url: `${ACCOUNTS_BASE_URL}/login` },
   { name: 'ETL', url: ETL_BASE_URL },
   { name: 'StoQR', url: STOQR_BASE_URL },
-  { name: 'Admin', url: `${ADMIN_BASE_URL}/login` },
 ];
 
 const expectDarkTheme = async (page: Page, appName: string) => {
@@ -33,7 +31,7 @@ const seedStaleLocalTheme = async (page: Page, url: string) => {
 };
 
 test.describe('Shared Theme Persistence', () => {
-  test('shared cookie overrides stale per-app storage across Accounts, ETL, StoQR, and Admin', async ({ page, context }) => {
+  test('shared cookie overrides stale per-app storage across Accounts, ETL, and StoQR', async ({ page, context }) => {
     for (const application of applications) {
       await seedStaleLocalTheme(page, application.url);
     }

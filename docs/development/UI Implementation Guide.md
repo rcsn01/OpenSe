@@ -38,7 +38,7 @@ Current reference:
 - `packages/ui/src/components/layout/AppLayout.tsx`
 - `packages/ui/src/components/ui/SideNav.tsx`
 
-Do not build a second sidebar/topbar system inside an app. If Accounts, Admin, ETL, or another app needs the same shell behavior, extend `AppShellLayout` instead of cloning StoQR's layout.
+Do not build a second sidebar/topbar system inside an app. If Accounts, ETL, StoQR, or another app needs the same shell behavior, extend `AppShellLayout` instead of cloning StoQR's layout.
 
 ---
 

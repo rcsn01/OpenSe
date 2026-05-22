@@ -11,19 +11,6 @@
 name: opense-prod
 
 services:
-  admin:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        APP_NAME: admin
-    image: opense/admin
-    ports:
-      - "5990:80"
-    volumes:
-      - ./apps/admin/public/config.js:/usr/share/nginx/html/config.js:ro
-    restart: unless-stopped
-
   accounts:
     build:
       context: .
