@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -68,7 +68,7 @@ vi.mock('../../hooks/queries/useProducts', () => ({
   }),
 }))
 
-const renderAdjustPage = (initialEntry = '/inventory/prod-1/adjust?barcode=BC-100&entryMethod=camera') => render(
+const renderAdjustPage = (initialEntry = '/inventory/prod-1/adjust') => render(
   <MemoryRouter initialEntries={[initialEntry]}>
     <Routes>
       <Route path="/inventory/:id/adjust" element={<ProductAdjustPage />} />
@@ -93,13 +93,13 @@ describe('ProductAdjustPage', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /confirm update/i })).toBeDisabled()
-      expect(screen.getByText('Adjust the quantity before confirming.')).toBeInTheDocument()
+      expect(screen.queryByText('Adjust the quantity before confirming.')).not.toBeInTheDocument()
     })
   })
 
   it('submits inventory adjustments without a reason payload', async () => {
     const user = userEvent.setup()
-    renderAdjustPage()
+    renderAdjustPage('/inventory/prod-1/adjust?barcode=BC-100&entryMethod=camera&returnTo=/scan/scan-actions&folderId=folder-2')
 
     const quantityInput = await screen.findByRole('spinbutton', { name: 'New quantity' })
     await waitFor(() => {
@@ -127,30 +127,111 @@ describe('ProductAdjustPage', () => {
     expect(mockMutateAsync.mock.calls[0]?.[0]).not.toHaveProperty('reason')
   })
 
-  it('renders transfer mode with stocked sources and destination locations except the source', async () => {
+  it('renders transfer mode with source and destination folder tree panels', async () => {
     renderAdjustPage('/inventory/prod-1/adjust?mode=transfer')
 
     expect(screen.getByRole('tab', { name: 'Transfer' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByLabelText('Source location')).toBeInTheDocument()
-    expect(screen.getByLabelText('Destination location')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Source' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Destination' })).toBeInTheDocument()
+    expect(screen.getByRole('tree', { name: 'Source folders' })).toBeInTheDocument()
+    expect(screen.getByRole('tree', { name: 'Destination folders' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /source location/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /destination location/i })).not.toBeInTheDocument()
     expect(screen.getByRole('spinbutton', { name: 'Transfer quantity' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Decrease transfer quantity' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Increase transfer quantity' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '+5' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '-50' })).toBeInTheDocument()
     expect(screen.getByLabelText('Transfer notes')).toBeInTheDocument()
 
-    const source = screen.getByLabelText('Source location') as HTMLSelectElement
-    const destination = screen.getByLabelText('Destination location') as HTMLSelectElement
+    const sourceTree = screen.getByRole('tree', { name: 'Source folders' })
+    const destinationTree = screen.getByRole('tree', { name: 'Destination folders' })
 
-    expect(source).toHaveDisplayValue('Warehouse, Aisle 1 (42 available)')
-    expect(Array.from(source.options).map((option) => option.textContent)).toEqual([
-      'Select source',
-      'Warehouse, Aisle 1 (42 available)',
-      'Overflow (6 available)',
-    ])
-    expect(Array.from(destination.options).map((option) => option.textContent)).toEqual([
-      'Select destination',
-      'Warehouse',
-      'Showroom',
-      'Overflow',
-    ])
+    expect(within(sourceTree).getByRole('treeitem', { name: /Aisle 1 42 available/ })).toHaveClass('active')
+    expect(within(sourceTree).getByRole('treeitem', { name: /Warehouse 0 available/ })).toHaveAttribute('aria-disabled', 'true')
+    expect(within(sourceTree).getByRole('treeitem', { name: /Showroom 0 available/ })).toHaveAttribute('aria-disabled', 'true')
+    expect(within(sourceTree).getByRole('treeitem', { name: /Overflow 6 available/ })).toBeInTheDocument()
+    expect(within(destinationTree).queryByText('Aisle 1')).not.toBeInTheDocument()
+    expect(within(destinationTree).getByText('Warehouse')).toBeInTheDocument()
+    expect(within(destinationTree).getByText('Showroom')).toBeInTheDocument()
+    expect(within(destinationTree).getByText('Overflow')).toBeInTheDocument()
+  })
+
+  it('leaves adjust location unselected for scanned product-only URLs', async () => {
+    renderAdjustPage('/inventory/prod-1/adjust?barcode=PK-300&entryMethod=camera&returnTo=/scan/scan-actions')
+
+    const folderSelect = await screen.findByRole('combobox', { name: 'Stock folder' })
+    const quantityInput = screen.getByRole('spinbutton', { name: 'New quantity' })
+
+    expect(folderSelect).toHaveValue('')
+    expect(quantityInput).toHaveValue(0)
+    expect(screen.getByRole('button', { name: /confirm update/i })).toBeDisabled()
+  })
+
+  it('preselects adjust location from a valid folderId URL', async () => {
+    renderAdjustPage('/inventory/prod-1/adjust?barcode=stoqr%3Av1%3Aproduct%3Aprod-1%3Afolder%3Afolder-4&entryMethod=camera&returnTo=/scan/scan-actions&folderId=folder-4')
+
+    const folderSelect = await screen.findByRole('combobox', { name: 'Stock folder' })
+    const quantityInput = screen.getByRole('spinbutton', { name: 'New quantity' })
+
+    expect(folderSelect).toHaveValue('folder-4')
+    expect(quantityInput).toHaveValue(6)
+    expect(screen.getByRole('button', { name: /confirm update/i })).toBeDisabled()
+  })
+
+  it('preselects transfer source from a valid folderId URL', async () => {
+    renderAdjustPage('/inventory/prod-1/adjust?mode=transfer&barcode=stoqr%3Av1%3Aproduct%3Aprod-1%3Afolder%3Afolder-4&entryMethod=camera&returnTo=/scan/scan-actions&folderId=folder-4')
+
+    const sourceTree = await screen.findByRole('tree', { name: 'Source folders' })
+    const destinationTree = screen.getByRole('tree', { name: 'Destination folders' })
+
+    expect(within(sourceTree).getByRole('treeitem', { name: /Overflow 6 available/ })).toHaveClass('active')
+    expect(within(destinationTree).queryByText('Overflow')).not.toBeInTheDocument()
+    expect(screen.getByText('6')).toBeInTheDocument()
+  })
+
+  it('leaves transfer source unselected for scanned product-only URLs', async () => {
+    renderAdjustPage('/inventory/prod-1/adjust?mode=transfer&barcode=PK-300&entryMethod=camera&returnTo=/scan/scan-actions')
+
+    const sourceTree = await screen.findByRole('tree', { name: 'Source folders' })
+
+    expect(within(sourceTree).getAllByRole('treeitem').every((item) => !item.classList.contains('active'))).toBe(true)
+    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /confirm transfer/i })).toBeDisabled()
+  })
+
+  it('selecting a positive-stock source updates availability and resets quantity', async () => {
+    const user = userEvent.setup()
+    renderAdjustPage('/inventory/prod-1/adjust?mode=transfer')
+
+    const quantityInput = screen.getByRole('spinbutton', { name: 'Transfer quantity' })
+    await user.type(quantityInput, '5')
+    expect(quantityInput).toHaveValue(5)
+
+    await user.click(screen.getByRole('treeitem', { name: /Overflow 6 available/ }))
+
+    expect(screen.getByText('6')).toBeInTheDocument()
+    expect(quantityInput).toHaveValue(0)
+  })
+
+  it('adjusts transfer quantity with the same buttons and chips as stock adjustment', async () => {
+    const user = userEvent.setup()
+    renderAdjustPage('/inventory/prod-1/adjust?mode=transfer')
+
+    const quantityInput = screen.getByRole('spinbutton', { name: 'Transfer quantity' })
+    expect(quantityInput).toHaveValue(0)
+
+    await user.click(screen.getByRole('button', { name: 'Increase transfer quantity' }))
+    expect(quantityInput).toHaveValue(1)
+
+    await user.click(screen.getByRole('button', { name: '+50' }))
+    expect(quantityInput).toHaveValue(42)
+
+    await user.click(screen.getByRole('button', { name: 'Decrease transfer quantity' }))
+    expect(quantityInput).toHaveValue(41)
+
+    await user.click(screen.getByRole('button', { name: '-50' }))
+    expect(quantityInput).toHaveValue(0)
   })
 
   it('disables transfer confirm for missing, invalid, over-available, and same-location selections', async () => {
@@ -158,12 +239,12 @@ describe('ProductAdjustPage', () => {
     renderAdjustPage('/inventory/prod-1/adjust?mode=transfer')
 
     const confirmButton = screen.getByRole('button', { name: /confirm transfer/i })
-    const destination = screen.getByLabelText('Destination location')
+    const destinationTree = screen.getByRole('tree', { name: 'Destination folders' })
     const quantityInput = screen.getByRole('spinbutton', { name: 'Transfer quantity' })
 
     expect(confirmButton).toBeDisabled()
 
-    await user.selectOptions(destination, 'folder-3')
+    await user.click(within(destinationTree).getByText('Showroom'))
     await user.type(quantityInput, '0')
     expect(confirmButton).toBeDisabled()
 
@@ -175,19 +256,17 @@ describe('ProductAdjustPage', () => {
     await user.type(quantityInput, '4')
     expect(confirmButton).not.toBeDisabled()
 
-    await user.selectOptions(destination, 'folder-4')
-    await user.selectOptions(screen.getByLabelText('Source location'), 'folder-4')
+    await user.click(screen.getByRole('treeitem', { name: /Overflow 6 available/ }))
     expect(confirmButton).toBeDisabled()
 
-    fireEvent.change(destination, { target: { value: 'folder-4' } })
-    expect(confirmButton).toBeDisabled()
+    expect(within(destinationTree).queryByText('Overflow')).not.toBeInTheDocument()
   })
 
   it('submits stock transfers through the transfer mutation payload', async () => {
     const user = userEvent.setup()
     renderAdjustPage('/inventory/prod-1/adjust?mode=transfer')
 
-    await user.selectOptions(screen.getByLabelText('Destination location'), 'folder-3')
+    await user.click(within(screen.getByRole('tree', { name: 'Destination folders' })).getByText('Showroom'))
     await user.type(screen.getByRole('spinbutton', { name: 'Transfer quantity' }), '5')
     await user.type(screen.getByLabelText('Transfer notes'), '  Move to showroom  ')
     await user.click(screen.getByRole('button', { name: /confirm transfer/i }))

@@ -84,10 +84,13 @@ export const ScanPage = () => {
     setScanValue(suggestion.value)
     setEntryMethod('manual')
   }, [])
-  const handleProductResolved = useCallback((product: Product, context: { scanValue: string; entryMethod: 'camera' | 'manual' }) => {
+  const handleProductResolved = useCallback((product: Product, context: { scanValue: string; entryMethod: 'camera' | 'manual'; folderId: string | null }) => {
     const params = new URLSearchParams()
     if (context.scanValue.trim()) {
       params.set('barcode', context.scanValue.trim())
+    }
+    if (context.folderId) {
+      params.set('folderId', context.folderId)
     }
     params.set('entryMethod', context.entryMethod)
     params.set('returnTo', '/scan/scan-actions')

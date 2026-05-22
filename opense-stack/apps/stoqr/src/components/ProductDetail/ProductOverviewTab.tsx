@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { InventoryTransaction, Product } from '../../types'
 import { bindStyles } from '../../lib/bindStyles'
+import { buildProductLocationScanPayload } from '../../lib/scanPayload'
 import styles from './ProductDetailSurface.module.css'
 
 const sx = bindStyles(styles)
@@ -154,8 +155,18 @@ export const ProductOverviewTab = ({
               {locationStocks.map((stock) => {
                 const reorderPoint = stock.reorder_point || product.reorder_point || 0
                 const status = getStockStatus(stock.quantity_on_hand, reorderPoint)
+                const locationQrValue = buildProductLocationScanPayload(product.id, stock.folder_id)
                 return (
                   <div key={stock.folder_id} className={sx('product-location-stock-row')}>
+                    <div className={sx('product-location-stock-qr-frame')}>
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(locationQrValue)}`}
+                        alt={`QR code for ${stock.folder_name ?? stock.folder_id}`}
+                        width={48}
+                        height={48}
+                        className={sx('product-location-stock-qr-image')}
+                      />
+                    </div>
                     <div className={sx('product-location-stock-location')}>
                       <span className={sx('product-location-stock-name')}>{stock.folder_name ?? stock.folder_id}</span>
                       <span className={sx('product-location-stock-path')}>Location</span>

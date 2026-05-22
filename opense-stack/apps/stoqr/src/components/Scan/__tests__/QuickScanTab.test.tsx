@@ -55,6 +55,7 @@ describe('QuickScanTab', () => {
     mockUseQuickScanLookup.mockReturnValue({
       data: {
         product: null,
+        folderId: null,
         notFoundSku: 'UNKNOWN-100',
         lastHandledBy: '-',
         lastUpdatedAt: null,
@@ -80,6 +81,7 @@ describe('QuickScanTab', () => {
     mockUseQuickScanLookup.mockReturnValue({
       data: {
         product: defaultProduct,
+        folderId: null,
         notFoundSku: null,
         lastHandledBy: 'Jane Doe',
         lastUpdatedAt: '2026-05-05T10:00:00Z',
@@ -104,6 +106,39 @@ describe('QuickScanTab', () => {
       expect(onProductResolved).toHaveBeenCalledWith(defaultProduct, {
         scanValue: 'COF-AERO-001',
         entryMethod: 'manual',
+        folderId: null,
+      })
+    })
+  })
+
+  it('hands product-location folder context to the adjustment page flow', async () => {
+    const onProductResolved = vi.fn()
+    mockUseQuickScanLookup.mockReturnValue({
+      data: {
+        product: defaultProduct,
+        folderId: 'folder-2',
+        notFoundSku: null,
+        lastHandledBy: 'Jane Doe',
+        lastUpdatedAt: '2026-05-05T10:00:00Z',
+      },
+      isLoading: false,
+    })
+
+    render(
+      <QuickScanTab
+        scanValue="stoqr:v1:product:prod-1:folder:folder-2"
+        setScanValue={vi.fn()}
+        companyId="company-1"
+        entryMethod="camera"
+        onProductResolved={onProductResolved}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(onProductResolved).toHaveBeenCalledWith(defaultProduct, {
+        scanValue: 'stoqr:v1:product:prod-1:folder:folder-2',
+        entryMethod: 'camera',
+        folderId: 'folder-2',
       })
     })
   })
@@ -113,6 +148,7 @@ describe('QuickScanTab', () => {
     mockUseQuickScanLookup.mockReturnValue({
       data: {
         product: defaultProduct,
+        folderId: null,
         notFoundSku: null,
         lastHandledBy: 'Jane Doe',
         lastUpdatedAt: '2026-05-05T10:00:00Z',
@@ -153,6 +189,7 @@ describe('QuickScanTab', () => {
     mockUseQuickScanLookup.mockReturnValue({
       data: {
         product: defaultProduct,
+        folderId: null,
         notFoundSku: null,
         lastHandledBy: 'Jane Doe',
         lastUpdatedAt: '2026-05-05T10:00:00Z',
