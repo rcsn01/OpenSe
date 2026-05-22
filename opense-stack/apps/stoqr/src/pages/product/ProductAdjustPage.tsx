@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, Minus, Plus } from 'lucide-react'
+import { ArrowLeft, ArrowRightLeft, Check, Minus, Plus } from 'lucide-react'
 import { EmptyState } from '@repo/ui'
 
 import { BasePage } from '../../components/BasePage'
 import { useCompany } from '../../contexts/CompanyContext'
-import { useProductDetail, useProductFolders } from '../../hooks/queries/useProducts'
+import { useProductDetail, useProductFolders, useTransferProductStock } from '../../hooks/queries/useProducts'
 import { useQuickScanTransaction, useQuickScanUser } from '../../hooks/queries/useQuickScan'
 import { getPublicImageUrl } from '../../utils'
 import '../../components/Scan/ScanSurface.css'
@@ -57,30 +57,40 @@ const getEntryMethod = (value: string | null): 'camera' | 'manual' => (value ===
 export const ProductAdjustPage = () => {
   const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { companyId } = useCompany()
   const { data, isLoading, refetch } = useProductDetail(companyId, id ?? null)
   const { data: folders = [] } = useProductFolders(companyId)
   const { data: userId } = useQuickScanUser()
   const transactionMutation = useQuickScanTransaction()
+  const transferMutation = useTransferProductStock(companyId, id ?? null)
 
   const product = data?.product ?? null
   const lastUpdatedAt = data?.transactions[0]?.created_at ?? null
   const barcode = searchParams.get('barcode') || product?.sku || null
   const entryMethod = getEntryMethod(searchParams.get('entryMethod'))
   const returnTo = searchParams.get('returnTo')
+  const mode = searchParams.get('mode') === 'transfer' ? 'transfer' : 'adjust'
 
   const [draftQuantity, setDraftQuantity] = useState(0)
   const [selectedFolderId, setSelectedFolderId] = useState('')
   const [note, setNote] = useState('')
+  const [transferSourceFolderId, setTransferSourceFolderId] = useState('')
+  const [transferDestinationFolderId, setTransferDestinationFolderId] = useState('')
+  const [transferQuantity, setTransferQuantity] = useState('')
+  const [transferNote, setTransferNote] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (product) {
       const initialFolderId = product.folder_stocks?.[0]?.folder_id ?? product.folder_id ?? ''
       const initialFolderStock = product.folder_stocks?.find((stock) => stock.folder_id === initialFolderId)
+      const initialTransferSourceId = product.folder_stocks?.find((stock) => stock.quantity_on_hand > 0)?.folder_id ?? ''
       setSelectedFolderId(initialFolderId)
       setDraftQuantity(initialFolderStock?.quantity_on_hand ?? product.quantity_on_hand)
+      setTransferSourceFolderId(initialTransferSourceId)
+      setTransferDestinationFolderId('')
+      setTransferQuantity('')
       setMessage(null)
     }
   }, [product])
@@ -90,6 +100,28 @@ export const ProductAdjustPage = () => {
     [product?.folder_stocks, selectedFolderId],
   )
   const currentFolderQuantity = selectedFolderStock?.quantity_on_hand ?? product?.quantity_on_hand ?? 0
+
+  const stockedFolderStocks = useMemo(
+    () => product?.folder_stocks?.filter((stock) => stock.quantity_on_hand > 0) ?? [],
+    [product?.folder_stocks],
+  )
+
+  const transferSourceStock = useMemo(
+    () => stockedFolderStocks.find((stock) => stock.folder_id === transferSourceFolderId) ?? null,
+    [stockedFolderStocks, transferSourceFolderId],
+  )
+  const transferAvailableQuantity = transferSourceStock?.quantity_on_hand ?? 0
+  const transferQuantityNumber = Number(transferQuantity)
+  const hasValidTransferQuantity = (
+    transferQuantity.trim().length > 0 &&
+    Number.isInteger(transferQuantityNumber) &&
+    transferQuantityNumber >= 1 &&
+    transferQuantityNumber <= transferAvailableQuantity
+  )
+  const destinationFolders = useMemo(
+    () => folders.filter((folder) => folder.id !== transferSourceFolderId),
+    [folders, transferSourceFolderId],
+  )
 
   const locationLabel = useMemo(
     () => buildFolderPathLabel(selectedFolderId || product?.folder_id || null, folders),
@@ -103,7 +135,28 @@ export const ProductAdjustPage = () => {
 
   const hasQuantityChange = product ? draftQuantity !== currentFolderQuantity : false
   const canConfirm = !!product && !!selectedFolderId && !transactionMutation.isPending && hasQuantityChange
-  const statusMessage = message ?? (product && selectedFolderId && !hasQuantityChange ? 'Adjust the quantity before confirming.' : null)
+  const canConfirmTransfer = (
+    !!product &&
+    !!transferSourceFolderId &&
+    !!transferDestinationFolderId &&
+    transferSourceFolderId !== transferDestinationFolderId &&
+    hasValidTransferQuantity &&
+    !transferMutation.isPending
+  )
+  const statusMessage = message ?? (
+    mode === 'adjust' && product && selectedFolderId && !hasQuantityChange ? 'Adjust the quantity before confirming.' : null
+  )
+
+  const handleModeChange = (nextMode: 'adjust' | 'transfer') => {
+    const nextSearchParams = new URLSearchParams(searchParams)
+    if (nextMode === 'transfer') {
+      nextSearchParams.set('mode', 'transfer')
+    } else {
+      nextSearchParams.delete('mode')
+    }
+    setSearchParams(nextSearchParams, { replace: true })
+    setMessage(null)
+  }
 
   const handleBack = () => {
     if (returnTo) {
@@ -166,6 +219,40 @@ export const ProductAdjustPage = () => {
     }
   }
 
+  const handleTransferConfirm = async () => {
+    if (!product) return
+
+    if (!transferSourceFolderId) {
+      setMessage('Select a source location before transferring stock.')
+      return
+    }
+
+    if (!transferDestinationFolderId || transferSourceFolderId === transferDestinationFolderId) {
+      setMessage('Select a different destination location.')
+      return
+    }
+
+    if (!hasValidTransferQuantity) {
+      setMessage(`Enter a quantity from 1 to ${transferAvailableQuantity}.`)
+      return
+    }
+
+    try {
+      await transferMutation.mutateAsync({
+        fromFolderId: transferSourceFolderId,
+        toFolderId: transferDestinationFolderId,
+        quantity: transferQuantityNumber,
+        notes: transferNote,
+      })
+      setMessage('Stock transferred.')
+      setTransferQuantity('')
+      setTransferNote('')
+      await refetch()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Transfer failed.')
+    }
+  }
+
   if (!id) {
     return <EmptyState title="Product not found" description="Missing product id in route." />
   }
@@ -217,133 +304,258 @@ export const ProductAdjustPage = () => {
                     <p className="scan-product-sku">{product.sku || 'No SKU assigned'}</p>
                   </div>
                   <h2 className="scan-product-name">{product.name}</h2>
+                  <div className="scan-mode-segment" role="tablist" aria-label="Stock action">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={mode === 'adjust'}
+                      className={`scan-mode-button${mode === 'adjust' ? ' is-active' : ''}`}
+                      onClick={() => handleModeChange('adjust')}
+                    >
+                      Adjust
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={mode === 'transfer'}
+                      className={`scan-mode-button${mode === 'transfer' ? ' is-active' : ''}`}
+                      onClick={() => handleModeChange('transfer')}
+                    >
+                      Transfer
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <dl className="scan-product-meta-grid">
-                <div className="scan-product-meta-row">
-                  <dt>Location</dt>
-                  <dd>
-                    <select
-                      className="scan-reason-select"
-                      aria-label="Stock folder"
-                      value={selectedFolderId}
+              {mode === 'adjust' ? (
+                <>
+                  <dl className="scan-product-meta-grid">
+                    <div className="scan-product-meta-row">
+                      <dt>Location</dt>
+                      <dd>
+                        <select
+                          className="scan-reason-select product-adjust-select"
+                          aria-label="Stock folder"
+                          value={selectedFolderId}
+                          onChange={(event) => {
+                            const nextFolderId = event.target.value
+                            const nextStock = product.folder_stocks?.find((stock) => stock.folder_id === nextFolderId)
+                            setSelectedFolderId(nextFolderId)
+                            setDraftQuantity(nextStock?.quantity_on_hand ?? 0)
+                            setMessage(null)
+                          }}
+                        >
+                          <option value="">Select folder</option>
+                          {folders.map((folder) => (
+                            <option key={folder.id} value={folder.id}>
+                              {buildFolderPathLabel(folder.id, folders)}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="sr-only">{locationLabel}</span>
+                      </dd>
+                    </div>
+                    <div className="scan-product-meta-row">
+                      <dt>Last updated</dt>
+                      <dd>{formatRelativeTime(lastUpdatedAt)}</dd>
+                    </div>
+                  </dl>
+
+                  <div className="scan-update-fields-row">
+                    <div className="scan-update-section">
+                      <p className="scan-update-label">Optional Notes</p>
+                      <textarea
+                        className="scan-update-notes"
+                        aria-label="Optional Notes"
+                        placeholder="Add details..."
+                        value={note}
+                        onChange={(event) => {
+                          setNote(event.target.value)
+                          setMessage(null)
+                        }}
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="scan-transfer-panel" aria-label="Transfer stock">
+                  <div className="scan-transfer-grid">
+                    <label className="scan-transfer-field">
+                      <span className="scan-update-label">Source Location</span>
+                      <select
+                        className="product-adjust-select"
+                        aria-label="Source location"
+                        value={transferSourceFolderId}
+                        onChange={(event) => {
+                          setTransferSourceFolderId(event.target.value)
+                          setTransferDestinationFolderId((current) => (current === event.target.value ? '' : current))
+                          setTransferQuantity('')
+                          setMessage(null)
+                        }}
+                      >
+                        <option value="">Select source</option>
+                        {stockedFolderStocks.map((stock) => (
+                          <option key={stock.folder_id} value={stock.folder_id}>
+                            {buildFolderPathLabel(stock.folder_id, folders)} ({stock.quantity_on_hand} available)
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="scan-transfer-field">
+                      <span className="scan-update-label">Destination Location</span>
+                      <select
+                        className="product-adjust-select"
+                        aria-label="Destination location"
+                        value={transferDestinationFolderId}
+                        onChange={(event) => {
+                          setTransferDestinationFolderId(event.target.value)
+                          setMessage(null)
+                        }}
+                      >
+                        <option value="">Select destination</option>
+                        {destinationFolders.map((folder) => (
+                          <option key={folder.id} value={folder.id}>
+                            {buildFolderPathLabel(folder.id, folders)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="scan-update-section">
+                    <p className="scan-update-label">Optional Notes</p>
+                    <textarea
+                      className="scan-update-notes"
+                      aria-label="Transfer notes"
+                      placeholder="Add details..."
+                      value={transferNote}
                       onChange={(event) => {
-                        const nextFolderId = event.target.value
-                        const nextStock = product.folder_stocks?.find((stock) => stock.folder_id === nextFolderId)
-                        setSelectedFolderId(nextFolderId)
-                        setDraftQuantity(nextStock?.quantity_on_hand ?? 0)
+                        setTransferNote(event.target.value)
                         setMessage(null)
                       }}
-                    >
-                      <option value="">Select folder</option>
-                      {folders.map((folder) => (
-                        <option key={folder.id} value={folder.id}>
-                          {buildFolderPathLabel(folder.id, folders)}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="sr-only">{locationLabel}</span>
-                  </dd>
+                      rows={2}
+                    />
+                  </div>
                 </div>
-                <div className="scan-product-meta-row">
-                  <dt>Last updated</dt>
-                  <dd>{formatRelativeTime(lastUpdatedAt)}</dd>
-                </div>
-              </dl>
-
-              <div className="scan-update-fields-row">
-                <div className="scan-update-section">
-                  <p className="scan-update-label">Optional Notes</p>
-                  <textarea
-                    className="scan-update-notes"
-                    aria-label="Optional Notes"
-                    placeholder="Add details..."
-                    value={note}
-                    onChange={(event) => {
-                      setNote(event.target.value)
-                      setMessage(null)
-                    }}
-                    rows={2}
-                  />
-                </div>
-              </div>
+              )}
             </section>
 
-            <section className="scan-update-controls">
-              <div className="scan-current-stock-row">
-                <span className="scan-update-label">Current Stock</span>
-                <strong className="scan-current-stock-value">{currentFolderQuantity}</strong>
-              </div>
-
-              <div className="scan-quantity-stage">
-                <p className="scan-update-label scan-update-label--center">New Quantity</p>
-
-                <div className="scan-quantity-row">
-                  <button
-                    type="button"
-                    className="scan-quantity-button"
-                    aria-label="Decrease quantity"
-                    onClick={() => handleDraftAdjust(-1)}
-                  >
-                    <Minus size={22} />
-                  </button>
-
-                  <input
-                    className="scan-quantity-input"
-                    type="number"
-                    min={0}
-                    value={draftQuantity}
-                    aria-label="New quantity"
-                    onChange={(event) => handleDraftInput(event.target.value)}
-                  />
-
-                  <button
-                    type="button"
-                    className="scan-quantity-button"
-                    aria-label="Increase quantity"
-                    onClick={() => handleDraftAdjust(1)}
-                  >
-                    <Plus size={22} />
-                  </button>
+            {mode === 'adjust' ? (
+              <section className="scan-update-controls">
+                <div className="scan-current-stock-row">
+                  <span className="scan-update-label">Current Stock</span>
+                  <strong className="scan-current-stock-value">{currentFolderQuantity}</strong>
                 </div>
 
-                <div className="scan-quick-adjust-grid">
-                  {QUICK_ADJUSTMENTS.map((adjustment) => (
+                <div className="scan-quantity-stage">
+                  <p className="scan-update-label scan-update-label--center">New Quantity</p>
+
+                  <div className="scan-quantity-row">
                     <button
-                      key={`plus-${adjustment}`}
                       type="button"
-                      className="scan-chip-button"
-                      onClick={() => handleDraftAdjust(adjustment)}
+                      className="scan-quantity-button"
+                      aria-label="Decrease quantity"
+                      onClick={() => handleDraftAdjust(-1)}
                     >
-                      +{adjustment}
+                      <Minus size={22} />
                     </button>
-                  ))}
-                  {QUICK_ADJUSTMENTS.map((adjustment) => (
+
+                    <input
+                      className="scan-quantity-input"
+                      type="number"
+                      min={0}
+                      value={draftQuantity}
+                      aria-label="New quantity"
+                      onChange={(event) => handleDraftInput(event.target.value)}
+                    />
+
                     <button
-                      key={`minus-${adjustment}`}
                       type="button"
-                      className="scan-chip-button"
-                      onClick={() => handleDraftAdjust(-adjustment)}
+                      className="scan-quantity-button"
+                      aria-label="Increase quantity"
+                      onClick={() => handleDraftAdjust(1)}
                     >
-                      -{adjustment}
+                      <Plus size={22} />
                     </button>
-                  ))}
+                  </div>
+
+                  <div className="scan-quick-adjust-grid">
+                    {QUICK_ADJUSTMENTS.map((adjustment) => (
+                      <button
+                        key={`plus-${adjustment}`}
+                        type="button"
+                        className="scan-chip-button"
+                        onClick={() => handleDraftAdjust(adjustment)}
+                      >
+                        +{adjustment}
+                      </button>
+                    ))}
+                    {QUICK_ADJUSTMENTS.map((adjustment) => (
+                      <button
+                        key={`minus-${adjustment}`}
+                        type="button"
+                        className="scan-chip-button"
+                        onClick={() => handleDraftAdjust(-adjustment)}
+                      >
+                        -{adjustment}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {statusMessage ? <p className="scan-update-message">{statusMessage}</p> : null}
+                {statusMessage ? <p className="scan-update-message">{statusMessage}</p> : null}
 
-              <button
-                type="button"
-                className="scan-confirm-button"
-                onClick={handleConfirm}
-                disabled={!canConfirm}
-              >
-                <Check size={16} />
-                {transactionMutation.isPending ? 'Updating...' : 'Confirm Update'}
-              </button>
-            </section>
+                <button
+                  type="button"
+                  className="scan-confirm-button"
+                  onClick={handleConfirm}
+                  disabled={!canConfirm}
+                >
+                  <Check size={16} />
+                  {transactionMutation.isPending ? 'Updating...' : 'Confirm Update'}
+                </button>
+              </section>
+            ) : (
+              <section className="scan-update-controls">
+                <div className="scan-current-stock-row">
+                  <span className="scan-update-label">Available to Transfer</span>
+                  <strong className="scan-current-stock-value">{transferAvailableQuantity}</strong>
+                </div>
+
+                <div className="scan-quantity-stage">
+                  <p className="scan-update-label scan-update-label--center">Transfer Quantity</p>
+                  <div className="scan-transfer-quantity-row">
+                    <input
+                      className="scan-quantity-input"
+                      type="number"
+                      min={1}
+                      max={transferAvailableQuantity || undefined}
+                      step={1}
+                      value={transferQuantity}
+                      aria-label="Transfer quantity"
+                      onChange={(event) => {
+                        setTransferQuantity(event.target.value)
+                        setMessage(null)
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {statusMessage ? <p className="scan-update-message">{statusMessage}</p> : null}
+
+                <button
+                  type="button"
+                  className="scan-confirm-button"
+                  onClick={handleTransferConfirm}
+                  disabled={!canConfirmTransfer}
+                >
+                  <ArrowRightLeft size={16} />
+                  {transferMutation.isPending ? 'Transferring...' : 'Confirm Transfer'}
+                </button>
+              </section>
+            )}
           </div>
         </section>
       ) : (

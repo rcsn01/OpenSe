@@ -38,6 +38,15 @@ export type CreateProductPayload = {
 
 export type UpdateProductPayload = CreateProductPayload
 
+export type TransferProductStockParams = {
+  companyId: string
+  productId: string
+  fromFolderId: string
+  toFolderId: string
+  quantity: number
+  notes?: string | null
+}
+
 export type ProductAttributeCatalogEntry = {
   key: string
   type: CustomFieldType
@@ -285,6 +294,22 @@ export const updateProduct = async (
   if (updateImagesError) throw updateImagesError
 
   return { id: productId }
+}
+
+export const transferProductStock = async (params: TransferProductStockParams): Promise<string> => {
+  const { data, error } = await supabase.rpc('transfer_stoqr_product_stock', {
+    target_company_id: params.companyId,
+    target_product_id: params.productId,
+    from_folder_id: params.fromFolderId,
+    to_folder_id: params.toFolderId,
+    transfer_quantity: params.quantity,
+    transfer_notes: normalizeOptionalText(params.notes),
+  })
+
+  if (error) throw error
+  if (!data) throw new Error('Stock transfer did not return a transfer group id')
+
+  return String(data)
 }
 
 export const fetchProductDetail = async (

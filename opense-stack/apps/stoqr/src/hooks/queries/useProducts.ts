@@ -4,7 +4,9 @@ import {
   fetchProductAttributeCatalog,
   fetchProductDetail,
   fetchProductFolders,
+  transferProductStock,
   type CreateProductPayload,
+  type TransferProductStockParams,
   updateProduct,
   type UpdateProductPayload,
 } from '../../api/products'
@@ -75,6 +77,30 @@ export const useUpdateProduct = (companyId: string | null, productId: string | n
       if (variables.payload.folderId) {
         queryClient.invalidateQueries({ queryKey: productKeys.folders(companyId) })
       }
+    },
+  })
+}
+
+export const useTransferProductStock = (companyId: string | null, productId: string | null) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: Omit<TransferProductStockParams, 'companyId' | 'productId'>) => {
+      if (!companyId) throw new Error('No company selected')
+      if (!productId) throw new Error('No product selected')
+      return transferProductStock({
+        companyId,
+        productId,
+        ...payload,
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: productKeys.detail(companyId, productId) })
+      queryClient.invalidateQueries({ queryKey: ['stoqr', 'inventory'] })
+      queryClient.invalidateQueries({ queryKey: ['stoqr', 'dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['stoqr', 'alerts'] })
+      queryClient.invalidateQueries({ queryKey: ['stoqr', 'reports'] })
+      queryClient.invalidateQueries({ queryKey: ['stoqr', 'procurement'] })
     },
   })
 }

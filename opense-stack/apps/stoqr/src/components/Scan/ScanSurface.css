@@ -379,6 +379,34 @@
   overflow-wrap: anywhere;
 }
 
+.scan-mode-segment {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 22px;
+  padding: 4px;
+  border: 1px solid #edf1f7;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.scan-mode-button {
+  min-width: 90px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #667085;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scan-mode-button.is-active {
+  background: #fff;
+  color: #10223d;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 8%);
+}
+
 .scan-product-meta-grid {
   display: grid;
   gap: 18px;
@@ -464,6 +492,23 @@
   outline: none;
 }
 
+.product-adjust-select {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #dfe6f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #10223d;
+  padding: 0 12px;
+  font-size: 0.95rem;
+}
+
+.product-adjust-select:focus {
+  outline: none;
+  border-color: #10223d;
+}
+
 .scan-reason-option {
   display: inline-flex;
   align-items: center;
@@ -504,6 +549,27 @@
 
 .scan-update-notes::placeholder {
   color: #9aa6bb;
+}
+
+.scan-transfer-panel {
+  display: grid;
+  gap: 28px;
+}
+
+.scan-transfer-grid {
+  display: grid;
+  gap: 18px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid #edf1f7;
+}
+
+.scan-transfer-field {
+  display: grid;
+  gap: 10px;
+}
+
+.scan-transfer-field .scan-update-label {
+  margin-bottom: 0;
 }
 
 .scan-current-stock-row {
@@ -585,6 +651,11 @@
 
 .scan-quantity-input[type="number"] {
   -moz-appearance: textfield;
+}
+
+.scan-transfer-quantity-row {
+  width: 100%;
+  max-width: 240px;
 }
 
 .scan-quick-adjust-grid {
