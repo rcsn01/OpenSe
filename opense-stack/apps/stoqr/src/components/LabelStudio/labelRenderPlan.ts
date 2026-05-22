@@ -113,7 +113,7 @@ const wrapText = (value: string, maxCharactersPerLine: number) => {
 }
 
 export const buildLabelRenderPlan = (
-  product: Pick<LabelProduct, 'id' | 'name' | 'sku' | 'selling_price'>,
+  product: Pick<LabelProduct, 'id' | 'name' | 'sku' | 'selling_price'> & Partial<Pick<LabelProduct, 'location_label'>>,
   layoutInput: Record<string, unknown> | LabelLayoutControls | null | undefined,
 ): LabelRenderPlan => {
   const layout = resolveLabelLayout(layoutInput as Record<string, unknown> | null | undefined)
@@ -165,6 +165,10 @@ export const buildLabelRenderPlan = (
 
   if (layout.showSku && product.sku) {
     addTextItem('sku', `SKU: ${product.sku}`, secondaryFontSize, 'regular')
+  }
+
+  if (layout.showLocation) {
+    addTextItem('location', `Location: ${product.location_label ?? 'Unassigned'}`, secondaryFontSize, 'regular')
   }
 
   if (layout.showPrice) {

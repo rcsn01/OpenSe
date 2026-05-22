@@ -34,7 +34,7 @@ beforeEach(() => {
 describe('label studio api', () => {
   it('fetches label products with search filter', async () => {
     const queryResult = {
-      data: [{ id: 'p-1', name: 'Label Product', sku: 'LBL-1', folder_id: 'folder-a' }],
+      data: [{ id: 'p-1', name: 'Label Product', sku: 'LBL-1', folder_id: 'folder-b', selling_price: null }],
       error: null,
     }
 
@@ -53,6 +53,22 @@ describe('label studio api', () => {
     mockDbFrom.mockImplementation((table: string) => {
       if (table === 'products') {
         return query
+      }
+
+      if (table === 'folders') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  { id: 'folder-a', name: 'Warehouse', parent_id: null },
+                  { id: 'folder-b', name: 'Aisle 1', parent_id: 'folder-a' },
+                ],
+                error: null,
+              }),
+            })),
+          })),
+        }
       }
 
       throw new Error(`Unexpected table: ${table}`)
@@ -60,31 +76,70 @@ describe('label studio api', () => {
 
     const rows = await fetchLabelProducts('company-1', 'LBL')
 
-    expect(rows).toEqual([{ id: 'p-1', name: 'Label Product', sku: 'LBL-1', folder_id: 'folder-a' }])
+    expect(rows).toEqual([
+      {
+        id: 'p-1',
+        name: 'Label Product',
+        sku: 'LBL-1',
+        folder_id: 'folder-b',
+        selling_price: null,
+        location_label: 'Warehouse / Aisle 1',
+      },
+    ])
     expect(query.or).toHaveBeenCalledWith('name.ilike.%LBL%,sku.ilike.%LBL%')
   })
 
   it('fetches label products scoped to selected folder', async () => {
     const queryResult = {
-      data: [{ id: 'p-2', name: 'Folder Product', sku: 'FLD-1', folder_id: 'folder-b' }],
+      data: [{ id: 'p-2', name: 'Folder Product', sku: 'FLD-1', folder_id: 'folder-c', selling_price: null }],
       error: null,
     }
 
     const query = {
       select: vi.fn(),
       eq: vi.fn(),
+      in: vi.fn(),
       order: vi.fn(),
       or: vi.fn(),
     }
 
     query.select.mockReturnValue(query)
     query.eq.mockReturnValue(query)
+    query.in.mockReturnValue(query)
     query.order.mockReturnValue(query)
     query.or.mockResolvedValue(queryResult)
 
+    const stockEqFolder = vi.fn().mockResolvedValue({
+      data: [{ product_id: 'p-2' }],
+      error: null,
+    })
+    const stockEqCompany = vi.fn(() => ({ eq: stockEqFolder }))
+    const stockSelect = vi.fn(() => ({ eq: stockEqCompany }))
+
     mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'product_folder_stocks') {
+        return { select: stockSelect }
+      }
+
       if (table === 'products') {
         return query
+      }
+
+      if (table === 'folders') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  { id: 'folder-a', name: 'Warehouse', parent_id: null },
+                  { id: 'folder-b', name: 'Aisle 1', parent_id: 'folder-a' },
+                  { id: 'folder-c', name: 'Overflow', parent_id: null },
+                ],
+                error: null,
+              }),
+            })),
+          })),
+        }
       }
 
       throw new Error(`Unexpected table: ${table}`)
@@ -92,13 +147,23 @@ describe('label studio api', () => {
 
     const rows = await fetchLabelProducts('company-1', 'FLD', 'folder-b')
 
-    expect(rows).toEqual([{ id: 'p-2', name: 'Folder Product', sku: 'FLD-1', folder_id: 'folder-b' }])
-    expect(query.eq).toHaveBeenCalledWith('folder_id', 'folder-b')
+    expect(rows).toEqual([
+      {
+        id: 'p-2',
+        name: 'Folder Product',
+        sku: 'FLD-1',
+        folder_id: 'folder-c',
+        selling_price: null,
+        location_label: 'Warehouse / Aisle 1',
+      },
+    ])
+    expect(query.in).toHaveBeenCalledWith('id', ['p-2'])
+    expect(query.eq).not.toHaveBeenCalledWith('folder_id', 'folder-b')
   })
 
   it('fetches label product folders', async () => {
     const order = vi.fn().mockResolvedValue({
-      data: [{ id: 'folder-a', name: 'Beverages' }],
+      data: [{ id: 'folder-a', name: 'Beverages', parent_id: null }],
       error: null,
     })
 
@@ -116,7 +181,7 @@ describe('label studio api', () => {
 
     const rows = await fetchLabelProductFolders('company-1')
 
-    expect(rows).toEqual([{ id: 'folder-a', name: 'Beverages' }])
+    expect(rows).toEqual([{ id: 'folder-a', name: 'Beverages', parent_id: null }])
     expect(eq).toHaveBeenCalledWith('company_id', 'company-1')
     expect(order).toHaveBeenCalledWith('name')
   })
