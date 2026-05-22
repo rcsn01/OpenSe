@@ -557,9 +557,9 @@ export function OrganisationPermissionsPanel({
                 sortDirection={roleSortDirection}
                 onSortChange={handleRoleSortChange}
                 getRowProps={(row) => {
-                  const canEditRow = usesRoutedEdit && canManage && row.editable && !saving;
+                  const canOpenRole = usesRoutedEdit && canManage && !saving;
 
-                  return canEditRow
+                  return canOpenRole
                     ? {
                         className: "cursor-pointer hover:bg-[var(--color-muted)]",
                         onClick: () => onEditRole?.(row.id),

@@ -10,6 +10,10 @@ ON CONFLICT (company_id, name) DO UPDATE
 SET description = EXCLUDED.description,
     role_rank = EXCLUDED.role_rank;
 
+-- Repair system-managed StoQR baseline roles after custom seed roles.
+SELECT public.ensure_stoqr_guest_role(o.id)
+FROM public.organisations o;
+
 INSERT INTO stoqr.role_permissions (role_id, permission_code)
 VALUES
   ('20202020-2020-2020-2020-202020202020', 'dashboard.view'),
@@ -76,6 +80,18 @@ JOIN stoqr.roles sr
  AND sr.name = src.role_name
 ON CONFLICT (user_id, company_id) DO UPDATE
 SET role_id = EXCLUDED.role_id;
+
+-- Any seeded StoQR seat without an explicit role starts as Guest.
+INSERT INTO stoqr.organisation_member_roles (user_id, company_id, role_id)
+SELECT om.user_id, om.org_id, guest_role.id
+FROM public.organisation_member_app_seats mas
+JOIN public.organisation_members om
+  ON om.id = mas.org_member_id
+JOIN stoqr.roles guest_role
+  ON guest_role.company_id = om.org_id
+ AND lower(guest_role.name) = 'guest'
+WHERE mas.app_code = 'stoqr'
+ON CONFLICT (user_id, company_id) DO NOTHING;
 
 -- Enforce owner invariants across public + app-specific membership tables.
 INSERT INTO public.organisation_members (org_id, user_id, role)

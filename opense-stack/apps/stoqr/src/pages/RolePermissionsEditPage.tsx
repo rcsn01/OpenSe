@@ -123,6 +123,7 @@ export const RolePermissionsEditPage = () => {
   const rolePermissions = data?.rolePermissions ?? {}
   const role = roles.find((item) => item.id === roleId) ?? null
   const isSystemRole = role ? isSystemRoleName(role.name) : false
+  const isReadOnly = isSystemRole || updateRoleMutation.isPending
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -212,11 +213,6 @@ export const RolePermissionsEditPage = () => {
     >
       {!role ? (
         <EmptyState title="Role not found" description="Return to permissions and choose a role again." />
-      ) : isSystemRole ? (
-        <EmptyState
-          title={`${role.name} role is system-managed`}
-          description={`The ${role.name.toLowerCase()} role cannot be edited directly.`}
-        />
       ) : (
         <form className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden" onSubmit={handleSubmit}>
           <header className="flex shrink-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -237,7 +233,9 @@ export const RolePermissionsEditPage = () => {
                   Edit Role Permissions
                 </h1>
                 <p className="m-0 mt-2 text-sm text-[var(--color-muted-foreground)]">
-                  Choose access types per permission area for this role.
+                  {isSystemRole
+                    ? `${role.name} is system-managed. Review its details and permissions here.`
+                    : 'Choose access types per permission area for this role.'}
                 </p>
               </div>
             </div>
@@ -249,18 +247,26 @@ export const RolePermissionsEditPage = () => {
                 onClick={() => navigate('/settings/organisations/permissions')}
                 disabled={updateRoleMutation.isPending}
               >
-                Cancel
+                {isSystemRole ? 'Back' : 'Cancel'}
               </Button>
-              <Button
-                type="submit"
-                disabled={updateRoleMutation.isPending || !name.trim()}
-                loading={updateRoleMutation.isPending}
-              >
-                <Save size={16} />
-                Save
-              </Button>
+              {!isSystemRole ? (
+                <Button
+                  type="submit"
+                  disabled={updateRoleMutation.isPending || !name.trim()}
+                  loading={updateRoleMutation.isPending}
+                >
+                  <Save size={16} />
+                  Save
+                </Button>
+              ) : null}
             </div>
           </header>
+
+          {isSystemRole ? (
+            <div className="shrink-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
+              The {role.name.toLowerCase()} role is system-managed, so its details and permissions are read-only.
+            </div>
+          ) : null}
 
           {message ? (
             <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -272,7 +278,11 @@ export const RolePermissionsEditPage = () => {
             <Card padding="lg" className="min-h-0 overflow-y-auto">
               <CardHeader>
                 <CardTitle>Role Details</CardTitle>
-                <CardDescription>Name, description, and rank shown across the organisation.</CardDescription>
+                <CardDescription>
+                  {isSystemRole
+                    ? 'Name, description, and rank are managed by the system.'
+                    : 'Name, description, and rank shown across the organisation.'}
+                </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div>
@@ -285,7 +295,7 @@ export const RolePermissionsEditPage = () => {
                       setName(event.target.value)
                       setMessage(null)
                     }}
-                    disabled={updateRoleMutation.isPending}
+                    disabled={isReadOnly}
                   />
                 </div>
 
@@ -299,7 +309,7 @@ export const RolePermissionsEditPage = () => {
                       setDescription(event.target.value)
                       setMessage(null)
                     }}
-                    disabled={updateRoleMutation.isPending}
+                    disabled={isReadOnly}
                     rows={5}
                   />
                 </div>
@@ -317,7 +327,7 @@ export const RolePermissionsEditPage = () => {
                       setRoleRank(event.target.value)
                       setMessage(null)
                     }}
-                    disabled={updateRoleMutation.isPending}
+                    disabled={isReadOnly}
                   />
                 </div>
               </CardContent>
@@ -326,7 +336,11 @@ export const RolePermissionsEditPage = () => {
             <Card padding="lg" className="flex min-h-0 flex-col overflow-hidden">
               <CardHeader className="shrink-0">
                 <CardTitle>Permission Matrix</CardTitle>
-                <CardDescription>Select the permissions assigned to this role.</CardDescription>
+                <CardDescription>
+                  {isSystemRole
+                    ? 'Permissions assigned to this system-managed role.'
+                    : 'Select the permissions assigned to this role.'}
+                </CardDescription>
               </CardHeader>
               <CardContent className="min-h-0 flex-1 overflow-auto">
                 <Table>
@@ -354,7 +368,7 @@ export const RolePermissionsEditPage = () => {
                             <Checkbox
                               checked={selectedPermissions.includes(permission.code)}
                               onChange={(event) => handleTogglePermission(permission.code, event.target.checked)}
-                              disabled={updateRoleMutation.isPending}
+                              disabled={isReadOnly}
                             />
                           </TableCell>
                         </TableRow>
