@@ -18,14 +18,15 @@ import { PagesTab } from '../components/TeamSettings/PagesTab'
 import { RolesTab } from '../components/TeamSettings/RolesTab'
 import { TwoFactorTab } from '../components/TeamSettings/TwoFactorTab'
 import { useOrganisationPageSettings, useUpdateOrganisationPageSettings } from '../hooks/queries/useOrganisationPageSettings'
+import { useMyPermissions } from '../hooks/queries/usePermissions'
 import {
   useCreateRoleWithPermissions,
-  useInviteCompanyMember,
   useTeamActivityEvents,
   useTeamSettingsData,
   useUpdateRoleWithPermissions,
   useUpdateCompanyMemberRole,
 } from '../hooks/queries/useTeamSettings'
+import { visiblePermissionCodes } from '../lib/permissions'
 
 export const TeamSettingsPage = () => {
   const { companyId } = useCompany()
@@ -46,24 +47,27 @@ export const TeamSettingsPage = () => {
   const pagesSearchTerm = activeTab === 'pages' ? searchValue : ''
   const twoFactorSearchTerm = activeTab === 'two-factor' ? searchValue : ''
   const { data, isLoading } = useTeamSettingsData(companyId)
+  const { data: myPermissions = [] } = useMyPermissions(companyId)
   const { data: pageSettings = defaultOrganisationPageSettings, isLoading: loadingPageSettings } = useOrganisationPageSettings(companyId)
   const { data: activity = [], isLoading: loadingActivity } = useTeamActivityEvents(companyId)
-  const inviteMutation = useInviteCompanyMember(companyId)
   const updateMemberRoleMutation = useUpdateCompanyMemberRole(companyId)
   const updateRoleMutation = useUpdateRoleWithPermissions(companyId)
   const createRoleMutation = useCreateRoleWithPermissions(companyId)
   const updatePageSettingsMutation = useUpdateOrganisationPageSettings(companyId)
 
-  const [inviteMessage, setInviteMessage] = useState<string | null>(null)
   const [roleChangeMessage, setRoleChangeMessage] = useState<string | null>(null)
 
   const members = data?.members ?? []
   const permissions = data?.permissions ?? []
+  const visiblePermissionCodeSet = useMemo(() => new Set(permissions.map((permission) => permission.code)), [permissions])
+  const canManageMembers = myPermissions.includes('organisation.members.manage')
+  const canManageRoles = myPermissions.includes('organisation.roles.manage')
+  const canManagePages = myPermissions.includes('organisation.pages.manage')
   const rolePermissions = data?.rolePermissions ?? {}
   const roles = (data?.roles ?? []).map((role) => ({
     ...role,
     roleRank: role.role_rank,
-    permissionCodes: rolePermissions[role.id] ?? [],
+    permissionCodes: visiblePermissionCodes(rolePermissions[role.id] ?? [], visiblePermissionCodeSet),
   }))
   const activitySuggestions = useMemo(
     () => activity.slice(0, 8).map((log) => ({
@@ -203,17 +207,6 @@ export const TeamSettingsPage = () => {
     }
   }, [activeTab, activitySuggestions, memberSuggestions, pageAccessSuggestions, permissionSuggestions])
 
-  const handleInvite = async (email: string, roleId: string) => {
-    if (!companyId || !email || !roleId) return
-    setInviteMessage(null)
-    try {
-      await inviteMutation.mutateAsync({ email, roleId })
-      setInviteMessage(`Invitation sent to ${email}.`)
-    } catch (error) {
-      setInviteMessage(error instanceof Error ? error.message : 'Failed to send invitation.')
-    }
-  }
-
   const handleRoleChange = async (memberId: string, roleId: string) => {
     setRoleChangeMessage(null)
     try {
@@ -279,9 +272,8 @@ export const TeamSettingsPage = () => {
                 roles={data?.roles ?? []}
                 currentUserId={user?.id}
                 onRoleChange={handleRoleChange}
-                onInvite={handleInvite}
-                inviteMessage={inviteMessage}
                 roleChangeMessage={roleChangeMessage}
+                canManage={canManageMembers}
                 searchTerm={teamsSearchTerm}
               />
             ),
@@ -295,7 +287,7 @@ export const TeamSettingsPage = () => {
                 permissions={permissions}
                 loadingRoles={isLoading}
                 loadingPermissions={isLoading}
-                canManage={true}
+                canManage={canManageRoles}
                 onCreateRole={handleCreateRole}
                 onUpdateRole={handleUpdateRole}
                 onEditRole={(roleId) => navigate(`/settings/organisations/permissions/${roleId}`)}
@@ -316,6 +308,7 @@ export const TeamSettingsPage = () => {
                 settings={pageSettings}
                 isLoading={loadingPageSettings}
                 isUpdating={updatePageSettingsMutation.isPending}
+                canManage={canManagePages}
                 onToggle={handlePageToggle}
                 searchTerm={pagesSearchTerm}
               />

@@ -12,6 +12,7 @@ type PagesTabProps = {
   settings: OrganisationPageSettings
   isLoading: boolean
   isUpdating: boolean
+  canManage?: boolean
   onToggle: (feature: OrganisationPageFeature, enabled: boolean) => Promise<void>
   searchTerm?: string
 }
@@ -60,6 +61,7 @@ export const PagesTab = ({
   settings,
   isLoading,
   isUpdating,
+  canManage = false,
   onToggle,
   searchTerm = '',
 }: PagesTabProps) => {
@@ -154,7 +156,7 @@ export const PagesTab = ({
 
             <Toggle
               checked={isFeatureEnabled(draft, feature)}
-              disabled={isUpdating}
+              disabled={!canManage || isUpdating}
               onChange={(event) =>
                 void handleToggle(feature, event.target.checked)
               }

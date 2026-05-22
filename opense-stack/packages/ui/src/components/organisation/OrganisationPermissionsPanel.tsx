@@ -41,6 +41,12 @@ export type OrganisationRole = {
 export type OrganisationPermission = {
   code: string;
   description: string | null;
+  page_key?: string | null;
+  action_key?: string | null;
+  label?: string | null;
+  sort_order?: number | null;
+  hidden?: boolean;
+  deprecated?: boolean;
 };
 
 type RolePayload = {
@@ -82,6 +88,76 @@ const formatLabel = (value: string) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
+type PermissionGroup = {
+  key: string;
+  label: string;
+  viewCode: string | null;
+  permissions: Array<{
+    code: string;
+    label: string;
+    actionKey: string;
+    description: string | null;
+    sortOrder: number;
+  }>;
+};
+
+const buildPermissionGroups = (
+  permissions: OrganisationPermission[],
+): PermissionGroup[] => {
+  const groups = new Map<string, PermissionGroup>();
+
+  permissions
+    .filter((permission) => !permission.hidden && !permission.deprecated)
+    .forEach((permission) => {
+      const parts = permission.code.split(".");
+      const pageKey =
+        permission.page_key ?? (parts.length > 1 ? parts[0] : permission.code);
+      const actionKey =
+        permission.action_key ??
+        (parts.length > 1 ? parts.slice(1).join(".") : "view");
+
+      if (!groups.has(pageKey)) {
+        groups.set(pageKey, {
+          key: pageKey,
+          label: formatLabel(pageKey),
+          viewCode: null,
+          permissions: [],
+        });
+      }
+
+      const group = groups.get(pageKey)!;
+      if (actionKey === "view") {
+        group.viewCode = permission.code;
+      }
+
+      group.permissions.push({
+        code: permission.code,
+        label: permission.label ?? formatLabel(actionKey),
+        actionKey,
+        description: permission.description,
+        sortOrder: permission.sort_order ?? 0,
+      });
+    });
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      permissions: group.permissions.sort((left, right) => {
+        if (left.actionKey === "view") return -1;
+        if (right.actionKey === "view") return 1;
+        return (
+          left.sortOrder - right.sortOrder ||
+          left.label.localeCompare(right.label)
+        );
+      }),
+    }))
+    .sort((left, right) => {
+      const leftSort = left.permissions[0]?.sortOrder ?? 0;
+      const rightSort = right.permissions[0]?.sortOrder ?? 0;
+      return leftSort - rightSort || left.label.localeCompare(right.label);
+    });
+};
+
 export function OrganisationPermissionsPanel({
   title = "Organisation Roles",
   description = "Manage roles and their permissions.",
@@ -116,51 +192,10 @@ export function OrganisationPermissionsPanel({
     "asc",
   );
 
-  const permissionMatrix = useMemo(() => {
-    const rows = new Map<
-      string,
-      { key: string; label: string; codesByType: Record<string, string> }
-    >();
-    const typeSet = new Set<string>();
-
-    for (const permission of permissions) {
-      const parts = permission.code.split(".");
-      const type = parts.length > 1 ? parts[parts.length - 1] : "access";
-      const resourceKey =
-        parts.length > 1 ? parts.slice(0, -1).join(".") : permission.code;
-
-      if (!rows.has(resourceKey)) {
-        rows.set(resourceKey, {
-          key: resourceKey,
-          label: formatLabel(resourceKey),
-          codesByType: {},
-        });
-      }
-
-      rows.get(resourceKey)!.codesByType[type] = permission.code;
-      typeSet.add(type);
-    }
-
-    const preferredOrder = ["view", "edit", "manage", "use"];
-    const types = Array.from(typeSet).sort((left, right) => {
-      const leftIndex = preferredOrder.indexOf(left);
-      const rightIndex = preferredOrder.indexOf(right);
-
-      if (leftIndex >= 0 && rightIndex >= 0) return leftIndex - rightIndex;
-      if (leftIndex >= 0) return -1;
-      if (rightIndex >= 0) return 1;
-      return left.localeCompare(right);
-    });
-
-    const rowsList = Array.from(rows.values()).sort((left, right) =>
-      left.label.localeCompare(right.label),
-    );
-
-    return {
-      types,
-      rows: rowsList,
-    };
-  }, [permissions]);
+  const permissionGroups = useMemo(
+    () => buildPermissionGroups(permissions),
+    [permissions],
+  );
 
   const openEditRole = (roleId: string) => {
     const role = roles.find((item) => item.id === roleId);
@@ -198,9 +233,28 @@ export function OrganisationPermissionsPanel({
 
   const handleTogglePermission = (permissionCode: string, checked: boolean) => {
     setEditPermissions((current) => {
+      const group = permissionGroups.find((item) =>
+        item.permissions.some((permission) => permission.code === permissionCode),
+      );
+      const isViewPermission = group?.viewCode === permissionCode;
+
       if (checked) {
-        return Array.from(new Set([...current, permissionCode]));
+        return Array.from(
+          new Set([
+            ...current,
+            ...(group?.viewCode ? [group.viewCode] : []),
+            permissionCode,
+          ]),
+        );
       }
+
+      if (isViewPermission && group) {
+        const groupCodes = new Set(
+          group.permissions.map((permission) => permission.code),
+        );
+        return current.filter((code) => !groupCodes.has(code));
+      }
+
       return current.filter((code) => code !== permissionCode);
     });
   };
@@ -635,50 +689,42 @@ export function OrganisationPermissionsPanel({
                     <TableHeader>
                       <TableRow>
                         <TableHead>Permission</TableHead>
-                        {permissionMatrix.types.map((type) => (
-                          <TableHead key={type}>{formatLabel(type)}</TableHead>
-                        ))}
+                        <TableHead>Action</TableHead>
+                        <TableHead>Enabled</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {permissionMatrix.rows.map((row) => (
-                        <TableRow key={row.key}>
-                          <TableCell className="font-medium text-slate-900">
-                            {row.label}
-                          </TableCell>
-                          {permissionMatrix.types.map((type) => {
-                            const permissionCode = row.codesByType[type];
-
-                            if (!permissionCode) {
-                              return (
-                                <TableCell
-                                  key={`${row.key}-${type}`}
-                                  className="text-slate-400"
-                                >
-                                  —
-                                </TableCell>
-                              );
-                            }
-
-                            return (
-                              <TableCell key={`${row.key}-${type}`}>
-                                <Checkbox
-                                  checked={editPermissions.includes(
-                                    permissionCode,
-                                  )}
-                                  onChange={(event) =>
-                                    handleTogglePermission(
-                                      permissionCode,
-                                      event.target.checked,
-                                    )
-                                  }
-                                  disabled={!canManage || saving}
-                                />
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
+                      {permissionGroups.map((group) =>
+                        group.permissions.map((permission, index) => (
+                          <TableRow key={permission.code}>
+                            <TableCell className="align-top font-medium text-slate-900">
+                              {index === 0 ? group.label : ""}
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium text-slate-900">
+                                {permission.label}
+                              </div>
+                              {permission.description ? (
+                                <div className="mt-1 text-xs text-slate-500">
+                                  {permission.description}
+                                </div>
+                              ) : null}
+                            </TableCell>
+                            <TableCell>
+                              <Checkbox
+                                checked={editPermissions.includes(permission.code)}
+                                onChange={(event) =>
+                                  handleTogglePermission(
+                                    permission.code,
+                                    event.target.checked,
+                                  )
+                                }
+                                disabled={!canManage || saving}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        )),
+                      )}
                     </TableBody>
                   </Table>
                 )}

@@ -30,18 +30,16 @@ export const MembersTab = ({
   roles,
   currentUserId,
   onRoleChange,
-  onInvite,
-  inviteMessage,
   roleChangeMessage,
+  canManage = false,
   searchTerm = '',
 }: {
   members: Member[]
   roles: Role[]
   currentUserId?: string
   onRoleChange: (memberId: string, roleId: string) => Promise<void>
-  onInvite: (email: string, roleId: string) => void
-  inviteMessage: string | null
   roleChangeMessage: string | null
+  canManage?: boolean
   searchTerm?: string
 }) => {
   const sharedMembers = useMemo<SearchableMember[]>(
@@ -86,15 +84,14 @@ export const MembersTab = ({
     <OrganisationTeamsTab
       members={filteredMembers}
       roles={sharedRoles}
-      canManageTeam={true}
+      canManageTeam={canManage}
       isRoleEditable={(member) => {
         const rawRoleName = members.find((item) => item.id === member.id)?.roles?.name ?? ''
         return rawRoleName.trim().toLowerCase() !== 'owner' && member.userId !== currentUserId
       }}
       onRoleChange={onRoleChange}
-      onInvite={onInvite}
-      inviteMessage={inviteMessage}
       roleChangeMessage={roleChangeMessage}
+      emptyStateDescription="Manage organisation membership through Accounts."
     />
   )
 }

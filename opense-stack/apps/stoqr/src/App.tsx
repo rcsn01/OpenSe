@@ -21,6 +21,7 @@ import { ProcurementPage } from './pages/ProcurementPage'
 import { AlertsPage } from './pages/AlertsPage'
 import { AlertRuleEditorPage } from './pages/AlertRuleEditorPage'
 import { AlertDetailPage } from './pages/AlertDetailPage'
+import { PermissionRoute } from './components/PermissionGate'
 import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { Toaster } from 'sonner'
 
@@ -88,36 +89,66 @@ export function App() {
           <Route element={<AppLayout />}>
             <Route element={<CompanyGate />}>
               <Route index element={<RootRedirect />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/inventory" element={<Navigate to="/inventory/all" replace />} />
-              <Route path="/inventory/import" element={<InventoryImportPage />} />
-              <Route path="/inventory/new" element={<CreateProductPage />} />
-              <Route path="/inventory/:tab" element={<InventoryListPage />} />
-              <Route path="/inventory/:id/edit" element={<EditProductPage />} />
-              <Route path="/inventory/:id/adjust" element={<ProductAdjustPage />} />
-              <Route path="/inventory/:id" element={<Navigate to="overview" replace />} />
-              <Route path="/inventory/:id/:tab" element={<ProductDetailPage />} />
-              <Route path="/scan" element={<Navigate to="/scan/scan-actions" replace />} />
-              <Route path="/scan/:tab" element={<ScanPage />} />
-              <Route path="/tools/labels" element={<Navigate to="/tools/labels/templates" replace />} />
-              <Route path="/tools/labels/design" element={<Navigate to="/tools/labels/templates" replace />} />
-              <Route path="/tools/labels/downloads" element={<Navigate to="/tools/labels/preview-batch" replace />} />
-              <Route path="/tools/labels/:tab/:templateId" element={<LabelDesignerPage />} />
-              <Route path="/tools/labels/:tab" element={<LabelStudioPage />} />
+              <Route element={<PermissionRoute permission="dashboard.view" />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="inventory.view" />}>
+                <Route path="/inventory" element={<Navigate to="/inventory/all" replace />} />
+                <Route path="/inventory/:tab" element={<InventoryListPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="inventory.import_export" />}>
+                <Route path="/inventory/import" element={<InventoryImportPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="inventory.create" />}>
+                <Route path="/inventory/new" element={<CreateProductPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="inventory.edit" />}>
+                <Route path="/inventory/:id/edit" element={<EditProductPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="inventory.adjust" />}>
+                <Route path="/inventory/:id/adjust" element={<ProductAdjustPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="inventory.use" />}>
+                <Route path="/inventory/:id" element={<Navigate to="overview" replace />} />
+                <Route path="/inventory/:id/:tab" element={<ProductDetailPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="scanner.view" />}>
+                <Route path="/scan" element={<Navigate to="/scan/scan-actions" replace />} />
+                <Route path="/scan/:tab" element={<ScanPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="labels.view" />}>
+                <Route path="/tools/labels" element={<Navigate to="/tools/labels/templates" replace />} />
+                <Route path="/tools/labels/design" element={<Navigate to="/tools/labels/templates" replace />} />
+                <Route path="/tools/labels/downloads" element={<Navigate to="/tools/labels/preview-batch" replace />} />
+                <Route path="/tools/labels/:tab/:templateId" element={<LabelDesignerPage />} />
+                <Route path="/tools/labels/:tab" element={<LabelStudioPage />} />
+              </Route>
               <Route path="/settings/team" element={<Navigate to="/settings/organisations/teams" replace />} />
               <Route path="/settings/team/:tab" element={<LegacyTeamSettingsRedirect />} />
-              <Route path="/settings/organisations" element={<Navigate to="/settings/organisations/teams" replace />} />
-              <Route path="/settings/organisations/permissions/:roleId" element={<RolePermissionsEditPage />} />
-              <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
-              <Route path="/reports" element={<Navigate to="/reports/stock-health" replace />} />
-              <Route path="/reports/:tab" element={<ReportsPage />} />
-              <Route path="/procurement" element={<Navigate to="/procurement/purchase-orders" replace />} />
-              <Route path="/procurement/:tab" element={<ProcurementPage />} />
-              <Route path="/alerts" element={<Navigate to="/alerts/feed" replace />} />
-              <Route path="/alerts/feed/:eventId" element={<AlertDetailPage />} />
-              <Route path="/alerts/rules/new" element={<AlertRuleEditorPage />} />
-              <Route path="/alerts/rules/:ruleId" element={<AlertRuleEditorPage />} />
-              <Route path="/alerts/:tab" element={<AlertsPage />} />
+              <Route element={<PermissionRoute permission="organisation.view" />}>
+                <Route path="/settings/organisations" element={<Navigate to="/settings/organisations/teams" replace />} />
+                <Route path="/settings/organisations/:tab" element={<TeamSettingsPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="organisation.roles.manage" />}>
+                <Route path="/settings/organisations/permissions/:roleId" element={<RolePermissionsEditPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="reports.view" />}>
+                <Route path="/reports" element={<Navigate to="/reports/stock-health" replace />} />
+                <Route path="/reports/:tab" element={<ReportsPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="procurement.view" />}>
+                <Route path="/procurement" element={<Navigate to="/procurement/purchase-orders" replace />} />
+                <Route path="/procurement/:tab" element={<ProcurementPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="alerts.view" />}>
+                <Route path="/alerts" element={<Navigate to="/alerts/feed" replace />} />
+                <Route path="/alerts/feed/:eventId" element={<AlertDetailPage />} />
+                <Route path="/alerts/:tab" element={<AlertsPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="alerts.manage" />}>
+                <Route path="/alerts/rules/new" element={<AlertRuleEditorPage />} />
+                <Route path="/alerts/rules/:ruleId" element={<AlertRuleEditorPage />} />
+              </Route>
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

@@ -5,6 +5,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AlertsPage } from "../AlertsPage";
 import { AppLayout } from "../../layouts/AppLayout";
 
+vi.mock("../../hooks/queries/usePermissions", () => ({
+  useMyPermissions: () => ({
+    data: [
+      "dashboard.view",
+      "inventory.view",
+      "scanner.view",
+      "labels.view",
+      "reports.view",
+      "procurement.view",
+      "alerts.view",
+      "alerts.manage",
+      "organisation.view",
+    ],
+    isLoading: false,
+  }),
+}));
+
 const mockCreateRule = vi.fn();
 const mockUpdateRule = vi.fn();
 const mockUpdateRuleEnabled = vi.fn();

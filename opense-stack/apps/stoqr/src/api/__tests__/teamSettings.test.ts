@@ -54,10 +54,25 @@ describe('team settings api', () => {
     }
 
     const permissions = {
-      select: vi.fn().mockResolvedValue({
-        data: [{ code: 'inventory.read', description: 'Inventory Read' }],
-        error: null,
-      }),
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn().mockResolvedValue({
+              data: [{
+                code: 'inventory.read',
+                description: 'Inventory Read',
+                page_key: 'inventory',
+                action_key: 'read',
+                label: 'Read',
+                sort_order: 100,
+                hidden: false,
+                deprecated: false,
+              }],
+              error: null,
+            }),
+          })),
+        })),
+      })),
     }
 
     const invitations = {

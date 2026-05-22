@@ -19,6 +19,26 @@ vi.mock('@repo/shared/utils', () => ({
   buildAccountsSettingsUrl: () => '/accounts/settings',
 }))
 
+vi.mock('../../contexts/CompanyContext', () => ({
+  useCompany: () => ({ companyId: 'company-1' }),
+}))
+
+vi.mock('../../hooks/queries/usePermissions', () => ({
+  useMyPermissions: () => ({
+    data: [
+      'dashboard.view',
+      'inventory.view',
+      'scanner.view',
+      'labels.view',
+      'reports.view',
+      'procurement.view',
+      'alerts.view',
+      'organisation.view',
+    ],
+    isLoading: false,
+  }),
+}))
+
 const mockMatchMedia = (matches: boolean) =>
   vi.fn().mockImplementation(() => ({
     matches,

@@ -23,6 +23,7 @@ import {
 import { StoqrPageShell } from '../components/StoqrPageShell'
 import { useCompany } from '../contexts/CompanyContext'
 import { useTeamSettingsData, useUpdateRoleWithPermissions } from '../hooks/queries/useTeamSettings'
+import { visiblePermissionCodes } from '../lib/permissions'
 
 const formatLabel = (value: string) =>
   value
@@ -38,6 +39,75 @@ const parseRoleRank = (value: string): number | null => {
   return parsed
 }
 
+type PermissionGroup = {
+  key: string
+  label: string
+  viewCode: string | null
+  permissions: Array<{ code: string; label: string; actionKey: string; description: string | null; sortOrder: number }>
+}
+
+const buildPermissionGroups = (permissions: Array<{
+  code: string
+  description: string | null
+  page_key?: string | null
+  action_key?: string | null
+  label?: string | null
+  sort_order?: number | null
+  hidden?: boolean
+  deprecated?: boolean
+}>): PermissionGroup[] => {
+  const groups = new Map<string, PermissionGroup>()
+
+  permissions
+    .filter((permission) => !permission.hidden && !permission.deprecated)
+    .forEach((permission) => {
+      const parts = permission.code.split('.')
+      const pageKey = permission.page_key ?? (parts.length > 1 ? parts[0] : permission.code)
+      const actionKey = permission.action_key ?? (parts.length > 1 ? parts.slice(1).join('.') : 'view')
+      const pageLabel = formatLabel(pageKey)
+      const sortOrder = permission.sort_order ?? 0
+
+      if (!groups.has(pageKey)) {
+        groups.set(pageKey, {
+          key: pageKey,
+          label: pageLabel,
+          viewCode: null,
+          permissions: [],
+        })
+      }
+
+      const group = groups.get(pageKey)!
+      const permissionRow = {
+        code: permission.code,
+        label: permission.label ?? formatLabel(actionKey),
+        actionKey,
+        description: permission.description,
+        sortOrder,
+      }
+
+      if (actionKey === 'view') {
+        group.viewCode = permission.code
+      }
+
+      group.permissions.push(permissionRow)
+    })
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      permissions: group.permissions.sort((left, right) => {
+        if (left.actionKey === 'view') return -1
+        if (right.actionKey === 'view') return 1
+        return left.sortOrder - right.sortOrder || left.label.localeCompare(right.label)
+      }),
+    }))
+    .sort((left, right) => {
+      const leftSort = left.permissions[0]?.sortOrder ?? 0
+      const rightSort = right.permissions[0]?.sortOrder ?? 0
+      return leftSort - rightSort || left.label.localeCompare(right.label)
+    })
+}
+
 export const RolePermissionsEditPage = () => {
   const { roleId } = useParams<{ roleId?: string }>()
   const navigate = useNavigate()
@@ -47,6 +117,7 @@ export const RolePermissionsEditPage = () => {
 
   const roles = data?.roles ?? []
   const permissions = data?.permissions ?? []
+  const visiblePermissionCodeSet = useMemo(() => new Set(permissions.map((permission) => permission.code)), [permissions])
   const rolePermissions = data?.rolePermissions ?? {}
   const role = roles.find((item) => item.id === roleId) ?? null
   const isOwnerRole = role?.name.trim().toLowerCase() === 'owner'
@@ -63,55 +134,27 @@ export const RolePermissionsEditPage = () => {
     setName(role.name)
     setDescription(role.description ?? '')
     setRoleRank(String(role.role_rank ?? 100))
-    setSelectedPermissions(rolePermissions[role.id] ?? [])
+    setSelectedPermissions(visiblePermissionCodes(rolePermissions[role.id] ?? [], visiblePermissionCodeSet))
     setMessage(null)
-  }, [role, rolePermissions])
+  }, [role, rolePermissions, visiblePermissionCodeSet])
 
-  const permissionMatrix = useMemo(() => {
-    const rows = new Map<string, { key: string; label: string; codesByType: Record<string, string> }>()
-    const typeSet = new Set<string>()
-
-    for (const permission of permissions) {
-      const parts = permission.code.split('.')
-      const type = parts.length > 1 ? parts[parts.length - 1] : 'access'
-      const resourceKey = parts.length > 1 ? parts.slice(0, -1).join('.') : permission.code
-
-      if (!rows.has(resourceKey)) {
-        rows.set(resourceKey, {
-          key: resourceKey,
-          label: formatLabel(resourceKey),
-          codesByType: {},
-        })
-      }
-
-      rows.get(resourceKey)!.codesByType[type] = permission.code
-      typeSet.add(type)
-    }
-
-    const preferredOrder = ['view', 'edit', 'manage', 'use']
-    const types = Array.from(typeSet).sort((left, right) => {
-      const leftIndex = preferredOrder.indexOf(left)
-      const rightIndex = preferredOrder.indexOf(right)
-
-      if (leftIndex >= 0 && rightIndex >= 0) return leftIndex - rightIndex
-      if (leftIndex >= 0) return -1
-      if (rightIndex >= 0) return 1
-      return left.localeCompare(right)
-    })
-
-    return {
-      types,
-      rows: Array.from(rows.values()).sort((left, right) => left.label.localeCompare(right.label)),
-    }
-  }, [permissions])
+  const permissionGroups = useMemo(() => buildPermissionGroups(permissions), [permissions])
 
   const hasDuplicateRoleRank = (parsedRoleRank: number) =>
     roles.some((item) => item.id !== roleId && item.role_rank === parsedRoleRank)
 
   const handleTogglePermission = (permissionCode: string, checked: boolean) => {
     setSelectedPermissions((current) => {
+      const group = permissionGroups.find((item) => item.permissions.some((permission) => permission.code === permissionCode))
+      const isViewPermission = group?.viewCode === permissionCode
+
       if (checked) {
-        return Array.from(new Set([...current, permissionCode]))
+        return Array.from(new Set([...current, ...(group?.viewCode ? [group.viewCode] : []), permissionCode]))
+      }
+
+      if (isViewPermission && group) {
+        const groupCodes = new Set(group.permissions.map((permission) => permission.code))
+        return current.filter((code) => !groupCodes.has(code))
       }
 
       return current.filter((code) => code !== permissionCode)
@@ -284,40 +327,33 @@ export const RolePermissionsEditPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Page</TableHead>
                       <TableHead>Permission</TableHead>
-                      {permissionMatrix.types.map((type) => (
-                        <TableHead key={type}>{formatLabel(type)}</TableHead>
-                      ))}
+                      <TableHead>Enabled</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {permissionMatrix.rows.map((row) => (
-                      <TableRow key={row.key}>
-                        <TableCell className="font-medium text-[var(--color-foreground)]">
-                          {row.label}
-                        </TableCell>
-                        {permissionMatrix.types.map((type) => {
-                          const permissionCode = row.codesByType[type]
-
-                          if (!permissionCode) {
-                            return (
-                              <TableCell key={`${row.key}-${type}`} className="text-[var(--color-muted-foreground)]">
-                                -
-                              </TableCell>
-                            )
-                          }
-
-                          return (
-                            <TableCell key={`${row.key}-${type}`}>
-                              <Checkbox
-                                checked={selectedPermissions.includes(permissionCode)}
-                                onChange={(event) => handleTogglePermission(permissionCode, event.target.checked)}
-                                disabled={updateRoleMutation.isPending}
-                              />
-                            </TableCell>
-                          )
-                        })}
-                      </TableRow>
+                    {permissionGroups.map((group) => (
+                      group.permissions.map((permission, index) => (
+                        <TableRow key={permission.code}>
+                          <TableCell className="align-top font-medium text-[var(--color-foreground)]">
+                            {index === 0 ? group.label : ''}
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium text-[var(--color-foreground)]">{permission.label}</div>
+                            {permission.description ? (
+                              <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">{permission.description}</div>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedPermissions.includes(permission.code)}
+                              onChange={(event) => handleTogglePermission(permission.code, event.target.checked)}
+                              disabled={updateRoleMutation.isPending}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
                     ))}
                   </TableBody>
                 </Table>
