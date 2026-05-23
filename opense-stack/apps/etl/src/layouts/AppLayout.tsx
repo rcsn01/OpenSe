@@ -6,13 +6,15 @@ import {
   type AppShellNavItem,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
-import { buildAccountsSettingsUrl } from '@repo/shared/utils'
-import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
 import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations'
 import {
   TopBarSearchContent,
   TopBarSearchProvider,
 } from '../components/Search/TopBarSearch'
+import {
+  buildAccountsOnboardingUrl,
+  buildAccountsSettingsUrl,
+} from '../lib/authRedirect'
 
 const mainNavItems: AppShellNavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -26,13 +28,15 @@ export const AppLayout = () => {
   const [signingOut, setSigningOut] = useState(false)
   const location = useLocation()
   const [pendingRedirect, setPendingRedirect] = useState(false)
-  const accountsUrl =
-    getRuntimeConfigValue('VITE_ACCOUNTS_URL', 'https://accounts.rcsn01.com') ??
-    'https://accounts.rcsn01.com'
+  const [orgRedirecting, setOrgRedirecting] = useState(false)
   const redirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [currentOrg, setCurrentOrg] = useState<OrgSimple | null>(null)
-  const { data: userOrgs = [] } = useUserOrganisations(user?.id)
+  const {
+    data: userOrgs = [],
+    isLoading: orgsLoading,
+    isError: orgsError,
+  } = useUserOrganisations(user?.id)
 
   useEffect(() => {
     if (userOrgs.length > 0 && !currentOrg) {
@@ -44,6 +48,23 @@ export const AppLayout = () => {
       setCurrentOrg(null)
     }
   }, [userOrgs, currentOrg])
+
+  useEffect(() => {
+    if (!session || !user || orgsLoading || orgsError || userOrgs.length > 0) {
+      setOrgRedirecting(false)
+      return
+    }
+
+    setOrgRedirecting(true)
+    window.location.assign(
+      buildAccountsOnboardingUrl(
+        `${location.pathname}${location.search}${location.hash}`,
+      ),
+    )
+  }, [location.hash, location.pathname, location.search, orgsError, orgsLoading, session, user, userOrgs.length])
+
+  const shouldRedirectToOnboarding =
+    Boolean(session && user) && !orgsLoading && !orgsError && userOrgs.length === 0
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -102,6 +123,14 @@ export const AppLayout = () => {
     return <Navigate to="/login" replace />
   }
 
+  if (shouldRedirectToOnboarding || orgRedirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <div className="animate-pulse text-slate-500">Redirecting to Accounts...</div>
+      </div>
+    )
+  }
+
   return (
     <TopBarSearchProvider>
       <AppShellLayout
@@ -115,7 +144,7 @@ export const AppLayout = () => {
         )}
         profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
         onSettingsClick={() => {
-          window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
+          window.location.assign(buildAccountsSettingsUrl())
         }}
         onLogout={handleSignOut}
         searchContent={<TopBarSearchContent />}

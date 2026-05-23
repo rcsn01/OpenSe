@@ -90,4 +90,15 @@ export const cn = (...classes: (string | undefined | null | false)[]): string =>
   return classes.filter(Boolean).join(' ')
 }
 
-export { buildAccountsAuthUrl, buildAccountsSettingsUrl, type AuthMode } from './authRedirect'
+export {
+  DEFAULT_LOCAL_APP_RETURN_URLS,
+  buildAccountsAuthUrl,
+  buildAccountsForwardQuery,
+  buildAccountsOnboardingUrl,
+  buildAccountsSettingsUrl,
+  createAccountsRedirects,
+  getSafeAccountsReturnTo,
+  isSafeAccountsReturnTo,
+  type AccountsReturnToValidationConfig,
+  type AuthMode,
+} from './authRedirect'

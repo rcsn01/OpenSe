@@ -1,7 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@repo/shared/auth/context'
-import { buildAccountsSettingsUrl } from '@repo/shared/utils'
-import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
 import {
   LayoutDashboard,
   Package,
@@ -22,6 +20,7 @@ import {
 } from '../components/Search/TopBarSearch'
 import { useCompany } from '../contexts/CompanyContext'
 import { useMyPermissions } from '../hooks/queries/usePermissions'
+import { buildAccountsSettingsUrl } from '../lib/authRedirect'
 
 const mainNavItems: Array<AppShellNavItem & { permission: string }> = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, permission: 'dashboard.view' },
@@ -44,9 +43,6 @@ export const AppLayout = () => {
   const { companyId } = useCompany()
   const { data: permissions = [], isLoading: permissionsLoading } = useMyPermissions(companyId)
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
-  const accountsUrl =
-    getRuntimeConfigValue('VITE_ACCOUNTS_URL', 'https://accounts.rcsn01.com') ??
-    'https://accounts.rcsn01.com'
 
   const handleSignOut = async () => {
     await logout()
@@ -74,7 +70,7 @@ export const AppLayout = () => {
         )}
         profileFallback={userName?.[0] || 'U'}
         onSettingsClick={() => {
-          window.location.assign(buildAccountsSettingsUrl({ accountsUrl }))
+          window.location.assign(buildAccountsSettingsUrl())
         }}
         onLogout={handleSignOut}
         searchContent={<TopBarSearchContent />}

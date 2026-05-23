@@ -8,6 +8,7 @@ type CompanyContextValue = {
   companyName: string | null
   companies: CompanyOption[]
   isLoading: boolean
+  loadError: Error | null
   setCompanyId: (value: string) => void
   refreshCompanies: () => Promise<void>
 }
@@ -26,9 +27,11 @@ export const CompanyProvider = ({
   const [companies, setCompanies] = useState<CompanyOption[]>([])
   const [companyId, setCompanyIdState] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<Error | null>(null)
 
   const refreshCompanies = useCallback(async () => {
     setIsLoading(true)
+    setLoadError(null)
     try {
       const options = await fetchUserCompanies(userId)
 
@@ -40,6 +43,7 @@ export const CompanyProvider = ({
       setCompanyIdState(next)
     } catch (error) {
       console.error(error)
+      setLoadError(error instanceof Error ? error : new Error('Failed to load companies.'))
       setCompanies([])
     } finally {
       setIsLoading(false)
@@ -50,18 +54,18 @@ export const CompanyProvider = ({
     refreshCompanies()
   }, [refreshCompanies])
 
-  const setCompanyId = (value: string) => {
+  const setCompanyId = useCallback((value: string) => {
     setCompanyIdState(value)
     localStorage.setItem(STORAGE_KEY, value)
-  }
+  }, [])
 
   const companyName = useMemo(() => {
     return companies.find((company) => company.id === companyId)?.name ?? null
   }, [companies, companyId])
 
   const value = useMemo(
-    () => ({ companyId, companyName, companies, isLoading, setCompanyId, refreshCompanies }),
-    [companyId, companyName, companies, isLoading],
+    () => ({ companyId, companyName, companies, isLoading, loadError, setCompanyId, refreshCompanies }),
+    [companyId, companyName, companies, isLoading, loadError, refreshCompanies, setCompanyId],
   )
 
   return <CompanyContext.Provider value={value}>{children}</CompanyContext.Provider>

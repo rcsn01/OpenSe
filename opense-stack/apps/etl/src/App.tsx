@@ -3,11 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@repo/ui';
 import { AuthRedirectPage } from '@repo/shared/auth';
 import { AuthProvider } from '@repo/shared/auth/context';
-import { buildAccountsSettingsUrl } from '@repo/shared/utils';
-import { getRuntimeConfigValue } from '@repo/shared/runtime-config';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { ReactFlowProvider } from 'reactflow';
-import { buildAccountsAuthUrl } from './lib/authRedirect';
+import { buildAccountsAuthUrl, buildAccountsSettingsUrl } from './lib/authRedirect';
 import { RootRedirect } from './RootRedirect';
 
 // Layouts
@@ -34,13 +32,9 @@ const DashboardIndexRedirect = () => {
 };
 
 const AccountsProfileRedirect = () => {
-  const accountsUrl =
-    getRuntimeConfigValue('VITE_ACCOUNTS_URL', 'https://accounts.rcsn01.com') ??
-    'https://accounts.rcsn01.com';
-
   useEffect(() => {
-    window.location.assign(buildAccountsSettingsUrl({ accountsUrl }));
-  }, [accountsUrl]);
+    window.location.assign(buildAccountsSettingsUrl());
+  }, []);
 
   return (
     <div className="min-h-[50vh] flex items-center justify-center text-[var(--color-muted-foreground)]">
