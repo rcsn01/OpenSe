@@ -95,10 +95,24 @@ export const OnboardingCreateOrganisationPage = () => {
   }
 
   const freeSeatLimit = policy?.freeSeatLimit ?? null
+
+  if (policy?.canCreateOrganisation === false) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 py-8 sm:px-6 lg:px-8">
+        <div className="w-full max-w-2xl">
+          <p className="text-xs font-medium uppercase text-[var(--color-muted-foreground)]">OpenSe Accounts</p>
+          <Alert className="mt-3" variant="info" title="Organisation limit reached">
+            This OpenSe instance is configured for {policy.maxOrganisations} organisation{policy.maxOrganisations === 1 ? '' : 's'}. Ask the instance operator to raise the limit before creating another organisation.
+          </Alert>
+        </div>
+      </main>
+    )
+  }
+
   const seatSummary = getOnboardingAppSeatSummary(selectedApps, freeSeatLimit)
   const seatTotal = getOnboardingSelectedSeatTotal(selectedApps, freeSeatLimit)
   const selectedAppNames = seatSummary.filter((app) => app.selected).map((app) => app.name)
-  const blocked = policyLoading || policy?.canCreateOrganisation === false
+  const blocked = policyLoading
 
   return (
     <OnboardingShell
@@ -107,11 +121,6 @@ export const OnboardingCreateOrganisationPage = () => {
       currentStep="create"
       alert={
         <>
-          {policy?.canCreateOrganisation === false ? (
-            <Alert variant="info" title="Organisation limit reached">
-              This OpenSe instance is configured for {policy.maxOrganisations} organisation{policy.maxOrganisations === 1 ? '' : 's'}. Ask the instance operator to raise the limit before creating another organisation.
-            </Alert>
-          ) : null}
           {error ? <Alert variant="destructive" title="Unable to create organisation">{error}</Alert> : null}
         </>
       }
