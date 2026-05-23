@@ -16,7 +16,7 @@ export interface OrgContext {
 export interface AppSeatBillingSummary {
   appCode: AppCode
   appName: string
-  seatLimit: number
+  seatLimit: number | null
   assignedSeats: number
 }
 
@@ -39,7 +39,7 @@ interface OrgContextRow {
 interface AppSeatSummaryRow {
   app_code: AppCode
   app_name: string | null
-  seat_limit: number
+  seat_limit: number | null
   assigned_seats: number
 }
 

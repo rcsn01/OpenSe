@@ -40,12 +40,13 @@ describe('onboarding UI helpers', () => {
     })).toBe('Select at least one app for free-tier seats.')
   })
 
-  it('keeps selected app free-tier seats unchanged', () => {
-    expect(getOnboardingAppSeatSummary(['etl'])).toMatchObject([
+  it('uses instance policy for selected app free-tier seats', () => {
+    expect(getOnboardingAppSeatSummary(['etl'], 5)).toMatchObject([
       { code: 'etl', seats: 5, selected: true },
       { code: 'stoqr', seats: 0, selected: false },
     ])
-    expect(getOnboardingSelectedSeatTotal(['etl', 'stoqr'])).toBe(10)
+    expect(getOnboardingSelectedSeatTotal(['etl', 'stoqr'], 5)).toBe(10)
+    expect(getOnboardingSelectedSeatTotal(['etl'], null)).toBeNull()
   })
 
   it('normalizes invite preview emails and reports duplicates', () => {

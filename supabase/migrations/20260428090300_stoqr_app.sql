@@ -1075,6 +1075,7 @@ DECLARE
   v_owner_etl_role_id UUID;
   v_previous_stoqr_role_id UUID;
   v_previous_etl_role_id UUID;
+  v_free_seat_limit INTEGER;
 BEGIN
   IF pg_trigger_depth() > 1 THEN
     RETURN NEW;
@@ -1132,11 +1133,15 @@ BEGIN
     END IF;
   END IF;
 
+  SELECT settings.free_seat_limit
+  INTO v_free_seat_limit
+  FROM public.platform_instance_settings settings
+  WHERE settings.id = true;
+
   INSERT INTO public.organisation_app_seats (org_id, app_code, seat_limit)
-  SELECT NEW.id, a.code, CASE WHEN a.code IN ('etl', 'stoqr') THEN 1 ELSE 0 END
+  SELECT NEW.id, a.code, v_free_seat_limit
   FROM public.apps a
-  ON CONFLICT (org_id, app_code) DO UPDATE
-    SET seat_limit = GREATEST(public.organisation_app_seats.seat_limit, EXCLUDED.seat_limit);
+  ON CONFLICT (org_id, app_code) DO NOTHING;
 
   INSERT INTO stoqr.organisation_page_settings (
     company_id,

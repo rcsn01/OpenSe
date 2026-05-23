@@ -76,11 +76,16 @@ INSERT INTO public.platform_pricing_plans (
   is_active
 )
 VALUES
-  ('adadadad-adad-adad-adad-adadadadad01', 'etl', 'ETL Pro', 'monthly', 2900, false, 'prod_etl_pro', 'price_etl_pro_monthly', true),
-  ('adadadad-adad-adad-adad-adadadadad02', 'etl', 'ETL Pro', 'yearly', 2500, false, 'prod_etl_pro', 'price_etl_pro_yearly', true),
-  ('adadadad-adad-adad-adad-adadadadad03', 'stoqr', 'StoQR Growth', 'monthly', 1900, false, 'prod_stoqr_growth', 'price_stoqr_growth_monthly', true),
-  ('adadadad-adad-adad-adad-adadadadad04', NULL, 'OpenSe Bundle', 'yearly', 3900, true, 'prod_opense_bundle', 'price_opense_bundle_yearly', true)
-ON CONFLICT (id) DO NOTHING;
+  ('adadadad-adad-adad-adad-adadadadad01', 'etl', 'ETL Pro', 'monthly', 2900, false, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad02', 'etl', 'ETL Pro', 'yearly', 2500, false, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad03', 'stoqr', 'StoQR Growth', 'monthly', 1900, false, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad04', NULL, 'OpenSe Bundle', 'yearly', 3900, true, NULL, NULL, true)
+ON CONFLICT (id) DO UPDATE
+SET
+  stripe_product_id = EXCLUDED.stripe_product_id,
+  stripe_price_id = EXCLUDED.stripe_price_id,
+  seat_price_cents = EXCLUDED.seat_price_cents,
+  is_active = EXCLUDED.is_active;
 
 INSERT INTO public.platform_coupons (
   id,

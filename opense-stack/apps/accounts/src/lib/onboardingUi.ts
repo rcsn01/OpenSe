@@ -1,7 +1,5 @@
 import type { AppCode, MemberRole, PendingInvite } from '../api/onboarding'
 
-export const FREE_TIER_ONBOARDING_SEATS = 5
-
 export const onboardingAppOptions: Array<{ code: AppCode; name: string }> = [
   { code: 'etl', name: 'ETL' },
   { code: 'stoqr', name: 'StoQR' },
@@ -29,17 +27,22 @@ export const validateOnboardingOrganisationForm = ({
   return null
 }
 
-export const getOnboardingAppSeatSummary = (selectedApps: AppCode[]) => {
+export const formatSeatLimit = (seatLimit: number | null) => (seatLimit === null ? 'Unlimited' : String(seatLimit))
+
+export const formatSeatLimitLabel = (seatLimit: number | null) => (seatLimit === null ? 'Unlimited seats' : `${seatLimit} seats`)
+
+export const getOnboardingAppSeatSummary = (selectedApps: AppCode[], freeSeatLimit: number | null) => {
   const selected = new Set(selectedApps)
   return onboardingAppOptions.map((app) => ({
     ...app,
     selected: selected.has(app.code),
-    seats: selected.has(app.code) ? FREE_TIER_ONBOARDING_SEATS : 0,
+    seats: selected.has(app.code) ? freeSeatLimit : 0,
   }))
 }
 
-export const getOnboardingSelectedSeatTotal = (selectedApps: AppCode[]) => {
-  return getOnboardingAppSeatSummary(selectedApps).reduce((total, app) => total + app.seats, 0)
+export const getOnboardingSelectedSeatTotal = (selectedApps: AppCode[], freeSeatLimit: number | null) => {
+  if (freeSeatLimit === null && selectedApps.length > 0) return null
+  return getOnboardingAppSeatSummary(selectedApps, freeSeatLimit).reduce((total, app) => total + (app.seats ?? 0), 0)
 }
 
 export const parseOnboardingInviteEmails = (value: string) => {

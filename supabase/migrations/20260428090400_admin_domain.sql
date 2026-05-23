@@ -33,6 +33,31 @@ CREATE TABLE public.platform_pricing_plans (
 CREATE INDEX platform_pricing_plans_active_idx
   ON public.platform_pricing_plans (is_active, app_code, created_at DESC);
 
+INSERT INTO public.platform_pricing_plans (
+  id,
+  app_code,
+  plan_name,
+  billing_interval,
+  seat_price_cents,
+  is_bundle,
+  stripe_product_id,
+  stripe_price_id,
+  is_active
+)
+VALUES
+  ('adadadad-adad-adad-adad-adadadadad01', 'etl', 'ETL Pro', 'monthly', 2900, false, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad02', 'etl', 'ETL Pro', 'yearly', 2500, false, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad03', 'stoqr', 'StoQR Growth', 'monthly', 1900, false, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad04', NULL, 'OpenSe Bundle', 'yearly', 3900, true, NULL, NULL, true)
+ON CONFLICT (id) DO UPDATE
+SET
+  app_code = EXCLUDED.app_code,
+  plan_name = EXCLUDED.plan_name,
+  billing_interval = EXCLUDED.billing_interval,
+  seat_price_cents = EXCLUDED.seat_price_cents,
+  is_bundle = EXCLUDED.is_bundle,
+  is_active = EXCLUDED.is_active;
+
 CREATE TABLE public.platform_coupons (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code TEXT NOT NULL UNIQUE,

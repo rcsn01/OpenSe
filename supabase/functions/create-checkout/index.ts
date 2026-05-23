@@ -96,6 +96,35 @@ const serviceUpdateOrgStripe = async (
   }
 }
 
+const getActivePricingPlan = async (
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  appCode: string,
+): Promise<{ seat_price_cents: number; stripe_price_id: string | null } | null> => {
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/platform_pricing_plans?app_code=eq.${appCode}&billing_interval=eq.monthly&is_active=eq.true&select=seat_price_cents,stripe_price_id,updated_at&order=updated_at.desc&limit=1`,
+    {
+      method: 'GET',
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+    },
+  )
+
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(data?.message ?? data?.error ?? 'Failed to load pricing plan')
+  }
+
+  const row = Array.isArray(data) ? data[0] : null
+  if (!row) return null
+  return {
+    seat_price_cents: Number(row.seat_price_cents ?? 0),
+    stripe_price_id: typeof row.stripe_price_id === 'string' && row.stripe_price_id ? row.stripe_price_id : null,
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflight(req)
@@ -172,6 +201,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const stripe = new Stripe(stripeSecretKey)
+    const pricingPlan = await getActivePricingPlan(supabaseUrl, serviceRoleKey, appCode)
 
     const customer = existingCustomerId
       ? await stripe.customers.retrieve(existingCustomerId)
@@ -183,24 +213,29 @@ Deno.serve(async (req: Request) => {
 
     const customerId = typeof customer === 'string' ? customer : customer.id
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      customer: customerId,
-      line_items: [
-        {
+    const lineItem = pricingPlan?.stripe_price_id
+      ? {
+          price: pricingPlan.stripe_price_id,
+          quantity: Math.max(seatLimit, 1),
+        }
+      : {
           price_data: {
             currency: 'usd',
             product_data: {
               name: `${appCode.toUpperCase()} seats`,
             },
             recurring: {
-              interval: 'month',
+              interval: 'month' as const,
             },
-            unit_amount: 1000,
+            unit_amount: pricingPlan?.seat_price_cents ?? 1000,
           },
           quantity: Math.max(seatLimit, 1),
-        },
-      ],
+        }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: customerId,
+      line_items: [lineItem],
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata,
