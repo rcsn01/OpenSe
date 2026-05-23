@@ -58,4 +58,11 @@ TRUNCATE TABLE
   stoqr.folders
 CASCADE;
 
+INSERT INTO public.platform_instance_settings (id, max_organisations, free_seat_limit)
+VALUES (true, 100, 5)
+ON CONFLICT (id) DO UPDATE
+SET
+  max_organisations = EXCLUDED.max_organisations,
+  free_seat_limit = EXCLUDED.free_seat_limit;
+
 -- ------------------------------------------------------------

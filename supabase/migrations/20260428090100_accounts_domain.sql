@@ -104,6 +104,7 @@ DECLARE
   v_member_role TEXT;
   v_seat_limit INTEGER;
   v_assigned_count INTEGER;
+  v_limit_row_count INTEGER := 0;
 BEGIN
   SELECT org_id, role
   INTO v_org_id, v_member_role
@@ -124,8 +125,14 @@ BEGIN
   WHERE org_id = v_org_id
     AND app_code = NEW.app_code;
 
-  IF v_seat_limit IS NULL THEN
+  GET DIAGNOSTICS v_limit_row_count = ROW_COUNT;
+
+  IF v_limit_row_count = 0 THEN
     RAISE EXCEPTION 'Seat limit is not configured for org % app %', v_org_id, NEW.app_code;
+  END IF;
+
+  IF v_seat_limit IS NULL THEN
+    RETURN NEW;
   END IF;
 
   SELECT COUNT(*)::INTEGER
@@ -147,6 +154,41 @@ BEGIN
       NEW.app_code,
       v_assigned_count,
       v_seat_limit;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.enforce_instance_organisation_limit()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_max_organisations INTEGER;
+  v_organisation_count INTEGER;
+BEGIN
+  IF auth.role() = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT max_organisations
+  INTO v_max_organisations
+  FROM public.platform_instance_settings
+  WHERE id = true;
+
+  IF v_max_organisations IS NULL THEN
+    v_max_organisations := 1;
+  END IF;
+
+  SELECT COUNT(*)::INTEGER
+  INTO v_organisation_count
+  FROM public.organisations;
+
+  IF v_organisation_count >= v_max_organisations THEN
+    RAISE EXCEPTION 'Organisation creation limit reached for this OpenSe instance';
   END IF;
 
   RETURN NEW;
@@ -386,7 +428,7 @@ BEGIN
   SELECT
     a.code,
     a.name,
-    COALESCE(oas.seat_limit, 0) AS seat_limit,
+    oas.seat_limit,
     COALESCE(assigned.assigned_count, 0)::INTEGER AS assigned_seats
   FROM public.apps a
   LEFT JOIN public.organisation_app_seats oas
@@ -401,6 +443,127 @@ BEGIN
   ) AS assigned
     ON assigned.app_code = a.code
   ORDER BY a.code;
+END;
+$$;
+
+CREATE FUNCTION public.accounts_get_onboarding_instance_policy()
+RETURNS TABLE (
+  can_create_organisation BOOLEAN,
+  organisation_count INTEGER,
+  max_organisations INTEGER,
+  free_seat_limit INTEGER
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_max_organisations INTEGER;
+  v_free_seat_limit INTEGER;
+  v_organisation_count INTEGER;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  SELECT settings.max_organisations, settings.free_seat_limit
+  INTO v_max_organisations, v_free_seat_limit
+  FROM public.platform_instance_settings settings
+  WHERE settings.id = true;
+
+  v_max_organisations := COALESCE(v_max_organisations, 1);
+
+  SELECT COUNT(*)::INTEGER
+  INTO v_organisation_count
+  FROM public.organisations;
+
+  RETURN QUERY
+  SELECT
+    v_organisation_count < v_max_organisations,
+    v_organisation_count,
+    v_max_organisations,
+    v_free_seat_limit;
+END;
+$$;
+
+CREATE FUNCTION public.accounts_create_organisation(p_name TEXT, p_selected_apps TEXT[])
+RETURNS TABLE (
+  org_id UUID,
+  org_name TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_user_email TEXT := LOWER(BTRIM(auth.jwt() ->> 'email'));
+  v_org_id UUID;
+  v_org_name TEXT := BTRIM(p_name);
+  v_selected_apps TEXT[] := COALESCE(p_selected_apps, ARRAY[]::TEXT[]);
+  v_invalid_app TEXT;
+  v_free_seat_limit INTEGER;
+  v_max_organisations INTEGER;
+  v_organisation_count INTEGER;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  IF v_org_name IS NULL OR v_org_name = '' THEN
+    RAISE EXCEPTION 'Organisation name is required';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.organisation_members WHERE user_id = v_user_id) THEN
+    RAISE EXCEPTION 'User already belongs to an organisation';
+  END IF;
+
+  SELECT app_code
+  INTO v_invalid_app
+  FROM unnest(v_selected_apps) selected(app_code)
+  WHERE NOT EXISTS (SELECT 1 FROM public.apps a WHERE a.code = selected.app_code)
+  LIMIT 1;
+
+  IF v_invalid_app IS NOT NULL THEN
+    RAISE EXCEPTION 'Unsupported app code: %', v_invalid_app;
+  END IF;
+
+  SELECT settings.max_organisations, settings.free_seat_limit
+  INTO v_max_organisations, v_free_seat_limit
+  FROM public.platform_instance_settings settings
+  WHERE settings.id = true;
+
+  v_max_organisations := COALESCE(v_max_organisations, 1);
+
+  SELECT COUNT(*)::INTEGER
+  INTO v_organisation_count
+  FROM public.organisations;
+
+  IF v_organisation_count >= v_max_organisations THEN
+    RAISE EXCEPTION 'Organisation creation limit reached for this OpenSe instance';
+  END IF;
+
+  INSERT INTO public.organisations (name, owner_id)
+  VALUES (v_org_name, v_user_id)
+  RETURNING id, name INTO v_org_id, v_org_name;
+
+  INSERT INTO public.organisation_app_seats (org_id, app_code, seat_limit)
+  SELECT
+    v_org_id,
+    a.code,
+    CASE WHEN a.code = ANY(v_selected_apps) THEN v_free_seat_limit ELSE 0 END
+  FROM public.apps a
+  ON CONFLICT ON CONSTRAINT organisation_app_seats_pkey DO UPDATE
+    SET seat_limit = EXCLUDED.seat_limit;
+
+  IF v_user_email IS NOT NULL AND v_user_email <> '' THEN
+    DELETE FROM public.organisation_invites
+    WHERE LOWER(email::TEXT) = v_user_email;
+  END IF;
+
+  RETURN QUERY SELECT v_org_id, v_org_name;
 END;
 $$;
 
@@ -467,7 +630,7 @@ BEGIN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
 
-  IF p_seat_limit < 0 THEN
+  IF p_seat_limit IS NULL OR p_seat_limit < 0 THEN
     RAISE EXCEPTION 'Seat limit must be non-negative';
   END IF;
 
@@ -676,6 +839,11 @@ CREATE TRIGGER trg_prevent_owner_member_mutation
   FOR EACH ROW
   EXECUTE FUNCTION public.prevent_owner_member_mutation();
 
+CREATE TRIGGER trg_enforce_instance_organisation_limit
+  BEFORE INSERT ON public.organisations
+  FOR EACH ROW
+  EXECUTE FUNCTION public.enforce_instance_organisation_limit();
+
 CREATE TRIGGER trg_enforce_org_app_seat_limit
   BEFORE INSERT OR UPDATE ON public.organisation_member_app_seats
   FOR EACH ROW
@@ -851,11 +1019,14 @@ REVOKE ALL ON FUNCTION public.can_manage_org_member_app_seats(UUID, UUID) FROM P
 REVOKE ALL ON FUNCTION public.get_primary_org_for_user(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.prevent_owner_member_mutation() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.enforce_org_app_seat_limit() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.enforce_instance_organisation_limit() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accept_invite(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_invite_organisation_member(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_get_my_org_context() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_get_org_app_seat_summary() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_get_onboarding_instance_policy() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.accounts_create_organisation(TEXT, TEXT[]) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_get_org_member_app_assignments() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_assign_org_member_app_seat(UUID, TEXT) FROM PUBLIC, anon, authenticated;
@@ -870,6 +1041,8 @@ GRANT EXECUTE ON FUNCTION public.accounts_invite_organisation_member(UUID, TEXT)
 GRANT EXECUTE ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) TO service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_my_org_context() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_org_app_seat_summary() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.accounts_get_onboarding_instance_policy() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.accounts_create_organisation(TEXT, TEXT[]) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_org_member_app_assignments() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_assign_org_member_app_seat(UUID, TEXT) TO authenticated, service_role;

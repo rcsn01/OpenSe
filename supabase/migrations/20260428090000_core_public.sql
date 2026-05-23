@@ -78,10 +78,22 @@ SET name = EXCLUDED.name;
 CREATE TABLE public.organisation_app_seats (
   org_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   app_code TEXT NOT NULL REFERENCES public.apps(code) ON DELETE CASCADE,
-  seat_limit INTEGER NOT NULL DEFAULT 1 CHECK (seat_limit >= 0),
+  seat_limit INTEGER DEFAULT NULL CHECK (seat_limit IS NULL OR seat_limit >= 0),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   PRIMARY KEY (org_id, app_code)
 );
+
+CREATE TABLE public.platform_instance_settings (
+  id BOOLEAN PRIMARY KEY DEFAULT true CHECK (id),
+  max_organisations INTEGER NOT NULL DEFAULT 1 CHECK (max_organisations >= 0),
+  free_seat_limit INTEGER DEFAULT NULL CHECK (free_seat_limit IS NULL OR free_seat_limit >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+INSERT INTO public.platform_instance_settings (id, max_organisations, free_seat_limit)
+VALUES (true, 1, NULL)
+ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE public.organisation_member_app_seats (
   org_member_id UUID NOT NULL REFERENCES public.organisation_members(id) ON DELETE CASCADE,
@@ -118,6 +130,11 @@ CREATE TRIGGER handle_organisation_app_seats_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION moddatetime(updated_at);
 
+CREATE TRIGGER handle_platform_instance_settings_updated_at
+  BEFORE UPDATE ON public.platform_instance_settings
+  FOR EACH ROW
+  EXECUTE FUNCTION moddatetime(updated_at);
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_members ENABLE ROW LEVEL SECURITY;
@@ -126,6 +143,7 @@ ALTER TABLE public.apps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_app_seats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organisation_member_app_seats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.platform_instance_settings ENABLE ROW LEVEL SECURITY;
 
 CREATE FUNCTION public.has_users()
 RETURNS BOOLEAN
@@ -267,6 +285,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.organisation_app_seats TO a
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.organisation_member_app_seats TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.subscriptions TO authenticated;
 
+REVOKE ALL ON TABLE public.platform_instance_settings FROM PUBLIC, anon, authenticated;
+
 GRANT ALL PRIVILEGES ON TABLE public.profiles TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.organisations TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_members TO service_role;
@@ -275,6 +295,7 @@ GRANT ALL PRIVILEGES ON TABLE public.apps TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_app_seats TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_member_app_seats TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public.subscriptions TO service_role;
+GRANT ALL PRIVILEGES ON TABLE public.platform_instance_settings TO service_role;
 
 REVOKE ALL ON FUNCTION public.has_users() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;

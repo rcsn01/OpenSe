@@ -36,7 +36,20 @@ interface MembershipRow {
 }
 
 const appCodes: AppCode[] = ['etl', 'stoqr']
-const FREE_TIER_SEAT_LIMIT = 5
+
+export interface OnboardingInstancePolicy {
+  canCreateOrganisation: boolean
+  organisationCount: number
+  maxOrganisations: number
+  freeSeatLimit: number | null
+}
+
+interface OnboardingInstancePolicyRow {
+  can_create_organisation: boolean
+  organisation_count: number
+  max_organisations: number
+  free_seat_limit: number | null
+}
 
 const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
   if (!value) return null
@@ -91,6 +104,23 @@ export const getPendingOrganisationInvites = async (): Promise<PendingInvite[]> 
       createdAt: invite.created_at,
     }
   })
+}
+
+export const getOnboardingInstancePolicy = async (): Promise<OnboardingInstancePolicy> => {
+  const { data, error } = await supabase.rpc('accounts_get_onboarding_instance_policy')
+  if (error) throw error
+
+  const row = Array.isArray(data) ? (data[0] as OnboardingInstancePolicyRow | undefined) : undefined
+  if (!row) {
+    throw new Error('Onboarding policy was not returned.')
+  }
+
+  return {
+    canCreateOrganisation: row.can_create_organisation,
+    organisationCount: row.organisation_count,
+    maxOrganisations: row.max_organisations,
+    freeSeatLimit: row.free_seat_limit,
+  }
 }
 
 export const acceptOrganisationInvite = async (inviteId: string): Promise<void> => {
@@ -152,7 +182,7 @@ export const createOrganisationForOnboarding = async (input: {
   name: string
   selectedApps: AppCode[]
 }): Promise<{ orgId: string; orgName: string }> => {
-  const user = await getCurrentUser()
+  await getCurrentUser()
   const orgName = input.name.trim()
 
   if (!orgName) {
@@ -165,41 +195,25 @@ export const createOrganisationForOnboarding = async (input: {
     throw new Error(`Unsupported app code: ${invalidApp}`)
   }
 
-  const pendingInvites = await getPendingOrganisationInvites()
-  for (const invite of pendingInvites) {
-    await declineOrganisationInvite(invite.id)
-  }
-
-  const { data, error } = await supabase
-    .from('organisations')
-    .insert({
-      name: orgName,
-      owner_id: user.id,
-    })
-    .select('id, name')
-    .single()
-
+  const { data, error } = await supabase.rpc('accounts_create_organisation', {
+    p_name: orgName,
+    p_selected_apps: selectedApps,
+  })
   if (error) throw error
 
-  for (const appCode of appCodes) {
-    const seatLimit = selectedApps.includes(appCode) ? FREE_TIER_SEAT_LIMIT : 0
-    const { error: seatError } = await supabase
-      .from('organisation_app_seats')
-      .update({ seat_limit: seatLimit })
-      .eq('org_id', data.id)
-      .eq('app_code', appCode)
-
-    if (seatError) throw seatError
+  const row = Array.isArray(data) ? (data[0] as { org_id: string; org_name: string } | undefined) : undefined
+  if (!row) {
+    throw new Error('Organisation creation did not return a row.')
   }
 
-  await updateOnboardingMetadata({
+  void updateOnboardingMetadata({
     accounts_onboarding_completed: false,
     accounts_onboarding_stage: 'invite-members',
-  })
+  }).catch(() => undefined)
 
   return {
-    orgId: data.id,
-    orgName: data.name,
+    orgId: row.org_id,
+    orgName: row.org_name,
   }
 }
 

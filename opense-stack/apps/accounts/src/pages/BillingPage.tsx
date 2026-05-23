@@ -14,6 +14,9 @@ import {
 } from '../api/organisationBilling'
 import { canManageOrganisation, updateBillingContact } from '../api/organisation'
 
+const formatSeatLimit = (seatLimit: number | null) => (seatLimit === null ? 'Unlimited' : String(seatLimit))
+const isWithinLimit = (assignedSeats: number, seatLimit: number | null) => seatLimit === null || assignedSeats <= seatLimit
+
 export const BillingPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
@@ -28,7 +31,7 @@ export const BillingPage = () => {
   const [billingPhone, setBillingPhone] = useState('')
 
   const canManageBilling = canManageOrganisation(organisation?.role)
-  const hasSubscription = useMemo(() => apps.some((app) => app.seatLimit > 0 || app.assignedSeats > 0), [apps])
+  const hasSubscription = useMemo(() => apps.some((app) => app.seatLimit === null || app.seatLimit > 0 || app.assignedSeats > 0), [apps])
 
   const loadSummary = async () => {
     try {
@@ -41,8 +44,8 @@ export const BillingPage = () => {
       setBillingEmail(summary.organisation.billingEmail ?? '')
       setBillingPhone(summary.organisation.billingPhone ?? '')
       setSeatLimitDrafts({
-        etl: String(summary.apps.find((app) => app.appCode === 'etl')?.seatLimit ?? 0),
-        stoqr: String(summary.apps.find((app) => app.appCode === 'stoqr')?.seatLimit ?? 0),
+        etl: summary.apps.find((app) => app.appCode === 'etl')?.seatLimit === null ? '' : String(summary.apps.find((app) => app.appCode === 'etl')?.seatLimit ?? 0),
+        stoqr: summary.apps.find((app) => app.appCode === 'stoqr')?.seatLimit === null ? '' : String(summary.apps.find((app) => app.appCode === 'stoqr')?.seatLimit ?? 0),
       })
     } catch (err: any) {
       setError(err?.message ?? 'Failed to load billing information.')
@@ -185,8 +188,8 @@ export const BillingPage = () => {
             <AccountsSection
               key={app.appCode}
               title={app.appName}
-              description={`Assigned ${app.assignedSeats} of ${app.seatLimit} seats`}
-              actions={<Badge variant={app.assignedSeats <= app.seatLimit ? 'success' : 'warning'}>{app.assignedSeats}/{app.seatLimit}</Badge>}
+              description={`Assigned ${app.assignedSeats} of ${formatSeatLimit(app.seatLimit)} seats`}
+              actions={<Badge variant={isWithinLimit(app.assignedSeats, app.seatLimit) ? 'success' : 'warning'}>{app.assignedSeats}/{formatSeatLimit(app.seatLimit)}</Badge>}
             >
               <div className="grid gap-3">
                 <label className="text-sm font-medium text-[var(--color-body)]" htmlFor={`seat-limit-${app.appCode}`}>
@@ -202,6 +205,9 @@ export const BillingPage = () => {
                   }}
                   disabled={!canManageBilling}
                 />
+                {app.seatLimit === null ? (
+                  <p className="text-xs text-[var(--color-muted-foreground)]">This app is currently unlimited. Enter a finite seat count to switch to self-service billing.</p>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" onClick={() => void handleSaveLimit(app.appCode)} disabled={!canManageBilling || savingKey === `limit:${app.appCode}`}>
                     <Save className="h-4 w-4" />

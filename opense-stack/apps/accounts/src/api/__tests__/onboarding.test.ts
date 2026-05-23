@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mockGetUser = vi.fn()
 const mockUpdateUser = vi.fn()
 const mockFrom = vi.fn()
+const mockRpc = vi.fn()
 
 const mockGetPendingOrganisationInvites = vi.fn()
 const mockInviteOrganisationMember = vi.fn()
@@ -14,6 +15,7 @@ vi.mock('@repo/shared/supabase', () => ({
       updateUser: (...args: unknown[]) => mockUpdateUser(...args),
     },
     from: (...args: unknown[]) => mockFrom(...args),
+    rpc: (...args: unknown[]) => mockRpc(...args),
   },
 }))
 
@@ -26,6 +28,7 @@ vi.mock('@repo/shared/organisation-invites', () => ({
 
 import {
   createOrganisationForOnboarding,
+  getOnboardingInstancePolicy,
   getOnboardingStatus,
   inviteOrganisationMembers,
 } from '../onboarding'
@@ -200,54 +203,44 @@ describe('onboarding api', () => {
     expect(mockFrom).not.toHaveBeenCalled()
   })
 
-  it('assigns 5 free-tier seats to selected apps and 0 seats to unselected apps', async () => {
+  it('reads onboarding instance policy from RPC', async () => {
+    mockRpc.mockResolvedValue({
+      data: [{
+        can_create_organisation: false,
+        organisation_count: 1,
+        max_organisations: 1,
+        free_seat_limit: null,
+      }],
+      error: null,
+    })
+
+    await expect(getOnboardingInstancePolicy()).resolves.toEqual({
+      canCreateOrganisation: false,
+      organisationCount: 1,
+      maxOrganisations: 1,
+      freeSeatLimit: null,
+    })
+  })
+
+  it('creates onboarding organisation through RPC with selected apps', async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: 'user-1', user_metadata: {} } },
       error: null,
     })
-    mockGetPendingOrganisationInvites.mockResolvedValue([])
-
-    const insertSingle = vi.fn().mockResolvedValue({
-      data: { id: 'org-1', name: 'Acme' },
+    mockRpc.mockResolvedValue({
+      data: [{ org_id: 'org-1', org_name: 'Acme' }],
       error: null,
     })
-    const insertSelect = vi.fn(() => ({ single: insertSingle }))
-    const insert = vi.fn(() => ({ select: insertSelect }))
-    const seatUpdates: Array<Record<string, unknown>> = []
-    const makeSeatChain = () => {
-      const chain: { eq: ReturnType<typeof vi.fn> } = { eq: vi.fn() }
-      chain.eq.mockReturnValueOnce(chain).mockResolvedValueOnce({ error: null })
-      return chain
-    }
-    const update = vi.fn((payload: Record<string, unknown>) => {
-      seatUpdates.push(payload)
-      return makeSeatChain()
-    })
 
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'organisations') {
-        return { insert }
-      }
-      if (table === 'organisation_app_seats') {
-        return { update }
-      }
-
-      throw new Error(`Unexpected table: ${table}`)
-    })
-
-    await createOrganisationForOnboarding({
+    await expect(createOrganisationForOnboarding({
       name: 'Acme',
       selectedApps: ['etl'],
-    })
+    })).resolves.toEqual({ orgId: 'org-1', orgName: 'Acme' })
 
-    expect(insert).toHaveBeenCalledWith({
-      name: 'Acme',
-      owner_id: 'user-1',
+    expect(mockRpc).toHaveBeenCalledWith('accounts_create_organisation', {
+      p_name: 'Acme',
+      p_selected_apps: ['etl'],
     })
-    expect(seatUpdates).toEqual([
-      { seat_limit: 5 },
-      { seat_limit: 0 },
-    ])
   })
 
   it('normalizes and de-duplicates emails before inviting members', async () => {
