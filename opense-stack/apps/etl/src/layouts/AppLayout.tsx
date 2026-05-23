@@ -22,7 +22,7 @@ const mainNavItems: AppShellNavItem[] = [
 ]
 
 export const AppLayout = () => {
-  const { session, user, loading, isDemoUser, logout } = useAuth()
+  const { session, user, loading, logout } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
   const location = useLocation()
   const [pendingRedirect, setPendingRedirect] = useState(false)
@@ -61,7 +61,7 @@ export const AppLayout = () => {
   // Delay redirect to allow session to restore from shared cookie (avoids flash loop with accounts login)
   // Skip redirect entirely when signing out - handleSignOut will navigate to landing
   useEffect(() => {
-    if (signingOut || session || isDemoUser || loading) {
+    if (signingOut || session || loading) {
       if (redirectTimeout.current) {
         clearTimeout(redirectTimeout.current)
         redirectTimeout.current = null
@@ -81,9 +81,9 @@ export const AppLayout = () => {
         redirectTimeout.current = null
       }
     }
-  }, [signingOut, session, isDemoUser, loading])
+  }, [signingOut, session, loading])
 
-  if (!session && !isDemoUser && !loading) {
+  if (!session && !loading) {
     // Don't redirect when signing out - let handleSignOut navigate to landing
     if (signingOut) {
       return (

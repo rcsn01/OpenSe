@@ -1,20 +1,19 @@
 export const workflowKeys = {
   all: ['workflows'] as const,
-  list: (userId: string | undefined, orgId: string | null | undefined, mode: 'personal' | 'org', isDemoUser: boolean) =>
-    ['workflows', userId, orgId, mode, isDemoUser] as const,
-  detail: (id: string | null, isDemoUser: boolean) => ['workflow', id, isDemoUser] as const,
+  list: (userId: string | undefined, orgId: string | null | undefined, mode: 'personal' | 'org') =>
+    ['workflows', userId, orgId, mode] as const,
+  detail: (id: string | null) => ['workflow', id] as const,
   detailBase: (id: string) => ['workflow', id] as const,
 }
 
 export const organisationKeys = {
-  userOrganisations: (userId: string | undefined, isDemoUser: boolean) =>
-    ['userOrganisations', userId, isDemoUser] as const,
-  members: (orgId: string | undefined, isDemoUser: boolean) => ['organisationMembers', orgId, isDemoUser] as const,
+  userOrganisations: (userId: string | undefined) => ['userOrganisations', userId] as const,
+  members: (orgId: string | undefined) => ['organisationMembers', orgId] as const,
 }
 
 export const activityKeys = {
-  executionLogs: (userId: string | undefined, orgId: string | null | undefined, isDemoUser: boolean) =>
-    ['executionLogs', userId, orgId, isDemoUser] as const,
+  executionLogs: (userId: string | undefined, orgId: string | null | undefined) =>
+    ['executionLogs', userId, orgId] as const,
 }
 
 export const notificationKeys = {
@@ -28,10 +27,9 @@ export const usageKeys = {
 }
 
 export const permissionKeys = {
-  appPermissions: (isDemoUser: boolean) => ['appPermissions', isDemoUser] as const,
-  orgRoles: (orgId: string | undefined, isDemoUser: boolean) => ['orgRoles', orgId, isDemoUser] as const,
-  memberRoleAssignments: (orgId: string | undefined, isDemoUser: boolean) =>
-    ['memberRoleAssignments', orgId, isDemoUser] as const,
+  appPermissions: () => ['appPermissions'] as const,
+  orgRoles: (orgId: string | undefined) => ['orgRoles', orgId] as const,
+  memberRoleAssignments: (orgId: string | undefined) => ['memberRoleAssignments', orgId] as const,
 }
 
 export const versionKeys = {
@@ -40,5 +38,5 @@ export const versionKeys = {
 }
 
 export const galleryKeys = {
-  templates: (isDemoUser: boolean) => ['galleryTemplates', isDemoUser] as const,
+  templates: () => ['galleryTemplates'] as const,
 }
