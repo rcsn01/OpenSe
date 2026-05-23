@@ -1,4 +1,4 @@
-import { buildAccountsAuthUrl as buildSharedAccountsAuthUrl, type AuthMode } from '@repo/shared/utils'
+import { createAccountsRedirects, type AuthMode } from '@repo/shared/utils'
 import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
 
 const ACCOUNTS_URL =
@@ -8,11 +8,18 @@ const APP_PUBLIC_URL =
   getRuntimeConfigValue('VITE_STOQR_PUBLIC_URL', 'https://open-stoqr.rcsn01.com') ??
   'https://open-stoqr.rcsn01.com'
 
+const accountsRedirects = createAccountsRedirects({
+  accountsUrl: ACCOUNTS_URL,
+  appPublicUrl: APP_PUBLIC_URL,
+  appName: 'Open-StoQR',
+  defaultRedirectPath: '/dashboard',
+})
+
 export const buildAccountsAuthUrl = (mode: AuthMode) => {
-  return buildSharedAccountsAuthUrl({
-    mode,
-    accountsUrl: ACCOUNTS_URL,
-    appPublicUrl: APP_PUBLIC_URL,
-    appName: 'Open-StoQR',
-  })
+  return accountsRedirects.auth(mode)
 }
+
+export const buildAccountsSettingsUrl = () => accountsRedirects.settings()
+
+export const buildAccountsOnboardingUrl = (redirectPath?: string) =>
+  accountsRedirects.onboarding({ redirectPath })

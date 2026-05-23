@@ -22,6 +22,11 @@ vi.mock("@repo/shared/auth/context", () => ({
 
 vi.mock("@repo/shared/utils", () => ({
   buildAccountsSettingsUrl: () => "/accounts/settings",
+  createAccountsRedirects: () => ({
+    auth: () => "/accounts/auth",
+    settings: () => "/accounts/settings",
+    onboarding: () => "/accounts/onboarding",
+  }),
 }));
 
 vi.mock("../../contexts/CompanyContext", () => ({

@@ -1,9 +1,10 @@
-import { Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { EmptyState, ThemeProvider } from '@repo/ui'
 import { AuthRedirectPage } from '@repo/shared/auth'
 import { AppLayout } from './layouts/AppLayout'
 import { CompanyProvider, useCompany } from './contexts/CompanyContext'
-import { buildAccountsAuthUrl } from './lib/authRedirect'
+import { buildAccountsAuthUrl, buildAccountsOnboardingUrl } from './lib/authRedirect'
 import { DashboardPage } from './pages/DashboardPage'
 import { InventoryImportPage } from './pages/InventoryImportPage'
 import { InventoryListPage } from './pages/InventoryPage'
@@ -26,10 +27,31 @@ import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { Toaster } from 'sonner'
 
 const CompanyGate = () => {
-  const { isLoading } = useCompany()
+  const { companies, isLoading, loadError } = useCompany()
+  const location = useLocation()
+  const [redirecting, setRedirecting] = useState(false)
+  const shouldRedirectToOnboarding = !isLoading && !loadError && companies.length === 0
+
+  useEffect(() => {
+    if (!shouldRedirectToOnboarding) {
+      setRedirecting(false)
+      return
+    }
+
+    setRedirecting(true)
+    window.location.assign(
+      buildAccountsOnboardingUrl(
+        `${location.pathname}${location.search}${location.hash}`,
+      ),
+    )
+  }, [location.hash, location.pathname, location.search, shouldRedirectToOnboarding])
 
   if (isLoading) {
     return <EmptyState title="Loading workspace..." description="" />
+  }
+
+  if (shouldRedirectToOnboarding || redirecting) {
+    return <EmptyState title="Redirecting to Accounts..." description="" />
   }
 
   return <Outlet />
@@ -86,8 +108,8 @@ export function App() {
       <CompanyProvider userId={user.id}>
         <Toaster position="top-right" richColors />
         <Routes>
-          <Route element={<AppLayout />}>
-            <Route element={<CompanyGate />}>
+          <Route element={<CompanyGate />}>
+            <Route element={<AppLayout />}>
               <Route index element={<RootRedirect />} />
               <Route element={<PermissionRoute permission="dashboard.view" />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
