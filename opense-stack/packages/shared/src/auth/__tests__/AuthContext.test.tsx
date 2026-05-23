@@ -2,7 +2,6 @@ import { act, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Session } from '@supabase/supabase-js'
 import { AuthProvider, useAuth, type AuthContextType } from '../AuthContext'
-import { DEMO_USER_ID } from '../demo'
 
 const mockGetSession = vi.fn()
 const mockGetUser = vi.fn()
@@ -54,26 +53,6 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(latestAuth?.loading).toBe(false))
     expect(latestAuth?.session).toBeNull()
     expect(latestAuth?.user).toBeNull()
-    expect(latestAuth?.isDemoUser).toBeUndefined()
-  })
-
-  it('enables demo mode fields only when demoMode is true', async () => {
-    render(
-      <AuthProvider demoMode>
-        <Probe />
-      </AuthProvider>,
-    )
-
-    await waitFor(() => expect(latestAuth?.loading).toBe(false))
-    expect(latestAuth?.isDemoUser).toBe(false)
-    expect(typeof latestAuth?.loginAsDemo).toBe('function')
-
-    await act(async () => {
-      latestAuth?.loginAsDemo?.()
-    })
-
-    expect(latestAuth?.isDemoUser).toBe(true)
-    expect(latestAuth?.user?.id).toBe(DEMO_USER_ID)
   })
 
   it('clears stale cached sessions that fail server validation on initialization', async () => {
@@ -115,30 +94,6 @@ describe('AuthProvider', () => {
     })
 
     expect(mockSignOut).toHaveBeenCalledWith()
-  })
-
-  it('logout in demo mode clears demo session without calling supabase signOut', async () => {
-    render(
-      <AuthProvider demoMode>
-        <Probe />
-      </AuthProvider>,
-    )
-
-    await waitFor(() => expect(latestAuth?.loading).toBe(false))
-
-    await act(async () => {
-      latestAuth?.loginAsDemo?.()
-    })
-
-    expect(latestAuth?.isDemoUser).toBe(true)
-
-    await act(async () => {
-      await latestAuth?.logout()
-    })
-
-    expect(mockSignOut).not.toHaveBeenCalled()
-    expect(latestAuth?.isDemoUser).toBe(false)
-    expect(latestAuth?.user).toBeNull()
   })
 
   it('updates user/session on auth state SIGNED_IN callback', async () => {

@@ -26,7 +26,7 @@ type AppContextType = {
 export const GalleryPage = () => {
   const { data: templates = [], isLoading: loading, error: queryError } = useGalleryTemplates();
   const error = queryError instanceof Error ? queryError.message : null;
-  const { user, isDemoUser } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { currentOrg } = useOutletContext<AppContextType>() || {};
   const { searchValue: gallerySearch } = useTopBarSearchValue();
@@ -77,12 +77,6 @@ export const GalleryPage = () => {
       {error && (
         <Alert variant="destructive" title="Error loading gallery">
           Error loading gallery: {error}
-        </Alert>
-      )}
-
-      {isDemoUser && (
-        <Alert variant="warning">
-          Demo mode is enabled. Workflow Gallery shows demo workflows, not admin-configured workflows.
         </Alert>
       )}
 

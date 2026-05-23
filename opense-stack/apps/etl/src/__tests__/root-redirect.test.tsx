@@ -30,20 +30,6 @@ describe('RootRedirect', () => {
       loading: false,
       session: { user: { id: 'user-1' } },
       user: { id: 'user-1' },
-      isDemoUser: false,
-    });
-
-    renderRootRedirect();
-
-    expect(screen.getByText('Dashboard destination')).toBeInTheDocument();
-  });
-
-  it('redirects demo users to the dashboard', () => {
-    mockUseAuth.mockReturnValue({
-      loading: false,
-      session: null,
-      user: null,
-      isDemoUser: true,
     });
 
     renderRootRedirect();
@@ -56,7 +42,6 @@ describe('RootRedirect', () => {
       loading: false,
       session: null,
       user: null,
-      isDemoUser: false,
     });
 
     renderRootRedirect();
@@ -69,7 +54,6 @@ describe('RootRedirect', () => {
       loading: true,
       session: null,
       user: null,
-      isDemoUser: false,
     });
 
     renderRootRedirect();
