@@ -24,12 +24,13 @@ test.describe('ETL onboarding redirects', () => {
     await installMockSupabaseSession(page, {
       userId: 'e2e-etl-zero-org-user',
       email: 'e2e-etl-zero-org@example.com',
+      canCreateOrganisation: false,
     });
 
     await safeGoto(page, '/activity/usage?range=7d');
 
     await page.waitForURL(
-      (url) => url.origin === accountsOrigin && url.pathname.startsWith('/onboarding'),
+      (url) => url.origin === accountsOrigin && url.pathname === '/onboarding/blocked',
       { timeout: 15000 },
     );
 

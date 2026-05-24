@@ -24,12 +24,13 @@ test.describe('StoQR onboarding redirects', () => {
     await installMockSupabaseSession(page, {
       userId: 'e2e-stoqr-zero-org-user',
       email: 'e2e-stoqr-zero-org@example.com',
+      canCreateOrganisation: false,
     });
 
     await safeGoto(page, '/inventory/all?tab=low-stock');
 
     await page.waitForURL(
-      (url) => url.origin === accountsOrigin && url.pathname.startsWith('/onboarding'),
+      (url) => url.origin === accountsOrigin && url.pathname === '/onboarding/blocked',
       { timeout: 15000 },
     );
 

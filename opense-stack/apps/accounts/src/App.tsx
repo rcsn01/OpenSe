@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '@repo/shared/auth/context'
 import { SharedLoginRoutePage } from './pages/SharedLoginRoutePage'
 import { SharedSignupRoutePage } from './pages/SharedSignupRoutePage'
 import { AccountShell } from './components/AccountShell'
+import { HomePage } from './pages/HomePage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SecurityPage } from './pages/SecurityPage'
 import { OrganisationPage } from './pages/OrganisationPage'
@@ -17,14 +18,9 @@ import { OnboardingStartPage } from './pages/OnboardingStartPage'
 import { OnboardingInvitationChoicePage } from './pages/OnboardingInvitationChoicePage'
 import { OnboardingCreateOrganisationPage } from './pages/OnboardingCreateOrganisationPage'
 import { OnboardingInviteMembersPage } from './pages/OnboardingInviteMembersPage'
-import { getOnboardingCompletedFallbackPath } from './lib/onboardingUi'
-
-const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
-  if (status.step === 'invites') return '/onboarding/invitations'
-  if (status.step === 'create') return '/onboarding/create-organisation'
-  if (status.step === 'invite-members') return '/onboarding/invite-members'
-  return getOnboardingCompletedFallbackPath()
-}
+import { OnboardingBlockedPage } from './pages/OnboardingBlockedPage'
+import { getOnboardingCompletedFallbackPath, getOnboardingPathForStatus } from './lib/onboardingUi'
+import { buildPathWithQuery } from './lib/redirect'
 
 const LoadingSession = () => <EmptyState title="Loading session..." description="" />
 
@@ -87,9 +83,14 @@ const OnboardingGate = () => {
   }
 
   const isOnboardingRoute = location.pathname.startsWith('/onboarding')
+  const onboardingPath = onboardingStatus ? getOnboardingPathForStatus(onboardingStatus) : null
 
-  if (onboardingStatus?.needsOnboarding && !isOnboardingRoute) {
-    return <Navigate to={getOnboardingRouteFromStatus(onboardingStatus)} replace />
+  if (onboardingStatus?.needsOnboarding && onboardingPath && !isOnboardingRoute) {
+    return <Navigate to={buildPathWithQuery(onboardingPath)} replace />
+  }
+
+  if (onboardingStatus?.needsOnboarding && onboardingPath && isOnboardingRoute && location.pathname !== onboardingPath) {
+    return <Navigate to={buildPathWithQuery(onboardingPath)} replace />
   }
 
   if (!onboardingStatus?.needsOnboarding && isOnboardingRoute) {
@@ -143,14 +144,16 @@ function App() {
     >
       <Routes>
         <Route element={<OnboardingGate />}>
-          <Route path="/" element={<Navigate to="/account/profile" replace />} />
+          <Route path="/" element={<Navigate to="/account/home" replace />} />
           <Route path="/onboarding" element={<OnboardingStartPage />} />
           <Route path="/onboarding/invitations" element={<OnboardingInvitationChoicePage />} />
           <Route path="/onboarding/create-organisation" element={<OnboardingCreateOrganisationPage />} />
           <Route path="/onboarding/invite-members" element={<OnboardingInviteMembersPage />} />
+          <Route path="/onboarding/blocked" element={<OnboardingBlockedPage />} />
 
           <Route element={<AccountShell />}>
-            <Route path="/account" element={<Navigate to="/account/profile" replace />} />
+            <Route path="/account" element={<Navigate to="/account/home" replace />} />
+            <Route path="/account/home" element={<HomePage />} />
             <Route path="/account/profile" element={<ProfilePage />} />
             <Route path="/account/security" element={<SecurityPage />} />
             <Route path="/account/organisation" element={<OrganisationPage />} />
@@ -169,7 +172,7 @@ function App() {
             <Route path="/seats" element={<Navigate to="/account/seats" replace />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/account/profile" replace />} />
+          <Route path="*" element={<Navigate to="/account/home" replace />} />
         </Route>
       </Routes>
     </ThemeProvider>

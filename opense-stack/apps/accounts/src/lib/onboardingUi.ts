@@ -1,4 +1,4 @@
-import type { AppCode, MemberRole, PendingInvite } from '../api/onboarding'
+import type { AppCode, MemberRole, OnboardingStatus, PendingInvite } from '../api/onboarding'
 
 export const onboardingAppOptions: Array<{ code: AppCode; name: string }> = [
   { code: 'etl', name: 'ETL' },
@@ -78,7 +78,19 @@ export const canInviteDuringOnboarding = (role: MemberRole | null | undefined) =
   return role === 'owner' || role === 'admin'
 }
 
-export const getOnboardingCompletedFallbackPath = () => '/account/profile'
+export const shouldSkipInviteMembersStep = (role: MemberRole | null | undefined) => {
+  return Boolean(role) && !canInviteDuringOnboarding(role)
+}
+
+export const getOnboardingCompletedFallbackPath = () => '/account/home'
+
+export const getOnboardingPathForStatus = (status: OnboardingStatus) => {
+  if (status.step === 'invites') return '/onboarding/invitations'
+  if (status.step === 'create') return '/onboarding/create-organisation'
+  if (status.step === 'invite-members') return '/onboarding/invite-members'
+  if (status.step === 'blocked') return '/onboarding/blocked'
+  return getOnboardingCompletedFallbackPath()
+}
 
 export const getInvitationAcceptedPath = () => '/onboarding/invite-members'
 

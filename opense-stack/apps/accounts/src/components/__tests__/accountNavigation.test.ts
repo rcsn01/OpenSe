@@ -8,10 +8,10 @@ import {
 } from '../accountNavigation'
 
 describe('account navigation', () => {
-  it('keeps Profile as the first navigation entry', () => {
+  it('keeps Home as the first navigation entry', () => {
     expect(accountNavigationItems[0]).toMatchObject({
-      to: '/account/profile',
-      label: 'Profile',
+      to: '/account/home',
+      label: 'Home',
     })
   })
 

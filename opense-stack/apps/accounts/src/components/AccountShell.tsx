@@ -4,12 +4,13 @@ import {
   type AppShellNavItem,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
-import { Activity, Building2, CreditCard, ShieldCheck, SlidersHorizontal, UserRound, Users } from 'lucide-react'
+import { Activity, Building2, CreditCard, Home, ShieldCheck, SlidersHorizontal, UserRound, Users } from 'lucide-react'
 import {
   accountNavigationItems,
 } from './accountNavigation'
 
 const navIconsByPath = {
+  '/account/home': Home,
   '/account/profile': UserRound,
   '/account/security': ShieldCheck,
   '/account/organisation': Building2,

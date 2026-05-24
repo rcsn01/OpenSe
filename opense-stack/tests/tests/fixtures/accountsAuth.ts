@@ -115,13 +115,14 @@ const createAccountsUserViaSignup = async (page: Page): Promise<AccountsUser | n
 const ensureAccountsGeneralPageAccess = async (page: Page) => {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await page.goto('/account/profile');
-    await page.waitForURL(/\/(account\/profile|onboarding\/create-organisation|onboarding\/invite-members|onboarding\/invitations|login)/, {
+    await page.waitForURL(/\/(account\/profile|onboarding\/create-organisation|onboarding\/invite-members|onboarding\/invitations|onboarding\/blocked|login)/, {
       timeout: 15000,
     });
 
     const currentUrl = page.url();
     if (/\/account\/profile$/.test(currentUrl)) return true;
     if (/\/login$/.test(currentUrl)) return false;
+    if (/\/onboarding\/blocked$/.test(currentUrl)) return false;
 
     if (/\/onboarding\/create-organisation$/.test(currentUrl)) {
       await page.locator('#onboarding-org-name').fill('E2E Mobile Org');

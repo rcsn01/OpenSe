@@ -4,6 +4,7 @@ export interface AccountNavigationItem {
 }
 
 export const accountNavigationItems: AccountNavigationItem[] = [
+  { to: '/account/home', label: 'Home' },
   { to: '/account/profile', label: 'Profile' },
   { to: '/account/security', label: 'Security' },
   { to: '/account/organisation', label: 'Organisation' },

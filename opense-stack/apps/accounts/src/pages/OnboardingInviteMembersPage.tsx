@@ -15,6 +15,7 @@ import {
   canInviteDuringOnboarding,
   getOnboardingCompletedFallbackPath,
   parseOnboardingInviteEmails,
+  shouldSkipInviteMembersStep,
 } from '../lib/onboardingUi'
 
 export const OnboardingInviteMembersPage = () => {
@@ -29,6 +30,14 @@ export const OnboardingInviteMembersPage = () => {
 
   const canInvite = useMemo(() => canInviteDuringOnboarding(status?.role), [status?.role])
   const parsedEmails = useMemo(() => parseOnboardingInviteEmails(emailsInput), [emailsInput])
+
+  const completeAndRedirect = async () => {
+    await completeOrganisationOnboarding()
+    const redirected = redirectBackToApp()
+    if (!redirected) {
+      navigate(getOnboardingCompletedFallbackPath(), { replace: true })
+    }
+  }
 
   const loadStatus = async () => {
     try {
@@ -52,6 +61,16 @@ export const OnboardingInviteMembersPage = () => {
 
       if (nextStatus.step === 'create') {
         navigate(buildPathWithQuery('/onboarding/create-organisation'), { replace: true })
+        return
+      }
+
+      if (nextStatus.step === 'blocked') {
+        navigate(buildPathWithQuery('/onboarding/blocked'), { replace: true })
+        return
+      }
+
+      if (nextStatus.step === 'invite-members' && shouldSkipInviteMembersStep(nextStatus.role)) {
+        await completeAndRedirect()
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load onboarding status.'
@@ -100,11 +119,7 @@ export const OnboardingInviteMembersPage = () => {
     try {
       setFinishing(true)
       setError(null)
-      await completeOrganisationOnboarding()
-      const redirected = redirectBackToApp()
-      if (!redirected) {
-        navigate(getOnboardingCompletedFallbackPath(), { replace: true })
-      }
+      await completeAndRedirect()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to complete onboarding.'
       setError(message)
@@ -120,6 +135,19 @@ export const OnboardingInviteMembersPage = () => {
         currentStep="invite-members"
         loading={true}
         loadingLabel="Loading onboarding..."
+      >
+        <div />
+      </OnboardingShell>
+    )
+  }
+
+  if (shouldSkipInviteMembersStep(status?.role)) {
+    return (
+      <OnboardingShell
+        title="Finishing onboarding"
+        description="Completing your organisation access before returning to Accounts."
+        currentStep="invite-members"
+        alert={error ? <Alert variant="destructive" title="Unable to continue">{error}</Alert> : null}
       >
         <div />
       </OnboardingShell>

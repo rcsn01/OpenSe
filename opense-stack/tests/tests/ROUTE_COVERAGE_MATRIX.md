@@ -14,8 +14,9 @@ Status legend:
 | `/` | covered-new | `apps/accounts/route-coverage.spec.ts` |
 | `/login`, `/signin` | covered-new | `apps/accounts/route-coverage.spec.ts` |
 | `/register`, `/signup` | covered-new | `apps/accounts/route-coverage.spec.ts` |
-| `/onboarding`, `/onboarding/invitations`, `/onboarding/create-organisation`, `/onboarding/invite-members` | covered-new | `apps/accounts/route-coverage.spec.ts` |
+| `/onboarding`, `/onboarding/invitations`, `/onboarding/create-organisation`, `/onboarding/invite-members`, `/onboarding/blocked` | covered-new | `apps/accounts/route-coverage.spec.ts` |
 | `/settings`, `/organisation`, `/billing`, `/seats` | covered-new | `apps/accounts/route-coverage.spec.ts` |
+| `/account/home`, `/account/profile`, `/account/security`, `/account/organisation`, `/account/billing`, `/account/seats`, `/account/activity`, `/account/preferences` | covered-new | `apps/accounts/route-coverage.spec.ts` |
 | `/account*` aliases | covered-new | `apps/accounts/route-coverage.spec.ts` |
 | `*` | covered-new | `apps/accounts/route-coverage.spec.ts` |
 | Billing + seats mutation flows | needs-deep | `apps/accounts/billing-seats.spec.ts` (`E2E_ACCOUNTS_DEEP=true`) |

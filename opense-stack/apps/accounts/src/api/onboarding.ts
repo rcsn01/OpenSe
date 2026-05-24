@@ -9,7 +9,7 @@ import {
 export type AppCode = 'etl' | 'stoqr'
 export type MemberRole = 'owner' | 'admin' | 'editor' | 'member'
 export type InviteRole = 'admin' | 'editor' | 'member'
-export type OnboardingStep = 'invites' | 'create' | 'invite-members' | 'done'
+export type OnboardingStep = 'invites' | 'create' | 'invite-members' | 'blocked' | 'done'
 
 export interface PendingInvite {
   id: string
@@ -167,10 +167,22 @@ export const getOnboardingStatus = async (): Promise<OnboardingStatus> => {
   }
 
   const pendingInvites = await getPendingOrganisationInvites()
+  if (pendingInvites.length > 0) {
+    return {
+      needsOnboarding: true,
+      step: 'invites',
+      pendingInvites,
+      orgId: null,
+      orgName: null,
+      role: null,
+    }
+  }
+
+  const policy = await getOnboardingInstancePolicy()
 
   return {
     needsOnboarding: true,
-    step: pendingInvites.length > 0 ? 'invites' : 'create',
+    step: policy.canCreateOrganisation ? 'create' : 'blocked',
     pendingInvites,
     orgId: null,
     orgName: null,
