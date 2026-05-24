@@ -131,9 +131,10 @@ test.describe('Accounts onboarding organisation limit', () => {
     const user = uniqueUser('second');
 
     await signUpAndSignIn(page, user);
-    await openCreateOrganisationPage(page);
+    await expect(page).toHaveURL(/\/onboarding\/blocked/);
 
-    await expect(page.getByText(/organisation limit reached/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /organisation limit reached/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /log out/i })).toBeVisible();
     await expect(page.getByRole('heading', { name: /create your organisation/i })).toHaveCount(0);
     await expect(page.getByLabel(/organisation name/i)).toHaveCount(0);
     await expect(page.getByText(/setup summary/i)).toHaveCount(0);
@@ -141,5 +142,16 @@ test.describe('Accounts onboarding organisation limit', () => {
 
     const orgs = await restGet<Array<{ id: string }>>('organisations?select=id');
     expect(orgs).toHaveLength(1);
+  });
+
+  test('direct create route redirects blocked users to the blocked onboarding screen', async ({ page }) => {
+    const user = uniqueUser('direct-blocked');
+
+    await signUpAndSignIn(page, user);
+    await page.goto('/onboarding/create-organisation');
+
+    await expect(page).toHaveURL(/\/onboarding\/blocked/);
+    await expect(page.getByRole('heading', { name: /organisation limit reached/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /create your organisation/i })).toHaveCount(0);
   });
 });

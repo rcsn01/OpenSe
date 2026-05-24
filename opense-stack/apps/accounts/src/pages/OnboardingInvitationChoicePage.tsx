@@ -4,6 +4,7 @@ import { Alert, Badge, Button, DataTable, type DataTableColumn } from '@repo/ui'
 import { Building2, CheckCircle2, XCircle } from 'lucide-react'
 import {
   acceptOrganisationInvite,
+  completeOrganisationOnboarding,
   declineOrganisationInvite,
   getOnboardingStatus,
   type OnboardingStatus,
@@ -16,6 +17,8 @@ import {
   getInvitationAcceptedPath,
   getInvitationDeclinedPath,
   getOnboardingCompletedFallbackPath,
+  getOnboardingPathForStatus,
+  shouldSkipInviteMembersStep,
 } from '../lib/onboardingUi'
 
 export const OnboardingInvitationChoicePage = () => {
@@ -44,7 +47,21 @@ export const OnboardingInvitationChoicePage = () => {
         return
       }
 
+      if (status.step === 'blocked') {
+        navigate(buildPathWithQuery('/onboarding/blocked'), { replace: true })
+        return
+      }
+
       if (status.step === 'invite-members') {
+        if (shouldSkipInviteMembersStep(status.role)) {
+          await completeOrganisationOnboarding()
+          const redirected = redirectBackToApp()
+          if (!redirected) {
+            navigate(getOnboardingCompletedFallbackPath(), { replace: true })
+          }
+          return
+        }
+
         navigate(buildPathWithQuery('/onboarding/invite-members'), { replace: true })
         return
       }
@@ -66,7 +83,17 @@ export const OnboardingInvitationChoicePage = () => {
     try {
       setActionLoading(inviteId)
       setError(null)
+      const invite = invites.find((candidate) => candidate.id === inviteId)
       await acceptOrganisationInvite(inviteId)
+      if (shouldSkipInviteMembersStep(invite?.role)) {
+        await completeOrganisationOnboarding()
+        const redirected = redirectBackToApp()
+        if (!redirected) {
+          navigate(getOnboardingCompletedFallbackPath(), { replace: true })
+        }
+        return
+      }
+
       navigate(buildPathWithQuery(getInvitationAcceptedPath()), { replace: true })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to accept invitation.'
@@ -86,7 +113,8 @@ export const OnboardingInvitationChoicePage = () => {
 
       const nextPath = getInvitationDeclinedPath(remaining)
       if (nextPath) {
-        navigate(buildPathWithQuery(nextPath), { replace: true })
+        const nextStatus = await getOnboardingStatus()
+        navigate(buildPathWithQuery(getOnboardingPathForStatus(nextStatus)), { replace: true })
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to decline invitation.'
@@ -105,7 +133,8 @@ export const OnboardingInvitationChoicePage = () => {
         await declineOrganisationInvite(invite.id)
       }
 
-      navigate(buildPathWithQuery('/onboarding/create-organisation'), { replace: true })
+      const nextStatus = await getOnboardingStatus()
+      navigate(buildPathWithQuery(getOnboardingPathForStatus(nextStatus)), { replace: true })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to decline invitations.'
       setError(message)

@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import type { PendingInvite } from '../../api/onboarding'
+import type { OnboardingStatus, PendingInvite } from '../../api/onboarding'
 import {
   canInviteDuringOnboarding,
   getInvitationAcceptedPath,
   getInvitationDeclinedPath,
   getOnboardingAppSeatSummary,
+  getOnboardingPathForStatus,
   getOnboardingSelectedSeatTotal,
   parseOnboardingInviteEmails,
+  shouldSkipInviteMembersStep,
   validateOnboardingOrganisationForm,
 } from '../onboardingUi'
 
@@ -66,9 +68,34 @@ describe('onboarding UI helpers', () => {
     expect(canInviteDuringOnboarding(null)).toBe(false)
   })
 
+  it('skips invite-members only for non-inviting membership roles', () => {
+    expect(shouldSkipInviteMembersStep('member')).toBe(true)
+    expect(shouldSkipInviteMembersStep('editor')).toBe(true)
+    expect(shouldSkipInviteMembersStep('owner')).toBe(false)
+    expect(shouldSkipInviteMembersStep('admin')).toBe(false)
+    expect(shouldSkipInviteMembersStep(null)).toBe(false)
+  })
+
   it('keeps invitation choice navigation decisions stable', () => {
     expect(getInvitationAcceptedPath()).toBe('/onboarding/invite-members')
     expect(getInvitationDeclinedPath([invite('2')])).toBeNull()
     expect(getInvitationDeclinedPath([])).toBe('/onboarding/create-organisation')
+  })
+
+  it('maps onboarding statuses to canonical routes', () => {
+    const status = (step: OnboardingStatus['step']): OnboardingStatus => ({
+      needsOnboarding: step !== 'done',
+      step,
+      pendingInvites: [],
+      orgId: null,
+      orgName: null,
+      role: null,
+    })
+
+    expect(getOnboardingPathForStatus(status('invites'))).toBe('/onboarding/invitations')
+    expect(getOnboardingPathForStatus(status('create'))).toBe('/onboarding/create-organisation')
+    expect(getOnboardingPathForStatus(status('invite-members'))).toBe('/onboarding/invite-members')
+    expect(getOnboardingPathForStatus(status('blocked'))).toBe('/onboarding/blocked')
+    expect(getOnboardingPathForStatus(status('done'))).toBe('/account/home')
   })
 })

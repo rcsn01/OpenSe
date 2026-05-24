@@ -79,6 +79,8 @@ describe('onboarding api', () => {
       orgName: 'Acme',
       role: 'owner',
     })
+    expect(mockGetPendingOrganisationInvites).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
   it('returns invite-members when membership exists but completion flag is false', async () => {
@@ -115,6 +117,8 @@ describe('onboarding api', () => {
       orgName: 'Acme Team',
       role: 'admin',
     })
+    expect(mockGetPendingOrganisationInvites).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
   it('returns invites step when no membership exists but pending invites exist', async () => {
@@ -147,9 +151,10 @@ describe('onboarding api', () => {
     expect(status.step).toBe('invites')
     expect(status.pendingInvites).toHaveLength(1)
     expect(status.pendingInvites[0]?.orgName).toBe('New Org')
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('returns create step when no membership and no pending invites', async () => {
+  it('returns create step when no membership, no pending invites, and policy allows creation', async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: 'user-1', user_metadata: {} } },
       error: null,
@@ -164,11 +169,53 @@ describe('onboarding api', () => {
     })
 
     mockGetPendingOrganisationInvites.mockResolvedValue([])
+    mockRpc.mockResolvedValue({
+      data: [{
+        can_create_organisation: true,
+        organisation_count: 0,
+        max_organisations: 1,
+        free_seat_limit: null,
+      }],
+      error: null,
+    })
 
     const status = await getOnboardingStatus()
 
     expect(status.step).toBe('create')
     expect(status.pendingInvites).toEqual([])
+    expect(mockRpc).toHaveBeenCalledWith('accounts_get_onboarding_instance_policy')
+  })
+
+  it('returns blocked step when no membership, no pending invites, and policy forbids creation', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'user-1', user_metadata: {} } },
+      error: null,
+    })
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'organisation_members') {
+        return makeMembershipChain([])
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    mockGetPendingOrganisationInvites.mockResolvedValue([])
+    mockRpc.mockResolvedValue({
+      data: [{
+        can_create_organisation: false,
+        organisation_count: 1,
+        max_organisations: 1,
+        free_seat_limit: null,
+      }],
+      error: null,
+    })
+
+    const status = await getOnboardingStatus()
+
+    expect(status.step).toBe('blocked')
+    expect(status.pendingInvites).toEqual([])
+    expect(mockRpc).toHaveBeenCalledWith('accounts_get_onboarding_instance_policy')
   })
 
   it('validates organisation name before creating onboarding org', async () => {

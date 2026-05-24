@@ -2,17 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { signIn, signInWithGoogle } from '@repo/shared/auth'
 import { useAuth } from '@repo/shared/auth/context'
-import { getOnboardingStatus, type OnboardingStatus } from '../api/onboarding'
+import { getOnboardingStatus } from '../api/onboarding'
 import { SharedLoginPage } from '../components/auth/SharedLoginPage'
 import { buildPathWithQuery, buildQueryString, getAppNameFromQuery, redirectBackToApp } from '../lib/redirect'
-import { getOnboardingCompletedFallbackPath } from '../lib/onboardingUi'
-
-const getOnboardingRouteFromStatus = (status: OnboardingStatus) => {
-  if (status.step === 'invites') return '/onboarding/invitations'
-  if (status.step === 'create') return '/onboarding/create-organisation'
-  if (status.step === 'invite-members') return '/onboarding/invite-members'
-  return getOnboardingCompletedFallbackPath()
-}
+import { getOnboardingCompletedFallbackPath, getOnboardingPathForStatus } from '../lib/onboardingUi'
 
 export const SharedLoginRoutePage = () => {
   const location = useLocation()
@@ -44,7 +37,7 @@ export const SharedLoginRoutePage = () => {
       const onboardingStatus = await getOnboardingStatus()
 
       if (onboardingStatus.needsOnboarding) {
-        navigate(buildPathWithQuery(getOnboardingRouteFromStatus(onboardingStatus)), { replace: true })
+        navigate(buildPathWithQuery(getOnboardingPathForStatus(onboardingStatus)), { replace: true })
         return
       }
     } catch {

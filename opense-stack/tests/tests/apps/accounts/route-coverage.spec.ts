@@ -2,6 +2,7 @@ import { test as baseTest, expect as baseExpect } from '@playwright/test';
 import { test as authTest, expect as authExpect } from '../../fixtures/accountsAuth';
 
 const protectedRoutes = [
+  '/account/home',
   '/account/profile',
   '/account/security',
   '/account/organisation',
@@ -15,9 +16,10 @@ const onboardingRoutes = [
   '/onboarding/invitations',
   '/onboarding/create-organisation',
   '/onboarding/invite-members',
+  '/onboarding/blocked',
 ];
 const accountAliasRoutes: Array<[string, string]> = [
-  ['/account', '/account/profile'],
+  ['/account', '/account/home'],
   ['/account/general', '/account/preferences'],
   ['/account/settings', '/account/profile'],
   ['/general', '/account/preferences'],
@@ -66,6 +68,6 @@ authTest.describe('Accounts Protected Route Coverage', () => {
 
   authTest('root route resolves to protected shell', async ({ authenticatedAccountsPage }) => {
     await authenticatedAccountsPage.goto('/');
-    await authExpect(authenticatedAccountsPage).toHaveURL(/\/(account\/profile|login|onboarding)/);
+    await authExpect(authenticatedAccountsPage).toHaveURL(/\/(account\/home|login|onboarding)/);
   });
 });
