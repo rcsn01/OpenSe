@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Download } from 'lucide-react'
-import { Badge, Button, DataTable, type DataTableColumn } from '@repo/ui'
+import { Badge, DataTable, type DataTableColumn } from '@repo/ui'
 import { fuzzyRankings, fuzzySearchItems, normalizePageSearchTerm } from '../../lib/pageSearch'
 import { formatDateTime } from '../../utils'
 
@@ -141,15 +140,6 @@ export const ActivityLogsTab = ({ logs, searchTerm = '' }: { logs: ActivityEvent
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-1 py-2">
-        <p className="text-sm text-[var(--color-muted-foreground)]">
-          Showing {filteredLogs.length} of {logs.length} events.
-        </p>
-        <Button variant="ghost" size="sm" onClick={() => window.print()}>
-          <Download className="h-4 w-4" />
-          Export Logs
-        </Button>
-      </div>
       <DataTable
         columns={activityColumns}
         rows={paginatedLogs}

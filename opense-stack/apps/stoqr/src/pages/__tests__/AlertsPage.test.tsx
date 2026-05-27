@@ -389,6 +389,16 @@ describe("AlertsPage", () => {
     });
   });
 
+  it("renders alert timestamps as a single clipped line in YYYY/MM/DD HH:MM format", () => {
+    renderAlertsRoute("/alerts/feed");
+
+    const timestamps = screen.getAllByText(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/);
+
+    expect(timestamps.length).toBeGreaterThan(0);
+    expect(timestamps[0]).toHaveClass("overflow-hidden");
+    expect(timestamps[0]).toHaveClass("whitespace-nowrap");
+  });
+
   it("filters the feed from the top bar search on alerts routes", async () => {
     const user = userEvent.setup();
 
