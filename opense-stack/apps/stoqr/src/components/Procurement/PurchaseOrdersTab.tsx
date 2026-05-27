@@ -425,10 +425,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
           </div>
 
           <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-            <div className="text-sm text-[var(--color-muted-foreground)]">
-              Showing {filteredPurchaseOrders.length} of {purchaseOrders.length} purchase orders
-            </div>
-
             <Button
               type="button"
               variant="ghost"
