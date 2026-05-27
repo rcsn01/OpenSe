@@ -110,6 +110,10 @@ export {
 } from "./layout/LandingNavbar";
 export { TopBar, type TopBarProps } from "./layout/TopBar";
 export {
+  SWITCHABLE_APP_ICONS,
+  type SwitchableAppKey,
+} from "./layout/AppBrandIcons";
+export {
   SwitchAppTopBar,
   type SwitchAppTopBarProps,
 } from "./layout/SwitchAppTopBar";

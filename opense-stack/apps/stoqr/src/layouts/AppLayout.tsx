@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import {
   AppShellLayout,
+  SWITCHABLE_APP_ICONS,
   type AppShellNavItem,
 } from '@repo/ui'
 import {
@@ -21,6 +22,8 @@ import {
 import { useCompany } from '../contexts/CompanyContext'
 import { useMyPermissions } from '../hooks/queries/usePermissions'
 import { buildAccountsSettingsUrl } from '../lib/authRedirect'
+
+const StoqrBrandIcon = SWITCHABLE_APP_ICONS.stoqr
 
 const mainNavItems: Array<AppShellNavItem & { permission: string }> = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, permission: 'dashboard.view' },
@@ -57,7 +60,7 @@ export const AppLayout = () => {
   return (
     <TopBarSearchProvider>
       <AppShellLayout
-        brand={{ icon: 'OS', name: 'Open StoQR', version: 'v1.0' }}
+        brand={{ icon: <StoqrBrandIcon className="w-5 h-5" />, name: 'Open StoQR', version: 'v1.0' }}
         navGroups={[
           { category: 'main', items: filterByPermission(mainNavItems) },
           { category: 'configuration', items: filterByPermission(configNavItems) },
