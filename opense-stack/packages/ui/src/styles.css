@@ -103,6 +103,8 @@
     var(--color-card) 82%,
     var(--color-muted) 18%
   );
+  --color-avatar-background: var(--color-primary-light);
+  --color-avatar-foreground: var(--color-primary);
   --color-shell: var(--shade-white-1);
   --color-shell-border: var(--shade-white-9);
   --color-overlay: color-mix(in srgb, var(--shade-black-1) 35%, transparent);
@@ -234,6 +236,8 @@
     in srgb,
     var(--shade-white-1) 16%,
     transparent
+  --color-avatar-background: var(--color-primary-light);
+  --color-avatar-foreground: var(--color-primary);
   );
   --color-overlay: color-mix(in srgb, var(--shade-black-1) 52%, transparent);
   --color-table-border: color-mix(

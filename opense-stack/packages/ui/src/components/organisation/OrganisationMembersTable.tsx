@@ -1,5 +1,6 @@
 import { type ReactNode, useMemo, useState } from 'react'
 import { DataTable, type DataTableColumn } from '../ui/DataTable'
+import { Avatar } from '../ui/Avatar'
 
 type OrganisationMembersSortField = 'member' | 'role' | 'permissions-role' | 'status'
 
@@ -91,10 +92,8 @@ export function OrganisationMembersTable({
 
         return (
           <div className="flex items-center">
-            <div className="h-10 w-10 flex-shrink-0">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
-                {initials}
-              </div>
+            <div className="flex-shrink-0">
+              <Avatar fallback={initials} size="md" className="shadow-sm" />
             </div>
             <div className="ml-4">
               <div className="text-sm font-medium text-[var(--color-foreground)]">
