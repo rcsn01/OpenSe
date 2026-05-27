@@ -147,10 +147,10 @@ describe('ProductAdjustPage', () => {
     const sourceTree = screen.getByRole('tree', { name: 'Source folders' })
     const destinationTree = screen.getByRole('tree', { name: 'Destination folders' })
 
-    expect(within(sourceTree).getByRole('treeitem', { name: /Aisle 1 42 available/ })).toHaveClass('active')
-    expect(within(sourceTree).getByRole('treeitem', { name: /Warehouse 0 available/ })).toHaveAttribute('aria-disabled', 'true')
-    expect(within(sourceTree).getByRole('treeitem', { name: /Showroom 0 available/ })).toHaveAttribute('aria-disabled', 'true')
-    expect(within(sourceTree).getByRole('treeitem', { name: /Overflow 6 available/ })).toBeInTheDocument()
+    expect(within(sourceTree).getByRole('treeitem', { name: /Aisle 1 42/ })).toHaveClass('active')
+    expect(within(sourceTree).getByRole('treeitem', { name: /Warehouse 0/ })).toHaveAttribute('aria-disabled', 'true')
+    expect(within(sourceTree).getByRole('treeitem', { name: /Showroom 0/ })).toHaveAttribute('aria-disabled', 'true')
+    expect(within(sourceTree).getByRole('treeitem', { name: /Overflow 6/ })).toBeInTheDocument()
     expect(within(destinationTree).queryByText('Aisle 1')).not.toBeInTheDocument()
     expect(within(destinationTree).getByText('Warehouse')).toBeInTheDocument()
     expect(within(destinationTree).getByText('Showroom')).toBeInTheDocument()
@@ -160,10 +160,10 @@ describe('ProductAdjustPage', () => {
   it('leaves adjust location unselected for scanned product-only URLs', async () => {
     renderAdjustPage('/inventory/prod-1/adjust?barcode=PK-300&entryMethod=camera&returnTo=/scan/scan-actions')
 
-    const folderSelect = await screen.findByRole('combobox', { name: 'Stock folder' })
+    const folderTree = await screen.findByRole('tree', { name: 'Stock folders' })
     const quantityInput = screen.getByRole('spinbutton', { name: 'New quantity' })
 
-    expect(folderSelect).toHaveValue('')
+    expect(within(folderTree).getAllByRole('treeitem').every((item) => !item.classList.contains('active'))).toBe(true)
     expect(quantityInput).toHaveValue(0)
     expect(screen.getByRole('button', { name: /confirm update/i })).toBeDisabled()
   })
@@ -171,10 +171,10 @@ describe('ProductAdjustPage', () => {
   it('preselects adjust location from a valid folderId URL', async () => {
     renderAdjustPage('/inventory/prod-1/adjust?barcode=stoqr%3Av1%3Aproduct%3Aprod-1%3Afolder%3Afolder-4&entryMethod=camera&returnTo=/scan/scan-actions&folderId=folder-4')
 
-    const folderSelect = await screen.findByRole('combobox', { name: 'Stock folder' })
+    const folderTree = await screen.findByRole('tree', { name: 'Stock folders' })
     const quantityInput = screen.getByRole('spinbutton', { name: 'New quantity' })
 
-    expect(folderSelect).toHaveValue('folder-4')
+    expect(within(folderTree).getByRole('treeitem', { name: /Overflow 6/ })).toHaveClass('active')
     expect(quantityInput).toHaveValue(6)
     expect(screen.getByRole('button', { name: /confirm update/i })).toBeDisabled()
   })
@@ -185,9 +185,9 @@ describe('ProductAdjustPage', () => {
     const sourceTree = await screen.findByRole('tree', { name: 'Source folders' })
     const destinationTree = screen.getByRole('tree', { name: 'Destination folders' })
 
-    expect(within(sourceTree).getByRole('treeitem', { name: /Overflow 6 available/ })).toHaveClass('active')
+    expect(within(sourceTree).getByRole('treeitem', { name: /Overflow 6/ })).toHaveClass('active')
     expect(within(destinationTree).queryByText('Overflow')).not.toBeInTheDocument()
-    expect(screen.getByText('6')).toBeInTheDocument()
+    expect(screen.getByText('6', { selector: '.scan-current-stock-value' })).toBeInTheDocument()
   })
 
   it('leaves transfer source unselected for scanned product-only URLs', async () => {
@@ -196,7 +196,7 @@ describe('ProductAdjustPage', () => {
     const sourceTree = await screen.findByRole('tree', { name: 'Source folders' })
 
     expect(within(sourceTree).getAllByRole('treeitem').every((item) => !item.classList.contains('active'))).toBe(true)
-    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(screen.getByText('0', { selector: '.scan-current-stock-value' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /confirm transfer/i })).toBeDisabled()
   })
 
@@ -208,9 +208,9 @@ describe('ProductAdjustPage', () => {
     await user.type(quantityInput, '5')
     expect(quantityInput).toHaveValue(5)
 
-    await user.click(screen.getByRole('treeitem', { name: /Overflow 6 available/ }))
+    await user.click(screen.getByRole('treeitem', { name: /Overflow 6/ }))
 
-    expect(screen.getByText('6')).toBeInTheDocument()
+    expect(screen.getByText('6', { selector: '.scan-current-stock-value' })).toBeInTheDocument()
     expect(quantityInput).toHaveValue(0)
   })
 
@@ -256,7 +256,7 @@ describe('ProductAdjustPage', () => {
     await user.type(quantityInput, '4')
     expect(confirmButton).not.toBeDisabled()
 
-    await user.click(screen.getByRole('treeitem', { name: /Overflow 6 available/ }))
+    await user.click(screen.getByRole('treeitem', { name: /Overflow 6/ }))
     expect(confirmButton).toBeDisabled()
 
     expect(within(destinationTree).queryByText('Overflow')).not.toBeInTheDocument()

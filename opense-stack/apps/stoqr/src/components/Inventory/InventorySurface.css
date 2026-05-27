@@ -600,12 +600,14 @@ button.tree-toggle {
 }
 
 .folder-selection-tree-content {
-  padding: 4px 0 8px;
+  padding: 4px;
 }
 
 .folder-selection-tree-item {
-  width: calc(100% - 16px);
+  width: 100%;
   min-width: 0;
+  margin-right: 0;
+  margin-left: 0;
 }
 
 .folder-selection-tree-item:focus-visible {
@@ -638,6 +640,7 @@ button.tree-toggle {
 .folder-selection-tree-meta {
   flex-shrink: 0;
   margin-left: 8px;
+  padding-right: 24px;
   color: var(--color-muted-foreground);
   font-size: 0.72rem;
   white-space: nowrap;

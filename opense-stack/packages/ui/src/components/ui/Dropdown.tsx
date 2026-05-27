@@ -32,7 +32,7 @@ export function Dropdown({
 
   return (
     <div ref={ref} className="relative inline-block">
-      <div onClick={() => setOpen((v) => !v)} className="cursor-pointer">
+      <div onClick={() => setOpen((v) => !v)} className="cursor-pointer [&>button]:border-0">
         {typeof trigger === "function" ? trigger(open) : trigger}
       </div>
       {open && (
