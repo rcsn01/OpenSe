@@ -2,7 +2,7 @@ import { cn } from '../../lib/cn'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 const avatarVariants = cva(
-  'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-muted)] font-medium text-[var(--color-muted-foreground)]',
+  'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-avatar-background)] font-medium text-[var(--color-avatar-foreground)]',
   {
     variants: {
       size: {
