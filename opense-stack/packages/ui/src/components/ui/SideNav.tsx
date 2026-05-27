@@ -24,7 +24,7 @@ const sideNavItemInactive =
   'text-[var(--color-foreground)] hover:bg-[var(--color-muted)]'
 
 const sideNavItemLabelClass =
-  'flex items-center gap-2 w-full m-0 p-0 font-inherit text-inherit'
+  'flex items-center gap-2 w-full m-0 p-0 font-inherit text-inherit [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0'
 
 export function SideNavItem({ children, active, onClick, renderLink }: SideNavItemProps) {
   const className = cn(
@@ -127,7 +127,7 @@ export function SideNavBrandSlot({
     <div className="side-nav-brand-slot flex h-14 shrink-0 items-center px-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-9 h-9 rounded-[10px] bg-[var(--color-surface-subtle)] text-[var(--color-foreground)] grid place-items-center font-extrabold text-base shrink-0 ring-1 ring-inset ring-[var(--color-border)] [&>svg]:w-5 [&>svg]:h-5">
+          <div className="w-9 h-9 rounded-[10px] bg-[var(--color-primary-light)] text-[var(--color-primary-hover)] grid place-items-center font-extrabold text-base shrink-0 shadow-[var(--shadow-sm)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--color-primary)_42%,var(--color-border))] [&>svg]:h-5 [&>svg]:w-5 [&>svg]:shrink-0">
             {icon}
           </div>
           <div className="flex flex-col leading-tight overflow-hidden min-w-0">
