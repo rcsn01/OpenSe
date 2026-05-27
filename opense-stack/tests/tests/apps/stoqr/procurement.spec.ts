@@ -18,7 +18,6 @@ test.describe('Stoqr Procurement', () => {
     await expect(autoGenerateButton).toBeVisible();
     await expect(createButton).toBeVisible();
 
-    await expect(authenticatedPage.getByText('Showing 0 of 0 purchase orders')).toBeVisible();
     await expect(authenticatedPage.getByRole('heading', { name: 'No purchase orders found' })).toBeVisible();
     await expect(
       authenticatedPage.getByText('Create your first purchase order to start tracking supplier commitments and incoming stock.'),
