@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, Palette, Workflow } from "lucide-react";
 import { getRuntimeConfigValue } from "@repo/shared/runtime-config";
 import { cn } from "../../lib/cn";
+import { SWITCHABLE_APP_ICONS } from "./AppBrandIcons";
 
 type CloseOptions = {
   returnFocus?: boolean;
@@ -45,6 +45,9 @@ export function SwitchAppPopover({
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
   const apps = useMemo(() => {
+    const EtlIcon = SWITCHABLE_APP_ICONS.etl;
+    const StoqrIcon = SWITCHABLE_APP_ICONS.stoqr;
+    const UiDesignIcon = SWITCHABLE_APP_ICONS["ui-design"];
     const etlUrl =
       getRuntimeConfigValue("VITE_ETL_PUBLIC_URL") ||
       getRuntimeConfigValue("VITE_ETL_URL") ||
@@ -63,20 +66,20 @@ export function SwitchAppPopover({
         label: "ETL",
         url: etlUrl,
         path: "/dashboard",
-        icon: <Workflow className="h-5 w-5" />,
+        icon: <EtlIcon className="h-5 w-5" />,
       },
       {
         key: "stoqr",
         label: "StoQR",
         url: stoqrUrl,
         path: "/dashboard",
-        icon: <Boxes className="h-5 w-5" />,
+        icon: <StoqrIcon className="h-5 w-5" />,
       },
       {
         key: "ui-design",
         label: "UI Design",
         url: uiDesignUrl,
-        icon: <Palette className="h-5 w-5" />,
+        icon: <UiDesignIcon className="h-5 w-5" />,
       },
     ] as AppSwitcherItem[];
   }, []);

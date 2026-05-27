@@ -3,6 +3,7 @@ import { Outlet, useLocation, Navigate, NavLink } from 'react-router-dom'
 import { LayoutDashboard, LayoutTemplate, Building2, Activity } from 'lucide-react'
 import {
   AppShellLayout,
+  SWITCHABLE_APP_ICONS,
   type AppShellNavItem,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
@@ -22,6 +23,8 @@ const mainNavItems: AppShellNavItem[] = [
   { href: '/organisation', label: 'Organisation', icon: <Building2 className="w-5 h-5" /> },
   { href: '/activity', label: 'Activity', icon: <Activity className="w-5 h-5" /> },
 ]
+
+const EtlBrandIcon = SWITCHABLE_APP_ICONS.etl
 
 export const AppLayout = () => {
   const { session, user, loading, logout } = useAuth()
@@ -134,7 +137,7 @@ export const AppLayout = () => {
   return (
     <TopBarSearchProvider>
       <AppShellLayout
-        brand={{ icon: 'OE', name: 'Open ETL', version: 'v1.0' }}
+        brand={{ icon: <EtlBrandIcon className="w-5 h-5" />, name: 'Open ETL', version: 'v1.0' }}
         navGroups={[{ category: 'main', items: mainNavItems }]}
         currentPath={location.pathname}
         renderNavLink={(item, { className, children }) => (

@@ -127,7 +127,7 @@ export function SideNavBrandSlot({
     <div className="side-nav-brand-slot flex h-14 shrink-0 items-center px-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-blue-500 to-indigo-500 text-white grid place-items-center font-extrabold text-base shrink-0 shadow-[0_4px_12px_rgba(59,130,246,0.3)] [&>svg]:w-5 [&>svg]:h-5">
+          <div className="w-9 h-9 rounded-[10px] bg-[var(--color-surface-subtle)] text-[var(--color-foreground)] grid place-items-center font-extrabold text-base shrink-0 ring-1 ring-inset ring-[var(--color-border)] [&>svg]:w-5 [&>svg]:h-5">
             {icon}
           </div>
           <div className="flex flex-col leading-tight overflow-hidden min-w-0">
