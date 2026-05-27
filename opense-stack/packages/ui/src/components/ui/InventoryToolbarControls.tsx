@@ -1,11 +1,7 @@
-import { ChevronDown, LayoutGrid, List as ListIcon, Plus } from 'lucide-react'
+import { LayoutGrid, List as ListIcon, Plus } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Dropdown, DropdownItem } from './Dropdown'
-
-export interface StockStatusFilterOption {
-  value: string
-  label: string
-}
+import { FilterDropdown, type FilterDropdownOption } from './FilterDropdown'
 
 export interface AddFilterItem {
   value: string
@@ -13,15 +9,6 @@ export interface AddFilterItem {
 }
 
 export type InventoryView = 'list' | 'grid'
-
-export interface StockStatusFilterDropdownProps {
-  value: string
-  options: StockStatusFilterOption[]
-  onChange: (value: string) => void
-  ariaLabel?: string
-  className?: string
-  menuClassName?: string
-}
 
 export interface AddFilterDropdownProps {
   items: AddFilterItem[]
@@ -42,7 +29,7 @@ export interface InventoryViewToggleProps {
 
 export interface InventoryToolbarControlsProps {
   stockStatus: string
-  stockStatusOptions: StockStatusFilterOption[]
+  stockStatusOptions: FilterDropdownOption[]
   onStockStatusChange: (value: string) => void
   filterItems: AddFilterItem[]
   onFilterSelect: (value: string) => void
@@ -56,50 +43,6 @@ const toolbarTextButtonClasses =
 
 const toolbarIconButtonClasses =
   'inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border-none p-0 transition-colors duration-[var(--transition-fast)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2'
-
-export function StockStatusFilterDropdown({
-  value,
-  options,
-  onChange,
-  ariaLabel = 'Stock status filter',
-  className,
-  menuClassName,
-}: StockStatusFilterDropdownProps) {
-  const selectedOption = options.find((option) => option.value === value) ?? options[0]
-  const isActive = Boolean(selectedOption && selectedOption.value !== options[0]?.value)
-
-  if (!selectedOption) return null
-
-  return (
-    <Dropdown
-      className={cn('min-w-[120px]', menuClassName)}
-      trigger={(open) => (
-        <button
-          type="button"
-          aria-label={ariaLabel}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          className={cn(
-            toolbarTextButtonClasses,
-            isActive
-              ? 'font-semibold text-[var(--color-primary)]'
-              : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]',
-            className,
-          )}
-        >
-          {selectedOption.label}
-          <ChevronDown size={12} />
-        </button>
-      )}
-    >
-      {options.map((option) => (
-        <DropdownItem key={option.value} onClick={() => onChange(option.value)}>
-          {option.label}
-        </DropdownItem>
-      ))}
-    </Dropdown>
-  )
-}
 
 export function AddFilterDropdown({
   items,
@@ -214,7 +157,7 @@ export function InventoryToolbarControls({
   return (
     <div className={cn('flex flex-wrap items-center justify-between gap-2', className)}>
       <div className="flex flex-1 flex-wrap items-center gap-1.5">
-        <StockStatusFilterDropdown
+        <FilterDropdown
           value={stockStatus}
           options={stockStatusOptions}
           onChange={onStockStatusChange}

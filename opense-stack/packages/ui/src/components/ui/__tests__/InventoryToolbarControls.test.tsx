@@ -5,8 +5,8 @@ import {
   AddFilterDropdown,
   InventoryToolbarControls,
   InventoryViewToggle,
-  StockStatusFilterDropdown,
 } from '../InventoryToolbarControls'
+import { FilterDropdown } from '../FilterDropdown'
 
 const stockStatusOptions = [
   { value: 'all', label: 'All Statuses' },
@@ -19,13 +19,13 @@ const filterItems = [
   { value: 'batch', label: 'Batch' },
 ]
 
-describe('StockStatusFilterDropdown', () => {
+describe('FilterDropdown', () => {
   it('renders the selected value and notifies on selection', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
 
     render(
-      <StockStatusFilterDropdown
+      <FilterDropdown
         value="all"
         options={stockStatusOptions}
         onChange={onChange}

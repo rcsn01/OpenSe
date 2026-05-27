@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
   Pagination,
-  StockStatusFilterDropdown,
+  FilterDropdown,
   AddFilterDropdown,
   InventoryViewToggle,
   InventoryToolbarControls,
@@ -470,7 +470,7 @@ export function DataDisplayPage() {
                   <Body size="body5" muted>
                     Stock status filter
                   </Body>
-                  <StockStatusFilterDropdown
+                  <FilterDropdown
                     value={stockStatus}
                     options={stockStatusOptions}
                     onChange={setStockStatus}
