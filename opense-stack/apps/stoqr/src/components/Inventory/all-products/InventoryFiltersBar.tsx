@@ -5,7 +5,7 @@ import {
   Button,
   Dropdown,
   DropdownItem,
-  StockStatusFilterDropdown,
+  FilterDropdown,
 } from '@repo/ui'
 import { missingPermissionMessage } from '../../PermissionGate'
 import type { InventoryFiltersBarProps } from './types'
@@ -149,7 +149,7 @@ export const InventoryFiltersBar = ({
         <>
           <div className="flex flex-1 flex-wrap items-center gap-1.5">
             {mobileExplorerToggle}
-            <StockStatusFilterDropdown
+            <FilterDropdown
               value={stockFilter}
               options={stockFilterOptions}
               onChange={setStockFilter}

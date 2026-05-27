@@ -103,10 +103,8 @@ describe('SuppliersTab', () => {
       </MemoryRouter>,
     )
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'View' }),
-      'has-open-orders',
-    )
+    await user.click(screen.getByRole('button', { name: 'View' }))
+    await user.click(screen.getByRole('button', { name: 'Has open POs' }))
 
     expect(screen.getByRole('row', { name: /Zenith Components/i })).toBeInTheDocument()
     expect(screen.queryByRole('row', { name: /Acme Medical/i })).not.toBeInTheDocument()

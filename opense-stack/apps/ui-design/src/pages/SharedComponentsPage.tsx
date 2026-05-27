@@ -83,7 +83,7 @@ import {
   SideSheetTitle,
   Skeleton,
   Spinner,
-  StockStatusFilterDropdown,
+  FilterDropdown,
   StackLayout,
   StatusBadge,
   SwitchAppTopBar,
@@ -665,7 +665,7 @@ export function SharedComponentsPage() {
   const tableTemplateRow = (
     <HStack wrap align="center" justify="between" className="gap-3">
       <HStack wrap align="center" className="gap-2">
-        <StockStatusFilterDropdown
+        <FilterDropdown
           value={inventoryFilter}
           options={inventoryFilterTemplates}
           onChange={(value) => applyFilterTemplate(value as InventoryFilterTemplate)}
@@ -1122,7 +1122,7 @@ export function SharedComponentsPage() {
             <GalleryCanvas>
               <HStack wrap justify="between">
                 <HStack wrap>
-                  <StockStatusFilterDropdown
+                  <FilterDropdown
                     value={stockStatus}
                     options={stockStatusOptions}
                     onChange={setStockStatus}

@@ -14,8 +14,8 @@ import {
   Dropdown,
   DropdownItem,
   EmptyState,
+  FilterDropdown,
   Input,
-  Select,
 } from "@repo/ui";
 import {
   Building2,
@@ -670,25 +670,17 @@ export const SuppliersTab = ({
         >
           <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-              <label className="flex max-w-[240px] flex-col gap-2 text-sm font-medium text-[var(--color-foreground)]">
-                View
-                <Select
+              <div className="flex max-w-[240px] flex-col gap-2 text-sm font-medium text-[var(--color-foreground)]">
+                <FilterDropdown
                   value={supplierFilter}
-                  onChange={(event) =>
-                    handleSupplierFilterChange(event.target.value as SupplierFilter)
-                  }
                   options={supplierFilterOptions}
+                  onChange={handleSupplierFilterChange}
+                  ariaLabel="View"
+                  className="h-9 justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm"
+                  menuClassName="min-w-[220px]"
                 />
-              </label>
-
-              <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-muted-foreground)] lg:pt-6">
-                <Badge variant="secondary" size="sm">
-                  {filteredSuppliers.length} visible
-                </Badge>
-                <Badge variant="outline" size="sm">
-                  {supplierRows.length} total
-                </Badge>
               </div>
+
             </div>
 
             <Button

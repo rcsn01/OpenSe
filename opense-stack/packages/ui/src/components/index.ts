@@ -64,14 +64,16 @@ export {
   type DropdownArrayItem,
 } from "./ui/Dropdown";
 export {
-  StockStatusFilterDropdown,
+  FilterDropdown,
+  type FilterDropdownOption,
+  type FilterDropdownProps,
+} from "./ui/FilterDropdown";
+export {
   AddFilterDropdown,
   InventoryViewToggle,
   InventoryToolbarControls,
-  type StockStatusFilterOption,
   type AddFilterItem,
   type InventoryView,
-  type StockStatusFilterDropdownProps,
   type AddFilterDropdownProps,
   type InventoryViewToggleProps,
   type InventoryToolbarControlsProps,

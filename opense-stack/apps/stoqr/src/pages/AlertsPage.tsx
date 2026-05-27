@@ -5,7 +5,7 @@ import {
   Card,
   ContentTabs,
   DataTable,
-  StockStatusFilterDropdown,
+  FilterDropdown,
   type DataTableColumn,
   Toggle,
 } from "@repo/ui";
@@ -523,7 +523,7 @@ export const AlertsPage = () => {
                 </Button>
               </>
             ) : (
-              <StockStatusFilterDropdown
+              <FilterDropdown
                 value={activeFilter}
                 options={feedFilters.map((filter) => ({
                   value: filter.id,
