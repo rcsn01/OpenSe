@@ -22,7 +22,6 @@ vi.mock('../useInlineProductEdit', () => ({
 
 const createProps = (overrides: Partial<ProductListViewProps> = {}): ProductListViewProps => ({
   companyId: 'company-1',
-  view: 'list',
   products: [
     { id: 'p-1', name: 'Widget', sku: 'W-1', quantity_on_hand: 50, reorder_point: 10, folder_id: null, cost_price: 5, selling_price: 20 },
     { id: 'p-2', name: 'Gadget', sku: 'G-1', quantity_on_hand: 3, reorder_point: 5, folder_id: 'f-1', cost_price: 8, selling_price: 30 },
@@ -135,25 +134,5 @@ describe('ProductListView – all columns are sortable', () => {
     renderWithRouter(props)
     fireEvent.click(screen.getByText('Folder').closest('th')!)
     expect(props.onSortChange).toHaveBeenCalledWith('folder_id')
-  })
-})
-
-describe('ProductListView – grid view AVAILABLE display', () => {
-  it('shows "stock / min" format in grid cards', () => {
-    renderWithRouter(createProps({ view: 'grid' }))
-    expect(screen.getByText('50 / 10')).toBeInTheDocument()
-    expect(screen.getByText('3 / 5')).toBeInTheDocument()
-  })
-
-  it('applies green color in grid when stock >= reorder_point', () => {
-    renderWithRouter(createProps({ view: 'grid' }))
-    const cell = screen.getByText('50 / 10')
-    expect(cell).toHaveClass('text-[var(--color-success)]')
-  })
-
-  it('applies red color in grid when stock < reorder_point', () => {
-    renderWithRouter(createProps({ view: 'grid' }))
-    const cell = screen.getByText('3 / 5')
-    expect(cell).toHaveClass('text-[var(--color-destructive)]')
   })
 })

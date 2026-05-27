@@ -665,17 +665,13 @@ export function SharedComponentsPage() {
   const tableTemplateRow = (
     <HStack wrap align="center" justify="between" className="gap-3">
       <HStack wrap align="center" className="gap-2">
-        {inventoryFilterTemplates.map((template) => (
-          <Button
-            key={template.value}
-            type="button"
-            variant={inventoryFilter === template.value ? "secondary" : "ghost"}
-            size="xs"
-            onClick={() => applyFilterTemplate(template.value)}
-          >
-            {template.label}
-          </Button>
-        ))}
+        <StockStatusFilterDropdown
+          value={inventoryFilter}
+          options={inventoryFilterTemplates}
+          onChange={(value) => applyFilterTemplate(value as InventoryFilterTemplate)}
+          ariaLabel="Inventory table filter"
+          menuClassName="min-w-[160px]"
+        />
       </HStack>
       <Dropdown
         align="right"
