@@ -161,17 +161,19 @@
   padding: 12px 22px;
   border: none;
   border-radius: 999px;
-  background: #090d16;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    opacity 0.18s ease;
   min-height: 44px;
 }
 
 .scan-camera-toggle:hover {
-  opacity: 0.92;
+  background: var(--color-primary-hover);
 }
 
 .scan-camera-toggle.is-active {
