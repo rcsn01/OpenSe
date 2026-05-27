@@ -401,11 +401,12 @@ describe("AlertsPage", () => {
     expect(screen.queryByText(/PCR Tips is at 4 units/i)).not.toBeInTheDocument();
   });
 
-  it("filters the feed using the shared filter buttons", async () => {
+  it("filters the feed using the shared dropdown filter", async () => {
     const user = userEvent.setup();
 
     renderAlertsRoute("/alerts/feed");
 
+    await user.click(screen.getByRole("button", { name: "Alert feed category filter" }));
     await user.click(screen.getByRole("button", { name: "Stock & Inventory" }));
 
     expect(screen.getByText("Showing 2 of 2 alerts")).toBeInTheDocument();

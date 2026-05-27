@@ -56,7 +56,6 @@ export const AllProductsTab = ({
   canImportExportInventory,
 }: AllProductsTabProps) => {
   const isSelectionMode = selectedRowIds.size > 0
-  const [view, setView] = useState<'list' | 'grid'>('list')
 
   // Folder creation inline state
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
@@ -355,8 +354,6 @@ export const AllProductsTab = ({
             selectedRowIds={selectedRowIds}
             stockFilter={stockFilter}
             setStockFilter={setStockFilter}
-            view={view}
-            setView={setView}
             activeCustomFieldFilters={activeCustomFieldFilters}
             onAddFilter={onAddFilter}
             onRemoveFilter={onRemoveFilter}
@@ -383,7 +380,6 @@ export const AllProductsTab = ({
 
           <ProductListView
             companyId={companyId}
-            view={view}
             products={products}
             isLoading={isLoading}
             selectedRowIds={selectedRowIds}

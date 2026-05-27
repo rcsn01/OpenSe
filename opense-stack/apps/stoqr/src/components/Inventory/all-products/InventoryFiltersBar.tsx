@@ -5,7 +5,7 @@ import {
   Button,
   Dropdown,
   DropdownItem,
-  InventoryViewToggle,
+  StockStatusFilterDropdown,
 } from '@repo/ui'
 import { missingPermissionMessage } from '../../PermissionGate'
 import type { InventoryFiltersBarProps } from './types'
@@ -26,8 +26,6 @@ export const InventoryFiltersBar = ({
   selectedRowIds,
   stockFilter,
   setStockFilter,
-  view,
-  setView,
   activeCustomFieldFilters,
   onAddFilter,
   onRemoveFilter,
@@ -151,19 +149,13 @@ export const InventoryFiltersBar = ({
         <>
           <div className="flex flex-1 flex-wrap items-center gap-1.5">
             {mobileExplorerToggle}
-            <div className="flex flex-wrap items-center gap-1">
-              {stockFilterOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  variant={stockFilter === option.value ? 'secondary' : 'ghost'}
-                  size="xs"
-                  onClick={() => setStockFilter(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
+            <StockStatusFilterDropdown
+              value={stockFilter}
+              options={stockFilterOptions}
+              onChange={setStockFilter}
+              ariaLabel="Inventory stock status filter"
+              menuClassName="min-w-[160px]"
+            />
 
             {activeCustomFieldFilters.length > 0 && (
               <div className="h-4 w-px shrink-0 bg-[var(--color-border)]" />
@@ -230,10 +222,6 @@ export const InventoryFiltersBar = ({
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5">
-            <InventoryViewToggle value={view} onChange={setView} />
-
-            <div className="h-4 w-px shrink-0 bg-[var(--color-border)]" />
-
             <Button
               type="button"
               variant="ghost"

@@ -5,7 +5,6 @@ export type FolderView = 'all' | 'uncategorised' | 'folder'
 
 export type ProductListViewProps = {
   companyId: string | null
-  view: 'list' | 'grid'
   products: InventoryProduct[]
   isLoading: boolean
   selectedRowIds: Set<string>
@@ -30,8 +29,6 @@ export type InventoryFiltersBarProps = {
   selectedRowIds: Set<string>
   stockFilter: 'all' | 'low' | 'out'
   setStockFilter: (value: 'all' | 'low' | 'out') => void
-  view: 'list' | 'grid'
-  setView: (value: 'list' | 'grid') => void
   activeCustomFieldFilters: CustomFieldActiveFilter[]
   onAddFilter: (key: string, value: CustomFieldPrimitive) => void
   onRemoveFilter: (key: string) => void

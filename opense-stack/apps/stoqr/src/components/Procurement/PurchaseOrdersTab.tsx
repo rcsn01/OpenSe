@@ -12,6 +12,7 @@ import {
   EmptyState,
   Input,
   Select,
+  StockStatusFilterDropdown,
 } from '@repo/ui'
 import { BellRing, Building2, CheckCircle2, Plus, Sparkles } from 'lucide-react'
 import type { PurchaseOrder } from '../../api/procurement'
@@ -414,17 +415,13 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
       <Card variant="plain" className="flex min-h-0 flex-1 flex-col overflow-hidden" padding="none">
         <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2 sm:min-w-[220px]">
-            {statusOptions.map((option) => (
-              <Button
-                key={option.value}
-                type="button"
-                variant={statusFilter === option.value ? 'secondary' : 'ghost'}
-                size="xs"
-                onClick={() => handleStatusFilterChange(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
+            <StockStatusFilterDropdown
+              value={statusFilter}
+              options={statusOptions}
+              onChange={handleStatusFilterChange}
+              ariaLabel="Purchase order status filter"
+              menuClassName="min-w-[220px]"
+            />
           </div>
 
           <div className="flex flex-wrap items-center gap-3 sm:justify-end">

@@ -8,8 +8,6 @@ const createProps = () => ({
   selectedRowIds: new Set<string>(),
   stockFilter: 'all' as const,
   setStockFilter: vi.fn(),
-  view: 'list' as const,
-  setView: vi.fn(),
   activeCustomFieldFilters: [] as { key: string; value: string | number | boolean }[],
   onAddFilter: vi.fn(),
   onRemoveFilter: vi.fn(),
@@ -111,6 +109,7 @@ describe('InventoryFiltersBar', () => {
     const props = createProps()
     render(<InventoryFiltersBar {...props} />)
 
+    fireEvent.click(screen.getByRole('button', { name: 'Inventory stock status filter' }))
     fireEvent.click(screen.getByRole('button', { name: 'Low Stock' }))
 
     expect(props.setStockFilter).toHaveBeenCalledWith('low')
@@ -142,20 +141,6 @@ describe('InventoryFiltersBar', () => {
     expect(createButton).toHaveAttribute('title', 'Your role does not include Inventory Create.')
     expect(importButton).toBeDisabled()
     expect(importButton).toHaveAttribute('title', 'Your role does not include Inventory Import Export.')
-  })
-
-  it('renders view toggle buttons beside the action buttons and switches views', () => {
-    const props = createProps()
-    render(<InventoryFiltersBar {...props} />)
-
-    const listBtn = screen.getByRole('button', { name: 'List view' })
-    const gridBtn = screen.getByRole('button', { name: 'Module view' })
-    expect(listBtn).toBeInTheDocument()
-    expect(gridBtn).toBeInTheDocument()
-
-    fireEvent.click(gridBtn)
-
-    expect(props.setView).toHaveBeenCalledWith('grid')
   })
 
   it('cancel button during value selection clears pending key', () => {

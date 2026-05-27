@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Badge, DataTable, EmptyState, Heading, Label, Pagination, cn } from '@repo/ui'
+import { DataTable, EmptyState, cn } from '@repo/ui'
 import { formatCurrency } from '../../../utils'
 import { missingPermissionMessage } from '../../PermissionGate'
 import { useInlineProductEdit } from './useInlineProductEdit'
@@ -10,7 +10,6 @@ const inventoryPageSizeOptions = [10, 20, 50]
 
 export const ProductListView = ({
   companyId,
-  view,
   products,
   isLoading,
   selectedRowIds,
@@ -51,104 +50,6 @@ export const ProductListView = ({
         <div className="empty-state px-12 py-12">Loading inventory data...</div>
       ) : products.length === 0 ? (
         <EmptyState title="No products found" description="Try adjusting filters or adding new items." />
-      ) : view === 'grid' ? (
-        <>
-          <div className="min-h-0 flex-1 overflow-y-auto p-5">
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
-              {products.map((product) => {
-                const isLow = product.quantity_on_hand <= product.reorder_point
-                const isOut = product.quantity_on_hand === 0
-
-                return (
-                  <div
-                    key={product.id}
-                    className={cn(
-                      'inventory-product-card',
-                      selectedRowIds.has(product.id) && 'is-selected',
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedRowIds.has(product.id)}
-                        disabled={isSaving || !canUseInventory}
-                        title={!canUseInventory ? missingPermissionMessage('inventory.use') : undefined}
-                        onChange={() => toggleSelection(product.id)}
-                      />
-                      {isOut ? (
-                        <Badge variant="destructive">Out of Stock</Badge>
-                      ) : isLow ? (
-                        <Badge variant="warning">Low Stock</Badge>
-                      ) : (
-                        <Badge variant="success">In Stock</Badge>
-                      )}
-                    </div>
-
-                    <div className="min-w-0">
-                      {canUseInventory ? (
-                        <Link to={`/inventory/${product.id}/overview`} className="block min-w-0">
-                          <Heading level="h6" className="m-0 leading-tight">
-                            {product.name}
-                          </Heading>
-                        </Link>
-                      ) : (
-                        <div className="block min-w-0" title={missingPermissionMessage('inventory.use')}>
-                          <Heading level="h6" className="m-0 leading-tight text-[var(--color-muted-foreground)]">
-                            {product.name}
-                          </Heading>
-                          <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
-                            No permission to open detail
-                          </span>
-                        </div>
-                      )}
-                      <Label className="block">{product.sku}</Label>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[var(--color-muted-foreground)]">Folder</span>
-                        <span>{folderSummary(product)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[var(--color-muted-foreground)]">Price</span>
-                        <span>{formatCurrency(product.selling_price)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[var(--color-muted-foreground)]">On Hand</span>
-                        <span>{product.quantity_on_hand}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[var(--color-muted-foreground)]">Available</span>
-                        <span
-                          className={cn(
-                            'font-semibold',
-                            product.quantity_on_hand >= product.reorder_point
-                              ? 'text-[var(--color-success)]'
-                              : 'text-[var(--color-destructive)]',
-                          )}
-                        >
-                          {product.quantity_on_hand} / {product.reorder_point}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="px-5 pb-4">
-            <Pagination
-              currentPage={page}
-              totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
-              totalItems={totalCount}
-              itemsPerPage={pageSize}
-              onPageChange={setPage}
-              onItemsPerPageChange={setPageSize}
-              pageSizeOptions={inventoryPageSizeOptions}
-            />
-          </div>
-        </>
       ) : (
         <DataTable
           variant="operational"
