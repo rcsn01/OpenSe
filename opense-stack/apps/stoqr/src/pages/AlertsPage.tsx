@@ -80,11 +80,17 @@ const feedFilters: Array<{ id: FeedCategory; label: string }> = [
   { id: "system", label: "System & Operations" },
 ];
 
-const formatDateTime = (value: string) =>
-  new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+const formatDateTime = (value: string) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  const padDateTimePart = (part: number) => String(part).padStart(2, "0");
+
+  return `${date.getFullYear()}/${padDateTimePart(date.getMonth() + 1)}/${padDateTimePart(date.getDate())} ${padDateTimePart(date.getHours())}:${padDateTimePart(date.getMinutes())}`;
+};
 
 const getEventCategory = (event: AlertEvent): FeedCategory => {
   if (event.alert_type === "low_stock" || event.alert_type === "expiration") {
@@ -389,7 +395,11 @@ export const AlertsPage = () => {
       header: "Date / Time",
       sortKey: "triggered_at",
       width: "16%",
-      renderCell: (event) => formatDateTime(event.triggered_at),
+      renderCell: (event) => (
+        <span className="block overflow-hidden whitespace-nowrap text-sm text-[var(--color-muted-foreground)]">
+          {formatDateTime(event.triggered_at)}
+        </span>
+      ),
     },
     {
       id: "severity",

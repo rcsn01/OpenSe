@@ -212,7 +212,7 @@ test.describe('Stoqr Organisations Settings', () => {
       await adminSession.page.getByRole('button', { name: 'Activity Logs' }).click()
       await expect(adminSession.page).toHaveURL(/\/settings\/organisations\/activity$/, { timeout: 20_000 })
       await expect(adminSession.page.getByRole('heading', { name: 'Activity Logs' })).toBeVisible()
-      await expect(adminSession.page.getByRole('button', { name: 'Export Logs' })).toBeVisible()
+      await expect(adminSession.page.getByRole('button', { name: 'Export Logs' })).toHaveCount(0)
 
       await adminSession.page.getByRole('button', { name: 'Two-Factor Authentication' }).click()
       await expect(adminSession.page).toHaveURL(/\/settings\/organisations\/two-factor$/, { timeout: 20_000 })
