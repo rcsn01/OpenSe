@@ -25,18 +25,21 @@ import { buildAccountsSettingsUrl } from '../lib/authRedirect'
 
 const StoqrBrandIcon = SWITCHABLE_APP_ICONS.stoqr
 
+const isSectionActive = (sectionRoot: string) => (pathname: string) =>
+  pathname === sectionRoot || pathname.startsWith(`${sectionRoot}/`)
+
 const mainNavItems: Array<AppShellNavItem & { permission: string }> = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, permission: 'dashboard.view' },
-  { href: '/inventory/all', label: 'Inventory', icon: <Package className="w-5 h-5" />, permission: 'inventory.view' },
-  { href: '/scan/scan-actions', label: 'Scanner', icon: <ScanBarcode className="w-5 h-5" />, permission: 'scanner.view' },
-  { href: '/tools/labels/templates', label: 'Label Studio', icon: <Tags className="w-5 h-5" />, permission: 'labels.view' },
-  { href: '/reports/stock-health', label: 'Reports', icon: <FileText className="w-5 h-5" />, permission: 'reports.view' },
-  { href: '/procurement/purchase-orders', label: 'Procurement', icon: <Truck className="w-5 h-5" />, permission: 'procurement.view' },
+  { href: '/inventory/all', label: 'Inventory', icon: <Package className="w-5 h-5" />, permission: 'inventory.view', isActive: isSectionActive('/inventory') },
+  { href: '/scan/scan-actions', label: 'Scanner', icon: <ScanBarcode className="w-5 h-5" />, permission: 'scanner.view', isActive: isSectionActive('/scan') },
+  { href: '/tools/labels/templates', label: 'Label Studio', icon: <Tags className="w-5 h-5" />, permission: 'labels.view', isActive: isSectionActive('/tools/labels') },
+  { href: '/reports/stock-health', label: 'Reports', icon: <FileText className="w-5 h-5" />, permission: 'reports.view', isActive: isSectionActive('/reports') },
+  { href: '/procurement/purchase-orders', label: 'Procurement', icon: <Truck className="w-5 h-5" />, permission: 'procurement.view', isActive: isSectionActive('/procurement') },
 ]
 
 const configNavItems: Array<AppShellNavItem & { permission: string }> = [
-  { href: '/alerts/feed', label: 'Alerts', icon: <Bell className="w-5 h-5" />, permission: 'alerts.view' },
-  { href: '/settings/organisations/teams', label: 'Organisations', icon: <Settings className="w-5 h-5" />, permission: 'organisation.view' },
+  { href: '/alerts/feed', label: 'Alerts', icon: <Bell className="w-5 h-5" />, permission: 'alerts.view', isActive: isSectionActive('/alerts') },
+  { href: '/settings/organisations/teams', label: 'Organisations', icon: <Settings className="w-5 h-5" />, permission: 'organisation.view', isActive: isSectionActive('/settings/organisations') },
 ]
 
 export const AppLayout = () => {
@@ -55,7 +58,7 @@ export const AppLayout = () => {
   const filterByPermission = (items: Array<AppShellNavItem & { permission: string }>): AppShellNavItem[] =>
     items
       .filter((item) => permissionsLoading || permissions.includes(item.permission))
-      .map((item) => ({ href: item.href, label: item.label, icon: item.icon }))
+      .map((item) => ({ href: item.href, label: item.label, icon: item.icon, isActive: item.isActive }))
 
   return (
     <TopBarSearchProvider>

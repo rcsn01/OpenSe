@@ -88,6 +88,15 @@ const renderRoute = (initialEntry: string) =>
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/plain" element={<div>Plain Page</div>} />
+          <Route path="/inventory/:tab" element={<div>Inventory</div>} />
+          <Route path="/scan/:tab" element={<div>Scan</div>} />
+          <Route path="/tools/labels/:tab" element={<div>Label Studio</div>} />
+          <Route path="/tools/labels/:tab/:templateId" element={<div>Label Designer</div>} />
+          <Route path="/reports/:tab" element={<div>Reports</div>} />
+          <Route path="/procurement/:tab" element={<div>Procurement</div>} />
+          <Route path="/alerts/:tab" element={<div>Alerts</div>} />
+          <Route path="/alerts/rules/new" element={<div>Alert Rule Editor</div>} />
+          <Route path="/settings/organisations/:tab" element={<div>Organisations</div>} />
           <Route
             path="/search/items"
             element={<SearchableStubPage searchKey="search-items" placeholder="Search items..." />}
@@ -136,5 +145,19 @@ describe('AppLayout', () => {
     renderRoute('/search/disabled')
 
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+  })
+
+  it('keeps the Label Studio nav item active on sibling tab routes', () => {
+    renderRoute('/tools/labels/preview-batch')
+
+    expect(screen.getByRole('link', { name: 'Label Studio' })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
+    expect(screen.getByRole('link', { name: 'Dashboard' })).not.toHaveClass('bg-[var(--color-side-nav-active-bg)]')
+  })
+
+  it('keeps the Alerts nav item active on nested section routes', () => {
+    renderRoute('/alerts/rules/new')
+
+    expect(screen.getByRole('link', { name: 'Alerts' })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
+    expect(screen.getByRole('link', { name: 'Organisations' })).not.toHaveClass('bg-[var(--color-side-nav-active-bg)]')
   })
 })
