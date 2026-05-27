@@ -70,7 +70,7 @@ vi.mock('../../../hooks/queries/useProcurementTabs', () => ({
 }))
 
 describe('SuppliersTab', () => {
-  it('filters supplier cards from the shared top-bar search', async () => {
+  it('filters supplier rows from the shared top-bar search', async () => {
     const user = userEvent.setup()
 
     render(
@@ -82,12 +82,41 @@ describe('SuppliersTab', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('heading', { name: 'Acme Medical' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Zenith Components' })).toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /Acme Medical/i })).toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /Zenith Components/i })).toBeInTheDocument()
 
     await user.type(screen.getByRole('combobox', { name: 'Search suppliers...' }), 'Zenith')
 
-    expect(screen.getByRole('heading', { name: 'Zenith Components' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Acme Medical' })).not.toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /Zenith Components/i })).toBeInTheDocument()
+    expect(screen.queryByRole('row', { name: /Acme Medical/i })).not.toBeInTheDocument()
+  })
+
+  it('applies the local supplier filter and opens the profile dialog from row actions', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <TopBarSearchProvider>
+          <TopBarSearchContent />
+          <SuppliersTab companyId="company-1" />
+        </TopBarSearchProvider>
+      </MemoryRouter>,
+    )
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'View' }),
+      'has-open-orders',
+    )
+
+    expect(screen.getByRole('row', { name: /Zenith Components/i })).toBeInTheDocument()
+    expect(screen.queryByRole('row', { name: /Acme Medical/i })).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Open actions for Zenith Components' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'View profile' }))
+
+    expect(screen.getByText('Supplier Profile')).toBeInTheDocument()
+    expect(screen.getByText('Procurement Snapshot')).toBeInTheDocument()
   })
 })
