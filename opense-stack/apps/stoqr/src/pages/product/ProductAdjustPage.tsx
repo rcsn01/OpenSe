@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRightLeft, Check, Minus, Plus } from 'lucide-react'
-import { EmptyState } from '@repo/ui'
+import { EmptyState, Heading } from '@repo/ui'
 
 import { BasePage } from '../../components/BasePage'
 import { FolderSelectionTree } from '../../components/Inventory/FolderSelectionTree'
@@ -148,10 +148,10 @@ export const ProductAdjustPage = () => {
     () => (transferSourceFolderId ? [transferSourceFolderId] : []),
     [transferSourceFolderId],
   )
-  const getTransferSourceMetaLabel = useMemo(
+  const getFolderStockMetaLabel = useMemo(
     () => (folderId: string) => {
       const quantity = folderStockByFolderId.get(folderId)?.quantity_on_hand ?? 0
-      return `${quantity} available`
+      return String(quantity)
     },
     [folderStockByFolderId],
   )
@@ -160,7 +160,6 @@ export const ProductAdjustPage = () => {
     () => buildFolderPathLabel(selectedFolderId || product?.folder_id || null, folders),
     [folders, product?.folder_id, selectedFolderId],
   )
-
   const primaryImageUrl = useMemo(() => {
     const imagePath = product?.image_urls?.[0]
     return imagePath ? getPublicImageUrl(imagePath) : ''
@@ -210,6 +209,13 @@ export const ProductAdjustPage = () => {
 
   const handleDraftAdjust = (delta: number) => {
     setDraftQuantity((current) => clampQuantity(current + delta))
+    setMessage(null)
+  }
+
+  const handleAdjustFolderSelect = (folderId: string) => {
+    const nextStock = product?.folder_stocks?.find((stock) => stock.folder_id === folderId)
+    setSelectedFolderId(folderId)
+    setDraftQuantity(nextStock?.quantity_on_hand ?? 0)
     setMessage(null)
   }
 
@@ -355,10 +361,7 @@ export const ProductAdjustPage = () => {
                   )}
                 </section>
                 <div className="scan-product-identity">
-                  <div className="scan-product-kicker-row">
-                    <p className="scan-product-sku">{product.sku || 'No SKU assigned'}</p>
-                  </div>
-                  <h2 className="scan-product-name">{product.name}</h2>
+                  <Heading level="h3">{product.name}</Heading>
                   <div className="scan-mode-segment" role="tablist" aria-label="Stock action">
                     <button
                       type="button"
@@ -384,42 +387,32 @@ export const ProductAdjustPage = () => {
 
               {mode === 'adjust' ? (
                 <>
-                  <dl className="scan-product-meta-grid">
-                    <div className="scan-product-meta-row">
-                      <dt>Location</dt>
-                      <dd>
-                        <select
-                          className="scan-reason-select product-adjust-select"
-                          aria-label="Stock folder"
-                          value={selectedFolderId}
-                          onChange={(event) => {
-                            const nextFolderId = event.target.value
-                            const nextStock = product.folder_stocks?.find((stock) => stock.folder_id === nextFolderId)
-                            setSelectedFolderId(nextFolderId)
-                            setDraftQuantity(nextStock?.quantity_on_hand ?? 0)
-                            setMessage(null)
-                          }}
-                        >
-                          <option value="">Select folder</option>
-                          {folders.map((folder) => (
-                            <option key={folder.id} value={folder.id}>
-                              {buildFolderPathLabel(folder.id, folders)}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="sr-only">{locationLabel}</span>
-                      </dd>
+                  <div className="scan-adjust-meta-grid">
+                    <section className="scan-transfer-tree-panel" aria-labelledby="adjust-location-heading">
+                      <div className="scan-transfer-tree-header">
+                        <h3 id="adjust-location-heading" className="scan-update-label">Location</h3>
+                      </div>
+                      <FolderSelectionTree
+                        folders={folders}
+                        selectedFolderId={selectedFolderId}
+                        onSelectFolder={handleAdjustFolderSelect}
+                        getFolderMetaLabel={getFolderStockMetaLabel}
+                        ariaLabel="Stock folders"
+                        emptyMessage="No folders available."
+                      />
+                      <span className="sr-only">{locationLabel}</span>
+                    </section>
+
+                    <div className="scan-adjust-last-updated">
+                      <p className="scan-update-label">Last updated</p>
+                      <p className="scan-adjust-last-updated-value">{formatRelativeTime(lastUpdatedAt)}</p>
                     </div>
-                    <div className="scan-product-meta-row">
-                      <dt>Last updated</dt>
-                      <dd>{formatRelativeTime(lastUpdatedAt)}</dd>
-                    </div>
-                  </dl>
+                  </div>
 
                   <div className="scan-update-fields-row">
                     <div className="scan-update-section">
                       <p className="scan-update-label">Optional Notes</p>
-                      <textarea
+                      <input
                         className="scan-update-notes"
                         aria-label="Optional Notes"
                         placeholder="Add details..."
@@ -428,7 +421,6 @@ export const ProductAdjustPage = () => {
                           setNote(event.target.value)
                           setMessage(null)
                         }}
-                        rows={2}
                       />
                     </div>
                   </div>
@@ -445,7 +437,7 @@ export const ProductAdjustPage = () => {
                         selectedFolderId={transferSourceFolderId}
                         onSelectFolder={handleTransferSourceSelect}
                         disabledFolderIds={disabledTransferSourceFolderIds}
-                        getFolderMetaLabel={getTransferSourceMetaLabel}
+                        getFolderMetaLabel={getFolderStockMetaLabel}
                         ariaLabel="Source folders"
                         emptyMessage="No source folders available."
                       />
@@ -468,7 +460,7 @@ export const ProductAdjustPage = () => {
 
                   <div className="scan-update-section">
                     <p className="scan-update-label">Optional Notes</p>
-                    <textarea
+                    <input
                       className="scan-update-notes"
                       aria-label="Transfer notes"
                       placeholder="Add details..."
@@ -477,7 +469,6 @@ export const ProductAdjustPage = () => {
                         setTransferNote(event.target.value)
                         setMessage(null)
                       }}
-                      rows={2}
                     />
                   </div>
                 </div>
@@ -505,7 +496,7 @@ export const ProductAdjustPage = () => {
                     </button>
 
                     <input
-                      className="scan-quantity-input"
+                      className="scan-quantity-input text-2xl leading-snug tracking-tight text-[var(--color-heading)] md:text-3xl"
                       type="number"
                       min={0}
                       value={draftQuantity}
@@ -580,7 +571,7 @@ export const ProductAdjustPage = () => {
                     </button>
 
                     <input
-                      className="scan-quantity-input"
+                      className="scan-quantity-input text-2xl leading-snug tracking-tight text-[var(--color-heading)] md:text-3xl"
                       type="number"
                       min={0}
                       max={transferAvailableQuantity || undefined}
