@@ -663,6 +663,7 @@ export const DashboardPage = () => {
       emptyStateTitle="Welcome to Open StoQR"
       emptyStateDescription="Select or create a company to load your inventory dashboard."
       loadingMessage="Loading dashboard..."
+      contentClassName="flex h-full min-h-0 overflow-y-auto px-2 pb-8 pt-[18px]"
       containerClassName={css("stoqr-dashboard")}
       contentStyle={{ padding: "18px 8px 32px" }}
       containerStyle={{ minWidth: 0 }}
