@@ -1,9 +1,13 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TopBarSearchContent, TopBarSearchProvider } from '../../Search/TopBarSearch'
 import { LabelPreviewBatchTab } from '../LabelPreviewBatchTab'
+
+const { mockMutateAsync } = vi.hoisted(() => ({
+  mockMutateAsync: vi.fn(),
+}))
 
 vi.mock('../../../hooks/queries/useLabelStudio', () => ({
   useLabelTemplates: () => ({
@@ -43,7 +47,7 @@ vi.mock('../../../hooks/queries/useLabelStudio', () => ({
     isLoading: false,
   }),
   useCreateLabelPrintJob: () => ({
-    mutateAsync: vi.fn(),
+    mutateAsync: mockMutateAsync,
     isPending: false,
   }),
 }))
@@ -52,18 +56,32 @@ vi.mock('../LabelPreviewCard', () => ({
   LabelPreviewCard: () => <div>Preview card</div>,
 }))
 
+vi.mock('../downloadLabelPdf', () => ({
+  downloadLabelPdf: vi.fn(),
+}))
+
+vi.mock('../pdfExport', () => ({
+  createLabelPdfDataUrl: vi.fn(async () => 'data:application/pdf;base64,stub'),
+}))
+
+const renderPreviewBatchTab = () =>
+  render(
+    <MemoryRouter>
+      <TopBarSearchProvider>
+        <TopBarSearchContent />
+        <LabelPreviewBatchTab companyId="company-1" />
+      </TopBarSearchProvider>
+    </MemoryRouter>,
+  )
+
 describe('LabelPreviewBatchTab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('filters available templates from the shared top-bar search on preview and batch', async () => {
     const user = userEvent.setup()
-
-    render(
-      <MemoryRouter>
-        <TopBarSearchProvider>
-          <TopBarSearchContent />
-          <LabelPreviewBatchTab companyId="company-1" />
-        </TopBarSearchProvider>
-      </MemoryRouter>,
-    )
+    renderPreviewBatchTab()
 
     const templateSelect = screen.getByLabelText('Template')
     expect(within(templateSelect).getByRole('option', { name: 'Shipping Label' })).toBeInTheDocument()
@@ -73,5 +91,70 @@ describe('LabelPreviewBatchTab', () => {
 
     expect(within(templateSelect).getByRole('option', { name: 'Returns Label' })).toBeInTheDocument()
     expect(within(templateSelect).queryByRole('option', { name: 'Shipping Label' })).not.toBeInTheDocument()
+  })
+
+  it('switches target modes and clears the previous product selection', async () => {
+    const user = userEvent.setup()
+    renderPreviewBatchTab()
+
+    await user.type(screen.getByLabelText('Product Search'), 'SHIP')
+    await user.click(screen.getByRole('button', { name: /Shipping Box/i }))
+
+    expect(screen.getByText('SHIP-100')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Multiple' }))
+
+    expect(screen.getByText('No products selected.')).toBeInTheDocument()
+    expect(screen.queryByText('SHIP-100')).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Product Search'), 'RET')
+    await user.click(screen.getByRole('button', { name: /Returns Envelope/i }))
+
+    expect(screen.getByText('RET-200')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Folder' }))
+
+    expect(screen.getByLabelText('Folder')).toBeInTheDocument()
+    expect(screen.queryByText('RET-200')).not.toBeInTheDocument()
+  })
+
+  it('updates the generated page and label summary when quantity changes', async () => {
+    const user = userEvent.setup()
+    renderPreviewBatchTab()
+
+    await user.selectOptions(screen.getByLabelText('Template'), 'template-1')
+    await user.type(screen.getByLabelText('Product Search'), 'SHIP')
+    await user.click(screen.getByRole('button', { name: /Shipping Box/i }))
+    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '3' } })
+
+    expect(screen.getByText(/Generates 1 PDF page across 3 labels\./)).toBeInTheDocument()
+  })
+
+  it('renders the PDF preview as the dedicated scroll region', () => {
+    renderPreviewBatchTab()
+
+    const previewRegion = screen.getByRole('region', { name: 'PDF preview' })
+    expect(previewRegion).toHaveClass('label-batch-preview-canvas')
+    expect(within(previewRegion).getByText('Preview card')).toBeInTheDocument()
+  })
+
+  it('validates missing export template, product, and folder states', async () => {
+    const user = userEvent.setup()
+    renderPreviewBatchTab()
+
+    await user.click(screen.getByRole('button', { name: 'Export PDF' }))
+    expect(screen.getByText('Select template and valid quantity.')).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Template'), 'template-1')
+    await user.click(screen.getByRole('button', { name: 'Export PDF' }))
+    expect(screen.getByText('Select a product.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Multiple' }))
+    await user.click(screen.getByRole('button', { name: 'Export PDF' }))
+    expect(screen.getByText('Select at least one product.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Folder' }))
+    await user.click(screen.getByRole('button', { name: 'Export PDF' }))
+    expect(screen.getByText('Select a folder.')).toBeInTheDocument()
   })
 })
