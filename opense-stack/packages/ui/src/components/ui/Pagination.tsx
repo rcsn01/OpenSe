@@ -161,12 +161,18 @@ export function Pagination({
 
         {typeof itemsPerPage === "number" && onItemsPerPageChange ? (
           <label className="relative flex h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-sm text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]">
-            <span>Rows</span>
+            <span aria-hidden="true">Rows</span>
+            <span
+              aria-hidden="true"
+              className="font-semibold text-[var(--color-foreground)]"
+            >
+              {itemsPerPage}
+            </span>
             <select
               aria-label="Items per page"
               value={itemsPerPage}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-              className="cursor-pointer appearance-none bg-transparent text-sm font-semibold text-[var(--color-foreground)] outline-none"
+              className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-[var(--radius-md)] opacity-0"
             >
               {pageSizeOptions.map((n) => (
                 <option key={n} value={n}>

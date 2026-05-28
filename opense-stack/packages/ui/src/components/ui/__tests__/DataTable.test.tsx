@@ -301,4 +301,36 @@ describe('DataTable', () => {
       'py-3',
     )
   })
+
+  it('makes the whole rows-per-page control target the page size select', async () => {
+    const user = userEvent.setup()
+    const onItemsPerPageChange = vi.fn()
+
+    render(
+      <DataTable
+        columns={columns}
+        rows={rows}
+        getRowId={(row) => row.id}
+        pagination={{
+          currentPage: 1,
+          totalItems: 30,
+          itemsPerPage: 10,
+          onPageChange: vi.fn(),
+          onItemsPerPageChange,
+          pageSizeOptions: [10, 25, 50],
+        }}
+      />,
+    )
+
+    const rowsLabel = screen.getByText('Rows')
+    const select = screen.getByRole('combobox', { name: 'Items per page' })
+
+    expect(rowsLabel).toHaveAttribute('aria-hidden', 'true')
+    expect(rowsLabel.closest('label')).toContainElement(select)
+    expect(select).toHaveClass('absolute', 'inset-0', 'opacity-0')
+
+    await user.selectOptions(select, '25')
+
+    expect(onItemsPerPageChange).toHaveBeenCalledWith(25)
+  })
 })
