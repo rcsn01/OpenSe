@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Button, Card } from '@repo/ui'
+import { Download, Printer } from 'lucide-react'
 import { useLabelPrintJobs } from '../../hooks/queries/useLabelStudio'
 import { downloadLabelPdf } from './downloadLabelPdf'
 
@@ -67,7 +68,7 @@ export const LabelDownloadsTab = ({
           {downloads.map((job) => (
             <div key={job.id} className="export-download-row">
               <div className="export-download-icon-wrap">
-                <span className="export-download-icon">🖨</span>
+                <Printer className="export-download-icon" size={16} aria-hidden="true" />
               </div>
               <div className="export-download-info">
                 <div className="export-download-name">{buildExportFileName(job)}</div>
@@ -82,7 +83,7 @@ export const LabelDownloadsTab = ({
                 aria-label={`Download ${buildExportFileName(job)}`}
                 onClick={() => downloadLabelPdf(job.output_url as string, buildExportFileName(job))}
               >
-                ⬇
+                <Download size={16} aria-hidden="true" />
               </Button>
             </div>
           ))}
