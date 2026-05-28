@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { signOut, signUp } from '@repo/shared/auth'
+import { signInWithGoogle, signOut, signUp } from '@repo/shared/auth'
 import { SharedSignupPage } from '../components/auth/SharedSignupPage'
+import { isGoogleAuthEnabled } from '../lib/googleAuth'
 import { buildQueryString, getAppNameFromQuery } from '../lib/redirect'
 
 const SIGNUP_CONFIRMATION_MESSAGE = 'Please check your email to confirm your account, then sign in.'
@@ -39,9 +40,23 @@ export const SharedSignupRoutePage = () => {
         replace: true,
         state: { success: SIGNUP_CONFIRMATION_MESSAGE },
       })
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to sign up')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to sign up'
+      setError(message)
     } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleSignUp = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      await signInWithGoogle(`/login${querySuffix}`)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to sign up with Google'
+      setError(message)
       setLoading(false)
     }
   }
@@ -54,6 +69,9 @@ export const SharedSignupRoutePage = () => {
       loading={loading}
       error={error}
       onSignUp={handleSignUp}
+      onGoogleSignIn={handleGoogleSignUp}
+      googleAuthEnabled={isGoogleAuthEnabled()}
+      googleLabel="Continue with Google"
       footer={
         <div className="text-center">
           <span className="text-[var(--color-muted-foreground)]">Already have an account? </span>

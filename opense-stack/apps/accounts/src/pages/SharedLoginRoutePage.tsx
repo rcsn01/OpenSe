@@ -4,6 +4,7 @@ import { signIn, signInWithGoogle } from '@repo/shared/auth'
 import { useAuth } from '@repo/shared/auth/context'
 import { getOnboardingStatus } from '../api/onboarding'
 import { SharedLoginPage } from '../components/auth/SharedLoginPage'
+import { isGoogleAuthEnabled } from '../lib/googleAuth'
 import { buildPathWithQuery, buildQueryString, getAppNameFromQuery, redirectBackToApp } from '../lib/redirect'
 import { getOnboardingCompletedFallbackPath, getOnboardingPathForStatus } from '../lib/onboardingUi'
 
@@ -117,6 +118,7 @@ export const SharedLoginRoutePage = () => {
       success={success}
       onEmailSignIn={handleLogin}
       onGoogleSignIn={handleGoogleLogin}
+      googleAuthEnabled={isGoogleAuthEnabled()}
       googleLabel="Continue with Google"
       footer={
         <div className="text-center">
