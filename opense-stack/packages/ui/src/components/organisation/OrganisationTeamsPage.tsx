@@ -4,10 +4,10 @@ import { FilterDropdown } from "../ui/FilterDropdown";
 import { StackLayout } from "../layout/StackLayout";
 
 type OrganisationTeamsPageProps = {
-  filterValue: string;
-  onFilterChange: (value: string) => void;
-  filterOptions: { value: string; label: string }[];
-  canManageTeam: boolean;
+  filterValue?: string;
+  onFilterChange?: (value: string) => void;
+  filterOptions?: { value: string; label: string }[];
+  canManageTeam?: boolean;
   onInviteClick?: () => void;
   inviteLabel?: string;
   inviteIcon?: ReactNode;
@@ -29,30 +29,32 @@ export function OrganisationTeamsPage({
   return (
     <StackLayout className="min-h-0 flex-1">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex flex-col items-center justify-between gap-4 px-1 py-2 sm:flex-row">
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <FilterDropdown
-              value={filterValue}
-              options={filterOptions}
-              onChange={onFilterChange}
-              ariaLabel="Team role filter"
-              menuClassName="min-w-[180px]"
-            />
-          </div>
+        {filterValue && onFilterChange && filterOptions ? (
+          <div className="flex flex-col items-center justify-between gap-4 px-1 py-2 sm:flex-row">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+              <FilterDropdown
+                value={filterValue}
+                options={filterOptions}
+                onChange={onFilterChange}
+                ariaLabel="Team role filter"
+                menuClassName="min-w-[180px]"
+              />
+            </div>
 
-          {canManageTeam && onInviteClick && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onInviteClick}
-              className="w-full sm:w-auto"
-            >
-              {inviteIcon}
-              {inviteLabel}
-            </Button>
-          )}
-        </div>
+            {canManageTeam && onInviteClick && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onInviteClick}
+                className="w-full sm:w-auto"
+              >
+                {inviteIcon}
+                {inviteLabel}
+              </Button>
+            )}
+          </div>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-hidden">{tableContent}</div>
       </div>

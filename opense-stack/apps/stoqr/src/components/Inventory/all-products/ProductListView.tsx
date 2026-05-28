@@ -27,6 +27,7 @@ export const ProductListView = ({
   onRefresh,
   canUseInventory,
   canEditInventory,
+  topRow,
 }: ProductListViewProps) => {
   const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name ?? '—'
   const folderSummary = (product: { folder_id: string | null; folder_stock_summary?: Array<{ folder_id: string; quantity_on_hand: number }> }) => {
@@ -46,11 +47,6 @@ export const ProductListView = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {isLoading ? (
-        <div className="empty-state px-12 py-12">Loading inventory data...</div>
-      ) : products.length === 0 ? (
-        <EmptyState title="No products found" description="Try adjusting filters or adding new items." />
-      ) : (
         <DataTable
           variant="operational"
           className="flex-1"
@@ -158,8 +154,15 @@ export const ProductListView = ({
               ),
             },
           ]}
-          rows={products}
+          rows={isLoading ? [] : products}
           getRowId={(product) => product.id}
+          topRow={topRow}
+          topRowCellClassName="p-0"
+          emptyState={
+            isLoading
+              ? 'Loading inventory data...'
+              : <EmptyState title="No products found" description="Try adjusting filters or adding new items." />
+          }
           minTableWidth={900}
           tableLayout="fixed"
           theadClassName={selectedRowIds.size > 0 ? 'table-header-selected' : undefined}
@@ -192,7 +195,6 @@ export const ProductListView = ({
             pageSizeOptions: inventoryPageSizeOptions,
           }}
         />
-      )}
     </div>
   )
 }

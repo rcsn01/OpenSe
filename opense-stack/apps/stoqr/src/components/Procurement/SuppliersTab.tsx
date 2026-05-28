@@ -5,6 +5,7 @@ import {
   Card,
   DataTable,
   type DataTableColumn,
+  type DataTableTopRowConfig,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -14,7 +15,6 @@ import {
   Dropdown,
   DropdownItem,
   EmptyState,
-  FilterDropdown,
   Input,
 } from "@repo/ui";
 import {
@@ -660,6 +660,29 @@ export const SuppliersTab = ({
         ? "Try a different supplier name, contact, SKU, or filter."
         : "Adjust the supplier view to find a matching vendor.";
 
+  const supplierTableTopRow: DataTableTopRowConfig = {
+    filters: [
+      {
+        value: supplierFilter,
+        options: supplierFilterOptions,
+        onChange: (value) => handleSupplierFilterChange(value as SupplierFilter),
+        ariaLabel: "View",
+        className:
+          "h-9 justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm",
+        menuClassName: "min-w-[220px]",
+      },
+    ],
+    actions: [
+      {
+        id: "add-supplier",
+        label: "Add Supplier",
+        icon: <Plus size={16} />,
+        className: "min-w-[156px]",
+        onClick: () => setIsAddDialogOpen(true),
+      },
+    ],
+  };
+
   return (
     <>
       <div className="flex min-h-0 flex-1 flex-col gap-6">
@@ -668,31 +691,6 @@ export const SuppliersTab = ({
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
           padding="none"
         >
-          <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-              <div className="flex max-w-[240px] flex-col gap-2 text-sm font-medium text-[var(--color-foreground)]">
-                <FilterDropdown
-                  value={supplierFilter}
-                  options={supplierFilterOptions}
-                  onChange={handleSupplierFilterChange}
-                  ariaLabel="View"
-                  className="h-9 justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm"
-                  menuClassName="min-w-[220px]"
-                />
-              </div>
-
-            </div>
-
-            <Button
-              type="button"
-              className="min-w-[156px]"
-              onClick={() => setIsAddDialogOpen(true)}
-            >
-              <Plus size={16} />
-              Add Supplier
-            </Button>
-          </div>
-
           {message ? (
             <div className="border-b border-[var(--color-border)] px-4 py-3 md:px-6">
               <p
@@ -707,41 +705,42 @@ export const SuppliersTab = ({
             </div>
           ) : null}
 
-          {loading ? (
-            <div className="empty-state">Loading suppliers...</div>
-          ) : filteredSuppliers.length === 0 ? (
-            <div className="px-6 py-10">
-              <EmptyState
-                title={
-                  suppliers.length === 0
-                    ? "No suppliers yet"
-                    : "No suppliers match your view"
-                }
-                description={emptyStateDescription}
-              />
-            </div>
-          ) : (
-            <DataTable
-              variant="operational"
-              className="min-h-0 flex-1"
-              columns={supplierColumns}
-              rows={pagedSuppliers}
-              getRowId={(row) => row.supplier.id}
-              minTableWidth={1240}
-              tableLayout="fixed"
-              sortField={tableSortField}
-              sortDirection={tableSortDirection}
-              onSortChange={handleTableSort}
-              pagination={{
-                currentPage: currentTablePage,
-                totalItems: filteredSuppliers.length,
-                itemsPerPage: tablePageSize,
-                onPageChange: setTablePage,
-                onItemsPerPageChange: handlePageSizeChange,
-                pageSizeOptions: supplierPageSizeOptions,
-              }}
-            />
-          )}
+          <DataTable
+            variant="operational"
+            className="min-h-0 flex-1"
+            columns={supplierColumns}
+            rows={loading ? [] : pagedSuppliers}
+            getRowId={(row) => row.supplier.id}
+            topRow={supplierTableTopRow}
+            topRowCellClassName="px-4 py-4 md:px-6"
+            emptyState={
+              loading ? (
+                "Loading suppliers..."
+              ) : (
+                <EmptyState
+                  title={
+                    suppliers.length === 0
+                      ? "No suppliers yet"
+                      : "No suppliers match your view"
+                  }
+                  description={emptyStateDescription}
+                />
+              )
+            }
+            minTableWidth={1240}
+            tableLayout="fixed"
+            sortField={tableSortField}
+            sortDirection={tableSortDirection}
+            onSortChange={handleTableSort}
+            pagination={{
+              currentPage: currentTablePage,
+              totalItems: filteredSuppliers.length,
+              itemsPerPage: tablePageSize,
+              onPageChange: setTablePage,
+              onItemsPerPageChange: handlePageSizeChange,
+              pageSizeOptions: supplierPageSizeOptions,
+            }}
+          />
         </Card>
       </div>
 

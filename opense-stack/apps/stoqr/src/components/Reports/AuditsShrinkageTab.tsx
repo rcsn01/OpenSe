@@ -316,101 +316,86 @@ export const AuditsShrinkageTab = ({
 
         <AnalyticsTablePanel
           title="Recent Discrepancy Log"
-          headerAside={
-            <label className="flex items-center gap-2 text-sm text-[var(--color-muted-foreground)]">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-              </svg>
-              <span>Filter</span>
-              <select
-                className="flex h-9 min-w-[180px] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-sm transition-colors hover:border-[var(--color-border-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-1"
-                value={reasonFilter}
-                onChange={(event) =>
-                  setReasonFilter(
-                    event.target.value as (typeof reasonOptions)[number],
-                  )
-                }
-              >
-                <option value="all">All Reasons</option>
-                <option value="Damaged in Transit">Damaged in Transit</option>
-                <option value="Expired">Expired</option>
-                <option value="Lost/Theft">Lost/Theft</option>
-                <option value="Counting Error">Counting Error</option>
-              </select>
-            </label>
-          }
         >
-          {logRows.length === 0 ? (
-            <AnalyticsEmptyPanel message="No discrepancy records for the selected filter." />
-          ) : (
-            <DataTable
-              columns={[
+          <DataTable
+            topRow={{
+              filters: [
                 {
-                  id: "date",
-                  header: "Date",
-                  renderCell: (row: (typeof logRows)[number]) => (
-                    <span className="text-sm text-[var(--color-muted-foreground)]">
-                      {formatAuditDate(row.date)}
-                    </span>
-                  ),
+                  value: reasonFilter,
+                  options: [
+                    { value: "all", label: "All Reasons" },
+                    { value: "Damaged in Transit", label: "Damaged in Transit" },
+                    { value: "Expired", label: "Expired" },
+                    { value: "Lost/Theft", label: "Lost/Theft" },
+                    { value: "Counting Error", label: "Counting Error" },
+                  ],
+                  onChange: (value) =>
+                    setReasonFilter(value as (typeof reasonOptions)[number]),
+                  ariaLabel: "Discrepancy reason filter",
+                  menuClassName: "min-w-[180px]",
                 },
-                {
-                  id: "sku",
-                  header: "SKU",
-                  renderCell: (row: (typeof logRows)[number]) => (
-                    <span className="font-semibold text-[var(--color-foreground)]">
-                      {row.sku}
-                    </span>
-                  ),
-                },
-                {
-                  id: "expected",
-                  header: "Expected",
-                  align: "right",
-                  renderCell: (row: (typeof logRows)[number]) => row.expected,
-                },
-                {
-                  id: "actual",
-                  header: "Actual",
-                  align: "right",
-                  renderCell: (row: (typeof logRows)[number]) => row.actual,
-                },
-                {
-                  id: "variance",
-                  header: "Variance",
-                  align: "right",
-                  renderCell: (row: (typeof logRows)[number]) => (
-                    <span
-                      className={row.variance < 0 ? "font-semibold text-[var(--color-destructive)]" : "font-semibold text-[var(--color-success)]"}
-                    >
-                      {row.variance > 0 ? "+" : ""}
-                      {row.variance}
-                    </span>
-                  ),
-                },
-                {
-                  id: "reason",
-                  header: "Reason",
-                  renderCell: (row: (typeof logRows)[number]) => (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)]">
-                      {row.reason}
-                    </span>
-                  ),
-                },
-              ]}
-              rows={logRows}
-              getRowId={(row) => row.id}
-            />
-          )}
+              ],
+            }}
+            emptyState={
+              <AnalyticsEmptyPanel message="No discrepancy records for the selected filter." />
+            }
+            columns={[
+              {
+                id: "date",
+                header: "Date",
+                renderCell: (row: (typeof logRows)[number]) => (
+                  <span className="text-sm text-[var(--color-muted-foreground)]">
+                    {formatAuditDate(row.date)}
+                  </span>
+                ),
+              },
+              {
+                id: "sku",
+                header: "SKU",
+                renderCell: (row: (typeof logRows)[number]) => (
+                  <span className="font-semibold text-[var(--color-foreground)]">
+                    {row.sku}
+                  </span>
+                ),
+              },
+              {
+                id: "expected",
+                header: "Expected",
+                align: "right",
+                renderCell: (row: (typeof logRows)[number]) => row.expected,
+              },
+              {
+                id: "actual",
+                header: "Actual",
+                align: "right",
+                renderCell: (row: (typeof logRows)[number]) => row.actual,
+              },
+              {
+                id: "variance",
+                header: "Variance",
+                align: "right",
+                renderCell: (row: (typeof logRows)[number]) => (
+                  <span
+                    className={row.variance < 0 ? "font-semibold text-[var(--color-destructive)]" : "font-semibold text-[var(--color-success)]"}
+                  >
+                    {row.variance > 0 ? "+" : ""}
+                    {row.variance}
+                  </span>
+                ),
+              },
+              {
+                id: "reason",
+                header: "Reason",
+                renderCell: (row: (typeof logRows)[number]) => (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)]">
+                    {row.reason}
+                  </span>
+                ),
+              },
+            ]}
+            rows={logRows}
+            getRowId={(row) => row.id}
+          />
         </AnalyticsTablePanel>
       </div>
     </div>

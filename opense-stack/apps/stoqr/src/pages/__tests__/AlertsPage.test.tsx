@@ -377,7 +377,9 @@ describe("AlertsPage", () => {
     expect(screen.queryByText("TIP-001")).not.toBeInTheDocument();
 
     await user.click(screen.getByLabelText("Select all visible alerts"));
-    await user.click(screen.getAllByRole("button", { name: "Acknowledge" })[0]);
+    const acknowledgeButton = screen.getByRole("button", { name: "Acknowledge" });
+    expect(acknowledgeButton.closest("table")).not.toBeNull();
+    await user.click(acknowledgeButton);
 
     expect(mockUpdateEventStatus).toHaveBeenCalledWith({
       eventId: "event-1",
@@ -416,7 +418,10 @@ describe("AlertsPage", () => {
 
     renderAlertsRoute("/alerts/feed");
 
-    await user.click(screen.getByRole("button", { name: "Alert feed category filter" }));
+    const filterButton = screen.getByRole("button", { name: "Alert feed category filter" });
+    expect(filterButton.closest("table")).not.toBeNull();
+
+    await user.click(filterButton);
     await user.click(screen.getByRole("button", { name: "Stock & Inventory" }));
 
     expect(screen.getByText("Showing 2 of 2 alerts")).toBeInTheDocument();
@@ -456,7 +461,9 @@ describe("AlertsPage", () => {
 
     cleanup();
     renderAlertsRoute("/alerts/rules");
-    await user.click(screen.getByRole("button", { name: "New Trigger" }));
+    const newTriggerButton = screen.getByRole("button", { name: "New Trigger" });
+    expect(newTriggerButton.closest("table")).not.toBeNull();
+    await user.click(newTriggerButton);
 
     expect(screen.getByTestId("location-path")).toHaveTextContent("/alerts/rules/new");
   });

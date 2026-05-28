@@ -4,6 +4,7 @@ import { Button } from '../ui/Button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/Dialog'
 import { Input, Select } from '../ui/Input'
 import { EmptyState } from '../ui/EmptyState'
+import type { DataTableTopRowConfig } from '../ui/DataTable'
 import { OrganisationMembersTable, type OrganisationMembersTableRow } from './OrganisationMembersTable'
 import { OrganisationTeamsPage } from './OrganisationTeamsPage'
 
@@ -109,6 +110,29 @@ export function OrganisationTeamsTab({
     ...roles.map((role) => ({ value: role.id, label: role.name })),
   ]
 
+  const tableTopRow: DataTableTopRowConfig = {
+    filters: [
+      {
+        value: roleFilter,
+        options: filterOptions,
+        onChange: setRoleFilter,
+        ariaLabel: 'Team role filter',
+        menuClassName: 'min-w-[180px]',
+      },
+    ],
+    actions: canManageTeam && onInvite
+      ? [
+          {
+            id: 'invite-members',
+            label: 'Invite Members',
+            icon: <Plus className="h-4 w-4" />,
+            variant: 'ghost',
+            onClick: () => setIsInviteModalOpen(true),
+          },
+        ]
+      : undefined,
+  }
+
   const handleInviteSubmit = () => {
     if (!onInvite || !inviteEmail || !inviteRole) {
       return
@@ -122,21 +146,13 @@ export function OrganisationTeamsTab({
   return (
     <>
       <OrganisationTeamsPage
-        filterValue={roleFilter}
-        onFilterChange={setRoleFilter}
-        filterOptions={filterOptions}
-        canManageTeam={canManageTeam}
-        onInviteClick={onInvite ? () => setIsInviteModalOpen(true) : undefined}
-        inviteLabel="Invite Members"
-        inviteIcon={<Plus className="h-4 w-4" />}
         tableContent={
-          rows.length === 0 ? (
-            <div className="p-12">
-              <EmptyState title={emptyStateTitle} description={emptyStateDescription} />
-            </div>
-          ) : (
-            <OrganisationMembersTable rows={rows} containerClassName="flex min-h-0 flex-1 overflow-hidden" />
-          )
+          <OrganisationMembersTable
+            rows={rows}
+            topRow={tableTopRow}
+            emptyState={<EmptyState title={emptyStateTitle} description={emptyStateDescription} />}
+            containerClassName="flex min-h-0 flex-1 overflow-hidden"
+          />
         }
       />
 

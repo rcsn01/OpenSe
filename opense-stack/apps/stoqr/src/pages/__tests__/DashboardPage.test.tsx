@@ -443,5 +443,7 @@ describe("DashboardPage", () => {
         "No inventory movement yet. Add products and transactions to populate velocity insights.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fast" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /dead stock/i })).toBeInTheDocument();
   });
 });
