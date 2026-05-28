@@ -1,5 +1,6 @@
 import { Layers3, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Button, Input, Select } from '@repo/ui'
 import type { LabelProduct } from '../../api/labelStudio'
 import { useCreateLabelPrintJob, useLabelProductFolders, useLabelProducts, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
 import { usePageTopBarSearch, useTopBarSearchValue } from '../Search/TopBarSearch'
@@ -54,7 +55,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   const { data: templates = [], isLoading: loadingTemplates } = useLabelTemplates(companyId)
   const [targetType, setTargetType] = useState<BatchTarget>('single')
   const [folderId, setFolderId] = useState('')
-  const activeFolderId = targetType === 'folder' ? folderId : undefined
+  const activeFolderId = targetType === 'folder' && folderId ? folderId : undefined
   const { data: products = [], isLoading: loadingProducts } = useLabelProducts(companyId, '', activeFolderId)
   const { data: folders = [], isLoading: loadingFolders } = useLabelProductFolders(companyId)
   const createPrintJobMutation = useCreateLabelPrintJob(companyId)
@@ -93,6 +94,10 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
     [products, selectedProductIds],
   )
   const selectedFolder = useMemo(() => folders.find((folder) => folder.id === folderId) ?? null, [folders, folderId])
+  const templateOptions = useMemo(
+    () => filteredTemplates.map((template) => ({ value: template.id, label: template.name })),
+    [filteredTemplates],
+  )
   const folderOptions = useMemo(
     () => folders
       .map((folder) => ({ value: folder.id, label: getFolderPathLabel(folder.id, folders) || folder.name }))
@@ -103,7 +108,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   const productsToPreview = useMemo(
     () => {
       if (targetType === 'folder') {
-        return products
+        return folderId ? products : []
       }
 
       if (targetType === 'multiple') {
@@ -132,6 +137,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
   const batchCount = useMemo(() => {
     return productsToPreview.length * quantity
   }, [productsToPreview.length, quantity])
+  const showInitialLoading = loadingTemplates || loadingFolders || (loadingProducts && targetType !== 'folder')
   const exportPageCount = useMemo(() => {
     if (!selectedTemplate || productsToPreview.length === 0) return 0
 
@@ -310,21 +316,21 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
           <p className="label-batch-sidebar-description">Select target products and print your labels.</p>
         </div>
 
-        {loadingTemplates || loadingProducts || loadingFolders ? (
+        {showInitialLoading ? (
           <div className="empty-state">Loading data...</div>
         ) : (
           <>
             <section className="label-batch-section">
               <span className="label-batch-section-label">1. Select Template</span>
               <label className="flex flex-col gap-2">
-                <select className="label-batch-select" aria-label="Template" value={templateId} onChange={(event) => handleTemplateChange(event.target.value)}>
-                  <option value="">Select template</option>
-                  {filteredTemplates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  className="label-batch-select"
+                  aria-label="Template"
+                  value={templateId}
+                  placeholder="Select template"
+                  options={templateOptions}
+                  onChange={(event) => handleTemplateChange(event.target.value)}
+                />
               </label>
             </section>
 
@@ -332,75 +338,77 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
               <span className="label-batch-section-label">2. Target Selection</span>
               <div className="flex flex-col gap-3">
                 <div className="label-batch-target-toggle" role="radiogroup" aria-label="Target type">
-                  <button
+                  <Button
                     type="button"
                     role="radio"
                     aria-checked={targetType === 'single'}
+                    variant={targetType === 'single' ? 'primary' : 'outline'}
                     className={`label-batch-target-button${targetType === 'single' ? ' is-active' : ''}`}
                     onClick={() => switchTargetType('single')}
                   >
                     Single
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     role="radio"
                     aria-checked={targetType === 'multiple'}
+                    variant={targetType === 'multiple' ? 'primary' : 'outline'}
                     className={`label-batch-target-button${targetType === 'multiple' ? ' is-active' : ''}`}
                     onClick={() => switchTargetType('multiple')}
                   >
                     Multiple
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     role="radio"
                     aria-checked={targetType === 'folder'}
+                    variant={targetType === 'folder' ? 'primary' : 'outline'}
                     className={`label-batch-target-button${targetType === 'folder' ? ' is-active' : ''}`}
                     onClick={() => switchTargetType('folder')}
                   >
                     Folder
-                  </button>
+                  </Button>
                 </div>
 
                 {targetType === 'folder' ? (
                   <>
-                    <select className="label-batch-select" aria-label="Folder" value={folderId} onChange={(event) => setFolderId(event.target.value)}>
-                      <option value="">Select folder</option>
-                      {folderOptions.map((folder) => (
-                        <option key={folder.value} value={folder.value}>
-                          {folder.label}
-                        </option>
-                      ))}
-                    </select>
+                    <Select
+                      className="label-batch-select"
+                      aria-label="Folder"
+                      value={folderId}
+                      placeholder="Select folder"
+                      options={folderOptions}
+                      onChange={(event) => setFolderId(event.target.value)}
+                    />
                     {selectedFolder && (
                       <div className="label-batch-folder-summary">{selectedFolderLabel} · {products.length} items</div>
                     )}
                   </>
                 ) : (
                   <>
-                    <label className="label-batch-search-field">
-                      <Search size={15} />
-                      <input
-                        className="label-batch-search-input"
-                        type="search"
-                        aria-label="Product Search"
-                        placeholder="Search products by SKU or Name..."
-                        value={productSearch}
-                        onChange={(event) => setProductSearch(event.target.value)}
-                      />
-                    </label>
+                    <Input
+                      className="label-batch-search-input"
+                      type="search"
+                      aria-label="Product Search"
+                      placeholder="Search products by SKU or Name..."
+                      value={productSearch}
+                      prefix={<Search size={15} />}
+                      onChange={(event) => setProductSearch(event.target.value)}
+                    />
 
                     {productSearch.trim().length > 0 ? (
                       <div className="label-batch-search-results">
                         {searchableProducts.slice(0, 6).map((product) => (
-                          <button
+                          <Button
                             key={product.id}
                             type="button"
+                            variant="ghost"
                             className="label-batch-search-result"
                             onClick={() => addProductSelection(product.id)}
                           >
                             <span className="label-batch-search-result-name">{product.name}</span>
                             <span className="label-batch-search-result-sku">{product.sku || 'No SKU'}</span>
-                          </button>
+                          </Button>
                         ))}
                         {searchableProducts.length === 0 ? <div className="label-batch-search-empty">No matching products.</div> : null}
                       </div>
@@ -416,14 +424,16 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
                               <span className="label-batch-selected-name">{product.name}</span>
                               <span className="label-batch-selected-sku">{product.sku || 'No SKU'}</span>
                             </div>
-                            <button
+                            <Button
                               type="button"
+                              variant="ghost"
+                              size="sm"
                               className="label-batch-remove-button"
                               aria-label={`Remove ${product.name}`}
                               onClick={() => removeSelectedProduct(product.id)}
                             >
                               Remove
-                            </button>
+                            </Button>
                           </div>
                         ))
                       )}
@@ -437,25 +447,27 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
               <span className="label-batch-section-label">3. Print Options</span>
               <div className="label-batch-quantity-row">
                 <span className="label-batch-quantity-label">Copies per item</span>
-                <input
-                  className="label-batch-quantity-input"
-                  type="number"
-                  min={1}
-                  aria-label="Quantity"
-                  value={quantity}
-                  onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
-                />
+                <div className="label-batch-quantity-control">
+                  <Input
+                    className="label-batch-quantity-input"
+                    type="number"
+                    min={1}
+                    aria-label="Quantity"
+                    value={quantity}
+                    onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
+                  />
+                </div>
               </div>
             </section>
 
-            <button
+            <Button
               type="button"
               className="label-batch-export-button"
               onClick={exportPdf}
-              disabled={createPrintJobMutation.isPending}
+              loading={createPrintJobMutation.isPending}
             >
               Export PDF
-            </button>
+            </Button>
             {batchCount > 0 && exportPageCount > 0 && (
               <p className="label-batch-summary">
                 Generates {exportPageCount} PDF {exportPageCount === 1 ? 'page' : 'pages'} across {batchCount} label{batchCount === 1 ? '' : 's'}.
@@ -476,7 +488,7 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
             <span className="label-batch-preview-page">Page 1 of {Math.max(exportPageCount, 1)}</span>
           </div>
 
-          <div className="label-batch-preview-canvas">
+          <div className="label-batch-preview-canvas" role="region" aria-label="PDF preview">
             <LabelPreviewCard
               className="label-batch-preview-card"
               title="A4 Layout Preview"
@@ -492,13 +504,6 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
               showVariableFields={false}
               showSummaryItems={false}
             />
-
-            {selectedTemplate ? (
-              <div className="label-batch-engine-pill">
-                <Layers3 size={14} />
-                Live Layout Engine active
-              </div>
-            ) : null}
           </div>
         </section>
       </div>
