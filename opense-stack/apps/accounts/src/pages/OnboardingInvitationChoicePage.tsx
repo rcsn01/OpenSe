@@ -7,6 +7,7 @@ import {
   completeOrganisationOnboarding,
   declineOrganisationInvite,
   getOnboardingStatus,
+  startInviteMembersOnboarding,
   type OnboardingStatus,
   type PendingInvite,
 } from '../api/onboarding'
@@ -20,6 +21,20 @@ import {
   getOnboardingPathForStatus,
   shouldSkipInviteMembersStep,
 } from '../lib/onboardingUi'
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error) return error.message
+  if (
+    error
+    && typeof error === 'object'
+    && 'message' in error
+    && typeof error.message === 'string'
+  ) {
+    return error.message
+  }
+
+  return fallback
+}
 
 export const OnboardingInvitationChoicePage = () => {
   const navigate = useNavigate()
@@ -68,8 +83,7 @@ export const OnboardingInvitationChoicePage = () => {
 
       setInvites(status.pendingInvites)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load invitations.'
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to load invitations.'))
     } finally {
       setLoading(false)
     }
@@ -86,7 +100,6 @@ export const OnboardingInvitationChoicePage = () => {
       const invite = invites.find((candidate) => candidate.id === inviteId)
       await acceptOrganisationInvite(inviteId)
       if (shouldSkipInviteMembersStep(invite?.role)) {
-        await completeOrganisationOnboarding()
         const redirected = redirectBackToApp()
         if (!redirected) {
           navigate(getOnboardingCompletedFallbackPath(), { replace: true })
@@ -94,10 +107,10 @@ export const OnboardingInvitationChoicePage = () => {
         return
       }
 
+      await startInviteMembersOnboarding()
       navigate(buildPathWithQuery(getInvitationAcceptedPath()), { replace: true })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to accept invitation.'
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to accept invitation.'))
     } finally {
       setActionLoading(null)
     }
@@ -117,8 +130,7 @@ export const OnboardingInvitationChoicePage = () => {
         navigate(buildPathWithQuery(getOnboardingPathForStatus(nextStatus)), { replace: true })
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to decline invitation.'
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to decline invitation.'))
     } finally {
       setActionLoading(null)
     }
@@ -136,8 +148,7 @@ export const OnboardingInvitationChoicePage = () => {
       const nextStatus = await getOnboardingStatus()
       navigate(buildPathWithQuery(getOnboardingPathForStatus(nextStatus)), { replace: true })
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to decline invitations.'
-      setError(message)
+      setError(getErrorMessage(err, 'Failed to decline invitations.'))
       setActionLoading(null)
     }
   }

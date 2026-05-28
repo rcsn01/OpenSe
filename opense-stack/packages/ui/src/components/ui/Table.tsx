@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
 
 /* ── Full-featured Table components ──────────────────── */
@@ -6,13 +6,15 @@ import { cn } from "../../lib/cn";
 export function Table({
   children,
   className,
+  style,
 }: {
   children: ReactNode;
   className?: string;
+  style?: CSSProperties;
 }) {
   return (
     <div className="w-full overflow-auto">
-      <table className={cn("w-full caption-bottom text-sm", className)}>
+      <table className={cn("w-full caption-bottom text-sm", className)} style={style}>
         {children}
       </table>
     </div>

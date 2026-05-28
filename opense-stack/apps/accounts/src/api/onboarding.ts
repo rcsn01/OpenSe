@@ -125,7 +125,9 @@ export const getOnboardingInstancePolicy = async (): Promise<OnboardingInstanceP
 
 export const acceptOrganisationInvite = async (inviteId: string): Promise<void> => {
   await acceptSharedOrganisationInvite(inviteId)
+}
 
+export const startInviteMembersOnboarding = async (): Promise<void> => {
   await updateOnboardingMetadata({
     accounts_onboarding_completed: false,
     accounts_onboarding_stage: 'invite-members',

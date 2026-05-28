@@ -10,6 +10,14 @@ interface OrganisationInviteRow {
   inviter: { full_name: string | null; email: string | null } | { full_name: string | null; email: string | null }[] | null
 }
 
+interface OrganisationInviteForOrgRow {
+  id: string
+  org_id: string
+  email: string
+  created_at: string
+  organisation_invite_app_seats?: Array<{ app_code: string }> | null
+}
+
 export interface PendingOrganisationInvite {
   id: string
   org_id: string
@@ -24,6 +32,7 @@ export interface OrganisationInviteForOrg {
   org_id: string
   email: string
   created_at: string
+  assigned_apps: string[]
 }
 
 const normalizeSingle = <T>(value: T | T[] | null | undefined): T | null => {
@@ -90,35 +99,52 @@ export const inviteOrganisationMember = async (
   orgId: string,
   email: string,
   _role: OrganisationInviteRole = 'member',
-): Promise<void> => {
+): Promise<OrganisationInviteForOrg> => {
   const normalizedEmail = email.trim().toLowerCase()
   if (!normalizedEmail) {
     throw new Error('Invite email is required.')
   }
 
-  const { error } = await supabase.rpc('accounts_invite_organisation_member', {
+  const { data, error } = await supabase.rpc('accounts_invite_organisation_member', {
     p_org_id: orgId,
     p_email: normalizedEmail,
   })
 
   if (error) throw error
+
+  const invite = Array.isArray(data) ? (data[0] as OrganisationInviteForOrgRow | undefined) : undefined
+  if (!invite) {
+    throw new Error('Invite was not returned.')
+  }
+
+  return {
+    id: invite.id,
+    org_id: invite.org_id,
+    email: invite.email.trim().toLowerCase(),
+    created_at: invite.created_at,
+    assigned_apps: [],
+  }
 }
 
 export const getOrganisationInvitesForOrg = async (orgId: string): Promise<OrganisationInviteForOrg[]> => {
   const { data, error } = await supabase
     .from('organisation_invites')
-    .select('id, org_id, email, created_at')
+    .select('id, org_id, email, created_at, organisation_invite_app_seats(app_code)')
     .eq('org_id', orgId)
     .is('accepted_at', null)
     .order('created_at', { ascending: true })
 
   if (error) throw error
 
-  return ((data ?? []) as OrganisationInviteForOrg[]).map((invite) => ({
+  return ((data ?? []) as OrganisationInviteForOrgRow[]).map((invite) => ({
     id: invite.id,
     org_id: invite.org_id,
     email: invite.email.trim().toLowerCase(),
     created_at: invite.created_at,
+    assigned_apps: (invite.organisation_invite_app_seats ?? [])
+      .map((seat) => seat.app_code)
+      .filter((appCode) => appCode.length > 0)
+      .sort(),
   }))
 }
 

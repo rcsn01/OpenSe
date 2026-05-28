@@ -18,10 +18,12 @@ vi.mock('@repo/shared/organisation-invites', () => ({
 }))
 
 import {
+  assignInviteSeat,
   assignSeat,
   cancelSeatInvite,
   getSeatAssignmentSnapshot,
   inviteSeatMembers,
+  unassignInviteSeat,
   unassignSeat,
 } from '../seatAssignments'
 
@@ -56,6 +58,7 @@ describe('seatAssignments api', () => {
         org_id: 'org-1',
         email: 'pending@example.com',
         created_at: '2026-05-20T00:00:00.000Z',
+        assigned_apps: ['etl', 'unknown', 'stoqr'],
       },
     ])
 
@@ -80,6 +83,7 @@ describe('seatAssignments api', () => {
           orgId: 'org-1',
           email: 'pending@example.com',
           createdAt: '2026-05-20T00:00:00.000Z',
+          assignedApps: ['etl', 'stoqr'],
         },
       ],
     })
@@ -122,19 +126,73 @@ describe('seatAssignments api', () => {
     })
   })
 
-  it('inviteSeatMembers normalizes and de-duplicates emails before inviting', async () => {
-    mockInviteOrganisationMember.mockResolvedValue(undefined)
+  it('assignInviteSeat calls RPC with expected payload', async () => {
+    mockRpc.mockResolvedValue({ error: null })
+
+    await assignInviteSeat('inv-1', 'etl')
+
+    expect(mockRpc).toHaveBeenCalledWith('accounts_assign_org_invite_app_seat', {
+      p_invite_id: 'inv-1',
+      p_app_code: 'etl',
+    })
+  })
+
+  it('unassignInviteSeat calls RPC with expected payload', async () => {
+    mockRpc.mockResolvedValue({ error: null })
+
+    await unassignInviteSeat('inv-1', 'stoqr')
+
+    expect(mockRpc).toHaveBeenCalledWith('accounts_unassign_org_invite_app_seat', {
+      p_invite_id: 'inv-1',
+      p_app_code: 'stoqr',
+    })
+  })
+
+  it('inviteSeatMembers normalizes and de-duplicates emails before inviting and assigning pending seats', async () => {
+    mockInviteOrganisationMember
+      .mockResolvedValueOnce({
+        id: 'inv-1',
+        org_id: 'org-1',
+        email: 'member@example.com',
+        created_at: '2026-05-20T00:00:00.000Z',
+        assigned_apps: [],
+      })
+      .mockResolvedValueOnce({
+        id: 'inv-2',
+        org_id: 'org-1',
+        email: 'second@example.com',
+        created_at: '2026-05-20T00:00:00.000Z',
+        assigned_apps: [],
+      })
+    mockRpc.mockResolvedValue({ error: null })
 
     await inviteSeatMembers('org-1', [
       ' MEMBER@Example.com ',
       'member@example.com',
       'second@example.com',
       '',
-    ])
+    ], ['etl', 'stoqr'])
 
     expect(mockInviteOrganisationMember).toHaveBeenCalledTimes(2)
     expect(mockInviteOrganisationMember).toHaveBeenNthCalledWith(1, 'org-1', 'member@example.com', 'member')
     expect(mockInviteOrganisationMember).toHaveBeenNthCalledWith(2, 'org-1', 'second@example.com', 'member')
+    expect(mockRpc).toHaveBeenCalledTimes(4)
+    expect(mockRpc).toHaveBeenNthCalledWith(1, 'accounts_assign_org_invite_app_seat', {
+      p_invite_id: 'inv-1',
+      p_app_code: 'etl',
+    })
+    expect(mockRpc).toHaveBeenNthCalledWith(2, 'accounts_assign_org_invite_app_seat', {
+      p_invite_id: 'inv-1',
+      p_app_code: 'stoqr',
+    })
+    expect(mockRpc).toHaveBeenNthCalledWith(3, 'accounts_assign_org_invite_app_seat', {
+      p_invite_id: 'inv-2',
+      p_app_code: 'etl',
+    })
+    expect(mockRpc).toHaveBeenNthCalledWith(4, 'accounts_assign_org_invite_app_seat', {
+      p_invite_id: 'inv-2',
+      p_app_code: 'stoqr',
+    })
   })
 
   it('cancelSeatInvite delegates to shared org invite cancellation', async () => {

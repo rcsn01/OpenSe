@@ -5,6 +5,7 @@ const mockUpdateUser = vi.fn()
 const mockFrom = vi.fn()
 const mockRpc = vi.fn()
 
+const mockAcceptOrganisationInvite = vi.fn()
 const mockGetPendingOrganisationInvites = vi.fn()
 const mockInviteOrganisationMember = vi.fn()
 
@@ -20,17 +21,19 @@ vi.mock('@repo/shared/supabase', () => ({
 }))
 
 vi.mock('@repo/shared/organisation-invites', () => ({
-  acceptOrganisationInvite: vi.fn(),
+  acceptOrganisationInvite: (...args: unknown[]) => mockAcceptOrganisationInvite(...args),
   declineOrganisationInvite: vi.fn(),
   getPendingOrganisationInvites: (...args: unknown[]) => mockGetPendingOrganisationInvites(...args),
   inviteOrganisationMember: (...args: unknown[]) => mockInviteOrganisationMember(...args),
 }))
 
 import {
+  acceptOrganisationInvite,
   createOrganisationForOnboarding,
   getOnboardingInstancePolicy,
   getOnboardingStatus,
   inviteOrganisationMembers,
+  startInviteMembersOnboarding,
 } from '../onboarding'
 
 const makeMembershipChain = (rows: unknown[]) => {
@@ -216,6 +219,37 @@ describe('onboarding api', () => {
     expect(status.step).toBe('blocked')
     expect(status.pendingInvites).toEqual([])
     expect(mockRpc).toHaveBeenCalledWith('accounts_get_onboarding_instance_policy')
+  })
+
+  it('accepts an organisation invite without writing auth metadata', async () => {
+    mockAcceptOrganisationInvite.mockResolvedValue(undefined)
+
+    await acceptOrganisationInvite('inv-1')
+
+    expect(mockAcceptOrganisationInvite).toHaveBeenCalledWith('inv-1')
+    expect(mockUpdateUser).not.toHaveBeenCalled()
+  })
+
+  it('starts invite-member onboarding metadata only when requested', async () => {
+    mockGetUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'user-1',
+          user_metadata: { theme: 'dark' },
+        },
+      },
+      error: null,
+    })
+
+    await startInviteMembersOnboarding()
+
+    expect(mockUpdateUser).toHaveBeenCalledWith({
+      data: {
+        theme: 'dark',
+        accounts_onboarding_completed: false,
+        accounts_onboarding_stage: 'invite-members',
+      },
+    })
   })
 
   it('validates organisation name before creating onboarding org', async () => {
