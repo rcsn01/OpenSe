@@ -1,4 +1,4 @@
-import { Layers3, Search } from 'lucide-react'
+import { Layers3, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Input, Select } from '@repo/ui'
 import type { LabelProduct } from '../../api/labelStudio'
@@ -134,9 +134,6 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
     [filteredProducts, selectedProductIds, targetType],
   )
 
-  const batchCount = useMemo(() => {
-    return productsToPreview.length * quantity
-  }, [productsToPreview.length, quantity])
   const showInitialLoading = loadingTemplates || loadingFolders || (loadingProducts && targetType !== 'folder')
   const exportPageCount = useMemo(() => {
     if (!selectedTemplate || productsToPreview.length === 0) return 0
@@ -414,25 +411,28 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
                       </div>
                     ) : null}
 
-                    <div className="label-batch-selected-list">
+                    <div
+                      className={`label-batch-selected-list${targetType === 'multiple' ? ' is-scrollable' : ''}`}
+                      aria-label={targetType === 'multiple' ? 'Selected products' : undefined}
+                      role={targetType === 'multiple' ? 'region' : undefined}
+                    >
                       {selectedListProducts.length === 0 ? (
                         <div className="label-batch-selected-empty">No products selected.</div>
                       ) : (
                         selectedListProducts.map((product) => (
                           <div key={product.id} className="label-batch-selected-item">
                             <div className="label-batch-selected-copy">
-                              <span className="label-batch-selected-name">{product.name}</span>
-                              <span className="label-batch-selected-sku">{product.sku || 'No SKU'}</span>
+                              <span className="label-batch-selected-name" title={product.name}>{product.name}</span>
                             </div>
                             <Button
                               type="button"
                               variant="ghost"
-                              size="sm"
+                              size="icon"
                               className="label-batch-remove-button"
                               aria-label={`Remove ${product.name}`}
                               onClick={() => removeSelectedProduct(product.id)}
                             >
-                              Remove
+                              <X size={14} aria-hidden="true" />
                             </Button>
                           </div>
                         ))
@@ -468,11 +468,6 @@ export const LabelPreviewBatchTab = ({ companyId, selectedTemplateId: initialSel
             >
               Export PDF
             </Button>
-            {batchCount > 0 && exportPageCount > 0 && (
-              <p className="label-batch-summary">
-                Generates {exportPageCount} PDF {exportPageCount === 1 ? 'page' : 'pages'} across {batchCount} label{batchCount === 1 ? '' : 's'}.
-              </p>
-            )}
             {message ? <div className="label-batch-message">{message}</div> : null}
           </>
         )}

@@ -100,25 +100,35 @@ describe('LabelPreviewBatchTab', () => {
     await user.type(screen.getByLabelText('Product Search'), 'SHIP')
     await user.click(screen.getByRole('button', { name: /Shipping Box/i }))
 
-    expect(screen.getByText('SHIP-100')).toBeInTheDocument()
+    expect(screen.getByText('Shipping Box')).toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: 'Multiple' }))
 
     expect(screen.getByText('No products selected.')).toBeInTheDocument()
-    expect(screen.queryByText('SHIP-100')).not.toBeInTheDocument()
+    expect(screen.queryByText('Shipping Box')).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Product Search'), 'RET')
     await user.click(screen.getByRole('button', { name: /Returns Envelope/i }))
 
-    expect(screen.getByText('RET-200')).toBeInTheDocument()
+    expect(screen.getByText('Returns Envelope')).toBeInTheDocument()
+    expect(screen.queryByText('RET-200')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: 'Folder' }))
 
     expect(screen.getByLabelText('Folder')).toBeInTheDocument()
-    expect(screen.queryByText('RET-200')).not.toBeInTheDocument()
+    expect(screen.queryByText('Returns Envelope')).not.toBeInTheDocument()
   })
 
-  it('updates the generated page and label summary when quantity changes', async () => {
+  it('makes the multiple selected products list a dedicated scroll region', async () => {
+    const user = userEvent.setup()
+    renderPreviewBatchTab()
+
+    await user.click(screen.getByRole('radio', { name: 'Multiple' }))
+
+    expect(screen.getByRole('region', { name: 'Selected products' })).toHaveClass('is-scrollable')
+  })
+
+  it('updates quantity without rendering a generated label summary', async () => {
     const user = userEvent.setup()
     renderPreviewBatchTab()
 
@@ -127,7 +137,8 @@ describe('LabelPreviewBatchTab', () => {
     await user.click(screen.getByRole('button', { name: /Shipping Box/i }))
     fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '3' } })
 
-    expect(screen.getByText(/Generates 1 PDF page across 3 labels\./)).toBeInTheDocument()
+    expect(screen.getByLabelText('Quantity')).toHaveValue(3)
+    expect(screen.queryByText(/Generates \d+ PDF/i)).not.toBeInTheDocument()
   })
 
   it('renders the PDF preview as the dedicated scroll region', () => {
