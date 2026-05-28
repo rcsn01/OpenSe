@@ -61,7 +61,7 @@ describe('TemplateLibraryTab', () => {
     expect(screen.getByRole('columnheader', { name: 'Dimensions' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Active Fields' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Last Modified' })).toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Actions' })).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Source' })).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Type' })).not.toBeInTheDocument()
     expect(screen.queryByText('Editing')).not.toBeInTheDocument()
@@ -72,14 +72,25 @@ describe('TemplateLibraryTab', () => {
     expect(screen.getAllByText('Barcode').length).toBeGreaterThan(0)
   })
 
-  it('opens the designer when the template name is activated', async () => {
+  it('opens the designer when the table row is clicked', async () => {
     const user = userEvent.setup()
     const onSelectTemplate = vi.fn()
 
     renderTemplateLibrary(<TemplateLibraryTab companyId="company-1" onSelectTemplate={onSelectTemplate} />)
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit Product Label template' })[0])
+    await user.click(screen.getByText('100x50mm'))
 
     expect(onSelectTemplate).toHaveBeenCalledWith('template-1')
+  })
+
+  it('opens the create form from the table top row', async () => {
+    const user = userEvent.setup()
+
+    renderTemplateLibrary(<TemplateLibraryTab companyId="company-1" />)
+
+    await user.click(screen.getByRole('button', { name: 'Create new template' }))
+
+    expect(screen.getByLabelText('Template Name')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide new template' })).toBeInTheDocument()
   })
 })

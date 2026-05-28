@@ -2,7 +2,11 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { type ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { DataTable, type DataTableColumn } from '../DataTable'
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableTopRowConfig,
+} from '../DataTable'
 
 type TestRow = {
   id: string
@@ -30,7 +34,7 @@ const rows: TestRow[] = [
 
 type DataTableTestProps = {
   rows?: TestRow[]
-  topRow?: ReactNode
+  topRow?: ReactNode | DataTableTopRowConfig
   bottomRow?: ReactNode
   emptyState?: ReactNode
   variant?: 'default' | 'boxed' | 'dashboard' | 'operational'
@@ -75,6 +79,98 @@ describe('DataTable', () => {
     const topRowCell = screen.getByText('Template controls').closest('td')
 
     expect(topRowCell).toHaveAttribute('colspan', String(columns.length))
+  })
+
+  it('renders structured top row filters and calls onChange', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+
+    renderTable({
+      topRow: {
+        filters: [
+          {
+            id: 'status',
+            value: 'all',
+            options: [
+              { value: 'all', label: 'All statuses' },
+              { value: 'ready', label: 'Ready' },
+            ],
+            onChange,
+            ariaLabel: 'Status filter',
+          },
+        ],
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Status filter' }))
+    await user.click(screen.getByRole('button', { name: 'Ready' }))
+
+    expect(onChange).toHaveBeenCalledWith('ready')
+  })
+
+  it('renders structured top row actions as buttons and calls handlers', async () => {
+    const user = userEvent.setup()
+    const onAdd = vi.fn()
+    const onReset = vi.fn()
+
+    renderTable({
+      topRow: {
+        actions: [
+          { id: 'add', label: 'Add draft', onClick: onAdd },
+          { id: 'reset', label: 'Reset', variant: 'ghost', onClick: onReset },
+        ],
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Add draft' }))
+    await user.click(screen.getByRole('button', { name: 'Reset' }))
+
+    expect(onAdd).toHaveBeenCalledTimes(1)
+    expect(onReset).toHaveBeenCalledTimes(1)
+  })
+
+  it('disables structured top row disabled and loading actions', () => {
+    renderTable({
+      topRow: {
+        actions: [
+          { id: 'disabled', label: 'Disabled action', disabled: true },
+          { id: 'loading', label: 'Loading action', loading: true },
+        ],
+      },
+    })
+
+    expect(
+      screen.getByRole('button', { name: 'Disabled action' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Loading action' }),
+    ).toBeDisabled()
+  })
+
+  it('renders structured top row left and right slots on their expected sides', () => {
+    renderTable({
+      topRow: {
+        left: <span>Left slot</span>,
+        right: <span>Right slot</span>,
+      },
+    })
+
+    const leftSlotGroup = screen.getByText('Left slot').parentElement
+    const rightSlotGroup = screen.getByText('Right slot').parentElement
+
+    expect(leftSlotGroup).toHaveClass('flex')
+    expect(rightSlotGroup).toHaveClass('ml-auto', 'justify-end')
+  })
+
+  it('does not render an extra table row for an empty structured top row', () => {
+    renderTable({ topRow: {} })
+
+    const headerRows = within(screen.getAllByRole('rowgroup')[0]).getAllByRole(
+      'row',
+    )
+
+    expect(headerRows).toHaveLength(1)
+    expect(headerRows[0]).toHaveTextContent('Name')
   })
 
   it('keeps the empty state below column headers when a top row is present', () => {
