@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "../ui/Button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/Card";
+import { CardDescription, CardHeader, CardTitle } from "../ui/Card";
 import { Checkbox } from "../ui/Checkbox";
 import {
   SideSheet,
@@ -543,7 +537,7 @@ export function OrganisationPermissionsPanel({
 
   return (
     <StackLayout className="min-h-0 flex-1">
-      <Card variant="plain" padding="md" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {(title || description) && (
           <CardHeader>
             <div>
@@ -552,7 +546,7 @@ export function OrganisationPermissionsPanel({
             </div>
           </CardHeader>
         )}
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
@@ -648,8 +642,8 @@ export function OrganisationPermissionsPanel({
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <SideSheet
         open={Boolean(editingRoleId)}
