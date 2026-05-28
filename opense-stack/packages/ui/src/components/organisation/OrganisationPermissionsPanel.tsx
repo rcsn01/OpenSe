@@ -20,7 +20,11 @@ import {
 } from "../ui/SideSheet";
 import { Input, Textarea } from "../ui/Input";
 import { StackLayout } from "../layout/StackLayout";
-import { DataTable, type DataTableColumn } from "../ui/DataTable";
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableTopRowConfig,
+} from "../ui/DataTable";
 import {
   Table,
   TableBody,
@@ -520,6 +524,19 @@ export function OrganisationPermissionsPanel({
     [canManage, onDeleteRole, openEditRole, saving, usesRoutedEdit],
   );
 
+  const roleTableTopRow: DataTableTopRowConfig = {
+    actions: [
+      {
+        id: "add-role",
+        label: "Add Role",
+        icon: <Plus className="h-4 w-4" />,
+        variant: "ghost",
+        disabled: !canManage || saving || isAddingRole,
+        onClick: () => setIsAddingRole(true),
+      },
+    ],
+  };
+
   return (
     <StackLayout className="min-h-0 flex-1">
       <Card variant="plain" padding="md" className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -556,6 +573,7 @@ export function OrganisationPermissionsPanel({
                 sortField={roleSortField}
                 sortDirection={roleSortDirection}
                 onSortChange={handleRoleSortChange}
+                topRow={roleTableTopRow}
                 getRowProps={(row) => {
                   const canOpenRole = usesRoutedEdit && canManage && !saving;
 
@@ -622,19 +640,7 @@ export function OrganisationPermissionsPanel({
                       Cancel
                     </Button>
                   </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsAddingRole(true)}
-                    disabled={!canManage || saving}
-                    className="w-full justify-center border border-dashed border-[var(--color-table-border)] py-5"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Role
-                  </Button>
-                )}
+                ) : undefined}
                 bottomRowCellClassName="bg-[var(--color-table-row-bg)] px-4 py-3"
               />
             </div>

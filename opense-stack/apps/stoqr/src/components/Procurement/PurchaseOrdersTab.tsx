@@ -9,8 +9,8 @@ import {
   CardTitle,
   DataTable,
   type DataTableColumn,
+  type DataTableTopRowConfig,
   EmptyState,
-  FilterDropdown,
   Input,
   Select,
 } from '@repo/ui'
@@ -410,50 +410,46 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
         ? `No purchase orders matched "${normalizePageSearchTerm(searchValue)}". Try a different term or status filter.`
         : 'Try adjusting your search or status filter to find a matching purchase order.'
 
+  const purchaseOrderTableTopRow: DataTableTopRowConfig = {
+    filters: [
+      {
+        value: statusFilter,
+        options: statusOptions,
+        onChange: (value) => handleStatusFilterChange(value as StatusFilter),
+        ariaLabel: 'Purchase order status filter',
+        menuClassName: 'min-w-[220px]',
+      },
+    ],
+    actions: [
+      {
+        id: 'alert-automation',
+        label: (
+          <>
+            Auto-Generate from Alerts
+            <Badge variant={lowStockProducts.length > 0 ? 'warning' : 'secondary'} size="sm">
+              {lowStockProducts.length}
+            </Badge>
+          </>
+        ),
+        icon: <BellRing className="h-4 w-4" />,
+        variant: 'ghost',
+        className: showAlertsHint ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary-hover)]' : undefined,
+        onClick: () => setShowAlertsHint((current) => !current),
+      },
+      {
+        id: 'create-po',
+        label: 'Create PO',
+        icon: <Plus className="h-4 w-4" />,
+        variant: 'ghost',
+        className: isCreating ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary-hover)]' : undefined,
+        onClick: () => setIsCreating((current) => !current),
+      },
+    ],
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
       <Card variant="plain" className="flex min-h-0 flex-1 flex-col overflow-hidden" padding="none">
-        <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2 sm:min-w-[220px]">
-            <FilterDropdown
-              value={statusFilter}
-              options={statusOptions}
-              onChange={handleStatusFilterChange}
-              ariaLabel="Purchase order status filter"
-              menuClassName="min-w-[220px]"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={showAlertsHint ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary-hover)]' : undefined}
-              onClick={() => setShowAlertsHint((current) => !current)}
-            >
-              <span className="inline-flex items-center gap-2">
-                <BellRing className="h-4 w-4" />
-                Auto-Generate from Alerts
-              </span>
-              <Badge variant={lowStockProducts.length > 0 ? 'warning' : 'secondary'} size="sm">
-                {lowStockProducts.length}
-              </Badge>
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={isCreating ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary-hover)]' : undefined}
-              onClick={() => setIsCreating((current) => !current)}
-            >
-              <Plus className="h-4 w-4" />
-              Create PO
-            </Button>
-          </div>
-        </div>
-
         {showAlertsHint ? (
           <div className="border-b border-dashed border-[var(--color-border-hover)] bg-[var(--color-muted)]/40 px-4 py-4 md:px-6">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -537,35 +533,34 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
           </div>
         ) : null}
 
-        {loadingOrders ? (
-          <div className="empty-state">Loading purchase orders...</div>
-        ) : filteredPurchaseOrders.length === 0 ? (
-          <div className="px-6 py-10">
-            <EmptyState title="No purchase orders found" description={emptyStateDescription} />
-          </div>
-        ) : (
-          <DataTable
-            className="min-h-0 flex-1"
-            columns={purchaseOrderColumns}
-            rows={pagedPurchaseOrders}
-            getRowId={(order) => order.id}
-            minTableWidth={1120}
-            tableLayout="fixed"
-            sortField={tableSortField}
-            sortDirection={tableSortDirection}
-            onSortChange={handleTableSort}
-            tableWrapClassName="border-0 bg-white"
-            tableClassName="bg-white"
-            pagination={{
-              currentPage: currentTablePage,
-              totalItems: filteredPurchaseOrders.length,
-              itemsPerPage: tablePageSize,
-              onPageChange: setTablePage,
-              onItemsPerPageChange: handlePageSizeChange,
-              pageSizeOptions: purchaseOrderPageSizeOptions,
-            }}
-          />
-        )}
+        <DataTable
+          className="min-h-0 flex-1"
+          columns={purchaseOrderColumns}
+          rows={loadingOrders ? [] : pagedPurchaseOrders}
+          getRowId={(order) => order.id}
+          topRow={purchaseOrderTableTopRow}
+          topRowCellClassName="bg-white px-4 py-4 md:px-6"
+          emptyState={
+            loadingOrders
+              ? 'Loading purchase orders...'
+              : <EmptyState title="No purchase orders found" description={emptyStateDescription} />
+          }
+          minTableWidth={1120}
+          tableLayout="fixed"
+          sortField={tableSortField}
+          sortDirection={tableSortDirection}
+          onSortChange={handleTableSort}
+          tableWrapClassName="border-0 bg-white"
+          tableClassName="bg-white"
+          pagination={{
+            currentPage: currentTablePage,
+            totalItems: filteredPurchaseOrders.length,
+            itemsPerPage: tablePageSize,
+            onPageChange: setTablePage,
+            onItemsPerPageChange: handlePageSizeChange,
+            pageSizeOptions: purchaseOrderPageSizeOptions,
+          }}
+        />
       </Card>
     </div>
   )

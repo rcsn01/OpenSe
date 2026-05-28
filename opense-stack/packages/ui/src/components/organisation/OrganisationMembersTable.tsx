@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo, useState } from 'react'
-import { DataTable, type DataTableColumn } from '../ui/DataTable'
+import { DataTable, type DataTableColumn, type DataTableTopRowConfig } from '../ui/DataTable'
 import { Avatar } from '../ui/Avatar'
 
 type OrganisationMembersSortField = 'member' | 'role' | 'permissions-role' | 'status'
@@ -23,6 +23,8 @@ type OrganisationMembersTableProps = {
   showPermissionsRole?: boolean
   showStatus?: boolean
   showActions?: boolean
+  topRow?: DataTableTopRowConfig
+  emptyState?: ReactNode
   containerClassName?: string
 }
 
@@ -31,6 +33,8 @@ export function OrganisationMembersTable({
   showPermissionsRole = false,
   showStatus = false,
   showActions = false,
+  topRow,
+  emptyState,
   containerClassName = 'flex min-h-0 flex-1 overflow-hidden',
 }: OrganisationMembersTableProps) {
   const [sortField, setSortField] = useState<OrganisationMembersSortField | null>(null)
@@ -156,6 +160,8 @@ export function OrganisationMembersTable({
         columns={columns}
         rows={sortedRows}
         getRowId={(row) => row.id}
+        topRow={topRow}
+        emptyState={emptyState}
         className="min-h-0 flex-1"
         minTableWidth={showPermissionsRole || showStatus || showActions ? 920 : 760}
         tableLayout="fixed"

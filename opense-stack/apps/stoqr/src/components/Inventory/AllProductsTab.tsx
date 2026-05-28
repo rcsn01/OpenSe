@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui'
+import {
+  AddFilterDropdown,
+  Button,
+  Card,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Dropdown,
+  DropdownItem,
+  type DataTableTopRowConfig,
+} from '@repo/ui'
+import { ChevronDown, Plus, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useCreateInventoryFolder,
@@ -8,12 +22,23 @@ import {
   useMoveInventoryProducts,
   useMoveFolderInInventory,
 } from '../../hooks/queries/useInventory'
-import { InventoryFiltersBar } from './all-products/InventoryFiltersBar'
+import { missingPermissionMessage } from '../PermissionGate'
 import { ProductListView } from './all-products/ProductListView'
 import { BulkAdjustModal } from './all-products/BulkAdjustModal'
 import { FolderNavigationPanel } from './FolderNavigationPanel'
 import type { AllProductsTabProps } from './all-products/types'
 import './InventorySurface.css'
+
+const formatCustomFieldValue = (value: string | number | boolean): string => {
+  if (typeof value === 'boolean') return value ? 'True' : 'False'
+  return String(value)
+}
+
+const stockFilterOptions: Array<{ value: AllProductsTabProps['stockFilter']; label: string }> = [
+  { value: 'all', label: 'All Statuses' },
+  { value: 'low', label: 'Low Stock' },
+  { value: 'out', label: 'Out of Stock' },
+]
 
 export const AllProductsTab = ({
   companyId,
@@ -255,6 +280,26 @@ export const AllProductsTab = ({
     [products, selectedRowIds],
   )
 
+  const activeCustomFieldKeys = useMemo(
+    () => new Set(activeCustomFieldFilters.map((filter) => filter.key)),
+    [activeCustomFieldFilters],
+  )
+
+  const availableFieldsForAdd = useMemo(
+    () => customFieldFilters.filter((field) => !activeCustomFieldKeys.has(field.key) && field.key !== pendingFilterKey),
+    [activeCustomFieldKeys, customFieldFilters, pendingFilterKey],
+  )
+
+  const pendingField = useMemo(
+    () => (pendingFilterKey ? customFieldFilters.find((field) => field.key === pendingFilterKey) ?? null : null),
+    [customFieldFilters, pendingFilterKey],
+  )
+
+  const addFilterItems = useMemo(
+    () => availableFieldsForAdd.map((field) => ({ value: field.key, label: field.key })),
+    [availableFieldsForAdd],
+  )
+
   const exportSelectedCsv = () => {
     if (selectedProducts.length === 0 || !canImportExportInventory) return
     const toCsv = (rows: string[][]) =>
@@ -290,6 +335,181 @@ export const AllProductsTab = ({
       toast.error(message)
     }
   }
+
+  const mobileExplorerToggle =
+    isMobileViewport && !isMobileExplorerOpen ? (
+      <button
+        type="button"
+        className="explorer-mobile-toggle"
+        aria-label="Open folder navigation"
+        aria-controls="inventory-folder-navigation"
+        aria-expanded="false"
+        onClick={() => setIsMobileExplorerOpen(true)}
+      >
+        <span aria-hidden="true">&gt;</span>
+      </button>
+    ) : null
+
+  const inventoryTableTopRow: DataTableTopRowConfig = isSelectionMode
+    ? {
+        className: 'inventory-toolbar selection-mode',
+        left: (
+          <>
+            {mobileExplorerToggle}
+            <span className="text-xs font-semibold text-[var(--color-primary)]">
+              {selectedRowIds.size} selected
+            </span>
+          </>
+        ),
+        actions: [
+          {
+            id: 'adjust-price',
+            label: 'Adjust Price',
+            variant: 'ghost',
+            disabled: !canEditInventory,
+            title: !canEditInventory ? missingPermissionMessage('inventory.edit') : undefined,
+            onClick: () => setBulkModalMode('price'),
+          },
+          {
+            id: 'adjust-quantity',
+            label: 'Adjust Qty',
+            variant: 'ghost',
+            disabled: !canAdjustInventory,
+            title: !canAdjustInventory ? missingPermissionMessage('inventory.adjust') : undefined,
+            onClick: () => setBulkModalMode('quantity'),
+          },
+          {
+            id: 'export-csv',
+            label: 'Export CSV',
+            variant: 'ghost',
+            disabled: !canImportExportInventory,
+            title: !canImportExportInventory ? missingPermissionMessage('inventory.import_export') : undefined,
+            onClick: exportSelectedCsv,
+          },
+          {
+            id: 'move-selected',
+            label: 'Move',
+            variant: 'ghost',
+            disabled: !canEditInventory,
+            title: !canEditInventory ? missingPermissionMessage('inventory.edit') : undefined,
+            onClick: handleOpenMoveDialog,
+          },
+          {
+            id: 'delete-selected',
+            label: 'Delete',
+            variant: 'ghost',
+            className: 'text-[var(--color-destructive)] hover:bg-[var(--color-destructive-light)]',
+            disabled: !canDeleteInventory,
+            title: !canDeleteInventory ? missingPermissionMessage('inventory.delete') : undefined,
+            onClick: handleBulkDelete,
+          },
+        ],
+      }
+    : {
+        className: 'inventory-toolbar',
+        leftClassName: 'flex-1',
+        filters: [
+          {
+            value: stockFilter,
+            options: stockFilterOptions,
+            onChange: (value) => setStockFilter(value as AllProductsTabProps['stockFilter']),
+            ariaLabel: 'Inventory stock status filter',
+            menuClassName: 'min-w-[160px]',
+          },
+        ],
+        left: (
+          <>
+            {mobileExplorerToggle}
+
+            {activeCustomFieldFilters.length > 0 && (
+              <div className="h-4 w-px shrink-0 bg-[var(--color-border)]" />
+            )}
+
+            {activeCustomFieldFilters.map((filter) => (
+              <div
+                key={filter.key}
+                className="inline-flex items-center gap-1 rounded bg-[color:rgba(102,193,63,0.06)] px-1.5 py-1 text-xs font-medium text-[var(--color-foreground)]"
+                aria-label={`Active filter: ${filter.key}`}
+              >
+                <span className="opacity-50">{filter.key}:</span>
+                <span>{formatCustomFieldValue(filter.value)}</span>
+                <button
+                  type="button"
+                  aria-label={`Remove ${filter.key} filter`}
+                  onClick={() => onRemoveFilter(filter.key)}
+                  className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm p-0 text-[var(--color-foreground)] opacity-35 transition-opacity hover:opacity-100"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+
+            {pendingField && (
+              <div className="flex items-center gap-1">
+                <Dropdown
+                  className="min-w-[120px]"
+                  defaultOpen
+                  trigger={
+                    <button
+                      type="button"
+                      aria-label="Custom field value"
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium text-[var(--color-primary)] transition-colors hover:bg-[var(--color-muted)]"
+                    >
+                      {pendingFilterKey}:
+                      <ChevronDown size={12} />
+                    </button>
+                  }
+                >
+                  {(pendingField.values ?? []).map((value) => (
+                    <DropdownItem
+                      key={JSON.stringify(value)}
+                      onClick={() => onAddFilter(pendingFilterKey!, value)}
+                    >
+                      {formatCustomFieldValue(value)}
+                    </DropdownItem>
+                  ))}
+                </Dropdown>
+                <button
+                  type="button"
+                  aria-label="Cancel pending filter"
+                  onClick={() => setPendingFilterKey(null)}
+                  className="inline-flex h-3.5 w-3.5 items-center justify-center p-0 text-[var(--color-foreground)] opacity-35 transition-opacity hover:opacity-100"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            )}
+
+            {!pendingFilterKey && addFilterItems.length > 0 && (
+              <AddFilterDropdown items={addFilterItems} onSelect={setPendingFilterKey} />
+            )}
+          </>
+        ),
+        actions: [
+          {
+            id: 'new-product',
+            label: 'New Product',
+            icon: <Plus className="h-4 w-4" />,
+            variant: 'ghost',
+            disabled: !canCreateInventory,
+            title: !canCreateInventory ? missingPermissionMessage('inventory.create') : undefined,
+            onClick: onCreateOpen,
+          },
+          {
+            id: 'import-csv',
+            label: 'Import CSV',
+            icon: <Upload className="h-4 w-4" />,
+            variant: 'ghost',
+            disabled: !canImportExportInventory || !canUseInventory,
+            title: !canImportExportInventory
+              ? missingPermissionMessage('inventory.import_export')
+              : !canUseInventory
+                ? missingPermissionMessage('inventory.use')
+                : undefined,
+            onClick: onImportOpen,
+          },
+        ],
+      }
 
   return (
     <div
@@ -349,35 +569,6 @@ export const AllProductsTab = ({
 
       <div className="explorer-main">
         <Card padding="none" variant="plain" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <InventoryFiltersBar
-            isSelectionMode={isSelectionMode}
-            selectedRowIds={selectedRowIds}
-            stockFilter={stockFilter}
-            setStockFilter={setStockFilter}
-            activeCustomFieldFilters={activeCustomFieldFilters}
-            onAddFilter={onAddFilter}
-            onRemoveFilter={onRemoveFilter}
-            pendingFilterKey={pendingFilterKey}
-            setPendingFilterKey={setPendingFilterKey}
-            customFieldFilters={customFieldFilters}
-            showMobileExplorerToggle={isMobileViewport && !isMobileExplorerOpen}
-            onMobileExplorerToggle={() => setIsMobileExplorerOpen(true)}
-            mobileExplorerControlsId="inventory-folder-navigation"
-            onImportOpen={onImportOpen}
-            onCreateOpen={onCreateOpen}
-            handleBulkDelete={handleBulkDelete}
-            onMoveSelected={handleOpenMoveDialog}
-            onBulkPriceAdjust={() => setBulkModalMode('price')}
-            onBulkQuantityAdjust={() => setBulkModalMode('quantity')}
-            onExportCsv={exportSelectedCsv}
-            canUseInventory={canUseInventory}
-            canCreateInventory={canCreateInventory}
-            canEditInventory={canEditInventory}
-            canAdjustInventory={canAdjustInventory}
-            canDeleteInventory={canDeleteInventory}
-            canImportExportInventory={canImportExportInventory}
-          />
-
           <ProductListView
             companyId={companyId}
             products={products}
@@ -397,6 +588,7 @@ export const AllProductsTab = ({
             onRefresh={onRefresh}
             canUseInventory={canUseInventory}
             canEditInventory={canEditInventory}
+            topRow={inventoryTableTopRow}
           />
         </Card>
       </div>

@@ -33,7 +33,40 @@ vi.mock('../FolderNavigationPanel', () => ({
 }))
 
 vi.mock('../all-products/ProductListView', () => ({
-  ProductListView: () => <div data-testid="product-list-view" />,
+  ProductListView: ({ topRow }: { topRow?: {
+    className?: string
+    filters?: Array<{ ariaLabel?: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }>
+    left?: React.ReactNode
+    actions?: Array<{ id?: string; label: React.ReactNode; onClick?: () => void; disabled?: boolean }>
+  } }) => (
+    <div data-testid="product-list-view">
+      {topRow ? (
+        <div className={topRow.className}>
+          {topRow.filters?.map((filter) => (
+            <button
+              key={filter.ariaLabel}
+              type="button"
+              aria-label={filter.ariaLabel}
+              onClick={() => filter.onChange(filter.options[1]?.value ?? filter.value)}
+            >
+              {filter.options.find((option) => option.value === filter.value)?.label}
+            </button>
+          ))}
+          {topRow.left}
+          {topRow.actions?.map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              disabled={action.disabled}
+              onClick={action.onClick}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  ),
 }))
 
 const mockMatchMedia = (matches: boolean) =>
@@ -176,5 +209,26 @@ describe('AllProductsTab', () => {
 
     expect(sidebar).toHaveAttribute('aria-hidden', 'true')
     expect(screen.getByRole('button', { name: 'Open folder navigation' })).toBeInTheDocument()
+  })
+
+  it('passes normal inventory controls into the product table top row', () => {
+    const props = {
+      ...createProps(),
+      selectedRowIds: new Set<string>(),
+      customFieldFilters: [{ key: 'Batch', valueType: 'text' as const, values: ['A', 'B'] }],
+    }
+
+    render(<AllProductsTab {...props} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inventory stock status filter' }))
+    fireEvent.click(screen.getByRole('button', { name: 'New Product' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Import CSV' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add custom field filter' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Batch' }))
+
+    expect(props.setStockFilter).toHaveBeenCalledWith('low')
+    expect(props.onCreateOpen).toHaveBeenCalled()
+    expect(props.onImportOpen).toHaveBeenCalled()
+    expect(props.setPendingFilterKey).toHaveBeenCalledWith('Batch')
   })
 })

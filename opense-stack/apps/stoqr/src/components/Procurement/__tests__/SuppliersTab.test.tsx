@@ -103,7 +103,13 @@ describe('SuppliersTab', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'View' }))
+    const filterButton = screen.getByRole('button', { name: 'View' })
+    const addSupplierButton = screen.getByRole('button', { name: 'Add Supplier' })
+
+    expect(filterButton.closest('table')).not.toBeNull()
+    expect(addSupplierButton.closest('table')).not.toBeNull()
+
+    await user.click(filterButton)
     await user.click(screen.getByRole('button', { name: 'Has open POs' }))
 
     expect(screen.getByRole('row', { name: /Zenith Components/i })).toBeInTheDocument()

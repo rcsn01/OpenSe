@@ -43,7 +43,10 @@ describe('OrganisationPermissionsPanel', () => {
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: /add role/i }))
+    const addRoleButton = screen.getByRole('button', { name: /add role/i })
+    expect(addRoleButton.closest('table')).not.toBeNull()
+
+    await user.click(addRoleButton)
     await user.type(screen.getByPlaceholderText('New role name'), 'Reviewer')
     await user.type(screen.getByPlaceholderText('Role description'), 'Review only role')
     await user.click(screen.getByRole('button', { name: /create role/i }))

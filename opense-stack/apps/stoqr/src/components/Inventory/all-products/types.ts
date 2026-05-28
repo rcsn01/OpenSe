@@ -1,4 +1,5 @@
 import type { CustomFieldActiveFilter, CustomFieldFilterOption, CustomFieldPrimitive, Folder } from '../../../types'
+import type { DataTableTopRowConfig } from '@repo/ui'
 import type { InventoryProduct, SortDirection, SortField } from '../types'
 
 export type FolderView = 'all' | 'uncategorised' | 'folder'
@@ -22,6 +23,7 @@ export type ProductListViewProps = {
   onRefresh: () => void
   canUseInventory: boolean
   canEditInventory: boolean
+  topRow?: DataTableTopRowConfig
 }
 
 export type InventoryFiltersBarProps = {

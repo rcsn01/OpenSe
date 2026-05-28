@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Badge,
-  Button,
   Card,
   ContentTabs,
   DataTable,
-  FilterDropdown,
   type DataTableColumn,
+  type DataTableTopRowConfig,
   Toggle,
 } from "@repo/ui";
 import {
@@ -376,6 +375,45 @@ export const AlertsPage = () => {
     setSelectedEventIds([]);
   };
 
+  const alertFeedTopRow: DataTableTopRowConfig = {
+    filters: hasSelectedEvents
+      ? undefined
+      : [
+          {
+            value: activeFilter,
+            options: feedFilters.map((filter) => ({
+              value: filter.id,
+              label: filter.label,
+            })),
+            onChange: (value) => setActiveFilter(value as FeedCategory),
+            ariaLabel: "Alert feed category filter",
+            menuClassName: "min-w-[220px]",
+          },
+        ],
+    right: (
+      <div className="text-sm text-[var(--color-muted-foreground)]">
+        Showing {visibleEvents.length} of {events.length} alerts
+      </div>
+    ),
+    actions: hasSelectedEvents
+      ? [
+          {
+            id: "acknowledge-alerts",
+            label: "Acknowledge",
+            icon: <CheckCheck size={14} aria-hidden="true" />,
+            variant: "ghost",
+            onClick: () => void updateSelectedStatus("acknowledged"),
+          },
+          {
+            id: "resolve-alerts",
+            label: "Resolve",
+            variant: "ghost",
+            onClick: () => void updateSelectedStatus("resolved"),
+          },
+        ]
+      : undefined,
+  };
+
   const alertColumns: Array<DataTableColumn<AlertEvent, AlertSortKey>> = [
     {
       id: "message",
@@ -499,54 +537,13 @@ export const AlertsPage = () => {
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
       padding="none"
     >
-      <div className="flex flex-col gap-4 border-b border-[var(--color-border)] px-4 py-4 md:px-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-1 sm:gap-3">
-            {hasSelectedEvents ? (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void updateSelectedStatus("acknowledged")}
-                >
-                  <CheckCheck size={14} aria-hidden="true" />
-                  Acknowledge
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void updateSelectedStatus("resolved")}
-                >
-                  Resolve
-                </Button>
-              </>
-            ) : (
-              <FilterDropdown
-                value={activeFilter}
-                options={feedFilters.map((filter) => ({
-                  value: filter.id,
-                  label: filter.label,
-                }))}
-                onChange={(value) => setActiveFilter(value as FeedCategory)}
-                ariaLabel="Alert feed category filter"
-                menuClassName="min-w-[220px]"
-              />
-            )}
-          </div>
-
-          <div className="text-sm text-[var(--color-muted-foreground)]">
-            Showing {visibleEvents.length} of {events.length} alerts
-          </div>
-        </div>
-      </div>
-
       <DataTable
         className="min-h-0 flex-1"
         columns={alertColumns}
         rows={pagedEvents}
         getRowId={(event) => event.id}
+        topRow={alertFeedTopRow}
+        topRowCellClassName="bg-white px-4 py-4 md:px-6"
         emptyState={
           loadingEvents
             ? "Loading alerts..."
@@ -587,25 +584,32 @@ export const AlertsPage = () => {
 
   const rulesContent = (
     <Card variant="plain" className="overflow-hidden" padding="none">
-      <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border)] px-6 py-5">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-            Alert Triggers
-          </h2>
-          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Manage automatic notifications for inventory conditions.
-          </p>
-        </div>
-        <Button type="button" variant="secondary" size="sm" onClick={() => navigate("/alerts/rules/new")}>
-          <Plus size={14} aria-hidden="true" />
-          New Trigger
-        </Button>
-      </div>
-
       <DataTable
         columns={ruleColumns}
         rows={visibleRules}
         getRowId={(rule) => rule.id}
+        topRow={{
+          left: (
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
+                Alert Triggers
+              </h2>
+              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                Manage automatic notifications for inventory conditions.
+              </p>
+            </div>
+          ),
+          actions: [
+            {
+              id: "new-trigger",
+              label: "New Trigger",
+              icon: <Plus size={14} aria-hidden="true" />,
+              variant: "secondary",
+              onClick: () => navigate("/alerts/rules/new"),
+            },
+          ],
+        }}
+        topRowCellClassName="px-6 py-5"
         emptyState={
           loadingRules
             ? "Loading alert triggers..."

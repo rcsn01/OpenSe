@@ -468,9 +468,8 @@ describe("report tabs", () => {
     expect(screen.getByText("Recent Discrepancy Log")).toBeInTheDocument();
     expect(screen.getByText("ELC-112")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("combobox"), {
-      target: { value: "Expired" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Discrepancy reason filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expired" }));
 
     expect(screen.getByText("FOD-882")).toBeInTheDocument();
     expect(screen.queryByText("ELC-112")).not.toBeInTheDocument();

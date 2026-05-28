@@ -793,37 +793,37 @@ export const DashboardPage = () => {
               className={css("stoqr-dashboard__section")}
               title="Item Velocity"
               headerClassName={css("stoqr-dashboard__section-header", "stoqr-dashboard__section-header--compact")}
-              headerAside={
-                <div
-                  className={css("stoqr-dashboard__velocity-toggle")}
-                  role="tablist"
-                  aria-label="Velocity range"
-                >
-                  {velocityTabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      className={css("stoqr-dashboard__velocity-toggle-button", velocityTab === tab.id && "is-active")}
-                      onClick={() => setVelocityTab(tab.id)}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              }
             >
-              {(pageModel.velocityGroups[velocityTab] as VelocityItem[])
-                .length > 0 ? (
-                <DataTable
-                  variant="dashboard"
-                  columns={velocityColumns}
-                  rows={pageModel.velocityGroups[velocityTab] as VelocityItem[]}
-                  getRowId={(item) => item.id}
-                  tableLayout="fixed"
-                />
-              ) : (
-                <AnalyticsEmptyPanel message="No inventory movement yet. Add products and transactions to populate velocity insights." />
-              )}
+              <DataTable
+                variant="dashboard"
+                columns={velocityColumns}
+                rows={pageModel.velocityGroups[velocityTab] as VelocityItem[]}
+                getRowId={(item) => item.id}
+                tableLayout="fixed"
+                topRow={{
+                  left: (
+                    <div
+                      className={css("stoqr-dashboard__velocity-toggle")}
+                      role="tablist"
+                      aria-label="Velocity range"
+                    >
+                      {velocityTabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          className={css("stoqr-dashboard__velocity-toggle-button", velocityTab === tab.id && "is-active")}
+                          onClick={() => setVelocityTab(tab.id)}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  ),
+                }}
+                emptyState={
+                  <AnalyticsEmptyPanel message="No inventory movement yet. Add products and transactions to populate velocity insights." />
+                }
+              />
             </AnalyticsTablePanel>
           </section>
         </>
