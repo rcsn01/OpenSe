@@ -4,8 +4,7 @@ import { signInWithGoogle, signOut, signUp } from '@repo/shared/auth'
 import { SharedSignupPage } from '../components/auth/SharedSignupPage'
 import { isGoogleAuthEnabled } from '../lib/googleAuth'
 import { buildQueryString, getAppNameFromQuery } from '../lib/redirect'
-
-const SIGNUP_CONFIRMATION_MESSAGE = 'Please check your email to confirm your account, then sign in.'
+import { getSignupSuccessMessage } from '../lib/signupSuccessMessage'
 
 export const SharedSignupRoutePage = () => {
   const navigate = useNavigate()
@@ -38,7 +37,7 @@ export const SharedSignupRoutePage = () => {
       await signOut()
       navigate(`/login${querySuffix}`, {
         replace: true,
-        state: { success: SIGNUP_CONFIRMATION_MESSAGE },
+        state: { success: getSignupSuccessMessage() },
       })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to sign up'

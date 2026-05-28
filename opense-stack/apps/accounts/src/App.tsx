@@ -61,9 +61,10 @@ const OnboardingGate = () => {
           role: null,
         })
       } finally {
-        if (cancelled) return
-        setOnboardingStatusScope(routeScope)
-        setOnboardingLoading(false)
+        if (!cancelled) {
+          setOnboardingStatusScope(routeScope)
+          setOnboardingLoading(false)
+        }
       }
     }
 
@@ -153,6 +154,7 @@ function App() {
 
           <Route element={<AccountShell />}>
             <Route path="/account" element={<Navigate to="/account/home" replace />} />
+            <Route path="/accounts" element={<Navigate to="/account/home" replace />} />
             <Route path="/account/home" element={<HomePage />} />
             <Route path="/account/profile" element={<ProfilePage />} />
             <Route path="/account/security" element={<SecurityPage />} />
