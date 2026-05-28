@@ -352,7 +352,6 @@ export const AllProductsTab = ({
 
   const inventoryTableTopRow: DataTableTopRowConfig = isSelectionMode
     ? {
-        className: 'inventory-toolbar selection-mode',
         left: (
           <>
             {mobileExplorerToggle}
@@ -406,8 +405,6 @@ export const AllProductsTab = ({
         ],
       }
     : {
-        className: 'inventory-toolbar',
-        leftClassName: 'flex-1',
         filters: [
           {
             value: stockFilter,

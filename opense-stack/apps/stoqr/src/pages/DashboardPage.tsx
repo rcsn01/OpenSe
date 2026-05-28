@@ -586,8 +586,6 @@ export const DashboardPage = () => {
         id: "alert",
         header: "Alert",
         width: "76%",
-        headerClassName: "px-0",
-        cellClassName: "px-0",
         renderCell: (item) => (
           <div className={css("stoqr-dashboard__alert-table-cell")}>
             <span
@@ -606,8 +604,6 @@ export const DashboardPage = () => {
         header: "When",
         width: "24%",
         align: "right",
-        headerClassName: "pl-4 pr-0",
-        cellClassName: "pl-4 pr-0",
         renderCell: (item) => (
           <span className={css("stoqr-dashboard__alert-time")}>{item.timeLabel}</span>
         ),
@@ -622,8 +618,6 @@ export const DashboardPage = () => {
         id: "item",
         header: "Item",
         width: "68%",
-        headerClassName: "px-0",
-        cellClassName: "px-0",
         renderCell: (item) => (
           <div className={css("stoqr-dashboard__velocity-copy")}>
             <p className={css("stoqr-dashboard__velocity-name")}>{item.name}</p>
@@ -636,8 +630,6 @@ export const DashboardPage = () => {
         header: "Velocity",
         width: "32%",
         align: "right",
-        headerClassName: "pl-4 pr-0",
-        cellClassName: "pl-4 pr-0",
         renderCell: (item) => (
           <div className={css("stoqr-dashboard__velocity-meta")}>
             <span className={css("stoqr-dashboard__velocity-rate")}>

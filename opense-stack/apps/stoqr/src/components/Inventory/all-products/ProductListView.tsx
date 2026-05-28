@@ -50,7 +50,6 @@ export const ProductListView = ({
         <DataTable
           variant="operational"
           className="flex-1"
-          tableWrapClassName="flex-1 min-h-0"
           columns={[
             {
               id: 'name',
@@ -157,7 +156,6 @@ export const ProductListView = ({
           rows={isLoading ? [] : products}
           getRowId={(product) => product.id}
           topRow={topRow}
-          topRowCellClassName="p-0"
           emptyState={
             isLoading
               ? 'Loading inventory data...'
@@ -185,7 +183,6 @@ export const ProductListView = ({
           rowClassName={(product) => (
             selectedRowIds.has(product.id) ? 'bg-[var(--color-primary-light)]' : undefined
           )}
-          footerClassName="border-t-0 px-5 pb-4 pt-0"
           pagination={{
             currentPage: page,
             totalItems: totalCount,

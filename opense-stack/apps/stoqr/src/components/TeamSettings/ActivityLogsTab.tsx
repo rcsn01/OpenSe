@@ -87,16 +87,12 @@ export const ActivityLogsTab = ({ logs, searchTerm = '' }: { logs: ActivityEvent
     setSortDirection('asc')
   }
 
-  const activityTableHeaderClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
-  const activityTableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
   const activityColumns: DataTableColumn<ActivityEvent, ActivitySortField>[] = [
     {
       id: 'timestamp',
       header: 'Timestamp',
       sortKey: 'timestamp',
       width: '20%',
-      headerClassName: activityTableHeaderClassName,
-      cellClassName: activityTableCellClassName,
       renderCell: (log) => (
         <span className="whitespace-nowrap text-sm text-[var(--color-muted-foreground)]">
           {formatDateTime(log.created_at)}
@@ -108,8 +104,6 @@ export const ActivityLogsTab = ({ logs, searchTerm = '' }: { logs: ActivityEvent
       header: 'User',
       sortKey: 'user',
       width: '22%',
-      headerClassName: activityTableHeaderClassName,
-      cellClassName: activityTableCellClassName,
       renderCell: (log) => (
         <span className="font-medium text-[var(--color-foreground)]">
           {log.profiles?.full_name ?? log.profiles?.username ?? 'System'}
@@ -121,8 +115,6 @@ export const ActivityLogsTab = ({ logs, searchTerm = '' }: { logs: ActivityEvent
       header: 'Action',
       sortKey: 'action',
       width: '18%',
-      headerClassName: activityTableHeaderClassName,
-      cellClassName: activityTableCellClassName,
       renderCell: (log) => (
         <Badge variant="neutral">{log.event_type}</Badge>
       ),
@@ -132,8 +124,6 @@ export const ActivityLogsTab = ({ logs, searchTerm = '' }: { logs: ActivityEvent
       header: 'Details',
       sortKey: 'details',
       width: '40%',
-      headerClassName: activityTableHeaderClassName,
-      cellClassName: activityTableCellClassName,
       renderCell: (log) => <span className="text-sm text-[var(--color-foreground)]">{log.message ?? '-'}</span>,
     },
   ]
@@ -151,8 +141,6 @@ export const ActivityLogsTab = ({ logs, searchTerm = '' }: { logs: ActivityEvent
         sortField={sortField}
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
-        tableWrapClassName="border-0 bg-white"
-        tableClassName="bg-white"
         pagination={{
           currentPage: activeTablePage,
           totalPages,

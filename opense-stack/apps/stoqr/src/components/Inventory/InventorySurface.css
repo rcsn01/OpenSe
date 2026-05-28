@@ -716,21 +716,6 @@ button.tree-toggle {
   padding: 40px;
 }
 
-.inventory-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
-  background: transparent;
-}
-
-.inventory-toolbar.selection-mode {
-  background: rgba(59, 130, 246, 0.04);
-}
-
 .editable-cell {
   display: inline-flex;
   align-items: center;
@@ -781,70 +766,4 @@ button.tree-toggle {
   flex: 1;
   height: 24px;
   padding: 2px 6px;
-}
-
-.inventory-toolbar-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  padding: 6px 12px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: var(--primary);
-  color: var(--color-primary-foreground);
-  font-size: var(--type-size-sm);
-  font-weight: var(--type-weight-semibold);
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    opacity 0.15s ease;
-}
-
-.inventory-toolbar-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.inventory-toolbar-button--ghost {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--text);
-}
-
-.inventory-toolbar-button--ghost:hover:not(:disabled) {
-  background: var(--color-muted);
-}
-
-.inventory-toolbar-button--danger {
-  border-color: color-mix(in srgb, var(--color-destructive) 55%, white);
-  color: var(--color-destructive);
-}
-
-.inventory-toolbar-button--danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-destructive-light) 72%, white);
-}
-
-.inventory-toolbar-button--primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-.inventory-toolbar-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: var(--type-size-xs);
-  font-weight: var(--type-weight-medium);
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-
-.inventory-toolbar-link:hover {
-  color: var(--text);
 }

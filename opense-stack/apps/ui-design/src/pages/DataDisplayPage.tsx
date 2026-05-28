@@ -1,4 +1,4 @@
-import { type CSSProperties, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   DataTable,
   Button,
@@ -42,22 +42,6 @@ type PurchaseOrderRow = {
   expectedSortValue: number
   status: PurchaseOrderStatus
 }
-
-type TypographyToken = 'table-header-text' | 'table-cell-text'
-
-const getTypographyTokenStyle = (token: TypographyToken): CSSProperties => ({
-  fontSize: `var(--typography-${token}-size)`,
-  lineHeight: `var(--typography-${token}-line-height)`,
-  fontWeight: `var(--typography-${token}-weight)`,
-  letterSpacing: `var(--typography-${token}-tracking)`,
-  color: `var(--typography-${token}-color)`,
-})
-
-const tableHeaderTextStyle = getTypographyTokenStyle('table-header-text')
-const tableCellTextStyle = getTypographyTokenStyle('table-cell-text')
-const tableHeaderClassName =
-  'border-b border-[#d9e2ef] bg-transparent px-4 py-4 uppercase'
-const tableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
 
 const purchaseOrderSeedRows: PurchaseOrderRow[] = [
   { poNumber: 'PO-3009', vendor: 'Rowe Scientific', items: 31, value: 547, expectedLabel: '61 days overdue', expectedSortValue: -61, status: 'Delayed' },
@@ -289,10 +273,6 @@ export function DataDisplayPage() {
                   header: 'PO Number',
                   sortKey: 'poNumber',
                   width: '18%',
-                  headerClassName: tableHeaderClassName,
-                  headerStyle: tableHeaderTextStyle,
-                  cellClassName: tableCellClassName,
-                  cellStyle: tableCellTextStyle,
                   renderCell: (row: PurchaseOrderRow) => row.poNumber,
                 },
                 {
@@ -300,10 +280,6 @@ export function DataDisplayPage() {
                   header: 'Vendor',
                   sortKey: 'vendor',
                   width: '22%',
-                  headerClassName: tableHeaderClassName,
-                  headerStyle: tableHeaderTextStyle,
-                  cellClassName: tableCellClassName,
-                  cellStyle: tableCellTextStyle,
                   renderCell: (row: PurchaseOrderRow) => row.vendor,
                 },
                 {
@@ -311,10 +287,6 @@ export function DataDisplayPage() {
                   header: 'Items',
                   sortKey: 'items',
                   width: '11%',
-                  headerClassName: tableHeaderClassName,
-                  headerStyle: tableHeaderTextStyle,
-                  cellClassName: tableCellClassName,
-                  cellStyle: tableCellTextStyle,
                   renderCell: (row: PurchaseOrderRow) => row.items,
                 },
                 {
@@ -322,10 +294,6 @@ export function DataDisplayPage() {
                   header: 'Value',
                   sortKey: 'value',
                   width: '12%',
-                  headerClassName: tableHeaderClassName,
-                  headerStyle: tableHeaderTextStyle,
-                  cellClassName: tableCellClassName,
-                  cellStyle: tableCellTextStyle,
                   renderCell: (row: PurchaseOrderRow) => purchaseOrderValueFormatter.format(row.value),
                 },
                 {
@@ -333,10 +301,6 @@ export function DataDisplayPage() {
                   header: 'Expected',
                   sortKey: 'expected',
                   width: '23%',
-                  headerClassName: tableHeaderClassName,
-                  headerStyle: tableHeaderTextStyle,
-                  cellClassName: tableCellClassName,
-                  cellStyle: tableCellTextStyle,
                   renderCell: (row: PurchaseOrderRow) => row.expectedLabel,
                 },
                 {
@@ -344,10 +308,6 @@ export function DataDisplayPage() {
                   header: 'Status',
                   sortKey: 'status',
                   width: '14%',
-                  headerClassName: tableHeaderClassName,
-                  headerStyle: tableHeaderTextStyle,
-                  cellClassName: tableCellClassName,
-                  cellStyle: tableCellTextStyle,
                   renderCell: (row: PurchaseOrderRow) => (
                     <span className={getPurchaseOrderStatusClassName(row.status)}>
                       {row.status}
@@ -359,14 +319,9 @@ export function DataDisplayPage() {
               getRowId={(row) => row.poNumber}
               minTableWidth={860}
               topRow={tableTopRow}
-              topRowClassName="bg-white"
-              topRowCellClassName="border-b border-[#d9e2ef] px-4 py-3"
               sortField={tableSortField}
               sortDirection={tableSortDirection}
               onSortChange={handleTableSort}
-              rowClassName="bg-white transition-colors hover:bg-[#f8fbff]"
-              tableWrapClassName="border-0 bg-white"
-              tableClassName="bg-white"
               pagination={{
                 currentPage: tablePage,
                 totalItems: filteredTableRows.length,
@@ -375,7 +330,6 @@ export function DataDisplayPage() {
                 onItemsPerPageChange: handlePageSizeChange,
                 pageSizeOptions: [10, 20, 30, 50],
               }}
-              footerClassName="border-[#d9e2ef] bg-white px-6 py-4"
             />
           </Card>
         </SubSection>

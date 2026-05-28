@@ -445,10 +445,9 @@ export function OrganisationPermissionsPanel({
         header: "Role Name",
         sortKey: "name",
         width: usesRoutedEdit ? "32%" : "26%",
-        cellClassName: "font-medium text-[var(--color-foreground)]",
         renderCell: (row) => (
           <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate">{row.name}</span>
+            <span className="truncate font-medium text-[var(--color-foreground)]">{row.name}</span>
             {!row.editable ? (
               <span className="shrink-0 rounded border border-[var(--color-border)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)]">
                 System-managed
@@ -462,16 +461,22 @@ export function OrganisationPermissionsPanel({
         header: "Description",
         sortKey: "description",
         width: usesRoutedEdit ? "50%" : "44%",
-        cellClassName: "text-[var(--color-muted-foreground)]",
-        renderCell: (row) => row.description || "—",
+        renderCell: (row) => (
+          <span className="text-[var(--color-muted-foreground)]">
+            {row.description || "—"}
+          </span>
+        ),
       },
       {
         id: "role-rank",
         header: "Role Rank",
         sortKey: "role-rank",
         width: usesRoutedEdit ? "18%" : "14%",
-        cellClassName: "text-[var(--color-muted-foreground)]",
-        renderCell: (row) => row.roleRank ?? "—",
+        renderCell: (row) => (
+          <span className="text-[var(--color-muted-foreground)]">
+            {row.roleRank ?? "—"}
+          </span>
+        ),
       },
       ...(!usesRoutedEdit
         ? [
@@ -481,7 +486,6 @@ export function OrganisationPermissionsPanel({
               sortable: false,
               align: "right" as const,
               width: "16%",
-              cellClassName: "text-right",
               renderCell: (row: RoleTableRow) => (
                 <div className="flex justify-end gap-2">
                   {!row.editable ? (
@@ -641,7 +645,6 @@ export function OrganisationPermissionsPanel({
                     </Button>
                   </div>
                 ) : undefined}
-                bottomRowCellClassName="bg-[var(--color-table-row-bg)] px-4 py-3"
               />
             </div>
           )}

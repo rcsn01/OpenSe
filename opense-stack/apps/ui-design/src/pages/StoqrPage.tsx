@@ -21,10 +21,6 @@ type StoqrOrderRow = {
   total: string;
 };
 
-const stoqrTableHeaderClassName =
-  "border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase";
-const stoqrTableCellClassName = "border-b border-[#d9e2ef] px-4 py-3";
-
 const orderRows: StoqrOrderRow[] = [
   {
     id: "PO-2026-1207",
@@ -61,32 +57,28 @@ const orderColumns: DataTableColumn<StoqrOrderRow>[] = [
     id: "id",
     header: "PO Number",
     width: "22%",
-    headerClassName: stoqrTableHeaderClassName,
-    cellClassName: `${stoqrTableCellClassName} font-semibold text-[var(--color-primary-hover)]`,
-    renderCell: (row) => row.id,
+    renderCell: (row) => (
+      <span className="font-semibold text-[var(--color-primary-hover)]">
+        {row.id}
+      </span>
+    ),
   },
   {
     id: "supplier",
     header: "Supplier",
     width: "28%",
-    headerClassName: stoqrTableHeaderClassName,
-    cellClassName: stoqrTableCellClassName,
     renderCell: (row) => row.supplier,
   },
   {
     id: "expected",
     header: "Expected",
     width: "20%",
-    headerClassName: stoqrTableHeaderClassName,
-    cellClassName: stoqrTableCellClassName,
     renderCell: (row) => row.expected,
   },
   {
     id: "status",
     header: "Status",
     width: "18%",
-    headerClassName: stoqrTableHeaderClassName,
-    cellClassName: stoqrTableCellClassName,
     renderCell: (row) => <Badge variant="secondary">{row.status}</Badge>,
   },
   {
@@ -94,8 +86,6 @@ const orderColumns: DataTableColumn<StoqrOrderRow>[] = [
     header: "Total",
     align: "right",
     width: "12%",
-    headerClassName: stoqrTableHeaderClassName,
-    cellClassName: stoqrTableCellClassName,
     renderCell: (row) => row.total,
   },
 ];
@@ -163,17 +153,13 @@ export function StoqrPage() {
             getRowId={(row) => row.id}
             minTableWidth={920}
             tableLayout="fixed"
-            tableWrapClassName="border-0 bg-white"
-            tableClassName="bg-white"
             selection={{
               selectedRowIds: new Set(),
               onToggleRow: () => undefined,
               onToggleAll: () => undefined,
               selectAllLabel: "Select all purchase orders",
               getRowLabel: (row) => row.id,
-              headerClassName: stoqrTableHeaderClassName,
-              cellClassName: stoqrTableCellClassName,
-            }}
+                                }}
           />
         </section>
 

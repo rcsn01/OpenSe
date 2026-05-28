@@ -88,8 +88,6 @@ const statusOptions: Array<{ value: StatusFilter; label: string }> = [
 ]
 
 const purchaseOrderPageSizeOptions = [10, 20, 30, 50]
-const purchaseOrderTableHeaderClassName = 'border-b border-[#d9e2ef] bg-white px-4 py-4 uppercase'
-const purchaseOrderTableCellClassName = 'border-b border-[#d9e2ef] px-4 py-3'
 
 const formatPurchaseOrderNumber = (order: PurchaseOrder) => {
   const year = new Date(order.created_at).getFullYear()
@@ -270,8 +268,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
         header: 'PO Number',
         sortKey: 'poNumber',
         width: '14%',
-        headerClassName: purchaseOrderTableHeaderClassName,
-        cellClassName: purchaseOrderTableCellClassName,
         renderCell: (order) => (
           <span className="font-semibold text-[var(--color-primary)]">
             {formatPurchaseOrderNumber(order)}
@@ -283,8 +279,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
         header: 'Supplier',
         sortKey: 'supplier',
         width: '23%',
-        headerClassName: purchaseOrderTableHeaderClassName,
-        cellClassName: purchaseOrderTableCellClassName,
         renderCell: (order) => (
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-[var(--color-muted)] p-2 text-[var(--color-muted-foreground)]">
@@ -301,8 +295,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
         header: 'Created',
         sortKey: 'created',
         width: '11%',
-        headerClassName: purchaseOrderTableHeaderClassName,
-        cellClassName: purchaseOrderTableCellClassName,
         renderCell: (order) => formatDateLabel(order.created_at),
       },
       {
@@ -310,8 +302,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
         header: 'Expected',
         sortKey: 'expected',
         width: '11%',
-        headerClassName: purchaseOrderTableHeaderClassName,
-        cellClassName: purchaseOrderTableCellClassName,
         renderCell: (order) => formatDateLabel(order.expected_date),
       },
       {
@@ -320,8 +310,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
         sortKey: 'total',
         width: '10%',
         align: 'right',
-        headerClassName: purchaseOrderTableHeaderClassName,
-        cellClassName: purchaseOrderTableCellClassName,
         renderCell: (order) => formatCurrency(order.total_amount ?? totalsByPo[order.id] ?? 0),
       },
       {
@@ -329,8 +317,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
         header: 'Workflow',
         sortKey: 'workflow',
         width: '31%',
-        headerClassName: purchaseOrderTableHeaderClassName,
-        cellClassName: purchaseOrderTableCellClassName,
         renderCell: (order) => {
           const workflow = workflowByPo[order.id] ?? {
             status: { label: statusLabels[order.status], variant: statusVariants[order.status] },
@@ -539,7 +525,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
           rows={loadingOrders ? [] : pagedPurchaseOrders}
           getRowId={(order) => order.id}
           topRow={purchaseOrderTableTopRow}
-          topRowCellClassName="bg-white px-4 py-4 md:px-6"
           emptyState={
             loadingOrders
               ? 'Loading purchase orders...'
@@ -550,8 +535,6 @@ export const PurchaseOrdersTab = ({ companyId }: { companyId: string | null }) =
           sortField={tableSortField}
           sortDirection={tableSortDirection}
           onSortChange={handleTableSort}
-          tableWrapClassName="border-0 bg-white"
-          tableClassName="bg-white"
           pagination={{
             currentPage: currentTablePage,
             totalItems: filteredPurchaseOrders.length,

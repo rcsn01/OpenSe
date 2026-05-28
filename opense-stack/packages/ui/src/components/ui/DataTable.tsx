@@ -43,32 +43,38 @@ const dataTableVariantClassNames: Record<
   }
 > = {
   default: {
-    tableWrap: "border-0 rounded-none bg-transparent",
-    table: "bg-transparent",
-    headerCell: "sticky top-0 z-[1] bg-transparent px-4 py-3 uppercase",
+    tableWrap: "border-0 rounded-none bg-[var(--color-table-row-bg)]",
+    table: "bg-[var(--color-table-row-bg)]",
+    headerCell:
+      "sticky top-0 z-[1] border-b border-[var(--color-table-border)] bg-[var(--color-table-header-bg)] px-4 py-4 uppercase",
     bodyCell:
-      "border-b border-[var(--color-shell-border)] px-4 py-3 align-middle",
+      "border-b border-[var(--color-table-border)] bg-[var(--color-table-row-bg)] px-4 py-3 align-middle",
     emptyStateCell: "px-4 py-6 text-center",
-    footer: "bg-transparent px-4 py-3",
+    footer:
+      "border-t border-[var(--color-table-border)] bg-[var(--color-table-row-bg)] px-6 py-4",
   },
   boxed: {
     tableWrap:
-      "rounded-[var(--radius-xl)] bg-[var(--color-surface-subtle)] px-3 py-2",
-    table: "bg-transparent",
-    headerCell: "sticky top-0 z-[1] bg-transparent px-4 py-3 uppercase",
+      "rounded-[var(--radius-xl)] bg-[var(--color-table-row-bg)] px-3 py-2",
+    table: "bg-[var(--color-table-row-bg)]",
+    headerCell:
+      "sticky top-0 z-[1] border-b border-[var(--color-table-border)] bg-[var(--color-table-header-bg)] px-4 py-4 uppercase",
     bodyCell:
-      "border-b border-[var(--color-shell-border)] px-4 py-3 align-middle",
+      "border-b border-[var(--color-table-border)] bg-[var(--color-table-row-bg)] px-4 py-3 align-middle",
     emptyStateCell: "px-4 py-6 text-center",
-    footer: "px-4 py-3",
+    footer:
+      "border-t border-[var(--color-table-border)] bg-[var(--color-table-row-bg)] px-6 py-4",
   },
   dashboard: {
-    tableWrap: "border-0 bg-transparent",
-    table: "bg-transparent",
-    headerCell: "bg-transparent px-3 pt-0 pb-2.5 uppercase",
+    tableWrap: "border-0 bg-[var(--color-table-row-bg)]",
+    table: "bg-[var(--color-table-row-bg)]",
+    headerCell:
+      "sticky top-0 z-[1] border-b border-[var(--color-table-border)] bg-[var(--color-table-header-bg)] px-4 py-4 uppercase",
     bodyCell:
-      "border-b border-[var(--color-shell-border)] px-3 py-2.5 align-top",
-    emptyStateCell: "px-3 py-6 text-center",
-    footer: "px-3 py-3 bg-transparent",
+      "border-b border-[var(--color-table-border)] bg-[var(--color-table-row-bg)] px-4 py-3 align-middle",
+    emptyStateCell: "px-4 py-6 text-center",
+    footer:
+      "border-t border-[var(--color-table-border)] bg-[var(--color-table-row-bg)] px-6 py-4",
   },
   operational: {
     tableWrap: "border-0 bg-[var(--color-table-row-bg)]",
@@ -78,7 +84,8 @@ const dataTableVariantClassNames: Record<
     bodyCell:
       "border-b border-[var(--color-table-border)] bg-[var(--color-table-row-bg)] px-4 py-3 align-middle",
     emptyStateCell: "px-4 py-6 text-center",
-    footer: "bg-[var(--color-table-row-bg)] px-4 py-3",
+    footer:
+      "border-t border-[var(--color-table-border)] bg-[var(--color-table-row-bg)] px-6 py-4",
   },
 };
 
