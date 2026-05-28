@@ -38,7 +38,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 4px 4px 18px;
-  border-bottom: 1px solid #edf1f7;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .scan-view-header--history {
@@ -48,7 +48,7 @@
 
 .scan-view-title {
   margin: 0;
-  color: #10223d;
+  color: var(--color-foreground);
   font-size: clamp(1.9rem, 3vw, 2.8rem);
   font-weight: 300;
   letter-spacing: -0.055em;
@@ -63,13 +63,13 @@
   height: 34px;
   border: none;
   background: transparent;
-  color: #a0a9bc;
+  color: var(--color-muted-foreground);
   cursor: pointer;
   transition: color 0.18s ease;
 }
 
 .scan-icon-action:hover {
-  color: #10223d;
+  color: var(--color-foreground);
 }
 
 .scan-idle-stage {
@@ -104,8 +104,8 @@
 
 .scan-camera-frame.is-active {
   min-height: clamp(340px, 52vh, 500px);
-  border: 1px solid #edf1f7;
-  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-subtle);
   overflow: hidden;
 }
 
@@ -133,13 +133,13 @@
   width: 84px;
   height: 84px;
   border-radius: 999px;
-  background: #f5f7fb;
-  color: #cad1dd;
+  background: var(--color-surface-subtle);
+  color: var(--color-muted-foreground);
 }
 
 .scan-camera-placeholder-title {
   margin: 0;
-  color: #10223d;
+  color: var(--color-foreground);
   font-size: 1.1rem;
   font-weight: 500;
 }
@@ -147,7 +147,7 @@
 .scan-camera-placeholder-copy {
   margin: 0;
   max-width: 240px;
-  color: #95a1b8;
+  color: var(--color-muted-foreground);
   font-size: 0.92rem;
   line-height: 1.55;
 }
@@ -177,9 +177,9 @@
 }
 
 .scan-camera-toggle.is-active {
-  background: #fff;
-  color: #10223d;
-  border: 1px solid #d7dfea;
+  background: var(--color-card);
+  color: var(--color-foreground);
+  border: 1px solid var(--color-border);
 }
 
 .scan-manual-entry {
@@ -192,13 +192,13 @@
   padding: 14px 0 6px;
   border: none;
   background: transparent;
-  color: #7f8ba2;
+  color: var(--color-muted-foreground);
   font-size: 0.9rem;
   cursor: pointer;
 }
 
 .scan-manual-entry:hover {
-  color: #10223d;
+  color: var(--color-foreground);
 }
 
 .scan-update-topbar {
@@ -207,7 +207,7 @@
   align-items: center;
   min-height: 44px;
   padding: 0 0 18px;
-  border-bottom: 1px solid #edf1f7;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .scan-update-back {
@@ -217,13 +217,13 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: #91a0b8;
+  color: var(--color-muted-foreground);
   font-size: 0.88rem;
   cursor: pointer;
 }
 
 .scan-update-back:hover {
-  color: #10223d;
+  color: var(--color-foreground);
 }
 
 .scan-update-back-mobile {
@@ -245,7 +245,7 @@
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
-  color: #a0a9bc;
+  color: var(--color-muted-foreground);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -259,7 +259,7 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  color: #8f9bb1;
+  color: var(--color-muted-foreground);
 }
 
 .scan-feedback-panel--missing {
@@ -269,14 +269,14 @@
 
 .scan-feedback-title {
   margin: 0 0 6px;
-  color: #10223d;
+  color: var(--color-foreground);
   font-size: 1.1rem;
   font-weight: 600;
 }
 
 .scan-feedback-text {
   margin: 0;
-  color: #8f9bb1;
+  color: var(--color-muted-foreground);
 }
 
 .scan-update-shell {
@@ -309,7 +309,7 @@
   padding-left: clamp(28px, 3vw, 44px);
   padding-right: clamp(28px, 3vw, 44px);
   padding-bottom: 28px;
-  border-left: 1px solid #edf1f7;
+  border-left: 1px solid var(--color-border);
 }
 
 .scan-product-summary {
@@ -319,7 +319,7 @@
   align-items: center;
   padding-bottom: 26px;
   margin-bottom: 26px;
-  border-bottom: 1px solid #edf1f7;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .scan-product-photo-card {
@@ -327,9 +327,9 @@
   overflow: hidden;
   width: 100%;
   aspect-ratio: 1;
-  border: 1px solid #edf1f7;
+  border: 1px solid var(--color-border);
   border-radius: 18px;
-  background: #f8fafc;
+  background: var(--color-surface-subtle);
 }
 
 .scan-product-photo {
@@ -346,7 +346,7 @@
   justify-content: center;
   padding: 18px;
   text-align: center;
-  color: #98a4b9;
+  color: var(--color-muted-foreground);
   font-size: 0.86rem;
   line-height: 1.4;
 }
@@ -362,7 +362,7 @@
   padding: 4px;
   border: none;
   border-radius: 10px;
-  background: #fff;
+  background: var(--color-card);
 }
 
 .scan-mode-button {
@@ -370,8 +370,8 @@
   padding: 8px 14px;
   border: none;
   border-radius: 7px;
-  background: #fff;
-  color: #667085;
+  background: var(--color-card);
+  color: var(--color-muted-foreground);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -389,7 +389,7 @@
   gap: 18px;
   padding-bottom: 28px;
   margin: 0 0 28px;
-  border-bottom: 1px solid #edf1f7;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .scan-adjust-last-updated {
@@ -402,7 +402,7 @@
 
 .scan-adjust-last-updated-value {
   margin: 0;
-  color: #10223d;
+  color: var(--color-foreground);
   font-size: 0.95rem;
   font-weight: 600;
 }
@@ -410,7 +410,7 @@
 .scan-update-section {
   padding-bottom: 28px;
   margin-bottom: 28px;
-  border-bottom: 1px solid #edf1f7;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .scan-update-section:last-child {
@@ -431,7 +431,7 @@
 
 .scan-update-label {
   margin: 0 0 18px;
-  color: #a0a9bc;
+  color: var(--color-muted-foreground);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -454,8 +454,8 @@
   min-height: 44px;
   border: none;
   border-radius: 12px;
-  background: #fff;
-  color: #10223d;
+  background: var(--color-card);
+  color: var(--color-foreground);
   padding: 0 14px;
   font-size: 0.95rem;
 }
@@ -469,7 +469,7 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  color: #10223d;
+  color: var(--color-foreground);
   font-size: 1rem;
   cursor: pointer;
 }
@@ -489,21 +489,21 @@
   height: 44px;
   padding: 0;
   border: none;
-  border-bottom: 1px solid #dfe6f0;
+  border-bottom: 1px solid var(--color-border);
   border-radius: 0;
   background: transparent;
-  color: #10223d;
+  color: var(--color-foreground);
   font-size: 1rem;
   line-height: 44px;
 }
 
 .scan-update-notes:focus {
   outline: none;
-  border-bottom-color: #10223d;
+  border-bottom-color: var(--color-foreground);
 }
 
 .scan-update-notes::placeholder {
-  color: #9aa6bb;
+  color: var(--color-muted-foreground);
 }
 
 .scan-transfer-panel {
@@ -517,7 +517,7 @@
   gap: var(--gap-4);
   align-items: stretch;
   padding-bottom: 28px;
-  border-bottom: 1px solid #edf1f7;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .scan-transfer-field,
@@ -548,9 +548,9 @@
 .scan-transfer-tree-panel .tree-content {
   height: 100%;
   max-height: 220px;
-  border: 1px solid #dfe6f0;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--color-card);
 }
 
 .scan-current-stock-row {
@@ -565,7 +565,7 @@
 }
 
 .scan-current-stock-value {
-  color: #10223d;
+  color: var(--color-foreground);
   font-size: 2rem;
   font-weight: 400;
   letter-spacing: -0.05em;
@@ -597,15 +597,15 @@
   justify-content: center;
   width: 56px;
   height: 56px;
-  border: 1px solid #edf1f7;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: #fff;
-  color: #ced5e2;
+  background: var(--color-card);
+  color: var(--color-muted-foreground);
   cursor: pointer;
 }
 
 .scan-quantity-button:hover {
-  color: #8f9bb1;
+  color: var(--color-muted-foreground);
 }
 
 .scan-quantity-input {
@@ -645,21 +645,21 @@
 
 .scan-chip-button {
   padding: 8px 0;
-  border: 1px solid #edf1f7;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: #fff;
-  color: #516072;
+  background: var(--color-card);
+  color: var(--color-muted-foreground);
   font-size: 0.86rem;
   cursor: pointer;
 }
 
 .scan-chip-button:hover {
-  border-color: #d8dfeb;
+  border-color: var(--color-border);
 }
 
 .scan-update-message {
   margin: 0;
-  color: #7f8ba2;
+  color: var(--color-muted-foreground);
   font-size: 0.92rem;
   text-align: center;
 }
@@ -697,7 +697,7 @@
   align-items: center;
   justify-content: center;
   min-height: 220px;
-  color: #8f9bb1;
+  color: var(--color-muted-foreground);
   text-align: center;
 }
 
@@ -712,7 +712,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 20px;
   padding: 18px 0;
-  border-bottom: 1px solid #edf1f7;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .scan-history-mobile-copy {
@@ -721,7 +721,7 @@
 
 .scan-history-mobile-sku {
   margin: 0 0 8px;
-  color: #a0a9bc;
+  color: var(--color-muted-foreground);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -730,14 +730,14 @@
 
 .scan-history-mobile-name {
   margin: 0 0 8px;
-  color: #10223d;
+  color: var(--color-foreground);
   font-size: 1.05rem;
   font-weight: 500;
 }
 
 .scan-history-mobile-meta {
   margin: 0;
-  color: #8f9bb1;
+  color: var(--color-muted-foreground);
   font-size: 0.88rem;
 }
 
@@ -749,15 +749,15 @@
 }
 
 .scan-history-change--positive {
-  color: #0f766e;
+  color: var(--color-success);
 }
 
 .scan-history-change--negative {
-  color: #10223d;
+  color: var(--color-foreground);
 }
 
 .scan-history-change--neutral {
-  color: #8f9bb1;
+  color: var(--color-muted-foreground);
 }
 
 .scan-history-desktop-shell {
@@ -889,7 +889,7 @@
     width: 28px;
     height: 28px;
     flex-shrink: 0;
-    color: #8b98ad;
+    color: var(--color-muted-foreground);
   }
 
   .scan-product-photo-card {
@@ -930,7 +930,7 @@
     gap: 14px;
     padding-bottom: 14px;
     margin-bottom: 14px;
-    border-bottom: 1px solid #edf1f7;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .scan-update-fields-row .scan-update-section {

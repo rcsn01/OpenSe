@@ -425,7 +425,7 @@ export const AllProductsTab = ({
             {activeCustomFieldFilters.map((filter) => (
               <div
                 key={filter.key}
-                className="inline-flex items-center gap-1 rounded bg-[color:rgba(102,193,63,0.06)] px-1.5 py-1 text-xs font-medium text-[var(--color-foreground)]"
+                className="inline-flex items-center gap-1 rounded bg-[color:color-mix(in_srgb,var(--color-success)_10%,transparent)] px-1.5 py-1 text-xs font-medium text-[var(--color-foreground)]"
                 aria-label={`Active filter: ${filter.key}`}
               >
                 <span className="opacity-50">{filter.key}:</span>

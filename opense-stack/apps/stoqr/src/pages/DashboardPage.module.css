@@ -4,7 +4,7 @@
   gap: 28px;
   width: 100%;
   min-width: 0;
-  color: #0f172a;
+  color: var(--color-foreground);
 }
 
 .stoqr-dashboard__summary {
@@ -12,7 +12,7 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 24px;
   padding-bottom: 22px;
-  border-bottom: 1px solid rgba(223, 227, 236, 0.92);
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .stoqr-dashboard__metric {
@@ -24,7 +24,7 @@
 
 .stoqr-dashboard__metric-label {
   margin: 0;
-  color: #64748b;
+  color: var(--color-muted-foreground);
   font-size: 12px;
   font-weight: 500;
 }
@@ -46,25 +46,25 @@
 }
 
 .stoqr-dashboard__metric-accent.is-up {
-  color: #059669;
+  color: var(--color-success);
 }
 
 .stoqr-dashboard__metric-accent.is-down {
-  color: #059669;
+  color: var(--color-success);
 }
 
 .stoqr-dashboard__metric-accent.is-neutral {
-  color: #64748b;
+  color: var(--color-muted-foreground);
 }
 
 .stoqr-dashboard__metric--warning .stoqr-dashboard__metric-accent,
 .stoqr-dashboard__metric--danger .stoqr-dashboard__metric-accent {
-  color: #ef4444;
+  color: var(--color-destructive);
 }
 
 .stoqr-dashboard__metric-detail {
   margin: 0;
-  color: #94a3b8;
+  color: var(--color-muted-foreground);
   font-size: 12px;
 }
 
@@ -99,7 +99,7 @@
 
 .stoqr-dashboard__section-title {
   margin: 0;
-  color: #94a3b8;
+  color: var(--color-muted-foreground);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -110,7 +110,7 @@
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  color: #64748b;
+  color: var(--color-muted-foreground);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -130,11 +130,11 @@
 }
 
 .stoqr-dashboard__legend-swatch--inbound {
-  background: #e2e8f0;
+  background: var(--color-chart-muted);
 }
 
 .stoqr-dashboard__legend-swatch--outbound {
-  background: #1e293b;
+  background: var(--color-chart-secondary);
 }
 
 .stoqr-dashboard__movement {
@@ -168,15 +168,15 @@
 }
 
 .stoqr-dashboard__movement-bar--inbound {
-  background: #e2e8f0;
+  background: var(--color-chart-muted);
 }
 
 .stoqr-dashboard__movement-bar--outbound {
-  background: #1e293b;
+  background: var(--color-chart-secondary);
 }
 
 .stoqr-dashboard__movement-label {
-  color: #94a3b8;
+  color: var(--color-muted-foreground);
   font-size: 11px;
   font-weight: 500;
 }
@@ -190,16 +190,16 @@
 }
 
 .stoqr-dashboard__alert-dot.is-critical {
-  color: #ef4444;
+  color: var(--color-destructive);
 }
 
 .stoqr-dashboard__alert-dot.is-high,
 .stoqr-dashboard__alert-dot.is-medium {
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .stoqr-dashboard__alert-dot.is-low {
-  color: #3b82f6;
+  color: var(--color-info);
 }
 
 .stoqr-dashboard__alert-copy {
@@ -213,14 +213,14 @@
 }
 
 .stoqr-dashboard__alert-title {
-  color: #0f172a;
+  color: var(--color-foreground);
   font-size: 13px;
   line-height: 1.45;
 }
 
 .stoqr-dashboard__alert-detail,
 .stoqr-dashboard__alert-time {
-  color: #94a3b8;
+  color: var(--color-muted-foreground);
   font-size: 11px;
 }
 
@@ -251,15 +251,15 @@
 }
 
 .stoqr-dashboard__status-pill.is-on-time {
-  color: #059669;
+  color: var(--color-success);
 }
 
 .stoqr-dashboard__status-pill.is-delayed {
-  color: #ef4444;
+  color: var(--color-destructive);
 }
 
 .stoqr-dashboard__status-pill.is-pending {
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .stoqr-dashboard__deliveries-mobile {
@@ -271,7 +271,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 14px 0;
-  border-bottom: 1px solid rgba(223, 227, 236, 0.92);
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .stoqr-dashboard__delivery-card:last-child {
@@ -291,7 +291,7 @@
 .stoqr-dashboard__velocity-name,
 .stoqr-dashboard__velocity-rate {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-foreground);
   font-size: 13px;
   font-weight: 500;
 }
@@ -299,7 +299,7 @@
 .stoqr-dashboard__delivery-card-vendor,
 .stoqr-dashboard__delivery-card-meta,
 .stoqr-dashboard__velocity-sku {
-  color: #94a3b8;
+  color: var(--color-muted-foreground);
   font-size: 11px;
 }
 
@@ -312,13 +312,13 @@
 .stoqr-dashboard__velocity-toggle-button {
   border: 0;
   background: transparent;
-  color: #94a3b8;
+  color: var(--color-muted-foreground);
   font-size: 12px;
   font-weight: 700;
 }
 
 .stoqr-dashboard__velocity-toggle-button.is-active {
-  color: #0f172a;
+  color: var(--color-foreground);
 }
 
 .stoqr-dashboard__velocity-copy,
@@ -350,22 +350,22 @@
 }
 
 .stoqr-dashboard__velocity-status.is-high {
-  color: #059669;
+  color: var(--color-success);
 }
 
 .stoqr-dashboard__velocity-status.is-medium {
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .stoqr-dashboard__velocity-status.is-low {
-  color: #ef4444;
+  color: var(--color-destructive);
 }
 
 .stoqr-dashboard__empty-panel {
   display: grid;
   place-items: center;
   min-height: 148px;
-  color: #94a3b8;
+  color: var(--color-muted-foreground);
   font-size: 13px;
   text-align: center;
 }

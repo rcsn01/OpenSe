@@ -505,7 +505,7 @@ export function OrganisationPermissionsPanel({
                           variant="outline"
                           onClick={() => handleDeleteRole(row.id)}
                           disabled={!canManage || saving}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-[var(--color-destructive)] hover:text-[var(--color-destructive-hover)]"
                         >
                           <Trash2 className="h-4 w-4" />
                           Delete
@@ -548,13 +548,13 @@ export function OrganisationPermissionsPanel({
         )}
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div className="rounded-lg border border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-bg)] px-3 py-2 text-sm text-[var(--color-status-danger-foreground)]">
               {error}
             </div>
           )}
 
           {loadingRoles ? (
-            <div className="py-8 text-center text-slate-500">
+            <div className="py-8 text-center text-[var(--color-muted-foreground)]">
               Loading roles...
             </div>
           ) : (
@@ -665,7 +665,7 @@ export function OrganisationPermissionsPanel({
             <SideSheetBody className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                  <label className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
                     Role Name
                   </label>
                   <Input
@@ -675,7 +675,7 @@ export function OrganisationPermissionsPanel({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                  <label className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
                     Description
                   </label>
                   <Textarea
@@ -685,7 +685,7 @@ export function OrganisationPermissionsPanel({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                  <label className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
                     Role Rank
                   </label>
                   <Input
@@ -701,7 +701,7 @@ export function OrganisationPermissionsPanel({
 
               <div className="overflow-x-auto">
                 {loadingPermissions ? (
-                  <div className="py-8 text-center text-sm text-slate-500">
+                  <div className="py-8 text-center text-sm text-[var(--color-muted-foreground)]">
                     Loading permissions...
                   </div>
                 ) : (
@@ -717,15 +717,15 @@ export function OrganisationPermissionsPanel({
                       {permissionGroups.map((group) =>
                         group.permissions.map((permission, index) => (
                           <TableRow key={permission.code}>
-                            <TableCell className="align-top font-medium text-slate-900">
+                            <TableCell className="align-top font-medium text-[var(--color-foreground)]">
                               {index === 0 ? group.label : ""}
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium text-slate-900">
+                              <div className="font-medium text-[var(--color-foreground)]">
                                 {permission.label}
                               </div>
                               {permission.description ? (
-                                <div className="mt-1 text-xs text-slate-500">
+                                <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">
                                   {permission.description}
                                 </div>
                               ) : null}
@@ -751,7 +751,7 @@ export function OrganisationPermissionsPanel({
               </div>
 
               {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <div className="rounded-lg border border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-bg)] px-3 py-2 text-sm text-[var(--color-status-danger-foreground)]">
                   {error}
                 </div>
               )}

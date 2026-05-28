@@ -162,7 +162,7 @@ export const SearchCombobox = ({
         <div
           id={listboxId}
           role="listbox"
-          className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[0_20px_45px_rgba(15,23,42,0.14)]"
+          className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-popover)]"
         >
           {filteredSuggestions.length > 0 ? (
             <div className="max-h-80 overflow-y-auto py-2">

@@ -278,7 +278,7 @@ export const ProcurementSuppliersTab = ({
           visual={
             <AnalyticsMiniSparkline
               data={pendingSparkline}
-              color="var(--color-foreground)"
+              color="var(--color-chart-secondary)"
               showDots={false}
             />
           }
@@ -309,7 +309,7 @@ export const ProcurementSuppliersTab = ({
                 style={{
                   height: 3,
                   flex: 1,
-                  background: "var(--color-primary)",
+                  background: "var(--color-chart-primary)",
                   borderRadius: "var(--radius-full)",
                 }}
               />
@@ -320,7 +320,7 @@ export const ProcurementSuppliersTab = ({
                     width: 10,
                     height: 10,
                     borderRadius: "50%",
-                    background: "var(--color-primary)",
+                    background: "var(--color-chart-primary)",
                     margin: "0 4px",
                   }}
                 />
@@ -329,7 +329,7 @@ export const ProcurementSuppliersTab = ({
                 style={{
                   height: 3,
                   flex: 1,
-                  background: "var(--color-primary)",
+                  background: "var(--color-chart-primary)",
                   borderRadius: "var(--radius-full)",
                 }}
               />
@@ -438,7 +438,7 @@ export const ProcurementSuppliersTab = ({
               xDataKey="month"
               yAxisWidth={50}
               series={[
-                { dataKey: "price", label: "Unit Cost", color: "var(--color-primary)" },
+                { dataKey: "price", label: "Unit Cost", color: "var(--color-chart-primary)" },
               ]}
               tooltipFormatter={(value) => [
                 formatCurrency(Number(value)),

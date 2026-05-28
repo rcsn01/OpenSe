@@ -692,8 +692,8 @@ export const DashboardPage = () => {
               headerAside={
                 <AnalyticsLegend
                   items={[
-                    { label: "Inbound", color: "var(--color-surface-strong)" },
-                    { label: "Outbound", color: "var(--color-foreground)" },
+                    { label: "Inbound", color: "var(--color-chart-muted)" },
+                    { label: "Outbound", color: "var(--color-chart-secondary)" },
                   ]}
                 />
               }
@@ -704,8 +704,8 @@ export const DashboardPage = () => {
                 ariaLabel="Inbound and outbound inventory volume"
                 emptyMessage="No movement history yet."
                 series={[
-                  { dataKey: "inbound", label: "Inbound", color: "var(--color-surface-strong)" },
-                  { dataKey: "outbound", label: "Outbound", color: "var(--color-foreground)" },
+                  { dataKey: "inbound", label: "Inbound", color: "var(--color-chart-muted)" },
+                  { dataKey: "outbound", label: "Outbound", color: "var(--color-chart-secondary)" },
                 ]}
               />
             </AnalyticsPanel>

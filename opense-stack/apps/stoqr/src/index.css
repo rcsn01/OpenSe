@@ -17,8 +17,8 @@
 }
 
 @theme {
-  --color-presetPrimary: #1E293B;
-  --color-presetAccent: #F97316;
-  --color-presetBackground: #F8FAFC;
-  --color-presetTextDark: #0F172A;
+  --color-presetPrimary: var(--color-foreground);
+  --color-presetAccent: var(--color-secondary);
+  --color-presetBackground: var(--color-background);
+  --color-presetTextDark: var(--color-foreground);
 }
