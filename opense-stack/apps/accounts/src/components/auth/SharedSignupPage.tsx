@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
+import { GoogleSignInButton } from './GoogleSignInButton'
 
 type SignupCredentials = {
   fullName: string
@@ -16,7 +17,10 @@ export type SharedSignupPageProps = {
   error?: string | null
   success?: string | null
   submitLabel?: string
+  googleLabel?: string
+  googleAuthEnabled?: boolean
   onSignUp: (credentials: SignupCredentials) => Promise<void> | void
+  onGoogleSignIn?: () => Promise<void> | void
   footer?: ReactNode
 }
 
@@ -28,7 +32,10 @@ export const SharedSignupPage = ({
   error = null,
   success = null,
   submitLabel = 'Create account',
+  googleLabel = 'Continue with Google',
+  googleAuthEnabled = false,
   onSignUp,
+  onGoogleSignIn,
   footer,
 }: SharedSignupPageProps) => {
   const [fullName, setFullName] = useState('')
@@ -142,6 +149,15 @@ export const SharedSignupPage = ({
                     {loading ? 'Creating account...' : submitLabel}
                   </button>
                 </form>
+
+                <div className="space-y-3">
+                  <GoogleSignInButton
+                    label={googleLabel}
+                    loading={loading}
+                    enabled={googleAuthEnabled}
+                    onClick={onGoogleSignIn}
+                  />
+                </div>
 
                 {footer && <div className="text-sm text-[var(--color-muted-foreground)]">{footer}</div>}
               </div>
