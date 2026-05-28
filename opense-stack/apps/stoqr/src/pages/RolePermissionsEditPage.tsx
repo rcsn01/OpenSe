@@ -269,7 +269,7 @@ export const RolePermissionsEditPage = () => {
           ) : null}
 
           {message ? (
-            <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div className="shrink-0 rounded-lg border border-[var(--color-status-danger-border)] bg-[var(--color-status-danger-bg)] px-3 py-2 text-sm text-[var(--color-status-danger-foreground)]">
               {message}
             </div>
           ) : null}

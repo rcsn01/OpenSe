@@ -57,7 +57,7 @@ const DEFAULT_MARGIN: Required<ChartMargin> = {
 
 const AXIS_TICK = {
   fontSize: "var(--type-size-xs)",
-  fill: "var(--color-muted-foreground)",
+  fill: "var(--color-chart-axis)",
 };
 
 const ChartFrame = ({
@@ -122,7 +122,7 @@ export const AnalyticsLineChart = ({
     renderChart={() => (
       <LineChart data={data} margin={{ ...DEFAULT_MARGIN, ...margin }}>
         <CartesianGrid
-          stroke="var(--color-border)"
+          stroke="var(--color-chart-grid)"
           strokeDasharray="3 3"
           vertical={false}
         />
@@ -151,7 +151,12 @@ export const AnalyticsLineChart = ({
             strokeWidth={2}
             dot={
               showDots
-                ? { fill: "#fff", stroke: item.color, strokeWidth: 2, r: 4 }
+                ? {
+                    fill: "var(--color-chart-dot-fill)",
+                    stroke: item.color,
+                    strokeWidth: 2,
+                    r: 4,
+                  }
                 : false
             }
             activeDot={{ r: 6 }}
@@ -214,7 +219,7 @@ export const AnalyticsAreaChart = ({
             ))}
           </defs>
           <CartesianGrid
-            stroke="var(--color-border)"
+            stroke="var(--color-chart-grid)"
             strokeDasharray="3 3"
             vertical={false}
           />
@@ -292,7 +297,7 @@ export const AnalyticsBarChart = ({
           margin={{ ...DEFAULT_MARGIN, ...margin }}
         >
           <CartesianGrid
-            stroke="var(--color-border)"
+            stroke="var(--color-chart-grid)"
             strokeDasharray="3 3"
             vertical={!isVertical ? false : undefined}
             horizontal={isVertical ? false : undefined}

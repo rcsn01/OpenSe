@@ -100,7 +100,7 @@ export function OrganisationTeamsTab({
           className="text-xs min-w-40"
         />
       ) : (
-        <span className="text-sm text-slate-700">{roles.find((role) => role.id === member.roleId)?.name ?? member.roleId ?? 'Member'}</span>
+        <span className="text-sm text-[var(--color-foreground)]">{roles.find((role) => role.id === member.roleId)?.name ?? member.roleId ?? 'Member'}</span>
       ),
     }
   })
@@ -170,7 +170,7 @@ export function OrganisationTeamsTab({
           </DialogHeader>
 
           <div className="space-y-4">
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">
               Email
               <Input
                 className="mt-1"
@@ -181,7 +181,7 @@ export function OrganisationTeamsTab({
               />
             </label>
 
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">
               Role
               <Select
                 className="mt-1"

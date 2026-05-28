@@ -367,7 +367,7 @@ export const MovementVelocityTab = ({
             <span className="text-sm text-[var(--color-muted-foreground)]">Units received {rangeLabel}</span>
           }
           visual={
-            <AnalyticsMiniSparkline data={inboundSparkline} color="var(--color-primary)" />
+            <AnalyticsMiniSparkline data={inboundSparkline} color="var(--color-chart-primary)" />
           }
         />
         <AnalyticsMetricCard
@@ -379,7 +379,7 @@ export const MovementVelocityTab = ({
           visual={
             <AnalyticsMiniSparkline
               data={outboundSparkline}
-              color="var(--color-foreground)"
+              color="var(--color-chart-secondary)"
             />
           }
         />
@@ -411,10 +411,10 @@ export const MovementVelocityTab = ({
         headerAside={
           <AnalyticsLegend
             items={[
-              { label: "Inbound", color: "var(--color-primary)", shape: "dot" },
+              { label: "Inbound", color: "var(--color-chart-primary)", shape: "dot" },
               {
                 label: "Outbound",
-                color: "var(--color-foreground)",
+                color: "var(--color-chart-secondary)",
                 shape: "dot",
               },
             ]}
@@ -425,11 +425,11 @@ export const MovementVelocityTab = ({
           data={chartData}
           xDataKey="label"
           series={[
-            { dataKey: "inbound", label: "Inbound", color: "var(--color-primary)" },
+            { dataKey: "inbound", label: "Inbound", color: "var(--color-chart-primary)" },
             {
               dataKey: "outbound",
               label: "Outbound",
-              color: "var(--color-foreground)",
+              color: "var(--color-chart-secondary)",
             },
           ]}
           height={280}

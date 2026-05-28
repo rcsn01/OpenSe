@@ -323,8 +323,8 @@ export const StockHealthValuationTab = ({
     .slice(0, 6);
 
   const DONUT_COLORS = [
-    "var(--color-foreground)",
-    "var(--color-primary)",
+    "var(--color-chart-secondary)",
+    "var(--color-chart-primary)",
     "var(--color-muted-foreground)",
     "var(--color-border)",
     "var(--color-warning)",
@@ -332,7 +332,7 @@ export const StockHealthValuationTab = ({
   ];
 
   const BAR_COLORS = [
-    "var(--color-foreground)",
+    "var(--color-chart-secondary)",
     "var(--color-info)",
     "var(--color-warning)",
   ];
@@ -541,7 +541,7 @@ export const StockHealthValuationTab = ({
                 width: `${Math.min((turnover / 8) * 100, 100)}%`,
                 height: "100%",
                 borderRadius: "var(--radius-full)",
-                background: "var(--color-primary)",
+                background: "var(--color-chart-primary)",
               }}
             />
           </div>
@@ -594,7 +594,7 @@ export const StockHealthValuationTab = ({
               {
                 dataKey: "value",
                 label: "Value",
-                color: BAR_COLORS[0] ?? "var(--color-foreground)",
+                color: BAR_COLORS[0] ?? "var(--color-chart-secondary)",
               },
             ]}
             yTickFormatter={(value) => `$${(Number(value) / 1000).toFixed(0)}k`}
@@ -618,12 +618,12 @@ export const StockHealthValuationTab = ({
               {
                 dataKey: "valuePct",
                 label: "Value Share",
-                color: "var(--color-foreground)",
+                color: "var(--color-chart-secondary)",
               },
               {
                 dataKey: "itemsPct",
                 label: "SKU Share",
-                color: "var(--color-info-light)",
+                color: "var(--color-chart-muted)",
               },
             ]}
             yTickFormatter={(value) => `${value}%`}
@@ -633,8 +633,8 @@ export const StockHealthValuationTab = ({
           <AnalyticsLegend
             muted
             items={[
-              { label: "Value Share", color: "var(--color-foreground)" },
-              { label: "SKU Share", color: "var(--color-info-light)" },
+              { label: "Value Share", color: "var(--color-chart-secondary)" },
+              { label: "SKU Share", color: "var(--color-chart-muted)" },
             ]}
           />
         </AnalyticsPanel>
@@ -660,7 +660,7 @@ export const StockHealthValuationTab = ({
                 data={folderValuation}
                 categoryKey="name"
                 layout="vertical"
-                series={[{ dataKey: "value", label: "Value", color: "var(--color-primary)" }]}
+                series={[{ dataKey: "value", label: "Value", color: "var(--color-chart-primary)" }]}
                 xTickFormatter={(value) =>
                   `$${(Number(value) / 1000).toFixed(0)}k`
                 }

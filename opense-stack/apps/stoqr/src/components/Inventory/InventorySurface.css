@@ -99,7 +99,7 @@
   z-index: 80;
   border: none;
   padding: 0;
-  background: rgba(15, 23, 42, 0.18);
+  background: color-mix(in srgb, var(--color-foreground) 18%, transparent);
   backdrop-filter: blur(1px);
   cursor: pointer;
 }
@@ -126,7 +126,7 @@
 }
 
 .tree-item:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--color-table-row-hover);
 }
 
 .tree-item.active {
@@ -193,7 +193,7 @@
 }
 
 .tree-action-btn:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
   color: var(--text);
 }
 
@@ -216,9 +216,9 @@
   min-height: 0;
   gap: 12px;
   padding: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--color-divider);
   border-radius: 18px;
-  background: linear-gradient(180deg, #f3f2ed 0%, #f8f8f4 100%);
+  background: linear-gradient(180deg, var(--color-surface-subtle) 0%, var(--color-surface-subtle) 100%);
 }
 
 .inventory-import-topbar {
@@ -231,7 +231,7 @@
   gap: 16px;
   flex-wrap: wrap;
   padding: 8px 6px 12px;
-  background: rgba(243, 242, 237, 0.92);
+  background: color-mix(in srgb, var(--color-surface-subtle) 92%, transparent);
   backdrop-filter: blur(10px);
 }
 
@@ -246,21 +246,21 @@
   font-size: 21px;
   font-weight: 650;
   letter-spacing: -0.02em;
-  color: #111827;
+  color: var(--color-foreground);
 }
 
 .inventory-import-meta {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #6b7280;
+  color: var(--color-muted-foreground);
   font-size: 12px;
 }
 
 .inventory-import-meta span + span::before {
   content: "|";
   margin-right: 10px;
-  color: rgba(107, 114, 128, 0.6);
+  color: color-mix(in srgb, var(--color-muted-foreground) 60%, transparent);
 }
 
 .inventory-import-topbar-actions {
@@ -274,14 +274,14 @@
   padding: 0 2px;
   border: none;
   background: transparent;
-  color: #4b5563;
+  color: var(--color-muted-foreground);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
 }
 
 .inventory-import-link:hover {
-  color: #111827;
+  color: var(--color-foreground);
 }
 
 .inventory-import-folder-picker {
@@ -291,10 +291,10 @@
   min-width: 200px;
   height: 40px;
   padding: 0 0 0 10px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #374151;
+  background: color-mix(in srgb, var(--color-card) 94%, transparent);
+  color: var(--color-muted-foreground);
 }
 
 .inventory-import-folder-select {
@@ -320,15 +320,15 @@
   padding: 0 18px;
   border: none;
   border-radius: 999px;
-  background: #111827;
-  color: #fff;
+  background: var(--color-foreground);
+  color: var(--color-inverse-foreground);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .inventory-import-primary:disabled {
-  background: #9ca3af;
+  background: var(--color-muted-foreground);
   cursor: not-allowed;
 }
 
@@ -343,15 +343,15 @@
 }
 
 .inventory-import-banner-warning {
-  border: 1px solid rgba(245, 158, 11, 0.22);
-  background: rgba(245, 158, 11, 0.12);
-  color: #92400e;
+  border: 1px solid var(--color-status-warning-border);
+  background: var(--color-status-warning-bg);
+  color: var(--color-warning);
 }
 
 .inventory-import-banner-success {
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  background: rgba(34, 197, 94, 0.1);
-  color: #166534;
+  border: 1px solid var(--color-status-success-border);
+  background: var(--color-status-success-bg);
+  color: var(--color-success);
 }
 
 .inventory-import-table-shell {
@@ -360,9 +360,9 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.84);
+  background: color-mix(in srgb, var(--color-card) 84%, transparent);
 }
 
 .inventory-import-table-scroll {
@@ -383,9 +383,9 @@
   top: 0;
   z-index: 1;
   padding: 0;
-  background: rgba(243, 242, 237, 0.96);
-  border-right: 1px solid rgba(15, 23, 42, 0.05);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: color-mix(in srgb, var(--color-surface-subtle) 96%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-bottom: 1px solid var(--color-divider);
   vertical-align: top;
 }
 
@@ -403,23 +403,23 @@
   padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 10px;
-  background: rgba(17, 24, 39, 0.04);
-  color: #6b7280;
+  background: var(--color-table-row-hover);
+  color: var(--color-muted-foreground);
   font-size: 13px;
   font-weight: 600;
 }
 
 .inventory-import-column-select.mapped {
-  border-color: rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.98);
-  color: #111827;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  border-color: var(--color-border-hover);
+  background: color-mix(in srgb, var(--color-card) 98%, transparent);
+  color: var(--color-foreground);
+  box-shadow: var(--shadow-sm);
 }
 
 .inventory-import-column-select:focus {
   outline: none;
-  border-color: rgba(34, 197, 94, 0.45);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+  border-color: color-mix(in srgb, var(--color-success) 45%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success) 18%, transparent);
 }
 
 .inventory-import-header-meta {
@@ -436,7 +436,7 @@
 }
 
 .inventory-import-source-label {
-  color: #9ca3af;
+  color: var(--color-muted-foreground);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -444,7 +444,7 @@
 }
 
 .inventory-import-header-check {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .inventory-import-fill-row {
@@ -452,7 +452,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: #9ca3af;
+  color: var(--color-muted-foreground);
   font-size: 11px;
 }
 
@@ -460,7 +460,7 @@
   width: 100%;
   height: 3px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.22);
+  background: color-mix(in srgb, var(--color-muted-foreground) 22%, transparent);
   overflow: hidden;
 }
 
@@ -471,24 +471,24 @@
 }
 
 .inventory-import-fill-bar.success {
-  background: #22c55e;
+  background: var(--color-success);
 }
 
 .inventory-import-fill-bar.warning {
-  background: #f59e0b;
+  background: var(--color-warning);
 }
 
 .inventory-import-fill-bar.danger {
-  background: #ef4444;
+  background: var(--color-destructive);
 }
 
 .inventory-import-table tbody td {
   max-width: 180px;
   padding: 14px 12px;
-  border-right: 1px solid rgba(15, 23, 42, 0.04);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.05);
-  background: rgba(255, 255, 255, 0.72);
-  color: #6b7280;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 48%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  background: color-mix(in srgb, var(--color-card) 72%, transparent);
+  color: var(--color-muted-foreground);
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
@@ -496,12 +496,12 @@
 }
 
 .inventory-import-cell.active {
-  background: rgba(17, 24, 39, 0.035);
-  color: #374151;
+  background: var(--color-table-row-hover);
+  color: var(--color-muted-foreground);
 }
 
 .inventory-import-empty-cell {
-  color: #d1a25a;
+  color: var(--color-warning);
   font-style: italic;
 }
 
@@ -509,8 +509,8 @@
   display: flex;
   justify-content: flex-end;
   padding: 12px 14px;
-  border-top: 1px solid rgba(15, 23, 42, 0.06);
-  color: #9ca3af;
+  border-top: 1px solid var(--color-divider);
+  color: var(--color-muted-foreground);
   font-size: 12px;
 }
 
@@ -528,14 +528,14 @@
   gap: 18px;
   width: min(560px, 100%);
   padding: 40px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
   border-radius: 24px;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(250, 250, 247, 0.96) 100%
+    color-mix(in srgb, var(--color-card) 92%, transparent) 0%,
+    color-mix(in srgb, var(--color-surface-subtle) 96%, transparent) 100%
   );
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow-elevated);
 }
 
 .inventory-import-empty-icon {
@@ -545,8 +545,8 @@
   width: 56px;
   height: 56px;
   border-radius: 18px;
-  background: rgba(17, 24, 39, 0.06);
-  color: #111827;
+  background: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+  color: var(--color-foreground);
 }
 
 @media (max-width: 900px) {
@@ -691,7 +691,7 @@ button.tree-toggle {
     height: 100%;
     background: var(--color-card);
     border-right: 1px solid var(--color-border);
-    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22);
+    box-shadow: var(--shadow-xl);
     padding-top: max(12px, env(safe-area-inset-top));
   }
 
@@ -729,7 +729,7 @@ button.tree-toggle {
 }
 
 .editable-cell:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--color-table-row-hover);
 }
 
 .edit-icon {
