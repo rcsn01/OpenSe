@@ -46,9 +46,25 @@ describe('organisation invites', () => {
   })
 
   it('inviteOrganisationMember normalizes email before calling invite RPC', async () => {
-    mockRpc.mockResolvedValue({ error: null })
+    mockRpc.mockResolvedValue({
+      data: [
+        {
+          id: 'inv-1',
+          org_id: 'org-1',
+          email: 'member@example.com',
+          created_at: '2026-05-20T00:00:00.000Z',
+        },
+      ],
+      error: null,
+    })
 
-    await inviteOrganisationMember('org-1', ' MEMBER@Example.com ', 'member')
+    await expect(inviteOrganisationMember('org-1', ' MEMBER@Example.com ', 'member')).resolves.toEqual({
+      id: 'inv-1',
+      org_id: 'org-1',
+      email: 'member@example.com',
+      created_at: '2026-05-20T00:00:00.000Z',
+      assigned_apps: [],
+    })
 
     expect(mockRpc).toHaveBeenCalledWith('accounts_invite_organisation_member', {
       p_org_id: 'org-1',
@@ -68,6 +84,10 @@ describe('organisation invites', () => {
             org_id: 'org-1',
             email: ' MEMBER@Example.com ',
             created_at: '2026-05-20T00:00:00.000Z',
+            organisation_invite_app_seats: [
+              { app_code: 'stoqr' },
+              { app_code: 'etl' },
+            ],
           },
         ],
         error: null,
@@ -81,6 +101,7 @@ describe('organisation invites', () => {
         org_id: 'org-1',
         email: 'member@example.com',
         created_at: '2026-05-20T00:00:00.000Z',
+        assigned_apps: ['etl', 'stoqr'],
       },
     ])
 

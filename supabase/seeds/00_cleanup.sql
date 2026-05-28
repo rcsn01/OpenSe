@@ -11,6 +11,7 @@
 TRUNCATE TABLE
   auth.identities,
   auth.users,
+  public.organisation_invite_app_seats,
   public.organisation_invites,
   public.organisation_member_app_seats,
   public.organisation_app_seats,

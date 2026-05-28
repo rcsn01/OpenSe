@@ -190,7 +190,7 @@ describe('OrganisationPermissionsPanel', () => {
     await user.click(screen.getAllByRole('button', { name: /^edit$/i })[0])
 
     const headers = screen.getAllByRole('columnheader').map((header) => header.textContent?.trim())
-    expect(headers.slice(-3)).toEqual(['Permission', 'Action', 'Enabled'])
+    expect(headers.slice(-5)).toEqual(['Page', 'View', 'Edit', 'Manage', 'Use'])
     expect(screen.getByText('Users')).toBeInTheDocument()
     expect(screen.getByText('Scanner')).toBeInTheDocument()
     expect(screen.queryByText('Hidden legacy permission')).not.toBeInTheDocument()

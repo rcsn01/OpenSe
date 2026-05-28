@@ -8,10 +8,12 @@ import {
   type DataTableColumn,
 } from '@repo/ui'
 import {
+  assignInviteSeat,
   assignSeat,
   cancelSeatInvite,
   getSeatAssignmentSnapshot,
   inviteSeatMembers,
+  unassignInviteSeat,
   unassignSeat,
   type PendingSeatInvite,
   type SeatMember,
@@ -27,6 +29,10 @@ const parseEmailList = (value: string): string[] => {
     .split(/[\n,;]+/)
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0)
+}
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  return error instanceof Error ? error.message : fallback
 }
 
 export const SeatManagementPage = () => {
@@ -54,6 +60,26 @@ export const SeatManagementPage = () => {
       header: 'Created',
       renderCell: (invite) => <span className="text-sm text-[var(--color-muted-foreground)]">{new Date(invite.createdAt).toLocaleDateString()}</span>,
     },
+    ...appCodes.map((appCode): DataTableColumn<PendingSeatInvite> => ({
+      id: appCode,
+      header: appCode.toUpperCase(),
+      renderCell: (invite) => {
+        const assigned = invite.assignedApps.includes(appCode)
+        const key = `invite-seat:${invite.id}:${appCode}`
+        return (
+          <Button
+            variant={assigned ? 'outline' : 'primary'}
+            size="sm"
+            disabled={savingKey === key || !canManage}
+            onClick={() => {
+              void handleToggleInviteSeat(invite, appCode)
+            }}
+          >
+            {savingKey === key ? 'Saving...' : assigned ? 'Remove' : 'Assign'}
+          </Button>
+        )
+      },
+    })),
     {
       id: 'action',
       header: 'Action',
@@ -113,19 +139,23 @@ export const SeatManagementPage = () => {
     })),
   ]
 
-  const loadMembers = async () => {
+  const loadMembers = async ({ showPageLoading = true }: { showPageLoading?: boolean } = {}) => {
     try {
-      setLoading(true)
+      if (showPageLoading) {
+        setLoading(true)
+      }
       setError(null)
       const snapshot = await getSeatAssignmentSnapshot()
       setOrgId(snapshot.orgId)
       setCurrentRole(snapshot.currentRole)
       setMembers(snapshot.members)
       setPendingInvites(snapshot.pendingInvites)
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to load seat assignments.')
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to load seat assignments.'))
     } finally {
-      setLoading(false)
+      if (showPageLoading) {
+        setLoading(false)
+      }
     }
   }
 
@@ -153,9 +183,9 @@ export const SeatManagementPage = () => {
       }
 
       setSuccess(`${currentlyAssigned ? 'Removed' : 'Assigned'} ${appCode.toUpperCase()} seat for ${member.fullName ?? member.email ?? 'user'}.`)
-      await loadMembers()
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to update seat assignment.')
+      await loadMembers({ showPageLoading: false })
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to update seat assignment.'))
     } finally {
       setSavingKey(null)
     }
@@ -181,11 +211,39 @@ export const SeatManagementPage = () => {
       await inviteSeatMembers(orgId, emails)
       setSuccess(`Created ${emails.length} pending invitation${emails.length > 1 ? 's' : ''}.`)
       setInviteInput('')
-      await loadMembers()
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to invite members.')
+      await loadMembers({ showPageLoading: false })
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to invite members.'))
     } finally {
       setInviting(false)
+    }
+  }
+
+  const handleToggleInviteSeat = async (invite: PendingSeatInvite, appCode: AppCode) => {
+    if (!canManage) {
+      return
+    }
+
+    const currentlyAssigned = invite.assignedApps.includes(appCode)
+    const actionKey = `invite-seat:${invite.id}:${appCode}`
+
+    try {
+      setSavingKey(actionKey)
+      setError(null)
+      setSuccess(null)
+
+      if (currentlyAssigned) {
+        await unassignInviteSeat(invite.id, appCode)
+      } else {
+        await assignInviteSeat(invite.id, appCode)
+      }
+
+      setSuccess(`${currentlyAssigned ? 'Removed' : 'Assigned'} ${appCode.toUpperCase()} seat for ${invite.email}.`)
+      await loadMembers({ showPageLoading: false })
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to update pending invite seat assignment.'))
+    } finally {
+      setSavingKey(null)
     }
   }
 
@@ -201,9 +259,9 @@ export const SeatManagementPage = () => {
       setSuccess(null)
       await cancelSeatInvite(orgId, invite.id)
       setSuccess(`Cancelled invitation for ${invite.email}.`)
-      await loadMembers()
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to cancel invitation.')
+      await loadMembers({ showPageLoading: false })
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to cancel invitation.'))
     } finally {
       setSavingKey(null)
     }
@@ -227,7 +285,7 @@ export const SeatManagementPage = () => {
           <Alert variant="info" title="Read-only seat access">Your role does not allow inviting members or assigning seats.</Alert>
         ) : null}
 
-        <AccountsSection title="Invite members" description="Invitations create pending organisation memberships. Seats can be assigned after members accept.">
+        <AccountsSection title="Invite members" description="Invitations create pending organisation memberships. Seats can be assigned from pending invitations below.">
           <div className="space-y-2">
             <label className="text-sm font-medium text-[var(--color-body)]" htmlFor="seat-invite-emails">
               Invite emails
@@ -253,14 +311,14 @@ export const SeatManagementPage = () => {
           </Button>
         </AccountsSection>
 
-        <AccountsSection title="Pending invitations" description="Cancel invitations that have not been accepted.">
+        <AccountsSection title="Pending invitations" description="Assign seats before acceptance, or cancel invitations that have not been accepted.">
           <DataTable
             variant="operational"
             rows={pendingInvites}
             columns={inviteColumns}
             getRowId={(invite) => invite.id}
             emptyState="No pending invitations."
-            minTableWidth="42rem"
+            minTableWidth="48rem"
           />
         </AccountsSection>
 

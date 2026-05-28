@@ -94,15 +94,25 @@ type PermissionGroup = {
     code: string;
     label: string;
     actionKey: string;
+    columnKey: string;
     description: string | null;
     sortOrder: number;
   }>;
+};
+
+type PermissionActionColumn = {
+  key: string;
+  label: string;
+  sortOrder: number;
 };
 
 const buildPermissionGroups = (
   permissions: OrganisationPermission[],
 ): PermissionGroup[] => {
   const groups = new Map<string, PermissionGroup>();
+
+  const getColumnKey = (actionKey: string) =>
+    actionKey.endsWith(".manage") ? "manage" : actionKey;
 
   permissions
     .filter((permission) => !permission.hidden && !permission.deprecated)
@@ -132,6 +142,7 @@ const buildPermissionGroups = (
         code: permission.code,
         label: permission.label ?? formatLabel(actionKey),
         actionKey,
+        columnKey: getColumnKey(actionKey),
         description: permission.description,
         sortOrder: permission.sort_order ?? 0,
       });
@@ -155,6 +166,38 @@ const buildPermissionGroups = (
       return leftSort - rightSort || left.label.localeCompare(right.label);
     });
 };
+
+const buildPermissionActionColumns = (
+  groups: PermissionGroup[],
+): PermissionActionColumn[] => {
+  const columns = new Map<string, PermissionActionColumn>();
+
+  groups.forEach((group) => {
+    group.permissions.forEach((permission) => {
+      const existing = columns.get(permission.columnKey);
+
+      if (!existing || permission.sortOrder < existing.sortOrder) {
+        columns.set(permission.columnKey, {
+          key: permission.columnKey,
+          label: permission.columnKey === "manage" ? "Manage" : permission.label,
+          sortOrder: permission.sortOrder,
+        });
+      }
+    });
+  });
+
+  return Array.from(columns.values()).sort((left, right) => {
+    if (left.key === "view") return -1;
+    if (right.key === "view") return 1;
+    return left.sortOrder - right.sortOrder || left.label.localeCompare(right.label);
+  });
+};
+
+const splitPermissionActionLabel = (label: string) =>
+  label
+    .replace(/\s*\/\s*/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
 
 export function OrganisationPermissionsPanel({
   title = "Organisation Roles",
@@ -194,6 +237,11 @@ export function OrganisationPermissionsPanel({
     () => buildPermissionGroups(permissions),
     [permissions],
   );
+  const permissionActionColumns = useMemo(
+    () => buildPermissionActionColumns(permissionGroups),
+    [permissionGroups],
+  );
+  const permissionMatrixMinWidth = 176 + permissionActionColumns.length * 88;
 
   const openEditRole = (roleId: string) => {
     const role = roles.find((item) => item.id === roleId);
@@ -256,6 +304,29 @@ export function OrganisationPermissionsPanel({
       return current.filter((code) => code !== permissionCode);
     });
   };
+
+  const handleTogglePermissionGroup = (
+    group: PermissionGroup,
+    permissionCodes: string[],
+    checked: boolean,
+  ) => {
+    setEditPermissions((current) => {
+      const permissionCodeSet = new Set(permissionCodes);
+
+      if (checked) {
+        return Array.from(
+          new Set([
+            ...current,
+            ...(group.viewCode ? [group.viewCode] : []),
+            ...permissionCodes,
+          ]),
+        );
+      }
+
+      return current.filter((code) => !permissionCodeSet.has(code));
+    });
+  };
+
 
   const handleAddRole = async () => {
     const trimmedName = addName.trim();
@@ -705,46 +776,103 @@ export function OrganisationPermissionsPanel({
                     Loading permissions...
                   </div>
                 ) : (
-                  <Table>
+                  <Table
+                    className="table-fixed border-separate border-spacing-0 overflow-hidden rounded-lg border border-[var(--color-shell-border)]"
+                    style={{ minWidth: `${permissionMatrixMinWidth}px` }}
+                  >
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Permission</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Enabled</TableHead>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="sticky left-0 z-10 w-44 border-r border-[var(--color-shell-border)] bg-[var(--color-background)]">
+                          Page
+                        </TableHead>
+                        {permissionActionColumns.map((column) => (
+                          <TableHead
+                            key={column.key}
+                            className="w-[88px] border-r border-[var(--color-shell-border)] px-1.5 py-3 text-center text-xs leading-tight last:border-r-0"
+                          >
+                            <span className="mx-auto flex max-w-20 flex-col items-center gap-0.5 whitespace-normal">
+                              {splitPermissionActionLabel(column.label).map((part, index) => (
+                                <span key={`${column.key}-${part}-${index}`}>
+                                  {part}
+                                </span>
+                              ))}
+                            </span>
+                          </TableHead>
+                        ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {permissionGroups.map((group) =>
-                        group.permissions.map((permission, index) => (
-                          <TableRow key={permission.code}>
-                            <TableCell className="align-top font-medium text-[var(--color-foreground)]">
-                              {index === 0 ? group.label : ""}
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium text-[var(--color-foreground)]">
-                                {permission.label}
-                              </div>
-                              {permission.description ? (
-                                <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-                                  {permission.description}
-                                </div>
-                              ) : null}
-                            </TableCell>
-                            <TableCell>
-                              <Checkbox
-                                checked={editPermissions.includes(permission.code)}
-                                onChange={(event) =>
-                                  handleTogglePermission(
-                                    permission.code,
-                                    event.target.checked,
-                                  )
-                                }
-                                disabled={!canManage || saving}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        )),
-                      )}
+                      {permissionGroups.map((group) => (
+                        <TableRow key={group.key}>
+                          <TableCell className="sticky left-0 z-10 w-44 border-r border-[var(--color-shell-border)] bg-[var(--color-background)] align-middle font-medium text-[var(--color-foreground)]">
+                            {group.label}
+                          </TableCell>
+                          {permissionActionColumns.map((column) => {
+                            const cellPermissions = group.permissions.filter(
+                              (item) => item.columnKey === column.key,
+                            );
+                            const cellPermissionCodes = cellPermissions.map(
+                              (permission) => permission.code,
+                            );
+                            const isCellChecked =
+                              cellPermissionCodes.length > 0 &&
+                              cellPermissionCodes.every((code) =>
+                                editPermissions.includes(code),
+                              );
+                            const cellLabel =
+                              cellPermissions.length > 1
+                                ? `${group.label}: ${column.label}`
+                                : `${group.label}: ${
+                                    cellPermissions[0]?.label ?? column.label
+                                  }`;
+                            const cellTitle = cellPermissions
+                              .map((permission) => permission.label)
+                              .join(", ");
+
+                            return (
+                              <TableCell
+                                key={`${group.key}-${column.key}`}
+                                className="h-14 w-[88px] border-r border-[var(--color-shell-border)] p-0 text-center last:border-r-0"
+                              >
+                                {cellPermissions.length > 0 ? (
+                                  <label
+                                    className="flex h-full min-h-14 cursor-pointer items-center justify-center px-3 py-2"
+                                    title={cellTitle}
+                                  >
+                                    <Checkbox
+                                      checked={isCellChecked}
+                                      onChange={(event) => {
+                                        if (cellPermissions.length === 1) {
+                                          handleTogglePermission(
+                                            cellPermissions[0].code,
+                                            event.target.checked,
+                                          );
+                                          return;
+                                        }
+
+                                        handleTogglePermissionGroup(
+                                          group,
+                                          cellPermissionCodes,
+                                          event.target.checked,
+                                        );
+                                      }}
+                                      disabled={!canManage || saving}
+                                      aria-label={cellLabel}
+                                    />
+                                  </label>
+                                ) : (
+                                  <span
+                                    className="text-[var(--color-muted-foreground)]/45"
+                                    aria-hidden="true"
+                                  >
+                                    -
+                                  </span>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 )}
