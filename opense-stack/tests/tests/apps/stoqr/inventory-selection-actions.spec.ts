@@ -50,7 +50,6 @@ test.describe('Stoqr Inventory selection actions', () => {
     const productRows = authenticatedPage.locator('tbody tr');
     const visibleProductCount = await productRows.count();
     const selectAll = authenticatedPage.getByLabel('Select all visible products');
-    const selectionToolbar = authenticatedPage.locator('.inventory-toolbar.selection-mode');
 
     await expect(selectAll).toBeVisible();
     expect(visibleProductCount).toBeGreaterThan(0);
@@ -65,8 +64,8 @@ test.describe('Stoqr Inventory selection actions', () => {
 
     await selectAll.uncheck();
     await expect(selectAll).not.toBeChecked();
-    await expect(selectionToolbar.getByRole('button', { name: /^Move$/ })).toHaveCount(0);
-    await expect(selectionToolbar.getByRole('button', { name: /^Delete$/ })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('button', { name: /^Move$/ })).toHaveCount(0);
+    await expect(authenticatedPage.getByRole('button', { name: /^Delete$/ })).toHaveCount(0);
   });
 
   test('selected products can be moved and deleted from the toolbar', async ({ authenticatedPage }) => {
@@ -86,37 +85,37 @@ test.describe('Stoqr Inventory selection actions', () => {
       .locator('tbody tr')
       .filter({ has: authenticatedPage.getByRole('link', { name: productName }) })
       .first();
-    const selectionToolbar = authenticatedPage.locator('.inventory-toolbar.selection-mode');
+    const selectionTopRow = authenticatedPage.locator('thead tr').filter({ hasText: '1 selected' });
 
     await expect(productRow).toBeVisible();
     await productRow.locator('input[type="checkbox"]').check();
 
-    await expect(selectionToolbar.getByRole('button', { name: /^Delete$/ })).toBeVisible();
-    await expect(selectionToolbar.getByRole('button', { name: /^Move$/ })).toBeVisible();
+    await expect(selectionTopRow.getByRole('button', { name: /^Delete$/ })).toBeVisible();
+    await expect(selectionTopRow.getByRole('button', { name: /^Move$/ })).toBeVisible();
     await expect(authenticatedPage.getByRole('button', { name: 'Print Labels' })).toHaveCount(0);
-    await expect(selectionToolbar.getByRole('button', { name: /^Export CSV$/ })).toBeVisible();
+    await expect(selectionTopRow.getByRole('button', { name: /^Export CSV$/ })).toBeVisible();
 
-    await selectionToolbar.getByRole('button', { name: /^Move$/ }).click();
+    await selectionTopRow.getByRole('button', { name: /^Move$/ }).click();
 
     const moveDialog = authenticatedPage.getByRole('dialog', { name: /move 1 selected product/i });
     await expect(moveDialog).toBeVisible();
     await authenticatedPage.getByLabel('Destination folder').selectOption({ label: folderName });
     await authenticatedPage.getByRole('button', { name: /move 1 product/i }).click();
 
-    await expect(selectionToolbar.getByRole('button', { name: /^Move$/ })).toHaveCount(0);
+    await expect(selectionTopRow.getByRole('button', { name: /^Move$/ })).toHaveCount(0);
     await openInventoryList(authenticatedPage);
     await expect(productRow).toBeVisible();
     await expect(productRow).toContainText(folderName);
 
     await productRow.locator('input[type="checkbox"]').check();
-    await expect(selectionToolbar.getByRole('button', { name: /^Delete$/ })).toBeVisible();
+    await expect(selectionTopRow.getByRole('button', { name: /^Delete$/ })).toBeVisible();
     await expect(authenticatedPage.locator('[data-sonner-toast]')).toHaveCount(0);
 
     authenticatedPage.once('dialog', (dialog) => {
       expect(dialog.message()).toContain('Are you sure you want to delete 1 items?');
       void dialog.accept();
     });
-    await selectionToolbar.getByRole('button', { name: /^Delete$/ }).click();
+    await selectionTopRow.getByRole('button', { name: /^Delete$/ }).click();
 
     await expect(productRow).toHaveCount(0);
   });

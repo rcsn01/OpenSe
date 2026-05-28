@@ -61,6 +61,29 @@ describe('DataTable', () => {
     expect(screen.queryByText('Template controls')).not.toBeInTheDocument()
   })
 
+  it('owns the default table chrome without consumer classes', () => {
+    renderTable()
+
+    const table = screen.getByRole('table')
+    const nameHeader = screen.getByText('Name').closest('th')
+    const alphaCell = screen.getByText('Alpha').closest('td')
+
+    expect(table).toHaveClass('bg-[var(--color-table-row-bg)]')
+    expect(nameHeader).toHaveClass(
+      'border-[var(--color-table-border)]',
+      'bg-[var(--color-table-header-bg)]',
+      'px-4',
+      'py-4',
+      'uppercase',
+    )
+    expect(alphaCell).toHaveClass(
+      'border-[var(--color-table-border)]',
+      'bg-[var(--color-table-row-bg)]',
+      'px-4',
+      'py-3',
+    )
+  })
+
   it('renders the optional top row above column headers', () => {
     renderTable({ topRow: <div>Template controls</div> })
 

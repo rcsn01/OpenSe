@@ -408,7 +408,6 @@ export const SuppliersTab = ({
         header: "Supplier",
         sortKey: "supplier",
         width: "28%",
-        cellClassName: "min-w-0",
         renderCell: (row) => (
           <div className="flex min-w-0 items-start gap-3">
             <div className="mt-0.5 rounded-lg bg-[var(--color-muted)] p-2 text-[var(--color-primary)]">
@@ -430,7 +429,6 @@ export const SuppliersTab = ({
         header: "Primary Contact",
         sortKey: "contact",
         width: "21%",
-        cellClassName: "min-w-0",
         renderCell: (row) => (
           <div className="min-w-0 space-y-1.5">
             <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-[var(--color-foreground)]">
@@ -496,7 +494,6 @@ export const SuppliersTab = ({
         header: "Catalog",
         sortKey: "catalog",
         width: "16%",
-        cellClassName: "min-w-0",
         renderCell: (row) => {
           const previewSkus = row.trackedSkus.slice(0, 2);
           const remainingSkuCount = Math.max(
@@ -568,7 +565,6 @@ export const SuppliersTab = ({
         align: "right",
         sortable: false,
         width: "6%",
-        cellClassName: "text-right",
         renderCell: (row) => (
           <div className="flex justify-end">
             <Dropdown
@@ -712,7 +708,6 @@ export const SuppliersTab = ({
             rows={loading ? [] : pagedSuppliers}
             getRowId={(row) => row.supplier.id}
             topRow={supplierTableTopRow}
-            topRowCellClassName="px-4 py-4 md:px-6"
             emptyState={
               loading ? (
                 "Loading suppliers..."

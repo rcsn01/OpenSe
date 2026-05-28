@@ -34,14 +34,13 @@ vi.mock('../FolderNavigationPanel', () => ({
 
 vi.mock('../all-products/ProductListView', () => ({
   ProductListView: ({ topRow }: { topRow?: {
-    className?: string
     filters?: Array<{ ariaLabel?: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }>
     left?: React.ReactNode
     actions?: Array<{ id?: string; label: React.ReactNode; onClick?: () => void; disabled?: boolean }>
   } }) => (
     <div data-testid="product-list-view">
       {topRow ? (
-        <div className={topRow.className}>
+        <div>
           {topRow.filters?.map((filter) => (
             <button
               key={filter.ariaLabel}
@@ -197,7 +196,7 @@ describe('AllProductsTab', () => {
 
     const toggleButton = screen.getByRole('button', { name: 'Open folder navigation' })
     expect(toggleButton).toHaveTextContent('>')
-    expect(toggleButton.closest('.inventory-toolbar')).not.toBeNull()
+    expect(screen.getByTestId('product-list-view')).toContainElement(toggleButton)
 
     fireEvent.click(toggleButton)
 

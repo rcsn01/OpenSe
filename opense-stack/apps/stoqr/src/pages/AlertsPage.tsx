@@ -543,7 +543,6 @@ export const AlertsPage = () => {
         rows={pagedEvents}
         getRowId={(event) => event.id}
         topRow={alertFeedTopRow}
-        topRowCellClassName="bg-white px-4 py-4 md:px-6"
         emptyState={
           loadingEvents
             ? "Loading alerts..."
@@ -556,8 +555,6 @@ export const AlertsPage = () => {
         onSortChange={handleTableSort}
         minTableWidth={940}
         tableLayout="fixed"
-        tableWrapClassName="border-0 bg-white"
-        tableClassName="bg-white"
         selection={{
           selectedRowIds: selectedEventIdSet,
           onToggleAll: toggleSelectAllPagedEvents,
@@ -609,7 +606,6 @@ export const AlertsPage = () => {
             },
           ],
         }}
-        topRowCellClassName="px-6 py-5"
         emptyState={
           loadingRules
             ? "Loading alert triggers..."

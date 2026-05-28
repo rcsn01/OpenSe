@@ -40,7 +40,6 @@ export function OrganisationMembersTable({
   const [sortField, setSortField] = useState<OrganisationMembersSortField | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
-  const cellClassName = 'whitespace-nowrap'
   const hasRoleSortValues = rows.some((row) => row.roleSortValue)
   const hasPermissionsRoleSortValues = rows.some((row) => row.permissionsRoleSortValue)
   const hasStatusSortValues = rows.some((row) => row.statusSortValue)
@@ -90,7 +89,6 @@ export function OrganisationMembersTable({
       header: 'Member',
       sortKey: 'member',
       width: showPermissionsRole || showStatus || showActions ? '34%' : '58%',
-      cellClassName,
       renderCell: (row) => {
         const initials = (row.initials ?? row.displayName.charAt(0)).toUpperCase()
 
@@ -115,8 +113,7 @@ export function OrganisationMembersTable({
       sortKey: 'role',
       sortable: hasRoleSortValues,
       width: showPermissionsRole || showStatus || showActions ? '22%' : '42%',
-      cellClassName,
-      renderCell: (row) => row.roleContent,
+      renderCell: (row) => <div className="whitespace-nowrap">{row.roleContent}</div>,
     },
     ...(showPermissionsRole
       ? [{
@@ -125,8 +122,9 @@ export function OrganisationMembersTable({
           sortKey: 'permissions-role',
           sortable: hasPermissionsRoleSortValues,
           width: '22%',
-          cellClassName,
-          renderCell: (row: OrganisationMembersTableRow) => row.permissionsRoleContent,
+          renderCell: (row: OrganisationMembersTableRow) => (
+            <div className="whitespace-nowrap">{row.permissionsRoleContent}</div>
+          ),
         } satisfies DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>]
       : []),
     ...(showStatus
@@ -136,8 +134,9 @@ export function OrganisationMembersTable({
           sortKey: 'status',
           sortable: hasStatusSortValues,
           width: '12%',
-          cellClassName,
-          renderCell: (row: OrganisationMembersTableRow) => row.statusContent,
+          renderCell: (row: OrganisationMembersTableRow) => (
+            <div className="whitespace-nowrap">{row.statusContent}</div>
+          ),
         } satisfies DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>]
       : []),
     ...(showActions
@@ -147,8 +146,9 @@ export function OrganisationMembersTable({
           align: 'right' as const,
           sortable: false,
           width: '10%',
-          cellClassName: `${cellClassName} text-right`,
-          renderCell: (row: OrganisationMembersTableRow) => row.actionsContent,
+          renderCell: (row: OrganisationMembersTableRow) => (
+            <div className="whitespace-nowrap text-right">{row.actionsContent}</div>
+          ),
         } satisfies DataTableColumn<OrganisationMembersTableRow, OrganisationMembersSortField>]
       : []),
   ]

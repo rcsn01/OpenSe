@@ -579,7 +579,6 @@ export function SharedComponentsPage() {
     [members, teamRoles],
   );
 
-  const inventoryTableDividerClassName = "border-b border-[#d6d6d6]";
   const inventoryColumns: Array<
     DataTableColumn<InventoryRow, InventorySortKey>
   > = [
@@ -587,7 +586,6 @@ export function SharedComponentsPage() {
       id: "item",
       header: "Item",
       sortKey: "item",
-      headerClassName: inventoryTableDividerClassName,
       renderCell: (row) => (
         <div className="ui-table-cell-stack">
           <span>{row.item}</span>
@@ -599,7 +597,6 @@ export function SharedComponentsPage() {
       id: "folder",
       header: "Folder",
       sortKey: "folder",
-      headerClassName: inventoryTableDividerClassName,
       renderCell: (row) => row.folder,
     },
     {
@@ -607,7 +604,6 @@ export function SharedComponentsPage() {
       header: "Price",
       sortKey: "price",
       align: "right",
-      headerClassName: inventoryTableDividerClassName,
       renderCell: (row) => currencyFormatter.format(row.price),
     },
     {
@@ -615,7 +611,6 @@ export function SharedComponentsPage() {
       header: "Available",
       sortKey: "available",
       align: "right",
-      headerClassName: inventoryTableDividerClassName,
       renderCell: (row) => row.available,
     },
   ];
@@ -1147,8 +1142,6 @@ export function SharedComponentsPage() {
                 sortDirection={sortDirection}
                 onSortChange={handleSort}
                 topRow={tableTemplateRow}
-                topRowClassName="bg-[var(--color-surface-subtle)]/75"
-                topRowCellClassName="border-b border-[#d6d6d6] px-4 py-3"
                 pagination={{
                   currentPage: tablePage,
                   totalItems: sortedRows.length,

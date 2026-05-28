@@ -26,35 +26,6 @@ export type ProductListViewProps = {
   topRow?: DataTableTopRowConfig
 }
 
-export type InventoryFiltersBarProps = {
-  isSelectionMode: boolean
-  selectedRowIds: Set<string>
-  stockFilter: 'all' | 'low' | 'out'
-  setStockFilter: (value: 'all' | 'low' | 'out') => void
-  activeCustomFieldFilters: CustomFieldActiveFilter[]
-  onAddFilter: (key: string, value: CustomFieldPrimitive) => void
-  onRemoveFilter: (key: string) => void
-  pendingFilterKey: string | null
-  setPendingFilterKey: (key: string | null) => void
-  customFieldFilters: CustomFieldFilterOption[]
-  showMobileExplorerToggle?: boolean
-  onMobileExplorerToggle?: () => void
-  mobileExplorerControlsId?: string
-  onImportOpen: () => void
-  onCreateOpen: () => void
-  handleBulkDelete: () => void
-  onMoveSelected: () => void
-  onBulkPriceAdjust: () => void
-  onBulkQuantityAdjust: () => void
-  onExportCsv: () => void
-  canCreateInventory: boolean
-  canEditInventory: boolean
-  canAdjustInventory: boolean
-  canDeleteInventory: boolean
-  canImportExportInventory: boolean
-  canUseInventory: boolean
-}
-
 export type AllProductsTabProps = {
   companyId: string | null
   folderView: FolderView
