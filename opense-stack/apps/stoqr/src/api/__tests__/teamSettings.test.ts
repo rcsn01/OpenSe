@@ -164,6 +164,27 @@ describe('team settings api', () => {
     expect(rolesTable.insert).not.toHaveBeenCalled()
   })
 
+  it.each(['Default', 'Guest'])('prevents creating custom role named %s', async (reservedName) => {
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'roles') {
+        return {
+          select: vi.fn(),
+          insert: vi.fn(),
+        }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await expect(
+      createRoleWithPermissions('company-1', {
+        name: reservedName,
+        description: 'Reserved role',
+        roleRank: 100,
+        perms: [],
+      }),
+    ).rejects.toThrow(`${reservedName} is reserved for a system-managed role.`)
+  })
+
   it('prevents updating role when duplicate role rank exists in organisation', async () => {
     const rolesTable = {
       select: vi.fn()
@@ -211,6 +232,53 @@ describe('team settings api', () => {
     ).rejects.toThrow('Role rank must be unique within your organisation.')
 
     expect(rolesTable.update).not.toHaveBeenCalled()
+  })
+
+  it('updates Default role permissions without updating role details', async () => {
+    const rolesUpdate = vi.fn()
+    const deleteEq = vi.fn().mockResolvedValue({ error: null })
+    const permissionsDelete = vi.fn(() => ({ eq: deleteEq }))
+    const permissionsInsert = vi.fn().mockResolvedValue({ error: null })
+
+    const rolesTable = {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({
+            data: { company_id: 'company-1', name: 'Default' },
+            error: null,
+          }),
+        })),
+      })),
+      update: rolesUpdate,
+    }
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'roles') return rolesTable
+      if (table === 'role_permissions') {
+        return {
+          delete: permissionsDelete,
+          insert: permissionsInsert,
+        }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+
+    await expect(
+      updateRoleWithPermissions('role-default', {
+        name: 'Changed Name',
+        description: 'Changed description',
+        roleRank: 42,
+        permissionCodes: ['dashboard.view', 'reports.view'],
+      }),
+    ).resolves.toBeUndefined()
+
+    expect(rolesUpdate).not.toHaveBeenCalled()
+    expect(permissionsDelete).toHaveBeenCalled()
+    expect(deleteEq).toHaveBeenCalledWith('role_id', 'role-default')
+    expect(permissionsInsert).toHaveBeenCalledWith([
+      { role_id: 'role-default', permission_code: 'dashboard.view' },
+      { role_id: 'role-default', permission_code: 'reports.view' },
+    ])
   })
 
   it('fetches activity events and enriches actor profile', async () => {

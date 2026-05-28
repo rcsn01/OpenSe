@@ -124,22 +124,22 @@ describe('OrganisationPermissionsPanel', () => {
         roles={[
           ...roles,
           {
-            id: 'role-guest',
-            name: 'Guest',
-            description: 'System-managed guest role',
+            id: 'role-default',
+            name: 'Default',
+            description: 'System-managed default role',
             roleRank: 0,
             permissionCodes: ['dashboard.view', 'inventory.view'],
           },
         ]}
         permissions={permissions}
         canManage={true}
-        isRoleEditable={(role) => role.name !== 'Guest'}
+        isRoleEditable={(role) => role.name !== 'Default'}
         onCreateRole={vi.fn()}
         onUpdateRole={vi.fn()}
       />,
     )
 
-    expect(screen.getByText('Guest')).toBeInTheDocument()
+    expect(screen.getByText('Default')).toBeInTheDocument()
     expect(screen.getAllByText('System-managed').length).toBeGreaterThan(0)
     expect(screen.getAllByRole('button', { name: /^edit$/i })).toHaveLength(2)
   })
@@ -153,25 +153,25 @@ describe('OrganisationPermissionsPanel', () => {
         roles={[
           ...roles,
           {
-            id: 'role-guest',
-            name: 'Guest',
-            description: 'System-managed guest role',
+            id: 'role-default',
+            name: 'Default',
+            description: 'System-managed default role',
             roleRank: 0,
             permissionCodes: ['dashboard.view', 'inventory.view'],
           },
         ]}
         permissions={permissions}
         canManage={true}
-        isRoleEditable={(role) => role.name !== 'Guest'}
+        isRoleEditable={(role) => role.name !== 'Default'}
         onCreateRole={vi.fn()}
         onUpdateRole={vi.fn()}
         onEditRole={onEditRole}
       />,
     )
 
-    await user.click(screen.getByText('Guest'))
+    await user.click(screen.getByText('Default'))
 
-    expect(onEditRole).toHaveBeenCalledWith('role-guest')
+    expect(onEditRole).toHaveBeenCalledWith('role-default')
   })
 
   it('renders metadata grouped permissions and hides deprecated codes', async () => {

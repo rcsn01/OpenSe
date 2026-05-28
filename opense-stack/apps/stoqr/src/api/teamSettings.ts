@@ -49,7 +49,11 @@ type CompanyInvitationRow = {
   created_at: string
 }
 
-const isSystemRoleName = (name: string) => ['owner', 'guest'].includes(name.trim().toLowerCase())
+const reservedSystemRoleNames = ['owner', 'default', 'guest']
+const normalizeRoleName = (name: string) => name.trim().toLowerCase()
+const isSystemRoleName = (name: string) => reservedSystemRoleNames.includes(normalizeRoleName(name))
+const isDefaultRoleName = (name: string) => normalizeRoleName(name) === 'default'
+const isOwnerRoleName = (name: string) => normalizeRoleName(name) === 'owner'
 
 export type TwoFactorStatus = {
   currentLevel: string | null
@@ -224,6 +228,19 @@ export const saveRoleWithPermissions = async (
   }
 }
 
+const replaceRolePermissions = async (roleId: string, permissionCodes: string[]) => {
+  const { error: deleteError } = await db.from('role_permissions').delete().eq('role_id', roleId)
+  if (deleteError) throw deleteError
+
+  if (permissionCodes.length > 0) {
+    const { error: permissionError } = await db.from('role_permissions').insert(
+      permissionCodes.map((permissionCode) => ({ role_id: roleId, permission_code: permissionCode })),
+    )
+
+    if (permissionError) throw permissionError
+  }
+}
+
 export const createRoleWithPermissions = async (
   companyId: string,
   payload: { name: string; description: string; roleRank: number; perms: string[] },
@@ -277,6 +294,15 @@ export const updateRoleWithPermissions = async (
 
   if (existingRoleError) throw existingRoleError
 
+  if (isOwnerRoleName(existingRole.name)) {
+    throw new Error('System-managed roles cannot be changed directly.')
+  }
+
+  if (isDefaultRoleName(existingRole.name)) {
+    await replaceRolePermissions(roleId, payload.permissionCodes)
+    return
+  }
+
   if (isSystemRoleName(existingRole.name) || isSystemRoleName(payload.name)) {
     throw new Error('System-managed roles cannot be changed directly.')
   }
@@ -305,16 +331,7 @@ export const updateRoleWithPermissions = async (
 
   if (roleError) throw roleError
 
-  const { error: deleteError } = await db.from('role_permissions').delete().eq('role_id', roleId)
-  if (deleteError) throw deleteError
-
-  if (payload.permissionCodes.length > 0) {
-    const { error: permissionError } = await db.from('role_permissions').insert(
-      payload.permissionCodes.map((permissionCode) => ({ role_id: roleId, permission_code: permissionCode })),
-    )
-
-    if (permissionError) throw permissionError
-  }
+  await replaceRolePermissions(roleId, payload.permissionCodes)
 }
 
 export const fetchTeamActivityEvents = async (companyId: string): Promise<TeamActivityEvent[]> => {

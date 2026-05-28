@@ -6,7 +6,7 @@ import {
 } from '@repo/ui'
 import { fuzzyRankings, fuzzySearchItems } from '../../lib/pageSearch'
 
-const isSystemRole = (role: OrganisationRole) => ['owner', 'guest'].includes(role.name.trim().toLowerCase())
+const isSystemRole = (role: OrganisationRole) => ['owner', 'default', 'guest'].includes(role.name.trim().toLowerCase())
 
 type RolePayload = {
   name: string

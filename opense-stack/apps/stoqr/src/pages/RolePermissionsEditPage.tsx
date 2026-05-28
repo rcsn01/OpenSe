@@ -39,7 +39,10 @@ const parseRoleRank = (value: string): number | null => {
   return parsed
 }
 
-const isSystemRoleName = (name: string) => ['owner', 'guest'].includes(name.trim().toLowerCase())
+const normalizeRoleName = (name: string) => name.trim().toLowerCase()
+const isSystemRoleName = (name: string) => ['owner', 'default', 'guest'].includes(normalizeRoleName(name))
+const isOwnerRoleName = (name: string) => normalizeRoleName(name) === 'owner'
+const isDefaultRoleName = (name: string) => normalizeRoleName(name) === 'default'
 
 type PermissionGroup = {
   key: string
@@ -123,7 +126,11 @@ export const RolePermissionsEditPage = () => {
   const rolePermissions = data?.rolePermissions ?? {}
   const role = roles.find((item) => item.id === roleId) ?? null
   const isSystemRole = role ? isSystemRoleName(role.name) : false
-  const isReadOnly = isSystemRole || updateRoleMutation.isPending
+  const isOwnerRole = role ? isOwnerRoleName(role.name) : false
+  const isDefaultRole = role ? isDefaultRoleName(role.name) : false
+  const isLegacyGuestRole = role ? normalizeRoleName(role.name) === 'guest' : false
+  const isDetailsReadOnly = isSystemRole || updateRoleMutation.isPending
+  const arePermissionsReadOnly = isOwnerRole || isLegacyGuestRole || updateRoleMutation.isPending
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -167,7 +174,24 @@ export const RolePermissionsEditPage = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!role || !roleId || isSystemRole) return
+    if (!role || !roleId || isOwnerRole || isLegacyGuestRole) return
+
+    if (isDefaultRole) {
+      try {
+        setMessage(null)
+        await updateRoleMutation.mutateAsync({
+          roleId,
+          name: role.name,
+          description: role.description ?? '',
+          roleRank: role.role_rank,
+          permissionCodes: selectedPermissions,
+        })
+        navigate('/settings/organisations/permissions')
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : 'Failed to save role changes.')
+      }
+      return
+    }
 
     const trimmedName = name.trim()
     if (!trimmedName) {
@@ -234,7 +258,7 @@ export const RolePermissionsEditPage = () => {
                 </h1>
                 <p className="m-0 mt-2 text-sm text-[var(--color-muted-foreground)]">
                   {isSystemRole
-                    ? `${role.name} is system-managed. Review its details and permissions here.`
+                    ? `${role.name} is system-managed. Review its details here.`
                     : 'Choose access types per permission area for this role.'}
                 </p>
               </div>
@@ -249,10 +273,10 @@ export const RolePermissionsEditPage = () => {
               >
                 {isSystemRole ? 'Back' : 'Cancel'}
               </Button>
-              {!isSystemRole ? (
+              {!isOwnerRole && !isLegacyGuestRole ? (
                 <Button
                   type="submit"
-                  disabled={updateRoleMutation.isPending || !name.trim()}
+                  disabled={updateRoleMutation.isPending || (!isDefaultRole && !name.trim())}
                   loading={updateRoleMutation.isPending}
                 >
                   <Save size={16} />
@@ -264,7 +288,9 @@ export const RolePermissionsEditPage = () => {
 
           {isSystemRole ? (
             <div className="shrink-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
-              The {role.name.toLowerCase()} role is system-managed, so its details and permissions are read-only.
+              {isDefaultRole
+                ? 'The default role is system-managed, so its details are read-only. Its permissions can be edited by role managers.'
+                : `The ${role.name.toLowerCase()} role is system-managed, so its details and permissions are read-only.`}
             </div>
           ) : null}
 
@@ -295,7 +321,7 @@ export const RolePermissionsEditPage = () => {
                       setName(event.target.value)
                       setMessage(null)
                     }}
-                    disabled={isReadOnly}
+                    disabled={isDetailsReadOnly}
                   />
                 </div>
 
@@ -309,7 +335,7 @@ export const RolePermissionsEditPage = () => {
                       setDescription(event.target.value)
                       setMessage(null)
                     }}
-                    disabled={isReadOnly}
+                    disabled={isDetailsReadOnly}
                     rows={5}
                   />
                 </div>
@@ -327,7 +353,7 @@ export const RolePermissionsEditPage = () => {
                       setRoleRank(event.target.value)
                       setMessage(null)
                     }}
-                    disabled={isReadOnly}
+                    disabled={isDetailsReadOnly}
                   />
                 </div>
               </CardContent>
@@ -338,7 +364,9 @@ export const RolePermissionsEditPage = () => {
                 <CardTitle>Permission Matrix</CardTitle>
                 <CardDescription>
                   {isSystemRole
-                    ? 'Permissions assigned to this system-managed role.'
+                    ? isDefaultRole
+                      ? 'Select the permissions assigned to the default role.'
+                      : 'Permissions assigned to this system-managed role.'
                     : 'Select the permissions assigned to this role.'}
                 </CardDescription>
               </CardHeader>
@@ -368,7 +396,7 @@ export const RolePermissionsEditPage = () => {
                             <Checkbox
                               checked={selectedPermissions.includes(permission.code)}
                               onChange={(event) => handleTogglePermission(permission.code, event.target.checked)}
-                              disabled={isReadOnly}
+                              disabled={arePermissionsReadOnly}
                             />
                           </TableCell>
                         </TableRow>
