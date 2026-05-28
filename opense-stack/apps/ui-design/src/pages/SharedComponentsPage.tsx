@@ -107,6 +107,7 @@ import {
 } from "@repo/ui";
 import type {
   DataTableColumn,
+  DataTableTopRowConfig,
   OrganisationMembersTableRow,
   OrganisationPermission,
   OrganisationRole,
@@ -578,6 +579,7 @@ export function SharedComponentsPage() {
     [members, teamRoles],
   );
 
+  const inventoryTableDividerClassName = "border-b border-[#d6d6d6]";
   const inventoryColumns: Array<
     DataTableColumn<InventoryRow, InventorySortKey>
   > = [
@@ -585,6 +587,7 @@ export function SharedComponentsPage() {
       id: "item",
       header: "Item",
       sortKey: "item",
+      headerClassName: inventoryTableDividerClassName,
       renderCell: (row) => (
         <div className="ui-table-cell-stack">
           <span>{row.item}</span>
@@ -596,6 +599,7 @@ export function SharedComponentsPage() {
       id: "folder",
       header: "Folder",
       sortKey: "folder",
+      headerClassName: inventoryTableDividerClassName,
       renderCell: (row) => row.folder,
     },
     {
@@ -603,6 +607,7 @@ export function SharedComponentsPage() {
       header: "Price",
       sortKey: "price",
       align: "right",
+      headerClassName: inventoryTableDividerClassName,
       renderCell: (row) => currencyFormatter.format(row.price),
     },
     {
@@ -610,6 +615,7 @@ export function SharedComponentsPage() {
       header: "Available",
       sortKey: "available",
       align: "right",
+      headerClassName: inventoryTableDividerClassName,
       renderCell: (row) => row.available,
     },
   ];
@@ -662,59 +668,47 @@ export function SharedComponentsPage() {
     });
   };
 
-  const tableTemplateRow = (
-    <HStack wrap align="center" justify="between" className="gap-3">
-      <HStack wrap align="center" className="gap-2">
-        <FilterDropdown
-          value={inventoryFilter}
-          options={inventoryFilterTemplates}
-          onChange={(value) => applyFilterTemplate(value as InventoryFilterTemplate)}
-          ariaLabel="Inventory table filter"
-          menuClassName="min-w-[160px]"
-        />
-      </HStack>
-      <Dropdown
-        align="right"
-        trigger={(open) => (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={
-              open
-                ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:bg-[var(--color-primary-hover)]"
-                : undefined
-            }
-          >
-            <Plus className="h-4 w-4" />
-            Actions
-          </Button>
-        )}
-      >
-        <DropdownItem
-          icon={<Plus className="h-4 w-4" />}
-          disabled={hasDraftRow}
-          onClick={handleAddDraftRow}
-        >
-          Add draft
-        </DropdownItem>
-        <DropdownItem
-          icon={<Trash2 className="h-4 w-4" />}
-          disabled={!hasDraftRow}
-          onClick={handleRemoveDraftRow}
-        >
-          Remove draft
-        </DropdownItem>
-        <DropdownSeparator />
-        <DropdownItem
-          icon={<RotateCcw className="h-4 w-4" />}
-          onClick={handleResetTableTemplates}
-        >
-          Reset
-        </DropdownItem>
-      </Dropdown>
-    </HStack>
-  );
+  const tableTemplateRow: DataTableTopRowConfig = {
+    filters: [
+      {
+        id: "inventory-filter",
+        value: inventoryFilter,
+        options: inventoryFilterTemplates,
+        onChange: (value) =>
+          applyFilterTemplate(value as InventoryFilterTemplate),
+        ariaLabel: "Inventory table filter",
+        menuClassName: "min-w-[160px]",
+      },
+    ],
+    actions: [
+      {
+        id: "add-draft",
+        label: "Add draft",
+        icon: <Plus className="h-4 w-4" />,
+        variant: "ghost",
+        size: "sm",
+        disabled: hasDraftRow,
+        onClick: handleAddDraftRow,
+      },
+      {
+        id: "remove-draft",
+        label: "Remove draft",
+        icon: <Trash2 className="h-4 w-4" />,
+        variant: "ghost",
+        size: "sm",
+        disabled: !hasDraftRow,
+        onClick: handleRemoveDraftRow,
+      },
+      {
+        id: "reset",
+        label: "Reset",
+        icon: <RotateCcw className="h-4 w-4" />,
+        variant: "ghost",
+        size: "sm",
+        onClick: handleResetTableTemplates,
+      },
+    ],
+  };
 
   return (
     <Container size="xl" className="ui-gallery-shell">
@@ -1154,7 +1148,7 @@ export function SharedComponentsPage() {
                 onSortChange={handleSort}
                 topRow={tableTemplateRow}
                 topRowClassName="bg-[var(--color-surface-subtle)]/75"
-                topRowCellClassName="border-b border-[var(--color-shell-border)] px-4 py-3"
+                topRowCellClassName="border-b border-[#d6d6d6] px-4 py-3"
                 pagination={{
                   currentPage: tablePage,
                   totalItems: sortedRows.length,

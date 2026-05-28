@@ -25,6 +25,7 @@ import {
   InventoryViewToggle,
   InventoryToolbarControls,
 } from '../components/ui'
+import type { DataTableTopRowConfig } from '../components/ui'
 import { Section, SubSection } from '../components/shared/PageSection'
 
 type PurchaseOrderStatus = 'Delayed' | 'Pending' | 'On track'
@@ -234,9 +235,9 @@ export function DataDisplayPage() {
     setTablePage(1)
   }
 
-  const tableTopRow = (
-    <HStack wrap align="center" justify="between" className="gap-3">
-      <HStack wrap align="center" className="gap-2">
+  const tableTopRow: DataTableTopRowConfig = {
+    left: (
+      <>
         {tableFilterOptions.map((option) => (
           <Button
             key={option.value}
@@ -248,12 +249,14 @@ export function DataDisplayPage() {
             {option.label}
           </Button>
         ))}
-      </HStack>
+      </>
+    ),
+    right: (
       <Badge variant="secondary" size="sm">
         {filteredTableRows.length} orders
       </Badge>
-    </HStack>
-  )
+    ),
+  }
 
   return (
     <Container size="lg" className="py-8">

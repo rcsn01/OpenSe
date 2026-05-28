@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MoreHorizontal, Package2, Plus } from 'lucide-react'
-import { DataTable, type DataTableColumn } from '@repo/ui'
+import { Package2, Plus } from 'lucide-react'
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableTopRowConfig,
+} from '@repo/ui'
 import { useCreateLabelTemplate, useLabelTemplates } from '../../hooks/queries/useLabelStudio'
 import { usePageTopBarSearch, useTopBarSearchValue } from '../Search/TopBarSearch'
 import type { SearchSuggestion } from '../../lib/pageSearch'
@@ -137,6 +141,21 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       return tableSortDirection === 'asc' ? comparison : -comparison
     })
   }, [tableRows, tableSortDirection, tableSortField])
+  const tableTopRow = useMemo<DataTableTopRowConfig>(
+    () => ({
+      actions: [
+        {
+          id: 'create-template',
+          label: showCreateForm ? 'Hide new template' : 'Create new template',
+          icon: <Plus size={16} />,
+          variant: 'ghost',
+          size: 'sm',
+          onClick: () => setShowCreateForm((current) => !current),
+        },
+      ],
+    }),
+    [showCreateForm],
+  )
   const handleTableSort = (field: TemplateSortField) => {
     if (tableSortField === field) {
       setTableSortDirection((current) => current === 'asc' ? 'desc' : 'asc')
@@ -152,7 +171,7 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       id: 'templateName',
       header: 'Template Name',
       sortKey: 'templateName',
-      width: '34%',
+      width: '36%',
       renderCell: (row) => (
         <div className="label-template-name-cell">
           <span className="label-template-name-icon" aria-hidden="true">
@@ -160,14 +179,7 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
           </span>
           <div className="label-template-name-copy">
             <div className="label-template-name-row">
-              <button
-                type="button"
-                className="label-template-name-button"
-                onClick={() => onSelectTemplate?.(row.id)}
-                aria-label={`Edit ${row.name} template`}
-              >
-                <span className="label-template-name">{row.name}</span>
-              </button>
+              <span className="label-template-name">{row.name}</span>
             </div>
           </div>
         </div>
@@ -177,14 +189,14 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       id: 'dimensions',
       header: 'Dimensions',
       sortKey: 'dimensions',
-      width: '14%',
+      width: '16%',
       renderCell: (row) => row.dimensionsLabel,
     },
     {
       id: 'activeFields',
       header: 'Active Fields',
       sortKey: 'activeFields',
-      width: '28%',
+      width: '30%',
       renderCell: (row) => (
         <div className="label-template-field-list">
           {row.activeFields.map((field) => (
@@ -197,27 +209,10 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
       id: 'lastModified',
       header: 'Last Modified',
       sortKey: 'lastModified',
-      width: '16%',
+      width: '18%',
       renderCell: (row) => row.lastModifiedLabel,
     },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: '8%',
-      align: 'right',
-      renderCell: (row) => (
-        <button
-          type="button"
-          className="label-template-action"
-          aria-label={`Template actions for ${row.name}`}
-          onClick={() => onSelectTemplate?.(row.id)}
-        >
-          <MoreHorizontal size={16} />
-        </button>
-      ),
-    },
-  ], [onSelectTemplate])
+  ], [])
   const handleSuggestionSelect = useCallback((suggestion: SearchSuggestion) => {
     const templateId = getLabelTemplateIdFromSuggestion(suggestion)
     if (templateId) {
@@ -271,7 +266,9 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
             sortField={tableSortField}
             sortDirection={tableSortDirection}
             onSortChange={handleTableSort}
+            topRow={tableTopRow}
             rowClassName={(row) => row.isSelected ? 'label-template-table-row is-editing' : 'label-template-table-row'}
+            onRowClick={(row) => onSelectTemplate?.(row.id)}
           />
         ) : null}
 
@@ -346,12 +343,14 @@ export const TemplateLibraryTab = ({ companyId, selectedTemplateId, onSelectTemp
 
       {message ? <div className="label-template-message">{message}</div> : null}
 
-      <div className="label-template-create-cta-wrap">
-        <button className="label-template-create-cta" type="button" onClick={() => setShowCreateForm((current) => !current)}>
-          <Plus size={16} />
-          {showCreateForm ? 'Hide new template' : 'Create new template'}
-        </button>
-      </div>
+      {isCompactView ? (
+        <div className="label-template-create-cta-wrap">
+          <button className="label-template-create-cta" type="button" onClick={() => setShowCreateForm((current) => !current)}>
+            <Plus size={16} />
+            {showCreateForm ? 'Hide new template' : 'Create new template'}
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -1,6 +1,13 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { type CSSProperties, type HTMLAttributes, type ReactNode } from "react";
+import {
+  type CSSProperties,
+  type HTMLAttributes,
+  type ReactNode,
+  isValidElement,
+} from "react";
 import { cn } from "../../lib/cn";
+import { Button, type ButtonProps } from "./Button";
+import { FilterDropdown, type FilterDropdownOption } from "./FilterDropdown";
 import { Pagination } from "./Pagination";
 
 type DataTableAlign = "left" | "center" | "right";
@@ -114,6 +121,40 @@ type DataTableSelectionProps<Row> = {
   cellClassName?: string;
 };
 
+export type DataTableTopRowFilter = {
+  id?: string;
+  value: string;
+  options: FilterDropdownOption[];
+  onChange: (value: string) => void;
+  ariaLabel?: string;
+  className?: string;
+  menuClassName?: string;
+};
+
+export type DataTableTopRowAction = {
+  id?: string;
+  label: ReactNode;
+  icon?: ReactNode;
+  onClick?: () => void;
+  variant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
+  disabled?: boolean;
+  loading?: boolean;
+  ariaLabel?: string;
+  title?: string;
+  className?: string;
+};
+
+export type DataTableTopRowConfig = {
+  filters?: DataTableTopRowFilter[];
+  left?: ReactNode;
+  right?: ReactNode;
+  actions?: DataTableTopRowAction[];
+  className?: string;
+  leftClassName?: string;
+  rightClassName?: string;
+};
+
 type DataTableProps<Row, SortKey extends string = string> = {
   columns: Array<DataTableColumn<Row, SortKey>>;
   rows: Row[];
@@ -126,7 +167,7 @@ type DataTableProps<Row, SortKey extends string = string> = {
   theadClassName?: string;
   tbodyClassName?: string;
   footerClassName?: string;
-  topRow?: ReactNode;
+  topRow?: ReactNode | DataTableTopRowConfig;
   topRowClassName?: string;
   topRowCellClassName?: string;
   bottomRow?: ReactNode;
@@ -147,6 +188,119 @@ type DataTableProps<Row, SortKey extends string = string> = {
   pagination?: DataTablePaginationProps;
   selection?: DataTableSelectionProps<Row>;
 };
+
+const topRowConfigKeys = [
+  "filters",
+  "left",
+  "right",
+  "actions",
+  "className",
+  "leftClassName",
+  "rightClassName",
+];
+
+function isDataTableTopRowConfig(
+  topRow: unknown,
+): topRow is DataTableTopRowConfig {
+  if (
+    typeof topRow !== "object" ||
+    topRow === null ||
+    Array.isArray(topRow) ||
+    isValidElement(topRow)
+  ) {
+    return false;
+  }
+
+  const keys = Object.keys(topRow);
+  return (
+    keys.length === 0 || keys.some((key) => topRowConfigKeys.includes(key))
+  );
+}
+
+function hasTopRowSlotContent(slot: ReactNode) {
+  return slot !== undefined && slot !== null && slot !== false;
+}
+
+function hasStructuredTopRowContent(topRow: DataTableTopRowConfig) {
+  return Boolean(
+    topRow.filters?.length ||
+      topRow.actions?.length ||
+      hasTopRowSlotContent(topRow.left) ||
+      hasTopRowSlotContent(topRow.right),
+  );
+}
+
+function renderStructuredTopRow(topRow: DataTableTopRowConfig) {
+  if (!hasStructuredTopRowContent(topRow)) {
+    return null;
+  }
+
+  const leftContent = Boolean(
+    topRow.filters?.length || hasTopRowSlotContent(topRow.left),
+  );
+  const rightContent = Boolean(
+    hasTopRowSlotContent(topRow.right) || topRow.actions?.length,
+  );
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3",
+        topRow.className,
+      )}
+    >
+      {leftContent ? (
+        <div
+          className={cn(
+            "flex min-w-0 flex-wrap items-center gap-2",
+            topRow.leftClassName,
+          )}
+        >
+          {topRow.filters?.map((filter, index) => (
+            <FilterDropdown
+              key={filter.id ?? index}
+              value={filter.value}
+              options={filter.options}
+              onChange={filter.onChange}
+              ariaLabel={filter.ariaLabel}
+              className={filter.className}
+              menuClassName={filter.menuClassName}
+            />
+          ))}
+          {topRow.left}
+        </div>
+      ) : null}
+
+      {rightContent ? (
+        <div
+          className={cn(
+            "ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2",
+            topRow.rightClassName,
+          )}
+        >
+          {topRow.right}
+          {topRow.actions?.map((action, index) => (
+            <Button
+              key={action.id ?? index}
+              type="button"
+              variant={action.variant}
+              size={action.size ?? "sm"}
+              disabled={action.disabled}
+              loading={action.loading}
+              aria-label={action.ariaLabel}
+              title={action.title}
+              className={action.className}
+              onClick={action.onClick}
+            >
+              {action.icon}
+              {action.label}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function DataTable<Row, SortKey extends string = string>({
   columns,
@@ -207,6 +361,9 @@ export function DataTable<Row, SortKey extends string = string>({
     selectableRows.some(({ row, index }) =>
       selection!.selectedRowIds.has(getRowId(row, index)),
     );
+  const renderedTopRow: ReactNode = isDataTableTopRowConfig(topRow)
+    ? renderStructuredTopRow(topRow)
+    : topRow;
 
   return (
     <div className={cn("flex min-h-0 flex-col overflow-hidden", className)}>
@@ -238,7 +395,7 @@ export function DataTable<Row, SortKey extends string = string>({
           ) : null}
 
           <thead className={theadClassName}>
-            {topRow ? (
+            {renderedTopRow ? (
               <tr className={topRowClassName}>
                 <td
                   colSpan={columnSpan}
@@ -248,7 +405,7 @@ export function DataTable<Row, SortKey extends string = string>({
                     topRowCellClassName,
                   )}
                 >
-                  {topRow}
+                  {renderedTopRow}
                 </td>
               </tr>
             ) : null}
