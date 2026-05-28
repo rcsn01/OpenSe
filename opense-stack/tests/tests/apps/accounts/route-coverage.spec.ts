@@ -20,6 +20,7 @@ const onboardingRoutes = [
 ];
 const accountAliasRoutes: Array<[string, string]> = [
   ['/account', '/account/home'],
+  ['/accounts', '/account/home'],
   ['/account/general', '/account/preferences'],
   ['/account/settings', '/account/profile'],
   ['/general', '/account/preferences'],

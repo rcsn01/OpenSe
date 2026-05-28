@@ -1,4 +1,4 @@
-import { Boxes, Globe2, Palette, Workflow, type LucideIcon } from 'lucide-react'
+import { Boxes, Palette, Workflow, type LucideIcon } from 'lucide-react'
 import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
 import { AccountsPageShell } from '../components/AccountsPageShell'
 
@@ -11,7 +11,6 @@ type AppDestination = {
 }
 
 const defaultAppUrls = {
-  opense: 'http://localhost:5994',
   etl: 'http://localhost:5992',
   stoqr: 'http://localhost:5993',
   ui: 'http://localhost:5999',
@@ -40,12 +39,6 @@ const getAppDestinations = (): AppDestination[] => [
     icon: Boxes,
   },
   {
-    key: 'opense',
-    name: 'OpenSe',
-    url: getRuntimeConfigValue('VITE_OPENSE_PUBLIC_URL') ?? getRuntimeConfigValue('VITE_OPENSE_URL') ?? defaultAppUrls.opense,
-    icon: Globe2,
-  },
-  {
     key: 'ui',
     name: 'UI Design',
     url: getRuntimeConfigValue('VITE_UI_PUBLIC_URL') ?? getRuntimeConfigValue('VITE_UI_DESIGN_URL') ?? defaultAppUrls.ui,
@@ -61,7 +54,7 @@ export const HomePage = () => {
       title="Home"
       description="Open connected OpenSe apps from your account workspace."
     >
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {appDestinations.map((app) => {
           const Icon = app.icon
           const href = buildAppUrl(app.url, app.path)
