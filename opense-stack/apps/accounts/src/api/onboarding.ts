@@ -220,10 +220,10 @@ export const createOrganisationForOnboarding = async (input: {
     throw new Error('Organisation creation did not return a row.')
   }
 
-  void updateOnboardingMetadata({
+  await updateOnboardingMetadata({
     accounts_onboarding_completed: false,
     accounts_onboarding_stage: 'invite-members',
-  }).catch(() => undefined)
+  })
 
   return {
     orgId: row.org_id,
