@@ -1,5 +1,45 @@
 -- Rename the StoQR system Guest role to Default and make its permissions manager-editable.
 
+CREATE OR REPLACE FUNCTION public.prevent_owner_role_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_TABLE_SCHEMA = 'stoqr' THEN
+    IF TG_OP = 'INSERT' THEN
+      IF lower(NEW.name) NOT IN ('owner', 'default', 'guest') AND NEW.role_rank <= 0 THEN
+        RAISE EXCEPTION 'Custom StoQR roles must use a positive role rank';
+      END IF;
+
+      RETURN NEW;
+    END IF;
+
+    IF lower(OLD.name) IN ('owner', 'default', 'guest')
+      AND current_setting('app.stoqr_repair_system_role', true) IS DISTINCT FROM 'on'
+    THEN
+      RAISE EXCEPTION 'The % role is system-managed and cannot be modified or deleted', OLD.name;
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+      AND lower(OLD.name) NOT IN ('owner', 'default', 'guest')
+      AND lower(NEW.name) IN ('owner', 'default', 'guest')
+    THEN
+      RAISE EXCEPTION 'Owner, Default, and Guest are reserved system role names';
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND lower(NEW.name) NOT IN ('owner', 'default', 'guest') AND NEW.role_rank <= 0 THEN
+      RAISE EXCEPTION 'Custom StoQR roles must use a positive role rank';
+    END IF;
+  ELSIF lower(OLD.name) = 'owner' THEN
+    RAISE EXCEPTION 'The Owner role is system-managed and cannot be modified or deleted';
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
 DO $$
 BEGIN
   PERFORM set_config('app.stoqr_repair_system_role', 'on', true);
@@ -324,6 +364,7 @@ DROP FUNCTION IF EXISTS public.prevent_stoqr_guest_permission_mutation();
 
 DROP TRIGGER IF EXISTS trg_assign_stoqr_guest_role_for_seat ON public.organisation_member_app_seats;
 DROP FUNCTION IF EXISTS public.assign_stoqr_guest_role_for_seat();
+DROP TRIGGER IF EXISTS trg_assign_stoqr_default_role_for_seat ON public.organisation_member_app_seats;
 
 CREATE OR REPLACE FUNCTION public.assign_stoqr_default_role_for_seat()
 RETURNS TRIGGER
