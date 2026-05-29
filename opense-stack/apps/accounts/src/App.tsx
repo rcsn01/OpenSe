@@ -19,7 +19,7 @@ import { OnboardingInvitationChoicePage } from './pages/OnboardingInvitationChoi
 import { OnboardingCreateOrganisationPage } from './pages/OnboardingCreateOrganisationPage'
 import { OnboardingInviteMembersPage } from './pages/OnboardingInviteMembersPage'
 import { OnboardingBlockedPage } from './pages/OnboardingBlockedPage'
-import { getOnboardingCompletedFallbackPath, getOnboardingPathForStatus } from './lib/onboardingUi'
+import { getOnboardingCompletedFallbackPath, getOnboardingPathForStatus, getOnboardingStatusScope } from './lib/onboardingUi'
 import { buildPathWithQuery } from './lib/redirect'
 
 const LoadingSession = () => <EmptyState title="Loading session..." description="" />
@@ -28,7 +28,7 @@ const OnboardingGate = () => {
   const location = useLocation()
   const { user } = useAuth()
   const userId = user?.id ?? null
-  const routeScope = location.pathname.startsWith('/onboarding') ? 'onboarding' : 'account'
+  const routeScope = getOnboardingStatusScope(location.pathname)
   const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus | null>(null)
   const [onboardingLoading, setOnboardingLoading] = useState(true)
   const [onboardingStatusScope, setOnboardingStatusScope] = useState<string | null>(null)

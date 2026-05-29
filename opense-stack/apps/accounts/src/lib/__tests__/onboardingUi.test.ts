@@ -7,6 +7,7 @@ import {
   getOnboardingAppSeatSummary,
   getOnboardingPathForStatus,
   getOnboardingSelectedSeatTotal,
+  getOnboardingStatusScope,
   parseOnboardingInviteEmails,
   shouldSkipInviteMembersStep,
   validateOnboardingOrganisationForm,
@@ -97,5 +98,11 @@ describe('onboarding UI helpers', () => {
     expect(getOnboardingPathForStatus(status('invite-members'))).toBe('/onboarding/invite-members')
     expect(getOnboardingPathForStatus(status('blocked'))).toBe('/onboarding/blocked')
     expect(getOnboardingPathForStatus(status('done'))).toBe('/account/home')
+  })
+
+  it('tracks each onboarding route as a distinct status scope', () => {
+    expect(getOnboardingStatusScope('/onboarding/create-organisation')).toBe('/onboarding/create-organisation')
+    expect(getOnboardingStatusScope('/onboarding/invite-members')).toBe('/onboarding/invite-members')
+    expect(getOnboardingStatusScope('/account/home')).toBe('account')
   })
 })

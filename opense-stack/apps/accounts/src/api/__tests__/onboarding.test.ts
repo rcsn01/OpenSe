@@ -305,7 +305,7 @@ describe('onboarding api', () => {
 
   it('creates onboarding organisation through RPC with selected apps', async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: 'user-1', user_metadata: {} } },
+      data: { user: { id: 'user-1', user_metadata: { theme: 'dark' } } },
       error: null,
     })
     mockRpc.mockResolvedValue({
@@ -321,6 +321,13 @@ describe('onboarding api', () => {
     expect(mockRpc).toHaveBeenCalledWith('accounts_create_organisation', {
       p_name: 'Acme',
       p_selected_apps: ['etl'],
+    })
+    expect(mockUpdateUser).toHaveBeenCalledWith({
+      data: {
+        theme: 'dark',
+        accounts_onboarding_completed: false,
+        accounts_onboarding_stage: 'invite-members',
+      },
     })
   })
 

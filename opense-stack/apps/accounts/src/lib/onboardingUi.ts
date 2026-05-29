@@ -92,6 +92,10 @@ export const getOnboardingPathForStatus = (status: OnboardingStatus) => {
   return getOnboardingCompletedFallbackPath()
 }
 
+export const getOnboardingStatusScope = (pathname: string) => {
+  return pathname.startsWith('/onboarding') ? pathname : 'account'
+}
+
 export const getInvitationAcceptedPath = () => '/onboarding/invite-members'
 
 export const getInvitationDeclinedPath = (remainingInvites: PendingInvite[]) => {
