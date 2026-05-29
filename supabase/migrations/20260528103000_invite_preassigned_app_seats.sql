@@ -1,13 +1,13 @@
 -- Allow organisation invites to reserve app seats before the invited user accepts.
 
-CREATE TABLE public.organisation_invite_app_seats (
+CREATE TABLE IF NOT EXISTS public.organisation_invite_app_seats (
   invite_id UUID NOT NULL REFERENCES public.organisation_invites(id) ON DELETE CASCADE,
   app_code TEXT NOT NULL REFERENCES public.apps(code) ON DELETE CASCADE,
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   PRIMARY KEY (invite_id, app_code)
 );
 
-CREATE INDEX organisation_invite_app_seats_app_idx
+CREATE INDEX IF NOT EXISTS organisation_invite_app_seats_app_idx
   ON public.organisation_invite_app_seats (app_code);
 
 ALTER TABLE public.organisation_invite_app_seats ENABLE ROW LEVEL SECURITY;
@@ -15,6 +15,7 @@ ALTER TABLE public.organisation_invite_app_seats ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, DELETE ON TABLE public.organisation_invite_app_seats TO authenticated;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_invite_app_seats TO service_role;
 
+DROP POLICY IF EXISTS invite_app_seats_select ON public.organisation_invite_app_seats;
 CREATE POLICY invite_app_seats_select ON public.organisation_invite_app_seats
   FOR SELECT USING (
     EXISTS (
@@ -29,6 +30,7 @@ CREATE POLICY invite_app_seats_select ON public.organisation_invite_app_seats
     )
   );
 
+DROP POLICY IF EXISTS invite_app_seats_manage ON public.organisation_invite_app_seats;
 CREATE POLICY invite_app_seats_manage ON public.organisation_invite_app_seats
   FOR ALL USING (
     EXISTS (
@@ -273,7 +275,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.accounts_assign_org_invite_app_seat(p_invite_id UUID, p_app_code TEXT)
+CREATE OR REPLACE FUNCTION public.accounts_assign_org_invite_app_seat(p_invite_id UUID, p_app_code TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -376,7 +378,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.accounts_unassign_org_invite_app_seat(p_invite_id UUID, p_app_code TEXT)
+CREATE OR REPLACE FUNCTION public.accounts_unassign_org_invite_app_seat(p_invite_id UUID, p_app_code TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
