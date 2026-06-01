@@ -1300,109 +1300,6 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.get_stoqr_my_permissions(target_company_id UUID)
-RETURNS TABLE (code TEXT)
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-SET search_path = public, stoqr
-AS $$
-  WITH current_membership AS (
-    SELECT om.org_id, om.user_id, om.role AS org_role, cm.role_id
-    FROM public.organisation_members om
-    LEFT JOIN stoqr.organisation_member_roles cm
-      ON cm.company_id = om.org_id
-     AND cm.user_id = om.user_id
-    WHERE om.org_id = target_company_id
-      AND om.user_id = auth.uid()
-  ),
-  assigned_permissions AS (
-    SELECT ap.code AS permission_code
-    FROM current_membership cm
-    JOIN stoqr.app_permissions ap ON TRUE
-    WHERE cm.org_role = 'owner'
-    UNION
-    SELECT rp.permission_code
-    FROM current_membership cm
-    JOIN stoqr.role_permissions rp ON rp.role_id = cm.role_id
-    WHERE cm.org_role <> 'owner'
-  ),
-  permission_edges(source_code, implied_code) AS (
-    VALUES
-      ('inventory.use', 'inventory.view'),
-      ('inventory.create', 'inventory.view'),
-      ('inventory.create', 'inventory.use'),
-      ('inventory.edit', 'inventory.view'),
-      ('inventory.edit', 'inventory.use'),
-      ('inventory.adjust', 'inventory.view'),
-      ('inventory.adjust', 'inventory.use'),
-      ('inventory.delete', 'inventory.view'),
-      ('inventory.delete', 'inventory.use'),
-      ('inventory.import_export', 'inventory.view'),
-      ('inventory.import_export', 'inventory.use'),
-      ('scanner.use', 'scanner.view'),
-      ('labels.use', 'labels.view'),
-      ('labels.manage', 'labels.view'),
-      ('labels.manage', 'labels.use'),
-      ('reports.export', 'reports.view'),
-      ('procurement.create', 'procurement.view'),
-      ('procurement.receive', 'procurement.view'),
-      ('procurement.manage', 'procurement.view'),
-      ('procurement.manage', 'procurement.create'),
-      ('procurement.manage', 'procurement.receive'),
-      ('alerts.use', 'alerts.view'),
-      ('alerts.manage', 'alerts.view'),
-      ('alerts.manage', 'alerts.use'),
-      ('organisation.members.manage', 'organisation.view'),
-      ('organisation.roles.manage', 'organisation.view'),
-      ('organisation.pages.manage', 'organisation.view'),
-      ('organisation.activity.view', 'organisation.view'),
-      ('organisation.company.manage', 'organisation.view'),
-      ('organisation.billing.manage', 'organisation.view'),
-      ('products.view', 'inventory.view'),
-      ('products.view', 'inventory.use'),
-      ('products.manage', 'inventory.create'),
-      ('products.manage', 'inventory.edit'),
-      ('products.manage', 'inventory.adjust'),
-      ('products.manage', 'inventory.delete'),
-      ('products.manage', 'inventory.view'),
-      ('products.manage', 'inventory.use'),
-      ('inventory.bulk_manage', 'inventory.import_export'),
-      ('inventory.bulk_manage', 'inventory.view'),
-      ('inventory.bulk_manage', 'inventory.use'),
-      ('transactions.view', 'inventory.use'),
-      ('transactions.view', 'inventory.view'),
-      ('transactions.create', 'inventory.adjust'),
-      ('transactions.create', 'scanner.use'),
-      ('transactions.create', 'inventory.use'),
-      ('transactions.create', 'inventory.view'),
-      ('transactions.create', 'scanner.view'),
-      ('company.manage', 'organisation.company.manage'),
-      ('billing.manage', 'organisation.billing.manage'),
-      ('members.view', 'organisation.view'),
-      ('members.manage', 'organisation.members.manage'),
-      ('roles.manage', 'organisation.roles.manage'),
-      ('activity.view', 'organisation.activity.view')
-  ),
-  expanded_permissions AS (
-    SELECT permission_code AS code
-    FROM assigned_permissions
-    UNION
-    SELECT pe.implied_code
-    FROM assigned_permissions ap
-    JOIN permission_edges pe ON pe.source_code = ap.permission_code
-    UNION
-    SELECT pe2.implied_code
-    FROM assigned_permissions ap
-    JOIN permission_edges pe1 ON pe1.source_code = ap.permission_code
-    JOIN permission_edges pe2 ON pe2.source_code = pe1.implied_code
-  )
-  SELECT DISTINCT ep.code
-  FROM expanded_permissions ep
-  JOIN stoqr.app_permissions ap ON ap.code = ep.code
-  WHERE ap.hidden = false
-  ORDER BY ep.code;
-$$;
 
 CREATE FUNCTION stoqr.update_inventory_count()
 RETURNS TRIGGER
@@ -2541,410 +2438,12 @@ VALUES ('product-images', 'product-images', false)
 ON CONFLICT (id) DO UPDATE
 SET public = EXCLUDED.public;
 
-CREATE FUNCTION public.get_inventory_stats(target_company_id UUID)
-RETURNS TABLE (total_items BIGINT, low_stock_items BIGINT, total_value NUMERIC)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-BEGIN
-  IF NOT public.has_permission(target_company_id, 'inventory.view') THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
 
-  RETURN QUERY
-  SELECT
-    COUNT(*)::BIGINT AS total_items,
-    COUNT(*) FILTER (WHERE COALESCE(p.quantity_on_hand, 0) <= COALESCE(p.reorder_point, 0))::BIGINT AS low_stock_items,
-    COALESCE(SUM(COALESCE(p.quantity_on_hand, 0) * COALESCE(p.cost_price, 0)), 0)::NUMERIC AS total_value
-  FROM stoqr.products p
-  WHERE p.company_id = target_company_id;
-END;
-$$;
 
-CREATE FUNCTION public.get_stoqr_dashboard_snapshot(
-  target_company_id UUID,
-  p_days INTEGER DEFAULT 30,
-  p_activity_limit INTEGER DEFAULT 10
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-DECLARE
-  v_days INTEGER := LEAST(GREATEST(COALESCE(p_days, 30), 1), 365);
-  v_activity_limit INTEGER := LEAST(GREATEST(COALESCE(p_activity_limit, 10), 1), 100);
-  v_result JSONB;
-BEGIN
-  IF NOT public.has_permission(target_company_id, 'dashboard.view') THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
 
-  WITH product_stats AS (
-    SELECT
-      COALESCE(SUM(COALESCE(p.quantity_on_hand, 0) * COALESCE(p.cost_price, 0)), 0)::NUMERIC AS total_inventory_value,
-      COALESCE(SUM(COALESCE(p.quantity_on_hand, 0)), 0)::BIGINT AS total_stock_units,
-      COUNT(*) FILTER (
-        WHERE COALESCE(p.quantity_on_hand, 0) <= COALESCE(NULLIF(p.min_stock_level, 0), p.reorder_point, 0)
-      )::BIGINT AS low_stock_items,
-      COUNT(*) FILTER (WHERE COALESCE(p.quantity_on_hand, 0) <= 0)::BIGINT AS out_of_stock_items
-    FROM stoqr.products p
-    WHERE p.company_id = target_company_id
-      AND p.deleted_at IS NULL
-  ),
-  pending_orders AS (
-    SELECT COUNT(*)::BIGINT AS pending_orders
-    FROM stoqr.purchase_orders po
-    WHERE po.company_id = target_company_id
-      AND po.status IN ('pending_approval', 'approved', 'not_started', 'awaiting_supplier', 'in_transit', 'partial_receipt', 'awaiting_return', 'shipped_to_vendor')
-  ),
-  alert_counts AS (
-    SELECT
-      COUNT(*) FILTER (WHERE ae.status = 'open')::BIGINT AS open_alerts,
-      COUNT(*) FILTER (WHERE ae.status = 'open' AND ae.alert_type = 'low_stock')::BIGINT AS low_stock_alerts,
-      COUNT(*) FILTER (WHERE ae.status = 'open' AND ae.alert_type = 'reorder_point')::BIGINT AS reorder_alerts,
-      COUNT(*) FILTER (WHERE ae.status = 'open' AND ae.alert_type = 'expiration')::BIGINT AS expiration_alerts,
-      COUNT(*) FILTER (WHERE ae.status = 'open' AND ae.severity = 'critical')::BIGINT AS critical_alerts
-    FROM stoqr.alert_events ae
-    WHERE ae.company_id = target_company_id
-  ),
-  inventory_trend AS (
-    SELECT
-      date_trunc('day', it.created_at)::date AS day,
-      SUM(it.quantity_change)::NUMERIC AS delta
-    FROM stoqr.inventory_transactions it
-    WHERE it.company_id = target_company_id
-      AND it.created_at >= (timezone('utc'::text, now()) - make_interval(days => v_days))
-    GROUP BY 1
-    ORDER BY 1
-  ),
-  usage_trend AS (
-    SELECT
-      date_trunc('day', it.created_at)::date AS day,
-      SUM(ABS(it.quantity_change))::NUMERIC AS usage
-    FROM stoqr.inventory_transactions it
-    WHERE it.company_id = target_company_id
-      AND it.transaction_type IN ('sale', 'loss', 'scan_out')
-      AND it.created_at >= (timezone('utc'::text, now()) - make_interval(days => v_days))
-    GROUP BY 1
-    ORDER BY 1
-  ),
-  recent_activity AS (
-    SELECT jsonb_build_object(
-      'id', ae.id,
-      'event_type', ae.event_type,
-      'entity_type', ae.entity_type,
-      'entity_id', ae.entity_id,
-      'message', ae.message,
-      'metadata', ae.metadata,
-      'created_at', ae.created_at,
-      'actor', jsonb_build_object(
-        'id', prof.id,
-        'full_name', prof.full_name,
-        'username', prof.username,
-        'email', prof.email
-      )
-    ) AS row_json
-    FROM stoqr.activity_events ae
-    LEFT JOIN public.profiles prof ON prof.id = ae.actor_user_id
-    WHERE ae.company_id = target_company_id
-    ORDER BY ae.created_at DESC
-    LIMIT v_activity_limit
-  )
-  SELECT jsonb_build_object(
-    'kpis', jsonb_build_object(
-      'total_inventory_value', ps.total_inventory_value,
-      'total_stock_units', ps.total_stock_units,
-      'low_stock_items', ps.low_stock_items,
-      'out_of_stock_items', ps.out_of_stock_items,
-      'pending_orders', po.pending_orders,
-      'open_alerts', ac.open_alerts
-    ),
-    'alerts_summary', jsonb_build_object(
-      'open_alerts', ac.open_alerts,
-      'critical_alerts', ac.critical_alerts,
-      'low_stock_alerts', ac.low_stock_alerts,
-      'reorder_alerts', ac.reorder_alerts,
-      'expiration_alerts', ac.expiration_alerts
-    ),
-    'charts', jsonb_build_object(
-      'inventory_trend', COALESCE((SELECT jsonb_agg(jsonb_build_object('day', day, 'delta', delta) ORDER BY day) FROM inventory_trend), '[]'::jsonb),
-      'usage_trend', COALESCE((SELECT jsonb_agg(jsonb_build_object('day', day, 'usage', usage) ORDER BY day) FROM usage_trend), '[]'::jsonb)
-    ),
-    'recent_activity', COALESCE((SELECT jsonb_agg(row_json) FROM recent_activity), '[]'::jsonb)
-  )
-  INTO v_result
-  FROM product_stats ps
-  CROSS JOIN pending_orders po
-  CROSS JOIN alert_counts ac;
 
-  RETURN COALESCE(v_result, '{}'::jsonb);
-END;
-$$;
 
-CREATE FUNCTION public.get_stoqr_report_inventory_valuation(target_company_id UUID)
-RETURNS TABLE (
-  product_id UUID,
-  sku TEXT,
-  name TEXT,
-  quantity_on_hand INTEGER,
-  min_stock_level INTEGER,
-  reorder_point INTEGER,
-  cost_price NUMERIC,
-  selling_price NUMERIC,
-  inventory_value NUMERIC,
-  potential_revenue NUMERIC,
-  margin_per_unit NUMERIC
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-BEGIN
-  IF NOT public.has_permission(target_company_id, 'reports.view') THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
 
-  RETURN QUERY
-  SELECT
-    p.id,
-    p.sku,
-    p.name,
-    COALESCE(p.quantity_on_hand, 0),
-    COALESCE(p.min_stock_level, 0),
-    COALESCE(p.reorder_point, 0),
-    COALESCE(p.cost_price, 0)::NUMERIC,
-    COALESCE(p.selling_price, 0)::NUMERIC,
-    (COALESCE(p.quantity_on_hand, 0) * COALESCE(p.cost_price, 0))::NUMERIC,
-    (COALESCE(p.quantity_on_hand, 0) * COALESCE(p.selling_price, 0))::NUMERIC,
-    (COALESCE(p.selling_price, 0) - COALESCE(p.cost_price, 0))::NUMERIC
-  FROM stoqr.products p
-  WHERE p.company_id = target_company_id
-    AND p.deleted_at IS NULL
-  ORDER BY p.name;
-END;
-$$;
-
-CREATE FUNCTION public.get_stoqr_report_stock_movements(
-  target_company_id UUID,
-  p_start TIMESTAMPTZ DEFAULT NULL,
-  p_end TIMESTAMPTZ DEFAULT NULL
-)
-RETURNS TABLE (
-  transaction_id UUID,
-  created_at TIMESTAMPTZ,
-  transaction_type TEXT,
-  source TEXT,
-  quantity_change INTEGER,
-  stock_after INTEGER,
-  product_id UUID,
-  sku TEXT,
-  product_name TEXT,
-  performed_by UUID,
-  performer_name TEXT,
-  notes TEXT
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-BEGIN
-  IF NOT public.has_permission(target_company_id, 'reports.view') THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    it.id,
-    it.created_at,
-    it.transaction_type,
-    it.source,
-    it.quantity_change,
-    it.stock_after,
-    p.id,
-    p.sku,
-    p.name,
-    it.performed_by,
-    COALESCE(pr.full_name, pr.username, pr.email),
-    it.notes
-  FROM stoqr.inventory_transactions it
-  JOIN stoqr.products p ON p.id = it.product_id
-  LEFT JOIN public.profiles pr ON pr.id = it.performed_by
-  WHERE it.company_id = target_company_id
-    AND (p_start IS NULL OR it.created_at >= p_start)
-    AND (p_end IS NULL OR it.created_at <= p_end)
-  ORDER BY it.created_at DESC;
-END;
-$$;
-
-CREATE FUNCTION public.get_stoqr_report_usage_depletion(
-  target_company_id UUID,
-  p_start TIMESTAMPTZ DEFAULT NULL,
-  p_end TIMESTAMPTZ DEFAULT NULL
-)
-RETURNS TABLE (
-  product_id UUID,
-  sku TEXT,
-  product_name TEXT,
-  opening_stock INTEGER,
-  current_stock INTEGER,
-  total_inbound INTEGER,
-  total_outbound INTEGER,
-  net_change INTEGER,
-  avg_daily_usage NUMERIC,
-  days_of_stock_remaining NUMERIC
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-DECLARE
-  v_start TIMESTAMPTZ := COALESCE(p_start, timezone('utc'::text, now()) - INTERVAL '30 days');
-  v_end TIMESTAMPTZ := COALESCE(p_end, timezone('utc'::text, now()));
-BEGIN
-  IF NOT public.has_permission(target_company_id, 'reports.view') THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  RETURN QUERY
-  WITH tx AS (
-    SELECT
-      it.product_id,
-      SUM(CASE WHEN it.quantity_change > 0 THEN it.quantity_change ELSE 0 END)::INTEGER AS total_inbound,
-      SUM(CASE WHEN it.quantity_change < 0 THEN ABS(it.quantity_change) ELSE 0 END)::INTEGER AS total_outbound,
-      SUM(it.quantity_change)::INTEGER AS net_change
-    FROM stoqr.inventory_transactions it
-    WHERE it.company_id = target_company_id
-      AND it.created_at >= v_start
-      AND it.created_at <= v_end
-    GROUP BY it.product_id
-  )
-  SELECT
-    p.id,
-    p.sku,
-    p.name,
-    (COALESCE(p.quantity_on_hand, 0) - COALESCE(tx.net_change, 0))::INTEGER,
-    COALESCE(p.quantity_on_hand, 0)::INTEGER,
-    COALESCE(tx.total_inbound, 0)::INTEGER,
-    COALESCE(tx.total_outbound, 0)::INTEGER,
-    COALESCE(tx.net_change, 0)::INTEGER,
-    CASE
-      WHEN EXTRACT(EPOCH FROM (v_end - v_start)) <= 0 THEN 0
-      ELSE ROUND((COALESCE(tx.total_outbound, 0)::NUMERIC / GREATEST(EXTRACT(EPOCH FROM (v_end - v_start)) / 86400.0, 1)), 2)
-    END,
-    CASE
-      WHEN COALESCE(tx.total_outbound, 0) <= 0 THEN NULL
-      ELSE ROUND(
-        COALESCE(p.quantity_on_hand, 0)::NUMERIC /
-        GREATEST((COALESCE(tx.total_outbound, 0)::NUMERIC / GREATEST(EXTRACT(EPOCH FROM (v_end - v_start)) / 86400.0, 1)), 0.000001),
-        2
-      )
-    END
-  FROM stoqr.products p
-  LEFT JOIN tx ON tx.product_id = p.id
-  WHERE p.company_id = target_company_id
-    AND p.deleted_at IS NULL
-  ORDER BY p.name;
-END;
-$$;
-
-CREATE FUNCTION public.get_stoqr_report_reorder_analysis(target_company_id UUID)
-RETURNS TABLE (
-  product_id UUID,
-  sku TEXT,
-  product_name TEXT,
-  quantity_on_hand INTEGER,
-  min_stock_level INTEGER,
-  reorder_point INTEGER,
-  max_stock_level INTEGER,
-  reorder_status TEXT,
-  suggested_reorder_qty INTEGER
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-BEGIN
-  IF NOT public.has_permission(target_company_id, 'reports.view') THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    p.id,
-    p.sku,
-    p.name,
-    COALESCE(p.quantity_on_hand, 0)::INTEGER,
-    COALESCE(p.min_stock_level, 0)::INTEGER,
-    COALESCE(p.reorder_point, 0)::INTEGER,
-    COALESCE(p.max_stock_level, COALESCE(p.reorder_point, 0))::INTEGER,
-    CASE
-      WHEN COALESCE(p.quantity_on_hand, 0) <= COALESCE(p.min_stock_level, 0) THEN 'critical'
-      WHEN COALESCE(p.quantity_on_hand, 0) <= COALESCE(p.reorder_point, 0) THEN 'reorder'
-      ELSE 'ok'
-    END,
-    GREATEST(COALESCE(p.max_stock_level, COALESCE(p.reorder_point, 0)) - COALESCE(p.quantity_on_hand, 0), 0)::INTEGER
-  FROM stoqr.products p
-  WHERE p.company_id = target_company_id
-    AND p.deleted_at IS NULL
-  ORDER BY p.name;
-END;
-$$;
-
-CREATE FUNCTION public.get_stoqr_report_dead_stock(
-  target_company_id UUID,
-  p_inactive_days INTEGER DEFAULT 90
-)
-RETURNS TABLE (
-  product_id UUID,
-  sku TEXT,
-  product_name TEXT,
-  quantity_on_hand INTEGER,
-  inventory_value NUMERIC,
-  last_movement_at TIMESTAMPTZ,
-  days_since_last_movement INTEGER
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-DECLARE
-  v_inactive_days INTEGER := LEAST(GREATEST(COALESCE(p_inactive_days, 90), 1), 3650);
-BEGIN
-  IF NOT public.has_permission(target_company_id, 'reports.view') THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  RETURN QUERY
-  WITH last_movement AS (
-    SELECT
-      it.product_id,
-      MAX(it.created_at) AS last_movement_at
-    FROM stoqr.inventory_transactions it
-    WHERE it.company_id = target_company_id
-    GROUP BY it.product_id
-  )
-  SELECT
-    p.id,
-    p.sku,
-    p.name,
-    COALESCE(p.quantity_on_hand, 0)::INTEGER,
-    (COALESCE(p.quantity_on_hand, 0) * COALESCE(p.cost_price, 0))::NUMERIC,
-    lm.last_movement_at,
-    COALESCE((EXTRACT(EPOCH FROM (timezone('utc'::text, now()) - lm.last_movement_at)) / 86400)::INTEGER, 999999)
-  FROM stoqr.products p
-  LEFT JOIN last_movement lm ON lm.product_id = p.id
-  WHERE p.company_id = target_company_id
-    AND p.deleted_at IS NULL
-    AND COALESCE(p.quantity_on_hand, 0) > 0
-    AND (
-      lm.last_movement_at IS NULL
-      OR lm.last_movement_at <= timezone('utc'::text, now()) - make_interval(days => v_inactive_days)
-    )
-  ORDER BY days_since_last_movement DESC, p.name;
-END;
-$$;
 
 CREATE FUNCTION public.create_stoqr_report_export(
   target_company_id UUID,
@@ -2992,48 +2491,6 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.get_stoqr_alert_products(target_company_id UUID)
-RETURNS TABLE (
-  id UUID,
-  name TEXT,
-  sku TEXT,
-  quantity_on_hand INTEGER,
-  reorder_point INTEGER,
-  expiry_date DATE,
-  folder_id UUID,
-  folder_name TEXT
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-BEGIN
-  IF NOT (
-    public.has_permission(target_company_id, 'alerts.view')
-    OR public.has_permission(target_company_id, 'inventory.view')
-  ) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    p.id,
-    p.name,
-    p.sku,
-    COALESCE(pfs.quantity_on_hand, p.quantity_on_hand, 0)::INTEGER,
-    COALESCE(NULLIF(pfs.reorder_point, 0), p.reorder_point, 0)::INTEGER,
-    p.expiry_date,
-    pfs.folder_id,
-    stoqr.folder_path_name(pfs.folder_id)
-  FROM stoqr.products p
-  LEFT JOIN stoqr.product_folder_stocks pfs
-    ON pfs.product_id = p.id
-   AND pfs.company_id = p.company_id
-  WHERE p.company_id = target_company_id
-    AND p.deleted_at IS NULL
-  ORDER BY p.name, folder_name;
-END;
-$$;
 
 CREATE FUNCTION stoqr.evaluate_low_stock_alerts()
 RETURNS TRIGGER
@@ -3460,72 +2917,6 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.get_stoqr_delivered_alert_events(target_company_id UUID)
-RETURNS TABLE (
-  id UUID,
-  company_id UUID,
-  rule_id UUID,
-  product_id UUID,
-  alert_type TEXT,
-  severity TEXT,
-  status TEXT,
-  message TEXT,
-  triggered_at TIMESTAMPTZ,
-  delivery_id UUID,
-  product_name TEXT,
-  product_sku TEXT,
-  folder_id UUID,
-  folder_name TEXT
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-BEGIN
-  IF NOT (
-    public.has_permission(target_company_id, 'alerts.view')
-    OR public.has_permission(target_company_id, 'alerts.use')
-    OR public.has_permission(target_company_id, 'alerts.manage')
-    OR public.has_permission(target_company_id, 'dashboard.view')
-  ) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  RETURN QUERY
-  WITH visible_events AS (
-    SELECT DISTINCT ON (ae.id)
-      ae.id,
-      ae.company_id,
-      ae.rule_id,
-      ae.product_id,
-      ae.alert_type,
-      ae.severity,
-      ae.status,
-      ae.message,
-      ae.triggered_at,
-      adl.id AS delivery_id,
-      p.name AS product_name,
-      p.sku AS product_sku,
-      ae.folder_id,
-      stoqr.folder_path_name(ae.folder_id) AS folder_name
-    FROM stoqr.alert_events ae
-    LEFT JOIN stoqr.alert_delivery_logs adl
-      ON adl.alert_event_id = ae.id
-     AND adl.channel = 'in_app'
-    LEFT JOIN stoqr.products p ON p.id = ae.product_id
-    WHERE ae.company_id = target_company_id
-      AND (
-        public.has_permission(target_company_id, 'alerts.manage')
-        OR public.has_permission(target_company_id, 'alerts.use')
-        OR adl.recipient = auth.uid()::text
-      )
-    ORDER BY ae.id, ae.triggered_at DESC
-  )
-  SELECT *
-  FROM visible_events
-  ORDER BY triggered_at DESC;
-END;
-$$;
 
 CREATE FUNCTION public.update_stoqr_delivered_alert_status(
   target_company_id UUID,
@@ -3649,7 +3040,6 @@ REVOKE ALL ON FUNCTION public.assign_stoqr_guest_role_for_seat() FROM PUBLIC, an
 REVOKE ALL ON FUNCTION public.grant_new_permission_to_owner_roles() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ensure_org_owner_member_and_default_seats() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.has_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_stoqr_my_permissions(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.update_inventory_count() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.folder_path_name(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.sync_product_stock_total() FROM PUBLIC, anon, authenticated;
@@ -3657,21 +3047,12 @@ REVOKE ALL ON FUNCTION public.transfer_stoqr_product_stock(UUID, UUID, UUID, UUI
 REVOKE ALL ON FUNCTION stoqr.evaluate_low_stock_alerts() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.capture_activity_event() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_inventory_stats(UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_stoqr_dashboard_snapshot(UUID, INTEGER, INTEGER) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_inventory_valuation(UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_stock_movements(UUID, TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_usage_depletion(UUID, TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_reorder_analysis(UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_stoqr_report_dead_stock(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE, DATE, JSONB) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_stoqr_alert_products(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_stoqr_delivered_alert_events(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO service_role;
@@ -3680,23 +3061,480 @@ GRANT EXECUTE ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) TO service_rol
 GRANT EXECUTE ON FUNCTION public.ensure_stoqr_guest_role(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.ensure_owner_app_roles(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.has_permission(UUID, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_stoqr_my_permissions(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION stoqr.folder_path_name(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.transfer_stoqr_product_stock(UUID, UUID, UUID, UUID, INTEGER, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.get_inventory_stats(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_stoqr_dashboard_snapshot(UUID, INTEGER, INTEGER) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_stoqr_report_inventory_valuation(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_stoqr_report_stock_movements(UUID, TIMESTAMPTZ, TIMESTAMPTZ) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_stoqr_report_usage_depletion(UUID, TIMESTAMPTZ, TIMESTAMPTZ) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_stoqr_report_reorder_analysis(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_stoqr_report_dead_stock(UUID, INTEGER) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE, DATE, JSONB) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_stoqr_alert_products(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) TO service_role;
 GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) TO service_role;
 GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.get_stoqr_delivered_alert_events(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) TO authenticated, service_role;
+
+
+-- Squashed from 20260528090000_stoqr_default_role.sql.
+
+-- Rename the StoQR system Guest role to Default and make its permissions manager-editable.
+
+CREATE OR REPLACE FUNCTION public.prevent_owner_role_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_TABLE_SCHEMA = 'stoqr' THEN
+    IF TG_OP = 'INSERT' THEN
+      IF lower(NEW.name) NOT IN ('owner', 'default', 'guest') AND NEW.role_rank <= 0 THEN
+        RAISE EXCEPTION 'Custom StoQR roles must use a positive role rank';
+      END IF;
+
+      RETURN NEW;
+    END IF;
+
+    IF lower(OLD.name) IN ('owner', 'default', 'guest')
+      AND current_setting('app.stoqr_repair_system_role', true) IS DISTINCT FROM 'on'
+    THEN
+      RAISE EXCEPTION 'The % role is system-managed and cannot be modified or deleted', OLD.name;
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+      AND lower(OLD.name) NOT IN ('owner', 'default', 'guest')
+      AND lower(NEW.name) IN ('owner', 'default', 'guest')
+    THEN
+      RAISE EXCEPTION 'Owner, Default, and Guest are reserved system role names';
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND lower(NEW.name) NOT IN ('owner', 'default', 'guest') AND NEW.role_rank <= 0 THEN
+      RAISE EXCEPTION 'Custom StoQR roles must use a positive role rank';
+    END IF;
+  ELSIF lower(OLD.name) = 'owner' THEN
+    RAISE EXCEPTION 'The Owner role is system-managed and cannot be modified or deleted';
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+DO $$
+BEGIN
+  PERFORM set_config('app.stoqr_repair_system_role', 'on', true);
+
+  UPDATE stoqr.roles r
+  SET name = 'Default custom ' || substr(r.id::text, 1, 8),
+      role_rank = COALESCE((
+        SELECT max(existing.role_rank) + 1
+        FROM stoqr.roles existing
+        WHERE existing.company_id = r.company_id
+          AND existing.id <> r.id
+      ), 100)
+  WHERE lower(r.name) = 'default'
+    AND EXISTS (
+      SELECT 1
+      FROM stoqr.roles guest_role
+      WHERE guest_role.company_id = r.company_id
+        AND lower(guest_role.name) = 'guest'
+    );
+
+  UPDATE stoqr.roles
+  SET name = 'Default',
+      description = 'System-managed default role',
+      role_rank = 0
+  WHERE lower(name) = 'guest';
+
+  UPDATE stoqr.roles
+  SET description = 'System-managed default role',
+      role_rank = 0
+  WHERE lower(name) = 'default';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.pick_stoqr_role_for_org_member(_org_id UUID, _org_role TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public, stoqr
+AS $$
+DECLARE
+  v_role_id UUID;
+BEGIN
+  IF _org_role = 'owner' THEN
+    SELECT r.id
+    INTO v_role_id
+    FROM stoqr.roles r
+    WHERE r.company_id = _org_id
+      AND lower(r.name) = 'owner'
+    LIMIT 1;
+
+    IF v_role_id IS NOT NULL THEN
+      RETURN v_role_id;
+    END IF;
+  END IF;
+
+  IF _org_role = 'admin' THEN
+    SELECT r.id
+    INTO v_role_id
+    FROM stoqr.roles r
+    WHERE r.company_id = _org_id
+      AND lower(r.name) <> 'owner'
+      AND EXISTS (
+        SELECT 1
+        FROM stoqr.role_permissions rp
+        WHERE rp.role_id = r.id
+          AND rp.permission_code IN ('organisation.members.manage', 'members.manage')
+      )
+    ORDER BY r.role_rank DESC, r.created_at
+    LIMIT 1;
+
+    IF v_role_id IS NOT NULL THEN
+      RETURN v_role_id;
+    END IF;
+
+    SELECT r.id
+    INTO v_role_id
+    FROM stoqr.roles r
+    WHERE r.company_id = _org_id
+      AND EXISTS (
+        SELECT 1
+        FROM stoqr.role_permissions rp
+        WHERE rp.role_id = r.id
+          AND rp.permission_code IN ('organisation.company.manage', 'company.manage')
+      )
+    ORDER BY r.role_rank DESC, r.created_at
+    LIMIT 1;
+
+    IF v_role_id IS NOT NULL THEN
+      RETURN v_role_id;
+    END IF;
+  END IF;
+
+  IF _org_role = 'editor' THEN
+    SELECT r.id
+    INTO v_role_id
+    FROM stoqr.roles r
+    WHERE r.company_id = _org_id
+      AND EXISTS (
+        SELECT 1
+        FROM stoqr.role_permissions rp
+        WHERE rp.role_id = r.id
+          AND rp.permission_code IN ('inventory.edit', 'inventory.create', 'products.manage')
+      )
+    ORDER BY r.role_rank DESC, r.created_at
+    LIMIT 1;
+
+    IF v_role_id IS NOT NULL THEN
+      RETURN v_role_id;
+    END IF;
+  END IF;
+
+  SELECT r.id
+  INTO v_role_id
+  FROM stoqr.roles r
+  WHERE r.company_id = _org_id
+    AND lower(r.name) = 'default'
+  ORDER BY r.created_at
+  LIMIT 1;
+
+  IF v_role_id IS NOT NULL THEN
+    RETURN v_role_id;
+  END IF;
+
+  SELECT r.id
+  INTO v_role_id
+  FROM stoqr.roles r
+  WHERE r.company_id = _org_id
+    AND lower(r.name) <> 'owner'
+  ORDER BY r.role_rank DESC, r.created_at
+  LIMIT 1;
+
+  RETURN v_role_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.pick_next_stoqr_role(p_company_id UUID, p_excluded_role_id UUID DEFAULT NULL)
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public, stoqr
+AS $$
+  SELECT r.id
+  FROM stoqr.roles r
+  WHERE r.company_id = p_company_id
+    AND lower(r.name) <> 'owner'
+    AND (p_excluded_role_id IS NULL OR r.id <> p_excluded_role_id)
+  ORDER BY CASE WHEN lower(r.name) = 'default' THEN 0 ELSE 1 END, r.role_rank DESC, r.created_at
+  LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ensure_stoqr_default_role(p_org_id UUID)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+DECLARE
+  v_default_role_id UUID;
+  v_conflicting_rank_role_id UUID;
+  v_created BOOLEAN := false;
+BEGIN
+  SELECT r.id
+  INTO v_default_role_id
+  FROM stoqr.roles r
+  WHERE r.company_id = p_org_id
+    AND lower(r.name) IN ('default', 'guest')
+  ORDER BY CASE WHEN lower(r.name) = 'default' THEN 0 ELSE 1 END, r.created_at
+  LIMIT 1;
+
+  SELECT r.id
+  INTO v_conflicting_rank_role_id
+  FROM stoqr.roles r
+  WHERE r.company_id = p_org_id
+    AND lower(r.name) NOT IN ('default', 'guest')
+    AND r.role_rank = 0
+  ORDER BY r.created_at
+  LIMIT 1;
+
+  IF v_conflicting_rank_role_id IS NOT NULL THEN
+    UPDATE stoqr.roles r
+    SET role_rank = COALESCE((
+      SELECT max(existing.role_rank) + 1
+      FROM stoqr.roles existing
+      WHERE existing.company_id = p_org_id
+        AND existing.id <> v_conflicting_rank_role_id
+    ), 100)
+    WHERE r.id = v_conflicting_rank_role_id;
+  END IF;
+
+  IF v_default_role_id IS NULL THEN
+    INSERT INTO stoqr.roles (company_id, name, description, role_rank)
+    VALUES (p_org_id, 'Default', 'System-managed default role', 0)
+    RETURNING id INTO v_default_role_id;
+    v_created := true;
+  ELSE
+    PERFORM set_config('app.stoqr_repair_system_role', 'on', true);
+
+    UPDATE stoqr.roles
+    SET name = 'Default',
+        description = 'System-managed default role',
+        role_rank = 0
+    WHERE id = v_default_role_id;
+  END IF;
+
+  IF v_created THEN
+    INSERT INTO stoqr.role_permissions (role_id, permission_code)
+    VALUES
+      (v_default_role_id, 'dashboard.view'),
+      (v_default_role_id, 'inventory.view')
+    ON CONFLICT (role_id, permission_code) DO NOTHING;
+  END IF;
+
+  RETURN v_default_role_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ensure_stoqr_guest_role(p_org_id UUID)
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+  SELECT public.ensure_stoqr_default_role(p_org_id);
+$$;
+
+CREATE OR REPLACE FUNCTION public.ensure_owner_app_roles(p_org_id UUID)
+RETURNS TABLE (owner_stoqr_role_id UUID, owner_etl_role_id UUID)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr, etl
+AS $$
+BEGIN
+  SELECT r.id
+  INTO owner_stoqr_role_id
+  FROM stoqr.roles r
+  WHERE r.company_id = p_org_id
+    AND lower(r.name) = 'owner'
+  ORDER BY r.created_at
+  LIMIT 1;
+
+  IF owner_stoqr_role_id IS NULL THEN
+    INSERT INTO stoqr.roles (company_id, name, description, role_rank)
+    VALUES (p_org_id, 'Owner', 'System-managed owner role', 1000)
+    RETURNING id INTO owner_stoqr_role_id;
+  END IF;
+
+  INSERT INTO stoqr.role_permissions (role_id, permission_code)
+  SELECT owner_stoqr_role_id, ap.code
+  FROM stoqr.app_permissions ap
+  ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+  PERFORM public.ensure_stoqr_default_role(p_org_id);
+
+  SELECT r.id
+  INTO owner_etl_role_id
+  FROM etl.roles r
+  WHERE r.org_id = p_org_id
+    AND lower(r.name) = 'owner'
+  ORDER BY r.created_at
+  LIMIT 1;
+
+  IF owner_etl_role_id IS NULL THEN
+    INSERT INTO etl.roles (org_id, name, description, role_rank)
+    VALUES (p_org_id, 'Owner', 'System-managed owner role', 1000)
+    RETURNING id INTO owner_etl_role_id;
+  END IF;
+
+  INSERT INTO etl.role_permissions (role_id, permission_code)
+  SELECT owner_etl_role_id, ap.code
+  FROM etl.app_permissions ap
+  ON CONFLICT (role_id, permission_code) DO NOTHING;
+
+  RETURN QUERY
+  SELECT owner_stoqr_role_id, owner_etl_role_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.prevent_owner_role_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_TABLE_SCHEMA = 'stoqr' THEN
+    IF TG_OP = 'INSERT' THEN
+      IF lower(NEW.name) NOT IN ('owner', 'default', 'guest') AND NEW.role_rank <= 0 THEN
+        RAISE EXCEPTION 'Custom StoQR roles must use a positive role rank';
+      END IF;
+
+      RETURN NEW;
+    END IF;
+
+    IF lower(OLD.name) IN ('owner', 'default', 'guest')
+      AND current_setting('app.stoqr_repair_system_role', true) IS DISTINCT FROM 'on'
+    THEN
+      RAISE EXCEPTION 'The % role is system-managed and cannot be modified or deleted', OLD.name;
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+      AND lower(OLD.name) NOT IN ('owner', 'default', 'guest')
+      AND lower(NEW.name) IN ('owner', 'default', 'guest')
+    THEN
+      RAISE EXCEPTION 'Owner, Default, and Guest are reserved system role names';
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND lower(NEW.name) NOT IN ('owner', 'default', 'guest') AND NEW.role_rank <= 0 THEN
+      RAISE EXCEPTION 'Custom StoQR roles must use a positive role rank';
+    END IF;
+  ELSIF lower(OLD.name) = 'owner' THEN
+    RAISE EXCEPTION 'The Owner role is system-managed and cannot be modified or deleted';
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_prevent_stoqr_guest_permission_mutation ON stoqr.role_permissions;
+DROP FUNCTION IF EXISTS public.prevent_stoqr_guest_permission_mutation();
+
+DROP TRIGGER IF EXISTS trg_assign_stoqr_guest_role_for_seat ON public.organisation_member_app_seats;
+DROP FUNCTION IF EXISTS public.assign_stoqr_guest_role_for_seat();
+DROP TRIGGER IF EXISTS trg_assign_stoqr_default_role_for_seat ON public.organisation_member_app_seats;
+
+CREATE OR REPLACE FUNCTION public.assign_stoqr_default_role_for_seat()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, stoqr
+AS $$
+DECLARE
+  v_org_id UUID;
+  v_user_id UUID;
+  v_default_role_id UUID;
+BEGIN
+  IF NEW.app_code <> 'stoqr' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT om.org_id, om.user_id
+  INTO v_org_id, v_user_id
+  FROM public.organisation_members om
+  WHERE om.id = NEW.org_member_id;
+
+  IF v_org_id IS NULL OR v_user_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT public.ensure_stoqr_default_role(v_org_id)
+  INTO v_default_role_id;
+
+  INSERT INTO stoqr.organisation_member_roles (user_id, company_id, role_id)
+  VALUES (v_user_id, v_org_id, v_default_role_id)
+  ON CONFLICT (user_id, company_id) DO NOTHING;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_assign_stoqr_default_role_for_seat
+  AFTER INSERT ON public.organisation_member_app_seats
+  FOR EACH ROW
+  EXECUTE FUNCTION public.assign_stoqr_default_role_for_seat();
+
+DROP POLICY IF EXISTS "Admins can manage roles" ON stoqr.roles;
+CREATE POLICY "Admins can manage roles" ON stoqr.roles
+  FOR ALL USING (
+    public.has_permission(company_id, 'organisation.roles.manage')
+    AND lower(name) NOT IN ('owner', 'default', 'guest')
+  )
+  WITH CHECK (
+    public.has_permission(company_id, 'organisation.roles.manage')
+    AND lower(name) NOT IN ('owner', 'default', 'guest')
+    AND role_rank > 0
+  );
+
+DROP POLICY IF EXISTS "Admins can manage role permissions" ON stoqr.role_permissions;
+CREATE POLICY "Admins can manage role permissions" ON stoqr.role_permissions
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM stoqr.roles r
+      WHERE r.id = role_permissions.role_id
+        AND public.has_permission(r.company_id, 'organisation.roles.manage')
+        AND lower(r.name) <> 'owner'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM stoqr.roles r
+      WHERE r.id = role_permissions.role_id
+        AND public.has_permission(r.company_id, 'organisation.roles.manage')
+        AND lower(r.name) <> 'owner'
+    )
+  );
+
+REVOKE ALL ON FUNCTION public.ensure_stoqr_default_role(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ensure_stoqr_guest_role(UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.assign_stoqr_default_role_for_seat() FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION public.ensure_stoqr_default_role(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.ensure_stoqr_guest_role(UUID) TO service_role;
+
+
+-- Squashed from 20260601040340_harden_function_execute_privileges.sql.
+
+-- These StoQR functions are trigger-only helpers for product identity bookkeeping.
+-- Direct Data API/RPC execution is intentionally blocked for client roles.
+REVOKE ALL ON FUNCTION stoqr.normalize_product_identity_fields() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION stoqr.sync_product_barcode_identities() FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION stoqr.normalize_product_identity_fields() TO service_role;
+GRANT EXECUTE ON FUNCTION stoqr.sync_product_barcode_identities() TO service_role;
+
+-- Future functions in exposed schemas should opt in to client EXECUTE grants explicitly.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA etl REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA stoqr REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
