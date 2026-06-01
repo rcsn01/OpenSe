@@ -192,8 +192,8 @@ LEFT JOIN stoqr.alert_delivery_logs adl
  AND adl.channel = 'in_app'
 LEFT JOIN stoqr.products p ON p.id = ae.product_id
 WHERE
-  public.has_permission(ae.company_id, 'alerts.manage')
-  OR public.has_permission(ae.company_id, 'alerts.use')
+  app_private.has_permission(ae.company_id, 'alerts.manage')
+  OR app_private.has_permission(ae.company_id, 'alerts.use')
   OR adl.recipient = auth.uid()::TEXT
 ORDER BY ae.id, ae.triggered_at DESC;
 

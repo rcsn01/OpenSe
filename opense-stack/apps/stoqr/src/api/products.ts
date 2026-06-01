@@ -297,19 +297,40 @@ export const updateProduct = async (
 }
 
 export const transferProductStock = async (params: TransferProductStockParams): Promise<string> => {
-  const { data, error } = await supabase.rpc('transfer_stoqr_product_stock', {
-    target_company_id: params.companyId,
-    target_product_id: params.productId,
-    from_folder_id: params.fromFolderId,
-    to_folder_id: params.toFolderId,
-    transfer_quantity: params.quantity,
-    transfer_notes: normalizeOptionalText(params.notes),
-  })
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError) throw userError
+
+  const transferGroupId = crypto.randomUUID()
+  const performedBy = userData.user?.id ?? null
+
+  const { error } = await db.from('inventory_transactions').insert([
+    {
+      company_id: params.companyId,
+      product_id: params.productId,
+      folder_id: params.fromFolderId,
+      performed_by: performedBy,
+      transaction_type: 'transfer_out',
+      source: 'manual',
+      quantity_change: -Math.abs(params.quantity),
+      transfer_group_id: transferGroupId,
+      notes: normalizeOptionalText(params.notes),
+    },
+    {
+      company_id: params.companyId,
+      product_id: params.productId,
+      folder_id: params.toFolderId,
+      performed_by: performedBy,
+      transaction_type: 'transfer_in',
+      source: 'manual',
+      quantity_change: Math.abs(params.quantity),
+      transfer_group_id: transferGroupId,
+      notes: normalizeOptionalText(params.notes),
+    },
+  ])
 
   if (error) throw error
-  if (!data) throw new Error('Stock transfer did not return a transfer group id')
 
-  return String(data)
+  return transferGroupId
 }
 
 export const fetchProductDetail = async (

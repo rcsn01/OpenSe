@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockRpc = vi.fn()
 const mockFrom = vi.fn()
 const mockGetOrganisationInvitesForOrg = vi.fn()
 const mockInviteOrganisationMember = vi.fn()
@@ -8,7 +7,6 @@ const mockCancelOrganisationInviteForOrg = vi.fn()
 
 vi.mock('@repo/shared/supabase', () => ({
   supabase: {
-    rpc: (...args: unknown[]) => mockRpc(...args),
     from: (...args: unknown[]) => mockFrom(...args),
   },
 }))
@@ -36,8 +34,6 @@ beforeEach(() => {
 
 describe('seatAssignments api', () => {
   it('builds seat assignment snapshot and filters unsupported app codes', async () => {
-    mockRpc
-      .mockResolvedValue({ error: null })
     mockFrom.mockImplementation((table: string) => {
       if (table === 'account_org_context') {
         const limit = vi.fn().mockResolvedValue({
@@ -129,48 +125,80 @@ describe('seatAssignments api', () => {
     )
   })
 
-  it('assignSeat calls RPC with expected payload', async () => {
-    mockRpc.mockResolvedValue({ error: null })
+  it('assignSeat writes through the member seat table', async () => {
+    const upsert = vi.fn().mockResolvedValue({ error: null })
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_member_app_seats') throw new Error(`Unexpected table: ${table}`)
+      return { upsert }
+    })
 
     await assignSeat('member-1', 'etl')
 
-    expect(mockRpc).toHaveBeenCalledWith('accounts_assign_org_member_app_seat', {
-      p_org_member_id: 'member-1',
-      p_app_code: 'etl',
-    })
+    expect(mockFrom).toHaveBeenCalledWith('organisation_member_app_seats')
+    expect(upsert).toHaveBeenCalledWith(
+      {
+        org_member_id: 'member-1',
+        app_code: 'etl',
+      },
+      { onConflict: 'org_member_id,app_code' },
+    )
   })
 
-  it('unassignSeat calls RPC with expected payload', async () => {
-    mockRpc.mockResolvedValue({ error: null })
+  it('unassignSeat deletes the member seat row directly', async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null })
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_member_app_seats') throw new Error(`Unexpected table: ${table}`)
+      return {
+        delete: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq,
+          })),
+        })),
+      }
+    })
 
     await unassignSeat('member-1', 'stoqr')
 
-    expect(mockRpc).toHaveBeenCalledWith('accounts_unassign_org_member_app_seat', {
-      p_org_member_id: 'member-1',
-      p_app_code: 'stoqr',
-    })
+    expect(mockFrom).toHaveBeenCalledWith('organisation_member_app_seats')
+    expect(eq).toHaveBeenCalledWith('app_code', 'stoqr')
   })
 
-  it('assignInviteSeat calls RPC with expected payload', async () => {
-    mockRpc.mockResolvedValue({ error: null })
+  it('assignInviteSeat writes through the invite seat table', async () => {
+    const upsert = vi.fn().mockResolvedValue({ error: null })
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_invite_app_seats') throw new Error(`Unexpected table: ${table}`)
+      return { upsert }
+    })
 
     await assignInviteSeat('inv-1', 'etl')
 
-    expect(mockRpc).toHaveBeenCalledWith('accounts_assign_org_invite_app_seat', {
-      p_invite_id: 'inv-1',
-      p_app_code: 'etl',
-    })
+    expect(mockFrom).toHaveBeenCalledWith('organisation_invite_app_seats')
+    expect(upsert).toHaveBeenCalledWith(
+      {
+        invite_id: 'inv-1',
+        app_code: 'etl',
+      },
+      { onConflict: 'invite_id,app_code' },
+    )
   })
 
-  it('unassignInviteSeat calls RPC with expected payload', async () => {
-    mockRpc.mockResolvedValue({ error: null })
+  it('unassignInviteSeat deletes the invite seat row directly', async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null })
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_invite_app_seats') throw new Error(`Unexpected table: ${table}`)
+      return {
+        delete: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq,
+          })),
+        })),
+      }
+    })
 
     await unassignInviteSeat('inv-1', 'stoqr')
 
-    expect(mockRpc).toHaveBeenCalledWith('accounts_unassign_org_invite_app_seat', {
-      p_invite_id: 'inv-1',
-      p_app_code: 'stoqr',
-    })
+    expect(mockFrom).toHaveBeenCalledWith('organisation_invite_app_seats')
+    expect(eq).toHaveBeenCalledWith('app_code', 'stoqr')
   })
 
   it('inviteSeatMembers normalizes and de-duplicates emails before inviting and assigning pending seats', async () => {
@@ -189,7 +217,12 @@ describe('seatAssignments api', () => {
         created_at: '2026-05-20T00:00:00.000Z',
         assigned_apps: [],
       })
-    mockRpc.mockResolvedValue({ error: null })
+
+    const inviteUpsert = vi.fn().mockResolvedValue({ error: null })
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_invite_app_seats') throw new Error(`Unexpected table: ${table}`)
+      return { upsert: inviteUpsert }
+    })
 
     await inviteSeatMembers('org-1', [
       ' MEMBER@Example.com ',
@@ -201,23 +234,23 @@ describe('seatAssignments api', () => {
     expect(mockInviteOrganisationMember).toHaveBeenCalledTimes(2)
     expect(mockInviteOrganisationMember).toHaveBeenNthCalledWith(1, 'org-1', 'member@example.com', 'member')
     expect(mockInviteOrganisationMember).toHaveBeenNthCalledWith(2, 'org-1', 'second@example.com', 'member')
-    expect(mockRpc).toHaveBeenCalledTimes(4)
-    expect(mockRpc).toHaveBeenNthCalledWith(1, 'accounts_assign_org_invite_app_seat', {
-      p_invite_id: 'inv-1',
-      p_app_code: 'etl',
-    })
-    expect(mockRpc).toHaveBeenNthCalledWith(2, 'accounts_assign_org_invite_app_seat', {
-      p_invite_id: 'inv-1',
-      p_app_code: 'stoqr',
-    })
-    expect(mockRpc).toHaveBeenNthCalledWith(3, 'accounts_assign_org_invite_app_seat', {
-      p_invite_id: 'inv-2',
-      p_app_code: 'etl',
-    })
-    expect(mockRpc).toHaveBeenNthCalledWith(4, 'accounts_assign_org_invite_app_seat', {
-      p_invite_id: 'inv-2',
-      p_app_code: 'stoqr',
-    })
+    expect(inviteUpsert).toHaveBeenCalledTimes(4)
+    expect(inviteUpsert).toHaveBeenNthCalledWith(1, {
+      invite_id: 'inv-1',
+      app_code: 'etl',
+    }, { onConflict: 'invite_id,app_code' })
+    expect(inviteUpsert).toHaveBeenNthCalledWith(2, {
+      invite_id: 'inv-1',
+      app_code: 'stoqr',
+    }, { onConflict: 'invite_id,app_code' })
+    expect(inviteUpsert).toHaveBeenNthCalledWith(3, {
+      invite_id: 'inv-2',
+      app_code: 'etl',
+    }, { onConflict: 'invite_id,app_code' })
+    expect(inviteUpsert).toHaveBeenNthCalledWith(4, {
+      invite_id: 'inv-2',
+      app_code: 'stoqr',
+    }, { onConflict: 'invite_id,app_code' })
   })
 
   it('cancelSeatInvite delegates to shared org invite cancellation', async () => {
@@ -228,8 +261,13 @@ describe('seatAssignments api', () => {
     expect(mockCancelOrganisationInviteForOrg).toHaveBeenCalledWith('org-1', 'inv-1')
   })
 
-  it('propagates RPC errors from seat assignment operations', async () => {
-    mockRpc.mockResolvedValue({ error: { message: 'rpc failed' } })
+  it('propagates write errors from seat assignment operations', async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_member_app_seats') throw new Error(`Unexpected table: ${table}`)
+      return {
+        upsert: vi.fn().mockResolvedValue({ error: { message: 'rpc failed' } }),
+      }
+    })
 
     await expect(assignSeat('member-1', 'etl')).rejects.toMatchObject({ message: 'rpc failed' })
   })

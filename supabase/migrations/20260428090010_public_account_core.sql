@@ -188,7 +188,7 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION public.is_org_owner(p_org_id UUID, p_user_id UUID)
+CREATE FUNCTION app_private.is_org_owner(p_org_id UUID, p_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
@@ -204,7 +204,7 @@ AS $$
   );
 $$;
 
-CREATE FUNCTION public.is_org_member(p_org_id UUID, p_user_id UUID)
+CREATE FUNCTION app_private.is_org_member(p_org_id UUID, p_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
@@ -220,7 +220,7 @@ AS $$
   );
 $$;
 
-CREATE FUNCTION public.is_org_admin(p_org_id UUID, p_user_id UUID)
+CREATE FUNCTION app_private.is_org_admin(p_org_id UUID, p_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
@@ -237,7 +237,7 @@ AS $$
   );
 $$;
 
-CREATE FUNCTION public.is_org_owner_strictly(p_org_id UUID, p_user_id UUID)
+CREATE FUNCTION app_private.is_org_owner_strictly(p_org_id UUID, p_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
@@ -283,15 +283,15 @@ REVOKE ALL ON FUNCTION public.has_users() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.demote_org_role(TEXT) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_org_owner(UUID, UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_org_member(UUID, UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_org_admin(UUID, UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_org_owner_strictly(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.is_org_owner(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.is_org_member(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.is_org_admin(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.is_org_owner_strictly(UUID, UUID) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.has_users() TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.demote_org_role(TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.is_org_owner(UUID, UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.is_org_member(UUID, UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.is_org_admin(UUID, UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.is_org_owner_strictly(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.is_org_owner(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.is_org_member(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.is_org_admin(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.is_org_owner_strictly(UUID, UUID) TO authenticated, service_role;

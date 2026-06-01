@@ -195,8 +195,9 @@ export const getOnboardingStatus = async (): Promise<OnboardingStatus> => {
 export const createOrganisationForOnboarding = async (input: {
   name: string
   selectedApps: AppCode[]
+  freeSeatLimit: number | null
 }): Promise<{ orgId: string; orgName: string }> => {
-  await getCurrentUser()
+  const user = await getCurrentUser()
   const orgName = input.name.trim()
 
   if (!orgName) {
@@ -209,15 +210,51 @@ export const createOrganisationForOnboarding = async (input: {
     throw new Error(`Unsupported app code: ${invalidApp}`)
   }
 
-  const { data, error } = await supabase.rpc('accounts_create_organisation', {
-    p_name: orgName,
-    p_selected_apps: selectedApps,
-  })
+  const { data: existingMembership, error: existingMembershipError } = await supabase
+    .from('organisation_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+
+  if (existingMembershipError) throw existingMembershipError
+  if ((existingMembership?.length ?? 0) > 0) {
+    throw new Error('User already belongs to an organisation')
+  }
+
+  const { data, error } = await supabase
+    .from('organisations')
+    .insert({
+      name: orgName,
+      owner_id: user.id,
+    })
+    .select('id, name')
+    .single()
+
   if (error) throw error
 
-  const row = Array.isArray(data) ? (data[0] as { org_id: string; org_name: string } | undefined) : undefined
-  if (!row) {
+  const row = data as { id: string; name: string } | null
+  if (!row?.id) {
     throw new Error('Organisation creation did not return a row.')
+  }
+
+  for (const appCode of appCodes) {
+    const { error: seatError } = await supabase
+      .from('organisation_app_seats')
+      .update({ seat_limit: selectedApps.includes(appCode) ? input.freeSeatLimit : 0 })
+      .eq('org_id', row.id)
+      .eq('app_code', appCode)
+
+    if (seatError) throw seatError
+  }
+
+  const currentEmail = user.email?.trim().toLowerCase()
+  if (currentEmail) {
+    const { error: cleanupError } = await supabase
+      .from('organisation_invites')
+      .delete()
+      .eq('email', currentEmail)
+
+    if (cleanupError) throw cleanupError
   }
 
   await updateOnboardingMetadata({
@@ -226,8 +263,8 @@ export const createOrganisationForOnboarding = async (input: {
   })
 
   return {
-    orgId: row.org_id,
-    orgName: row.org_name,
+    orgId: row.id,
+    orgName: row.name,
   }
 }
 

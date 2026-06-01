@@ -262,6 +262,7 @@ describe('onboarding api', () => {
       createOrganisationForOnboarding({
         name: '   ',
         selectedApps: ['etl'],
+        freeSeatLimit: 1,
       })
     ).rejects.toThrow('Organisation name is required.')
 
@@ -278,6 +279,7 @@ describe('onboarding api', () => {
       createOrganisationForOnboarding({
         name: 'Acme',
         selectedApps: ['etl', 'invalid-app' as never],
+        freeSeatLimit: 1,
       })
     ).rejects.toThrow('Unsupported app code: invalid-app')
 
@@ -303,25 +305,74 @@ describe('onboarding api', () => {
     })
   })
 
-  it('creates onboarding organisation through RPC with selected apps', async () => {
+  it('creates onboarding organisation through direct table writes with selected apps', async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: 'user-1', user_metadata: { theme: 'dark' } } },
+      data: { user: { id: 'user-1', email: 'user@example.com', user_metadata: { theme: 'dark' } } },
       error: null,
     })
-    mockRpc.mockResolvedValue({
-      data: [{ org_id: 'org-1', org_name: 'Acme' }],
+
+    const orgInsertSingle = vi.fn().mockResolvedValue({
+      data: { id: 'org-1', name: 'Acme' },
       error: null,
+    })
+    const orgInsertChain = {
+      select: vi.fn(() => ({ single: orgInsertSingle })),
+    }
+    const seatUpdateEq = vi.fn().mockResolvedValue({ error: null })
+    const seatUpdate = vi.fn(() => ({
+      eq: vi.fn(() => ({
+        eq: seatUpdateEq,
+      })),
+    }))
+    const inviteDeleteEq = vi.fn().mockResolvedValue({ error: null })
+    const membershipLimit = vi.fn().mockResolvedValue({ data: [], error: null })
+    const membershipEq = vi.fn(() => ({ limit: membershipLimit }))
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'organisation_members') {
+        return {
+          select: vi.fn(() => ({
+            eq: membershipEq,
+          })),
+        }
+      }
+      if (table === 'organisations') {
+        return {
+          insert: vi.fn(() => orgInsertChain),
+        }
+      }
+      if (table === 'organisation_app_seats') {
+        return {
+          update: seatUpdate,
+        }
+      }
+      if (table === 'organisation_invites') {
+        return {
+          delete: vi.fn(() => ({
+            eq: inviteDeleteEq,
+          })),
+        }
+      }
+      throw new Error(`Unexpected table: ${table}`)
     })
 
     await expect(createOrganisationForOnboarding({
       name: 'Acme',
       selectedApps: ['etl'],
+      freeSeatLimit: 5,
     })).resolves.toEqual({ orgId: 'org-1', orgName: 'Acme' })
 
-    expect(mockRpc).toHaveBeenCalledWith('accounts_create_organisation', {
-      p_name: 'Acme',
-      p_selected_apps: ['etl'],
-    })
+    expect(mockFrom).toHaveBeenCalledWith('organisation_members')
+    expect(mockFrom).toHaveBeenCalledWith('organisations')
+    expect(mockFrom).toHaveBeenCalledWith('organisation_app_seats')
+    expect(mockFrom).toHaveBeenCalledWith('organisation_invites')
+    expect(membershipEq).toHaveBeenCalledWith('user_id', 'user-1')
+    expect(membershipLimit).toHaveBeenCalledWith(1)
+    expect(seatUpdate).toHaveBeenCalledTimes(2)
+    expect(seatUpdate).toHaveBeenNthCalledWith(1, { seat_limit: 5 })
+    expect(seatUpdate).toHaveBeenNthCalledWith(2, { seat_limit: 0 })
+    expect(seatUpdateEq).toHaveBeenNthCalledWith(1, 'app_code', 'etl')
+    expect(seatUpdateEq).toHaveBeenNthCalledWith(2, 'app_code', 'stoqr')
     expect(mockUpdateUser).toHaveBeenCalledWith({
       data: {
         theme: 'dark',

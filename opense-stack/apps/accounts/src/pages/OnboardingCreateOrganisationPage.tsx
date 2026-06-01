@@ -81,6 +81,7 @@ export const OnboardingCreateOrganisationPage = () => {
       await createOrganisationForOnboarding({
         name: orgName,
         selectedApps,
+        freeSeatLimit: policy?.freeSeatLimit ?? null,
       })
       navigate(buildPathWithQuery('/onboarding/invite-members'), { replace: true })
     } catch (err: unknown) {

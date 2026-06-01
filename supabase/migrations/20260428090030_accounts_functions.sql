@@ -1,21 +1,21 @@
-CREATE FUNCTION public.can_manage_org_app_seat_limits(p_org_id UUID, p_user_id UUID)
+CREATE FUNCTION app_private.can_manage_org_app_seat_limits(p_org_id UUID, p_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT public.is_org_admin(p_org_id, p_user_id);
+  SELECT app_private.is_org_admin(p_org_id, p_user_id);
 $$;
 
-CREATE FUNCTION public.can_manage_org_member_app_seats(p_org_id UUID, p_user_id UUID)
+CREATE FUNCTION app_private.can_manage_org_member_app_seats(p_org_id UUID, p_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT public.is_org_admin(p_org_id, p_user_id);
+  SELECT app_private.is_org_admin(p_org_id, p_user_id);
 $$;
 
 CREATE FUNCTION public.get_primary_org_for_user(p_user_id UUID DEFAULT auth.uid())
@@ -46,7 +46,7 @@ CREATE POLICY invite_app_seats_manage ON public.organisation_invite_app_seats
       SELECT 1
       FROM public.organisation_invites oi
       WHERE oi.id = organisation_invite_app_seats.invite_id
-        AND public.can_manage_org_member_app_seats(oi.org_id, auth.uid())
+        AND app_private.can_manage_org_member_app_seats(oi.org_id, auth.uid())
     )
   )
   WITH CHECK (
@@ -54,11 +54,11 @@ CREATE POLICY invite_app_seats_manage ON public.organisation_invite_app_seats
       SELECT 1
       FROM public.organisation_invites oi
       WHERE oi.id = organisation_invite_app_seats.invite_id
-        AND public.can_manage_org_member_app_seats(oi.org_id, auth.uid())
+        AND app_private.can_manage_org_member_app_seats(oi.org_id, auth.uid())
     )
   );
 
-CREATE FUNCTION public.prevent_owner_member_mutation()
+CREATE FUNCTION app_private.prevent_owner_member_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -236,83 +236,6 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.accounts_invite_organisation_member(p_org_id UUID, p_email TEXT)
-RETURNS TABLE (
-  id UUID,
-  org_id UUID,
-  email TEXT,
-  created_at TIMESTAMPTZ
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_user_id UUID := auth.uid();
-  v_email TEXT := LOWER(BTRIM(p_email));
-  v_invite public.organisation_invites%ROWTYPE;
-BEGIN
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  IF p_org_id IS NULL THEN
-    RAISE EXCEPTION 'Organisation id is required';
-  END IF;
-
-  IF v_email IS NULL OR v_email = '' THEN
-    RAISE EXCEPTION 'Invite email is required';
-  END IF;
-
-  IF NOT (
-    public.is_org_admin(p_org_id, v_user_id)
-    OR public.is_org_owner(p_org_id, v_user_id)
-  ) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM public.profiles p
-    JOIN public.organisation_members om ON om.user_id = p.id
-    WHERE LOWER(p.email) = v_email
-      AND om.org_id = p_org_id
-  ) THEN
-    RAISE EXCEPTION 'User is already a member of this organisation';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM public.profiles p
-    JOIN public.organisation_members om ON om.user_id = p.id
-    WHERE LOWER(p.email) = v_email
-  ) THEN
-    RAISE EXCEPTION 'User already belongs to an organisation';
-  END IF;
-
-  SELECT *
-  INTO v_invite
-  FROM public.organisation_invites oi
-  WHERE oi.org_id = p_org_id
-    AND LOWER(oi.email::TEXT) = v_email
-  LIMIT 1;
-
-  IF v_invite.id IS NULL THEN
-    INSERT INTO public.organisation_invites (org_id, email, invited_by)
-    VALUES (p_org_id, v_email, v_user_id)
-    RETURNING *
-    INTO v_invite;
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    v_invite.id,
-    v_invite.org_id,
-    v_invite.email::TEXT,
-    v_invite.created_at;
-END;
-$$;
-
 CREATE FUNCTION public.log_org_audit_event(
   p_org_id UUID,
   p_action TEXT,
@@ -327,7 +250,7 @@ SET search_path = public
 AS $$
 BEGIN
   IF auth.role() <> 'service_role'
-     AND NOT public.is_org_member(p_org_id, auth.uid()) THEN
+     AND NOT app_private.is_org_member(p_org_id, auth.uid()) THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
 
@@ -394,86 +317,6 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.accounts_create_organisation(p_name TEXT, p_selected_apps TEXT[])
-RETURNS TABLE (
-  org_id UUID,
-  org_name TEXT
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_user_id UUID := auth.uid();
-  v_user_email TEXT := LOWER(BTRIM(auth.jwt() ->> 'email'));
-  v_org_id UUID;
-  v_org_name TEXT := BTRIM(p_name);
-  v_selected_apps TEXT[] := COALESCE(p_selected_apps, ARRAY[]::TEXT[]);
-  v_invalid_app TEXT;
-  v_free_seat_limit INTEGER;
-  v_max_organisations INTEGER;
-  v_organisation_count INTEGER;
-BEGIN
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  IF v_org_name IS NULL OR v_org_name = '' THEN
-    RAISE EXCEPTION 'Organisation name is required';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM public.organisation_members WHERE user_id = v_user_id) THEN
-    RAISE EXCEPTION 'User already belongs to an organisation';
-  END IF;
-
-  SELECT app_code
-  INTO v_invalid_app
-  FROM unnest(v_selected_apps) selected(app_code)
-  WHERE NOT EXISTS (SELECT 1 FROM public.apps a WHERE a.code = selected.app_code)
-  LIMIT 1;
-
-  IF v_invalid_app IS NOT NULL THEN
-    RAISE EXCEPTION 'Unsupported app code: %', v_invalid_app;
-  END IF;
-
-  SELECT settings.max_organisations, settings.free_seat_limit
-  INTO v_max_organisations, v_free_seat_limit
-  FROM public.platform_instance_settings settings
-  WHERE settings.id = true;
-
-  v_max_organisations := COALESCE(v_max_organisations, 1);
-
-  SELECT COUNT(*)::INTEGER
-  INTO v_organisation_count
-  FROM public.organisations;
-
-  IF v_organisation_count >= v_max_organisations THEN
-    RAISE EXCEPTION 'Organisation creation limit reached for this OpenSe instance';
-  END IF;
-
-  INSERT INTO public.organisations (name, owner_id)
-  VALUES (v_org_name, v_user_id)
-  RETURNING id, name INTO v_org_id, v_org_name;
-
-  INSERT INTO public.organisation_app_seats (org_id, app_code, seat_limit)
-  SELECT
-    v_org_id,
-    a.code,
-    CASE WHEN a.code = ANY(v_selected_apps) THEN v_free_seat_limit ELSE 0 END
-  FROM public.apps a
-  ON CONFLICT ON CONSTRAINT organisation_app_seats_pkey DO UPDATE
-    SET seat_limit = EXCLUDED.seat_limit;
-
-  IF v_user_email IS NOT NULL AND v_user_email <> '' THEN
-    DELETE FROM public.organisation_invites
-    WHERE LOWER(email::TEXT) = v_user_email;
-  END IF;
-
-  RETURN QUERY SELECT v_org_id, v_org_name;
-END;
-$$;
-
-
 CREATE FUNCTION public.accounts_update_org_seat_limit(p_app_code TEXT, p_seat_limit INTEGER)
 RETURNS VOID
 LANGUAGE plpgsql
@@ -499,7 +342,7 @@ BEGIN
     RAISE EXCEPTION 'No organisation membership found for current user';
   END IF;
 
-  IF NOT public.can_manage_org_app_seat_limits(v_org_id, v_user_id) THEN
+  IF NOT app_private.can_manage_org_app_seat_limits(v_org_id, v_user_id) THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
 
@@ -528,117 +371,10 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.accounts_assign_org_member_app_seat(p_org_member_id UUID, p_app_code TEXT)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_user_id UUID := auth.uid();
-  v_org_id UUID;
-  v_member_org_id UUID;
-  v_inserted_count INTEGER;
-BEGIN
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  v_org_id := public.get_primary_org_for_user(v_user_id);
-
-  IF v_org_id IS NULL THEN
-    RAISE EXCEPTION 'No organisation membership found for current user';
-  END IF;
-
-  SELECT om.org_id
-  INTO v_member_org_id
-  FROM public.organisation_members om
-  WHERE om.id = p_org_member_id;
-
-  IF v_member_org_id IS NULL OR v_member_org_id <> v_org_id THEN
-    RAISE EXCEPTION 'Target member is not in your organisation';
-  END IF;
-
-  IF NOT public.can_manage_org_member_app_seats(v_org_id, v_user_id) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
-  VALUES (p_org_member_id, p_app_code)
-  ON CONFLICT (org_member_id, app_code) DO NOTHING;
-
-  GET DIAGNOSTICS v_inserted_count = ROW_COUNT;
-
-  IF v_inserted_count > 0 THEN
-    PERFORM public.log_org_audit_event(
-      v_org_id,
-      'seat_assigned',
-      p_app_code,
-      p_org_member_id,
-      '{}'::jsonb
-    );
-  END IF;
-END;
-$$;
-
-CREATE FUNCTION public.accounts_unassign_org_member_app_seat(p_org_member_id UUID, p_app_code TEXT)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_user_id UUID := auth.uid();
-  v_org_id UUID;
-  v_member_org_id UUID;
-  v_deleted_count INTEGER;
-BEGIN
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  v_org_id := public.get_primary_org_for_user(v_user_id);
-
-  IF v_org_id IS NULL THEN
-    RAISE EXCEPTION 'No organisation membership found for current user';
-  END IF;
-
-  SELECT om.org_id
-  INTO v_member_org_id
-  FROM public.organisation_members om
-  WHERE om.id = p_org_member_id;
-
-  IF v_member_org_id IS NULL OR v_member_org_id <> v_org_id THEN
-    RAISE EXCEPTION 'Target member is not in your organisation';
-  END IF;
-
-  IF NOT public.can_manage_org_member_app_seats(v_org_id, v_user_id) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  DELETE FROM public.organisation_member_app_seats
-  WHERE org_member_id = p_org_member_id
-    AND app_code = p_app_code;
-
-  GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
-
-  IF v_deleted_count > 0 THEN
-    PERFORM public.log_org_audit_event(
-      v_org_id,
-      'seat_unassigned',
-      p_app_code,
-      p_org_member_id,
-      '{}'::jsonb
-    );
-  END IF;
-END;
-$$;
-
-
 CREATE TRIGGER trg_prevent_owner_member_mutation
   BEFORE UPDATE OR DELETE ON public.organisation_members
   FOR EACH ROW
-  EXECUTE FUNCTION public.prevent_owner_member_mutation();
+  EXECUTE FUNCTION app_private.prevent_owner_member_mutation();
 
 CREATE TRIGGER trg_enforce_instance_organisation_limit
   BEFORE INSERT ON public.organisations
@@ -670,7 +406,7 @@ CREATE POLICY profiles_update_self ON public.profiles
 CREATE POLICY organisations_select ON public.organisations
   FOR SELECT USING (
     owner_id = auth.uid()
-    OR public.is_org_member(id, auth.uid())
+    OR app_private.is_org_member(id, auth.uid())
   );
 
 CREATE POLICY organisations_insert ON public.organisations
@@ -679,11 +415,11 @@ CREATE POLICY organisations_insert ON public.organisations
 CREATE POLICY organisations_update ON public.organisations
   FOR UPDATE USING (
     owner_id = auth.uid()
-    OR public.is_org_admin(id, auth.uid())
+    OR app_private.is_org_admin(id, auth.uid())
   )
   WITH CHECK (
     owner_id = auth.uid()
-    OR public.is_org_admin(id, auth.uid())
+    OR app_private.is_org_admin(id, auth.uid())
   );
 
 CREATE POLICY organisations_delete ON public.organisations
@@ -692,15 +428,15 @@ CREATE POLICY organisations_delete ON public.organisations
 CREATE POLICY organisation_members_select ON public.organisation_members
   FOR SELECT USING (
     user_id = auth.uid()
-    OR public.is_org_member(org_id, auth.uid())
+    OR app_private.is_org_member(org_id, auth.uid())
   );
 
 CREATE POLICY organisation_members_insert ON public.organisation_members
-  FOR INSERT WITH CHECK (public.is_org_admin(org_id, auth.uid()));
+  FOR INSERT WITH CHECK (app_private.is_org_admin(org_id, auth.uid()));
 
 CREATE POLICY organisation_members_update ON public.organisation_members
   FOR UPDATE USING (
-    public.is_org_admin(org_id, auth.uid())
+    app_private.is_org_admin(org_id, auth.uid())
     AND NOT (
       user_id = (
         SELECT o.owner_id
@@ -710,7 +446,7 @@ CREATE POLICY organisation_members_update ON public.organisation_members
     )
   )
   WITH CHECK (
-    public.is_org_admin(org_id, auth.uid())
+    app_private.is_org_admin(org_id, auth.uid())
     AND NOT (
       user_id = (
         SELECT o.owner_id
@@ -723,7 +459,7 @@ CREATE POLICY organisation_members_update ON public.organisation_members
 
 CREATE POLICY organisation_members_delete ON public.organisation_members
   FOR DELETE USING (
-    public.is_org_admin(org_id, auth.uid())
+    app_private.is_org_admin(org_id, auth.uid())
     AND NOT (
       user_id = (
         SELECT o.owner_id
@@ -738,14 +474,14 @@ CREATE POLICY apps_select ON public.apps
   FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY app_seats_select ON public.organisation_app_seats
-  FOR SELECT USING (public.is_org_member(org_id, auth.uid()));
+  FOR SELECT USING (app_private.is_org_member(org_id, auth.uid()));
 
 CREATE POLICY app_seats_manage ON public.organisation_app_seats
   FOR ALL USING (
-    public.can_manage_org_app_seat_limits(org_id, auth.uid())
+    app_private.can_manage_org_app_seat_limits(org_id, auth.uid())
   )
   WITH CHECK (
-    public.can_manage_org_app_seat_limits(org_id, auth.uid())
+    app_private.can_manage_org_app_seat_limits(org_id, auth.uid())
   );
 
 CREATE POLICY member_app_seats_select ON public.organisation_member_app_seats
@@ -756,7 +492,7 @@ CREATE POLICY member_app_seats_select ON public.organisation_member_app_seats
       WHERE om.id = organisation_member_app_seats.org_member_id
         AND (
           om.user_id = auth.uid()
-          OR public.is_org_member(om.org_id, auth.uid())
+          OR app_private.is_org_member(om.org_id, auth.uid())
         )
     )
   );
@@ -767,7 +503,7 @@ CREATE POLICY member_app_seats_manage ON public.organisation_member_app_seats
       SELECT 1
       FROM public.organisation_members om
       WHERE om.id = organisation_member_app_seats.org_member_id
-        AND public.can_manage_org_member_app_seats(om.org_id, auth.uid())
+        AND app_private.can_manage_org_member_app_seats(om.org_id, auth.uid())
     )
   )
   WITH CHECK (
@@ -775,7 +511,7 @@ CREATE POLICY member_app_seats_manage ON public.organisation_member_app_seats
       SELECT 1
       FROM public.organisation_members om
       WHERE om.id = organisation_member_app_seats.org_member_id
-        AND public.can_manage_org_member_app_seats(om.org_id, auth.uid())
+        AND app_private.can_manage_org_member_app_seats(om.org_id, auth.uid())
     )
   );
 
@@ -784,71 +520,63 @@ CREATE POLICY organisation_invites_select_own ON public.organisation_invites
 
 CREATE POLICY organisation_invites_select_admin ON public.organisation_invites
   FOR SELECT USING (
-    public.is_org_admin(org_id, auth.uid())
-    OR public.is_org_owner(org_id, auth.uid())
+    app_private.is_org_admin(org_id, auth.uid())
+    OR app_private.is_org_owner(org_id, auth.uid())
   );
 
 CREATE POLICY organisation_invites_insert_admin ON public.organisation_invites
   FOR INSERT WITH CHECK (
-    public.is_org_admin(org_id, auth.uid())
-    OR public.is_org_owner(org_id, auth.uid())
+    app_private.is_org_admin(org_id, auth.uid())
+    OR app_private.is_org_owner(org_id, auth.uid())
   );
 
 CREATE POLICY organisation_invites_delete_admin_or_user ON public.organisation_invites
   FOR DELETE USING (
-    public.is_org_admin(org_id, auth.uid())
-    OR public.is_org_owner(org_id, auth.uid())
+    app_private.is_org_admin(org_id, auth.uid())
+    OR app_private.is_org_owner(org_id, auth.uid())
     OR email = auth.jwt() ->> 'email'
   );
 
 CREATE POLICY subscriptions_select ON public.subscriptions
-  FOR SELECT USING (public.is_org_member(org_id, auth.uid()));
+  FOR SELECT USING (app_private.is_org_member(org_id, auth.uid()));
 
 CREATE POLICY subscriptions_manage ON public.subscriptions
-  FOR ALL USING (public.is_org_owner_strictly(org_id, auth.uid()))
-  WITH CHECK (public.is_org_owner_strictly(org_id, auth.uid()));
+  FOR ALL USING (app_private.is_org_owner_strictly(org_id, auth.uid()))
+  WITH CHECK (app_private.is_org_owner_strictly(org_id, auth.uid()));
 
 -- Organisation audit history is intentionally append-only through SECURITY DEFINER RPCs.
 CREATE POLICY organisation_audit_events_select ON public.organisation_audit_events
-  FOR SELECT USING (public.is_org_member(org_id, auth.uid()));
+  FOR SELECT USING (app_private.is_org_member(org_id, auth.uid()));
 
 GRANT SELECT ON TABLE public.organisation_audit_events TO authenticated;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_audit_events TO service_role;
 
-REVOKE ALL ON FUNCTION public.can_manage_org_app_seat_limits(UUID, UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.can_manage_org_member_app_seats(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.can_manage_org_app_seat_limits(UUID, UUID) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.can_manage_org_member_app_seats(UUID, UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.get_primary_org_for_user(UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.prevent_owner_member_mutation() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.prevent_owner_member_mutation() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.enforce_org_app_seat_limit() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.enforce_instance_organisation_limit() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accept_invite(UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.accounts_invite_organisation_member(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_get_onboarding_instance_policy() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.accounts_create_organisation(TEXT, TEXT[]) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.accounts_assign_org_member_app_seat(UUID, TEXT) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.accounts_unassign_org_member_app_seat(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.can_manage_org_app_seat_limits(UUID, UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.can_manage_org_member_app_seats(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.can_manage_org_app_seat_limits(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.can_manage_org_member_app_seats(UUID, UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.get_primary_org_for_user(UUID) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accept_invite(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.accounts_invite_organisation_member(UUID, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) TO service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_get_onboarding_instance_policy() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.accounts_create_organisation(TEXT, TEXT[]) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.accounts_assign_org_member_app_seat(UUID, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.accounts_unassign_org_member_app_seat(UUID, TEXT) TO authenticated, service_role;
-CREATE OR REPLACE FUNCTION public.can_manage_org_app_seat_limits(p_org_id UUID, p_user_id UUID)
+CREATE OR REPLACE FUNCTION app_private.can_manage_org_app_seat_limits(p_org_id UUID, p_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT public.is_org_admin(p_org_id, p_user_id);
+  SELECT app_private.is_org_admin(p_org_id, p_user_id);
 $$;
 
 CREATE OR REPLACE FUNCTION public.log_my_account_audit_event(
@@ -929,7 +657,7 @@ BEGIN
     RAISE EXCEPTION 'No organisation membership found for current user';
   END IF;
 
-  IF NOT public.can_manage_org_member_app_seats(v_org_id, v_user_id) THEN
+  IF NOT app_private.can_manage_org_member_app_seats(v_org_id, v_user_id) THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
 
@@ -1011,7 +739,7 @@ BEGIN
     RAISE EXCEPTION 'No organisation membership found for current user';
   END IF;
 
-  IF NOT public.can_manage_org_app_seat_limits(v_org_id, v_user_id) THEN
+  IF NOT app_private.can_manage_org_app_seat_limits(v_org_id, v_user_id) THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
 
@@ -1050,66 +778,9 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.accounts_transfer_organisation_ownership(p_new_owner_user_id UUID)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_user_id UUID := auth.uid();
-  v_org_id UUID;
-BEGIN
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  v_org_id := public.get_primary_org_for_user(v_user_id);
-
-  IF v_org_id IS NULL THEN
-    RAISE EXCEPTION 'No organisation membership found for current user';
-  END IF;
-
-  IF NOT public.is_org_owner_strictly(v_org_id, v_user_id) THEN
-    RAISE EXCEPTION 'Only the current owner can transfer ownership';
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM public.organisation_members
-    WHERE org_id = v_org_id
-      AND user_id = p_new_owner_user_id
-  ) THEN
-    RAISE EXCEPTION 'New owner must be an existing organisation member';
-  END IF;
-
-  UPDATE public.organisations
-  SET owner_id = p_new_owner_user_id
-  WHERE id = v_org_id;
-
-  UPDATE public.organisation_members
-  SET role = CASE
-    WHEN user_id = p_new_owner_user_id THEN 'owner'
-    WHEN user_id = v_user_id THEN 'admin'
-    ELSE role
-  END
-  WHERE org_id = v_org_id
-    AND user_id IN (p_new_owner_user_id, v_user_id);
-
-  PERFORM public.log_org_audit_event(
-    v_org_id,
-    'organisation_owner_transferred',
-    NULL,
-    NULL,
-    jsonb_build_object('from_user_id', v_user_id, 'to_user_id', p_new_owner_user_id)
-  );
-END;
-$$;
-
 REVOKE ALL ON FUNCTION public.log_my_account_audit_event(TEXT, JSONB) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_update_organisation_profile(TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_update_billing_contact(TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.accounts_transfer_organisation_ownership(UUID) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.log_my_account_audit_event(TEXT, JSONB) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.accounts_update_organisation_profile(TEXT, TEXT, TEXT) TO authenticated, service_role;
@@ -1174,276 +845,6 @@ BEGIN
   RETURN true;
 END;
 $$;
-
-
-CREATE OR REPLACE FUNCTION public.accounts_assign_org_member_app_seat(p_org_member_id UUID, p_app_code TEXT)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_user_id UUID := auth.uid();
-  v_org_id UUID;
-  v_member_org_id UUID;
-  v_member_role TEXT;
-  v_seat_limit INTEGER;
-  v_reserved_count INTEGER;
-  v_inserted_count INTEGER;
-BEGIN
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  v_org_id := public.get_primary_org_for_user(v_user_id);
-
-  IF v_org_id IS NULL THEN
-    RAISE EXCEPTION 'No organisation membership found for current user';
-  END IF;
-
-  SELECT om.org_id, om.role
-  INTO v_member_org_id, v_member_role
-  FROM public.organisation_members om
-  WHERE om.id = p_org_member_id;
-
-  IF v_member_org_id IS NULL OR v_member_org_id <> v_org_id THEN
-    RAISE EXCEPTION 'Target member is not in your organisation';
-  END IF;
-
-  IF NOT public.can_manage_org_member_app_seats(v_org_id, v_user_id) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM public.organisation_member_app_seats mas
-    WHERE mas.org_member_id = p_org_member_id
-      AND mas.app_code = p_app_code
-  ) THEN
-    RETURN;
-  END IF;
-
-  IF v_member_role <> 'owner' THEN
-    SELECT oas.seat_limit
-    INTO v_seat_limit
-    FROM public.organisation_app_seats oas
-    WHERE oas.org_id = v_org_id
-      AND oas.app_code = p_app_code;
-
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'Seat limit is not configured for org % app %', v_org_id, p_app_code;
-    END IF;
-
-    IF v_seat_limit IS NOT NULL THEN
-      SELECT (
-        SELECT COUNT(*)::INTEGER
-        FROM public.organisation_member_app_seats mas
-        JOIN public.organisation_members om ON om.id = mas.org_member_id
-        WHERE om.org_id = v_org_id
-          AND om.role <> 'owner'
-          AND mas.app_code = p_app_code
-      ) + (
-        SELECT COUNT(*)::INTEGER
-        FROM public.organisation_invite_app_seats ias
-        JOIN public.organisation_invites oi ON oi.id = ias.invite_id
-        WHERE oi.org_id = v_org_id
-          AND oi.accepted_at IS NULL
-          AND ias.app_code = p_app_code
-      )
-      INTO v_reserved_count;
-
-      IF v_reserved_count >= v_seat_limit THEN
-        RAISE EXCEPTION 'Seat limit exceeded for org % app % (% assigned / % limit)',
-          v_org_id,
-          p_app_code,
-          v_reserved_count,
-          v_seat_limit;
-      END IF;
-    END IF;
-  END IF;
-
-  INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
-  VALUES (p_org_member_id, p_app_code)
-  ON CONFLICT (org_member_id, app_code) DO NOTHING;
-
-  GET DIAGNOSTICS v_inserted_count = ROW_COUNT;
-
-  IF v_inserted_count > 0 THEN
-    PERFORM public.log_org_audit_event(
-      v_org_id,
-      'seat_assigned',
-      p_app_code,
-      p_org_member_id,
-      '{}'::jsonb
-    );
-  END IF;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.accounts_assign_org_invite_app_seat(p_invite_id UUID, p_app_code TEXT)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_user_id UUID := auth.uid();
-  v_org_id UUID;
-  v_invite_org_id UUID;
-  v_invite_email TEXT;
-  v_seat_limit INTEGER;
-  v_reserved_count INTEGER;
-  v_inserted_count INTEGER;
-BEGIN
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  v_org_id := public.get_primary_org_for_user(v_user_id);
-
-  IF v_org_id IS NULL THEN
-    RAISE EXCEPTION 'No organisation membership found for current user';
-  END IF;
-
-  SELECT oi.org_id, oi.email::TEXT
-  INTO v_invite_org_id, v_invite_email
-  FROM public.organisation_invites oi
-  WHERE oi.id = p_invite_id
-    AND oi.accepted_at IS NULL;
-
-  IF v_invite_org_id IS NULL OR v_invite_org_id <> v_org_id THEN
-    RAISE EXCEPTION 'Target invite is not in your organisation';
-  END IF;
-
-  IF NOT public.can_manage_org_member_app_seats(v_org_id, v_user_id) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM public.organisation_invite_app_seats ias
-    WHERE ias.invite_id = p_invite_id
-      AND ias.app_code = p_app_code
-  ) THEN
-    RETURN;
-  END IF;
-
-  SELECT oas.seat_limit
-  INTO v_seat_limit
-  FROM public.organisation_app_seats oas
-  WHERE oas.org_id = v_org_id
-    AND oas.app_code = p_app_code;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Seat limit is not configured for org % app %', v_org_id, p_app_code;
-  END IF;
-
-  IF v_seat_limit IS NOT NULL THEN
-    SELECT (
-      SELECT COUNT(*)::INTEGER
-      FROM public.organisation_member_app_seats mas
-      JOIN public.organisation_members om ON om.id = mas.org_member_id
-      WHERE om.org_id = v_org_id
-        AND om.role <> 'owner'
-        AND mas.app_code = p_app_code
-    ) + (
-      SELECT COUNT(*)::INTEGER
-      FROM public.organisation_invite_app_seats ias
-      JOIN public.organisation_invites oi ON oi.id = ias.invite_id
-      WHERE oi.org_id = v_org_id
-        AND oi.accepted_at IS NULL
-        AND ias.app_code = p_app_code
-    )
-    INTO v_reserved_count;
-
-    IF v_reserved_count >= v_seat_limit THEN
-      RAISE EXCEPTION 'Seat limit exceeded for org % app % (% assigned / % limit)',
-        v_org_id,
-        p_app_code,
-        v_reserved_count,
-        v_seat_limit;
-    END IF;
-  END IF;
-
-  INSERT INTO public.organisation_invite_app_seats (invite_id, app_code)
-  VALUES (p_invite_id, p_app_code)
-  ON CONFLICT (invite_id, app_code) DO NOTHING;
-
-  GET DIAGNOSTICS v_inserted_count = ROW_COUNT;
-
-  IF v_inserted_count > 0 THEN
-    PERFORM public.log_org_audit_event(
-      v_org_id,
-      'seat_assigned',
-      p_app_code,
-      NULL,
-      jsonb_build_object('invite_id', p_invite_id, 'invite_email', v_invite_email)
-    );
-  END IF;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.accounts_unassign_org_invite_app_seat(p_invite_id UUID, p_app_code TEXT)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_user_id UUID := auth.uid();
-  v_org_id UUID;
-  v_invite_org_id UUID;
-  v_invite_email TEXT;
-  v_deleted_count INTEGER;
-BEGIN
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  v_org_id := public.get_primary_org_for_user(v_user_id);
-
-  IF v_org_id IS NULL THEN
-    RAISE EXCEPTION 'No organisation membership found for current user';
-  END IF;
-
-  SELECT oi.org_id, oi.email::TEXT
-  INTO v_invite_org_id, v_invite_email
-  FROM public.organisation_invites oi
-  WHERE oi.id = p_invite_id
-    AND oi.accepted_at IS NULL;
-
-  IF v_invite_org_id IS NULL OR v_invite_org_id <> v_org_id THEN
-    RAISE EXCEPTION 'Target invite is not in your organisation';
-  END IF;
-
-  IF NOT public.can_manage_org_member_app_seats(v_org_id, v_user_id) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  DELETE FROM public.organisation_invite_app_seats
-  WHERE invite_id = p_invite_id
-    AND app_code = p_app_code;
-
-  GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
-
-  IF v_deleted_count > 0 THEN
-    PERFORM public.log_org_audit_event(
-      v_org_id,
-      'seat_unassigned',
-      p_app_code,
-      NULL,
-      jsonb_build_object('invite_id', p_invite_id, 'invite_email', v_invite_email)
-    );
-  END IF;
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.accounts_assign_org_invite_app_seat(UUID, TEXT) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.accounts_unassign_org_invite_app_seat(UUID, TEXT) FROM PUBLIC, anon, authenticated;
-
-GRANT EXECUTE ON FUNCTION public.accounts_assign_org_invite_app_seat(UUID, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.accounts_unassign_org_invite_app_seat(UUID, TEXT) TO authenticated, service_role;
-
 
 
 -- Qualify accept_invite identifiers so invite_id is never ambiguous with table columns.

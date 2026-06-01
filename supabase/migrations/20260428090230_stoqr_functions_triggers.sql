@@ -476,7 +476,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.prevent_owner_role_mutation()
+CREATE FUNCTION app_private.prevent_owner_role_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -547,7 +547,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.prevent_owner_role_permission_delete()
+CREATE FUNCTION app_private.prevent_owner_role_permission_delete()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -759,7 +759,7 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.has_permission(_company_id UUID, _permission_code TEXT)
+CREATE FUNCTION app_private.has_permission(_company_id UUID, _permission_code TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -1036,85 +1036,6 @@ BEGIN
 END;
 $$;
 
-CREATE FUNCTION public.transfer_stoqr_product_stock(
-  target_company_id UUID,
-  target_product_id UUID,
-  from_folder_id UUID,
-  to_folder_id UUID,
-  transfer_quantity INTEGER,
-  transfer_notes TEXT DEFAULT NULL
-)
-RETURNS UUID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-DECLARE
-  v_transfer_group_id UUID := gen_random_uuid();
-  v_user_id UUID := auth.uid();
-BEGIN
-  IF NOT public.has_permission(target_company_id, 'inventory.adjust') THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  IF from_folder_id = to_folder_id THEN
-    RAISE EXCEPTION 'Source and destination folders must be different';
-  END IF;
-
-  IF COALESCE(transfer_quantity, 0) <= 0 THEN
-    RAISE EXCEPTION 'Transfer quantity must be greater than zero';
-  END IF;
-
-  INSERT INTO stoqr.inventory_transactions (
-    company_id,
-    product_id,
-    folder_id,
-    performed_by,
-    transaction_type,
-    source,
-    quantity_change,
-    transfer_group_id,
-    notes
-  )
-  VALUES (
-    target_company_id,
-    target_product_id,
-    from_folder_id,
-    v_user_id,
-    'transfer_out',
-    'manual',
-    -ABS(transfer_quantity),
-    v_transfer_group_id,
-    transfer_notes
-  );
-
-  INSERT INTO stoqr.inventory_transactions (
-    company_id,
-    product_id,
-    folder_id,
-    performed_by,
-    transaction_type,
-    source,
-    quantity_change,
-    transfer_group_id,
-    notes
-  )
-  VALUES (
-    target_company_id,
-    target_product_id,
-    to_folder_id,
-    v_user_id,
-    'transfer_in',
-    'manual',
-    ABS(transfer_quantity),
-    v_transfer_group_id,
-    transfer_notes
-  );
-
-  RETURN v_transfer_group_id;
-END;
-$$;
-
 CREATE FUNCTION stoqr.log_activity_event(
   p_company_id UUID,
   p_event_type TEXT,
@@ -1131,7 +1052,7 @@ SET search_path = stoqr, public
 AS $$
 BEGIN
   IF auth.role() <> 'service_role'
-     AND NOT public.is_org_member(p_company_id, auth.uid()) THEN
+     AND NOT app_private.is_org_member(p_company_id, auth.uid()) THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
 
@@ -1233,17 +1154,17 @@ CREATE TRIGGER trg_ensure_org_owner_member_and_default_seats
 CREATE TRIGGER trg_prevent_owner_role_mutation_stoqr
   BEFORE INSERT OR UPDATE OR DELETE ON stoqr.roles
   FOR EACH ROW
-  EXECUTE FUNCTION public.prevent_owner_role_mutation();
+  EXECUTE FUNCTION app_private.prevent_owner_role_mutation();
 
 CREATE TRIGGER trg_prevent_owner_role_mutation_etl
   BEFORE UPDATE OR DELETE ON etl.roles
   FOR EACH ROW
-  EXECUTE FUNCTION public.prevent_owner_role_mutation();
+  EXECUTE FUNCTION app_private.prevent_owner_role_mutation();
 
 CREATE TRIGGER trg_prevent_owner_role_permission_delete_stoqr
   BEFORE DELETE ON stoqr.role_permissions
   FOR EACH ROW
-  EXECUTE FUNCTION public.prevent_owner_role_permission_delete();
+  EXECUTE FUNCTION app_private.prevent_owner_role_permission_delete();
 
 CREATE TRIGGER trg_prevent_stoqr_guest_permission_mutation
   BEFORE INSERT OR UPDATE OR DELETE ON stoqr.role_permissions
@@ -1253,7 +1174,7 @@ CREATE TRIGGER trg_prevent_stoqr_guest_permission_mutation
 CREATE TRIGGER trg_prevent_owner_role_permission_delete_etl
   BEFORE DELETE ON etl.role_permissions
   FOR EACH ROW
-  EXECUTE FUNCTION public.prevent_owner_role_permission_delete();
+  EXECUTE FUNCTION app_private.prevent_owner_role_permission_delete();
 
 CREATE TRIGGER trg_grant_new_permission_to_owner_roles_stoqr
   AFTER INSERT ON stoqr.app_permissions
@@ -1335,7 +1256,7 @@ AS $$
 DECLARE
   v_export_id UUID;
 BEGIN
-  IF NOT public.has_permission(target_company_id, 'reports.export') THEN
+  IF NOT app_private.has_permission(target_company_id, 'reports.export') THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
 
@@ -1792,56 +1713,9 @@ END;
 $$;
 
 
-CREATE FUNCTION public.update_stoqr_delivered_alert_status(
-  target_company_id UUID,
-  target_event_id UUID,
-  next_status TEXT
-)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, stoqr
-AS $$
-BEGIN
-  IF next_status NOT IN ('open', 'acknowledged', 'resolved') THEN
-    RAISE EXCEPTION 'Invalid alert status';
-  END IF;
-
-  IF NOT (
-    public.has_permission(target_company_id, 'alerts.manage')
-    OR public.has_permission(target_company_id, 'alerts.use')
-    OR EXISTS (
-      SELECT 1
-      FROM stoqr.alert_delivery_logs adl
-      JOIN stoqr.alert_events ae ON ae.id = adl.alert_event_id
-      WHERE ae.company_id = target_company_id
-        AND ae.id = target_event_id
-        AND adl.channel = 'in_app'
-        AND adl.recipient = auth.uid()::text
-    )
-  ) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  UPDATE stoqr.alert_events
-  SET
-    status = next_status,
-    acknowledged_at = CASE
-      WHEN next_status = 'acknowledged' THEN timezone('utc'::text, now())
-      ELSE acknowledged_at
-    END,
-    resolved_at = CASE
-      WHEN next_status = 'resolved' THEN timezone('utc'::text, now())
-      ELSE resolved_at
-    END
-  WHERE company_id = target_company_id
-    AND id = target_event_id;
-END;
-$$;
-
 -- Rename the StoQR system Guest role to Default and make its permissions manager-editable.
 
-CREATE OR REPLACE FUNCTION public.prevent_owner_role_mutation()
+CREATE OR REPLACE FUNCTION app_private.prevent_owner_role_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -2160,7 +2034,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.prevent_owner_role_mutation()
+CREATE OR REPLACE FUNCTION app_private.prevent_owner_role_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -2250,11 +2124,11 @@ CREATE TRIGGER trg_assign_stoqr_default_role_for_seat
 DROP POLICY IF EXISTS "Admins can manage roles" ON stoqr.roles;
 CREATE POLICY "Admins can manage roles" ON stoqr.roles
   FOR ALL USING (
-    public.has_permission(company_id, 'organisation.roles.manage')
+    app_private.has_permission(company_id, 'organisation.roles.manage')
     AND lower(name) NOT IN ('owner', 'default', 'guest')
   )
   WITH CHECK (
-    public.has_permission(company_id, 'organisation.roles.manage')
+    app_private.has_permission(company_id, 'organisation.roles.manage')
     AND lower(name) NOT IN ('owner', 'default', 'guest')
     AND role_rank > 0
   );
@@ -2266,7 +2140,7 @@ CREATE POLICY "Admins can manage role permissions" ON stoqr.role_permissions
       SELECT 1
       FROM stoqr.roles r
       WHERE r.id = role_permissions.role_id
-        AND public.has_permission(r.company_id, 'organisation.roles.manage')
+        AND app_private.has_permission(r.company_id, 'organisation.roles.manage')
         AND lower(r.name) <> 'owner'
     )
   )
@@ -2275,7 +2149,7 @@ CREATE POLICY "Admins can manage role permissions" ON stoqr.role_permissions
       SELECT 1
       FROM stoqr.roles r
       WHERE r.id = role_permissions.role_id
-        AND public.has_permission(r.company_id, 'organisation.roles.manage')
+        AND app_private.has_permission(r.company_id, 'organisation.roles.manage')
         AND lower(r.name) <> 'owner'
     )
   );
@@ -2283,7 +2157,10 @@ CREATE POLICY "Admins can manage role permissions" ON stoqr.role_permissions
 REVOKE ALL ON FUNCTION public.ensure_stoqr_default_role(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ensure_stoqr_guest_role(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.assign_stoqr_default_role_for_seat() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.has_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.prevent_owner_role_mutation() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.prevent_owner_role_permission_delete() FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.ensure_stoqr_default_role(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.ensure_stoqr_guest_role(UUID) TO service_role;
-
+GRANT EXECUTE ON FUNCTION app_private.has_permission(UUID, TEXT) TO authenticated, service_role;

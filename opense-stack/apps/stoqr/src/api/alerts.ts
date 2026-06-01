@@ -338,11 +338,20 @@ export const updateAlertEventStatus = async (
   eventId: string,
   status: AlertEvent["status"],
 ) => {
-  const { error } = await supabase.rpc("update_stoqr_delivered_alert_status", {
-    target_company_id: companyId,
-    target_event_id: eventId,
-    next_status: status,
-  });
+  const updates: Record<string, unknown> = { status };
+  if (status === "acknowledged") {
+    updates.acknowledged_at = new Date().toISOString();
+  } else if (status === "resolved") {
+    updates.resolved_at = new Date().toISOString();
+  }
+
+  const { error } = await db
+    .from("alert_events")
+    .update(updates)
+    .eq("company_id", companyId)
+    .eq("id", eventId)
+    .select("id")
+    .single();
 
   if (error) throw error;
 };

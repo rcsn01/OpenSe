@@ -126,37 +126,49 @@ export const cancelSeatInvite = async (orgId: string, inviteId: string): Promise
 }
 
 export const assignSeat = async (orgMemberId: string, appCode: AppCode): Promise<void> => {
-  const { error } = await supabase.rpc('accounts_assign_org_member_app_seat', {
-    p_org_member_id: orgMemberId,
-    p_app_code: appCode,
-  })
+  const { error } = await supabase
+    .from('organisation_member_app_seats')
+    .upsert(
+      {
+        org_member_id: orgMemberId,
+        app_code: appCode,
+      },
+      { onConflict: 'org_member_id,app_code' },
+    )
 
   if (error) throw error
 }
 
 export const unassignSeat = async (orgMemberId: string, appCode: AppCode): Promise<void> => {
-  const { error } = await supabase.rpc('accounts_unassign_org_member_app_seat', {
-    p_org_member_id: orgMemberId,
-    p_app_code: appCode,
-  })
+  const { error } = await supabase
+    .from('organisation_member_app_seats')
+    .delete()
+    .eq('org_member_id', orgMemberId)
+    .eq('app_code', appCode)
 
   if (error) throw error
 }
 
 export const assignInviteSeat = async (inviteId: string, appCode: AppCode): Promise<void> => {
-  const { error } = await supabase.rpc('accounts_assign_org_invite_app_seat', {
-    p_invite_id: inviteId,
-    p_app_code: appCode,
-  })
+  const { error } = await supabase
+    .from('organisation_invite_app_seats')
+    .upsert(
+      {
+        invite_id: inviteId,
+        app_code: appCode,
+      },
+      { onConflict: 'invite_id,app_code' },
+    )
 
   if (error) throw error
 }
 
 export const unassignInviteSeat = async (inviteId: string, appCode: AppCode): Promise<void> => {
-  const { error } = await supabase.rpc('accounts_unassign_org_invite_app_seat', {
-    p_invite_id: inviteId,
-    p_app_code: appCode,
-  })
+  const { error } = await supabase
+    .from('organisation_invite_app_seats')
+    .delete()
+    .eq('invite_id', inviteId)
+    .eq('app_code', appCode)
 
   if (error) throw error
 }
