@@ -1,21 +1,3 @@
--- Core platform baseline.
---
--- Accounts and platform administration remain logical domains implemented in the public schema.
--- Only etl and stoqr are physical application schemas.
-
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "citext";
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";
-CREATE EXTENSION IF NOT EXISTS "moddatetime";
-CREATE EXTENSION IF NOT EXISTS "pg_net";
-
-CREATE SCHEMA IF NOT EXISTS etl;
-CREATE SCHEMA IF NOT EXISTS stoqr;
-
-GRANT USAGE ON SCHEMA etl TO authenticated, service_role;
-GRANT USAGE ON SCHEMA stoqr TO authenticated, service_role;
-
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT,
