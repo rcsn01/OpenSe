@@ -97,9 +97,16 @@ test.describe('Stoqr Inventory selection actions', () => {
 
     await selectionTopRow.getByRole('button', { name: /^Move$/ }).click();
 
-    const moveDialog = authenticatedPage.getByRole('dialog', { name: /move 1 selected product/i });
+    const moveDialog = authenticatedPage.locator('[role="dialog"]').filter({ hasText: 'Move 1 selected product' });
     await expect(moveDialog).toBeVisible();
-    await authenticatedPage.getByLabel('Destination folder').selectOption({ label: folderName });
+    const destinationFolder = authenticatedPage.getByLabel('Destination folder');
+    const destinationValue = await destinationFolder
+      .locator('option')
+      .filter({ hasText: folderName })
+      .last()
+      .getAttribute('value');
+    expect(destinationValue).toBeTruthy();
+    await destinationFolder.selectOption(destinationValue!);
     await authenticatedPage.getByRole('button', { name: /move 1 product/i }).click();
 
     await expect(selectionTopRow.getByRole('button', { name: /^Move$/ })).toHaveCount(0);

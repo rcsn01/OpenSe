@@ -1,23 +1,22 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('UI Design Navigation Tabs', () => {
-  test('tab clicks update URL and render tab content', async ({ page }) => {
-    await page.goto('/navigation/overview');
-    await expect(page).toHaveURL(/\/navigation\/overview$/);
-    await expect(page.getByText(/Overview content goes here\./i)).toBeVisible();
+  test('sidebar links update hash and reveal gallery sections', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Shared Component Gallery' })).toBeVisible();
 
-    await page.getByRole('button', { name: /^Settings$/i }).click();
-    await expect(page).toHaveURL(/\/navigation\/settings$/);
-    await expect(page.getByText(/Settings content goes here\./i)).toBeVisible();
+    await page.getByRole('link', { name: 'Forms' }).click();
+    await expect(page).toHaveURL(/\/#forms$/);
+    await expect(page.getByRole('heading', { name: 'Forms' })).toBeVisible();
 
-    await page.getByRole('button', { name: /^Members$/i }).click();
-    await expect(page).toHaveURL(/\/navigation\/members$/);
-    await expect(page.getByText(/Members list goes here\./i)).toBeVisible();
+    await page.getByRole('link', { name: 'Navigation' }).click();
+    await expect(page).toHaveURL(/\/#navigation$/);
+    await expect(page.getByRole('heading', { name: 'Navigation' })).toBeVisible();
   });
 
-  test('deep-link loads members tab content directly', async ({ page }) => {
-    await page.goto('/navigation/members');
-    await expect(page).toHaveURL(/\/navigation\/members$/);
-    await expect(page.getByText(/Members list goes here\./i)).toBeVisible();
+  test('preview links load routed pages directly', async ({ page }) => {
+    await page.goto('/preview/landing-navbar');
+    await expect(page).toHaveURL(/\/preview\/landing-navbar$/);
+    await expect(page.getByRole('heading', { name: /landing navbar/i })).toBeVisible();
   });
 });

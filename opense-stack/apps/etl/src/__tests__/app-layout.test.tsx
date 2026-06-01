@@ -19,6 +19,9 @@ vi.mock('@repo/ui', () => ({
       {children}
     </div>
   ),
+  SWITCHABLE_APP_ICONS: {
+    etl: () => <span data-testid="etl-brand-icon" />,
+  },
 }))
 
 vi.mock('../hooks/queries/useOrganisations', () => ({
