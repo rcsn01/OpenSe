@@ -1481,10 +1481,6 @@ SECURITY DEFINER
 SET search_path = public, stoqr
 AS $$
 BEGIN
-  IF auth.role() <> 'service_role' THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
   RETURN QUERY
   WITH claimed AS (
     SELECT adl.id
@@ -1539,10 +1535,6 @@ SECURITY DEFINER
 SET search_path = public, stoqr
 AS $$
 BEGIN
-  IF auth.role() <> 'service_role' THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
   IF next_status NOT IN ('sent', 'failed') THEN
     RAISE EXCEPTION 'Invalid email delivery status';
   END IF;
@@ -1621,10 +1613,6 @@ SECURITY DEFINER
 SET search_path = public, stoqr
 AS $$
 BEGIN
-  IF auth.role() <> 'service_role' THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
   RETURN QUERY
   WITH claimed AS (
     SELECT adl.id
@@ -1694,10 +1682,6 @@ SECURITY DEFINER
 SET search_path = public, stoqr
 AS $$
 BEGIN
-  IF auth.role() <> 'service_role' THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
   IF next_status NOT IN ('sent', 'failed') THEN
     RAISE EXCEPTION 'Invalid alert delivery status';
   END IF;
@@ -2161,6 +2145,4 @@ REVOKE ALL ON FUNCTION app_private.has_permission(UUID, TEXT) FROM PUBLIC, anon,
 REVOKE ALL ON FUNCTION app_private.prevent_owner_role_mutation() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION app_private.prevent_owner_role_permission_delete() FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.ensure_stoqr_default_role(UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.ensure_stoqr_guest_role(UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION app_private.has_permission(UUID, TEXT) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.has_permission(UUID, TEXT) TO authenticated;

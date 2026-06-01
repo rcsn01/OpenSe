@@ -200,7 +200,7 @@ AS $$
     FROM public.organisations
     WHERE id = p_org_id
       AND owner_id = p_user_id
-      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
+      AND p_user_id = auth.uid()
   );
 $$;
 
@@ -216,7 +216,7 @@ AS $$
     FROM public.organisation_members
     WHERE org_id = p_org_id
       AND user_id = p_user_id
-      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
+      AND p_user_id = auth.uid()
   );
 $$;
 
@@ -233,7 +233,7 @@ AS $$
     WHERE org_id = p_org_id
       AND user_id = p_user_id
       AND role IN ('owner', 'admin')
-      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
+      AND p_user_id = auth.uid()
   );
 $$;
 
@@ -249,7 +249,7 @@ AS $$
     FROM public.organisations
     WHERE id = p_org_id
       AND owner_id = p_user_id
-      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
+      AND p_user_id = auth.uid()
   );
 $$;
 
@@ -288,10 +288,10 @@ REVOKE ALL ON FUNCTION app_private.is_org_member(UUID, UUID) FROM PUBLIC, anon, 
 REVOKE ALL ON FUNCTION app_private.is_org_admin(UUID, UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION app_private.is_org_owner_strictly(UUID, UUID) FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.has_users() TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.demote_org_role(TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION app_private.is_org_owner(UUID, UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION app_private.is_org_member(UUID, UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION app_private.is_org_admin(UUID, UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION app_private.is_org_owner_strictly(UUID, UUID) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.has_users() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.pick_higher_org_role(TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.demote_org_role(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION app_private.is_org_owner(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION app_private.is_org_member(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION app_private.is_org_admin(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION app_private.is_org_owner_strictly(UUID, UUID) TO authenticated;

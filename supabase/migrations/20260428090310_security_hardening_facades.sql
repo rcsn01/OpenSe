@@ -85,20 +85,77 @@ BEGIN
       target_fn.proname,
       target_fn.identity_args
     );
-    EXECUTE format(
-      'GRANT EXECUTE ON FUNCTION public.%I(%s) TO authenticated, service_role',
-      target_fn.proname,
-      target_fn.identity_args
-    );
+    IF target_fn.proname = 'has_users' AND target_fn.identity_args = '' THEN
+      EXECUTE format(
+        'GRANT EXECUTE ON FUNCTION public.%I(%s) TO anon, authenticated',
+        target_fn.proname,
+        target_fn.identity_args
+      );
 
+      EXECUTE format(
+        'GRANT EXECUTE ON FUNCTION app_private.%I(%s) TO anon, authenticated',
+        target_fn.proname,
+        target_fn.identity_args
+      );
+    ELSE
+      EXECUTE format(
+        'GRANT EXECUTE ON FUNCTION public.%I(%s) TO authenticated',
+        target_fn.proname,
+        target_fn.identity_args
+      );
+
+      EXECUTE format(
+        'GRANT EXECUTE ON FUNCTION app_private.%I(%s) TO authenticated',
+        target_fn.proname,
+        target_fn.identity_args
+      );
+    END IF;
+  END LOOP;
+END;
+$$;
+
+-- Supabase projects may carry default EXECUTE grants for service_role on new
+-- functions. Keep direct service-role RPC access limited to alert workers.
+DO $$
+DECLARE
+  target_fn RECORD;
+BEGIN
+  FOR target_fn IN
+    SELECT
+      n.nspname,
+      p.proname,
+      pg_get_function_identity_arguments(p.oid) AS identity_args
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname IN ('public', 'app_private', 'etl', 'stoqr')
+      AND NOT EXISTS (
+        SELECT 1
+        FROM pg_depend d
+        WHERE d.classid = 'pg_proc'::regclass
+          AND d.objid = p.oid
+          AND d.deptype = 'e'
+      )
+      AND NOT (
+        n.nspname = 'public'
+        AND (
+          (p.proname = 'claim_stoqr_pending_email_alerts' AND pg_get_function_identity_arguments(p.oid) = 'target_company_id uuid, batch_size integer')
+          OR (p.proname = 'mark_stoqr_alert_email_delivery' AND pg_get_function_identity_arguments(p.oid) = 'target_delivery_id uuid, next_status text, provider_message_id text, error_message text')
+          OR (p.proname = 'claim_stoqr_pending_alert_notifications' AND pg_get_function_identity_arguments(p.oid) = 'target_company_id uuid, batch_size integer')
+          OR (p.proname = 'mark_stoqr_alert_notification_delivery' AND pg_get_function_identity_arguments(p.oid) = 'target_delivery_id uuid, next_status text, provider_message_id text, error_message text')
+        )
+      )
+  LOOP
     EXECUTE format(
-      'GRANT EXECUTE ON FUNCTION app_private.%I(%s) TO authenticated, service_role',
+      'REVOKE EXECUTE ON FUNCTION %I.%I(%s) FROM service_role',
+      target_fn.nspname,
       target_fn.proname,
       target_fn.identity_args
     );
   END LOOP;
 END;
 $$;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA app_private REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated, service_role;
 
 
 

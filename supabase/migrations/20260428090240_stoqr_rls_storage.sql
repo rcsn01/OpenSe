@@ -836,18 +836,11 @@ REVOKE ALL ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) FR
 REVOKE ALL ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.ensure_stoqr_guest_role(UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.ensure_owner_app_roles(UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION app_private.has_permission(UUID, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION stoqr.folder_path_name(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE, DATE, JSONB) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.has_permission(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION stoqr.folder_path_name(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE, DATE, JSONB) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) TO service_role;
 GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) TO service_role;
 GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) TO service_role;
 
@@ -856,13 +849,10 @@ GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TE
 REVOKE ALL ON FUNCTION stoqr.normalize_product_identity_fields() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.sync_product_barcode_identities() FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION stoqr.normalize_product_identity_fields() TO service_role;
-GRANT EXECUTE ON FUNCTION stoqr.sync_product_barcode_identities() TO service_role;
-
 -- Future functions in exposed schemas should opt in to client EXECUTE grants explicitly.
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA etl REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA stoqr REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA etl REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA stoqr REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE POLICY alert_dispatch_config_deny_client_access
 ON stoqr.alert_dispatch_config
