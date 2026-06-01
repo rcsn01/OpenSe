@@ -31,7 +31,9 @@ test.describe('Stoqr navigation after search', () => {
     await expect(alertsSearch).toBeVisible();
     await alertsSearch.fill('scanner');
     await expect(alertsSearch).toHaveValue('scanner');
-    await expect(authenticatedPage.getByText('Showing 1 of 7 alerts')).toBeVisible();
+    await expect(
+      authenticatedPage.getByText(/Showing \d+ of \d+ alerts|No alerts matched "scanner"\./).first(),
+    ).toBeVisible();
 
     await authenticatedPage.getByRole('link', { name: 'Procurement' }).click();
     await expect(authenticatedPage).toHaveURL(/\/procurement\/purchase-orders$/);

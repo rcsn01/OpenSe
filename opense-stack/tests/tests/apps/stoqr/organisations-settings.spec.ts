@@ -19,6 +19,207 @@ const ACME_MEMBER_USER: SeededUser = {
   password: '!Password1',
 }
 
+const ACME_ORG_NAME = 'E2E Acme Distribution'
+
+const serviceConfig = () => {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  return supabaseUrl && serviceRoleKey ? { supabaseUrl, serviceRoleKey } : null
+}
+
+const serviceHeaders = (serviceRoleKey: string, extra?: Record<string, string>) => ({
+  apikey: serviceRoleKey,
+  Authorization: `Bearer ${serviceRoleKey}`,
+  ...extra,
+})
+
+const serviceFetch = async (path: string, init?: RequestInit) => {
+  const config = serviceConfig()
+  if (!config) {
+    throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for seeded StoQR organisation tests')
+  }
+
+  return fetch(`${config.supabaseUrl}${path}`, {
+    ...init,
+    headers: serviceHeaders(config.serviceRoleKey, {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.headers as Record<string, string> | undefined),
+    }),
+  })
+}
+
+const ensureAuthUserId = async (user: SeededUser, fullName: string) => {
+  const createResponse = await serviceFetch('/auth/v1/admin/users', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: user.email,
+      password: user.password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
+    }),
+  })
+
+  if (createResponse.ok) {
+    const created = (await createResponse.json()) as { id?: string }
+    if (created.id) return created.id
+  }
+
+  const listResponse = await serviceFetch('/auth/v1/admin/users?page=1&per_page=1000')
+  expect(listResponse.ok).toBeTruthy()
+  const payload = (await listResponse.json()) as { users?: Array<{ id: string; email?: string | null }> }
+  const existing = payload.users?.find((candidate) => (candidate.email ?? '').toLowerCase() === user.email.toLowerCase())
+  expect(existing?.id).toBeTruthy()
+
+  const updateResponse = await serviceFetch(`/auth/v1/admin/users/${existing!.id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      email: user.email,
+      password: user.password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
+    }),
+  })
+  expect(updateResponse.ok).toBeTruthy()
+
+  return existing!.id
+}
+
+const upsertRows = async (path: string, rows: unknown) => {
+  const response = await serviceFetch(path, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(rows),
+  })
+  expect(response.ok).toBeTruthy()
+  return response
+}
+
+const ensureE2EOrganisationSettingsUsers = async () => {
+  const adminId = await ensureAuthUserId(ACME_ADMIN_USER, 'Acme Admin')
+  const memberId = await ensureAuthUserId(ACME_MEMBER_USER, 'Acme Member')
+
+  await upsertRows('/rest/v1/profiles?on_conflict=id', [
+    { id: adminId, email: ACME_ADMIN_USER.email, full_name: 'Acme Admin', username: 'e2e-acme-admin' },
+    { id: memberId, email: ACME_MEMBER_USER.email, full_name: 'Acme Member', username: 'e2e-acme-member' },
+  ])
+
+  const orgLookupResponse = await serviceFetch(
+    `/rest/v1/organisations?select=id&name=eq.${encodeURIComponent(ACME_ORG_NAME)}&limit=1`,
+  )
+  expect(orgLookupResponse.ok).toBeTruthy()
+  const existingOrgs = (await orgLookupResponse.json()) as Array<{ id: string }>
+
+  let orgId = existingOrgs[0]?.id
+  if (!orgId) {
+    const createOrgResponse = await serviceFetch('/rest/v1/organisations', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ name: ACME_ORG_NAME, owner_id: adminId }),
+    })
+    expect(createOrgResponse.ok).toBeTruthy()
+    const createdOrgs = (await createOrgResponse.json()) as Array<{ id: string }>
+    orgId = createdOrgs[0]?.id
+  }
+  expect(orgId).toBeTruthy()
+
+  const repairRolesResponse = await serviceFetch('/rest/v1/rpc/ensure_owner_app_roles', {
+    method: 'POST',
+    body: JSON.stringify({ p_org_id: orgId }),
+  })
+  expect(repairRolesResponse.ok).toBeTruthy()
+
+  const customRoleResponse = await serviceFetch('/rest/v1/roles?on_conflict=company_id,name', {
+    method: 'POST',
+    headers: {
+      'Accept-Profile': 'stoqr',
+      'Content-Profile': 'stoqr',
+      Prefer: 'resolution=merge-duplicates,return=representation',
+    },
+    body: JSON.stringify({
+      company_id: orgId,
+      name: 'E2E Manager',
+      description: 'Editable role for organisation settings e2e coverage',
+      role_rank: 500,
+    }),
+  })
+  expect(customRoleResponse.ok).toBeTruthy()
+  const customRoles = (await customRoleResponse.json()) as Array<{ id: string }>
+  const customRoleId = customRoles[0]?.id
+  expect(customRoleId).toBeTruthy()
+
+  const customRolePermissionResponse = await serviceFetch('/rest/v1/role_permissions?on_conflict=role_id,permission_code', {
+    method: 'POST',
+    headers: {
+      'Accept-Profile': 'stoqr',
+      'Content-Profile': 'stoqr',
+      Prefer: 'resolution=merge-duplicates',
+    },
+    body: JSON.stringify([
+      'dashboard.view',
+      'inventory.view',
+      'reports.view',
+      'procurement.view',
+      'alerts.view',
+      'organisation.view',
+    ].map((permission_code) => ({ role_id: customRoleId, permission_code }))),
+  })
+  expect(customRolePermissionResponse.ok).toBeTruthy()
+
+  const membersResponse = await upsertRows('/rest/v1/organisation_members?on_conflict=org_id,user_id', [
+    { org_id: orgId, user_id: adminId, role: 'owner' },
+    { org_id: orgId, user_id: memberId, role: 'member' },
+  ])
+  const members = (await membersResponse.json()) as Array<{ id: string; user_id: string }>
+
+  await upsertRows('/rest/v1/organisation_app_seats?on_conflict=org_id,app_code', [
+    { org_id: orgId, app_code: 'etl', seat_limit: null },
+    { org_id: orgId, app_code: 'stoqr', seat_limit: null },
+  ])
+
+  await upsertRows('/rest/v1/organisation_member_app_seats?on_conflict=org_member_id,app_code', members.flatMap((member) => [
+    { org_member_id: member.id, app_code: 'stoqr' },
+  ]))
+
+  const ownerRoleResponse = await serviceFetch(
+    `/rest/v1/roles?select=id&company_id=eq.${orgId}&name=eq.Owner&limit=1`,
+    { headers: { 'Accept-Profile': 'stoqr' } },
+  )
+  expect(ownerRoleResponse.ok).toBeTruthy()
+  const ownerRoles = (await ownerRoleResponse.json()) as Array<{ id: string }>
+  const ownerRoleId = ownerRoles[0]?.id
+  expect(ownerRoleId).toBeTruthy()
+
+  const memberRolesResponse = await serviceFetch('/rest/v1/organisation_member_roles?on_conflict=user_id,company_id', {
+    method: 'POST',
+    headers: {
+      'Accept-Profile': 'stoqr',
+      'Content-Profile': 'stoqr',
+      Prefer: 'resolution=merge-duplicates',
+    },
+    body: JSON.stringify([
+      { user_id: adminId, company_id: orgId, role_id: ownerRoleId },
+      { user_id: memberId, company_id: orgId, role_id: customRoleId },
+    ]),
+  })
+  expect(memberRolesResponse.ok).toBeTruthy()
+
+  const pageSettingsResponse = await serviceFetch('/rest/v1/organisation_page_settings?on_conflict=company_id', {
+    method: 'POST',
+    headers: {
+      'Accept-Profile': 'stoqr',
+      'Content-Profile': 'stoqr',
+      Prefer: 'resolution=merge-duplicates',
+    },
+    body: JSON.stringify({
+      company_id: orgId,
+      reports_enabled: true,
+      procurement_enabled: true,
+      alerts_enabled: true,
+    }),
+  })
+  expect(pageSettingsResponse.ok).toBeTruthy()
+}
+
 const organisationPageRoutes = [
   { label: 'Reports', route: '/reports/stock-health' },
   { label: 'Procurement', route: '/procurement/purchase-orders' },
@@ -171,6 +372,12 @@ const openOrganisationSettingsTab = async (
 }
 
 test.describe('Stoqr Organisations Settings', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  test.beforeAll(async () => {
+    await ensureE2EOrganisationSettingsUsers()
+  })
+
   test('teams settings shows organisation navigation and the owner row is read-only', async ({ browser }) => {
     const adminSession = await openAuthenticatedPageForUser(browser, ACME_ADMIN_USER)
 
@@ -211,7 +418,7 @@ test.describe('Stoqr Organisations Settings', () => {
 
       await adminSession.page.getByRole('button', { name: 'Activity Logs' }).click()
       await expect(adminSession.page).toHaveURL(/\/settings\/organisations\/activity$/, { timeout: 20_000 })
-      await expect(adminSession.page.getByRole('heading', { name: 'Activity Logs' })).toBeVisible()
+      await expect(adminSession.page.getByRole('columnheader', { name: 'Timestamp' })).toBeVisible()
       await expect(adminSession.page.getByRole('button', { name: 'Export Logs' })).toHaveCount(0)
 
       await adminSession.page.getByRole('button', { name: 'Two-Factor Authentication' }).click()
@@ -229,17 +436,13 @@ test.describe('Stoqr Organisations Settings', () => {
     try {
       await openOrganisationSettingsTab(adminSession.page, 'permissions')
 
-      await expect(adminSession.page.getByRole('heading', { name: 'Organisation Permissions' })).toBeVisible()
       await expect(adminSession.page.getByRole('columnheader', { name: 'Role Rank' })).toBeVisible()
 
-      const editButton = adminSession.page
-        .locator('tbody tr', { hasNotText: 'Owner' })
-        .getByRole('button', { name: /^edit$/i })
-        .first()
+      const editableRoleRow = adminSession.page.getByRole('row', { name: /E2E Manager/ })
+      await expect(editableRoleRow).toBeVisible()
+      await editableRoleRow.click()
 
-      await expect(editButton).toBeVisible()
-      await editButton.click()
-
+      await expect(adminSession.page).toHaveURL(/\/settings\/organisations\/permissions\/[^/]+$/, { timeout: 20_000 })
       await expect(adminSession.page.getByRole('heading', { name: 'Edit Role Permissions' })).toBeVisible()
       await expect(adminSession.page.getByText('Role Rank').last()).toBeVisible()
       await expect(adminSession.page.getByRole('button', { name: /^save$/i })).toBeVisible()

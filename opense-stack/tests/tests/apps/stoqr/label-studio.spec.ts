@@ -3,12 +3,17 @@ import { expect } from '@playwright/test'
 import { test } from '../../fixtures/auth'
 import { CreateProductPage, LabelStudioPage } from '../../pages/AppPages'
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const editTemplateControl = (page: Page, templateName: string) =>
+  page.locator('tbody tr').filter({ hasText: templateName }).first()
+
 const createTemplate = async (page: Page, templateName: string) => {
   await page.getByRole('button', { name: 'Create new template' }).click()
   await page.getByLabel('Template Name').fill(templateName)
   await page.getByRole('button', { name: 'Create Template' }).click()
   await expect(page.getByText('Template created. Click its name to edit it.')).toBeVisible()
-  await expect(page.getByRole('button', { name: `Edit ${templateName} template` })).toBeVisible()
+  await expect(editTemplateControl(page, templateName)).toBeVisible()
 }
 
 const createProductForLabelExport = async (page: Page, productName: string, sku: string) => {
@@ -35,7 +40,7 @@ test.describe('Stoqr Label Studio', () => {
     await expect(authenticatedPage.getByRole('button', { name: 'Create new template' })).toBeVisible()
 
     await createTemplate(authenticatedPage, templateName)
-    await authenticatedPage.getByRole('button', { name: `Edit ${templateName} template` }).click()
+    await editTemplateControl(authenticatedPage, templateName).click()
 
     await expect(authenticatedPage.getByRole('heading', { name: templateName })).toBeVisible()
     await expect(authenticatedPage.getByLabel('Width (mm)')).toBeVisible()
@@ -87,7 +92,7 @@ test.describe('Stoqr Label Studio', () => {
     await labelStudioPage.goto()
     await labelStudioPage.expectLoaded()
     await createTemplate(authenticatedPage, templateName)
-    await authenticatedPage.getByRole('button', { name: `Edit ${templateName} template` }).click()
+    await editTemplateControl(authenticatedPage, templateName).click()
 
     await expect(authenticatedPage.getByRole('heading', { name: templateName })).toBeVisible()
     await expect(authenticatedPage.getByText('Live Canvas')).toBeVisible()
@@ -102,7 +107,7 @@ test.describe('Stoqr Label Studio', () => {
 
     await expect(authenticatedPage.getByRole('button', { name: 'Discard' })).toBeDisabled()
     await authenticatedPage.getByRole('button', { name: 'Back to templates' }).click()
-    await authenticatedPage.getByRole('button', { name: `Edit ${templateName} template` }).click()
+    await editTemplateControl(authenticatedPage, templateName).click()
 
     await expect(authenticatedPage.getByLabel('Content Padding (pt)')).toHaveValue('12')
     await expect(authenticatedPage.getByLabel('Barcode Scale (%)')).toHaveValue('130')
@@ -122,13 +127,13 @@ test.describe('Stoqr Label Studio', () => {
 
     const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search templates...' })
     await searchInput.fill(templateTwo)
-    await authenticatedPage.getByRole('option', { name: new RegExp(templateTwo) }).click()
+    await authenticatedPage.getByRole('option', { name: new RegExp(escapeRegExp(templateTwo)) }).click()
 
     await expect(authenticatedPage).toHaveURL(/\/tools\/labels\/templates\/.+\?.*template=.+/)
     await expect(authenticatedPage.getByRole('heading', { name: templateTwo })).toBeVisible()
 
     await searchInput.fill(templateOne)
-    await authenticatedPage.getByRole('option', { name: new RegExp(templateOne) }).click()
+    await authenticatedPage.getByRole('option', { name: new RegExp(escapeRegExp(templateOne)) }).click()
 
     await expect(authenticatedPage.getByRole('heading', { name: templateOne })).toBeVisible()
   })

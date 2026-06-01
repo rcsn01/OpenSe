@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('UI Design Mobile Side Navigation', () => {
   test('side panel opens from top bar and closes via outside tap or swipe left', async ({ page }) => {
-    await page.goto('/buttons');
-    await expect(page).toHaveURL(/\/buttons$/);
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/$/);
 
     const viewportWidth = await page.evaluate(() => window.innerWidth);
     expect(viewportWidth).toBeLessThanOrEqual(430);

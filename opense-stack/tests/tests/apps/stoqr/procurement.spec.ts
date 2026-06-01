@@ -10,7 +10,7 @@ test.describe('Stoqr Procurement', () => {
     await expect(authenticatedPage.getByRole('button', { name: 'Suppliers' })).toBeVisible();
     await expect(authenticatedPage.getByPlaceholder('Search POs...')).toHaveCount(1);
     await expect(authenticatedPage.getByPlaceholder('Search items...')).toHaveCount(0);
-    const filterButton = authenticatedPage.getByRole('button', { name: 'PO status filter' });
+    const filterButton = authenticatedPage.getByRole('button', { name: 'Purchase order status filter' });
     const autoGenerateButton = authenticatedPage.getByRole('button', { name: /auto-generate from alerts/i });
     const createButton = authenticatedPage.getByRole('button', { name: /create po/i });
 
@@ -25,8 +25,9 @@ test.describe('Stoqr Procurement', () => {
 
     await filterButton.click();
     await authenticatedPage.getByRole('button', { name: 'Awaiting Supplier' }).click();
-    await expect(authenticatedPage.getByRole('button', { name: 'Clear Awaiting Supplier filter' })).toBeVisible();
-    await authenticatedPage.getByRole('button', { name: 'Clear Awaiting Supplier filter' }).click();
+    await expect(filterButton).toContainText('Awaiting Supplier');
+    await filterButton.click();
+    await authenticatedPage.getByRole('button', { name: /^All$/ }).click();
   });
 
   test('suppliers tab shows supplier management search and actions', async ({ authenticatedPage }) => {
@@ -57,11 +58,11 @@ test.describe('Stoqr Procurement', () => {
     await authenticatedPage.getByRole('button', { name: 'Save Supplier' }).click();
 
     await expect(authenticatedPage.getByText('Supplier added.')).toBeVisible();
-    await expect(authenticatedPage.getByRole('heading', { name: supplierName })).toBeVisible();
+    await expect(authenticatedPage.getByText(supplierName).first()).toBeVisible();
 
     const searchInput = authenticatedPage.getByRole('combobox', { name: 'Search suppliers...' });
     await searchInput.fill(supplierName);
 
-    await expect(authenticatedPage.getByRole('heading', { name: supplierName })).toBeVisible();
+    await expect(authenticatedPage.getByText(supplierName).first()).toBeVisible();
   });
 });

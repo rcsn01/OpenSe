@@ -2,18 +2,8 @@ import { test, expect } from '@playwright/test';
 
 const routes = [
   '/',
-  '/colors',
-  '/typography',
-  '/spacing',
-  '/buttons',
-  '/forms',
-  '/cards',
-  '/badges',
-  '/alerts',
-  '/data',
-  '/overlays',
-  '/dividers',
-  '/test',
+  '/preview/landing-navbar',
+  '/preview/stoqr',
 ];
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -23,11 +13,7 @@ test.describe('UI Design Route Coverage', () => {
     test(`route ${route} renders`, async ({ page }) => {
       await page.goto(route);
 
-      if (route === '/') {
-        await expect(page).toHaveURL(/\/$/);
-      } else {
-        await expect(page).toHaveURL(new RegExp(`${escapeRegExp(route)}$`));
-      }
+      await expect(page).toHaveURL(new RegExp(`${escapeRegExp(route)}$`));
 
       await expect(page.locator('body')).toBeVisible();
     });
@@ -36,5 +22,12 @@ test.describe('UI Design Route Coverage', () => {
   test('wildcard route redirects to root', async ({ page }) => {
     await page.goto('/non-existent-path');
     await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('gallery anchors are hash based', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('link', { name: 'Foundations' }).click();
+    await expect(page).toHaveURL(/\/#foundations$/);
+    await expect(page.getByRole('heading', { name: 'Foundations' })).toBeVisible();
   });
 });

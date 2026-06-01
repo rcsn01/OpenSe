@@ -80,7 +80,7 @@ test.describe("Stoqr Alerts", () => {
       await expect(lowStockTrigger).toBeVisible();
     }
     await expect(authenticatedPage.getByLabel("Trigger type")).toHaveValue(
-      "low_stock",
+      "Quantity on hand <= Low stock alert level",
     );
     await expect(
       authenticatedPage.getByRole("switch", {
@@ -134,6 +134,12 @@ test.describe("Stoqr Alerts", () => {
       .first()
       .click();
 
+    await authenticatedPage
+      .getByRole("switch", { name: "Mattermost enabled" })
+      .click();
+    await authenticatedPage
+      .getByRole("button", { name: "Set up Mattermost" })
+      .click({ force: true });
     await authenticatedPage
       .getByLabel("Connector provider")
       .selectOption("mattermost");

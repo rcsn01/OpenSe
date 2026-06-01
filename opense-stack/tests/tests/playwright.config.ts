@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const workspaceRoot = process.cwd();
 
-const loadEnvFromFile = (filePath: string) => {
+const loadEnvFromFile = (filePath: string, options: { override?: boolean } = {}) => {
   if (!existsSync(filePath)) return;
 
   const content = readFileSync(filePath, 'utf8');
@@ -16,7 +16,7 @@ const loadEnvFromFile = (filePath: string) => {
     if (equalsIndex <= 0) continue;
 
     const key = line.slice(0, equalsIndex).trim();
-    if (!key || process.env[key] !== undefined) continue;
+    if (!key || (!options.override && process.env[key] !== undefined)) continue;
 
     const rawValue = line.slice(equalsIndex + 1).trim();
     const unquoted =
@@ -30,7 +30,7 @@ const loadEnvFromFile = (filePath: string) => {
 };
 
 loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test'));
-loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test.local'));
+loadEnvFromFile(resolve(workspaceRoot, 'tests/tests/.env.test.local'), { override: true });
 
 const withAccounts = process.env.E2E_WITH_ACCOUNTS !== 'false';
 const reuseExistingServer = process.env.E2E_REUSE_SERVER === 'true';

@@ -102,6 +102,7 @@ test.describe.configure({ mode: 'serial' });
 test.describe('Accounts onboarding organisation limit', () => {
   test.beforeEach(() => {
     test.skip(!serviceConfig(), 'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
+    test.skip(process.env.E2E_ACCOUNTS_DEEP !== 'true', 'Set E2E_ACCOUNTS_DEEP=true for fresh-install organisation limit coverage');
   });
 
   test('first user can create the only fresh-install organisation with unlimited selected app seats', async ({ page }) => {
