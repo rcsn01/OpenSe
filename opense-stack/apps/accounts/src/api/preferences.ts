@@ -56,26 +56,45 @@ const mapPreferences = (row: AccountPreferencesRow | undefined): AccountPreferen
 }
 
 export const getAccountPreferences = async (): Promise<AccountPreferences> => {
-  const { data, error } = await supabase.rpc('accounts_get_preferences')
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError) throw userError
+  const userId = userData.user?.id
+  if (!userId) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('account_preferences')
+    .select('theme, timezone, locale, notification_preferences, default_landing_app, updated_at')
+    .eq('user_id', userId)
+    .maybeSingle()
   if (error) throw error
-  const row = Array.isArray(data) ? (data[0] as AccountPreferencesRow | undefined) : undefined
-  return mapPreferences(row)
+  const row = data as AccountPreferencesRow | null
+  return mapPreferences(row ?? undefined)
 }
 
 export const saveAccountPreferences = async (preferences: AccountPreferences): Promise<AccountPreferences> => {
-  const { data, error } = await supabase.rpc('accounts_upsert_preferences', {
-    p_theme: preferences.theme,
-    p_timezone: preferences.timezone,
-    p_locale: preferences.locale,
-    p_notification_preferences: {
-      product_updates: preferences.notifyProductUpdates,
-      security_alerts: preferences.notifySecurityAlerts,
-      billing_alerts: preferences.notifyBillingAlerts,
-    },
-    p_default_landing_app: preferences.defaultLandingApp,
-  })
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError) throw userError
+  const userId = userData.user?.id
+  if (!userId) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('account_preferences')
+    .upsert({
+      user_id: userId,
+      theme: preferences.theme,
+      timezone: preferences.timezone || 'UTC',
+      locale: preferences.locale || 'en-AU',
+      notification_preferences: {
+        product_updates: preferences.notifyProductUpdates,
+        security_alerts: preferences.notifySecurityAlerts,
+        billing_alerts: preferences.notifyBillingAlerts,
+      },
+      default_landing_app: preferences.defaultLandingApp,
+    }, { onConflict: 'user_id' })
+    .select('theme, timezone, locale, notification_preferences, default_landing_app, updated_at')
+    .single()
   if (error) throw error
 
-  const row = Array.isArray(data) ? (data[0] as AccountPreferencesRow | undefined) : undefined
-  return mapPreferences(row)
+  const row = data as AccountPreferencesRow | null
+  return mapPreferences(row ?? undefined)
 }

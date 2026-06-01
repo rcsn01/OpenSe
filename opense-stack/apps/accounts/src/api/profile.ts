@@ -40,10 +40,19 @@ const mapProfile = (row: AccountProfileRow): AccountProfile => ({
 })
 
 export const getAccountProfile = async (): Promise<AccountProfile> => {
-  const { data, error } = await supabase.rpc('accounts_get_profile')
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError) throw userError
+  const userId = userData.user?.id
+  if (!userId) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, full_name, username, avatar_url, avatar_storage_path, recovery_email, created_at, updated_at')
+    .eq('id', userId)
+    .single()
   if (error) throw error
 
-  const row = Array.isArray(data) ? (data[0] as AccountProfileRow | undefined) : undefined
+  const row = data as AccountProfileRow | null
   if (!row) throw new Error('Profile not found for current user.')
   return mapProfile(row)
 }
@@ -69,15 +78,20 @@ export const updateAccountProfile = async ({
     updateAuthFullName(nextName),
   ])
 
-  const { data, error } = await supabase.rpc('accounts_update_profile', {
-    p_full_name: nextName,
-    p_username: username?.trim() || null,
-    p_avatar_url: avatarUrl,
-    p_avatar_storage_path: avatarStoragePath,
-  })
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: nextName,
+      username: username?.trim() || null,
+      avatar_url: avatarUrl,
+      avatar_storage_path: avatarStoragePath,
+    })
+    .eq('id', userId)
+    .select('id, email, full_name, username, avatar_url, avatar_storage_path, recovery_email, created_at, updated_at')
+    .single()
   if (error) throw error
 
-  const row = Array.isArray(data) ? (data[0] as AccountProfileRow | undefined) : undefined
+  const row = data as AccountProfileRow | null
   if (!row) throw new Error('Updated profile was not returned.')
   return mapProfile(row)
 }

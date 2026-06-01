@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient'
+import { db } from '../supabaseClient'
 
 type ProductSummary = {
   id: string
@@ -25,27 +25,6 @@ type TopMover = {
   sku: string
   totalSold: number
   revenue: number
-}
-
-type DashboardSnapshotRpc = {
-  kpis?: {
-    total_inventory_value?: number | string | null
-    total_stock_units?: number | string | null
-    low_stock_items?: number | string | null
-    out_of_stock_items?: number | string | null
-    pending_orders?: number | string | null
-  }
-  alerts_summary?: {
-    open_alerts?: number | string | null
-    critical_alerts?: number | string | null
-    low_stock_alerts?: number | string | null
-    reorder_alerts?: number | string | null
-    expiration_alerts?: number | string | null
-  }
-  charts?: {
-    inventory_trend?: Array<{ day: string; delta: number | string | null }>
-    usage_trend?: Array<{ day: string; usage: number | string | null }>
-  }
 }
 
 type ReportValuationRpcRow = {
@@ -114,28 +93,51 @@ export type DashboardData = {
 export const fetchDashboardData = async (companyId: string): Promise<DashboardData> => {
   const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const nowIso = new Date().toISOString()
+  const pendingStatuses = [
+    'pending_approval',
+    'approved',
+    'not_started',
+    'awaiting_supplier',
+    'in_transit',
+    'partial_receipt',
+    'awaiting_return',
+    'shipped_to_vendor',
+  ]
 
-  const [{ data: snapshotData, error: snapshotError }, { data: valuationData, error: valuationError }, { data: movementData, error: movementError }] = await Promise.all([
-    supabase.rpc('get_stoqr_dashboard_snapshot', {
-      target_company_id: companyId,
-      p_days: 30,
-      p_activity_limit: 7,
-    }),
-    supabase.rpc('get_stoqr_report_inventory_valuation', { target_company_id: companyId }),
-    supabase.rpc('get_stoqr_report_stock_movements', {
-      target_company_id: companyId,
-      p_start: thirtyDaysAgoIso,
-      p_end: nowIso,
-    }),
+  const [
+    { data: valuationData, error: valuationError },
+    { data: movementData, error: movementError },
+    { count: pendingOrders, error: pendingOrdersError },
+    { data: alertData, error: alertError },
+  ] = await Promise.all([
+    db.from('report_inventory_valuation')
+      .select('product_id, sku, name, quantity_on_hand, reorder_point, cost_price, selling_price')
+      .eq('company_id', companyId)
+      .order('name', { ascending: true }),
+    db.from('report_stock_movements')
+      .select('transaction_id, created_at, transaction_type, quantity_change, product_id, sku, product_name, performer_name')
+      .eq('company_id', companyId)
+      .gte('created_at', thirtyDaysAgoIso)
+      .lte('created_at', nowIso)
+      .order('created_at', { ascending: false }),
+    db.from('purchase_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .in('status', pendingStatuses),
+    db.from('alert_events')
+      .select('alert_type, severity, status')
+      .eq('company_id', companyId)
+      .eq('status', 'open'),
   ])
 
-  if (snapshotError) throw snapshotError
   if (valuationError) throw valuationError
   if (movementError) throw movementError
+  if (pendingOrdersError) throw pendingOrdersError
+  if (alertError) throw alertError
 
-  const snapshot = (snapshotData ?? {}) as DashboardSnapshotRpc
   const valuationRows = ((valuationData ?? []) as ReportValuationRpcRow[])
   const movementRows = ((movementData ?? []) as ReportStockMovementRpcRow[])
+  const openAlerts = (alertData ?? []) as Array<{ alert_type: string | null; severity: string | null; status: string | null }>
 
   const products: ProductSummary[] = valuationRows.map((row) => ({
     id: row.product_id,
@@ -195,29 +197,44 @@ export const fetchDashboardData = async (companyId: string): Promise<DashboardDa
     profiles: { full_name: row.performer_name, username: null },
   }))
 
-  const trendRows = snapshot.charts?.inventory_trend ?? []
-  const totalValue = toNumber(snapshot.kpis?.total_inventory_value, 0)
-  const totalDelta = trendRows.reduce((sum, point) => sum + toNumber(point.delta, 0), 0)
+  const totalValue = products.reduce((sum, product) => sum + product.quantity_on_hand * product.cost_price, 0)
+  const totalStockUnits = products.reduce((sum, product) => sum + product.quantity_on_hand, 0)
+  const lowStockCount = products.filter((product) => product.quantity_on_hand <= product.reorder_point).length
+  const outOfStockCount = products.filter((product) => product.quantity_on_hand <= 0).length
+  const deltaByDay = movementRows.reduce((acc, row) => {
+    const day = String(row.created_at).slice(0, 10)
+    acc.set(day, (acc.get(day) ?? 0) + toNumber(row.quantity_change, 0))
+    return acc
+  }, new Map<string, number>())
+  const days = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date()
+    date.setDate(date.getDate() - (29 - index))
+    return date.toISOString().slice(0, 10)
+  })
+  const totalDelta = days.reduce((sum, day) => sum + (deltaByDay.get(day) ?? 0), 0)
   let runningValue = totalValue - totalDelta
 
-  const chartData = trendRows
-    .slice()
-    .sort((left, right) => String(left.day).localeCompare(String(right.day)))
-    .map((point) => {
-      runningValue += toNumber(point.delta, 0)
+  const chartData = days
+    .map((day) => {
+      runningValue += deltaByDay.get(day) ?? 0
       return {
-        date: String(point.day),
+        date: day,
         value: runningValue,
       }
     })
 
-  const usageChartData = (snapshot.charts?.usage_trend ?? [])
-    .slice()
-    .sort((left, right) => String(left.day).localeCompare(String(right.day)))
-    .map((point) => ({
-      date: String(point.day),
-      value: toNumber(point.usage, 0),
-    }))
+  const usageByDay = movementRows.reduce((acc, row) => {
+    const normalizedType = normalizeTransactionType(row.transaction_type)
+    if (normalizedType !== 'sale' && normalizedType !== 'loss') return acc
+    const day = String(row.created_at).slice(0, 10)
+    acc.set(day, (acc.get(day) ?? 0) + Math.abs(toNumber(row.quantity_change, 0)))
+    return acc
+  }, new Map<string, number>())
+
+  const usageChartData = days.map((day) => ({
+    date: day,
+    value: usageByDay.get(day) ?? 0,
+  }))
 
   const movementChartData = Array.from(
     movementRows.reduce((acc, row) => {
@@ -245,20 +262,20 @@ export const fetchDashboardData = async (companyId: string): Promise<DashboardDa
     transactions,
     revenue30Days,
     totalValue,
-    totalStockUnits: toNumber(snapshot.kpis?.total_stock_units, 0),
-    pendingOrders: toNumber(snapshot.kpis?.pending_orders, 0),
-    lowStockCount: toNumber(snapshot.kpis?.low_stock_items, 0),
-    outOfStockCount: toNumber(snapshot.kpis?.out_of_stock_items, 0),
+    totalStockUnits,
+    pendingOrders: pendingOrders ?? 0,
+    lowStockCount,
+    outOfStockCount,
     topMovers,
     chartData,
     usageChartData,
     movementChartData,
     alertsSummary: {
-      openAlerts: toNumber(snapshot.alerts_summary?.open_alerts, 0),
-      criticalAlerts: toNumber(snapshot.alerts_summary?.critical_alerts, 0),
-      lowStockAlerts: toNumber(snapshot.alerts_summary?.low_stock_alerts, 0),
-      reorderAlerts: toNumber(snapshot.alerts_summary?.reorder_alerts, 0),
-      expirationAlerts: toNumber(snapshot.alerts_summary?.expiration_alerts, 0),
+      openAlerts: openAlerts.length,
+      criticalAlerts: openAlerts.filter((alert) => alert.severity === 'critical').length,
+      lowStockAlerts: openAlerts.filter((alert) => alert.alert_type === 'low_stock').length,
+      reorderAlerts: openAlerts.filter((alert) => alert.alert_type === 'reorder_point').length,
+      expirationAlerts: openAlerts.filter((alert) => alert.alert_type === 'expiration').length,
     },
   }
 }

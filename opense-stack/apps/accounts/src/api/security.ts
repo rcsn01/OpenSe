@@ -22,6 +22,14 @@ export interface MfaEnrollment {
   secret: string | null
 }
 
+type SupabaseMfaFactor = {
+  id: string
+  factor_type?: string | null
+  status?: string | null
+  friendly_name?: string | null
+  created_at?: string | null
+}
+
 export const changeAccountPassword = updatePassword
 
 export const getCurrentSessionSummary = async (): Promise<AccountSessionSummary> => {
@@ -48,7 +56,15 @@ export const requestRecoveryEmailChange = async (email: string): Promise<void> =
     throw new Error('Enter a valid recovery email.')
   }
 
-  const { error } = await supabase.rpc('accounts_update_recovery_email', { p_recovery_email: nextEmail })
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError) throw userError
+  const userId = userData.user?.id
+  if (!userId) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ recovery_email: nextEmail })
+    .eq('id', userId)
   if (error) throw error
 }
 
@@ -57,8 +73,8 @@ export const listMfaFactors = async (): Promise<MfaFactor[]> => {
   if (error) throw error
 
   const factors = [
-    ...((data?.totp ?? []) as any[]),
-    ...((data?.phone ?? []) as any[]),
+    ...((data?.totp ?? []) as SupabaseMfaFactor[]),
+    ...((data?.phone ?? []) as SupabaseMfaFactor[]),
   ]
 
   return factors.map((factor) => ({

@@ -48,7 +48,11 @@ export interface SeatAssignmentSnapshot {
 }
 
 export const getSeatAssignmentSnapshot = async (): Promise<SeatAssignmentSnapshot> => {
-  const { data: contextRows, error: contextError } = await supabase.rpc('accounts_get_my_org_context')
+  const { data: contextRows, error: contextError } = await supabase
+    .from('account_org_context')
+    .select('org_id, member_role')
+    .order('member_created_at', { ascending: true })
+    .limit(1)
   if (contextError) throw contextError
 
   const contextRow = Array.isArray(contextRows) ? (contextRows[0] as OrgContextRow | undefined) : undefined
@@ -56,7 +60,11 @@ export const getSeatAssignmentSnapshot = async (): Promise<SeatAssignmentSnapsho
     throw new Error('No organisation membership found for the current user.')
   }
 
-  const { data: memberRows, error: memberError } = await supabase.rpc('accounts_get_org_member_app_assignments')
+  const { data: memberRows, error: memberError } = await supabase
+    .from('account_org_member_app_assignments')
+    .select('org_member_id, user_id, full_name, email, role, assigned_apps')
+    .eq('org_id', contextRow.org_id)
+    .order('created_at', { ascending: true })
   if (memberError) throw memberError
 
   const pendingInviteRows = await getOrganisationInvitesForOrg(contextRow.org_id)

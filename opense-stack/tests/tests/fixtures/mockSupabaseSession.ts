@@ -191,20 +191,19 @@ export const installMockSupabaseSession = async (
     ]));
   });
 
-  await page.route('**/rest/v1/rpc/accounts_get_profile', async (route) => {
+  await page.route('**/rest/v1/profiles*', async (route) => {
     if (await continuePreflight(route)) return;
-    await route.fulfill(json([
-      {
-        id: userId,
-        email,
-        full_name: user.user_metadata.full_name,
-        username: null,
-        avatar_url: null,
-        avatar_storage_path: null,
-        recovery_email: null,
-        created_at: createdAt,
-        updated_at: null,
-      },
-    ]));
+    const profile = {
+      id: userId,
+      email,
+      full_name: user.user_metadata.full_name,
+      username: null,
+      avatar_url: null,
+      avatar_storage_path: null,
+      recovery_email: null,
+      created_at: createdAt,
+      updated_at: null,
+    };
+    await route.fulfill(json(route.request().method() === 'PATCH' ? profile : profile));
   });
 };

@@ -1,4 +1,4 @@
-import { db, supabase } from '../supabaseClient'
+import { db } from '../supabaseClient'
 
 type ReportProduct = {
   id: string
@@ -128,12 +128,16 @@ export const fetchReportsData = async (companyId: string) => {
   const endIso = new Date().toISOString()
 
   const [{ data: valuationData, error: valuationError }, { data: movementData, error: movementError }, { data: schedulesData, error: schedulesError }] = await Promise.all([
-    supabase.rpc('get_stoqr_report_inventory_valuation', { target_company_id: companyId }),
-    supabase.rpc('get_stoqr_report_stock_movements', {
-      target_company_id: companyId,
-      p_start: startIso,
-      p_end: endIso,
-    }),
+    db.from('report_inventory_valuation')
+      .select('product_id, sku, name, quantity_on_hand, cost_price, selling_price')
+      .eq('company_id', companyId)
+      .order('name', { ascending: true }),
+    db.from('report_stock_movements')
+      .select('transaction_id, created_at, transaction_type, quantity_change, notes, performed_by, performer_name, product_id, sku, product_name')
+      .eq('company_id', companyId)
+      .gte('created_at', startIso)
+      .lte('created_at', endIso)
+      .order('created_at', { ascending: false }),
     db.from('report_schedules').select('*').eq('company_id', companyId),
   ])
 

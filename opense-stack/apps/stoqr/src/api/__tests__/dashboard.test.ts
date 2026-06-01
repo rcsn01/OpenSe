@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockRpc = vi.fn()
+const mockDbFrom = vi.fn()
 
 vi.mock('../../supabaseClient', () => ({
-  supabase: {
-    rpc: (...args: unknown[]) => mockRpc(...args),
+  db: {
+    from: (...args: unknown[]) => mockDbFrom(...args),
   },
 }))
 
@@ -15,132 +15,165 @@ beforeEach(() => {
 })
 
 describe('dashboard api', () => {
-  it('maps RPC payloads into dashboard model including new KPI fields', async () => {
-    mockRpc
-      .mockResolvedValueOnce({
-        data: {
-          kpis: {
-            total_inventory_value: '1250',
-            total_stock_units: '42',
-            low_stock_items: '3',
-            out_of_stock_items: '1',
-            pending_orders: '4',
-          },
-          alerts_summary: {
-            open_alerts: '8',
-            critical_alerts: '2',
-            low_stock_alerts: '3',
-            reorder_alerts: '2',
-            expiration_alerts: '1',
-          },
-          charts: {
-            inventory_trend: [
-              { day: '2026-02-20', delta: '100' },
-              { day: '2026-02-21', delta: '150' },
-            ],
-            usage_trend: [
-              { day: '2026-02-20', usage: '10' },
-              { day: '2026-02-21', usage: '12' },
-            ],
-          },
-        },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [
-          {
-            product_id: 'p-1',
-            sku: 'SKU-1',
-            name: 'Product 1',
-            quantity_on_hand: '10',
-            reorder_point: '5',
-            cost_price: '20',
-            selling_price: '30',
-          },
-        ],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [
-          {
-            transaction_id: 't-0',
-            created_at: '2026-02-20T00:00:00Z',
-            transaction_type: 'purchase',
-            quantity_change: '5',
-            product_id: 'p-1',
-            sku: 'SKU-1',
-            product_name: 'Product 1',
-            performer_name: 'Warehouse Team',
-          },
-          {
-            transaction_id: 't-1',
-            created_at: '2026-02-21T00:00:00Z',
-            transaction_type: 'sale',
-            quantity_change: '-2',
-            product_id: 'p-1',
-            sku: 'SKU-1',
-            product_name: 'Product 1',
-            performer_name: 'Alice',
-          },
-          {
-            transaction_id: 't-2',
-            created_at: '2026-02-22T00:00:00Z',
-            transaction_type: 'scan_out',
-            quantity_change: '-1',
-            product_id: 'p-1',
-            sku: 'SKU-1',
-            product_name: 'Product 1',
-            performer_name: 'Bob',
-          },
-        ],
-        error: null,
-      })
+  it('maps direct view payloads into dashboard model including KPI fields', async () => {
+    const formatDay = (offset: number) => {
+      const date = new Date()
+      date.setDate(date.getDate() + offset)
+      return date.toISOString().slice(0, 10)
+    }
+    const dayOne = formatDay(-2)
+    const dayTwo = formatDay(-1)
+    const dayThree = formatDay(0)
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'report_inventory_valuation') {
+        const order = vi.fn().mockResolvedValue({
+          data: [
+            {
+              product_id: 'p-1',
+              sku: 'SKU-1',
+              name: 'Product 1',
+              quantity_on_hand: '10',
+              reorder_point: '5',
+              cost_price: '20',
+              selling_price: '30',
+            },
+          ],
+          error: null,
+        })
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ order })),
+          })),
+        }
+      }
+
+      if (table === 'report_stock_movements') {
+        const order = vi.fn().mockResolvedValue({
+          data: [
+            {
+              transaction_id: 't-0',
+              created_at: `${dayOne}T00:00:00Z`,
+              transaction_type: 'purchase',
+              quantity_change: '5',
+              product_id: 'p-1',
+              sku: 'SKU-1',
+              product_name: 'Product 1',
+              performer_name: 'Warehouse Team',
+            },
+            {
+              transaction_id: 't-1',
+              created_at: `${dayTwo}T00:00:00Z`,
+              transaction_type: 'sale',
+              quantity_change: '-2',
+              product_id: 'p-1',
+              sku: 'SKU-1',
+              product_name: 'Product 1',
+              performer_name: 'Alice',
+            },
+            {
+              transaction_id: 't-2',
+              created_at: `${dayThree}T00:00:00Z`,
+              transaction_type: 'scan_out',
+              quantity_change: '-1',
+              product_id: 'p-1',
+              sku: 'SKU-1',
+              product_name: 'Product 1',
+              performer_name: 'Bob',
+            },
+          ],
+          error: null,
+        })
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              gte: vi.fn(() => ({
+                lte: vi.fn(() => ({ order })),
+              })),
+            })),
+          })),
+        }
+      }
+
+      if (table === 'purchase_orders') {
+        const inFilter = vi.fn().mockResolvedValue({ count: 4, error: null })
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ in: inFilter })),
+          })),
+        }
+      }
+
+      if (table === 'alert_events') {
+        const statusEq = vi.fn().mockResolvedValue({
+          data: [
+            { alert_type: 'low_stock', severity: 'critical', status: 'open' },
+            { alert_type: 'low_stock', severity: 'high', status: 'open' },
+            { alert_type: 'reorder_point', severity: 'medium', status: 'open' },
+            { alert_type: 'expiration', severity: 'critical', status: 'open' },
+          ],
+          error: null,
+        })
+        const companyEq = vi.fn(() => ({ eq: statusEq }))
+        return {
+          select: vi.fn(() => ({ eq: companyEq })),
+        }
+      }
+
+      throw new Error(`Unexpected table: ${table}`)
+    })
 
     const data = await fetchDashboardData('company-1')
 
-    expect(data.totalValue).toBe(1250)
-    expect(data.totalStockUnits).toBe(42)
-    expect(data.lowStockCount).toBe(3)
+    expect(data.totalValue).toBe(200)
+    expect(data.totalStockUnits).toBe(10)
+    expect(data.lowStockCount).toBe(0)
     expect(data.pendingOrders).toBe(4)
     expect(data.alertsSummary.criticalAlerts).toBe(2)
-    expect(data.usageChartData).toEqual([
-      { date: '2026-02-20', value: 10 },
-      { date: '2026-02-21', value: 12 },
-    ])
+    expect(data.usageChartData.reduce((sum, point) => sum + point.value, 0)).toBe(3)
     expect(data.movementChartData).toEqual([
-      { date: '2026-02-20', inbound: 5, outbound: 0 },
-      { date: '2026-02-21', inbound: 0, outbound: 2 },
-      { date: '2026-02-22', inbound: 0, outbound: 1 },
+      { date: dayOne, inbound: 5, outbound: 0 },
+      { date: dayTwo, inbound: 0, outbound: 2 },
+      { date: dayThree, inbound: 0, outbound: 1 },
     ])
     expect(data.revenue30Days).toBe(90)
     expect(data.topMovers[0]).toMatchObject({ id: 'p-1', totalSold: 3, revenue: 90 })
 
-    expect(mockRpc).toHaveBeenNthCalledWith(1, 'get_stoqr_dashboard_snapshot', expect.objectContaining({
-      target_company_id: 'company-1',
-    }))
-    expect(mockRpc).toHaveBeenNthCalledWith(2, 'get_stoqr_report_inventory_valuation', {
-      target_company_id: 'company-1',
-    })
-    expect(mockRpc).toHaveBeenNthCalledWith(3, 'get_stoqr_report_stock_movements', expect.objectContaining({
-      target_company_id: 'company-1',
-    }))
+    expect(mockDbFrom).toHaveBeenCalledWith('report_inventory_valuation')
+    expect(mockDbFrom).toHaveBeenCalledWith('report_stock_movements')
+    expect(mockDbFrom).toHaveBeenCalledWith('purchase_orders')
+    expect(mockDbFrom).toHaveBeenCalledWith('alert_events')
   })
 
-  it('throws if snapshot RPC fails', async () => {
-    mockRpc
-      .mockResolvedValueOnce({
-        data: null,
-        error: { message: 'snapshot failed' },
-      })
-      .mockResolvedValueOnce({
-        data: [],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [],
-        error: null,
-      })
+  it('throws if valuation view fails', async () => {
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'report_inventory_valuation') {
+        const order = vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: 'valuation failed' },
+        })
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ order })),
+          })),
+        }
+      }
 
-    await expect(fetchDashboardData('company-1')).rejects.toMatchObject({ message: 'snapshot failed' })
+      const resolved = Promise.resolve({ data: [], count: 0, error: null })
+      const query = {
+        eq: vi.fn(() => query),
+        gte: vi.fn(() => query),
+        lte: vi.fn(() => query),
+        in: vi.fn(() => resolved),
+        order: vi.fn(() => resolved),
+        then: (resolve: (value: { data: never[]; count: number; error: null }) => unknown) =>
+          resolved.then(resolve),
+      }
+      return {
+        select: vi.fn(() => query),
+      }
+    })
+
+    await expect(fetchDashboardData('company-1')).rejects.toMatchObject({ message: 'valuation failed' })
   })
 })

@@ -56,7 +56,11 @@ export const canManageOrganisation = (role: string | null | undefined) => role =
 export const canTransferOwnership = (role: string | null | undefined) => role === 'owner'
 
 export const getOrganisationProfile = async (): Promise<OrganisationProfile> => {
-  const { data, error } = await supabase.rpc('accounts_get_organisation_profile')
+  const { data, error } = await supabase
+    .from('account_organisation_profile')
+    .select('org_id, org_name, status, member_role, owner_user_id, owner_full_name, owner_email, primary_contact_name, primary_contact_email, billing_name, billing_email, billing_phone, stripe_customer_id, stripe_subscription_id')
+    .order('member_created_at', { ascending: true })
+    .limit(1)
   if (error) throw error
 
   const row = Array.isArray(data) ? (data[0] as OrganisationProfileRow | undefined) : undefined
@@ -73,16 +77,18 @@ export const updateOrganisationProfile = async ({
   primaryContactName: string | null
   primaryContactEmail: string | null
 }): Promise<OrganisationProfile> => {
-  const { data, error } = await supabase.rpc('accounts_update_organisation_profile', {
-    p_org_name: orgName.trim(),
-    p_primary_contact_name: primaryContactName?.trim() || null,
-    p_primary_contact_email: primaryContactEmail?.trim() || null,
-  })
+  const current = await getOrganisationProfile()
+  const { error } = await supabase
+    .from('organisations')
+    .update({
+      name: orgName.trim(),
+      primary_contact_name: primaryContactName?.trim() || null,
+      primary_contact_email: primaryContactEmail?.trim().toLowerCase() || null,
+    })
+    .eq('id', current.orgId)
   if (error) throw error
 
-  const row = Array.isArray(data) ? (data[0] as OrganisationProfileRow | undefined) : undefined
-  if (!row) throw new Error('Updated organisation profile was not returned.')
-  return mapOrganisation(row)
+  return getOrganisationProfile()
 }
 
 export const updateBillingContact = async ({
@@ -94,16 +100,18 @@ export const updateBillingContact = async ({
   billingEmail: string | null
   billingPhone: string | null
 }): Promise<OrganisationProfile> => {
-  const { data, error } = await supabase.rpc('accounts_update_billing_contact', {
-    p_billing_name: billingName?.trim() || null,
-    p_billing_email: billingEmail?.trim() || null,
-    p_billing_phone: billingPhone?.trim() || null,
-  })
+  const current = await getOrganisationProfile()
+  const { error } = await supabase
+    .from('organisations')
+    .update({
+      billing_name: billingName?.trim() || null,
+      billing_email: billingEmail?.trim().toLowerCase() || null,
+      billing_phone: billingPhone?.trim() || null,
+    })
+    .eq('id', current.orgId)
   if (error) throw error
 
-  const row = Array.isArray(data) ? (data[0] as OrganisationProfileRow | undefined) : undefined
-  if (!row) throw new Error('Updated billing contact was not returned.')
-  return mapOrganisation(row)
+  return getOrganisationProfile()
 }
 
 export const transferOrganisationOwnership = async (targetUserId: string): Promise<void> => {
