@@ -19,7 +19,7 @@ const ACME_MEMBER_USER: SeededUser = {
   password: '!Password1',
 }
 
-const ACME_ORG_NAME = 'E2E Acme Distribution'
+const ACME_ORG_NAME = 'Acme Distribution'
 
 const serviceConfig = () => {
   const supabaseUrl = process.env.SUPABASE_URL
@@ -122,11 +122,21 @@ const ensureE2EOrganisationSettingsUsers = async () => {
   }
   expect(orgId).toBeTruthy()
 
-  const repairRolesResponse = await serviceFetch('/rest/v1/rpc/ensure_owner_app_roles', {
-    method: 'POST',
-    body: JSON.stringify({ p_org_id: orgId }),
-  })
-  expect(repairRolesResponse.ok).toBeTruthy()
+  const stoqrSystemRolesResponse = await serviceFetch(
+    `/rest/v1/roles?select=name&company_id=eq.${orgId}&name=in.(Owner,Default)`,
+    { headers: { 'Accept-Profile': 'stoqr' } },
+  )
+  expect(stoqrSystemRolesResponse.ok).toBeTruthy()
+  const stoqrSystemRoles = (await stoqrSystemRolesResponse.json()) as Array<{ name: string }>
+  expect(new Set(stoqrSystemRoles.map((role) => role.name))).toEqual(new Set(['Owner', 'Default']))
+
+  const etlOwnerRoleResponse = await serviceFetch(
+    `/rest/v1/roles?select=id&org_id=eq.${orgId}&name=eq.Owner&limit=1`,
+    { headers: { 'Accept-Profile': 'etl' } },
+  )
+  expect(etlOwnerRoleResponse.ok).toBeTruthy()
+  const etlOwnerRoles = (await etlOwnerRoleResponse.json()) as Array<{ id: string }>
+  expect(etlOwnerRoles[0]?.id).toBeTruthy()
 
   const customRoleResponse = await serviceFetch('/rest/v1/roles?on_conflict=company_id,name', {
     method: 'POST',

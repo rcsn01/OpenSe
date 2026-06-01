@@ -33,7 +33,7 @@ AS $$
       om.created_at
     FROM public.organisation_members om
     WHERE om.user_id = p_user_id
-      AND (p_user_id = auth.uid() OR auth.role() = 'service_role')
+      AND p_user_id = auth.uid()
   ) AS candidate
   ORDER BY candidate.precedence, candidate.created_at
   LIMIT 1;
@@ -165,10 +165,6 @@ DECLARE
   v_max_organisations INTEGER;
   v_organisation_count INTEGER;
 BEGIN
-  IF auth.role() = 'service_role' THEN
-    RETURN NEW;
-  END IF;
-
   SELECT max_organisations
   INTO v_max_organisations
   FROM public.platform_instance_settings
@@ -249,8 +245,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF auth.role() <> 'service_role'
-     AND NOT app_private.is_org_member(p_org_id, auth.uid()) THEN
+  IF NOT app_private.is_org_member(p_org_id, auth.uid()) THEN
     RAISE EXCEPTION 'Access denied';
   END IF;
 
@@ -562,13 +557,12 @@ REVOKE ALL ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB)
 REVOKE ALL ON FUNCTION public.accounts_get_onboarding_instance_policy() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION app_private.can_manage_org_app_seat_limits(UUID, UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION app_private.can_manage_org_member_app_seats(UUID, UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_primary_org_for_user(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.accept_invite(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.log_org_audit_event(UUID, TEXT, TEXT, UUID, JSONB) TO service_role;
-GRANT EXECUTE ON FUNCTION public.accounts_get_onboarding_instance_policy() TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.can_manage_org_app_seat_limits(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION app_private.can_manage_org_member_app_seats(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_primary_org_for_user(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.accept_invite(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.accounts_get_onboarding_instance_policy() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) TO authenticated;
 CREATE OR REPLACE FUNCTION app_private.can_manage_org_app_seat_limits(p_org_id UUID, p_user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -782,8 +776,8 @@ REVOKE ALL ON FUNCTION public.log_my_account_audit_event(TEXT, JSONB) FROM PUBLI
 REVOKE ALL ON FUNCTION public.accounts_update_organisation_profile(TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.accounts_update_billing_contact(TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.log_my_account_audit_event(TEXT, JSONB) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.accounts_update_organisation_profile(TEXT, TEXT, TEXT) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.log_my_account_audit_event(TEXT, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.accounts_update_organisation_profile(TEXT, TEXT, TEXT) TO authenticated;
 CREATE OR REPLACE FUNCTION public.accept_invite(invite_id UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql

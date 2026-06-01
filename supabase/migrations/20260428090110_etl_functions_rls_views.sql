@@ -347,8 +347,7 @@ REVOKE ALL ON FUNCTION public.pick_next_etl_role(UUID, UUID) FROM PUBLIC, anon, 
 REVOKE ALL ON FUNCTION app_private.has_etl_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION etl.enforce_template_immutability() FROM PUBLIC, anon, authenticated;
 
-GRANT EXECUTE ON FUNCTION public.pick_next_etl_role(UUID, UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION app_private.has_etl_permission(UUID, TEXT) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.has_etl_permission(UUID, TEXT) TO authenticated;
 CREATE OR REPLACE VIEW etl.personal_usage_stats
 WITH (security_invoker = true)
 AS
