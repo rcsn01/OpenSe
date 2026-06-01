@@ -432,95 +432,8 @@ CREATE POLICY notifications_delete ON etl.notification_settings
     )
   );
 
-CREATE FUNCTION public.get_org_member_usage_stats(target_org_id UUID)
-RETURNS TABLE (
-  total_count BIGINT,
-  success_count BIGINT,
-  failed_count BIGINT,
-  daily_date DATE,
-  daily_total BIGINT,
-  daily_success BIGINT,
-  daily_failed BIGINT
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, etl
-AS $$
-BEGIN
-  IF NOT public.is_org_member(target_org_id, auth.uid())
-     AND NOT public.is_org_owner(target_org_id, auth.uid()) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
 
-  RETURN QUERY
-  SELECT
-    COUNT(*)::BIGINT,
-    COUNT(*) FILTER (WHERE we.status = 'success')::BIGINT,
-    COUNT(*) FILTER (WHERE we.status = 'failed')::BIGINT,
-    we.started_at::DATE AS daily_date,
-    COUNT(*)::BIGINT,
-    COUNT(*) FILTER (WHERE we.status = 'success')::BIGINT,
-    COUNT(*) FILTER (WHERE we.status = 'failed')::BIGINT
-  FROM etl.workflow_executions we
-  JOIN etl.workflows w ON w.id = we.workflow_id
-  WHERE w.org_id = target_org_id
-    AND we.started_at >= now() - INTERVAL '30 days'
-  GROUP BY we.started_at::DATE
-  ORDER BY daily_date;
-END;
-$$;
 
-CREATE FUNCTION public.get_org_active_users(target_org_id UUID)
-RETURNS TABLE (user_id UUID, email TEXT, full_name TEXT, execution_count BIGINT, last_active TIMESTAMPTZ)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, etl
-AS $$
-BEGIN
-  IF NOT public.is_org_member(target_org_id, auth.uid())
-     AND NOT public.is_org_owner(target_org_id, auth.uid()) THEN
-    RAISE EXCEPTION 'Access denied';
-  END IF;
-
-  RETURN QUERY
-  SELECT
-    we.user_id,
-    p.email,
-    p.full_name,
-    COUNT(*)::BIGINT AS execution_count,
-    MAX(we.started_at) AS last_active
-  FROM etl.workflow_executions we
-  JOIN etl.workflows w ON w.id = we.workflow_id
-  JOIN public.profiles p ON p.id = we.user_id
-  WHERE w.org_id = target_org_id
-    AND we.started_at >= now() - INTERVAL '30 days'
-  GROUP BY we.user_id, p.email, p.full_name
-  ORDER BY execution_count DESC;
-END;
-$$;
-
-CREATE FUNCTION public.get_personal_usage_stats()
-RETURNS TABLE (daily_date DATE, daily_total BIGINT, daily_success BIGINT, daily_failed BIGINT)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, etl
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    we.started_at::DATE,
-    COUNT(*)::BIGINT,
-    COUNT(*) FILTER (WHERE we.status = 'success')::BIGINT,
-    COUNT(*) FILTER (WHERE we.status = 'failed')::BIGINT
-  FROM etl.workflow_executions we
-  JOIN etl.workflows w ON w.id = we.workflow_id
-  WHERE w.owner_id = auth.uid()
-    AND w.org_id IS NULL
-    AND we.started_at >= now() - INTERVAL '30 days'
-  GROUP BY we.started_at::DATE
-  ORDER BY daily_date;
-END;
-$$;
 
 GRANT SELECT ON TABLE etl.app_permissions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE etl.roles TO authenticated;
@@ -543,12 +456,6 @@ GRANT ALL PRIVILEGES ON TABLE etl.notification_settings TO service_role;
 REVOKE ALL ON FUNCTION public.pick_next_etl_role(UUID, UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.has_etl_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION etl.enforce_template_immutability() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_org_member_usage_stats(UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_org_active_users(UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_personal_usage_stats() FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.pick_next_etl_role(UUID, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.has_etl_permission(UUID, TEXT) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_org_member_usage_stats(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_org_active_users(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_personal_usage_stats() TO authenticated, service_role;
