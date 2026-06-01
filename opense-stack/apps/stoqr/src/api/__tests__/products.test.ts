@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockDbFrom = vi.fn()
 const mockSupabaseFrom = vi.fn()
-const mockSupabaseRpc = vi.fn()
+const mockSupabaseGetUser = vi.fn()
 const mockStorageFrom = vi.fn()
 
 vi.mock('../../supabaseClient', () => ({
@@ -10,8 +10,10 @@ vi.mock('../../supabaseClient', () => ({
     from: (...args: unknown[]) => mockDbFrom(...args),
   },
   supabase: {
+    auth: {
+      getUser: (...args: unknown[]) => mockSupabaseGetUser(...args),
+    },
     from: (...args: unknown[]) => mockSupabaseFrom(...args),
-    rpc: (...args: unknown[]) => mockSupabaseRpc(...args),
     storage: {
       from: (...args: unknown[]) => mockStorageFrom(...args),
     },
@@ -22,6 +24,10 @@ import { createProduct, fetchProductDetail, transferProductStock, updateProduct 
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockSupabaseGetUser.mockResolvedValue({
+    data: { user: { id: 'user-1' } },
+    error: null,
+  })
 })
 
 afterEach(() => {
@@ -388,8 +394,15 @@ describe('products api', () => {
     }))
   })
 
-  it('transfers product stock through the stock transfer RPC with normalized notes', async () => {
-    mockSupabaseRpc.mockResolvedValue({ data: 'transfer-group-1', error: null })
+  it('transfers product stock through direct inventory transactions with normalized notes', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'inventory_transactions') {
+        return { insert }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('11111111-1111-4111-8111-111111111111')
 
     const result = await transferProductStock({
       companyId: 'company-1',
@@ -400,20 +413,44 @@ describe('products api', () => {
       notes: '  Move to front shelf  ',
     })
 
-    expect(result).toBe('transfer-group-1')
-    expect(mockSupabaseRpc).toHaveBeenCalledWith('transfer_stoqr_product_stock', {
-      target_company_id: 'company-1',
-      target_product_id: 'prod-1',
-      from_folder_id: 'folder-1',
-      to_folder_id: 'folder-2',
-      transfer_quantity: 3,
-      transfer_notes: 'Move to front shelf',
-    })
+    expect(result).toBe('11111111-1111-4111-8111-111111111111')
+    expect(mockSupabaseGetUser).toHaveBeenCalled()
+    expect(insert).toHaveBeenCalledWith([
+      {
+        company_id: 'company-1',
+        product_id: 'prod-1',
+        folder_id: 'folder-1',
+        performed_by: 'user-1',
+        transaction_type: 'transfer_out',
+        source: 'manual',
+        quantity_change: -3,
+        transfer_group_id: '11111111-1111-4111-8111-111111111111',
+        notes: 'Move to front shelf',
+      },
+      {
+        company_id: 'company-1',
+        product_id: 'prod-1',
+        folder_id: 'folder-2',
+        performed_by: 'user-1',
+        transaction_type: 'transfer_in',
+        source: 'manual',
+        quantity_change: 3,
+        transfer_group_id: '11111111-1111-4111-8111-111111111111',
+        notes: 'Move to front shelf',
+      },
+    ])
   })
 
-  it('sends null notes and throws stock transfer RPC errors', async () => {
+  it('sends null notes and throws stock transfer write errors', async () => {
     const rpcError = { message: 'Insufficient stock' }
-    mockSupabaseRpc.mockResolvedValue({ data: null, error: rpcError })
+    const insert = vi.fn().mockResolvedValue({ error: rpcError })
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table === 'inventory_transactions') {
+        return { insert }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('11111111-1111-4111-8111-111111111111')
 
     await expect(transferProductStock({
       companyId: 'company-1',
@@ -423,9 +460,8 @@ describe('products api', () => {
       quantity: 99,
       notes: '   ',
     })).rejects.toEqual(rpcError)
-
-    expect(mockSupabaseRpc).toHaveBeenCalledWith('transfer_stoqr_product_stock', expect.objectContaining({
-      transfer_notes: null,
-    }))
+    expect(insert).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ notes: null }),
+    ]))
   })
 })

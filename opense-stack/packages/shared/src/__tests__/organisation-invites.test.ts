@@ -45,17 +45,39 @@ describe('organisation invites', () => {
     expect(mockFrom).not.toHaveBeenCalled()
   })
 
-  it('inviteOrganisationMember normalizes email before calling invite RPC', async () => {
-    mockRpc.mockResolvedValue({
-      data: [
-        {
-          id: 'inv-1',
-          org_id: 'org-1',
-          email: 'member@example.com',
-          created_at: '2026-05-20T00:00:00.000Z',
-        },
-      ],
+  it('inviteOrganisationMember normalizes email before creating an invite row', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'user-1' } },
       error: null,
+    })
+
+    const existingSelect = {
+      eq: vi.fn(() => existingSelect),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }
+    const insertSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: 'inv-1',
+        org_id: 'org-1',
+        email: 'member@example.com',
+        created_at: '2026-05-20T00:00:00.000Z',
+      },
+      error: null,
+    })
+    const insertChain = {
+      select: vi.fn(() => ({
+        single: insertSingle,
+      })),
+    }
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'organisation_invites') {
+        throw new Error(`Unexpected table: ${table}`)
+      }
+
+      return {
+        select: vi.fn(() => existingSelect),
+        insert: vi.fn(() => insertChain),
+      }
     })
 
     await expect(inviteOrganisationMember('org-1', ' MEMBER@Example.com ', 'member')).resolves.toEqual({
@@ -66,10 +88,10 @@ describe('organisation invites', () => {
       assigned_apps: [],
     })
 
-    expect(mockRpc).toHaveBeenCalledWith('accounts_invite_organisation_member', {
-      p_org_id: 'org-1',
-      p_email: 'member@example.com',
-    })
+    expect(mockGetUser).toHaveBeenCalled()
+    expect(existingSelect.eq).toHaveBeenNthCalledWith(1, 'org_id', 'org-1')
+    expect(existingSelect.eq).toHaveBeenNthCalledWith(2, 'email', 'member@example.com')
+    expect(insertSingle).toHaveBeenCalled()
   })
 
   it('getOrganisationInvitesForOrg lists pending invites for an org', async () => {

@@ -10,9 +10,9 @@ BEGIN
       FOR SELECT USING (
         deleted_at IS NULL
         AND (
-          public.has_permission(company_id, 'reports.view')
-          OR public.has_permission(company_id, 'dashboard.view')
-          OR public.has_permission(company_id, 'alerts.view')
+          app_private.has_permission(company_id, 'reports.view')
+          OR app_private.has_permission(company_id, 'dashboard.view')
+          OR app_private.has_permission(company_id, 'alerts.view')
         )
       );
   END IF;
@@ -25,9 +25,9 @@ BEGIN
   ) THEN
     CREATE POLICY "Report viewers can view product folder stocks" ON stoqr.product_folder_stocks
       FOR SELECT USING (
-        public.has_permission(company_id, 'reports.view')
-        OR public.has_permission(company_id, 'dashboard.view')
-        OR public.has_permission(company_id, 'alerts.view')
+        app_private.has_permission(company_id, 'reports.view')
+        OR app_private.has_permission(company_id, 'dashboard.view')
+        OR app_private.has_permission(company_id, 'alerts.view')
       );
   END IF;
 
@@ -39,8 +39,8 @@ BEGIN
   ) THEN
     CREATE POLICY "Report viewers can view transactions" ON stoqr.inventory_transactions
       FOR SELECT USING (
-        public.has_permission(company_id, 'reports.view')
-        OR public.has_permission(company_id, 'dashboard.view')
+        app_private.has_permission(company_id, 'reports.view')
+        OR app_private.has_permission(company_id, 'dashboard.view')
       );
   END IF;
 
@@ -51,7 +51,7 @@ BEGIN
       AND policyname = 'Dashboard viewers can view purchase orders'
   ) THEN
     CREATE POLICY "Dashboard viewers can view purchase orders" ON stoqr.purchase_orders
-      FOR SELECT USING (public.has_permission(company_id, 'dashboard.view'));
+      FOR SELECT USING (app_private.has_permission(company_id, 'dashboard.view'));
   END IF;
 
   IF NOT EXISTS (
@@ -75,7 +75,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Alert users can view delivered alert events" ON stoqr.alert_events
       FOR SELECT USING (
-        public.has_permission(company_id, 'alerts.use')
+        app_private.has_permission(company_id, 'alerts.use')
         OR EXISTS (
           SELECT 1
           FROM stoqr.alert_delivery_logs adl
@@ -91,7 +91,7 @@ CREATE POLICY "Public read app permissions" ON stoqr.app_permissions
   FOR SELECT USING (true);
 
 CREATE POLICY "Members can view company roles" ON stoqr.roles
-  FOR SELECT USING (public.is_org_member(company_id, auth.uid()));
+  FOR SELECT USING (app_private.is_org_member(company_id, auth.uid()));
 
 CREATE POLICY "Members can view role permissions" ON stoqr.role_permissions
   FOR SELECT USING (
@@ -99,7 +99,7 @@ CREATE POLICY "Members can view role permissions" ON stoqr.role_permissions
       SELECT 1
       FROM stoqr.roles r
       WHERE r.id = role_permissions.role_id
-        AND public.is_org_member(r.company_id, auth.uid())
+        AND app_private.is_org_member(r.company_id, auth.uid())
     )
   );
 
@@ -107,12 +107,12 @@ CREATE POLICY "Users can view their own memberships" ON stoqr.organisation_membe
   FOR SELECT USING (user_id = auth.uid());
 
 CREATE POLICY "Managers can view all members" ON stoqr.organisation_member_roles
-  FOR SELECT USING (public.has_permission(company_id, 'organisation.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'organisation.view'));
 
 CREATE POLICY "Managers can update members" ON stoqr.organisation_member_roles
   FOR UPDATE USING (
-    public.has_permission(company_id, 'organisation.members.manage')
-    AND NOT (user_id = auth.uid() AND public.is_org_owner(company_id, auth.uid()))
+    app_private.has_permission(company_id, 'organisation.members.manage')
+    AND NOT (user_id = auth.uid() AND app_private.is_org_owner(company_id, auth.uid()))
     AND NOT (
       user_id = (
         SELECT o.owner_id
@@ -122,7 +122,7 @@ CREATE POLICY "Managers can update members" ON stoqr.organisation_member_roles
     )
   )
   WITH CHECK (
-    public.has_permission(company_id, 'organisation.members.manage')
+    app_private.has_permission(company_id, 'organisation.members.manage')
     AND EXISTS (
       SELECT 1
       FROM public.organisation_members om
@@ -150,7 +150,7 @@ CREATE POLICY "Managers can update members" ON stoqr.organisation_member_roles
 
 CREATE POLICY "Managers can insert members" ON stoqr.organisation_member_roles
   FOR INSERT WITH CHECK (
-    public.has_permission(company_id, 'organisation.members.manage')
+    app_private.has_permission(company_id, 'organisation.members.manage')
     AND EXISTS (
       SELECT 1
       FROM public.organisation_members om
@@ -178,7 +178,7 @@ CREATE POLICY "Managers can insert members" ON stoqr.organisation_member_roles
 
 CREATE POLICY "Managers can delete members" ON stoqr.organisation_member_roles
   FOR DELETE USING (
-    public.has_permission(company_id, 'organisation.members.manage')
+    app_private.has_permission(company_id, 'organisation.members.manage')
     AND NOT (
       user_id = (
         SELECT o.owner_id
@@ -189,60 +189,60 @@ CREATE POLICY "Managers can delete members" ON stoqr.organisation_member_roles
   );
 
 CREATE POLICY "Members can view organisation page settings" ON stoqr.organisation_page_settings
-  FOR SELECT USING (public.has_permission(company_id, 'organisation.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'organisation.view'));
 
 CREATE POLICY "Admins can insert organisation page settings" ON stoqr.organisation_page_settings
-  FOR INSERT WITH CHECK (public.has_permission(company_id, 'organisation.pages.manage'));
+  FOR INSERT WITH CHECK (app_private.has_permission(company_id, 'organisation.pages.manage'));
 
 CREATE POLICY "Admins can update organisation page settings" ON stoqr.organisation_page_settings
-  FOR UPDATE USING (public.has_permission(company_id, 'organisation.pages.manage'))
-  WITH CHECK (public.has_permission(company_id, 'organisation.pages.manage'));
+  FOR UPDATE USING (app_private.has_permission(company_id, 'organisation.pages.manage'))
+  WITH CHECK (app_private.has_permission(company_id, 'organisation.pages.manage'));
 
 CREATE POLICY "Members can view folders" ON stoqr.folders
-  FOR SELECT USING (public.has_permission(company_id, 'inventory.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'inventory.view'));
 
 CREATE POLICY "Staff can manage folders" ON stoqr.folders
-  FOR ALL USING (public.has_permission(company_id, 'inventory.edit'))
-  WITH CHECK (public.has_permission(company_id, 'inventory.edit'));
+  FOR ALL USING (app_private.has_permission(company_id, 'inventory.edit'))
+  WITH CHECK (app_private.has_permission(company_id, 'inventory.edit'));
 
 CREATE POLICY "Members can view tags" ON stoqr.tags
-  FOR SELECT USING (public.has_permission(company_id, 'inventory.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'inventory.view'));
 
 CREATE POLICY "Staff can manage tags" ON stoqr.tags
-  FOR ALL USING (public.has_permission(company_id, 'inventory.edit'))
-  WITH CHECK (public.has_permission(company_id, 'inventory.edit'));
+  FOR ALL USING (app_private.has_permission(company_id, 'inventory.edit'))
+  WITH CHECK (app_private.has_permission(company_id, 'inventory.edit'));
 
 CREATE POLICY "Members can view products" ON stoqr.products
   FOR SELECT USING (
     deleted_at IS NULL
-    AND public.has_permission(company_id, 'inventory.view')
+    AND app_private.has_permission(company_id, 'inventory.view')
   );
 
 CREATE POLICY "Staff can create products" ON stoqr.products
-  FOR INSERT WITH CHECK (public.has_permission(company_id, 'inventory.create'));
+  FOR INSERT WITH CHECK (app_private.has_permission(company_id, 'inventory.create'));
 
 CREATE POLICY "Staff can edit products" ON stoqr.products
   FOR UPDATE USING (
-    public.has_permission(company_id, 'inventory.edit')
-    OR public.has_permission(company_id, 'inventory.adjust')
-    OR public.has_permission(company_id, 'inventory.import_export')
+    app_private.has_permission(company_id, 'inventory.edit')
+    OR app_private.has_permission(company_id, 'inventory.adjust')
+    OR app_private.has_permission(company_id, 'inventory.import_export')
   )
   WITH CHECK (
-    public.has_permission(company_id, 'inventory.edit')
-    OR public.has_permission(company_id, 'inventory.adjust')
-    OR public.has_permission(company_id, 'inventory.import_export')
+    app_private.has_permission(company_id, 'inventory.edit')
+    OR app_private.has_permission(company_id, 'inventory.adjust')
+    OR app_private.has_permission(company_id, 'inventory.import_export')
   );
 
 CREATE POLICY "Staff can delete products" ON stoqr.products
-  FOR DELETE USING (public.has_permission(company_id, 'inventory.delete'));
+  FOR DELETE USING (app_private.has_permission(company_id, 'inventory.delete'));
 
 CREATE POLICY "Members can view product barcodes" ON stoqr.product_barcodes
-  FOR SELECT USING (public.has_permission(company_id, 'inventory.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'inventory.view'));
 
 CREATE POLICY "Staff can manage product barcodes" ON stoqr.product_barcodes
-  FOR ALL USING (public.has_permission(company_id, 'inventory.edit'))
+  FOR ALL USING (app_private.has_permission(company_id, 'inventory.edit'))
   WITH CHECK (
-    public.has_permission(company_id, 'inventory.edit')
+    app_private.has_permission(company_id, 'inventory.edit')
     AND EXISTS (
       SELECT 1
       FROM stoqr.products p
@@ -252,12 +252,12 @@ CREATE POLICY "Staff can manage product barcodes" ON stoqr.product_barcodes
   );
 
 CREATE POLICY "Members can view product tags" ON stoqr.product_tags
-  FOR SELECT USING (public.has_permission(company_id, 'inventory.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'inventory.view'));
 
 CREATE POLICY "Staff can manage product tags" ON stoqr.product_tags
-  FOR ALL USING (public.has_permission(company_id, 'inventory.edit'))
+  FOR ALL USING (app_private.has_permission(company_id, 'inventory.edit'))
   WITH CHECK (
-    public.has_permission(company_id, 'inventory.edit')
+    app_private.has_permission(company_id, 'inventory.edit')
     AND EXISTS (
       SELECT 1
       FROM stoqr.products p
@@ -273,19 +273,19 @@ CREATE POLICY "Staff can manage product tags" ON stoqr.product_tags
   );
 
 CREATE POLICY "Members can view product folder stocks" ON stoqr.product_folder_stocks
-  FOR SELECT USING (public.has_permission(company_id, 'inventory.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'inventory.view'));
 
 CREATE POLICY "Staff can manage product folder stocks" ON stoqr.product_folder_stocks
   FOR ALL USING (
-    public.has_permission(company_id, 'inventory.edit')
-    OR public.has_permission(company_id, 'inventory.adjust')
-    OR public.has_permission(company_id, 'inventory.import_export')
+    app_private.has_permission(company_id, 'inventory.edit')
+    OR app_private.has_permission(company_id, 'inventory.adjust')
+    OR app_private.has_permission(company_id, 'inventory.import_export')
   )
   WITH CHECK (
     (
-      public.has_permission(company_id, 'inventory.edit')
-      OR public.has_permission(company_id, 'inventory.adjust')
-      OR public.has_permission(company_id, 'inventory.import_export')
+      app_private.has_permission(company_id, 'inventory.edit')
+      OR app_private.has_permission(company_id, 'inventory.adjust')
+      OR app_private.has_permission(company_id, 'inventory.import_export')
     )
     AND EXISTS (
       SELECT 1
@@ -302,11 +302,11 @@ CREATE POLICY "Staff can manage product folder stocks" ON stoqr.product_folder_s
   );
 
 CREATE POLICY "Members can view transactions" ON stoqr.inventory_transactions
-  FOR SELECT USING (public.has_permission(company_id, 'inventory.use'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'inventory.use'));
 
 CREATE POLICY "Staff can create transactions" ON stoqr.inventory_transactions
   FOR INSERT WITH CHECK (
-    public.has_permission(company_id, 'inventory.adjust')
+    app_private.has_permission(company_id, 'inventory.adjust')
     AND EXISTS (
       SELECT 1
       FROM stoqr.products p
@@ -325,20 +325,20 @@ CREATE POLICY "Staff can create transactions" ON stoqr.inventory_transactions
   );
 
 CREATE POLICY "Staff can manage bulk operations" ON stoqr.inventory_bulk_operations
-  FOR ALL USING (public.has_permission(company_id, 'inventory.import_export'))
-  WITH CHECK (public.has_permission(company_id, 'inventory.import_export'));
+  FOR ALL USING (app_private.has_permission(company_id, 'inventory.import_export'))
+  WITH CHECK (app_private.has_permission(company_id, 'inventory.import_export'));
 
 CREATE POLICY "Members can view scan events" ON stoqr.scan_events
   FOR SELECT USING (
-    public.has_permission(company_id, 'scanner.view')
-    OR public.has_permission(company_id, 'inventory.use')
+    app_private.has_permission(company_id, 'scanner.view')
+    OR app_private.has_permission(company_id, 'inventory.use')
   );
 
 CREATE POLICY "Staff can create scan events" ON stoqr.scan_events
   FOR INSERT WITH CHECK (
     (
-      public.has_permission(company_id, 'scanner.use')
-      OR public.has_permission(company_id, 'inventory.adjust')
+      app_private.has_permission(company_id, 'scanner.use')
+      OR app_private.has_permission(company_id, 'inventory.adjust')
     )
     AND (
       product_id IS NULL
@@ -370,44 +370,44 @@ CREATE POLICY "Staff can create scan events" ON stoqr.scan_events
   );
 
 CREATE POLICY "Members can view report schedules" ON stoqr.report_schedules
-  FOR SELECT USING (public.has_permission(company_id, 'reports.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'reports.view'));
 
 CREATE POLICY "Admins can manage report schedules" ON stoqr.report_schedules
-  FOR ALL USING (public.has_permission(company_id, 'reports.export'))
-  WITH CHECK (public.has_permission(company_id, 'reports.export'));
+  FOR ALL USING (app_private.has_permission(company_id, 'reports.export'))
+  WITH CHECK (app_private.has_permission(company_id, 'reports.export'));
 
 CREATE POLICY "Members can view report exports" ON stoqr.report_exports
   FOR SELECT USING (
-    public.has_permission(company_id, 'reports.view')
+    app_private.has_permission(company_id, 'reports.view')
     OR (
       requested_by = auth.uid()
-      AND public.is_org_member(company_id, auth.uid())
+      AND app_private.is_org_member(company_id, auth.uid())
     )
   );
 
 CREATE POLICY "Staff can manage report exports" ON stoqr.report_exports
-  FOR ALL USING (public.has_permission(company_id, 'reports.export'))
-  WITH CHECK (public.has_permission(company_id, 'reports.export'));
+  FOR ALL USING (app_private.has_permission(company_id, 'reports.export'))
+  WITH CHECK (app_private.has_permission(company_id, 'reports.export'));
 
 CREATE POLICY "Members can view suppliers" ON stoqr.suppliers
-  FOR SELECT USING (public.has_permission(company_id, 'procurement.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'procurement.view'));
 
 CREATE POLICY "Staff can create suppliers" ON stoqr.suppliers
-  FOR INSERT WITH CHECK (public.has_permission(company_id, 'procurement.create'));
+  FOR INSERT WITH CHECK (app_private.has_permission(company_id, 'procurement.create'));
 
 CREATE POLICY "Staff can manage suppliers" ON stoqr.suppliers
-  FOR UPDATE USING (public.has_permission(company_id, 'procurement.manage'))
-  WITH CHECK (public.has_permission(company_id, 'procurement.manage'));
+  FOR UPDATE USING (app_private.has_permission(company_id, 'procurement.manage'))
+  WITH CHECK (app_private.has_permission(company_id, 'procurement.manage'));
 
 CREATE POLICY "Staff can delete suppliers" ON stoqr.suppliers
-  FOR DELETE USING (public.has_permission(company_id, 'procurement.manage'));
+  FOR DELETE USING (app_private.has_permission(company_id, 'procurement.manage'));
 
 CREATE POLICY "Members can view POs" ON stoqr.purchase_orders
-  FOR SELECT USING (public.has_permission(company_id, 'procurement.view'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'procurement.view'));
 
 CREATE POLICY "Staff can create POs" ON stoqr.purchase_orders
   FOR INSERT WITH CHECK (
-    public.has_permission(company_id, 'procurement.create')
+    app_private.has_permission(company_id, 'procurement.create')
     AND (
       supplier_id IS NULL
       OR EXISTS (
@@ -421,13 +421,13 @@ CREATE POLICY "Staff can create POs" ON stoqr.purchase_orders
 
 CREATE POLICY "Staff can manage POs" ON stoqr.purchase_orders
   FOR UPDATE USING (
-    public.has_permission(company_id, 'procurement.manage')
-    OR public.has_permission(company_id, 'procurement.receive')
+    app_private.has_permission(company_id, 'procurement.manage')
+    OR app_private.has_permission(company_id, 'procurement.receive')
   )
   WITH CHECK (
     (
-      public.has_permission(company_id, 'procurement.manage')
-      OR public.has_permission(company_id, 'procurement.receive')
+      app_private.has_permission(company_id, 'procurement.manage')
+      OR app_private.has_permission(company_id, 'procurement.receive')
     )
     AND (
       supplier_id IS NULL
@@ -441,7 +441,7 @@ CREATE POLICY "Staff can manage POs" ON stoqr.purchase_orders
   );
 
 CREATE POLICY "Staff can delete POs" ON stoqr.purchase_orders
-  FOR DELETE USING (public.has_permission(company_id, 'procurement.manage'));
+  FOR DELETE USING (app_private.has_permission(company_id, 'procurement.manage'));
 
 CREATE POLICY "Members can view PO items" ON stoqr.purchase_order_items
   FOR SELECT USING (
@@ -449,7 +449,7 @@ CREATE POLICY "Members can view PO items" ON stoqr.purchase_order_items
       SELECT 1
       FROM stoqr.purchase_orders po
       WHERE po.id = purchase_order_items.po_id
-        AND public.has_permission(po.company_id, 'procurement.view')
+        AND app_private.has_permission(po.company_id, 'procurement.view')
     )
   );
 
@@ -459,7 +459,7 @@ CREATE POLICY "Staff can create PO items" ON stoqr.purchase_order_items
       SELECT 1
       FROM stoqr.purchase_orders po
       WHERE po.id = purchase_order_items.po_id
-        AND public.has_permission(po.company_id, 'procurement.create')
+        AND app_private.has_permission(po.company_id, 'procurement.create')
         AND (
           purchase_order_items.product_id IS NULL
           OR EXISTS (
@@ -479,8 +479,8 @@ CREATE POLICY "Staff can manage PO items" ON stoqr.purchase_order_items
       FROM stoqr.purchase_orders po
       WHERE po.id = purchase_order_items.po_id
         AND (
-          public.has_permission(po.company_id, 'procurement.manage')
-          OR public.has_permission(po.company_id, 'procurement.receive')
+          app_private.has_permission(po.company_id, 'procurement.manage')
+          OR app_private.has_permission(po.company_id, 'procurement.receive')
         )
     )
   )
@@ -490,8 +490,8 @@ CREATE POLICY "Staff can manage PO items" ON stoqr.purchase_order_items
       FROM stoqr.purchase_orders po
       WHERE po.id = purchase_order_items.po_id
         AND (
-          public.has_permission(po.company_id, 'procurement.manage')
-          OR public.has_permission(po.company_id, 'procurement.receive')
+          app_private.has_permission(po.company_id, 'procurement.manage')
+          OR app_private.has_permission(po.company_id, 'procurement.receive')
         )
         AND (
           purchase_order_items.product_id IS NULL
@@ -511,18 +511,18 @@ CREATE POLICY "Staff can delete PO items" ON stoqr.purchase_order_items
       SELECT 1
       FROM stoqr.purchase_orders po
       WHERE po.id = purchase_order_items.po_id
-        AND public.has_permission(po.company_id, 'procurement.manage')
+        AND app_private.has_permission(po.company_id, 'procurement.manage')
     )
   );
 
 CREATE POLICY "Staff can view receiving logs" ON stoqr.receiving_logs
   FOR SELECT USING (
-    public.has_permission(company_id, 'procurement.view')
+    app_private.has_permission(company_id, 'procurement.view')
   );
 
 CREATE POLICY "Staff can manage receiving logs" ON stoqr.receiving_logs
   FOR INSERT WITH CHECK (
-    public.has_permission(company_id, 'procurement.receive')
+    app_private.has_permission(company_id, 'procurement.receive')
     AND (
       po_id IS NULL
       OR EXISTS (
@@ -545,30 +545,30 @@ CREATE POLICY "Staff can manage receiving logs" ON stoqr.receiving_logs
 
 CREATE POLICY "Members can view alert rules" ON stoqr.alert_rules
   FOR SELECT USING (
-    public.has_permission(company_id, 'alerts.view')
-    OR public.has_permission(company_id, 'alerts.manage')
+    app_private.has_permission(company_id, 'alerts.view')
+    OR app_private.has_permission(company_id, 'alerts.manage')
   );
 
 CREATE POLICY "Staff can manage alert rules" ON stoqr.alert_rules
-  FOR ALL USING (public.has_permission(company_id, 'alerts.manage'))
-  WITH CHECK (public.has_permission(company_id, 'alerts.manage'));
+  FOR ALL USING (app_private.has_permission(company_id, 'alerts.manage'))
+  WITH CHECK (app_private.has_permission(company_id, 'alerts.manage'));
 
 CREATE POLICY "Members can view alert events" ON stoqr.alert_events
   FOR SELECT USING (
-    public.has_permission(company_id, 'alerts.view')
-    OR public.has_permission(company_id, 'alerts.manage')
-    OR public.has_permission(company_id, 'dashboard.view')
+    app_private.has_permission(company_id, 'alerts.view')
+    OR app_private.has_permission(company_id, 'alerts.manage')
+    OR app_private.has_permission(company_id, 'dashboard.view')
   );
 
 CREATE POLICY "Staff can manage alert events" ON stoqr.alert_events
   FOR ALL USING (
-    public.has_permission(company_id, 'alerts.manage')
-    OR public.has_permission(company_id, 'alerts.use')
+    app_private.has_permission(company_id, 'alerts.manage')
+    OR app_private.has_permission(company_id, 'alerts.use')
   )
   WITH CHECK (
     (
-      public.has_permission(company_id, 'alerts.manage')
-      OR public.has_permission(company_id, 'alerts.use')
+      app_private.has_permission(company_id, 'alerts.manage')
+      OR app_private.has_permission(company_id, 'alerts.use')
     )
     AND (
       rule_id IS NULL
@@ -600,17 +600,17 @@ CREATE POLICY "Staff can manage alert events" ON stoqr.alert_events
   );
 
 CREATE POLICY "Staff can view alert deliveries" ON stoqr.alert_delivery_logs
-  FOR SELECT USING (public.has_permission(company_id, 'alerts.manage'));
+  FOR SELECT USING (app_private.has_permission(company_id, 'alerts.manage'));
 
 CREATE POLICY "Members can view alert connectors" ON stoqr.alert_connectors
   FOR SELECT USING (
-    public.has_permission(company_id, 'alerts.view')
-    OR public.has_permission(company_id, 'alerts.manage')
+    app_private.has_permission(company_id, 'alerts.view')
+    OR app_private.has_permission(company_id, 'alerts.manage')
   );
 
 CREATE POLICY "Staff can manage alert connectors" ON stoqr.alert_connectors
-  FOR ALL USING (public.has_permission(company_id, 'alerts.manage'))
-  WITH CHECK (public.has_permission(company_id, 'alerts.manage'));
+  FOR ALL USING (app_private.has_permission(company_id, 'alerts.manage'))
+  WITH CHECK (app_private.has_permission(company_id, 'alerts.manage'));
 
 CREATE POLICY "Members can view alert connector targets" ON stoqr.alert_connector_targets
   FOR SELECT USING (
@@ -619,8 +619,8 @@ CREATE POLICY "Members can view alert connector targets" ON stoqr.alert_connecto
       FROM stoqr.alert_connectors ac
       WHERE ac.id = alert_connector_targets.connector_id
         AND (
-          public.has_permission(ac.company_id, 'alerts.view')
-          OR public.has_permission(ac.company_id, 'alerts.manage')
+          app_private.has_permission(ac.company_id, 'alerts.view')
+          OR app_private.has_permission(ac.company_id, 'alerts.manage')
         )
     )
   );
@@ -631,7 +631,7 @@ CREATE POLICY "Staff can manage alert connector targets" ON stoqr.alert_connecto
       SELECT 1
       FROM stoqr.alert_connectors ac
       WHERE ac.id = alert_connector_targets.connector_id
-        AND public.has_permission(ac.company_id, 'alerts.manage')
+        AND app_private.has_permission(ac.company_id, 'alerts.manage')
     )
   )
   WITH CHECK (
@@ -639,7 +639,7 @@ CREATE POLICY "Staff can manage alert connector targets" ON stoqr.alert_connecto
       SELECT 1
       FROM stoqr.alert_connectors ac
       WHERE ac.id = alert_connector_targets.connector_id
-        AND public.has_permission(ac.company_id, 'alerts.manage')
+        AND app_private.has_permission(ac.company_id, 'alerts.manage')
     )
   );
 
@@ -650,8 +650,8 @@ CREATE POLICY "Members can view alert rule connector targets" ON stoqr.alert_rul
       FROM stoqr.alert_rules ar
       WHERE ar.id = alert_rule_connector_targets.rule_id
         AND (
-          public.has_permission(ar.company_id, 'alerts.view')
-          OR public.has_permission(ar.company_id, 'alerts.manage')
+          app_private.has_permission(ar.company_id, 'alerts.view')
+          OR app_private.has_permission(ar.company_id, 'alerts.manage')
         )
     )
   );
@@ -662,7 +662,7 @@ CREATE POLICY "Staff can manage alert rule connector targets" ON stoqr.alert_rul
       SELECT 1
       FROM stoqr.alert_rules ar
       WHERE ar.id = alert_rule_connector_targets.rule_id
-        AND public.has_permission(ar.company_id, 'alerts.manage')
+        AND app_private.has_permission(ar.company_id, 'alerts.manage')
     )
   )
   WITH CHECK (
@@ -673,41 +673,41 @@ CREATE POLICY "Staff can manage alert rule connector targets" ON stoqr.alert_rul
       JOIN stoqr.alert_connectors ac ON ac.id = act.connector_id
       WHERE ar.id = alert_rule_connector_targets.rule_id
         AND ar.company_id = ac.company_id
-        AND public.has_permission(ar.company_id, 'alerts.manage')
+        AND app_private.has_permission(ar.company_id, 'alerts.manage')
     )
   );
 
 CREATE POLICY "Members can view activity events" ON stoqr.activity_events
   FOR SELECT USING (
-    public.has_permission(company_id, 'organisation.activity.view')
-    OR public.has_permission(company_id, 'organisation.view')
+    app_private.has_permission(company_id, 'organisation.activity.view')
+    OR app_private.has_permission(company_id, 'organisation.view')
   );
 
 CREATE POLICY "Members can view label templates" ON stoqr.label_templates
   FOR SELECT USING (
     company_id IS NULL
-    OR public.has_permission(company_id, 'labels.view')
+    OR app_private.has_permission(company_id, 'labels.view')
   );
 
 CREATE POLICY "Staff can manage label templates" ON stoqr.label_templates
   FOR ALL USING (
     company_id IS NOT NULL
-    AND public.has_permission(company_id, 'labels.manage')
+    AND app_private.has_permission(company_id, 'labels.manage')
   )
   WITH CHECK (
     company_id IS NOT NULL
-    AND public.has_permission(company_id, 'labels.manage')
+    AND app_private.has_permission(company_id, 'labels.manage')
   );
 
 CREATE POLICY "Staff can manage label print jobs" ON stoqr.label_print_jobs
   FOR ALL USING (
-    public.has_permission(company_id, 'labels.use')
-    OR public.has_permission(company_id, 'labels.manage')
+    app_private.has_permission(company_id, 'labels.use')
+    OR app_private.has_permission(company_id, 'labels.manage')
   )
   WITH CHECK (
     (
-      public.has_permission(company_id, 'labels.use')
-      OR public.has_permission(company_id, 'labels.manage')
+      app_private.has_permission(company_id, 'labels.use')
+      OR app_private.has_permission(company_id, 'labels.manage')
     )
     AND (
       template_id IS NULL
@@ -729,8 +729,8 @@ CREATE POLICY "Give users access to their company folder" ON storage.objects
       FROM stoqr.organisation_member_roles
       WHERE user_id = auth.uid()
         AND (
-          public.has_permission(company_id, 'inventory.create')
-          OR public.has_permission(company_id, 'inventory.edit')
+          app_private.has_permission(company_id, 'inventory.create')
+          OR app_private.has_permission(company_id, 'inventory.edit')
         )
     )
   );
@@ -818,15 +818,14 @@ REVOKE ALL ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) FROM PU
 REVOKE ALL ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ensure_stoqr_guest_role(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ensure_owner_app_roles(UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.prevent_owner_role_mutation() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.prevent_owner_role_permission_delete() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.prevent_owner_role_mutation() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.prevent_owner_role_permission_delete() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.grant_new_permission_to_owner_roles() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ensure_org_owner_member_and_default_seats() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.has_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.has_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.update_inventory_count() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.folder_path_name(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.sync_product_stock_total() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.transfer_stoqr_product_stock(UUID, UUID, UUID, UUID, INTEGER, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.evaluate_low_stock_alerts() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION stoqr.capture_activity_event() FROM PUBLIC, anon, authenticated;
@@ -836,16 +835,14 @@ REVOKE ALL ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEXT, 
 REVOKE ALL ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.map_stoqr_role_to_org_role(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.pick_stoqr_role_for_org_member(UUID, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.pick_next_stoqr_role(UUID, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.ensure_stoqr_guest_role(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.ensure_owner_app_roles(UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.has_permission(UUID, TEXT) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.has_permission(UUID, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION stoqr.folder_path_name(UUID) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.transfer_stoqr_product_stock(UUID, UUID, UUID, UUID, INTEGER, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION stoqr.log_activity_event(UUID, TEXT, TEXT, UUID, TEXT, JSONB, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.create_stoqr_report_export(UUID, TEXT, TEXT, DATE, DATE, JSONB) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.claim_stoqr_pending_email_alerts(UUID, INTEGER) TO service_role;
@@ -853,7 +850,6 @@ GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_email_delivery(UUID, TEXT, TEX
 GRANT EXECUTE ON FUNCTION public.request_stoqr_alert_notification_dispatch(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.claim_stoqr_pending_alert_notifications(UUID, INTEGER) TO service_role;
 GRANT EXECUTE ON FUNCTION public.mark_stoqr_alert_notification_delivery(UUID, TEXT, TEXT, TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.update_stoqr_delivered_alert_status(UUID, UUID, TEXT) TO authenticated, service_role;
 
 -- These StoQR functions are trigger-only helpers for product identity bookkeeping.
 -- Direct Data API/RPC execution is intentionally blocked for client roles.

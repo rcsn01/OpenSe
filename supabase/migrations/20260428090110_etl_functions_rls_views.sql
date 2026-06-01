@@ -14,7 +14,7 @@ AS $$
   LIMIT 1;
 $$;
 
-CREATE FUNCTION public.has_etl_permission(_org_id UUID, _permission_code TEXT)
+CREATE FUNCTION app_private.has_etl_permission(_org_id UUID, _permission_code TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -68,15 +68,15 @@ CREATE POLICY etl_app_permissions_select ON etl.app_permissions
   FOR SELECT USING (true);
 
 CREATE POLICY etl_roles_select ON etl.roles
-  FOR SELECT USING (public.is_org_member(org_id, auth.uid()));
+  FOR SELECT USING (app_private.is_org_member(org_id, auth.uid()));
 
 CREATE POLICY etl_roles_manage ON etl.roles
   FOR ALL USING (
-    public.has_etl_permission(org_id, 'roles.manage')
+    app_private.has_etl_permission(org_id, 'roles.manage')
     AND lower(name) <> 'owner'
   )
   WITH CHECK (
-    public.has_etl_permission(org_id, 'roles.manage')
+    app_private.has_etl_permission(org_id, 'roles.manage')
     AND lower(name) <> 'owner'
   );
 
@@ -86,7 +86,7 @@ CREATE POLICY etl_role_permissions_select ON etl.role_permissions
       SELECT 1
       FROM etl.roles r
       WHERE r.id = role_permissions.role_id
-        AND public.is_org_member(r.org_id, auth.uid())
+        AND app_private.is_org_member(r.org_id, auth.uid())
     )
   );
 
@@ -96,7 +96,7 @@ CREATE POLICY etl_role_permissions_manage ON etl.role_permissions
       SELECT 1
       FROM etl.roles r
       WHERE r.id = role_permissions.role_id
-        AND public.has_etl_permission(r.org_id, 'roles.manage')
+        AND app_private.has_etl_permission(r.org_id, 'roles.manage')
         AND lower(r.name) <> 'owner'
     )
   )
@@ -105,7 +105,7 @@ CREATE POLICY etl_role_permissions_manage ON etl.role_permissions
       SELECT 1
       FROM etl.roles r
       WHERE r.id = role_permissions.role_id
-        AND public.has_etl_permission(r.org_id, 'roles.manage')
+        AND app_private.has_etl_permission(r.org_id, 'roles.manage')
         AND lower(r.name) <> 'owner'
     )
   );
@@ -118,7 +118,7 @@ CREATE POLICY etl_member_roles_select ON etl.organisation_member_roles
       WHERE om.id = organisation_member_roles.org_member_id
         AND (
           om.user_id = auth.uid()
-          OR public.has_etl_permission(om.org_id, 'roles.manage')
+          OR app_private.has_etl_permission(om.org_id, 'roles.manage')
         )
     )
   );
@@ -129,7 +129,7 @@ CREATE POLICY etl_member_roles_manage ON etl.organisation_member_roles
       SELECT 1
       FROM public.organisation_members om
       WHERE om.id = organisation_member_roles.org_member_id
-        AND public.has_etl_permission(om.org_id, 'roles.manage')
+        AND app_private.has_etl_permission(om.org_id, 'roles.manage')
         AND NOT (om.user_id = auth.uid() AND om.role = 'owner')
         AND NOT (
           om.user_id = (
@@ -145,7 +145,7 @@ CREATE POLICY etl_member_roles_manage ON etl.organisation_member_roles
       SELECT 1
       FROM public.organisation_members om
       WHERE om.id = organisation_member_roles.org_member_id
-        AND public.has_etl_permission(om.org_id, 'roles.manage')
+        AND app_private.has_etl_permission(om.org_id, 'roles.manage')
         AND NOT (om.user_id = auth.uid() AND om.role = 'owner')
         AND NOT (
           om.user_id = (
@@ -171,7 +171,7 @@ CREATE POLICY workflows_select_unified ON etl.workflows
   FOR SELECT USING (
     is_template = true
     OR (org_id IS NULL AND owner_id = auth.uid())
-    OR public.has_etl_permission(org_id, 'workflows.view')
+    OR app_private.has_etl_permission(org_id, 'workflows.view')
   );
 
 CREATE POLICY workflows_insert_owned_or_managed ON etl.workflows
@@ -180,7 +180,7 @@ CREATE POLICY workflows_insert_owned_or_managed ON etl.workflows
     AND owner_id = auth.uid()
     AND (
       org_id IS NULL
-      OR public.has_etl_permission(org_id, 'workflows.manage')
+      OR app_private.has_etl_permission(org_id, 'workflows.manage')
     )
   );
 
@@ -189,14 +189,14 @@ CREATE POLICY workflows_update_non_template_owner_or_member ON etl.workflows
     is_template = false
     AND (
       (org_id IS NULL AND owner_id = auth.uid())
-      OR (org_id IS NOT NULL AND (owner_id = auth.uid() OR public.has_etl_permission(org_id, 'workflows.manage')))
+      OR (org_id IS NOT NULL AND (owner_id = auth.uid() OR app_private.has_etl_permission(org_id, 'workflows.manage')))
     )
   )
   WITH CHECK (
     is_template = false
     AND (
       (org_id IS NULL AND owner_id = auth.uid())
-      OR (org_id IS NOT NULL AND (owner_id = auth.uid() OR public.has_etl_permission(org_id, 'workflows.manage')))
+      OR (org_id IS NOT NULL AND (owner_id = auth.uid() OR app_private.has_etl_permission(org_id, 'workflows.manage')))
     )
   );
 
@@ -205,14 +205,14 @@ CREATE POLICY workflows_delete_non_template_owner_or_member ON etl.workflows
     is_template = false
     AND (
       (org_id IS NULL AND owner_id = auth.uid())
-      OR (org_id IS NOT NULL AND (owner_id = auth.uid() OR public.has_etl_permission(org_id, 'workflows.manage')))
+      OR (org_id IS NOT NULL AND (owner_id = auth.uid() OR app_private.has_etl_permission(org_id, 'workflows.manage')))
     )
   );
 
 CREATE POLICY workflow_executions_select_unified ON etl.workflow_executions
   FOR SELECT USING (
     user_id = auth.uid()
-    OR public.has_etl_permission(org_id, 'executions.view')
+    OR app_private.has_etl_permission(org_id, 'executions.view')
   );
 
 CREATE POLICY workflow_executions_insert_self ON etl.workflow_executions
@@ -227,7 +227,7 @@ CREATE POLICY workflow_executions_insert_self ON etl.workflow_executions
           OR (
             w.org_id IS NOT NULL
             AND workflow_executions.org_id = w.org_id
-            AND public.has_etl_permission(w.org_id, 'executions.run')
+            AND app_private.has_etl_permission(w.org_id, 'executions.run')
           )
         )
     )
@@ -241,7 +241,7 @@ CREATE POLICY versions_select ON etl.workflow_versions
       WHERE w.id = workflow_versions.workflow_id
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
-          OR public.has_etl_permission(w.org_id, 'workflows.view')
+          OR app_private.has_etl_permission(w.org_id, 'workflows.view')
         )
     )
   );
@@ -254,7 +254,7 @@ CREATE POLICY versions_insert ON etl.workflow_versions
       WHERE w.id = workflow_versions.workflow_id
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
-          OR public.has_etl_permission(w.org_id, 'workflows.manage')
+          OR app_private.has_etl_permission(w.org_id, 'workflows.manage')
         )
     )
   );
@@ -267,7 +267,7 @@ CREATE POLICY notifications_select ON etl.notification_settings
       WHERE w.id = notification_settings.workflow_id
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
-          OR public.has_etl_permission(w.org_id, 'notifications.manage')
+          OR app_private.has_etl_permission(w.org_id, 'notifications.manage')
         )
     )
   );
@@ -280,7 +280,7 @@ CREATE POLICY notifications_insert ON etl.notification_settings
       WHERE w.id = notification_settings.workflow_id
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
-          OR public.has_etl_permission(w.org_id, 'notifications.manage')
+          OR app_private.has_etl_permission(w.org_id, 'notifications.manage')
         )
     )
   );
@@ -293,7 +293,7 @@ CREATE POLICY notifications_update ON etl.notification_settings
       WHERE w.id = notification_settings.workflow_id
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
-          OR public.has_etl_permission(w.org_id, 'notifications.manage')
+          OR app_private.has_etl_permission(w.org_id, 'notifications.manage')
         )
     )
   )
@@ -304,7 +304,7 @@ CREATE POLICY notifications_update ON etl.notification_settings
       WHERE w.id = notification_settings.workflow_id
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
-          OR public.has_etl_permission(w.org_id, 'notifications.manage')
+          OR app_private.has_etl_permission(w.org_id, 'notifications.manage')
         )
     )
   );
@@ -317,7 +317,7 @@ CREATE POLICY notifications_delete ON etl.notification_settings
       WHERE w.id = notification_settings.workflow_id
         AND (
           (w.org_id IS NULL AND w.owner_id = auth.uid())
-          OR public.has_etl_permission(w.org_id, 'notifications.manage')
+          OR app_private.has_etl_permission(w.org_id, 'notifications.manage')
         )
     )
   );
@@ -344,11 +344,11 @@ GRANT ALL PRIVILEGES ON TABLE etl.workflow_versions TO service_role;
 GRANT ALL PRIVILEGES ON TABLE etl.notification_settings TO service_role;
 
 REVOKE ALL ON FUNCTION public.pick_next_etl_role(UUID, UUID) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.has_etl_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION app_private.has_etl_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION etl.enforce_template_immutability() FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.pick_next_etl_role(UUID, UUID) TO service_role;
-GRANT EXECUTE ON FUNCTION public.has_etl_permission(UUID, TEXT) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION app_private.has_etl_permission(UUID, TEXT) TO authenticated, service_role;
 CREATE OR REPLACE VIEW etl.personal_usage_stats
 WITH (security_invoker = true)
 AS

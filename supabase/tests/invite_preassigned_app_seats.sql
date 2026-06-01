@@ -56,14 +56,20 @@ BEGIN
   PERFORM set_config('request.jwt.claim.email', 'admin@acme.test', true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
-  SELECT id
-  INTO v_invite_id
-  FROM public.accounts_invite_organisation_member(
+  INSERT INTO public.organisation_invites (
+    org_id,
+    email,
+    invited_by
+  )
+  VALUES (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'preassigned@acme.test'
-  );
+    'preassigned@acme.test',
+    '33333333-3333-3333-3333-333333333333'
+  )
+  RETURNING id INTO v_invite_id;
 
-  PERFORM public.accounts_assign_org_invite_app_seat(v_invite_id, 'etl');
+  INSERT INTO public.organisation_invite_app_seats (invite_id, app_code)
+  VALUES (v_invite_id, 'etl');
 
   IF NOT EXISTS (
     SELECT 1
@@ -74,7 +80,9 @@ BEGIN
     RAISE EXCEPTION 'Admin should be able to pre-assign a seat to a pending invite';
   END IF;
 
-  PERFORM public.accounts_unassign_org_invite_app_seat(v_invite_id, 'etl');
+  DELETE FROM public.organisation_invite_app_seats
+  WHERE invite_id = v_invite_id
+    AND app_code = 'etl';
 
   IF EXISTS (
     SELECT 1
@@ -85,7 +93,8 @@ BEGIN
     RAISE EXCEPTION 'Admin should be able to remove a pre-assigned invite seat';
   END IF;
 
-  PERFORM public.accounts_assign_org_invite_app_seat(v_invite_id, 'stoqr');
+  INSERT INTO public.organisation_invite_app_seats (invite_id, app_code)
+  VALUES (v_invite_id, 'stoqr');
 END;
 $$;
 

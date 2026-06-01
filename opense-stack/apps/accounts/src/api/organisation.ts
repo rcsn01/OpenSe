@@ -115,8 +115,24 @@ export const updateBillingContact = async ({
 }
 
 export const transferOrganisationOwnership = async (targetUserId: string): Promise<void> => {
-  const { error } = await supabase.rpc('accounts_transfer_organisation_ownership', {
-    p_new_owner_user_id: targetUserId,
-  })
+  const current = await getOrganisationProfile()
+
+  const { data: targetMembership, error: targetMembershipError } = await supabase
+    .from('organisation_members')
+    .select('id')
+    .eq('org_id', current.orgId)
+    .eq('user_id', targetUserId)
+    .maybeSingle()
+
+  if (targetMembershipError) throw targetMembershipError
+  if (!targetMembership?.id) {
+    throw new Error('New owner must be an existing organisation member.')
+  }
+
+  const { error } = await supabase
+    .from('organisations')
+    .update({ owner_id: targetUserId })
+    .eq('id', current.orgId)
+
   if (error) throw error
 }

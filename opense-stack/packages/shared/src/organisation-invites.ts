@@ -105,14 +105,37 @@ export const inviteOrganisationMember = async (
     throw new Error('Invite email is required.')
   }
 
-  const { data, error } = await supabase.rpc('accounts_invite_organisation_member', {
-    p_org_id: orgId,
-    p_email: normalizedEmail,
-  })
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError) throw userError
 
-  if (error) throw error
+  const invitedBy = userData.user?.id ?? null
 
-  const invite = Array.isArray(data) ? (data[0] as OrganisationInviteForOrgRow | undefined) : undefined
+  const { data: existingInvite, error: existingInviteError } = await supabase
+    .from('organisation_invites')
+    .select('id, org_id, email, created_at')
+    .eq('org_id', orgId)
+    .eq('email', normalizedEmail)
+    .maybeSingle()
+
+  if (existingInviteError) throw existingInviteError
+
+  const invite =
+    (existingInvite as OrganisationInviteForOrgRow | null) ??
+    (await (async () => {
+      const { data, error } = await supabase
+        .from('organisation_invites')
+        .insert({
+          org_id: orgId,
+          email: normalizedEmail,
+          invited_by: invitedBy,
+        })
+        .select('id, org_id, email, created_at')
+        .single()
+
+      if (error) throw error
+      return data as OrganisationInviteForOrgRow | null
+    })())
+
   if (!invite) {
     throw new Error('Invite was not returned.')
   }

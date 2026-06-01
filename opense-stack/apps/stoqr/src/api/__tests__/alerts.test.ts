@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockDbFrom = vi.fn();
-const mockSupabaseRpc = vi.fn();
 const mockSupabaseInvoke = vi.fn();
 
 vi.mock("../../supabaseClient", () => ({
@@ -9,7 +8,6 @@ vi.mock("../../supabaseClient", () => ({
     from: (...args: unknown[]) => mockDbFrom(...args),
   },
   supabase: {
-    rpc: (...args: unknown[]) => mockSupabaseRpc(...args),
     functions: {
       invoke: (...args: unknown[]) => mockSupabaseInvoke(...args),
     },
@@ -418,26 +416,30 @@ describe("alerts api", () => {
   });
 
   it("updates alert event status scoped by company", async () => {
-    mockSupabaseRpc.mockResolvedValue({ data: null, error: null });
+    const single = vi.fn().mockResolvedValue({ data: { id: "event-1" }, error: null });
+    const update = vi.fn(() => ({
+      eq: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          select: vi.fn(() => ({ single })),
+        })),
+      })),
+    }));
+
+    mockDbFrom.mockImplementation((table: string) => {
+      if (table !== "alert_events") throw new Error(`Unexpected table: ${table}`);
+      return { update };
+    });
 
     await updateAlertEventStatus("company-1", "event-1", "acknowledged");
     await updateAlertEventStatus("company-1", "event-1", "resolved");
 
-    expect(mockSupabaseRpc).toHaveBeenCalledWith(
-      "update_stoqr_delivered_alert_status",
-      {
-        target_company_id: "company-1",
-        target_event_id: "event-1",
-        next_status: "acknowledged",
-      },
-    );
-    expect(mockSupabaseRpc).toHaveBeenCalledWith(
-      "update_stoqr_delivered_alert_status",
-      {
-        target_company_id: "company-1",
-        target_event_id: "event-1",
-        next_status: "resolved",
-      },
-    );
+    expect(update).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      status: "acknowledged",
+      acknowledged_at: expect.any(String),
+    }));
+    expect(update).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      status: "resolved",
+      resolved_at: expect.any(String),
+    }));
   });
 });

@@ -141,8 +141,8 @@ CREATE POLICY invite_app_seats_select ON public.organisation_invite_app_seats
       WHERE oi.id = organisation_invite_app_seats.invite_id
         AND (
           oi.email = auth.jwt() ->> 'email'
-          OR public.is_org_admin(oi.org_id, auth.uid())
-          OR public.is_org_owner(oi.org_id, auth.uid())
+          OR app_private.is_org_admin(oi.org_id, auth.uid())
+          OR app_private.is_org_owner(oi.org_id, auth.uid())
         )
     )
   );
