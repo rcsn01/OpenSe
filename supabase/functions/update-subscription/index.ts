@@ -52,6 +52,28 @@ const rpc = async (
   return data
 }
 
+const restGet = async (
+  supabaseUrl: string,
+  anonKey: string,
+  authHeader: string,
+  path: string,
+) => {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    method: 'GET',
+    headers: {
+      apikey: anonKey,
+      Authorization: authHeader,
+    },
+  })
+
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(data?.message ?? data?.error ?? `REST ${path} failed`)
+  }
+
+  return data
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return handleCorsPreflight(req)
@@ -80,7 +102,12 @@ Deno.serve(async (req: Request) => {
     const appCode = parseAppCode(body.appCode)
     const seatLimit = parseSeatLimit(body.seatLimit, body.tier)
 
-    const contextRows = await rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_get_my_org_context')
+    const contextRows = await restGet(
+      supabaseUrl,
+      supabaseAnonKey,
+      authHeader,
+      'account_org_context?select=org_id,org_name,member_role,stripe_customer_id,stripe_subscription_id&order=member_created_at.asc&limit=1',
+    )
     const context = Array.isArray(contextRows) ? contextRows[0] : null
 
     if (!context?.org_id) {

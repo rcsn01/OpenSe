@@ -99,13 +99,15 @@ export type AlertIntegrationTestResult = {
 export const fetchAlertProducts = async (
   companyId: string,
 ): Promise<Product[]> => {
-  const { data, error } = await supabase.rpc("get_stoqr_alert_products", {
-    target_company_id: companyId,
-  });
+  const { data, error } = await db
+    .from("alert_products")
+    .select("id, name, sku, quantity_on_hand, reorder_point, expiry_date, folder_id, folder_name")
+    .eq("company_id", companyId)
+    .order("name", { ascending: true });
 
   if (error) throw error;
 
-  return ((data as Product[] | null) ?? []).map((product) => ({
+  return ((data as unknown as Product[] | null) ?? []).map((product) => ({
     ...product,
     description: null,
     cost_price: null,
@@ -301,12 +303,11 @@ export const updateAlertRuleEnabled = async (
 export const fetchAlertEvents = async (
   companyId: string,
 ): Promise<AlertEvent[]> => {
-  const { data, error } = await supabase.rpc(
-    "get_stoqr_delivered_alert_events",
-    {
-      target_company_id: companyId,
-    },
-  );
+  const { data, error } = await db
+    .from("delivered_alert_events")
+    .select("id, company_id, rule_id, product_id, alert_type, severity, status, message, triggered_at, delivery_id, product_name, product_sku, folder_id, folder_name")
+    .eq("company_id", companyId)
+    .order("triggered_at", { ascending: false });
 
   if (error) throw error;
 

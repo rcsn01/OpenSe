@@ -66,6 +66,28 @@ const rpc = async (
   return data
 }
 
+const restGet = async (
+  supabaseUrl: string,
+  anonKey: string,
+  authHeader: string,
+  path: string,
+) => {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    method: 'GET',
+    headers: {
+      apikey: anonKey,
+      Authorization: authHeader,
+    },
+  })
+
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(data?.message ?? data?.error ?? `REST ${path} failed`)
+  }
+
+  return data
+}
+
 const serviceFetch = async (
   supabaseUrl: string,
   serviceRoleKey: string,
@@ -120,11 +142,36 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'export-account') {
       const [profile, preferences, orgContext, assignments, auditEvents] = await Promise.all([
-        rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_get_profile').catch(() => []),
-        rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_get_preferences').catch(() => []),
-        rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_get_my_org_context').catch(() => []),
-        rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_get_org_member_app_assignments').catch(() => []),
-        rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_list_org_audit_events', { p_limit: 200 }).catch(() => []),
+        restGet(
+          supabaseUrl,
+          supabaseAnonKey,
+          authHeader,
+          `profiles?select=id,email,full_name,username,avatar_url,avatar_storage_path,recovery_email,created_at,updated_at&id=eq.${user.id}`,
+        ).catch(() => []),
+        restGet(
+          supabaseUrl,
+          supabaseAnonKey,
+          authHeader,
+          `account_preferences?select=theme,timezone,locale,notification_preferences,default_landing_app,updated_at&user_id=eq.${user.id}`,
+        ).catch(() => []),
+        restGet(
+          supabaseUrl,
+          supabaseAnonKey,
+          authHeader,
+          'account_org_context?select=org_id,org_name,member_role,stripe_customer_id,stripe_subscription_id,billing_name,billing_email,billing_phone&order=member_created_at.asc&limit=1',
+        ).catch(() => []),
+        restGet(
+          supabaseUrl,
+          supabaseAnonKey,
+          authHeader,
+          'account_org_member_app_assignments?select=org_member_id,user_id,full_name,email,role,assigned_apps&order=created_at.asc',
+        ).catch(() => []),
+        restGet(
+          supabaseUrl,
+          supabaseAnonKey,
+          authHeader,
+          'account_org_audit_events?select=id,org_id,actor_user_id,actor_email,actor_full_name,action,app_code,target_org_member_id,target_user_email,metadata,created_at&order=created_at.desc&limit=200',
+        ).catch(() => []),
       ])
 
       await rpc(supabaseUrl, supabaseAnonKey, authHeader, 'log_my_account_audit_event', {

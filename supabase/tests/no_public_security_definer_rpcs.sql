@@ -19,26 +19,15 @@ BEGIN
     RAISE EXCEPTION 'Exposed SECURITY DEFINER functions are executable by client roles: %', v_exposed_functions;
   END IF;
 
-  IF (
-    SELECT prosecdef
+  IF EXISTS (
+    SELECT 1
     FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public'
+    WHERE n.nspname IN ('public', 'app_private')
       AND p.proname = 'accounts_get_profile'
       AND pg_get_function_identity_arguments(p.oid) = ''
   ) THEN
-    RAISE EXCEPTION 'public.accounts_get_profile should be a SECURITY INVOKER facade';
-  END IF;
-
-  IF NOT (
-    SELECT prosecdef
-    FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'app_private'
-      AND p.proname = 'accounts_get_profile'
-      AND pg_get_function_identity_arguments(p.oid) = ''
-  ) THEN
-    RAISE EXCEPTION 'app_private.accounts_get_profile should remain SECURITY DEFINER';
+    RAISE EXCEPTION 'accounts_get_profile should be removed after migrating to direct RLS-backed profile reads';
   END IF;
 END;
 $$;

@@ -1,4 +1,4 @@
-import { db, supabase } from '../supabaseClient'
+import { db } from '../supabaseClient'
 import type { CustomFieldActiveFilter, CustomFieldFilterOption, CustomFieldPrimitive, CustomFieldValueType, Folder, Tag } from '../types'
 import { toNumber } from '../utils'
 import type { InventoryProduct, SortDirection, SortField } from '../components/Inventory/types'
@@ -110,9 +110,11 @@ export const fetchInventoryFilters = async (companyId: string): Promise<{ folder
 }
 
 export const fetchInventoryStats = async (companyId: string): Promise<InventoryStats> => {
-  const { data, error } = await supabase
-    .rpc('get_inventory_stats', { target_company_id: companyId })
-    .single<{
+  const { data, error } = await db
+    .from('inventory_stats')
+    .select('total_items, low_stock_items, total_value')
+    .eq('company_id', companyId)
+    .maybeSingle<{
       total_items: number | string | null
       low_stock_items: number | string | null
       total_value: number | string | null

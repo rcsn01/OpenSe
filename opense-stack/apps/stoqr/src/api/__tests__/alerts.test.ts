@@ -37,8 +37,8 @@ beforeEach(() => {
 });
 
 describe("alerts api", () => {
-  it("fetches alert products from RPC", async () => {
-    mockSupabaseRpc.mockResolvedValue({
+  it("fetches alert products from view", async () => {
+    const order = vi.fn().mockResolvedValue({
       data: [
         {
           id: "p-1",
@@ -47,17 +47,22 @@ describe("alerts api", () => {
           quantity_on_hand: 1,
           reorder_point: 2,
           expiry_date: null,
+          folder_id: null,
+          folder_name: null,
         },
       ],
       error: null,
+    });
+    mockDbFrom.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({ order })),
+      })),
     });
 
     const rows = await fetchAlertProducts("company-1");
 
     expect(rows).toHaveLength(1);
-    expect(mockSupabaseRpc).toHaveBeenCalledWith("get_stoqr_alert_products", {
-      target_company_id: "company-1",
-    });
+    expect(mockDbFrom).toHaveBeenCalledWith("alert_products");
   });
 
   it("creates and toggles alert rules", async () => {
@@ -205,24 +210,6 @@ describe("alerts api", () => {
       error: null,
     });
 
-    const eventsLimit = vi.fn().mockResolvedValue({
-      data: [
-        {
-          id: "e-1",
-          company_id: "company-1",
-          rule_id: "r-1",
-          product_id: "p-1",
-          alert_type: "expiration",
-          severity: "high",
-          status: "open",
-          message: "Expiry soon",
-          triggered_at: "2026-02-24T00:00:00Z",
-          products: { name: "Milk", sku: "MLK" },
-        },
-      ],
-      error: null,
-    });
-
     const deliveryLimit = vi.fn().mockResolvedValue({
       data: [
         {
@@ -270,32 +257,6 @@ describe("alerts api", () => {
       error: null,
     });
 
-    mockSupabaseRpc.mockImplementation((fn: string) => {
-      if (fn === "get_stoqr_delivered_alert_events") {
-        return Promise.resolve({
-          data: [
-            {
-              id: "e-1",
-              company_id: "company-1",
-              rule_id: "r-1",
-              product_id: "p-1",
-              alert_type: "expiration",
-              severity: "high",
-              status: "open",
-              message: "Expiry soon",
-              triggered_at: "2026-02-24T00:00:00Z",
-              delivery_id: "d-1",
-              product_name: "Milk",
-              product_sku: "MLK",
-            },
-          ],
-          error: null,
-        });
-      }
-
-      throw new Error(`Unexpected rpc: ${fn}`);
-    });
-
     mockDbFrom.mockImplementation((table: string) => {
       if (table === "alert_rules") {
         return {
@@ -309,7 +270,55 @@ describe("alerts api", () => {
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
-              order: vi.fn(() => ({ limit: eventsLimit })),
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: "e-1",
+                    company_id: "company-1",
+                    rule_id: "r-1",
+                    product_id: "p-1",
+                    alert_type: "expiration",
+                    severity: "high",
+                    status: "open",
+                    message: "Expiry soon",
+                    triggered_at: "2026-02-24T00:00:00Z",
+                    delivery_id: "d-1",
+                    product_name: "Milk",
+                    product_sku: "MLK",
+                  },
+                ],
+                error: null,
+              }),
+            })),
+          })),
+        };
+      }
+
+      if (table === "delivered_alert_events") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              order: vi.fn().mockResolvedValue({
+                data: [
+                  {
+                    id: "e-1",
+                    company_id: "company-1",
+                    rule_id: "r-1",
+                    product_id: "p-1",
+                    alert_type: "expiration",
+                    severity: "high",
+                    status: "open",
+                    message: "Expiry soon",
+                    triggered_at: "2026-02-24T00:00:00Z",
+                    delivery_id: "d-1",
+                    product_name: "Milk",
+                    product_sku: "MLK",
+                    folder_id: null,
+                    folder_name: null,
+                  },
+                ],
+                error: null,
+              }),
             })),
           })),
         };

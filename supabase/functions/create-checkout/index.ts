@@ -44,26 +44,23 @@ const getCurrentUser = async (supabaseUrl: string, supabaseAnonKey: string, auth
   return user as { id: string; email?: string }
 }
 
-const rpc = async (
+const restGet = async (
   supabaseUrl: string,
   anonKey: string,
   authHeader: string,
-  rpcName: string,
-  body: Record<string, unknown> = {},
+  path: string,
 ) => {
-  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
-    method: 'POST',
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    method: 'GET',
     headers: {
-      'Content-Type': 'application/json',
       apikey: anonKey,
       Authorization: authHeader,
     },
-    body: JSON.stringify(body),
   })
 
   const data = await response.json().catch(() => null)
   if (!response.ok) {
-    throw new Error(data?.message ?? data?.error ?? `RPC ${rpcName} failed`)
+    throw new Error(data?.message ?? data?.error ?? `REST ${path} failed`)
   }
 
   return data
@@ -179,7 +176,12 @@ Deno.serve(async (req: Request) => {
         org_id: requestedOrgId,
       }
 
-      const contextRows = await rpc(supabaseUrl, supabaseAnonKey, authHeader, 'accounts_get_my_org_context')
+      const contextRows = await restGet(
+        supabaseUrl,
+        supabaseAnonKey,
+        authHeader,
+        'account_org_context?select=org_id,org_name,member_role,stripe_customer_id&order=member_created_at.asc&limit=1',
+      )
       const context = Array.isArray(contextRows) ? contextRows[0] : null
 
       if (!context?.org_id || context.org_id !== requestedOrgId) {

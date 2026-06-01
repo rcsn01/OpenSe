@@ -29,7 +29,12 @@ interface AccountsAuditEventRow {
 }
 
 export const listOrgAuditEvents = async (limit = 12): Promise<OrgAuditEvent[]> => {
-  const { data, error } = await supabase.rpc('accounts_list_org_audit_events', { p_limit: limit })
+  const boundedLimit = Math.min(Math.max(limit, 1), 200)
+  const { data, error } = await supabase
+    .from('account_org_audit_events')
+    .select('id, org_id, actor_user_id, actor_email, actor_full_name, action, app_code, target_org_member_id, target_user_email, metadata, created_at')
+    .order('created_at', { ascending: false })
+    .limit(boundedLimit)
   if (error) throw error
 
   const rows = (data ?? []) as AccountsAuditEventRow[]

@@ -37,10 +37,11 @@ BEGIN
 
   IF EXISTS (
     SELECT 1
-    FROM public.get_stoqr_my_permissions(v_company_id)
-    WHERE code IN ('products.view', 'transactions.create', 'members.manage')
+    FROM stoqr.my_permissions
+    WHERE company_id = v_company_id
+      AND code IN ('products.view', 'transactions.create', 'members.manage')
   ) THEN
-    RAISE EXCEPTION 'get_stoqr_my_permissions should not return hidden legacy codes';
+    RAISE EXCEPTION 'stoqr.my_permissions should not return hidden legacy codes';
   END IF;
 END;
 $$;

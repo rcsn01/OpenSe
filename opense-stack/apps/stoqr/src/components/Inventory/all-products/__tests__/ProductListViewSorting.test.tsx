@@ -22,7 +22,6 @@ vi.mock('../useInlineProductEdit', () => ({
 
 const createProps = (overrides: Partial<ProductListViewProps> = {}): ProductListViewProps => ({
   companyId: 'company-1',
-  view: 'list',
   products: [
     { id: 'p-1', name: 'Widget', sku: 'W-1', quantity_on_hand: 10, reorder_point: 5, folder_id: null, cost_price: 5, selling_price: 20 },
     { id: 'p-2', name: 'Gadget', sku: 'G-1', quantity_on_hand: 0, reorder_point: 3, folder_id: 'f-1', cost_price: 8, selling_price: 30 },

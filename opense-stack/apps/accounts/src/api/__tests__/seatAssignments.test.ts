@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockRpc = vi.fn()
+const mockFrom = vi.fn()
 const mockGetOrganisationInvitesForOrg = vi.fn()
 const mockInviteOrganisationMember = vi.fn()
 const mockCancelOrganisationInviteForOrg = vi.fn()
@@ -8,6 +9,7 @@ const mockCancelOrganisationInviteForOrg = vi.fn()
 vi.mock('@repo/shared/supabase', () => ({
   supabase: {
     rpc: (...args: unknown[]) => mockRpc(...args),
+    from: (...args: unknown[]) => mockFrom(...args),
   },
 }))
 
@@ -35,23 +37,41 @@ beforeEach(() => {
 describe('seatAssignments api', () => {
   it('builds seat assignment snapshot and filters unsupported app codes', async () => {
     mockRpc
-      .mockResolvedValueOnce({
-        data: [{ org_id: 'org-1', member_role: 'admin' }],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [
-          {
-            org_member_id: 'member-1',
-            user_id: 'user-1',
-            full_name: 'Alice',
-            email: 'alice@example.com',
-            role: 'admin',
-            assigned_apps: ['etl', 'unknown', 'stoqr'],
-          },
-        ],
-        error: null,
-      })
+      .mockResolvedValue({ error: null })
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'account_org_context') {
+        const limit = vi.fn().mockResolvedValue({
+          data: [{ org_id: 'org-1', member_role: 'admin' }],
+          error: null,
+        })
+        return {
+          select: vi.fn(() => ({
+            order: vi.fn(() => ({ limit })),
+          })),
+        }
+      }
+      if (table === 'account_org_member_app_assignments') {
+        const order = vi.fn().mockResolvedValue({
+          data: [
+            {
+              org_member_id: 'member-1',
+              user_id: 'user-1',
+              full_name: 'Alice',
+              email: 'alice@example.com',
+              role: 'admin',
+              assigned_apps: ['etl', 'unknown', 'stoqr'],
+            },
+          ],
+          error: null,
+        })
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ order })),
+          })),
+        }
+      }
+      throw new Error(`Unexpected table: ${table}`)
+    })
     mockGetOrganisationInvitesForOrg.mockResolvedValue([
       {
         id: 'inv-1',
@@ -88,15 +108,20 @@ describe('seatAssignments api', () => {
       ],
     })
 
-    expect(mockRpc).toHaveBeenNthCalledWith(1, 'accounts_get_my_org_context')
-    expect(mockRpc).toHaveBeenNthCalledWith(2, 'accounts_get_org_member_app_assignments')
+    expect(mockFrom).toHaveBeenNthCalledWith(1, 'account_org_context')
+    expect(mockFrom).toHaveBeenNthCalledWith(2, 'account_org_member_app_assignments')
     expect(mockGetOrganisationInvitesForOrg).toHaveBeenCalledWith('org-1')
   })
 
   it('throws when no membership context exists', async () => {
-    mockRpc.mockResolvedValueOnce({
-      data: [],
-      error: null,
+    mockFrom.mockImplementation((table: string) => {
+      if (table !== 'account_org_context') throw new Error(`Unexpected table: ${table}`)
+      const limit = vi.fn().mockResolvedValue({ data: [], error: null })
+      return {
+        select: vi.fn(() => ({
+          order: vi.fn(() => ({ limit })),
+        })),
+      }
     })
 
     await expect(getSeatAssignmentSnapshot()).rejects.toThrow(

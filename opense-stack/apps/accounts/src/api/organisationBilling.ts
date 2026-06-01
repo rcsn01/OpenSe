@@ -49,7 +49,11 @@ const appNameMap: Record<AppCode, string> = {
 }
 
 const getCurrentOrgContext = async (): Promise<OrgContext> => {
-  const { data, error } = await supabase.rpc('accounts_get_my_org_context')
+  const { data, error } = await supabase
+    .from('account_org_context')
+    .select('org_id, org_name, member_role, stripe_customer_id, stripe_subscription_id, billing_name, billing_email, billing_phone')
+    .order('member_created_at', { ascending: true })
+    .limit(1)
   if (error) throw error
 
   const contextRow = Array.isArray(data) ? (data[0] as OrgContextRow | undefined) : undefined
@@ -72,7 +76,11 @@ const getCurrentOrgContext = async (): Promise<OrgContext> => {
 export const getOrganisationBillingSummary = async (): Promise<BillingSummary> => {
   const organisation = await getCurrentOrgContext()
 
-  const { data: appSummaryRows, error: appSummaryError } = await supabase.rpc('accounts_get_org_app_seat_summary')
+  const { data: appSummaryRows, error: appSummaryError } = await supabase
+    .from('account_org_app_seat_summary')
+    .select('app_code, app_name, seat_limit, assigned_seats')
+    .eq('org_id', organisation.orgId)
+    .order('app_code', { ascending: true })
   if (appSummaryError) throw appSummaryError
 
   const apps: AppSeatBillingSummary[] = ((appSummaryRows ?? []) as AppSeatSummaryRow[])

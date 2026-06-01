@@ -50,16 +50,58 @@ beforeEach(() => {
 })
 
 describe('inventory api', () => {
-  it('throws when fetchInventoryStats RPC returns an error', async () => {
-    mockRpc.mockReturnValue({
-      single: vi.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'RPC failed' },
-      }),
+  it('throws when fetchInventoryStats view returns an error', async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'Stats failed' },
+          }),
+        })),
+      })),
     })
 
-    await expect(fetchInventoryStats('company-1')).rejects.toMatchObject({ message: 'RPC failed' })
-    expect(mockRpc).toHaveBeenCalledWith('get_inventory_stats', { target_company_id: 'company-1' })
+    await expect(fetchInventoryStats('company-1')).rejects.toMatchObject({ message: 'Stats failed' })
+    expect(mockFrom).toHaveBeenCalledWith('inventory_stats')
+  })
+
+  it('maps inventory stats from the view', async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { total_items: '2', low_stock_items: '1', total_value: '42.5' },
+            error: null,
+          }),
+        })),
+      })),
+    })
+
+    await expect(fetchInventoryStats('company-1')).resolves.toEqual({
+      totalItems: 2,
+      lowStockItems: 1,
+      totalValue: 42.5,
+    })
+  })
+
+  it('returns empty stats when the view has no row', async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: null,
+          }),
+        })),
+      })),
+    })
+
+    await expect(fetchInventoryStats('company-1')).resolves.toEqual({
+      totalItems: 0,
+      lowStockItems: 0,
+      totalValue: 0,
+    })
   })
 
   it('returns 0 and avoids insert when import rows are empty/invalid', async () => {
