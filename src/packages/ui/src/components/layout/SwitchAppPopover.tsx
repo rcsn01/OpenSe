@@ -14,7 +14,7 @@ export interface SwitchAppPopoverProps {
 }
 
 type AppSwitcherItem = {
-  key: "etl" | "stoqr" | "ui-design";
+  key: "etl" | "stoqr";
   label: string;
   url: string;
   /** Path to append to base URL when switching (e.g. /dashboard to skip landing) */
@@ -25,7 +25,6 @@ type AppSwitcherItem = {
 const DEFAULT_APP_URLS = {
   etl: "http://localhost:5992",
   stoqr: "http://localhost:5993",
-  "ui-design": "http://localhost:5999",
 } as const;
 
 function buildAppUrl(base: string, path?: string): string {
@@ -47,7 +46,6 @@ export function SwitchAppPopover({
   const apps = useMemo(() => {
     const EtlIcon = SWITCHABLE_APP_ICONS.etl;
     const StoqrIcon = SWITCHABLE_APP_ICONS.stoqr;
-    const UiDesignIcon = SWITCHABLE_APP_ICONS["ui-design"];
     const etlUrl =
       getRuntimeConfigValue("VITE_ETL_PUBLIC_URL") ||
       getRuntimeConfigValue("VITE_ETL_URL") ||
@@ -56,10 +54,6 @@ export function SwitchAppPopover({
       getRuntimeConfigValue("VITE_STOQR_PUBLIC_URL") ||
       getRuntimeConfigValue("VITE_STOQR_URL") ||
       DEFAULT_APP_URLS.stoqr;
-    const uiDesignUrl =
-      getRuntimeConfigValue("VITE_UI_PUBLIC_URL") ||
-      getRuntimeConfigValue("VITE_UI_DESIGN_URL") ||
-      DEFAULT_APP_URLS["ui-design"];
     return [
       {
         key: "etl",
@@ -74,12 +68,6 @@ export function SwitchAppPopover({
         url: stoqrUrl,
         path: "/dashboard",
         icon: <StoqrIcon className="h-5 w-5" />,
-      },
-      {
-        key: "ui-design",
-        label: "UI Design",
-        url: uiDesignUrl,
-        icon: <UiDesignIcon className="h-5 w-5" />,
       },
     ] as AppSwitcherItem[];
   }, []);
