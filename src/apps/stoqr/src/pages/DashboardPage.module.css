@@ -235,6 +235,32 @@
   align-items: start;
 }
 
+.stoqr-dashboard__alert-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stoqr-dashboard__alert-card {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.stoqr-dashboard__alert-card:first-child {
+  padding-top: 0;
+}
+
+.stoqr-dashboard__alert-card:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.stoqr-dashboard__alert-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .stoqr-dashboard__deliveries-desktop {
   overflow-x: auto;
 }
@@ -344,6 +370,34 @@
   text-align: right;
 }
 
+.stoqr-dashboard__velocity-mobile,
+.stoqr-dashboard__velocity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stoqr-dashboard__velocity-mobile {
+  gap: 12px;
+}
+
+.stoqr-dashboard__velocity-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.stoqr-dashboard__velocity-card:first-child {
+  padding-top: 0;
+}
+
+.stoqr-dashboard__velocity-card:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
 .stoqr-dashboard__velocity-status {
   font-size: 11px;
   font-weight: 600;
@@ -383,12 +437,55 @@
 
 @media (max-width: 760px) {
   .stoqr-dashboard {
-    gap: 22px;
+    gap: 20px;
   }
 
-  .stoqr-dashboard__summary {
-    grid-template-columns: 1fr 1fr;
-    gap: 18px 14px;
+  .stoqr-dashboard__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 14px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .stoqr-dashboard__metrics :global(.analytics-metric-card:first-child) {
+    grid-column: 1 / -1;
+  }
+
+  .stoqr-dashboard__metrics :global(.analytics-metric-card__value) {
+    font-size: 1.375rem;
+  }
+
+  .stoqr-dashboard__metrics :global(.analytics-metric-card:first-child .analytics-metric-card__value) {
+    font-size: 2rem;
+  }
+
+  .stoqr-dashboard__metrics :global(.analytics-metric-card__detail) {
+    display: none;
+  }
+
+  .stoqr-dashboard__metrics :global(.analytics-metric-card:first-child .analytics-metric-card__detail) {
+    display: block;
+  }
+
+  .stoqr-dashboard__layout--primary,
+  .stoqr-dashboard__layout--secondary {
+    display: contents;
+  }
+
+  .stoqr-dashboard__panel--alerts {
+    order: 1;
+  }
+
+  .stoqr-dashboard__panel--deliveries {
+    order: 2;
+  }
+
+  .stoqr-dashboard__panel--movement {
+    order: 3;
+  }
+
+  .stoqr-dashboard__panel--velocity {
+    order: 4;
   }
 
   .stoqr-dashboard__section-header,
@@ -407,6 +504,25 @@
     flex-direction: column;
   }
 
+  .stoqr-dashboard__panel--movement :global(.analytics-comparison-bars) {
+    gap: 12px;
+  }
+
+  .stoqr-dashboard__panel--movement :global(.analytics-comparison-bars__bars) {
+    height: 86px;
+    gap: 5px;
+  }
+
+  .stoqr-dashboard__panel--movement :global(.analytics-comparison-bars__bar) {
+    width: 11px;
+  }
+
+  .stoqr-dashboard__alert-card-header,
+  .stoqr-dashboard__velocity-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .stoqr-dashboard__velocity-meta {
     align-items: flex-start;
     text-align: left;
@@ -414,8 +530,8 @@
 }
 
 @media (max-width: 560px) {
-  .stoqr-dashboard__summary {
-    grid-template-columns: 1fr;
+  .stoqr-dashboard__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .stoqr-dashboard__movement {
