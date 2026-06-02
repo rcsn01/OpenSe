@@ -51,23 +51,30 @@ const removeWebOnlyPublicFiles = (appDir) => {
   fs.rmSync(path.join(appDir, '.well-known'), { recursive: true, force: true })
 }
 
+const installMobileRuntimeFiles = (appDir) => {
+  fs.writeFileSync(path.join(appDir, 'config.js'), serializeMobileRuntimeLoader())
+  fs.copyFileSync(path.join(assetRoot, 'mobile-bridge.js'), path.join(appDir, 'mobile-bridge.js'))
+  patchBundledIndex(appDir)
+  removeWebOnlyPublicFiles(appDir)
+}
+
+fs.rmSync(wwwRoot, { recursive: true, force: true })
 fs.mkdirSync(wwwRoot, { recursive: true })
-fs.copyFileSync(path.join(assetRoot, 'index.html'), path.join(wwwRoot, 'index.html'))
-fs.copyFileSync(path.join(assetRoot, 'setup.js'), path.join(wwwRoot, 'setup.js'))
-fs.writeFileSync(path.join(wwwRoot, 'config.js'), serializeMobileRuntimeLoader())
 
 for (const app of apps) {
   run('pnpm', ['--dir', app.dir, 'build', '--mode', 'mobile'])
 
+  if (app.name === 'accounts') {
+    copyDir(path.join(app.dir, 'dist'), wwwRoot)
+    installMobileRuntimeFiles(wwwRoot)
+  }
+
   const target = path.join(wwwRoot, app.name)
   copyDir(path.join(app.dir, 'dist'), target)
-  fs.writeFileSync(path.join(target, 'config.js'), serializeMobileRuntimeLoader())
-  fs.copyFileSync(path.join(assetRoot, 'mobile-bridge.js'), path.join(target, 'mobile-bridge.js'))
-  patchBundledIndex(target)
-  removeWebOnlyPublicFiles(target)
+  installMobileRuntimeFiles(target)
 }
 
-const allowed = new Set(['accounts', 'etl', 'stoqr', 'index.html', 'setup.js', 'config.js'])
+const allowed = new Set(['accounts', 'etl', 'stoqr', 'assets', 'index.html', 'mobile-bridge.js', 'config.js'])
 const unexpected = fs.readdirSync(wwwRoot).filter((entry) => !allowed.has(entry))
 if (unexpected.length > 0) {
   throw new Error(`Unexpected mobile www entries: ${unexpected.join(', ')}`)

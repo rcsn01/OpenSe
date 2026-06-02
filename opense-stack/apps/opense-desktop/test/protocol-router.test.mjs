@@ -73,7 +73,6 @@ describe('desktop protocol router', () => {
   it('serves generated config from root and app-prefixed config paths', async () => {
     const handler = createProtocolHandler({
       appsRoot: '/unused',
-      setupRoot: '/unused',
       getConfigScript: () => 'window.__OPENSE_CONFIG__ = { ok: true };',
     })
 
@@ -88,7 +87,6 @@ describe('desktop protocol router', () => {
   it('redirects bare app roots to trailing-slash URLs for relative assets', async () => {
     const handler = createProtocolHandler({
       appsRoot: '/unused',
-      setupRoot: '/unused',
       getConfigScript: () => '',
     })
 
@@ -96,5 +94,17 @@ describe('desktop protocol router', () => {
 
     expect(response.status).toBe(302)
     expect(response.headers.get('location')).toBe('opense://desktop/accounts/')
+  })
+
+  it('redirects the legacy setup route into the Accounts setup route', async () => {
+    const handler = createProtocolHandler({
+      appsRoot: '/unused',
+      getConfigScript: () => '',
+    })
+
+    const response = await handler(new Request('opense://desktop/setup'))
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe('opense://desktop/accounts/setup')
   })
 })
