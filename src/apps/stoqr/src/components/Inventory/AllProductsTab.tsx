@@ -11,9 +11,10 @@ import {
   DialogTitle,
   Dropdown,
   DropdownItem,
+  FilterDropdown,
   type DataTableTopRowConfig,
 } from '@repo/ui'
-import { ChevronDown, Plus, Upload, X } from 'lucide-react'
+import { ChevronDown, Folder, Plus, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useCreateInventoryFolder,
@@ -346,7 +347,7 @@ export const AllProductsTab = ({
         aria-expanded="false"
         onClick={() => setIsMobileExplorerOpen(true)}
       >
-        <span aria-hidden="true">&gt;</span>
+        <Folder aria-hidden="true" className="h-4 w-4" />
       </button>
     ) : null
 
@@ -405,18 +406,17 @@ export const AllProductsTab = ({
         ],
       }
     : {
-        filters: [
-          {
-            value: stockFilter,
-            options: stockFilterOptions,
-            onChange: (value) => setStockFilter(value as AllProductsTabProps['stockFilter']),
-            ariaLabel: 'Inventory stock status filter',
-            menuClassName: 'min-w-[160px]',
-          },
-        ],
         left: (
           <>
             {mobileExplorerToggle}
+
+            <FilterDropdown
+              value={stockFilter}
+              options={stockFilterOptions}
+              onChange={(value) => setStockFilter(value as AllProductsTabProps['stockFilter'])}
+              ariaLabel="Inventory stock status filter"
+              menuClassName="min-w-[160px]"
+            />
 
             {activeCustomFieldFilters.length > 0 && (
               <div className="h-4 w-px shrink-0 bg-[var(--color-border)]" />

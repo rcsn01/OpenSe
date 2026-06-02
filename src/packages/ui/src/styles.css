@@ -454,6 +454,42 @@ img {
   min-height: 0;
 }
 
+.pagination-layout {
+  display: grid;
+  grid-template-areas: "summary pages rows";
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px 16px;
+}
+
+.pagination-summary {
+  grid-area: summary;
+}
+
+.pagination-pages {
+  grid-area: pages;
+  justify-self: end;
+}
+
+.pagination-rows {
+  grid-area: rows;
+  justify-self: end;
+}
+
+@media (max-width: 640px) {
+  .pagination-layout {
+    grid-template-areas:
+      "summary rows"
+      "pages pages";
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 14px;
+  }
+
+  .pagination-pages {
+    justify-self: center;
+  }
+}
+
 /* EmptyState & utility */
 .muted {
   color: var(--color-muted-foreground);

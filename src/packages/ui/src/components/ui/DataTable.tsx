@@ -374,6 +374,26 @@ export function DataTable<Row, SortKey extends string = string>({
 
   return (
     <div className={cn("flex min-h-0 flex-col overflow-hidden", className)}>
+      {renderedTopRow ? (
+        <div
+          className={cn(
+            "data-table-top-row shrink-0 overflow-x-auto overflow-y-hidden",
+            topRowClassName,
+          )}
+        >
+          <div
+            className={cn(
+              "data-table-top-row-content min-w-max",
+              variantClassNames.bodyCell,
+              tableCellTextClassName,
+              topRowCellClassName,
+            )}
+          >
+            {renderedTopRow}
+          </div>
+        </div>
+      ) : null}
+
       <div
         className={cn(
           "table-wrap min-h-0 w-full flex-1 overflow-auto",
@@ -402,21 +422,6 @@ export function DataTable<Row, SortKey extends string = string>({
           ) : null}
 
           <thead className={theadClassName}>
-            {renderedTopRow ? (
-              <tr className={topRowClassName}>
-                <td
-                  colSpan={columnSpan}
-                  className={cn(
-                    variantClassNames.bodyCell,
-                    tableCellTextClassName,
-                    topRowCellClassName,
-                  )}
-                >
-                  {renderedTopRow}
-                </td>
-              </tr>
-            ) : null}
-
             <tr>
               {selection ? (
                 <th

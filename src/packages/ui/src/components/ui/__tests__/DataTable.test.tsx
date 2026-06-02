@@ -89,19 +89,21 @@ describe('DataTable', () => {
 
     const headerRows = within(screen.getAllByRole('rowgroup')[0]).getAllByRole('row')
     const bodyRows = within(screen.getAllByRole('rowgroup')[1]).getAllByRole('row')
+    const topRow = screen.getByText('Template controls').closest('.data-table-top-row')
 
-    expect(headerRows).toHaveLength(2)
-    expect(headerRows[0]).toHaveTextContent('Template controls')
-    expect(headerRows[1]).toHaveTextContent('Name')
+    expect(topRow).toHaveClass('overflow-x-auto')
+    expect(headerRows).toHaveLength(1)
+    expect(headerRows[0]).toHaveTextContent('Name')
     expect(bodyRows[0]).toHaveTextContent('Alpha')
   })
 
-  it('spans the optional top row across all columns', () => {
+  it('renders the optional top row outside the table scroll area', () => {
     renderTable({ topRow: <div>Template controls</div> })
 
-    const topRowCell = screen.getByText('Template controls').closest('td')
+    const topRowContent = screen.getByText('Template controls').closest('.data-table-top-row-content')
 
-    expect(topRowCell).toHaveAttribute('colspan', String(columns.length))
+    expect(topRowContent).toHaveClass('min-w-max')
+    expect(screen.getByText('Template controls').closest('table')).toBeNull()
   })
 
   it('renders structured top row filters and calls onChange', async () => {
@@ -206,8 +208,8 @@ describe('DataTable', () => {
     const headerRows = within(screen.getAllByRole('rowgroup')[0]).getAllByRole('row')
     const bodyRows = within(screen.getAllByRole('rowgroup')[1]).getAllByRole('row')
 
-    expect(headerRows[0]).toHaveTextContent('Template controls')
-    expect(headerRows[1]).toHaveTextContent('Name')
+    expect(screen.getByText('Template controls').closest('.data-table-top-row')).toBeInTheDocument()
+    expect(headerRows[0]).toHaveTextContent('Name')
     expect(bodyRows).toHaveLength(1)
     expect(bodyRows[0]).toHaveTextContent('Nothing here yet.')
   })
@@ -259,7 +261,7 @@ describe('DataTable', () => {
     expect(onToggleAll).toHaveBeenCalledTimes(1)
   })
 
-  it('spans top, bottom, and empty rows across the selection column too', () => {
+  it('keeps top controls separate while spanning bottom and empty rows across the selection column too', () => {
     render(
       <DataTable
         columns={columns}
@@ -276,7 +278,8 @@ describe('DataTable', () => {
       />,
     )
 
-    expect(screen.getByText('Top controls').closest('td')).toHaveAttribute('colspan', String(columns.length + 1))
+    expect(screen.getByText('Top controls').closest('.data-table-top-row')).toBeInTheDocument()
+    expect(screen.getByText('Top controls').closest('td')).toBeNull()
     expect(screen.getByText('Nothing here yet.')).toHaveAttribute('colspan', String(columns.length + 1))
     expect(screen.getByText('Bottom controls').closest('td')).toHaveAttribute('colspan', String(columns.length + 1))
   })

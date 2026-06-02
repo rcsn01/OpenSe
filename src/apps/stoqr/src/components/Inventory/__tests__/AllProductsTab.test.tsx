@@ -188,15 +188,19 @@ describe('AllProductsTab', () => {
       value: mockMatchMedia(true),
     })
 
-    const props = createProps()
+    const props = {
+      ...createProps(),
+      selectedRowIds: new Set<string>(),
+    }
     render(<AllProductsTab {...props} />)
 
     const sidebar = screen.getByRole('complementary', { hidden: true })
     expect(sidebar).toHaveAttribute('aria-hidden', 'true')
 
     const toggleButton = screen.getByRole('button', { name: 'Open folder navigation' })
-    expect(toggleButton).toHaveTextContent('>')
+    const statusFilter = screen.getByRole('button', { name: 'Inventory stock status filter' })
     expect(screen.getByTestId('product-list-view')).toContainElement(toggleButton)
+    expect(toggleButton.compareDocumentPosition(statusFilter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     fireEvent.click(toggleButton)
 
@@ -220,6 +224,7 @@ describe('AllProductsTab', () => {
     render(<AllProductsTab {...props} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Inventory stock status filter' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Low Stock' }))
     fireEvent.click(screen.getByRole('button', { name: 'New Product' }))
     fireEvent.click(screen.getByRole('button', { name: 'Import CSV' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add custom field filter' }))

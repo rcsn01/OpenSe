@@ -70,11 +70,11 @@ export function Pagination({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-between gap-3",
+        "pagination-layout",
         className,
       )}
     >
-      <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted-foreground)]">
+      <div className="pagination-summary flex flex-wrap items-center gap-3 text-sm text-[var(--color-muted-foreground)]">
         {hasPageSummary ? (
           <span>
             showing{" "}
@@ -89,100 +89,98 @@ export function Pagination({
         ) : null}
       </div>
 
-      <div className="ml-auto flex flex-wrap items-center gap-4">
-        <nav
-          aria-label="Pagination"
-          className="inline-flex items-center gap-1"
+      <nav
+        aria-label="Pagination"
+        className="pagination-pages inline-flex items-center gap-1"
+      >
+        <button
+          type="button"
+          aria-label="Go to first page"
+          onClick={() => onPageChange(1)}
+          disabled={currentPage <= 1}
+          className={iconButtonCls}
         >
-          <button
-            type="button"
-            aria-label="Go to first page"
-            onClick={() => onPageChange(1)}
-            disabled={currentPage <= 1}
-            className={iconButtonCls}
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            aria-label="Go to previous page"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage <= 1}
-            className={iconButtonCls}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+          <ChevronsLeft className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Go to previous page"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className={iconButtonCls}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
 
-          {pages.map((p, i) =>
-            p === "..." ? (
-              <span
-                key={`dots-${i}`}
-                className="inline-flex w-9 items-center justify-center text-[var(--color-muted-foreground)]"
-              >
-                …
-              </span>
-            ) : (
-              <button
-                key={p}
-                type="button"
-                aria-current={p === currentPage ? "page" : undefined}
-                onClick={() => onPageChange(p as number)}
-                className={cn(
-                  pageButtonCls,
-                  p === currentPage
-                    ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-[var(--shadow-sm)]"
-                    : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]",
-                )}
-              >
-                {p}
-              </button>
-            ),
-          )}
-
-          <button
-            type="button"
-            aria-label="Go to next page"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-            className={iconButtonCls}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            aria-label="Go to last page"
-            onClick={() => onPageChange(totalPages)}
-            disabled={currentPage >= totalPages}
-            className={iconButtonCls}
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </button>
-        </nav>
-
-        {typeof itemsPerPage === "number" && onItemsPerPageChange ? (
-          <label className="relative flex h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-sm text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]">
-            <span aria-hidden="true">Rows</span>
+        {pages.map((p, i) =>
+          p === "..." ? (
             <span
-              aria-hidden="true"
-              className="font-semibold text-[var(--color-foreground)]"
+              key={`dots-${i}`}
+              className="inline-flex w-9 items-center justify-center text-[var(--color-muted-foreground)]"
             >
-              {itemsPerPage}
+              …
             </span>
-            <select
-              aria-label="Items per page"
-              value={itemsPerPage}
-              onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-              className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-[var(--radius-md)] opacity-0"
+          ) : (
+            <button
+              key={p}
+              type="button"
+              aria-current={p === currentPage ? "page" : undefined}
+              onClick={() => onPageChange(p as number)}
+              className={cn(
+                pageButtonCls,
+                p === currentPage
+                  ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-[var(--shadow-sm)]"
+                  : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+              )}
             >
-              {pageSizeOptions.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-      </div>
+              {p}
+            </button>
+          ),
+        )}
+
+        <button
+          type="button"
+          aria-label="Go to next page"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          className={iconButtonCls}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Go to last page"
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage >= totalPages}
+          className={iconButtonCls}
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </button>
+      </nav>
+
+      {typeof itemsPerPage === "number" && onItemsPerPageChange ? (
+        <label className="pagination-rows relative flex h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-sm text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]">
+          <span aria-hidden="true">Rows</span>
+          <span
+            aria-hidden="true"
+            className="font-semibold text-[var(--color-foreground)]"
+          >
+            {itemsPerPage}
+          </span>
+          <select
+            aria-label="Items per page"
+            value={itemsPerPage}
+            onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+            className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-[var(--radius-md)] opacity-0"
+          >
+            {pageSizeOptions.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
     </div>
   );
 }
