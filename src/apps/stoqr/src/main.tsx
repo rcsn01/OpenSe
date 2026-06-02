@@ -2,10 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, HashRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { getRouterBasename, getRouterMode } from '@repo/shared/runtime-config'
+import { applyRuntimeDocumentAttributes, getRouterBasename, getRouterMode } from '@repo/shared/runtime-config'
 import { ErrorBoundary } from '@repo/ui'
 import './index.css'
 import App from './App.tsx'
+
+applyRuntimeDocumentAttributes()
 
 const routerBasename = getRouterBasename('VITE_STOQR_ROUTER_BASENAME')
 const Router = getRouterMode('VITE_STOQR_ROUTER_MODE') === 'hash' ? HashRouter : BrowserRouter

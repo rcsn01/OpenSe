@@ -4,7 +4,7 @@
 # No image build needed — uses the stock Node image directly.
 #
 # Usage:
-#   cd opense-stack
+#   cd src
 #   docker compose -f docker-compose.dev.yml up
 # ─────────────────────────────────────────────────────────────
 name: opense-dev

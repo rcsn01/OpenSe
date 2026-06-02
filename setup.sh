@@ -57,7 +57,7 @@ read_env_value() {
   local key="$1"
   local file line value
 
-  for file in "$ROOT_DIR/.env" "$ROOT_DIR/opense-stack/.env" "$SUPABASE_DIR/.env"; do
+  for file in "$ROOT_DIR/.env" "$ROOT_DIR/src/.env" "$SUPABASE_DIR/.env"; do
     if [[ -f "$file" ]]; then
       line="$(grep -E "^${key}=" "$file" | tail -n 1 || true)"
       if [[ -n "$line" ]]; then

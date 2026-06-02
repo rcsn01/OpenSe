@@ -6,7 +6,7 @@ OpenSe/
 │   ├── migrations/     # Database migrations (SQL schemas)
 │   └── functions/      # Supabase Edge Functions
 │
-└── opense-stack/       # Monorepo (Turbo + pnpm workspaces)
+└── src/                # Monorepo (Turbo + pnpm workspaces)
     ├── apps/           # Public frontend apps
     │   ├── accounts    # Shared auth (login/signup)
     │   ├── etl         # ETL app

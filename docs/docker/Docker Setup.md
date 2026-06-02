@@ -13,7 +13,7 @@ For Telegram and Mattermost alert connectors, see [StoQR Chat Connector Setup](.
 | OpenSe | `@repo/opense` | 5994 | 5994 |
 | UI Design | `@repo/ui-design` | 5999 | 5999 |
 
-> All commands are run from the `opense-stack/` directory.
+> All commands are run from the `src/` directory.
 
 ---
 
@@ -49,7 +49,7 @@ docker compose -f docker-compose.dev.yml down
 ```
 
 **How it works:**
-- The entire `opense-stack/` directory is bind-mounted into each container at `/app`.
+- The entire `src/` directory is bind-mounted into each container at `/app`.
 - Each container runs `pnpm install` then starts the Vite dev server for its app.
 - Each app serves its own `apps/<app>/public/config.js` at `/config.js`.
 - A named Docker volume (`pnpm-store`) caches the pnpm store across restarts.

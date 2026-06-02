@@ -383,9 +383,9 @@ Avoid tests that assert class names or internal implementation details unless th
 ### Usual StoQR UI Checks
 
 ```bash
-pnpm --dir opense-stack/apps/stoqr test -- --run <affected tests>
-pnpm --dir opense-stack/apps/stoqr typecheck
-pnpm --dir opense-stack/apps/stoqr build
+pnpm --dir src/apps/stoqr test -- --run <affected tests>
+pnpm --dir src/apps/stoqr typecheck
+pnpm --dir src/apps/stoqr build
 ```
 
 Then verify the changed route in the browser. For visually sensitive changes, browser verification is required even when tests pass.

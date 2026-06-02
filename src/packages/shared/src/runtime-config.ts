@@ -31,6 +31,18 @@ export const isMobileRuntime = () =>
 
 export const usesExternalOAuthRuntime = () => isDesktopRuntime() || isMobileRuntime()
 
+export const applyRuntimeDocumentAttributes = () => {
+  if (typeof document === 'undefined') return
+
+  const target = getRuntimeConfigValue('VITE_OPENSE_RUNTIME_TARGET')
+  if (target === 'desktop' || target === 'mobile') {
+    document.documentElement.dataset.openseRuntimeTarget = target
+    return
+  }
+
+  delete document.documentElement.dataset.openseRuntimeTarget
+}
+
 export type RouterMode = 'browser' | 'hash'
 
 export const getRouterMode = (key: string): RouterMode =>

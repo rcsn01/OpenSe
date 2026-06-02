@@ -55,7 +55,7 @@ Environment toggles:
 UI verification rules:
 - For UI changes, do not stop at passing unit tests. Verify the affected route in a real browser.
 - Prefer focused tests for the affected app/route before running the full suite.
-- For StoQR UI changes, the usual minimum is: focused tests, `pnpm --dir opense-stack/apps/stoqr build`, and a browser pass on the changed route.
+- For StoQR UI changes, the usual minimum is: focused tests, `pnpm --dir src/apps/stoqr build`, and a browser pass on the changed route.
 
 Viewing Reports
 # Open HTML report

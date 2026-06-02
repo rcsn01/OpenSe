@@ -20,7 +20,7 @@ Email recipients are selected by organisation role on each alert rule. Telegram 
 Set the chat provider secrets on the linked Supabase project:
 
 ```bash
-pnpm --dir opense-stack exec supabase --workdir .. secrets set --project-ref YOUR_PROJECT_REF \
+pnpm --dir src exec supabase --workdir .. secrets set --project-ref YOUR_PROJECT_REF \
   TELEGRAM_BOT_TOKEN='123456:bot-token' \
   MATTERMOST_WEBHOOKS_JSON='{}' \
   MATTERMOST_BASE_URL='https://mattermost.example.com' \
@@ -104,8 +104,8 @@ Authorization: Bearer MATTERMOST_BOT_TOKEN
 Deploy the generic dispatcher and connector management functions:
 
 ```bash
-pnpm --dir opense-stack exec supabase --workdir .. functions deploy send-stoqr-alert-notifications --project-ref YOUR_PROJECT_REF --use-api
-pnpm --dir opense-stack exec supabase --workdir .. functions deploy manage-stoqr-alert-connectors --project-ref YOUR_PROJECT_REF --use-api
+pnpm --dir src exec supabase --workdir .. functions deploy send-stoqr-alert-notifications --project-ref YOUR_PROJECT_REF --use-api
+pnpm --dir src exec supabase --workdir .. functions deploy manage-stoqr-alert-connectors --project-ref YOUR_PROJECT_REF --use-api
 ```
 
 The older `send-stoqr-alert-emails` function remains for email-only compatibility. New UI actions call `send-stoqr-alert-notifications`.

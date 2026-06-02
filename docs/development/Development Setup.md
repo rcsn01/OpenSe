@@ -6,7 +6,7 @@
 ## Step-by-Step Setup
 # 1. Install Dependencies
 ```bash
-cd opense-stack
+cd src
 pnpm install
 ```
 # 2. Create Runtime Config Files
