@@ -73,18 +73,9 @@ const getAppsRoot = () =>
     ? path.join(process.resourcesPath, 'apps')
     : path.resolve(__dirname, '..', '..')
 
-const getSetupRoot = () =>
-  app.isPackaged
-    ? path.join(process.resourcesPath, 'app.asar', 'setup')
-    : path.resolve(__dirname, '..', 'setup')
-
 const getConfigScript = () => {
   const config = readStoredDiscovery()
-  if (!config?.discovery) {
-    return 'window.__OPENSE_CONFIG__ = {};\n'
-  }
-
-  return serializeDesktopRuntimeConfig(config.discovery)
+  return serializeDesktopRuntimeConfig(config?.discovery)
 }
 
 const translateDesktopUrlToDevServer = (url) => {
@@ -114,7 +105,7 @@ const loadInitialPage = async () => {
   }
 
   const configured = readStoredDiscovery()
-  await mainWindow.loadURL(configured ? 'opense://desktop/accounts/' : 'opense://desktop/setup')
+  await mainWindow.loadURL(configured ? 'opense://desktop/accounts/' : 'opense://desktop/accounts/setup')
 }
 
 const createMainWindow = async () => {
@@ -185,7 +176,6 @@ app.whenReady().then(async () => {
     'opense',
     createProtocolHandler({
       appsRoot: getAppsRoot(),
-      setupRoot: getSetupRoot(),
       getConfigScript,
     }),
   )
@@ -209,7 +199,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('desktop:reset-configuration', async () => {
     clearStoredDiscovery()
-    await mainWindow.loadURL('opense://desktop/setup')
+    await mainWindow.loadURL('opense://desktop/accounts/setup')
   })
 
   await createMainWindow()

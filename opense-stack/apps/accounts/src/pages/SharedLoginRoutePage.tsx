@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Settings } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { signIn, signInWithGoogle } from '@repo/shared/auth'
 import { useAuth } from '@repo/shared/auth/context'
@@ -7,6 +8,7 @@ import { SharedLoginPage } from '../components/auth/SharedLoginPage'
 import { isGoogleAuthEnabled } from '../lib/googleAuth'
 import { buildPathWithQuery, buildQueryString, getAppNameFromQuery, redirectBackToApp } from '../lib/redirect'
 import { getOnboardingCompletedFallbackPath, getOnboardingPathForStatus } from '../lib/onboardingUi'
+import { canUseWrapperSetup } from '../lib/wrapperRuntime'
 
 export const SharedLoginRoutePage = () => {
   const location = useLocation()
@@ -21,6 +23,7 @@ export const SharedLoginRoutePage = () => {
   const isRedirecting = useRef(false)
   const query = buildQueryString()
   const querySuffix = query ? `?${query}` : ''
+  const showInstanceSettings = canUseWrapperSetup()
 
   const getInternalNextPath = useCallback((): string | null => {
     const next = (location.state as { next?: unknown } | null)?.next
@@ -109,28 +112,43 @@ export const SharedLoginRoutePage = () => {
   }
 
   return (
-    <SharedLoginPage
-      appName={getAppNameFromQuery()}
-      title="Sign in"
-      description="Continue to your workspace."
-      loading={loading || authLoading}
-      error={error}
-      success={success}
-      onEmailSignIn={handleLogin}
-      onGoogleSignIn={handleGoogleLogin}
-      googleAuthEnabled={isGoogleAuthEnabled()}
-      googleLabel="Continue with Google"
-      footer={
-        <div className="text-center">
-          <span className="text-[var(--color-muted-foreground)]">Need an account? </span>
-          <Link
-            to={`/register${querySuffix}`}
-            className="font-medium text-[var(--color-primary)] transition hover:text-[var(--color-primary-hover)]"
-          >
-            Sign up
-          </Link>
-        </div>
-      }
-    />
+    <>
+      <SharedLoginPage
+        appName={getAppNameFromQuery()}
+        title="Sign in"
+        description="Continue to your workspace."
+        loading={loading || authLoading}
+        error={error}
+        success={success}
+        onEmailSignIn={handleLogin}
+        onGoogleSignIn={handleGoogleLogin}
+        googleAuthEnabled={isGoogleAuthEnabled()}
+        googleLabel="Continue with Google"
+        footer={
+          <div className="text-center">
+            <span className="text-[var(--color-muted-foreground)]">Need an account? </span>
+            <Link
+              to={`/register${querySuffix}`}
+              className="font-medium text-[var(--color-primary)] transition hover:text-[var(--color-primary-hover)]"
+            >
+              Sign up
+            </Link>
+          </div>
+        }
+      />
+
+      {showInstanceSettings && (
+        <Link
+          to="/setup"
+          aria-label="Change linked instance"
+          className="group fixed bottom-6 right-6 z-50 inline-flex h-10 max-w-10 items-center justify-center overflow-hidden rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-3 text-[var(--color-muted-foreground)] shadow-[var(--shadow-lg)] transition-[max-width,border-color,color,background-color] duration-200 hover:max-w-56 hover:border-[var(--color-border-hover)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] focus-visible:max-w-56 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
+        >
+          <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="ml-0 max-w-0 whitespace-nowrap text-sm font-medium opacity-0 transition-[margin,max-width,opacity] duration-200 group-hover:ml-2 group-hover:max-w-44 group-hover:opacity-100 group-focus-visible:ml-2 group-focus-visible:max-w-44 group-focus-visible:opacity-100">
+            Change linked instance
+          </span>
+        </Link>
+      )}
+    </>
   )
 }

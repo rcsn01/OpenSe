@@ -93,6 +93,20 @@ describe('desktop discovery', () => {
     expect(config).not.toHaveProperty('VITE_OPENSE_ROUTER_BASENAME')
   })
 
+  it('builds unconfigured desktop runtime defaults without Supabase values', () => {
+    const config = buildDesktopRuntimeConfig()
+
+    expect(config).toMatchObject({
+      VITE_OPENSE_RUNTIME_TARGET: 'desktop',
+      VITE_ACCOUNTS_URL: 'opense://desktop/accounts',
+      VITE_ACCOUNTS_ROUTER_BASENAME: '/accounts',
+      VITE_ETL_PUBLIC_URL: 'opense://desktop/etl',
+      VITE_STOQR_PUBLIC_URL: 'opense://desktop/stoqr',
+    })
+    expect(config).not.toHaveProperty('VITE_SUPABASE_URL')
+    expect(config).not.toHaveProperty('VITE_SUPABASE_ANON_KEY')
+  })
+
   it('validates stored desktop config before reuse', () => {
     expect(
       validateStoredDesktopConfig({

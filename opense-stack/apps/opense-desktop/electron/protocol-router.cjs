@@ -81,7 +81,7 @@ const fileResponse = (filePath) => {
   })
 }
 
-const createProtocolHandler = ({ appsRoot, setupRoot, getConfigScript }) => {
+const createProtocolHandler = ({ appsRoot, getConfigScript }) => {
   return async (request) => {
     const url = new URL(request.url)
 
@@ -99,12 +99,8 @@ const createProtocolHandler = ({ appsRoot, setupRoot, getConfigScript }) => {
       })
     }
 
-    if (url.pathname === '/setup' || url.pathname === '/setup/') {
-      return fileResponse(path.join(setupRoot, 'setup.html'))
-    }
-
-    if (url.pathname.startsWith('/setup/')) {
-      return fileResponse(path.join(setupRoot, url.pathname.replace('/setup/', '')))
+    if (url.pathname === '/setup' || url.pathname === '/setup/' || url.pathname.startsWith('/setup/')) {
+      return Response.redirect(`opense://desktop/accounts/setup${url.search}${url.hash}`, 302)
     }
 
     return fileResponse(resolveAppFilePath({ appsRoot, pathname: url.pathname }))

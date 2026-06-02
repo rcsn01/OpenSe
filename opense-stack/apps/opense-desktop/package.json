@@ -23,7 +23,6 @@
     ],
     "files": [
       "electron/**/*",
-      "setup/**/*",
       "package.json"
     ],
     "extraResources": [

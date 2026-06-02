@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import runtimeConfig from '../scripts/runtime-config.cjs'
 import urlRouter from '../scripts/mobile-url-router.cjs'
 
 const { buildMobileRuntimeConfig, serializeMobileRuntimeLoader } = runtimeConfig
 const { mobileDeepLinkToPath } = urlRouter
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 describe('mobile runtime config', () => {
   it('builds the mobile runtime config contract', () => {
@@ -33,6 +37,14 @@ describe('mobile runtime config', () => {
   it('serializes a synchronous config loader', () => {
     expect(serializeMobileRuntimeLoader()).toContain('window.__OPENSE_CONFIG__')
     expect(serializeMobileRuntimeLoader()).toContain('opense.mobile.config.v1')
+  })
+
+  it('builds Accounts as the Capacitor root without standalone setup assets', () => {
+    const buildScript = fs.readFileSync(path.resolve(__dirname, '../scripts/build-assets.cjs'), 'utf8')
+
+    expect(buildScript).toContain("copyDir(path.join(app.dir, 'dist'), wwwRoot)")
+    expect(buildScript).not.toContain('setup.js')
+    expect(buildScript).toContain("'assets'")
   })
 })
 
