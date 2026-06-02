@@ -57,12 +57,21 @@ describe('utils/index', () => {
         'opense://desktop/accounts/account/profile',
       )
     })
+
+    it('preserves mobile app base paths', () => {
+      expect(buildAccountsSettingsUrl({ accountsUrl: 'opense://mobile/accounts' })).toBe(
+        'opense://mobile/accounts/account/profile',
+      )
+    })
   })
 
   describe('appendAppPath', () => {
     it('appends paths without replacing custom-protocol base paths', () => {
       expect(appendAppPath('opense://desktop/etl', '/dashboard')).toBe(
         'opense://desktop/etl/dashboard',
+      )
+      expect(appendAppPath('opense://mobile/stoqr', '/dashboard')).toBe(
+        'opense://mobile/stoqr/dashboard',
       )
       expect(appendAppPath('https://etl.example.com/app', '/dashboard')).toBe(
         'https://etl.example.com/app/dashboard',
@@ -166,6 +175,39 @@ describe('utils/index', () => {
       expect(getSafeAccountsReturnTo('opense://desktop/opense/', desktopConfig)).toBe('')
       expect(getSafeAccountsReturnTo('opense://desktop/admin', desktopConfig)).toBe('')
       expect(getSafeAccountsReturnTo('opense://phishing/etl/dashboard', desktopConfig)).toBe('')
+    })
+
+    it('accepts configured mobile app prefixes', () => {
+      const mobileConfig = {
+        ...config,
+        allowedAppPublicUrls: [
+          'opense://mobile/etl',
+          'opense://mobile/stoqr',
+        ],
+      }
+
+      expect(getSafeAccountsReturnTo('opense://mobile/etl/dashboard', mobileConfig)).toBe(
+        'opense://mobile/etl/dashboard',
+      )
+      expect(getSafeAccountsReturnTo('opense://mobile/stoqr/dashboard', mobileConfig)).toBe(
+        'opense://mobile/stoqr/dashboard',
+      )
+    })
+
+    it('rejects Accounts, unbundled OpenSe, and unknown mobile return targets', () => {
+      const mobileConfig = {
+        ...config,
+        allowedAppPublicUrls: [
+          'opense://mobile/etl',
+          'opense://mobile/stoqr',
+        ],
+      }
+
+      expect(getSafeAccountsReturnTo('opense://mobile/accounts/login', mobileConfig)).toBe('')
+      expect(getSafeAccountsReturnTo('opense://mobile/opense/', mobileConfig)).toBe('')
+      expect(getSafeAccountsReturnTo('opense://mobile/admin', mobileConfig)).toBe('')
+      expect(getSafeAccountsReturnTo('opense://desktop/etl/dashboard', mobileConfig)).toBe('')
+      expect(getSafeAccountsReturnTo('opense://phishing/etl/dashboard', mobileConfig)).toBe('')
     })
 
     it('accepts local app ports only when local origins are enabled', () => {

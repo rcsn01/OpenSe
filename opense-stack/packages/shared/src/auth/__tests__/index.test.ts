@@ -106,4 +106,38 @@ describe('shared auth api', () => {
     })
     expect(openExternal).toHaveBeenCalledWith('https://accounts.google.com/oauth')
   })
+
+  it('opens the provider URL externally in mobile mode', async () => {
+    const openExternal = vi.fn().mockResolvedValue(undefined)
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: 'https://accounts.google.com/oauth' },
+      error: null,
+    })
+    vi.stubGlobal('window', {
+      location: {
+        origin: 'opense://mobile',
+        assign: vi.fn(),
+      },
+      __OPENSE_CONFIG__: {
+        VITE_OPENSE_RUNTIME_TARGET: 'mobile',
+        VITE_ACCOUNTS_URL: 'opense://mobile/accounts',
+      },
+      openseMobile: { openExternal },
+    })
+
+    await signInWithGoogle('/login?returnTo=opense%3A%2F%2Fmobile%2Fetl%2Fdashboard')
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo:
+          'opense://mobile/accounts/login?returnTo=opense%3A%2F%2Fmobile%2Fetl%2Fdashboard',
+        skipBrowserRedirect: true,
+        queryParams: {
+          prompt: 'select_account',
+        },
+      },
+    })
+    expect(openExternal).toHaveBeenCalledWith('https://accounts.google.com/oauth')
+  })
 })

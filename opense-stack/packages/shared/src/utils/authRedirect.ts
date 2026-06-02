@@ -178,10 +178,13 @@ const getOriginIfSafe = (value: string): string | null => {
   return new URL(value).origin
 }
 
-const parseDesktopUrl = (value: string): URL | null => {
+const parseNativeAppUrl = (value: string): URL | null => {
   try {
     const parsed = new URL(value)
-    if (parsed.protocol !== 'opense:' || parsed.hostname !== 'desktop') {
+    if (
+      parsed.protocol !== 'opense:' ||
+      (parsed.hostname !== 'desktop' && parsed.hostname !== 'mobile')
+    ) {
       return null
     }
     return parsed
@@ -195,14 +198,14 @@ const normalizePathPrefix = (pathname: string) => {
   return normalized || '/'
 }
 
-const getAllowedDesktopPrefixes = ({
+const getAllowedNativeAppPrefixes = ({
   allowedAppPublicUrls = [],
 }: Pick<AccountsReturnToValidationConfig, 'allowedAppPublicUrls'>) => {
   const prefixes: URL[] = []
 
   for (const value of allowedAppPublicUrls) {
     if (!value) continue
-    const parsed = parseDesktopUrl(value)
+    const parsed = parseNativeAppUrl(value)
     if (!parsed) continue
 
     const prefix = normalizePathPrefix(parsed.pathname)
@@ -214,7 +217,7 @@ const getAllowedDesktopPrefixes = ({
   return prefixes
 }
 
-const desktopPathMatchesPrefix = (pathname: string, prefix: string) => {
+const nativeAppPathMatchesPrefix = (pathname: string, prefix: string) => {
   const normalizedPath = normalizePathPrefix(pathname)
   const normalizedPrefix = normalizePathPrefix(prefix)
   return (
@@ -223,21 +226,22 @@ const desktopPathMatchesPrefix = (pathname: string, prefix: string) => {
   )
 }
 
-const isSafeDesktopReturnTo = (
+const isSafeNativeAppReturnTo = (
   value: string,
   config: AccountsReturnToValidationConfig,
 ) => {
-  const parsed = parseDesktopUrl(value)
+  const parsed = parseNativeAppUrl(value)
   if (!parsed) {
     return false
   }
 
-  if (desktopPathMatchesPrefix(parsed.pathname, '/accounts')) {
+  if (nativeAppPathMatchesPrefix(parsed.pathname, '/accounts')) {
     return false
   }
 
-  return getAllowedDesktopPrefixes(config).some((allowed) =>
-    desktopPathMatchesPrefix(parsed.pathname, allowed.pathname),
+  return getAllowedNativeAppPrefixes(config).some((allowed) =>
+    parsed.hostname === allowed.hostname &&
+    nativeAppPathMatchesPrefix(parsed.pathname, allowed.pathname),
   )
 }
 
@@ -296,8 +300,8 @@ export const isSafeAccountsReturnTo = (
   value: string,
   config: AccountsReturnToValidationConfig,
 ) => {
-  if (parseDesktopUrl(value)) {
-    return isSafeDesktopReturnTo(value, config)
+  if (parseNativeAppUrl(value)) {
+    return isSafeNativeAppReturnTo(value, config)
   }
 
   const returnOrigin = getOriginIfSafe(value)

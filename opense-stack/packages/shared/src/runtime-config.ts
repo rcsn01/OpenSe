@@ -26,6 +26,16 @@ export const getRuntimeConfigValue = (
 export const isDesktopRuntime = () =>
   getRuntimeConfigValue('VITE_OPENSE_RUNTIME_TARGET') === 'desktop'
 
+export const isMobileRuntime = () =>
+  getRuntimeConfigValue('VITE_OPENSE_RUNTIME_TARGET') === 'mobile'
+
+export const usesExternalOAuthRuntime = () => isDesktopRuntime() || isMobileRuntime()
+
+export type RouterMode = 'browser' | 'hash'
+
+export const getRouterMode = (key: string): RouterMode =>
+  getRuntimeConfigValue(key) === 'hash' ? 'hash' : 'browser'
+
 export const getRouterBasename = (key: string, fallback = '/') => {
   const value = getRuntimeConfigValue(key, fallback) ?? fallback
   if (!value || value === '/') return '/'
