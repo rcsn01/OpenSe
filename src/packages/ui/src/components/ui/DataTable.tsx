@@ -448,7 +448,7 @@ export function DataTable<Row, SortKey extends string = string>({
                   </span>
                 </th>
               ) : null}
-              {columns.map((column) => {
+              {columns.map((column, columnIndex) => {
                 const align = column.align ?? "left";
                 const isSortable = Boolean(
                   onSortChange && (column.sortable ?? column.sortKey),
@@ -471,6 +471,7 @@ export function DataTable<Row, SortKey extends string = string>({
                       variantClassNames.headerCell,
                       tableHeaderTextClassName,
                       alignmentClassNames[align],
+                      selection && columnIndex === 0 && "pl-2",
                       isSortable &&
                         "sortable-th cursor-pointer select-none transition-colors",
                       column.headerClassName,
@@ -592,7 +593,7 @@ export function DataTable<Row, SortKey extends string = string>({
                         />
                       </td>
                     ) : null}
-                    {columns.map((column) => {
+                    {columns.map((column, columnIndex) => {
                       const align = column.align ?? "left";
                       const computedCellStyle =
                         typeof column.cellStyle === "function"
@@ -607,6 +608,7 @@ export function DataTable<Row, SortKey extends string = string>({
                             tableCellTextClassName,
                             index === rows.length - 1 && "border-b-0",
                             alignmentClassNames[align],
+                            selection && columnIndex === 0 && "pl-2",
                             column.cellClassName,
                           )}
                           style={{
