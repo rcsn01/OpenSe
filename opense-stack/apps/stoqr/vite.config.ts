@@ -1,11 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === 'desktop' ? './' : '/',
   plugins: [react()],
   // Remove allowHosts in production
   server: {
     port: 5993,
+    strictPort: true,
     host: true,
     allowedHosts: true,
   },
@@ -16,4 +18,4 @@ export default defineConfig({
     setupFiles: ['./src/__tests__/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
-})
+}))

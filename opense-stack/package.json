@@ -5,6 +5,7 @@
   "workspaces": [
     "apps/accounts",
     "apps/etl",
+    "apps/opense-desktop",
     "apps/opense",
     "apps/stoqr",
     "apps/ui-design",
@@ -12,12 +13,16 @@
   ],
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=@repo/accounts --filter=@repo/etl --filter=@repo/opense --filter=@repo/stoqr --filter=@repo/ui-design",
     "dev:accounts": "pnpm --dir apps/accounts dev",
+    "dev:desktop": "pnpm --dir apps/opense-desktop dev",
     "dev:etl": "pnpm --dir apps/etl dev",
     "dev:opense": "pnpm --dir apps/opense dev",
     "dev:stoqr": "pnpm --dir apps/stoqr dev",
     "dev:ui-design": "pnpm --dir apps/ui-design dev",
+    "desktop:build-assets": "pnpm --dir apps/opense-desktop build-assets",
+    "desktop:package": "pnpm --dir apps/opense-desktop package",
+    "desktop:package:all": "pnpm --dir apps/opense-desktop package:all",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:style-tokens": "node scripts/audit-style-tokens.mjs",
@@ -38,6 +43,6 @@
     "kill-port": "^2.0.1",
     "prettier": "^3.2.5",
     "supabase": "^2.22.0",
-    "turbo": "^2.8.3"
+    "turbo": "2.8.3"
   }
 }

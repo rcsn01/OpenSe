@@ -1,0 +1,60 @@
+{
+  "name": "@repo/opense-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "build-assets": "pnpm --dir ../accounts build --mode desktop && pnpm --dir ../etl build --mode desktop && pnpm --dir ../stoqr build --mode desktop",
+    "dev": "node scripts/dev.cjs",
+    "package": "pnpm build-assets && electron-builder --mac --win --linux",
+    "package:all": "pnpm package",
+    "test": "vitest run"
+  },
+  "build": {
+    "appId": "com.opense.desktop",
+    "productName": "OpenSe",
+    "asar": true,
+    "protocols": [
+      {
+        "name": "OpenSe Desktop",
+        "schemes": ["opense"]
+      }
+    ],
+    "files": [
+      "electron/**/*",
+      "setup/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../accounts/dist",
+        "to": "apps/accounts"
+      },
+      {
+        "from": "../etl/dist",
+        "to": "apps/etl"
+      },
+      {
+        "from": "../stoqr/dist",
+        "to": "apps/stoqr"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Office"
+    }
+  },
+  "devDependencies": {
+    "electron": "39.8.10",
+    "electron-builder": "26.8.1",
+    "vitest": "^4.0.18"
+  }
+}

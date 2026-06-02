@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@repo/ui';
 import { AuthRedirectPage } from '@repo/shared/auth';
 import { AuthProvider } from '@repo/shared/auth/context';
+import { getRouterBasename } from '@repo/shared/runtime-config';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { ReactFlowProvider } from 'reactflow';
 import { buildAccountsAuthUrl, buildAccountsSettingsUrl } from './lib/authRedirect';
@@ -24,6 +25,8 @@ import { TeamTab } from './components/organisation/TeamTab';
 import { OrgUsageAnalytics } from './components/organisation/UsageAnalytics';
 import { OrgLogsTab } from './components/organisation/OrgLogsTab';
 import { PermissionsTab } from './components/organisation/PermissionsTab';
+
+const routerBasename = getRouterBasename('VITE_ETL_ROUTER_BASENAME');
 
 const DashboardIndexRedirect = () => {
   const lastTab = typeof window !== 'undefined' ? window.localStorage.getItem('dashboardLastTab') : null;
@@ -51,7 +54,7 @@ function AppContent() {
       cookieKey="opense-theme"
       respectStoredTheme={true}
     >
-      <BrowserRouter>
+      <BrowserRouter basename={routerBasename}>
         <ReactFlowProvider>
           <WorkflowProvider>
             <SystemCheck>

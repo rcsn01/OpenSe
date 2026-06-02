@@ -22,3 +22,32 @@ export const getRuntimeConfigValue = (
 
   return fallback
 }
+
+export const isDesktopRuntime = () =>
+  getRuntimeConfigValue('VITE_OPENSE_RUNTIME_TARGET') === 'desktop'
+
+export const getRouterBasename = (key: string, fallback = '/') => {
+  const value = getRuntimeConfigValue(key, fallback) ?? fallback
+  if (!value || value === '/') return '/'
+  return value.startsWith('/') ? value.replace(/\/+$/, '') : `/${value.replace(/\/+$/, '')}`
+}
+
+export const appendAppPath = (baseUrl: string, path = '/') => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const pathMatch = normalizedPath.match(/^([^?#]*)(\?[^#]*)?(#.*)?$/)
+  const nextPathname = pathMatch?.[1] ?? '/'
+  const nextSearch = pathMatch?.[2] ?? ''
+  const nextHash = pathMatch?.[3] ?? ''
+
+  try {
+    const parsed = new URL(baseUrl)
+    const basePath = parsed.pathname.replace(/\/+$/, '')
+    const nextPath = nextPathname === '/' ? '' : nextPathname
+    parsed.pathname = `${basePath}${nextPath}` || '/'
+    parsed.search = nextSearch
+    parsed.hash = nextHash
+    return parsed.toString()
+  } catch {
+    return `${baseUrl.replace(/\/+$/, '')}${normalizedPath}`
+  }
+}

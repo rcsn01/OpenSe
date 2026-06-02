@@ -1,5 +1,5 @@
 import { Boxes, Palette, Workflow, type LucideIcon } from 'lucide-react'
-import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
+import { appendAppPath, getRuntimeConfigValue } from '@repo/shared/runtime-config'
 import { AccountsPageShell } from '../components/AccountsPageShell'
 
 type AppDestination = {
@@ -18,9 +18,7 @@ const defaultAppUrls = {
 
 const buildAppUrl = (baseUrl: string, path?: string) => {
   if (!path) return baseUrl
-  const url = new URL(baseUrl)
-  url.pathname = path.startsWith('/') ? path : `/${path}`
-  return url.toString()
+  return appendAppPath(baseUrl, path)
 }
 
 const getAppDestinations = (): AppDestination[] => [

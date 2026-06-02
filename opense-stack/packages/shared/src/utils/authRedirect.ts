@@ -60,12 +60,31 @@ const normalizeRedirectPath = (value: string) => {
   return value.startsWith('/') ? value : `/${value}`
 }
 
+export const appendAppPath = (baseUrl: string, path = '/') => {
+  const normalizedPath = normalizeRedirectPath(path)
+  const pathMatch = normalizedPath.match(/^([^?#]*)(\?[^#]*)?(#.*)?$/)
+  const nextPathname = pathMatch?.[1] ?? '/'
+  const nextSearch = pathMatch?.[2] ?? ''
+  const nextHash = pathMatch?.[3] ?? ''
+
+  try {
+    const parsed = new URL(baseUrl)
+    const basePath = parsed.pathname.replace(/\/+$/, '')
+    const nextPath = nextPathname === '/' ? '' : nextPathname
+    parsed.pathname = `${basePath}${nextPath}` || '/'
+    parsed.search = nextSearch
+    parsed.hash = nextHash
+    return parsed.toString()
+  } catch {
+    return `${normalizeBaseUrl(baseUrl)}${normalizedPath}`
+  }
+}
+
 const buildReturnTo = ({
   appPublicUrl,
   redirectPath = DEFAULT_REDIRECT_PATH,
 }: Pick<BuildAccountsRedirectUrlOptions, 'appPublicUrl' | 'redirectPath'>) => {
-  const normalizedAppPublicUrl = normalizeBaseUrl(appPublicUrl)
-  return `${normalizedAppPublicUrl}${normalizeRedirectPath(redirectPath)}`
+  return appendAppPath(appPublicUrl, redirectPath)
 }
 
 const buildAccountsUrl = ({
@@ -75,13 +94,12 @@ const buildAccountsUrl = ({
   appName,
   redirectPath,
 }: BuildAccountsRedirectUrlOptions & { path: string }) => {
-  const normalizedAccountsUrl = normalizeBaseUrl(accountsUrl)
   const params = new URLSearchParams({
     app: appName,
     returnTo: buildReturnTo({ appPublicUrl, redirectPath }),
   })
 
-  return `${normalizedAccountsUrl}${normalizeRedirectPath(path)}?${params.toString()}`
+  return `${appendAppPath(accountsUrl, path)}?${params.toString()}`
 }
 
 export const buildAccountsAuthUrl = ({
@@ -116,8 +134,7 @@ export const buildAccountsOnboardingUrl = ({
 }
 
 export const buildAccountsSettingsUrl = ({ accountsUrl }: BuildAccountsSettingsUrlOptions): string => {
-  const normalizedAccountsUrl = normalizeBaseUrl(accountsUrl)
-  return `${normalizedAccountsUrl}/account/profile`
+  return appendAppPath(accountsUrl, '/account/profile')
 }
 
 export const createAccountsRedirects = ({
@@ -159,6 +176,69 @@ const getOriginIfSafe = (value: string): string | null => {
   }
 
   return new URL(value).origin
+}
+
+const parseDesktopUrl = (value: string): URL | null => {
+  try {
+    const parsed = new URL(value)
+    if (parsed.protocol !== 'opense:' || parsed.hostname !== 'desktop') {
+      return null
+    }
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+const normalizePathPrefix = (pathname: string) => {
+  const normalized = pathname.replace(/\/+$/, '')
+  return normalized || '/'
+}
+
+const getAllowedDesktopPrefixes = ({
+  allowedAppPublicUrls = [],
+}: Pick<AccountsReturnToValidationConfig, 'allowedAppPublicUrls'>) => {
+  const prefixes: URL[] = []
+
+  for (const value of allowedAppPublicUrls) {
+    if (!value) continue
+    const parsed = parseDesktopUrl(value)
+    if (!parsed) continue
+
+    const prefix = normalizePathPrefix(parsed.pathname)
+    if (prefix === '/accounts') continue
+    parsed.pathname = prefix
+    prefixes.push(parsed)
+  }
+
+  return prefixes
+}
+
+const desktopPathMatchesPrefix = (pathname: string, prefix: string) => {
+  const normalizedPath = normalizePathPrefix(pathname)
+  const normalizedPrefix = normalizePathPrefix(prefix)
+  return (
+    normalizedPath === normalizedPrefix ||
+    normalizedPath.startsWith(`${normalizedPrefix}/`)
+  )
+}
+
+const isSafeDesktopReturnTo = (
+  value: string,
+  config: AccountsReturnToValidationConfig,
+) => {
+  const parsed = parseDesktopUrl(value)
+  if (!parsed) {
+    return false
+  }
+
+  if (desktopPathMatchesPrefix(parsed.pathname, '/accounts')) {
+    return false
+  }
+
+  return getAllowedDesktopPrefixes(config).some((allowed) =>
+    desktopPathMatchesPrefix(parsed.pathname, allowed.pathname),
+  )
 }
 
 const getAccountsOrigins = ({
@@ -216,6 +296,10 @@ export const isSafeAccountsReturnTo = (
   value: string,
   config: AccountsReturnToValidationConfig,
 ) => {
+  if (parseDesktopUrl(value)) {
+    return isSafeDesktopReturnTo(value, config)
+  }
+
   const returnOrigin = getOriginIfSafe(value)
   if (!returnOrigin) {
     return false

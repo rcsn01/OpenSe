@@ -92,6 +92,7 @@ export const cn = (...classes: (string | undefined | null | false)[]): string =>
 
 export {
   DEFAULT_LOCAL_APP_RETURN_URLS,
+  appendAppPath,
   buildAccountsAuthUrl,
   buildAccountsForwardQuery,
   buildAccountsOnboardingUrl,
