@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockSignUp = vi.fn()
 const mockSignInWithPassword = vi.fn()
+const mockSignInWithOAuth = vi.fn()
 const mockSignOut = vi.fn()
 const mockUpdateUser = vi.fn()
 const mockRpc = vi.fn()
@@ -13,7 +14,7 @@ vi.mock('../../supabase', () => ({
       signInWithPassword: (...args: unknown[]) => mockSignInWithPassword(...args),
       signOut: () => mockSignOut(),
       updateUser: (...args: unknown[]) => mockUpdateUser(...args),
-      signInWithOAuth: vi.fn().mockResolvedValue({ error: null }),
+      signInWithOAuth: (...args: unknown[]) => mockSignInWithOAuth(...args),
     },
     from: () => ({
       select: () => ({
@@ -27,11 +28,13 @@ vi.mock('../../supabase', () => ({
   },
 }))
 
-import { hasUsers, signIn, signOut, signUp, updatePassword } from '../index'
+import { hasUsers, signIn, signInWithGoogle, signOut, signUp, updatePassword } from '../index'
 
 describe('shared auth api', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSignInWithOAuth.mockResolvedValue({ data: {}, error: null })
+    vi.unstubAllGlobals()
   })
 
   it('signUp rejects weak passwords before supabase call', async () => {
@@ -68,5 +71,39 @@ describe('shared auth api', () => {
   it('hasUsers returns RPC boolean', async () => {
     mockRpc.mockResolvedValue({ data: true, error: null })
     await expect(hasUsers()).resolves.toBe(true)
+  })
+
+  it('opens the provider URL externally in desktop mode', async () => {
+    const openExternal = vi.fn().mockResolvedValue(undefined)
+    mockSignInWithOAuth.mockResolvedValue({
+      data: { url: 'https://accounts.google.com/oauth' },
+      error: null,
+    })
+    vi.stubGlobal('window', {
+      location: {
+        origin: 'opense://desktop',
+        assign: vi.fn(),
+      },
+      __OPENSE_CONFIG__: {
+        VITE_OPENSE_RUNTIME_TARGET: 'desktop',
+        VITE_ACCOUNTS_URL: 'opense://desktop/accounts',
+      },
+      openseDesktop: { openExternal },
+    })
+
+    await signInWithGoogle('/login?returnTo=opense%3A%2F%2Fdesktop%2Fetl%2Fdashboard')
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo:
+          'opense://desktop/accounts/login?returnTo=opense%3A%2F%2Fdesktop%2Fetl%2Fdashboard',
+        skipBrowserRedirect: true,
+        queryParams: {
+          prompt: 'select_account',
+        },
+      },
+    })
+    expect(openExternal).toHaveBeenCalledWith('https://accounts.google.com/oauth')
   })
 })

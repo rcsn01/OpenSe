@@ -1,6 +1,7 @@
 packages:
   - 'apps/accounts'
   - 'apps/etl'
+  - 'apps/opense-desktop'
   - 'apps/opense'
   - 'apps/stoqr'
   - 'apps/ui-design'

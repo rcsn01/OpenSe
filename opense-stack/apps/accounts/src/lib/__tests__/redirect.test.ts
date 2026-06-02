@@ -8,11 +8,13 @@ import {
 const setWindowLocation = (
   search: string,
   origin = 'http://localhost:5991',
+  config: Record<string, string> = {},
 ) => {
   const url = new URL(origin)
   const replace = vi.fn()
 
   vi.stubGlobal('window', {
+    __OPENSE_CONFIG__: config,
     location: {
       origin,
       hostname: url.hostname,
@@ -61,6 +63,38 @@ describe('accounts redirect helpers', () => {
     setWindowLocation(buildSearch('javascript:alert(1)'))
 
     expect(getReturnToFromQuery()).toBe('')
+  })
+
+  it('keeps configured desktop app return destinations', () => {
+    setWindowLocation(
+      buildSearch('opense://desktop/etl/dashboard'),
+      'opense://desktop',
+      {
+        VITE_ACCOUNTS_URL: 'opense://desktop/accounts',
+        VITE_ETL_PUBLIC_URL: 'opense://desktop/etl',
+        VITE_STOQR_PUBLIC_URL: 'opense://desktop/stoqr',
+      },
+    )
+
+    expect(getReturnToFromQuery()).toBe('opense://desktop/etl/dashboard')
+    expect(buildQueryString()).toBe(
+      'returnTo=opense%3A%2F%2Fdesktop%2Fetl%2Fdashboard&app=Open-ETL',
+    )
+  })
+
+  it('rejects desktop Accounts return destinations', () => {
+    setWindowLocation(
+      buildSearch('opense://desktop/accounts/login'),
+      'opense://desktop',
+      {
+        VITE_ACCOUNTS_URL: 'opense://desktop/accounts',
+        VITE_ETL_PUBLIC_URL: 'opense://desktop/etl',
+        VITE_STOQR_PUBLIC_URL: 'opense://desktop/stoqr',
+      },
+    )
+
+    expect(getReturnToFromQuery()).toBe('')
+    expect(buildQueryString()).toBe('app=Open-ETL')
   })
 
   it('only redirects back when returnTo is allowed', () => {

@@ -8,6 +8,7 @@ import {
   createAccountsRedirects,
   formatCurrency,
   getSafeAccountsReturnTo,
+  appendAppPath,
   parseCsv,
   toNumber,
 } from '../index'
@@ -48,6 +49,23 @@ describe('utils/index', () => {
     it('points app settings actions to the Accounts profile center', () => {
       expect(buildAccountsSettingsUrl({ accountsUrl: 'https://accounts.example.com/' })).toBe(
         'https://accounts.example.com/account/profile',
+      )
+    })
+
+    it('preserves desktop app base paths', () => {
+      expect(buildAccountsSettingsUrl({ accountsUrl: 'opense://desktop/accounts' })).toBe(
+        'opense://desktop/accounts/account/profile',
+      )
+    })
+  })
+
+  describe('appendAppPath', () => {
+    it('appends paths without replacing custom-protocol base paths', () => {
+      expect(appendAppPath('opense://desktop/etl', '/dashboard')).toBe(
+        'opense://desktop/etl/dashboard',
+      )
+      expect(appendAppPath('https://etl.example.com/app', '/dashboard')).toBe(
+        'https://etl.example.com/app/dashboard',
       )
     })
   })
@@ -116,6 +134,38 @@ describe('utils/index', () => {
       expect(getSafeAccountsReturnTo('https://etl.example.com/dashboard', config)).toBe(
         'https://etl.example.com/dashboard',
       )
+    })
+
+    it('accepts configured desktop app prefixes', () => {
+      const desktopConfig = {
+        ...config,
+        allowedAppPublicUrls: [
+          'opense://desktop/etl',
+          'opense://desktop/stoqr',
+        ],
+      }
+
+      expect(getSafeAccountsReturnTo('opense://desktop/etl/dashboard', desktopConfig)).toBe(
+        'opense://desktop/etl/dashboard',
+      )
+      expect(getSafeAccountsReturnTo('opense://desktop/stoqr/dashboard', desktopConfig)).toBe(
+        'opense://desktop/stoqr/dashboard',
+      )
+    })
+
+    it('rejects Accounts, unbundled OpenSe, and unknown desktop return targets', () => {
+      const desktopConfig = {
+        ...config,
+        allowedAppPublicUrls: [
+          'opense://desktop/etl',
+          'opense://desktop/stoqr',
+        ],
+      }
+
+      expect(getSafeAccountsReturnTo('opense://desktop/accounts/login', desktopConfig)).toBe('')
+      expect(getSafeAccountsReturnTo('opense://desktop/opense/', desktopConfig)).toBe('')
+      expect(getSafeAccountsReturnTo('opense://desktop/admin', desktopConfig)).toBe('')
+      expect(getSafeAccountsReturnTo('opense://phishing/etl/dashboard', desktopConfig)).toBe('')
     })
 
     it('accepts local app ports only when local origins are enabled', () => {

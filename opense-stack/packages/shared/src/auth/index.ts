@@ -1,6 +1,15 @@
 import { supabase } from '../supabase'
+import { appendAppPath, getRuntimeConfigValue, isDesktopRuntime } from '../runtime-config'
 import { validatePassword } from './validation'
 export { AuthRedirectPage } from './AuthRedirectPage'
+
+declare global {
+  interface Window {
+    openseDesktop?: {
+      openExternal: (url: string) => Promise<void>
+    }
+  }
+}
 
 export interface SignUpOptions {
   fullName?: string
@@ -38,10 +47,15 @@ export const signOut = async () => {
 }
 
 export const signInWithGoogle = async (redirectPath = '/dashboard') => {
-  const { error } = await supabase.auth.signInWithOAuth({
+  const redirectBase =
+    getRuntimeConfigValue('VITE_ACCOUNTS_URL') ?? window.location.origin
+  const redirectTo = appendAppPath(redirectBase, redirectPath)
+  const shouldOpenExternal = isDesktopRuntime()
+  const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}${redirectPath}`,
+      redirectTo,
+      skipBrowserRedirect: shouldOpenExternal,
       queryParams: {
         prompt: 'select_account',
       },
@@ -49,6 +63,21 @@ export const signInWithGoogle = async (redirectPath = '/dashboard') => {
   })
 
   if (error) throw error
+
+  if (shouldOpenExternal) {
+    const authUrl = data.url
+    if (!authUrl) {
+      throw new Error('Google sign-in URL was not returned.')
+    }
+
+    const desktopApi = window.openseDesktop
+    if (desktopApi?.openExternal) {
+      await desktopApi.openExternal(authUrl)
+      return
+    }
+
+    window.location.assign(authUrl)
+  }
 }
 
 export const fetchProfileFullName = async (userId: string) => {
