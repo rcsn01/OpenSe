@@ -8,6 +8,11 @@ const config: CapacitorConfig = {
     App: {
       urlScheme: 'opense',
     },
+    StatusBar: {
+      overlaysWebView: false,
+      backgroundColor: '#ffffff',
+      style: 'LIGHT',
+    },
   },
 }
 
