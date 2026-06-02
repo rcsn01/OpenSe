@@ -774,35 +774,13 @@ export const DashboardPage = () => {
               title="Actionable Alerts"
             >
               {pageModel.attentionItems.length > 0 ? (
-                isMobileDashboard ? (
-                  <div className={css("stoqr-dashboard__alert-list")}>
-                    {pageModel.attentionItems.map((item) => (
-                      <article key={item.id} className={css("stoqr-dashboard__alert-card")}>
-                        <div className={css("stoqr-dashboard__alert-table-cell")}>
-                          <span
-                            className={css("stoqr-dashboard__alert-dot", `is-${item.severity}`)}
-                            aria-hidden="true"
-                          />
-                          <div className={css("stoqr-dashboard__alert-copy")}>
-                            <div className={css("stoqr-dashboard__alert-card-header")}>
-                              <p className={css("stoqr-dashboard__alert-title")}>{item.title}</p>
-                              <span className={css("stoqr-dashboard__alert-time")}>{item.timeLabel}</span>
-                            </div>
-                            <p className={css("stoqr-dashboard__alert-detail")}>{item.detail}</p>
-                          </div>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <DataTable
-                    variant="dashboard"
-                    columns={attentionColumns}
-                    rows={pageModel.attentionItems}
-                    getRowId={(item) => item.id}
-                    tableLayout="fixed"
-                  />
-                )
+                <DataTable
+                  variant="dashboard"
+                  columns={attentionColumns}
+                  rows={pageModel.attentionItems}
+                  getRowId={(item) => item.id}
+                  tableLayout="fixed"
+                />
               ) : (
                 <AnalyticsEmptyPanel message="No actionable alerts right now." />
               )}
@@ -816,45 +794,15 @@ export const DashboardPage = () => {
               title="Expected Deliveries"
             >
               {pageModel.deliveryRows.length > 0 ? (
-                <>
-                  <div className={css("stoqr-dashboard__deliveries-desktop")}>
-                    <DataTable
-                      variant="dashboard"
-                      columns={deliveryColumns}
-                      rows={pageModel.deliveryRows}
-                      getRowId={(row) => row.id}
-                      minTableWidth={deliveriesTableMinWidth}
-                    />
-                  </div>
-
-                  <div className={css("stoqr-dashboard__deliveries-mobile")}>
-                    {pageModel.deliveryRows.map((row) => (
-                      <div
-                        key={row.id}
-                        className={css("stoqr-dashboard__delivery-card")}
-                      >
-                        <div className={css("stoqr-dashboard__delivery-card-row")}>
-                          <span className={css("stoqr-dashboard__delivery-card-po")}>
-                            {row.poLabel}
-                          </span>
-                          <span
-                            className={css("stoqr-dashboard__status-pill", `is-${row.statusTone}`)}
-                          >
-                            {row.statusLabel}
-                          </span>
-                        </div>
-                        <p className={css("stoqr-dashboard__delivery-card-vendor")}>
-                          {row.vendor}
-                        </p>
-                        <div className={css("stoqr-dashboard__delivery-card-meta")}>
-                          <span>{row.itemsCountLabel} items</span>
-                          <span>{row.valueLabel}</span>
-                          <span>{row.expectedLabel}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
+                <div className={css("stoqr-dashboard__deliveries-table")}>
+                  <DataTable
+                    variant="dashboard"
+                    columns={deliveryColumns}
+                    rows={pageModel.deliveryRows}
+                    getRowId={(row) => row.id}
+                    minTableWidth={deliveriesTableMinWidth}
+                  />
+                </div>
               ) : (
                 <AnalyticsEmptyPanel message="No deliveries scheduled." />
               )}
@@ -866,49 +814,19 @@ export const DashboardPage = () => {
               title="Item Velocity"
               headerClassName={css("stoqr-dashboard__section-header", "stoqr-dashboard__section-header--compact")}
             >
-              {isMobileDashboard ? (
-                <div className={css("stoqr-dashboard__velocity-mobile")}>
-                  {velocityToggle}
-                  {velocityItems.length > 0 ? (
-                    <div className={css("stoqr-dashboard__velocity-list")}>
-                      {velocityItems.map((item) => (
-                        <article key={item.id} className={css("stoqr-dashboard__velocity-card")}>
-                          <div className={css("stoqr-dashboard__velocity-copy")}>
-                            <p className={css("stoqr-dashboard__velocity-name")}>{item.name}</p>
-                            <p className={css("stoqr-dashboard__velocity-sku")}>{item.sku}</p>
-                          </div>
-                          <div className={css("stoqr-dashboard__velocity-meta")}>
-                            <span className={css("stoqr-dashboard__velocity-rate")}>
-                              {item.metricLabel}
-                            </span>
-                            <span
-                              className={css("stoqr-dashboard__velocity-status", `is-${item.statusTone}`)}
-                            >
-                              {item.statusLabel}
-                            </span>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  ) : (
-                    <AnalyticsEmptyPanel message="No inventory movement yet. Add products and transactions to populate velocity insights." />
-                  )}
-                </div>
-              ) : (
-                <DataTable
-                  variant="dashboard"
-                  columns={velocityColumns}
-                  rows={velocityItems}
-                  getRowId={(item) => item.id}
-                  tableLayout="fixed"
-                  topRow={{
-                    left: velocityToggle,
-                  }}
-                  emptyState={
-                    <AnalyticsEmptyPanel message="No inventory movement yet. Add products and transactions to populate velocity insights." />
-                  }
-                />
-              )}
+              <DataTable
+                variant="dashboard"
+                columns={velocityColumns}
+                rows={velocityItems}
+                getRowId={(item) => item.id}
+                tableLayout="fixed"
+                topRow={{
+                  left: velocityToggle,
+                }}
+                emptyState={
+                  <AnalyticsEmptyPanel message="No inventory movement yet. Add products and transactions to populate velocity insights." />
+                }
+              />
             </AnalyticsTablePanel>
           </section>
         </>
