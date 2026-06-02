@@ -380,6 +380,20 @@ body {
   color: var(--color-foreground);
 }
 
+:root {
+  --opense-safe-area-top: 0px;
+  --opense-safe-area-right: 0px;
+  --opense-safe-area-bottom: 0px;
+  --opense-safe-area-left: 0px;
+}
+
+html[data-opense-runtime-target="mobile"] {
+  --opense-safe-area-top: env(safe-area-inset-top, 0px);
+  --opense-safe-area-right: env(safe-area-inset-right, 0px);
+  --opense-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --opense-safe-area-left: env(safe-area-inset-left, 0px);
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -394,6 +408,16 @@ img {
   select,
   textarea {
     font: inherit;
+  }
+}
+
+@media (pointer: coarse) {
+  @supports (-webkit-touch-callout: none) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
 }
 
@@ -732,6 +756,25 @@ img {
 .side-nav,
 .app-sidebar {
   background: var(--color-shell);
+}
+
+html[data-opense-runtime-target="mobile"] .app-layout {
+  padding-right: var(--opense-safe-area-right);
+  padding-bottom: var(--opense-safe-area-bottom);
+  padding-left: var(--opense-safe-area-left);
+}
+
+html[data-opense-runtime-target="mobile"] .app-top-bar {
+  padding-top: calc(var(--gap-4) + var(--opense-safe-area-top));
+}
+
+html[data-opense-runtime-target="mobile"] .app-sidebar {
+  padding-top: var(--opense-safe-area-top);
+  padding-bottom: var(--opense-safe-area-bottom);
+}
+
+html[data-opense-runtime-target="mobile"] [data-app-scroll-container] {
+  padding-bottom: var(--opense-safe-area-bottom);
 }
 
 /* SideNav label: inherit typography from parent (link/button), do not override */

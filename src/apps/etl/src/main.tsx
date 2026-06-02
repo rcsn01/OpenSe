@@ -19,8 +19,11 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { ErrorBoundary } from '@repo/ui'
+import { applyRuntimeDocumentAttributes } from '@repo/shared/runtime-config'
 import './index.css'
 import App from './App'
+
+applyRuntimeDocumentAttributes()
 
 const queryClient = new QueryClient({
   defaultOptions: {
