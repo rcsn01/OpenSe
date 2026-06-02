@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@repo/ui';
 import { AuthRedirectPage } from '@repo/shared/auth';
 import { AuthProvider } from '@repo/shared/auth/context';
-import { getRouterBasename } from '@repo/shared/runtime-config';
+import { getRouterBasename, getRouterMode } from '@repo/shared/runtime-config';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { ReactFlowProvider } from 'reactflow';
 import { buildAccountsAuthUrl, buildAccountsSettingsUrl } from './lib/authRedirect';
@@ -27,6 +27,8 @@ import { OrgLogsTab } from './components/organisation/OrgLogsTab';
 import { PermissionsTab } from './components/organisation/PermissionsTab';
 
 const routerBasename = getRouterBasename('VITE_ETL_ROUTER_BASENAME');
+const Router = getRouterMode('VITE_ETL_ROUTER_MODE') === 'hash' ? HashRouter : BrowserRouter;
+const routerProps = Router === BrowserRouter ? { basename: routerBasename } : {};
 
 const DashboardIndexRedirect = () => {
   const lastTab = typeof window !== 'undefined' ? window.localStorage.getItem('dashboardLastTab') : null;
@@ -54,7 +56,7 @@ function AppContent() {
       cookieKey="opense-theme"
       respectStoredTheme={true}
     >
-      <BrowserRouter basename={routerBasename}>
+      <Router {...routerProps}>
         <ReactFlowProvider>
           <WorkflowProvider>
             <SystemCheck>
@@ -100,7 +102,7 @@ function AppContent() {
             </SystemCheck>
           </WorkflowProvider>
         </ReactFlowProvider>
-      </BrowserRouter>
+      </Router>
     </ThemeProvider>
   );
 }

@@ -1,11 +1,14 @@
 import { supabase } from '../supabase'
-import { appendAppPath, getRuntimeConfigValue, isDesktopRuntime } from '../runtime-config'
+import { appendAppPath, getRuntimeConfigValue, usesExternalOAuthRuntime } from '../runtime-config'
 import { validatePassword } from './validation'
 export { AuthRedirectPage } from './AuthRedirectPage'
 
 declare global {
   interface Window {
     openseDesktop?: {
+      openExternal: (url: string) => Promise<void>
+    }
+    openseMobile?: {
       openExternal: (url: string) => Promise<void>
     }
   }
@@ -50,7 +53,7 @@ export const signInWithGoogle = async (redirectPath = '/dashboard') => {
   const redirectBase =
     getRuntimeConfigValue('VITE_ACCOUNTS_URL') ?? window.location.origin
   const redirectTo = appendAppPath(redirectBase, redirectPath)
-  const shouldOpenExternal = isDesktopRuntime()
+  const shouldOpenExternal = usesExternalOAuthRuntime()
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -68,6 +71,12 @@ export const signInWithGoogle = async (redirectPath = '/dashboard') => {
     const authUrl = data.url
     if (!authUrl) {
       throw new Error('Google sign-in URL was not returned.')
+    }
+
+    const mobileApi = window.openseMobile
+    if (mobileApi?.openExternal) {
+      await mobileApi.openExternal(authUrl)
+      return
     }
 
     const desktopApi = window.openseDesktop

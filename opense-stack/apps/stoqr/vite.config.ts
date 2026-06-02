@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => ({
-  base: mode === 'desktop' ? './' : '/',
+  base: mode === 'desktop' || mode === 'mobile' ? './' : '/',
   plugins: [react()],
   // Remove allowHosts in production
   server: {
