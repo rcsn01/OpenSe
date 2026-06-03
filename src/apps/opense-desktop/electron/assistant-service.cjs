@@ -17,6 +17,7 @@ const OPEN_ASS_BUILTIN_COMMANDS = [
   { name: 'session', source: 'built-in', description: 'Show current session state and statistics.' },
   { name: 'clone', source: 'built-in', description: 'Clone the current Pi session and refresh the transcript.' },
   { name: 'model', source: 'built-in', description: 'Switch models with provider/model, or choose interactively without an argument.' },
+  { name: 'todos', source: 'built-in', description: 'Show the current todo state in the native Open-Ass UI.' },
 ]
 
 const nowIso = () => new Date().toISOString()
@@ -75,6 +76,10 @@ const validateText = (value, label = 'Text') => {
 }
 
 const validateCommand = (command) => validateText(command, 'Command')
+const validateStreamingBehavior = (behavior) => {
+  if (behavior == null) return 'followUp'
+  return validateOneOf(behavior, ['steer', 'followUp'], 'Streaming behavior')
+}
 const validateBoolean = (value, label) => {
   if (typeof value !== 'boolean') throw new Error(`${label} must be true or false.`)
   return value
@@ -203,17 +208,86 @@ const normalizeMessageRecord = (message, index = 0) => {
   }
 }
 
+const normalizeTodoStatus = (value, fallback) => {
+  const status = String(value ?? fallback ?? 'pending')
+  return ['pending', 'in_progress', 'completed', 'cancelled'].includes(status) ? status : 'pending'
+}
+
+const normalizeTodoDetails = (details) => {
+  const items = Array.isArray(details?.todos) ? details.todos : null
+  if (!items) return null
+  return items.map((item, index) => {
+    const record = item && typeof item === 'object' && !Array.isArray(item) ? item : { text: item }
+    return {
+      id: String(record.id ?? index + 1),
+      content: String(record.content ?? record.text ?? record.title ?? ''),
+      status: normalizeTodoStatus(record.status, typeof record.done === 'boolean' ? (record.done ? 'completed' : 'pending') : undefined),
+      explanation: typeof record.explanation === 'string' ? record.explanation : undefined,
+    }
+  }).filter((todo) => todo.content.trim() !== '')
+}
+
+const todosFromToolResult = (result) => {
+  const toolName = String(result?.toolName ?? result?.name ?? result?.tool ?? '')
+  if (toolName !== 'todo') return null
+  return normalizeTodoDetails(result?.details ?? result?.result?.details)
+}
+
+const extractLatestTodosFromMessages = (messages) => {
+  let latest = null
+  for (const message of Array.isArray(messages) ? messages : []) {
+    const toolName = String(message?.toolName ?? message?.name ?? message?.tool ?? '')
+    const role = message?.role
+    if (role !== 'toolResult' && role !== 'tool' && toolName !== 'todo') continue
+    const todos = todosFromToolResult(message)
+    if (todos) latest = todos
+  }
+  return latest
+}
+
+const normalizeQueueItem = (item, index) => {
+  if (typeof item === 'string') {
+    const content = item.trim()
+    return content ? { content } : null
+  }
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return null
+  const content = String(item.content ?? item.text ?? item.message ?? '').trim()
+  if (!content) return null
+  return {
+    id: item.id == null ? undefined : String(item.id),
+    content,
+    createdAt: typeof item.createdAt === 'string' ? item.createdAt : typeof item.timestamp === 'string' ? item.timestamp : undefined,
+  }
+}
+
+const normalizeQueueItems = (items) =>
+  (Array.isArray(items) ? items : []).map(normalizeQueueItem).filter(Boolean)
+
+const buildSteerQueueState = ({ active, queuedCount = 0 } = {}) => ({
+  active: Boolean(active),
+  queuedCount,
+  canSteer: Boolean(active),
+  canQueue: Boolean(active),
+  hint: active ? 'Enter steers the active turn. Tab queues a follow-up.' : '',
+})
+
 const normalizePiEvent = (sessionId, event) => {
   if (!event || typeof event !== 'object') return []
 
   if (event.type === 'agent_start') {
-    return [{ type: 'status', sessionId, status: 'running' }]
+    return [
+      { type: 'status', sessionId, status: 'running' },
+      { type: 'metadata', sessionId, metadata: { steerQueue: buildSteerQueueState({ active: true }) } },
+    ]
   }
 
   if (event.type === 'agent_end') {
     const messages = Array.isArray(event.messages) ? event.messages.map(normalizeMessageRecord) : []
+    const todos = extractLatestTodosFromMessages(event.messages)
     return [
       ...(messages.length ? [{ type: 'messages', sessionId, messages }] : []),
+      ...(todos ? [{ type: 'todos', sessionId, todos }] : []),
+      { type: 'metadata', sessionId, metadata: { steerQueue: buildSteerQueueState({ active: false }) } },
       { type: 'status', sessionId, status: 'running' },
     ]
   }
@@ -226,6 +300,8 @@ const normalizePiEvent = (sessionId, event) => {
     const events = []
     if (event.message) events.push({ type: 'message', sessionId, message: normalizeMessageRecord(event.message) })
     for (const result of Array.isArray(event.toolResults) ? event.toolResults : []) {
+      const todos = todosFromToolResult(result)
+      if (todos) events.push({ type: 'todos', sessionId, todos })
       events.push({
         type: 'tool',
         sessionId,
@@ -270,7 +346,7 @@ const normalizePiEvent = (sessionId, event) => {
   }
 
   if (event.type === 'tool_execution_start' || event.type === 'tool_execution_update' || event.type === 'tool_execution_end') {
-    return [
+    const events = [
       {
         type: 'tool',
         sessionId,
@@ -283,18 +359,30 @@ const normalizePiEvent = (sessionId, event) => {
         },
       },
     ]
+    if (event.type === 'tool_execution_end') {
+      const todos = todosFromToolResult(event)
+      if (todos) events.push({ type: 'todos', sessionId, todos })
+    }
+    return events
   }
 
   if (event.type === 'queue_update') {
+    const steering = normalizeQueueItems(event.steering)
+    const followUp = normalizeQueueItems(event.followUp)
+    const queuedCount = steering.length + followUp.length
+    const active = event.active === false
+      ? false
+      : Boolean(event.active ?? event.agentActive ?? event.streaming ?? event.isStreaming ?? true)
     return [
       {
         type: 'metadata',
         sessionId,
         metadata: {
           queue: {
-            steering: Array.isArray(event.steering) ? event.steering : [],
-            followUp: Array.isArray(event.followUp) ? event.followUp : [],
+            steering,
+            followUp,
           },
+          steerQueue: buildSteerQueueState({ active, queuedCount }),
         },
       },
     ]
@@ -764,6 +852,8 @@ const createAssistantService = ({
     const messages = await sendRpc(client, { type: 'get_messages' }).catch(() => [])
     const normalized = Array.isArray(messages) ? messages.map(normalizeMessageRecord) : []
     emitSessionEvent(client.sessionId, { type: 'messages', sessionId: client.sessionId, messages: normalized })
+    const todos = extractLatestTodosFromMessages(messages)
+    if (todos) emitSessionEvent(client.sessionId, { type: 'todos', sessionId: client.sessionId, todos })
     return normalized
   }
 
@@ -844,9 +934,9 @@ const createAssistantService = ({
       return readRegistry().find((item) => item.id === session.id) ?? session
     },
 
-    sendCommand: async (sessionId, command) => {
+    sendCommand: async (sessionId, command, behavior) => {
       const client = await ensureProcess(sessionId)
-      await sendRpc(client, { type: 'prompt', message: validateCommand(command), streamingBehavior: 'followUp' })
+      await sendRpc(client, { type: 'prompt', message: validateCommand(command), streamingBehavior: validateStreamingBehavior(behavior) })
     },
 
     runSlashCommand: async (sessionId, command, args) => {
@@ -909,6 +999,13 @@ const createAssistantService = ({
           }
         }
         return requestOpenAssModelSelect(client)
+      }
+
+      if (commandName === 'todos') {
+        return {
+          handledBy: 'builtin',
+          message: 'Todos are shown in the native Open-Ass work-state panel.',
+        }
       }
 
       const commands = await sendRpc(client, { type: 'get_commands' }).catch(() => ({ commands: [] }))
@@ -1110,7 +1207,9 @@ const createAssistantService = ({
     executeTuiCommand: async (sessionId, command) => {
       if (!sessionId) return
       const client = await ensureProcess(sessionId)
-      await sendRpc(client, { type: 'prompt', message: validateCommand(command), streamingBehavior: 'followUp' })
+      const message = validateCommand(command)
+      if (message.trim() === '/todos') return
+      await sendRpc(client, { type: 'prompt', message, streamingBehavior: 'followUp' })
     },
 
     onSessionEvent: (sessionId, callback) => {
@@ -1148,7 +1247,7 @@ const registerAssistantIpc = ({ ipcMain, service }) => {
   ipcMain.handle('assistant:list-sessions', () => service.listSessions())
   ipcMain.handle('assistant:create-session', (_event, input) => service.createSession(input))
   ipcMain.handle('assistant:open-session', (_event, sessionId) => service.openSession(sessionId))
-  ipcMain.handle('assistant:send-command', (_event, sessionId, command) => service.sendCommand(sessionId, command))
+  ipcMain.handle('assistant:send-command', (_event, sessionId, command, behavior) => service.sendCommand(sessionId, command, behavior))
   ipcMain.handle('assistant:run-slash-command', (_event, sessionId, command, args) =>
     service.runSlashCommand(sessionId, command, args),
   )
@@ -1203,6 +1302,8 @@ module.exports = {
   createAssistantService,
   normalizeMessageRecord,
   normalizePiEvent,
+  normalizeTodoDetails,
+  normalizeQueueItem,
   parseEnvOutput,
   registerAssistantIpc,
   validateCommand,

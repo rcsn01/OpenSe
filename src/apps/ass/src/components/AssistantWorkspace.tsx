@@ -12,7 +12,10 @@ import {
 } from '@repo/ui'
 import {
   Bot,
+  CheckCircle2,
   CircleStop,
+  Clock3,
+  CornerDownLeft,
   FolderOpen,
   GitBranch,
   GitFork,
@@ -41,7 +44,11 @@ import {
   getAssistantBridge,
   type AssistantCapabilities,
   type AssistantCommand,
+  type AssistantQueueItem,
+  type AssistantQueueState,
   type AssistantStatus,
+  type AssistantSteerQueueState,
+  type AssistantTodo,
   type AssistantTranscriptMessage,
   type ExtensionUiRequest,
 } from '../lib/assistantBridge'
@@ -99,6 +106,148 @@ type RuntimeState = {
   followUpMode?: 'all' | 'one-at-a-time'
   autoCompactionEnabled?: boolean
   autoRetryEnabled?: boolean
+}
+
+const TODO_STATUS_ORDER: Record<string, number> = {
+  in_progress: 0,
+  pending: 1,
+  completed: 2,
+  cancelled: 3,
+}
+
+const orderTodos = (todos: AssistantTodo[], includeCancelled = false) =>
+  [...todos]
+    .filter((todo) => includeCancelled || todo.status !== 'cancelled')
+    .sort((a, b) => (TODO_STATUS_ORDER[a.status] ?? 10) - (TODO_STATUS_ORDER[b.status] ?? 10))
+
+const todoCounts = (todos: AssistantTodo[], includeCancelled = false) =>
+  orderTodos(todos, includeCancelled).reduce(
+    (counts, todo) => ({ ...counts, [todo.status]: (counts[todo.status] ?? 0) + 1 }),
+    {} as Record<string, number>,
+  )
+
+const todoStatusLabel = (status: string) => {
+  if (status === 'in_progress') return 'active'
+  if (status === 'completed') return 'done'
+  return status
+}
+
+const TodoRows = ({
+  todos,
+  limit,
+  includeCancelled = false,
+}: {
+  todos: AssistantTodo[]
+  limit?: number
+  includeCancelled?: boolean
+}) => {
+  const ordered = orderTodos(todos, includeCancelled)
+  const visible = typeof limit === 'number' ? ordered.slice(0, limit) : ordered
+  const hidden = ordered.length - visible.length
+
+  if (!ordered.length) return <p className="text-xs text-[var(--color-muted-foreground)]">No todos.</p>
+
+  return (
+    <div className="space-y-1.5">
+      {visible.map((todo) => (
+        <div
+          key={todo.id}
+          className={cn(
+            'flex items-start gap-2 text-xs',
+            todo.status === 'completed' && 'text-[var(--color-muted-foreground)]',
+            todo.status === 'cancelled' && 'text-[var(--color-muted-foreground)] line-through',
+          )}
+        >
+          {todo.status === 'completed' ? (
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-success)]" />
+          ) : todo.status === 'in_progress' ? (
+            <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-primary)]" />
+          ) : (
+            <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-muted-foreground)]" />
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block break-words">{todo.content}</span>
+            {todo.explanation ? (
+              <span className="block break-words text-[var(--color-muted-foreground)]">{todo.explanation}</span>
+            ) : null}
+          </span>
+          <Badge>{todoStatusLabel(todo.status)}</Badge>
+        </div>
+      ))}
+      {hidden > 0 ? <p className="text-xs text-[var(--color-muted-foreground)]">{hidden} more todos</p> : null}
+    </div>
+  )
+}
+
+const QueueRows = ({ label, items }: { label: string; items: AssistantQueueItem[] }) => {
+  if (!items.length) return null
+  return (
+    <div className="space-y-1">
+      <div className="text-[11px] font-medium uppercase text-[var(--color-muted-foreground)]">{label}</div>
+      {items.map((item, index) => (
+        <div key={item.id ?? `${label}-${index}`} className="break-words text-xs text-[var(--color-foreground)]">
+          {item.content}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const WorkState = ({
+  todos,
+  queue,
+  steerQueue,
+  compact = false,
+}: {
+  todos: AssistantTodo[]
+  queue?: AssistantQueueState
+  steerQueue?: AssistantSteerQueueState
+  compact?: boolean
+}) => {
+  const counts = todoCounts(todos)
+  const hasTodos = orderTodos(todos).length > 0
+  const steeringItems = queue?.steering ?? []
+  const followUpItems = queue?.followUp ?? []
+  const hasQueue = steeringItems.length > 0 || followUpItems.length > 0
+  const activeSteer = Boolean(steerQueue?.active)
+
+  if (!hasTodos && !hasQueue && !activeSteer) return null
+
+  return (
+    <div className={cn('space-y-2', compact ? 'text-xs' : 'border-b border-[var(--color-border)] px-3 py-2')}>
+      {activeSteer ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-muted)] px-2 py-1.5 text-xs">
+          <span className="flex min-w-0 items-center gap-2 text-[var(--color-foreground)]">
+            <CornerDownLeft className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{steerQueue?.hint || 'Enter steers. Tab queues a follow-up.'}</span>
+          </span>
+          {typeof steerQueue?.queuedCount === 'number' && steerQueue.queuedCount > 0 ? (
+            <Badge>{steerQueue.queuedCount} queued</Badge>
+          ) : null}
+        </div>
+      ) : null}
+
+      {hasQueue ? (
+        <div className="grid gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-2 sm:grid-cols-2">
+          <QueueRows label="Steering" items={steeringItems} />
+          <QueueRows label="Follow-up" items={followUpItems} />
+        </div>
+      ) : null}
+
+      {hasTodos ? (
+        <div className={cn('rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-2', compact && 'border-0 bg-transparent p-0')}>
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium">
+            <ListTodo className="h-3.5 w-3.5" />
+            <span>Todos</span>
+            {counts.in_progress ? <Badge>{counts.in_progress} active</Badge> : null}
+            {counts.pending ? <Badge>{counts.pending} pending</Badge> : null}
+            {counts.completed ? <Badge>{counts.completed} done</Badge> : null}
+          </div>
+          <TodoRows todos={todos} limit={compact ? undefined : 5} />
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -243,6 +392,8 @@ export const AssistantWorkspace = () => {
   const questions = activeSession ? state.questionsBySessionId[activeSession.id] ?? [] : []
   const metadata = activeSession ? state.metadataBySessionId[activeSession.id] ?? {} : {}
   const runtimeState = (metadata.state ?? capabilities?.state ?? {}) as RuntimeState
+  const queueState = metadata.queue
+  const steerQueueState = metadata.steerQueue
   const extensionStatuses = asRecord(metadata.extensionStatuses) as Record<string, string>
   const extensionWidgets = asRecord(metadata.extensionWidgets) as Record<string, { lines?: string[]; placement?: string }>
   const extensionTitle = typeof metadata.extensionTitle === 'string' ? metadata.extensionTitle : ''
@@ -262,7 +413,7 @@ export const AssistantWorkspace = () => {
     if (slashQuery == null) return []
     return slashCommands.filter((item) => slashCommandMatchesQuery(item, slashQuery)).slice(0, 8)
   }, [slashCommands, slashQuery])
-  const slashMenuOpen = slashQuery != null && dismissedSlashText !== command && filteredSlashCommands.length > 0
+  const slashMenuOpen = !steerQueueState?.active && slashQuery != null && dismissedSlashText !== command && filteredSlashCommands.length > 0
   const filteredSelectOptions = useMemo(() => {
     if (!selectRequest) return []
     const query = selectFilter.trim().toLowerCase()
@@ -417,8 +568,7 @@ export const AssistantWorkspace = () => {
     dispatch({ type: 'clear-extension-request' })
   }
 
-  const sendCommand = async (event: FormEvent) => {
-    event.preventDefault()
+  const submitComposer = async (behavior: 'steer' | 'followUp' = steerQueueState?.active ? 'steer' : 'followUp') => {
     if (selectRequest) return
     if (!bridge || !activeSession || !command.trim()) return
     const nextCommand = command.trim()
@@ -480,13 +630,18 @@ export const AssistantWorkspace = () => {
           }
         }
       } else {
-        await bridge.sendCommand(activeSession.id, route.command)
+        await bridge.sendCommand(activeSession.id, route.command, behavior)
       }
     } catch (error) {
       dispatch({ type: 'error', error: error instanceof Error ? error.message : String(error) })
     } finally {
       setSending(false)
     }
+  }
+
+  const sendCommand = async (event: FormEvent) => {
+    event.preventDefault()
+    await submitComposer()
   }
 
   const insertSlashCommand = (item: AssistantCommand) => {
@@ -541,10 +696,17 @@ export const AssistantWorkspace = () => {
 
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
-      event.currentTarget.form?.requestSubmit()
+      void submitComposer(steerQueueState?.active ? 'steer' : 'followUp')
       return
     }
 
+    if (steerQueueState?.active && event.key === 'Tab') {
+      event.preventDefault()
+      void submitComposer('followUp')
+      return
+    }
+
+    if (steerQueueState?.active) return
     if (!slashMenuOpen) return
     if (event.key === 'ArrowDown') {
       event.preventDefault()
@@ -911,6 +1073,7 @@ export const AssistantWorkspace = () => {
                 </div>
 
                 <form onSubmit={sendCommand} className="border-t border-[var(--color-border)] p-3">
+                  <WorkState todos={todos} queue={queueState} steerQueue={steerQueueState} />
                   {selectRequest ? (
                     <InlineSelectPicker
                       request={selectRequest}
@@ -976,8 +1139,21 @@ export const AssistantWorkspace = () => {
                     />
                     <Button type="submit" size="md" loading={sending} disabled={Boolean(selectRequest) || !command.trim()}>
                       <Send className="h-4 w-4" />
-                      Send
+                      {steerQueueState?.active ? 'Steer' : 'Send'}
                     </Button>
+                    {steerQueueState?.active ? (
+                      <Button
+                        type="button"
+                        size="md"
+                        variant="secondary"
+                        loading={sending}
+                        disabled={Boolean(selectRequest) || !command.trim()}
+                        onClick={() => void submitComposer('followUp')}
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                        Queue
+                      </Button>
+                    ) : null}
                   </div>
                 </form>
               </>
@@ -995,20 +1171,12 @@ export const AssistantWorkspace = () => {
                 <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">
                   <div className="mb-2 flex items-center gap-2 font-medium">
                     <ListTodo className="h-3.5 w-3.5" />
-                    Todos
+                    Work state
                   </div>
-                  {todos.length ? (
-                    <div className="space-y-2">
-                      {todos.map((todo, index) => (
-                        <div key={`${todo.content}-${index}`} className="flex items-start justify-between gap-2">
-                          <span className="min-w-0 break-words">{todo.content}</span>
-                          <Badge>{todo.status}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[var(--color-muted-foreground)]">No todos.</p>
-                  )}
+                  <WorkState todos={todos} queue={queueState} steerQueue={steerQueueState} compact />
+                  {!todos.length && !((queueState?.steering?.length ?? 0) || (queueState?.followUp?.length ?? 0)) && !steerQueueState?.active ? (
+                    <p className="text-[var(--color-muted-foreground)]">No work state.</p>
+                  ) : null}
                 </section>
 
                 <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">

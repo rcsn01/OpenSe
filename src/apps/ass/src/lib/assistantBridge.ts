@@ -60,9 +60,29 @@ export type AssistantQuestionRequest = {
 }
 
 export type AssistantTodo = {
+  id: string
   content: string
   status: string
-  priority: string
+  explanation?: string
+}
+
+export type AssistantQueueItem = {
+  id?: string
+  content: string
+  createdAt?: string
+}
+
+export type AssistantQueueState = {
+  steering: AssistantQueueItem[]
+  followUp: AssistantQueueItem[]
+}
+
+export type AssistantSteerQueueState = {
+  active: boolean
+  queuedCount: number
+  canSteer: boolean
+  canQueue: boolean
+  hint: string
 }
 
 export type AssistantDiff = {
@@ -73,7 +93,10 @@ export type AssistantDiff = {
   status?: string
 }
 
-export type AssistantMetadata = Record<string, unknown>
+export type AssistantMetadata = Record<string, unknown> & {
+  queue?: AssistantQueueState
+  steerQueue?: AssistantSteerQueueState
+}
 
 export type AssistantCapabilities = {
   providers?: unknown
@@ -162,7 +185,7 @@ export type OpenSeAssistantBridge = {
   listSessions: () => Promise<AssistantSession[]>
   createSession: (input?: CreateSessionInput) => Promise<AssistantSession | null>
   openSession: (sessionId: string) => Promise<AssistantSession>
-  sendCommand: (sessionId: string, command: string) => Promise<void>
+  sendCommand: (sessionId: string, command: string, behavior?: 'steer' | 'followUp') => Promise<void>
   runSlashCommand: (sessionId: string, command: string, args?: string) => Promise<SlashCommandResult>
   runShellCommand: (sessionId: string, command: string, agent?: string) => Promise<void>
   abort: (sessionId: string) => Promise<void>
