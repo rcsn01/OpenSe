@@ -115,13 +115,13 @@ export type AssistantCapabilities = {
 
 export type AssistantCommand = {
   name: string
-  source?: 'built-in' | 'extension' | 'prompt' | 'skill' | string
+  source?: 'builtin' | 'open-ass' | 'extension' | 'prompt' | 'skill' | string
   description?: string
 }
 
 export type SlashCommandResult =
   | { handledBy: 'pi' }
-  | { handledBy: 'builtin'; message?: string; session?: AssistantSession }
+  | { handledBy: 'builtin'; message?: string; session?: AssistantSession; uiRequest?: ExtensionUiRequest }
 
 export type ExtensionUiRequest =
   | {
@@ -219,7 +219,7 @@ export type OpenSeAssistantBridge = {
     sessionId: string,
     callback: (event: AssistantSessionEvent) => void,
   ) => () => void
-  respondToExtensionUi: (sessionId: string, response: unknown) => Promise<void>
+  respondToExtensionUi: (sessionId: string, response: unknown) => Promise<SlashCommandResult | void>
   executeTuiCommand: (sessionId: string | null, command: string) => Promise<void>
 }
 

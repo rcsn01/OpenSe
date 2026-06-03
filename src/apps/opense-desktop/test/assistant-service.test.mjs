@@ -59,9 +59,11 @@ const createFakeRpcProcess = (options = {}) => {
         if (command.type === 'get_messages') {
           return options.messages ?? [{ id: 'msg_loaded', role: 'user', content: [{ type: 'text', text: 'loaded' }] }]
         }
-        if (command.type === 'get_commands') return { commands: [{ name: 'fix', source: 'prompt' }] }
+        if (command.type === 'get_commands') return { commands: options.commands ?? [{ name: 'fix', source: 'prompt' }] }
         if (command.type === 'get_available_models') return { models: [{ provider: 'google', id: 'gemini-test' }] }
         if (command.type === 'get_session_stats') return { totalMessages: 1 }
+        if (command.type === 'new_session') return { cancelled: false }
+        if (command.type === 'export_html') return { path: command.outputPath ?? '/tmp/pi-session.html' }
         if (command.type === 'bash') return { output: 'ok', exitCode: 0, cancelled: false, truncated: false }
       })()
       setImmediate(() => {
@@ -258,7 +260,7 @@ describe('assistant service', () => {
     expect(fakeProcess.writes.filter((command) => command.type === 'get_state').length).toBeGreaterThan(1)
   })
 
-  it('lists Pi RPC commands alongside Open-Ass built-ins', async () => {
+  it('lists Pi TUI built-ins, Open-Ass commands, and Pi RPC commands in TUI order', async () => {
     const directoryPath = makeTempRoot()
     const fakeProcess = createFakeRpcProcess()
     const service = createAssistantService({
@@ -271,14 +273,70 @@ describe('assistant service', () => {
 
     const capabilities = await service.listCapabilities(session.id)
 
+    expect(capabilities.commands.slice(0, 21).map((command) => command.name)).toEqual([
+      'settings',
+      'model',
+      'scoped-models',
+      'export',
+      'import',
+      'share',
+      'copy',
+      'name',
+      'session',
+      'changelog',
+      'hotkeys',
+      'fork',
+      'clone',
+      'tree',
+      'login',
+      'logout',
+      'new',
+      'compact',
+      'resume',
+      'reload',
+      'quit',
+    ])
     expect(capabilities.commands).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: 'compact', source: 'built-in' }),
-        expect.objectContaining({ name: 'name', source: 'built-in' }),
-        expect.objectContaining({ name: 'session', source: 'built-in' }),
-        expect.objectContaining({ name: 'clone', source: 'built-in' }),
-        expect.objectContaining({ name: 'model', source: 'built-in' }),
+        expect.objectContaining({ name: 'compact', source: 'builtin' }),
+        expect.objectContaining({ name: 'name', source: 'builtin' }),
+        expect.objectContaining({ name: 'session', source: 'builtin' }),
+        expect.objectContaining({ name: 'clone', source: 'builtin' }),
+        expect.objectContaining({ name: 'model', source: 'builtin' }),
+        expect.objectContaining({ name: 'resume', source: 'builtin' }),
+        expect.objectContaining({ name: 'reload', source: 'builtin' }),
+        expect.objectContaining({ name: 'todos', source: 'open-ass' }),
         expect.objectContaining({ name: 'fix', source: 'prompt' }),
+      ]),
+    )
+  })
+
+  it('keeps RPC command sources and lets built-ins override conflicting RPC names', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess({
+      commands: [
+        { name: 'model', source: 'prompt', description: 'Conflicting prompt template.' },
+        { name: 'skill:review', source: 'skill', description: 'Run review skill.' },
+        { name: 'ship', source: 'extension', description: 'Run release extension.' },
+      ],
+    })
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+
+    const capabilities = await service.listCapabilities(session.id)
+
+    expect(capabilities.commands.filter((command) => command.name === 'model')).toEqual([
+      expect.objectContaining({ name: 'model', source: 'builtin', description: 'Select model (opens selector UI)' }),
+    ])
+    expect(capabilities.commands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'skill:review', source: 'skill' }),
+        expect.objectContaining({ name: 'ship', source: 'extension' }),
       ]),
     )
   })
@@ -299,6 +357,8 @@ describe('assistant service', () => {
     const details = await service.runSlashCommand(session.id, 'session', '')
     const model = await service.runSlashCommand(session.id, 'model', 'google/gemini-test')
     const clone = await service.runSlashCommand(session.id, 'clone', '')
+    const started = await service.runSlashCommand(session.id, 'new', '')
+    const exported = await service.runSlashCommand(session.id, 'export', '/tmp/export.html')
 
     expect(compact).toMatchObject({ handledBy: 'builtin', message: expect.stringContaining('notes') })
     expect(fakeProcess.writes.find((command) => command.type === 'compact')).toMatchObject({
@@ -319,6 +379,13 @@ describe('assistant service', () => {
     expect(model).toMatchObject({ handledBy: 'builtin', message: 'Model set to google/gemini-test.' })
     expect(fakeProcess.writes.find((command) => command.type === 'clone')).toMatchObject({ type: 'clone' })
     expect(clone).toMatchObject({ handledBy: 'builtin', session: expect.objectContaining({ id: session.id }) })
+    expect(fakeProcess.writes.find((command) => command.type === 'new_session')).toMatchObject({ type: 'new_session' })
+    expect(started).toMatchObject({ handledBy: 'builtin', message: 'Started new session.' })
+    expect(fakeProcess.writes.find((command) => command.type === 'export_html')).toMatchObject({
+      type: 'export_html',
+      outputPath: '/tmp/export.html',
+    })
+    expect(exported).toMatchObject({ handledBy: 'builtin', message: 'Exported session to /tmp/export.html.' })
   })
 
   it('emits a synthetic select request for no-arg /model and resolves it locally', async () => {
@@ -338,7 +405,13 @@ describe('assistant service', () => {
     const requestEvent = events.find((event) => event.type === 'extension_ui')
     const request = requestEvent?.request
 
-    expect(result).toEqual({ handledBy: 'builtin' })
+    expect(result).toMatchObject({
+      handledBy: 'builtin',
+      uiRequest: expect.objectContaining({
+        type: 'select',
+        title: 'Choose model',
+      }),
+    })
     expect(request).toMatchObject({
       type: 'select',
       title: 'Choose model',
@@ -377,6 +450,145 @@ describe('assistant service', () => {
       message: '/fix test',
       streamingBehavior: 'followUp',
     })
+  })
+
+  it('forwards discovered extension and skill slash commands unchanged', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess({
+      commands: [
+        { name: 'ship', source: 'extension' },
+        { name: 'skill:review', source: 'skill' },
+      ],
+    })
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+
+    const extensionResult = await service.runSlashCommand(session.id, 'ship', 'now')
+    const skillResult = await service.runSlashCommand(session.id, 'skill:review', 'diff')
+
+    expect(extensionResult).toEqual({ handledBy: 'pi' })
+    expect(skillResult).toEqual({ handledBy: 'pi' })
+    expect(fakeProcess.writes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'prompt', message: '/ship now', streamingBehavior: 'followUp' }),
+        expect.objectContaining({ type: 'prompt', message: '/skill:review diff', streamingBehavior: 'followUp' }),
+      ]),
+    )
+  })
+
+  it('handles /resume locally instead of forwarding it', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess()
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+
+    const result = await service.runSlashCommand(session.id, 'resume', '')
+
+    expect(result).toMatchObject({ handledBy: 'builtin', message: expect.stringContaining('No other Open-Ass sessions') })
+    expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/resume')).toBeUndefined()
+  })
+
+  it('does not forward Pi built-ins as prompts', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess()
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      clipboard: { writeText: vi.fn() },
+    })
+    const session = await service.createSession({ directoryPath })
+
+    for (const command of [
+      'settings',
+      'model',
+      'scoped-models',
+      'export',
+      'import',
+      'share',
+      'copy',
+      'name',
+      'session',
+      'changelog',
+      'hotkeys',
+      'fork',
+      'tree',
+      'login',
+      'logout',
+      'resume',
+      'quit',
+    ]) {
+      await service.runSlashCommand(session.id, command, '')
+    }
+
+    expect(fakeProcess.writes.filter((command) => command.type === 'prompt')).toEqual([])
+  })
+
+  it('copies the last assistant text and reloads the current Pi RPC process', async () => {
+    const directoryPath = makeTempRoot()
+    const clipboard = { writeText: vi.fn() }
+    const processes = [
+      createFakeRpcProcess({ messages: [{ id: 'assistant-1', role: 'assistant', content: 'copy me' }] }),
+      createFakeRpcProcess(),
+    ]
+    const spawn = vi.fn(() => processes.shift())
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn,
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      clipboard,
+    })
+    const session = await service.createSession({ directoryPath })
+
+    const copied = await service.runSlashCommand(session.id, 'copy', '')
+    const reloaded = await service.runSlashCommand(session.id, 'reload', '')
+
+    expect(copied).toMatchObject({ handledBy: 'builtin', message: expect.stringContaining('Copied') })
+    expect(clipboard.writeText).toHaveBeenCalledWith('copy me')
+    expect(spawn).toHaveBeenCalledTimes(2)
+    expect(reloaded).toMatchObject({ handledBy: 'builtin', message: expect.stringContaining('Reloaded') })
+  })
+
+  it('resolves /resume and /quit built-in UI responses locally', async () => {
+    const directoryPath = makeTempRoot()
+    const processes = [createFakeRpcProcess(), createFakeRpcProcess()]
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => processes.shift() ?? createFakeRpcProcess()),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const first = await service.createSession({ directoryPath })
+    const second = await service.createSession({ directoryPath })
+
+    const resume = await service.runSlashCommand(first.id, 'resume', '')
+    const resumed = await service.respondToExtensionUi(first.id, {
+      id: resume.uiRequest.id,
+      value: second.id,
+    })
+    const quit = await service.runSlashCommand(second.id, 'quit', '')
+    const closed = await service.respondToExtensionUi(second.id, {
+      id: quit.uiRequest.id,
+      confirmed: true,
+    })
+
+    expect(resume.uiRequest).toMatchObject({ type: 'select', title: 'Resume session' })
+    expect(resumed).toMatchObject({ handledBy: 'builtin', session: expect.objectContaining({ id: second.id }) })
+    expect(quit.uiRequest).toMatchObject({ type: 'confirm', title: 'Close Pi session' })
+    expect(closed).toMatchObject({ handledBy: 'builtin', message: expect.stringContaining('Closed') })
+    expect((await service.getSessionData(second.id)).status).toBe('closed')
   })
 
   it('does not send unavailable slash commands to the model as prompts', async () => {

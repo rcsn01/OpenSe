@@ -97,34 +97,38 @@ describe('AssistantWorkspace', () => {
     expect(screen.getAllByText('Pi CLI was not found on PATH.').length).toBeGreaterThan(0)
   })
 
-  it('renders persisted sessions from the desktop registry', async () => {
+  it('renders persisted sessions as project directory tabs', async () => {
     installBridge({
       listSessions: vi.fn(async () => [baseSession]),
     })
 
     renderWorkspace()
 
+    expect(await screen.findByText('PROJECTS')).toBeInTheDocument()
+    expect(screen.queryByText('MAIN')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /sessions/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /add directory/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^project$/i })).toBeInTheDocument()
     expect((await screen.findAllByText('project')).length).toBeGreaterThan(0)
     expect(screen.getByText(/Users\/dev\/project/)).toBeInTheDocument()
   })
 
-  it('creates a session through the directory picker flow', async () => {
+  it('creates a session through the project add button', async () => {
     const bridge = installBridge()
     const user = userEvent.setup()
 
     renderWorkspace()
 
-    await user.click(await screen.findByRole('button', { name: /choose directory/i }))
+    await user.click(await screen.findByRole('button', { name: /add directory/i }))
 
     await waitFor(() => expect(bridge.createSession).toHaveBeenCalledWith())
     expect((await screen.findAllByText('project')).length).toBeGreaterThan(0)
   })
 
-  it('applies streaming transcript updates and can abort', async () => {
+  it('applies streaming transcript updates with a trimmed session toolbar', async () => {
     const bridge = installBridge({
       listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
     })
-    const user = userEvent.setup()
 
     renderWorkspace()
     await screen.findAllByText('project')
@@ -145,9 +149,14 @@ describe('AssistantWorkspace', () => {
     })
 
     expect(await screen.findByText('Working on it.')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Abort' }))
-    expect(bridge.abort).toHaveBeenCalledWith('session-1')
+    expect(screen.getByRole('button', { name: 'Share session' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Fork session' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open session' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Abort' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Rename session' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Undo last message' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Restart' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete session' })).not.toBeInTheDocument()
   })
 
   it('routes composer input by prefix', async () => {
@@ -225,7 +234,7 @@ describe('AssistantWorkspace', () => {
     expect(screen.getByText('built-in')).toBeInTheDocument()
   })
 
-  it('renders todos above the composer with native ordering', async () => {
+  it('renders todos above the composer in canonical order', async () => {
     const bridge = installBridge({
       listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
     })
@@ -257,8 +266,131 @@ describe('AssistantWorkspace', () => {
     expect(composerState.getByText('working now')).toBeInTheDocument()
 
     const text = (composer as HTMLElement).textContent ?? ''
-    expect(text.indexOf('Active task')).toBeLessThan(text.indexOf('Pending task'))
-    expect(text.indexOf('Pending task')).toBeLessThan(text.indexOf('Done task'))
+    expect(text.indexOf('Done task')).toBeLessThan(text.indexOf('Pending task'))
+    expect(text.indexOf('Pending task')).toBeLessThan(text.indexOf('Active task'))
+  })
+
+  it('shows a max-five balanced todo window around current progress', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'todos',
+        sessionId: 'session-1',
+        todos: [
+          { id: '1', content: 'Task 1', status: 'completed' },
+          { id: '2', content: 'Task 2', status: 'completed' },
+          { id: '3', content: 'Task 3', status: 'completed' },
+          { id: '4', content: 'Task 4', status: 'in_progress' },
+          { id: '5', content: 'Task 5', status: 'pending' },
+          { id: '6', content: 'Task 6', status: 'pending' },
+          { id: '7', content: 'Task 7', status: 'pending' },
+        ],
+      })
+    })
+
+    const composer = screen.getByLabelText('Send command').closest('form')
+    expect(composer).not.toBeNull()
+    const composerState = within(composer as HTMLElement)
+
+    expect(composerState.queryByText('Task 1')).not.toBeInTheDocument()
+    for (const task of ['Task 2', 'Task 3', 'Task 4', 'Task 5', 'Task 6']) {
+      expect(composerState.getByText(task)).toBeInTheDocument()
+    }
+    expect(composerState.queryByText('Task 7')).not.toBeInTheDocument()
+
+    const text = (composer as HTMLElement).textContent ?? ''
+    expect(text.indexOf('Task 2')).toBeLessThan(text.indexOf('Task 3'))
+    expect(text.indexOf('Task 3')).toBeLessThan(text.indexOf('Task 4'))
+    expect(text.indexOf('Task 4')).toBeLessThan(text.indexOf('Task 5'))
+    expect(text.indexOf('Task 5')).toBeLessThan(text.indexOf('Task 6'))
+  })
+
+  it('shows the latest five completed todos when all todos are completed', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'todos',
+        sessionId: 'session-1',
+        todos: [
+          { id: '1', content: 'Complete 1', status: 'completed' },
+          { id: '2', content: 'Complete 2', status: 'completed' },
+          { id: '3', content: 'Complete 3', status: 'completed' },
+          { id: '4', content: 'Complete 4', status: 'completed' },
+          { id: '5', content: 'Complete 5', status: 'completed' },
+          { id: '6', content: 'Complete 6', status: 'completed' },
+          { id: '7', content: 'Complete 7', status: 'completed' },
+        ],
+      })
+    })
+
+    const composer = screen.getByLabelText('Send command').closest('form')
+    expect(composer).not.toBeNull()
+    const composerState = within(composer as HTMLElement)
+
+    expect(composerState.queryByText('Complete 1')).not.toBeInTheDocument()
+    expect(composerState.queryByText('Complete 2')).not.toBeInTheDocument()
+    for (const task of ['Complete 3', 'Complete 4', 'Complete 5', 'Complete 6', 'Complete 7']) {
+      expect(composerState.getByText(task)).toBeInTheDocument()
+    }
+  })
+
+  it('expands and collapses the todo panel including cancelled todos', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'todos',
+        sessionId: 'session-1',
+        todos: [
+          { id: '1', content: 'Expand 1', status: 'completed' },
+          { id: '2', content: 'Expand 2', status: 'completed' },
+          { id: '3', content: 'Expand 3', status: 'in_progress' },
+          { id: '4', content: 'Expand 4', status: 'pending' },
+          { id: '5', content: 'Expand 5', status: 'pending' },
+          { id: '6', content: 'Expand 6', status: 'pending' },
+          { id: '7', content: 'Expand 7', status: 'pending' },
+          { id: '8', content: 'Cancelled expand task', status: 'cancelled' },
+        ],
+      })
+    })
+
+    const composer = screen.getByLabelText('Send command').closest('form')
+    expect(composer).not.toBeNull()
+    const composerState = within(composer as HTMLElement)
+
+    expect(composerState.queryByText('Expand 6')).not.toBeInTheDocument()
+    expect(composerState.queryByText('Expand 7')).not.toBeInTheDocument()
+    expect(composerState.queryByText('Cancelled expand task')).not.toBeInTheDocument()
+
+    await user.click(composerState.getByRole('button', { name: /expand todos/i }))
+
+    expect(composerState.getByText('Expand 6')).toBeInTheDocument()
+    expect(composerState.getByText('Expand 7')).toBeInTheDocument()
+    expect(composerState.getByText('Cancelled expand task')).toBeInTheDocument()
+
+    await user.click(composerState.getByRole('button', { name: /collapse todos/i }))
+
+    expect(composerState.queryByText('Expand 6')).not.toBeInTheDocument()
+    expect(composerState.queryByText('Expand 7')).not.toBeInTheDocument()
+    expect(composerState.queryByText('Cancelled expand task')).not.toBeInTheDocument()
   })
 
   it('renders queued steering and follow-up state', async () => {
@@ -408,6 +540,27 @@ describe('AssistantWorkspace', () => {
     expect(screen.queryByRole('option', { name: /\/compact/i })).not.toBeInTheDocument()
   })
 
+  it('shows Pi TUI built-ins in slash autocomplete', async () => {
+    installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+      listCapabilities: vi.fn(async () => ({
+        commands: [
+          { name: 'resume', source: 'builtin', description: 'Resume a different session' },
+          { name: 'review', source: 'prompt', description: 'Review the current changes.' },
+        ],
+      })),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    await user.type(screen.getByLabelText('Send command'), '/res')
+
+    expect(await screen.findByRole('option', { name: /\/resume/i })).toBeInTheDocument()
+    expect(screen.getByText('builtin')).toBeInTheDocument()
+  })
+
   it('inserts a selected slash command with the keyboard', async () => {
     installBridge({
       listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
@@ -467,6 +620,74 @@ describe('AssistantWorkspace', () => {
     await user.click(screen.getByRole('button', { name: /send/i }))
 
     expect(await screen.findByText(/Name: project/)).toBeInTheDocument()
+  })
+
+  it('opens returned built-in select UI and sends the response through the bridge', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+      runSlashCommand: vi.fn(async () => ({
+        handledBy: 'builtin' as const,
+        uiRequest: {
+          id: 'builtin-model',
+          type: 'select' as const,
+          title: 'Choose model',
+          options: [
+            { label: 'google/gemini-test', value: 'google' },
+            { label: 'openai/gpt-test', value: 'openai' },
+          ],
+        },
+      })),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    await user.type(screen.getByLabelText('Send command'), '/model')
+    await user.click(screen.getByRole('button', { name: /send/i }))
+    await user.click(await screen.findByRole('option', { name: 'openai/gpt-test' }))
+
+    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'model', '')
+    expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
+      id: 'builtin-model',
+      value: 'openai',
+    })
+  })
+
+  it('handles built-in UI responses that return a session and message', async () => {
+    const resumedSession = { ...baseSession, id: 'session-2', displayName: 'resumed' }
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+      runSlashCommand: vi.fn(async () => ({
+        handledBy: 'builtin' as const,
+        uiRequest: {
+          id: 'builtin-quit',
+          type: 'confirm' as const,
+          title: 'Close Pi session',
+          message: 'Close this session?',
+        },
+      })),
+      respondToExtensionUi: vi.fn(async () => ({
+        handledBy: 'builtin' as const,
+        message: 'Resumed resumed.',
+        session: resumedSession,
+      })),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    await user.type(screen.getByLabelText('Send command'), '/quit')
+    await user.click(screen.getByRole('button', { name: /send/i }))
+    await user.click(await screen.findByRole('button', { name: 'Confirm' }))
+
+    expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
+      id: 'builtin-quit',
+      confirmed: true,
+    })
+    expect(await screen.findByText('resumed')).toBeInTheDocument()
+    expect(await screen.findByText('Resumed resumed.')).toBeInTheDocument()
   })
 
   it('renders non-select extension UI requests as modal dialogs and sends responses', async () => {
