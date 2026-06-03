@@ -1,9 +1,11 @@
 const DESKTOP_RUNTIME_DEFAULTS = {
   VITE_OPENSE_RUNTIME_TARGET: 'desktop',
   VITE_ACCOUNTS_URL: 'opense://desktop/accounts',
+  VITE_ASS_PUBLIC_URL: 'opense://desktop/ass',
   VITE_ETL_PUBLIC_URL: 'opense://desktop/etl',
   VITE_STOQR_PUBLIC_URL: 'opense://desktop/stoqr',
   VITE_ACCOUNTS_ROUTER_BASENAME: '/accounts',
+  VITE_ASS_ROUTER_BASENAME: '/ass',
   VITE_ETL_ROUTER_BASENAME: '/etl',
   VITE_STOQR_ROUTER_BASENAME: '/stoqr',
 }

@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { getRuntimeConfigValue } from "@repo/shared/runtime-config";
+import { appendAppPath, getRuntimeConfigValue, isDesktopRuntime } from "@repo/shared/runtime-config";
 import { cn } from "../../lib/cn";
 import { SWITCHABLE_APP_ICONS } from "./AppBrandIcons";
 
@@ -14,7 +14,7 @@ export interface SwitchAppPopoverProps {
 }
 
 type AppSwitcherItem = {
-  key: "etl" | "stoqr";
+  key: "ass" | "etl" | "stoqr";
   label: string;
   url: string;
   /** Path to append to base URL when switching (e.g. /dashboard to skip landing) */
@@ -23,15 +23,18 @@ type AppSwitcherItem = {
 };
 
 const DEFAULT_APP_URLS = {
+  ass: "http://localhost:5995",
   etl: "http://localhost:5992",
   stoqr: "http://localhost:5993",
 } as const;
 
 function buildAppUrl(base: string, path?: string): string {
   if (!path) return base;
-  const url = new URL(base);
-  url.pathname = path.startsWith("/") ? path : `/${path}`;
-  return url.toString();
+  return appendAppPath(base, path);
+}
+
+function shouldShowAss(): boolean {
+  return isDesktopRuntime() || Boolean(getRuntimeConfigValue("VITE_ASS_PUBLIC_URL"));
 }
 
 export function SwitchAppPopover({
@@ -46,6 +49,10 @@ export function SwitchAppPopover({
   const apps = useMemo(() => {
     const EtlIcon = SWITCHABLE_APP_ICONS.etl;
     const StoqrIcon = SWITCHABLE_APP_ICONS.stoqr;
+    const AssIcon = SWITCHABLE_APP_ICONS.ass;
+    const assUrl =
+      getRuntimeConfigValue("VITE_ASS_PUBLIC_URL") ||
+      DEFAULT_APP_URLS.ass;
     const etlUrl =
       getRuntimeConfigValue("VITE_ETL_PUBLIC_URL") ||
       getRuntimeConfigValue("VITE_ETL_URL") ||
@@ -54,7 +61,7 @@ export function SwitchAppPopover({
       getRuntimeConfigValue("VITE_STOQR_PUBLIC_URL") ||
       getRuntimeConfigValue("VITE_STOQR_URL") ||
       DEFAULT_APP_URLS.stoqr;
-    return [
+    const switchableApps: AppSwitcherItem[] = [
       {
         key: "etl",
         label: "ETL",
@@ -69,7 +76,19 @@ export function SwitchAppPopover({
         path: "/dashboard",
         icon: <StoqrIcon className="h-5 w-5" />,
       },
-    ] as AppSwitcherItem[];
+    ];
+
+    if (shouldShowAss()) {
+      switchableApps.push({
+        key: "ass",
+        label: "Ass",
+        url: assUrl,
+        path: "/",
+        icon: <AssIcon className="h-5 w-5" />,
+      });
+    }
+
+    return switchableApps;
   }, []);
 
   useEffect(() => {

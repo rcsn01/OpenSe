@@ -4,6 +4,7 @@
   "packageManager": "pnpm@9.15.0",
   "workspaces": [
     "apps/accounts",
+    "apps/ass",
     "apps/etl",
     "apps/opense-desktop",
     "apps/opense-mobile",
@@ -14,8 +15,9 @@
   ],
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev --filter=@repo/accounts --filter=@repo/etl --filter=@repo/opense --filter=@repo/stoqr --filter=@repo/ui-design",
+    "dev": "turbo run dev --filter=@repo/accounts --filter=@repo/ass --filter=@repo/etl --filter=@repo/opense --filter=@repo/stoqr --filter=@repo/ui-design",
     "dev:accounts": "pnpm --dir apps/accounts dev",
+    "dev:ass": "pnpm --dir apps/ass dev",
     "dev:desktop": "pnpm --dir apps/opense-desktop dev",
     "dev:etl": "pnpm --dir apps/etl dev",
     "dev:opense": "pnpm --dir apps/opense dev",

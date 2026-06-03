@@ -1,5 +1,5 @@
-import { Boxes, ChevronRight, Workflow, type LucideIcon } from 'lucide-react'
-import { appendAppPath, getRuntimeConfigValue } from '@repo/shared/runtime-config'
+import { Bot, Boxes, ChevronRight, Workflow, type LucideIcon } from 'lucide-react'
+import { appendAppPath, getRuntimeConfigValue, isDesktopRuntime } from '@repo/shared/runtime-config'
 import { AccountsPageShell } from '../components/AccountsPageShell'
 
 type AppDestination = {
@@ -11,6 +11,7 @@ type AppDestination = {
 }
 
 const defaultAppUrls = {
+  ass: 'http://localhost:5995',
   etl: 'http://localhost:5992',
   stoqr: 'http://localhost:5993',
 } as const
@@ -20,22 +21,39 @@ const buildAppUrl = (baseUrl: string, path?: string) => {
   return appendAppPath(baseUrl, path)
 }
 
-const getAppDestinations = (): AppDestination[] => [
-  {
-    key: 'etl',
-    name: 'Open-ETL',
-    url: getRuntimeConfigValue('VITE_ETL_PUBLIC_URL') ?? getRuntimeConfigValue('VITE_ETL_URL') ?? defaultAppUrls.etl,
-    path: '/dashboard',
-    icon: Workflow,
-  },
-  {
-    key: 'stoqr',
-    name: 'Open-StoQR',
-    url: getRuntimeConfigValue('VITE_STOQR_PUBLIC_URL') ?? getRuntimeConfigValue('VITE_STOQR_URL') ?? defaultAppUrls.stoqr,
-    path: '/dashboard',
-    icon: Boxes,
-  },
-]
+const shouldShowAss = () =>
+  isDesktopRuntime() || Boolean(getRuntimeConfigValue('VITE_ASS_PUBLIC_URL'))
+
+const getAppDestinations = (): AppDestination[] => {
+  const destinations: AppDestination[] = [
+    {
+      key: 'etl',
+      name: 'Open-ETL',
+      url: getRuntimeConfigValue('VITE_ETL_PUBLIC_URL') ?? getRuntimeConfigValue('VITE_ETL_URL') ?? defaultAppUrls.etl,
+      path: '/dashboard',
+      icon: Workflow,
+    },
+    {
+      key: 'stoqr',
+      name: 'Open-StoQR',
+      url: getRuntimeConfigValue('VITE_STOQR_PUBLIC_URL') ?? getRuntimeConfigValue('VITE_STOQR_URL') ?? defaultAppUrls.stoqr,
+      path: '/dashboard',
+      icon: Boxes,
+    },
+  ]
+
+  if (shouldShowAss()) {
+    destinations.push({
+      key: 'ass',
+      name: 'Open-Ass',
+      url: getRuntimeConfigValue('VITE_ASS_PUBLIC_URL') ?? defaultAppUrls.ass,
+      path: '/',
+      icon: Bot,
+    })
+  }
+
+  return destinations
+}
 
 export const HomePage = () => {
   const appDestinations = getAppDestinations()
