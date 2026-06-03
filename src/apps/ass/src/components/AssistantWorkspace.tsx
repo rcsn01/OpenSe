@@ -26,15 +26,16 @@ import {
   Send,
   Share2,
   ShieldCheck,
-  Terminal,
   Wrench,
 } from 'lucide-react'
 import { ExtensionRequestDialog } from './ExtensionRequestDialog'
+import { TranscriptRenderer } from './TranscriptRenderer'
 import {
   addSession,
   applySessionList,
   initialSessionViewState,
   reduceSessionEvent,
+  selectTranscriptItems,
 } from '../lib/sessionState'
 import {
   getAssistantBridge,
@@ -46,7 +47,8 @@ import {
   type AssistantStatus,
   type AssistantSteerQueueState,
   type AssistantTodo,
-  type AssistantTranscriptMessage,
+  type AssistantTranscriptItem,
+  type AssistantTranscriptPart,
   type ExtensionUiRequest,
   type SlashCommandResult,
 } from '../lib/assistantBridge'
@@ -78,29 +80,55 @@ const formatProjectName = (path: string) => {
 const formatSessionLabel = (session: { displayName?: string; firstMessage?: string; piSessionId?: string; id: string }) =>
   session.displayName || session.firstMessage || session.piSessionId || session.id
 
-const MessageBubble = ({ message }: { message: AssistantTranscriptMessage }) => {
-  const isUser = message.role === 'user'
-  const isTool = message.role === 'tool'
+const EMPTY_TRANSCRIPT_ITEMS: AssistantTranscriptItem[] = []
+const EMPTY_TRANSCRIPT_PARTS: AssistantTranscriptPart[] = []
 
-  return (
-    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
-      <article
-        className={cn(
-          'max-w-[78ch] rounded-[var(--radius-md)] border px-3 py-2 text-sm leading-6',
-          isUser
-            ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
-            : 'border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)]',
-          isTool && 'font-mono text-xs',
-        )}
-      >
-        <div className="mb-1 text-[11px] font-medium uppercase text-current opacity-70">
-          {message.role}
-          {message.status === 'streaming' ? ' streaming' : ''}
-        </div>
-        <pre className="m-0 whitespace-pre-wrap break-words font-inherit">{message.content}</pre>
-      </article>
-    </div>
-  )
+const SESSION_NAV_STEP = 5
+
+const nextSessionNavCount = (current: number, total: number) => Math.min(total, current + SESSION_NAV_STEP)
+
+const previousSessionNavCount = (current: number) => {
+  if (current <= SESSION_NAV_STEP) return SESSION_NAV_STEP
+  if (current % SESSION_NAV_STEP === 0) return current - SESSION_NAV_STEP
+  return Math.max(SESSION_NAV_STEP, Math.floor(current / SESSION_NAV_STEP) * SESSION_NAV_STEP)
+}
+
+let promptIdSequence = 0
+
+const createPromptIds = () => {
+  promptIdSequence = (promptIdSequence + 1) % Number.MAX_SAFE_INTEGER
+  const suffix = `${Date.now().toString(36)}${promptIdSequence.toString(36).padStart(4, '0')}`
+  return {
+    messageID: `msg_${suffix}`,
+    textPartID: `prt_${suffix}`,
+  }
+}
+
+const createOptimisticPromptItem = (
+  promptIds: { messageID: string; textPartID: string },
+  content: string,
+): AssistantTranscriptItem => ({
+  info: {
+    id: promptIds.messageID,
+    role: 'user',
+    content,
+    createdAt: new Date().toISOString(),
+    status: 'complete',
+    optimistic: true,
+  },
+  parts: [{
+    id: promptIds.textPartID,
+    messageId: promptIds.messageID,
+    type: 'text',
+    text: content,
+  }],
+})
+
+const FORWARDED_SLASH_COMMAND_SOURCES = new Set(['prompt', 'extension', 'skill'])
+
+const isForwardedSlashCommand = (commands: AssistantCommand[], commandName: string) => {
+  const command = commands.find((item) => item.name.toLowerCase() === commandName.toLowerCase())
+  return FORWARDED_SLASH_COMMAND_SOURCES.has(String(command?.source ?? '').toLowerCase())
 }
 
 type RuntimeState = {
@@ -405,8 +433,10 @@ export const AssistantWorkspace = () => {
   const [selectFilter, setSelectFilter] = useState('')
   const [selectSelection, setSelectSelection] = useState(0)
   const [expandedTodoSessionIds, setExpandedTodoSessionIds] = useState<Record<string, boolean>>({})
+  const [visibleProjectSessionCounts, setVisibleProjectSessionCounts] = useState<Record<string, number>>({})
   const [capabilities, setCapabilities] = useState<AssistantCapabilities | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
+  const [loadingOlderTranscript, setLoadingOlderTranscript] = useState(false)
   const commandInputRef = useRef<HTMLTextAreaElement | null>(null)
   const selectInputRef = useRef<HTMLInputElement | null>(null)
   const navigate = useNavigate()
@@ -417,8 +447,12 @@ export const AssistantWorkspace = () => {
     () => state.sessions.find((session) => session.id === state.activeSessionId) ?? null,
     [state.activeSessionId, state.sessions],
   )
-  const messages = activeSession ? state.messagesBySessionId[activeSession.id] ?? [] : []
-  const toolEvents = activeSession ? state.toolsBySessionId[activeSession.id] ?? [] : []
+  const transcriptItems = useMemo(
+    () => (activeSession ? selectTranscriptItems(state, activeSession.id) : EMPTY_TRANSCRIPT_ITEMS),
+    [activeSession, state],
+  )
+  const liveTranscriptParts = activeSession ? state.liveUnkeyedBySessionId[activeSession.id] ?? EMPTY_TRANSCRIPT_PARTS : EMPTY_TRANSCRIPT_PARTS
+  const transcriptHistory = activeSession ? state.historyBySessionId[activeSession.id] : undefined
   const todos = activeSession ? state.todosBySessionId[activeSession.id] ?? [] : []
   const todosExpanded = activeSession ? Boolean(expandedTodoSessionIds[activeSession.id]) : false
   const diffs = activeSession ? state.diffsBySessionId[activeSession.id] ?? [] : []
@@ -582,6 +616,32 @@ export const AssistantWorkspace = () => {
     }
   }, [bridge, navigate])
 
+  const loadOlderTranscript = async () => {
+    if (!bridge || !activeSession || transcriptHistory?.complete || loadingOlderTranscript) return
+    setLoadingOlderTranscript(true)
+    try {
+      const page = await bridge.loadTranscriptPage(activeSession.id, {
+        before: transcriptHistory?.cursor,
+        limit: 100,
+      })
+      dispatch({
+        type: 'event',
+        event: {
+          type: 'transcript_snapshot',
+          sessionId: activeSession.id,
+          items: page.items,
+          cursor: page.cursor,
+          complete: page.complete,
+          mode: page.mode,
+        },
+      })
+    } catch (error) {
+      dispatch({ type: 'error', error: error instanceof Error ? error.message : String(error) })
+    } finally {
+      setLoadingOlderTranscript(false)
+    }
+  }
+
   const handleSlashCommandResult = (result: SlashCommandResult, sessionId = activeSession?.id) => {
     if (result.handledBy !== 'builtin') return
     if (result.session) {
@@ -638,7 +698,13 @@ export const AssistantWorkspace = () => {
       if (nextCommand.startsWith('/')) {
         const [slash, ...args] = nextCommand.slice(1).trim().split(/\s+/)
         if (!slash) return { type: 'error' as const, error: 'Enter a command after /.' }
-        return { type: 'slash' as const, command: slash, args: args.join(' ') }
+        const joinedArgs = args.join(' ')
+        return {
+          type: 'slash' as const,
+          command: slash,
+          args: joinedArgs,
+          promptText: `/${slash}${joinedArgs ? ` ${joinedArgs}` : ''}`,
+        }
       }
       return { type: 'prompt' as const, command: nextCommand }
     })()
@@ -648,30 +714,51 @@ export const AssistantWorkspace = () => {
     }
     setCommand('')
     setSending(true)
-    dispatch({
-      type: 'event',
-      event: {
-        type: 'message',
-        sessionId: activeSession.id,
-        message: {
-          id: `user-${Date.now()}`,
-          role: 'user',
-          content: nextCommand,
-          createdAt: new Date().toISOString(),
-          status: 'complete',
+    const optimisticPromptIds =
+      route.type === 'prompt' || (route.type === 'slash' && isForwardedSlashCommand(slashCommands, route.command))
+        ? createPromptIds()
+        : null
+    const optimisticText = route.type === 'slash' ? route.promptText : route.type === 'prompt' ? route.command : ''
+    if (optimisticPromptIds) {
+      dispatch({
+        type: 'event',
+        event: {
+          type: 'transcript_optimistic_add',
+          sessionId: activeSession.id,
+          item: createOptimisticPromptItem(optimisticPromptIds, optimisticText),
         },
-      },
-    })
+      })
+    }
     try {
       if (route.type === 'shell') {
         await bridge.runShellCommand(activeSession.id, route.command)
       } else if (route.type === 'slash') {
-        const result = await bridge.runSlashCommand(activeSession.id, route.command, route.args)
+        const result = await bridge.runSlashCommand(activeSession.id, route.command, route.args, optimisticPromptIds ?? undefined)
+        if (optimisticPromptIds && result.handledBy !== 'pi') {
+          dispatch({
+            type: 'event',
+            event: {
+              type: 'transcript_optimistic_remove',
+              sessionId: activeSession.id,
+              messageId: optimisticPromptIds.messageID,
+            },
+          })
+        }
         handleSlashCommandResult(result, activeSession.id)
       } else {
-        await bridge.sendCommand(activeSession.id, route.command, behavior)
+        await bridge.sendCommand(activeSession.id, route.command, behavior, optimisticPromptIds ?? undefined)
       }
     } catch (error) {
+      if (optimisticPromptIds) {
+        dispatch({
+          type: 'event',
+          event: {
+            type: 'transcript_optimistic_remove',
+            sessionId: activeSession.id,
+            messageId: optimisticPromptIds.messageID,
+          },
+        })
+      }
       dispatch({ type: 'error', error: error instanceof Error ? error.message : String(error) })
     } finally {
       setSending(false)
@@ -850,6 +937,27 @@ export const AssistantWorkspace = () => {
     await bridge.respondToQuestion(activeSession.id, requestId, [[label]])
   }
 
+  const toggleProjectSessions = (directoryPath: string, currentCount: number, totalCount: number) => {
+    setVisibleProjectSessionCounts((counts) => ({
+      ...counts,
+      [directoryPath]: currentCount > 0 ? 0 : Math.min(SESSION_NAV_STEP, totalCount),
+    }))
+  }
+
+  const expandProjectSessions = (directoryPath: string, currentCount: number, totalCount: number) => {
+    setVisibleProjectSessionCounts((counts) => ({
+      ...counts,
+      [directoryPath]: nextSessionNavCount(currentCount, totalCount),
+    }))
+  }
+
+  const retractProjectSessions = (directoryPath: string, currentCount: number) => {
+    setVisibleProjectSessionCounts((counts) => ({
+      ...counts,
+      [directoryPath]: previousSessionNavCount(currentCount),
+    }))
+  }
+
   const projectNavGroups = useMemo<AppShellNavGroup[]>(() => {
     const projects = new Map<string, AssistantSession[]>()
     for (const session of state.sessions) {
@@ -878,6 +986,19 @@ export const AssistantWorkspace = () => {
           const projectName = formatProjectName(directoryPath)
           const activeProjectSession = sessions.find((session) => session.id === state.activeSessionId)
           const targetSession = activeProjectSession ?? sessions[0]
+          const activeSessionIndex = activeProjectSession ? sessions.findIndex((session) => session.id === activeProjectSession.id) : -1
+          const activeProjectVisibleCount =
+            activeSessionIndex === -1
+              ? SESSION_NAV_STEP
+              : Math.ceil((activeSessionIndex + 1) / SESSION_NAV_STEP) * SESSION_NAV_STEP
+          const visibleSessionCount = Math.min(
+            sessions.length,
+            visibleProjectSessionCounts[directoryPath] ??
+              (directoryPath === activeSession?.directoryPath ? activeProjectVisibleCount : 0),
+          )
+          const visibleSessions = sessions.slice(0, visibleSessionCount)
+          const canExpandSessions = visibleSessionCount > 0 && visibleSessionCount < sessions.length
+          const canRetractSessions = visibleSessionCount > SESSION_NAV_STEP
 
           return {
             href: `/sessions/${targetSession.id}`,
@@ -885,6 +1006,8 @@ export const AssistantWorkspace = () => {
             ariaLabel: `Project ${projectName}`,
             icon: <FolderOpen className="h-4 w-4" />,
             isActive: () => directoryPath === activeSession?.directoryPath,
+            onClick: () => toggleProjectSessions(directoryPath, visibleSessionCount, sessions.length),
+            isExpanded: visibleSessionCount > 0,
             trailing: (
               <Button
                 type="button"
@@ -900,7 +1023,7 @@ export const AssistantWorkspace = () => {
             ),
             children: (
               <div className="mt-0.5 flex flex-col gap-0.5 pl-7 pr-1">
-                {sessions.map((session) => (
+                {visibleSessions.map((session) => (
                   <NavLink
                     key={session.id}
                     to={`/sessions/${session.id}`}
@@ -913,13 +1036,37 @@ export const AssistantWorkspace = () => {
                     {formatSessionLabel(session)}
                   </NavLink>
                 ))}
+                {canExpandSessions || canRetractSessions ? (
+                  <div className="flex items-center justify-between gap-1 px-2 py-1">
+                    {canExpandSessions ? (
+                      <button
+                        type="button"
+                        aria-label={`Expand sessions in ${projectName}`}
+                        className="text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                        onClick={() => expandProjectSessions(directoryPath, visibleSessionCount, sessions.length)}
+                      >
+                        Expand
+                      </button>
+                    ) : null}
+                    {canRetractSessions ? (
+                      <button
+                        type="button"
+                        aria-label={`Retract sessions in ${projectName}`}
+                        className="text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                        onClick={() => retractProjectSessions(directoryPath, visibleSessionCount)}
+                      >
+                        Retract
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ),
           }
         }),
       },
     ]
-  }, [activeSession?.directoryPath, createSession, creating, state.activeSessionId, state.sessions])
+  }, [activeSession?.directoryPath, createSession, creating, state.activeSessionId, state.sessions, visibleProjectSessionCounts])
 
   const shell = (
     <AppShellLayout
@@ -932,8 +1079,14 @@ export const AssistantWorkspace = () => {
           <NavLink
             to={item.href}
             aria-label={item.ariaLabel}
+            aria-expanded={item.isExpanded}
             className={className}
-            onClick={() => {
+            onClick={(event) => {
+              if (item.onClick) {
+                event.preventDefault()
+                item.onClick()
+                return
+              }
               if (targetSession) dispatch({ type: 'activate', sessionId: targetSession.id })
             }}
           >
@@ -1020,35 +1173,26 @@ export const AssistantWorkspace = () => {
               </div>
             ) : (
               <>
-                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+                <div className="flex min-h-0 flex-1 flex-col px-4 py-3">
                   {state.error ? (
                     <div className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-destructive)] bg-[color:color-mix(in_srgb,var(--color-destructive)_8%,transparent)] px-3 py-2 text-sm text-[var(--color-destructive)]">
                       {state.error}
                     </div>
                   ) : null}
-                  {messages.length === 0 && toolEvents.length === 0 ? (
+                  {transcriptItems.length === 0 && liveTranscriptParts.length === 0 ? (
                     <EmptyState
                       title="No messages yet"
                       description="Send a command to Pi or open a persisted session to load messages."
                     />
                   ) : (
-                    <div className="flex flex-col gap-3">
-                      {messages.map((message) => (
-                        <MessageBubble key={message.id} message={message} />
-                      ))}
-                      {toolEvents.map((tool) => (
-                        <div
-                          key={tool.id}
-                          className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2 text-xs text-[var(--color-muted-foreground)]"
-                        >
-                          <div className="flex items-center gap-2 font-medium text-[var(--color-foreground)]">
-                            <Terminal className="h-3.5 w-3.5" />
-                            {tool.name}
-                            {tool.status ? <Badge>{tool.status}</Badge> : null}
-                          </div>
-                          {tool.summary ? <p className="mt-1">{tool.summary}</p> : null}
-                        </div>
-                      ))}
+                    <div className="min-h-0 flex-1">
+                      <TranscriptRenderer
+                        items={transcriptItems}
+                        liveParts={liveTranscriptParts}
+                        canLoadOlder={Boolean(transcriptHistory && !transcriptHistory.complete)}
+                        loadingOlder={loadingOlderTranscript}
+                        onLoadOlder={loadOlderTranscript}
+                      />
                     </div>
                   )}
                 </div>

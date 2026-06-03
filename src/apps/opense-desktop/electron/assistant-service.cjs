@@ -44,6 +44,15 @@ const PI_TUI_BUILTIN_COMMAND_NAMES = new Set(PI_TUI_BUILTIN_COMMANDS.map((comman
 const OPEN_ASS_ONLY_COMMAND_NAMES = new Set(OPEN_ASS_ONLY_COMMANDS.map((command) => command.name))
 
 const nowIso = () => new Date().toISOString()
+let tuiIdSequence = 0
+const createTuiId = (prefix) => {
+  tuiIdSequence = (tuiIdSequence + 1) % Number.MAX_SAFE_INTEGER
+  return `${prefix}_${Date.now().toString(36)}${tuiIdSequence.toString(36).padStart(4, '0')}`
+}
+const createPromptIds = () => ({
+  messageID: createTuiId('msg'),
+  textPartID: createTuiId('prt'),
+})
 
 const expandHomePath = (value, homeDir = os.homedir()) => {
   if (typeof value !== 'string' || value.trim() === '') return value
@@ -150,9 +159,41 @@ const validateStreamingBehavior = (behavior) => {
   if (behavior == null) return 'followUp'
   return validateOneOf(behavior, ['steer', 'followUp'], 'Streaming behavior')
 }
+const validatePromptIds = (promptIds) => {
+  const generated = createPromptIds()
+  if (promptIds == null) return generated
+  if (typeof promptIds !== 'object' || Array.isArray(promptIds)) return generated
+  const messageID = typeof promptIds.messageID === 'string' && promptIds.messageID.startsWith('msg_')
+    ? promptIds.messageID
+    : generated.messageID
+  const textPartID = typeof promptIds.textPartID === 'string' && promptIds.textPartID.startsWith('prt_')
+    ? promptIds.textPartID
+    : generated.textPartID
+  return { messageID, textPartID }
+}
+const buildPromptPayload = (message, behavior, promptIds) => {
+  const ids = validatePromptIds(promptIds)
+  const text = validateCommand(message)
+  return {
+    type: 'prompt',
+    message: text,
+    streamingBehavior: validateStreamingBehavior(behavior),
+    messageID: ids.messageID,
+    textPartID: ids.textPartID,
+    parts: [{ id: ids.textPartID, type: 'text', text }],
+  }
+}
 const validateBoolean = (value, label) => {
   if (typeof value !== 'boolean') throw new Error(`${label} must be true or false.`)
   return value
+}
+
+const validatePositiveInteger = (value, label) => {
+  const number = Number(value)
+  if (!Number.isInteger(number) || number <= 0 || number > 1000) {
+    throw new Error(`${label} must be a positive integer.`)
+  }
+  return number
 }
 
 const validateOneOf = (value, allowed, label) => {
@@ -354,34 +395,276 @@ const contentToText = (content) => {
     if (typeof content.content === 'string') return content.content
     if (Array.isArray(content.content)) return contentToText(content.content)
     if (typeof content.value === 'string') return content.value
-    if (content.type === 'toolCall') return `${content.name ?? 'tool'} ${JSON.stringify(content.arguments ?? {})}`
   }
   return ''
 }
 
+const normalizePartId = (part, messageId, index, type) => {
+  if (part && typeof part === 'object' && !Array.isArray(part)) {
+    const explicit = part.id ?? part.partId ?? part.partID
+    if (explicit != null) return String(explicit)
+    if (type === 'toolCall' && (part.toolCallId ?? part.toolCallID) != null) return String(part.toolCallId ?? part.toolCallID)
+  }
+  return `${messageId}:part:${index}`
+}
+
+const normalizeMessagePart = (part, index = 0, messageId = `msg-${index}`) => {
+  if (part == null) return null
+  if (typeof part === 'string') {
+    return { id: `${messageId}:part:${index}`, messageId, type: 'text', text: part, raw: part }
+  }
+  if (typeof part !== 'object' || Array.isArray(part)) {
+    return { id: `${messageId}:part:${index}`, messageId, type: 'unknown', label: 'value', value: part, raw: part }
+  }
+
+  const type = String(part.type ?? part.kind ?? '')
+  if (type === 'text' || typeof part.text === 'string') {
+    return {
+      id: normalizePartId(part, messageId, index, 'text'),
+      messageId,
+      type: 'text',
+      text: String(part.text ?? part.content ?? ''),
+      raw: part,
+    }
+  }
+  if (type === 'thinking' || type === 'reasoning') {
+    return {
+      id: normalizePartId(part, messageId, index, 'thinking'),
+      messageId,
+      type: 'thinking',
+      text: String(part.text ?? part.content ?? part.delta ?? ''),
+      raw: part,
+    }
+  }
+  if (type === 'toolCall' || type === 'tool_call') {
+    const id = normalizePartId(part, messageId, index, 'toolCall')
+    return {
+      id,
+      messageId,
+      type: 'toolCall',
+      toolCallId: String(part.toolCallId ?? part.toolCallID ?? id),
+      name: String(part.name ?? part.toolName ?? part.tool ?? 'tool'),
+      arguments: part.arguments ?? part.args ?? part.input,
+      status: typeof part.status === 'string' ? part.status : undefined,
+      raw: part,
+    }
+  }
+  if (type === 'image' || type === 'image_url' || typeof part.image === 'string' || typeof part.url === 'string') {
+    return {
+      id: normalizePartId(part, messageId, index, 'image'),
+      messageId,
+      type: 'image',
+      url: typeof part.url === 'string' ? part.url : typeof part.image === 'string' ? part.image : undefined,
+      data: typeof part.data === 'string' ? part.data : undefined,
+      mimeType: typeof part.mimeType === 'string' ? part.mimeType : typeof part.mediaType === 'string' ? part.mediaType : undefined,
+      alt: typeof part.alt === 'string' ? part.alt : undefined,
+      raw: part,
+    }
+  }
+  return {
+    id: normalizePartId(part, messageId, index, type || 'unknown'),
+    messageId,
+    type: 'unknown',
+    label: type || 'part',
+    value: part,
+    raw: part,
+  }
+}
+
+const normalizeMessageParts = (content, messageId) => {
+  if (content == null) return undefined
+  const parts = (Array.isArray(content) ? content : [content])
+    .map((part, index) => normalizeMessagePart(part, index, messageId))
+    .filter(Boolean)
+  return parts.length ? parts : undefined
+}
+
 const messageRole = (message) => {
-  if (message?.role === 'assistant') return 'assistant'
-  if (message?.role === 'system') return 'system'
-  if (message?.role === 'tool' || message?.role === 'toolResult') return 'tool'
+  if (typeof message?.role === 'string' && message.role.trim()) return message.role
   return 'user'
 }
 
+const normalizeTimestamp = (value) => {
+  if (typeof value === 'string' && value.trim()) return value
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const millis = value < 1_000_000_000_000 ? value * 1000 : value
+    return new Date(millis).toISOString()
+  }
+  return undefined
+}
+
+const stableMessageId = (message) => {
+  const id = message?.id ?? message?.entryId ?? message?.messageId ?? message?.messageID ?? message?.info?.id
+  return id == null || String(id).trim() === '' ? null : String(id)
+}
+
+const stableParentMessageId = (message) => {
+  const id = message?.parentMessageId
+    ?? message?.parentMessageID
+    ?? message?.parentId
+    ?? message?.parentID
+    ?? message?.info?.parentMessageId
+    ?? message?.info?.parentMessageID
+    ?? message?.info?.parentId
+    ?? message?.info?.parentID
+  return id == null || String(id).trim() === '' ? undefined : String(id)
+}
+
 const normalizeMessageRecord = (message, index = 0) => {
-  const id = String(message?.id ?? message?.entryId ?? message?.messageId ?? `msg-${index}`)
-  const role = messageRole(message)
+  const id = stableMessageId(message)
+  if (!id) return null
+  const nestedMessage = message?.type === 'message' && message?.message && typeof message.message === 'object' && !Array.isArray(message.message)
+    ? message.message
+    : null
+  const messageData = nestedMessage ?? message
+  const role = messageRole(messageData)
+  const content = messageData && typeof messageData === 'object'
+    ? Object.prototype.hasOwnProperty.call(messageData, 'content')
+      ? messageData.content
+      : Object.prototype.hasOwnProperty.call(messageData, 'text')
+        ? messageData.text
+        : Object.prototype.hasOwnProperty.call(messageData, 'message')
+          ? messageData.message
+          : ''
+    : messageData
   return {
     id,
     role,
-    content: contentToText(message?.content ?? message?.text ?? message?.message ?? message),
-    createdAt: typeof message?.timestamp === 'string' ? message.timestamp : typeof message?.createdAt === 'string' ? message.createdAt : undefined,
-    status: message?.stopReason === 'error' ? 'error' : message?.stopReason === 'aborted' ? 'error' : 'complete',
+    content: contentToText(content),
+    createdAt: normalizeTimestamp(message?.timestamp ?? messageData?.createdAt ?? messageData?.timestamp ?? message?.createdAt),
+    status: messageData?.stopReason === 'error' ? 'error' : messageData?.stopReason === 'aborted' ? 'error' : 'complete',
+    parentMessageId: stableParentMessageId(message),
+    raw: message,
+    parts: normalizeMessageParts(content, id),
+    toolCallId: (messageData?.toolCallId ?? message?.toolCallId) == null ? undefined : String(messageData?.toolCallId ?? message?.toolCallId),
+    toolName: messageData?.toolName == null && messageData?.name == null && messageData?.tool == null && message?.toolName == null && message?.name == null && message?.tool == null
+      ? undefined
+      : String(messageData?.toolName ?? messageData?.name ?? messageData?.tool ?? message?.toolName ?? message?.name ?? message?.tool),
+    details: messageData?.details ?? messageData?.result?.details ?? message?.details ?? message?.result?.details,
   }
+}
+
+const transcriptInfoFromMessage = (message) => ({
+  id: message.id,
+  role: message.role,
+  content: message.content,
+  createdAt: message.createdAt,
+  status: message.status,
+  parentMessageId: message.parentMessageId,
+  raw: message.raw,
+  toolCallId: message.toolCallId,
+  toolName: message.toolName,
+  details: message.details,
+})
+
+const transcriptItemFromMessage = (message) => ({
+  info: transcriptInfoFromMessage(message),
+  parts: Array.isArray(message.parts) ? message.parts : [],
+})
+
+const transcriptEventsFromMessage = (sessionId, message) => {
+  if (!message) return []
+  const item = transcriptItemFromMessage(message)
+  return [
+    { type: 'transcript_message_upsert', sessionId, info: item.info },
+    ...item.parts.map((part) => ({ type: 'transcript_part_upsert', sessionId, part })),
+  ]
+}
+
+const normalizeTranscriptSnapshot = (messages) =>
+  messages.map(normalizeMessageRecord).filter(Boolean).map(transcriptItemFromMessage)
+
+const transcriptItemsFromSessionFile = (filePath) => {
+  if (!isUsablePiSessionFile(filePath)) return []
+  try {
+    return normalizeTranscriptSnapshot(readJsonLines(filePath).filter((entry) => entry?.type === 'message'))
+  } catch {
+    return []
+  }
+}
+
+const partIdForDelta = (messageId, assistantEvent, partType) => {
+  const part = assistantEvent?.part && typeof assistantEvent.part === 'object' ? assistantEvent.part : {}
+  const explicit = assistantEvent?.partId
+    ?? assistantEvent?.partID
+    ?? part.id
+    ?? part.partId
+    ?? part.partID
+  if (explicit != null) return String(explicit)
+  return `${messageId}:${partType}`
 }
 
 const getRpcMessagesArray = (payload) => {
   if (Array.isArray(payload)) return payload
   if (Array.isArray(payload?.messages)) return payload.messages
+  if (Array.isArray(payload?.items)) return payload.items
   return []
+}
+
+const transcriptItemCandidates = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.items)) return payload.items
+  return []
+}
+
+const normalizeTranscriptItemRecord = (item) => {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return null
+  const info = item.info
+  if (!info || typeof info !== 'object' || Array.isArray(info)) return null
+  const id = stableMessageId(info)
+  if (!id) return null
+  const parts = Array.isArray(item.parts)
+    ? item.parts.map((part, index) => normalizeMessagePart(part, index, id)).filter(Boolean)
+    : []
+  const infoTime = info.time && typeof info.time === 'object' && !Array.isArray(info.time) ? info.time : {}
+  const content = contentToText(
+    info.content
+      ?? info.text
+      ?? info.message
+      ?? parts.filter((part) => part.type === 'text').map((part) => part.text).join(''),
+  )
+  return {
+    info: {
+      id,
+      role: messageRole(info),
+      content,
+      createdAt: normalizeTimestamp(info.createdAt ?? info.timestamp ?? infoTime.created ?? infoTime.completed),
+      status: info.stopReason === 'error' || info.stopReason === 'aborted' ? 'error' : typeof info.status === 'string' ? info.status : 'complete',
+      parentMessageId: stableParentMessageId(info),
+      raw: info.raw ?? info,
+      toolCallId: info.toolCallId == null && info.toolCallID == null ? undefined : String(info.toolCallId ?? info.toolCallID),
+      toolName: info.toolName == null && info.name == null && info.tool == null
+        ? undefined
+        : String(info.toolName ?? info.name ?? info.tool),
+      details: info.details ?? info.result?.details,
+    },
+    parts,
+  }
+}
+
+const normalizeTranscriptPagePayload = (payload, options = {}) => {
+  const rawItems = transcriptItemCandidates(payload).map(normalizeTranscriptItemRecord).filter(Boolean)
+  const items = rawItems.length ? rawItems : normalizeTranscriptSnapshot(getRpcMessagesArray(payload))
+  const isObjectPayload = payload && typeof payload === 'object' && !Array.isArray(payload)
+  const hasPageMetadata = isObjectPayload && (
+    Object.prototype.hasOwnProperty.call(payload, 'cursor') ||
+    Object.prototype.hasOwnProperty.call(payload, 'complete') ||
+    Object.prototype.hasOwnProperty.call(payload, 'hasMore')
+  )
+  const cursor = hasPageMetadata && payload.cursor != null ? String(payload.cursor) : undefined
+  const complete = hasPageMetadata
+    ? typeof payload.complete === 'boolean'
+      ? payload.complete
+      : typeof payload.hasMore === 'boolean'
+        ? !payload.hasMore
+        : !cursor
+    : true
+  return {
+    items,
+    cursor,
+    complete,
+    mode: options.before && hasPageMetadata ? 'prepend' : 'replace',
+  }
 }
 
 const normalizeTodoStatus = (value, fallback) => {
@@ -447,8 +730,19 @@ const buildSteerQueueState = ({ active, queuedCount = 0 } = {}) => ({
   hint: active ? 'Enter steers the active turn. Tab queues a follow-up.' : '',
 })
 
-const normalizePiEvent = (sessionId, event) => {
+const normalizePiEvent = (sessionId, event, knownPartIds) => {
   if (!event || typeof event !== 'object') return []
+
+  const eventMessageId = (assistantEvent = {}) => {
+    const id = event.message?.id
+      ?? event.messageId
+      ?? event.messageID
+      ?? assistantEvent.messageId
+      ?? assistantEvent.messageID
+      ?? assistantEvent.part?.messageId
+      ?? assistantEvent.part?.messageID
+    return id == null ? undefined : String(id)
+  }
 
   if (event.type === 'agent_start') {
     return [
@@ -458,10 +752,8 @@ const normalizePiEvent = (sessionId, event) => {
   }
 
   if (event.type === 'agent_end') {
-    const messages = Array.isArray(event.messages) ? event.messages.map(normalizeMessageRecord) : []
     const todos = extractLatestTodosFromMessages(event.messages)
     return [
-      ...(messages.length ? [{ type: 'messages', sessionId, messages }] : []),
       ...(todos ? [{ type: 'todos', sessionId, todos }] : []),
       { type: 'metadata', sessionId, metadata: { steerQueue: buildSteerQueueState({ active: false }) } },
       { type: 'status', sessionId, status: 'running' },
@@ -469,12 +761,12 @@ const normalizePiEvent = (sessionId, event) => {
   }
 
   if (event.type === 'message_start' || event.type === 'message_end') {
-    return event.message ? [{ type: 'message', sessionId, message: normalizeMessageRecord(event.message) }] : []
+    return event.message ? transcriptEventsFromMessage(sessionId, normalizeMessageRecord(event.message)) : []
   }
 
   if (event.type === 'turn_end') {
     const events = []
-    if (event.message) events.push({ type: 'message', sessionId, message: normalizeMessageRecord(event.message) })
+    if (event.message) events.push(...transcriptEventsFromMessage(sessionId, normalizeMessageRecord(event.message)))
     for (const result of Array.isArray(event.toolResults) ? event.toolResults : []) {
       const todos = todosFromToolResult(result)
       if (todos) events.push({ type: 'todos', sessionId, todos })
@@ -496,25 +788,84 @@ const normalizePiEvent = (sessionId, event) => {
   if (event.type === 'message_update') {
     const assistantEvent = event.assistantMessageEvent ?? {}
     const events = []
+    const messageId = eventMessageId(assistantEvent)
+    const message = event.message ? normalizeMessageRecord(event.message) : null
+    if (message) events.push({ type: 'transcript_message_upsert', sessionId, info: transcriptInfoFromMessage(message) })
+
     if (assistantEvent.type === 'text_delta' || assistantEvent.type === 'thinking_delta') {
-      events.push({
-        type: 'text_delta',
-        sessionId,
-        messageId: event.message?.id,
-        delta: String(assistantEvent.delta ?? ''),
-      })
+      const delta = String(assistantEvent.delta ?? '')
+      const partType = assistantEvent.type === 'text_delta' ? 'text' : 'thinking'
+      if (!messageId) {
+        events.push({
+          type: 'transcript_unkeyed_delta',
+          sessionId,
+          content: delta,
+          partType,
+          raw: assistantEvent,
+        })
+      } else {
+        const partId = partIdForDelta(messageId, assistantEvent, partType)
+        if (!knownPartIds || !knownPartIds.has(`${messageId}:${partId}`)) {
+          events.push({
+            type: 'transcript_part_upsert',
+            sessionId,
+            part: {
+              id: partId,
+              messageId,
+              type: partType,
+              text: '',
+              raw: assistantEvent,
+            },
+          })
+          knownPartIds?.add(`${messageId}:${partId}`)
+        }
+        events.push({
+          type: 'transcript_part_delta',
+          sessionId,
+          messageId,
+          partId,
+          partType,
+          delta,
+          raw: assistantEvent,
+        })
+      }
     } else if (assistantEvent.type === 'toolcall_start' || assistantEvent.type === 'toolcall_end') {
-      events.push({
-        type: 'tool',
-        sessionId,
-        tool: {
-          id: String(assistantEvent.toolCall?.id ?? assistantEvent.id ?? crypto.randomUUID()),
-          name: String(assistantEvent.toolCall?.name ?? assistantEvent.name ?? 'tool'),
-          status: assistantEvent.type === 'toolcall_end' ? 'complete' : 'running',
-          summary: assistantEvent.toolCall ? JSON.stringify(assistantEvent.toolCall.arguments ?? {}) : undefined,
-          createdAt: nowIso(),
-        },
-      })
+      const toolCall = assistantEvent.toolCall ?? {}
+      const toolCallId = String(toolCall.id ?? assistantEvent.id ?? crypto.randomUUID())
+      const toolName = String(toolCall.name ?? assistantEvent.name ?? 'tool')
+      const toolArgs = toolCall.arguments ?? assistantEvent.arguments ?? assistantEvent.args
+      if (!messageId) {
+        events.push({
+          type: 'transcript_unkeyed_delta',
+          sessionId,
+          content: toolName,
+          partType: 'toolCall',
+          part: {
+            type: 'toolCall',
+            id: toolCallId,
+            name: toolName,
+            arguments: toolArgs,
+            status: assistantEvent.type === 'toolcall_end' ? 'complete' : 'running',
+            raw: assistantEvent,
+          },
+          raw: assistantEvent,
+        })
+      } else {
+        events.push({
+          type: 'transcript_part_upsert',
+          sessionId,
+          part: {
+            id: toolCallId,
+            messageId,
+            type: 'toolCall',
+            toolCallId,
+            name: toolName,
+            arguments: toolArgs,
+            status: assistantEvent.type === 'toolcall_end' ? 'complete' : 'running',
+            raw: assistantEvent,
+          },
+        })
+      }
     } else if (assistantEvent.type === 'error') {
       events.push({ type: 'error', sessionId, error: String(assistantEvent.error ?? assistantEvent.reason ?? 'Pi agent error') })
     }
@@ -1054,6 +1405,7 @@ const createAssistantService = ({
     const messages = getRpcMessagesArray(await sendRpc(client, { type: 'get_messages' }).catch(() => []))
     const options = messages
       .map(normalizeMessageRecord)
+      .filter(Boolean)
       .filter((message) => message.role === 'user' && message.id && message.content.trim())
       .slice(-20)
       .reverse()
@@ -1162,6 +1514,7 @@ const createAssistantService = ({
       const messages = getRpcMessagesArray(await sendRpc(client, { type: 'get_messages' }).catch(() => []))
       const assistant = messages
         .map(normalizeMessageRecord)
+        .filter(Boolean)
         .reverse()
         .find((message) => message.role === 'assistant' && message.content.trim())
       text = assistant?.content ?? ''
@@ -1297,8 +1650,17 @@ const createAssistantService = ({
       return
     }
 
-    for (const event of normalizePiEvent(client.sessionId, data)) {
+    for (const event of normalizePiEvent(client.sessionId, data, client.transcriptPartIds)) {
       emitSessionEvent(client.sessionId, event)
+    }
+    if (data.type === 'agent_end' || data.type === 'turn_end') {
+      void emitMessages(client).catch((error) => {
+        emitSessionEvent(client.sessionId, {
+          type: 'error',
+          sessionId: client.sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      })
     }
   }
 
@@ -1330,6 +1692,7 @@ const createAssistantService = ({
       stdoutBuffer: '',
       stderr: '',
       exitError: null,
+      transcriptPartIds: new Set(),
     }
     processes.set(session.id, client)
 
@@ -1370,7 +1733,9 @@ const createAssistantService = ({
     const model = modelLabelFromState(state)
     const updated = updateRegistrySession(session.id, {
       status: 'running',
-      piSessionFile: state?.sessionFile,
+      piSessionFile: isUsablePiSessionFile(state?.sessionFile) || !session.piSessionFile
+        ? state?.sessionFile
+        : session.piSessionFile,
       title: state?.sessionName ?? session.title,
       displayName: state?.sessionName ?? session.displayName,
       model,
@@ -1388,13 +1753,40 @@ const createAssistantService = ({
 
   const ensureProcess = async (sessionId) => startProcess(getRegisteredSession(sessionId))
 
-  const emitMessages = async (client) => {
-    const messages = getRpcMessagesArray(await sendRpc(client, { type: 'get_messages' }).catch(() => []))
-    const normalized = messages.map(normalizeMessageRecord)
-    emitSessionEvent(client.sessionId, { type: 'messages', sessionId: client.sessionId, messages: normalized })
+  const loadTranscriptPageForClient = async (client, options = {}) => {
+    const command = { type: 'get_messages' }
+    if (options.before) command.before = validateText(String(options.before), 'Transcript cursor')
+    if (options.limit != null) command.limit = validatePositiveInteger(options.limit, 'Transcript page limit')
+    const payload = await sendRpc(client, command).catch(() => [])
+    const page = normalizeTranscriptPagePayload(payload, options)
+    if (!page.items.length && !options.before) {
+      const registered = resolveKnownSession(client.sessionId)
+      const sessionFile = [registered?.piSessionFile, client.session?.piSessionFile].find(isUsablePiSessionFile)
+      const fileItems = transcriptItemsFromSessionFile(sessionFile)
+      if (fileItems.length) {
+        page.items = fileItems
+        page.cursor = undefined
+        page.complete = true
+        page.mode = 'replace'
+      }
+    }
+    emitSessionEvent(client.sessionId, {
+      type: 'transcript_snapshot',
+      sessionId: client.sessionId,
+      items: page.items,
+      cursor: page.cursor,
+      complete: page.complete,
+      mode: page.mode,
+    })
+    const messages = getRpcMessagesArray(payload)
     const todos = extractLatestTodosFromMessages(messages)
     if (todos) emitSessionEvent(client.sessionId, { type: 'todos', sessionId: client.sessionId, todos })
-    return normalized
+    return page
+  }
+
+  const emitMessages = async (client) => {
+    const page = await loadTranscriptPageForClient(client)
+    return page.items
   }
 
   const refreshRuntimeState = async (client) => {
@@ -1477,12 +1869,17 @@ const createAssistantService = ({
       return listKnownSessions().find((item) => item.id === session.id) ?? session
     },
 
-    sendCommand: async (sessionId, command, behavior) => {
+    loadTranscriptPage: async (sessionId, options = {}) => {
       const client = await ensureProcess(sessionId)
-      await sendRpc(client, { type: 'prompt', message: validateCommand(command), streamingBehavior: validateStreamingBehavior(behavior) })
+      return loadTranscriptPageForClient(client, options)
     },
 
-    runSlashCommand: async (sessionId, command, args) => {
+    sendCommand: async (sessionId, command, behavior, promptIds) => {
+      const client = await ensureProcess(sessionId)
+      await sendRpc(client, buildPromptPayload(command, behavior, promptIds))
+    },
+
+    runSlashCommand: async (sessionId, command, args, promptIds) => {
       const slash = validateText(command, 'Slash command').replace(/^\//, '')
       const commandName = slash.trim()
       const rawArgs = typeof args === 'string' ? args : ''
@@ -1658,7 +2055,7 @@ const createAssistantService = ({
 
       const commands = await sendRpc(client, { type: 'get_commands' }).catch(() => ({ commands: [] }))
       if (hasPiCommand(commands, commandName)) {
-        await sendRpc(client, { type: 'prompt', message: `/${slash}${suffix}`, streamingBehavior: 'followUp' })
+        await sendRpc(client, buildPromptPayload(`/${slash}${suffix}`, 'followUp', promptIds))
         return { handledBy: 'pi' }
       }
 
@@ -1865,7 +2262,7 @@ const createAssistantService = ({
           return
         }
       }
-      await sendRpc(client, { type: 'prompt', message, streamingBehavior: 'followUp' })
+      await sendRpc(client, buildPromptPayload(message, 'followUp'))
     },
 
     onSessionEvent: (sessionId, callback) => {
@@ -1904,9 +2301,14 @@ const registerAssistantIpc = ({ ipcMain, service }) => {
   ipcMain.handle('assistant:list-sessions', () => service.listSessions())
   ipcMain.handle('assistant:create-session', (_event, input) => service.createSession(input))
   ipcMain.handle('assistant:open-session', (_event, sessionId) => service.openSession(sessionId))
-  ipcMain.handle('assistant:send-command', (_event, sessionId, command, behavior) => service.sendCommand(sessionId, command, behavior))
-  ipcMain.handle('assistant:run-slash-command', (_event, sessionId, command, args) =>
-    service.runSlashCommand(sessionId, command, args),
+  ipcMain.handle('assistant:load-transcript-page', (_event, sessionId, options) =>
+    service.loadTranscriptPage(sessionId, options),
+  )
+  ipcMain.handle('assistant:send-command', (_event, sessionId, command, behavior, promptIds) =>
+    service.sendCommand(sessionId, command, behavior, promptIds),
+  )
+  ipcMain.handle('assistant:run-slash-command', (_event, sessionId, command, args, promptIds) =>
+    service.runSlashCommand(sessionId, command, args, promptIds),
   )
   ipcMain.handle('assistant:run-shell-command', (_event, sessionId, command, agent) =>
     service.runShellCommand(sessionId, command, agent),

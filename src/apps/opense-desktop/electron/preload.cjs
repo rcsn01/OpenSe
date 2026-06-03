@@ -12,9 +12,11 @@ contextBridge.exposeInMainWorld('openseAssistant', {
   listSessions: () => ipcRenderer.invoke('assistant:list-sessions'),
   createSession: (input) => ipcRenderer.invoke('assistant:create-session', input),
   openSession: (sessionId) => ipcRenderer.invoke('assistant:open-session', sessionId),
-  sendCommand: (sessionId, command, behavior) => ipcRenderer.invoke('assistant:send-command', sessionId, command, behavior),
-  runSlashCommand: (sessionId, command, args) =>
-    ipcRenderer.invoke('assistant:run-slash-command', sessionId, command, args),
+  loadTranscriptPage: (sessionId, options) => ipcRenderer.invoke('assistant:load-transcript-page', sessionId, options),
+  sendCommand: (sessionId, command, behavior, promptIds) =>
+    ipcRenderer.invoke('assistant:send-command', sessionId, command, behavior, promptIds),
+  runSlashCommand: (sessionId, command, args, promptIds) =>
+    ipcRenderer.invoke('assistant:run-slash-command', sessionId, command, args, promptIds),
   runShellCommand: (sessionId, command, agent) =>
     ipcRenderer.invoke('assistant:run-shell-command', sessionId, command, agent),
   abort: (sessionId) => ipcRenderer.invoke('assistant:abort', sessionId),
@@ -115,7 +117,21 @@ const showRendererError = (title, detail) => {
   }
 }
 
+const isResizeObserverLoopError = (message) => (
+  typeof message === 'string' &&
+  (
+    message.includes('ResizeObserver loop completed with undelivered notifications') ||
+    message.includes('ResizeObserver loop limit exceeded')
+  )
+)
+
 window.addEventListener('error', (event) => {
+  if (isResizeObserverLoopError(event.message)) {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    return
+  }
+
   showRendererError(
     'OpenSe Desktop renderer error',
     event.error?.stack || event.message || 'Unknown renderer error',
@@ -124,6 +140,12 @@ window.addEventListener('error', (event) => {
 
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason
+  if (isResizeObserverLoopError(reason?.message || String(reason))) {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    return
+  }
+
   showRendererError(
     'OpenSe Desktop promise rejection',
     reason?.stack || reason?.message || String(reason),

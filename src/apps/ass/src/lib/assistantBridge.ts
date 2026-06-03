@@ -26,12 +26,92 @@ export type AssistantSession = {
   lastError?: string
 }
 
-export type AssistantTranscriptMessage = {
+export type AssistantMessageRole =
+  | 'user'
+  | 'assistant'
+  | 'system'
+  | 'tool'
+  | 'toolResult'
+  | 'bashExecution'
+  | 'custom'
+  | 'branchSummary'
+  | 'compactionSummary'
+  | (string & {})
+
+export type AssistantMessagePart =
+  | { type: 'text'; text: string; raw?: unknown }
+  | { type: 'thinking'; text: string; raw?: unknown }
+  | {
+      type: 'toolCall'
+      id: string
+      name: string
+      arguments?: unknown
+      status?: string
+      raw?: unknown
+    }
+  | {
+      type: 'image'
+      url?: string
+      data?: string
+      mimeType?: string
+      alt?: string
+      raw?: unknown
+    }
+  | { type: 'unknown'; label?: string; value: unknown; raw?: unknown }
+
+export type AssistantTranscriptPart =
+  | { id: string; messageId: string; type: 'text'; text: string; raw?: unknown }
+  | { id: string; messageId: string; type: 'thinking'; text: string; raw?: unknown }
+  | {
+      id: string
+      messageId: string
+      type: 'toolCall'
+      toolCallId?: string
+      name: string
+      arguments?: unknown
+      status?: string
+      raw?: unknown
+    }
+  | {
+      id: string
+      messageId: string
+      type: 'image'
+      url?: string
+      data?: string
+      mimeType?: string
+      alt?: string
+      raw?: unknown
+    }
+  | { id: string; messageId: string; type: 'unknown'; label?: string; value: unknown; raw?: unknown }
+
+export type AssistantTranscriptMessageInfo = {
   id: string
-  role: 'user' | 'assistant' | 'system' | 'tool'
+  role: AssistantMessageRole
   content: string
   createdAt?: string
   status?: 'streaming' | 'complete' | 'error'
+  parentMessageId?: string
+  optimistic?: boolean
+  raw?: unknown
+  toolCallId?: string
+  toolName?: string
+  details?: unknown
+}
+
+export type AssistantTranscriptItem = {
+  info: AssistantTranscriptMessageInfo
+  parts: AssistantTranscriptPart[]
+}
+
+export type AssistantTranscriptPage = {
+  items: AssistantTranscriptItem[]
+  cursor?: string
+  complete: boolean
+  mode: 'replace' | 'prepend'
+}
+
+export type AssistantTranscriptMessage = AssistantTranscriptMessageInfo & {
+  parts?: Array<AssistantMessagePart | AssistantTranscriptPart>
 }
 
 export type AssistantToolEvent = {
@@ -152,15 +232,47 @@ export type ExtensionUiRequest =
 
 export type AssistantSessionEvent =
   | { type: 'status'; sessionId: string; status: AssistantSessionStatus; model?: string; error?: string }
-  | { type: 'messages'; sessionId: string; messages: AssistantTranscriptMessage[] }
+  | {
+      type: 'transcript_snapshot'
+      sessionId: string
+      items: AssistantTranscriptItem[]
+      cursor?: string
+      complete?: boolean
+      mode?: 'replace' | 'prepend'
+    }
+  | { type: 'transcript_optimistic_add'; sessionId: string; item: AssistantTranscriptItem }
+  | { type: 'transcript_optimistic_remove'; sessionId: string; messageId: string }
+  | { type: 'transcript_message_upsert'; sessionId: string; info: AssistantTranscriptMessageInfo; index?: number }
+  | { type: 'transcript_message_remove'; sessionId: string; messageId: string }
+  | { type: 'transcript_part_upsert'; sessionId: string; part: AssistantTranscriptPart; index?: number }
+  | {
+      type: 'transcript_part_delta'
+      sessionId: string
+      messageId: string
+      partId: string
+      partType: 'text' | 'thinking'
+      delta: string
+      raw?: unknown
+    }
+  | { type: 'transcript_part_remove'; sessionId: string; messageId: string; partId: string }
+  | {
+      type: 'transcript_unkeyed_delta'
+      sessionId: string
+      content: string
+      partType?: 'text' | 'thinking' | 'toolCall' | string
+      part?: AssistantMessagePart
+      raw?: unknown
+    }
+  | { type: 'messages'; sessionId: string; messages: AssistantTranscriptMessage[]; replace?: boolean }
   | { type: 'message'; sessionId: string; message: AssistantTranscriptMessage }
   | {
       type: 'message_part'
       sessionId: string
-      messageId: string
+      messageId?: string
       partId?: string
       content: string
       partType?: string
+      part?: AssistantMessagePart
     }
   | { type: 'text_delta'; sessionId: string; messageId?: string; delta: string }
   | { type: 'tool'; sessionId: string; tool: AssistantToolEvent }
@@ -189,8 +301,22 @@ export type OpenSeAssistantBridge = {
   listSessions: () => Promise<AssistantSession[]>
   createSession: (input?: CreateSessionInput) => Promise<AssistantSession | null>
   openSession: (sessionId: string) => Promise<AssistantSession>
-  sendCommand: (sessionId: string, command: string, behavior?: 'steer' | 'followUp') => Promise<void>
-  runSlashCommand: (sessionId: string, command: string, args?: string) => Promise<SlashCommandResult>
+  loadTranscriptPage: (
+    sessionId: string,
+    options?: { before?: string; limit?: number },
+  ) => Promise<AssistantTranscriptPage>
+  sendCommand: (
+    sessionId: string,
+    command: string,
+    behavior?: 'steer' | 'followUp',
+    promptIds?: { messageID: string; textPartID: string },
+  ) => Promise<void>
+  runSlashCommand: (
+    sessionId: string,
+    command: string,
+    args?: string,
+    promptIds?: { messageID: string; textPartID: string },
+  ) => Promise<SlashCommandResult>
   runShellCommand: (sessionId: string, command: string, agent?: string) => Promise<void>
   abort: (sessionId: string) => Promise<void>
   closeSession: (sessionId: string) => Promise<void>

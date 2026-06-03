@@ -334,7 +334,10 @@ describe('assistant service', () => {
     expect(spawn.mock.calls[0][1]).toEqual(expect.arrayContaining(['--session', firstFile]))
     expect(spawn.mock.calls[1][1]).toEqual(expect.arrayContaining(['--session', secondFile]))
     expect(resumed).toMatchObject({ handledBy: 'builtin', session: expect.objectContaining({ id: second.id }) })
-    expect(events.some((event) => event.type === 'messages' && event.messages.some((message) => message.content === 'resumed assistant'))).toBe(true)
+    expect(events.some((event) =>
+      event.type === 'transcript_snapshot' &&
+      event.items.some((item) => item.info.content === 'resumed assistant'),
+    )).toBe(true)
     unsubscribe()
   })
 
@@ -344,7 +347,22 @@ describe('assistant service', () => {
       messages: {
         messages: [
           { id: 'msg_user', role: 'user', content: [{ type: 'text', text: 'object user' }] },
-          { id: 'msg_assistant', role: 'assistant', content: [{ type: 'text', text: 'object assistant' }] },
+          {
+            id: 'msg_assistant',
+            role: 'assistant',
+            content: [
+              { type: 'text', text: 'object assistant' },
+              { type: 'toolCall', id: 'tool-1', name: 'todo', arguments: { todos: [{ text: 'Keep structure' }] } },
+            ],
+          },
+          {
+            id: 'tool-1-result',
+            role: 'toolResult',
+            toolCallId: 'tool-1',
+            toolName: 'todo',
+            content: [{ type: 'text', text: 'updated' }],
+            details: { todos: [{ id: '1', text: 'Keep structure', status: 'pending' }] },
+          },
         ],
       },
     })
@@ -361,12 +379,197 @@ describe('assistant service', () => {
     await service.openSession(session.id)
 
     expect(events).toContainEqual(expect.objectContaining({
-      type: 'messages',
-      messages: [
-        expect.objectContaining({ role: 'user', content: 'object user' }),
-        expect.objectContaining({ role: 'assistant', content: 'object assistant' }),
+      type: 'transcript_snapshot',
+      items: [
+        expect.objectContaining({
+          info: expect.objectContaining({
+            role: 'user',
+            content: 'object user',
+            raw: expect.objectContaining({ id: 'msg_user' }),
+          }),
+          parts: [expect.objectContaining({ type: 'text', text: 'object user' })],
+        }),
+        expect.objectContaining({
+          info: expect.objectContaining({
+            role: 'assistant',
+            content: 'object assistant',
+          }),
+          parts: [
+            expect.objectContaining({ id: expect.any(String), messageId: 'msg_assistant', type: 'text', text: 'object assistant' }),
+            expect.objectContaining({ id: 'tool-1', messageId: 'msg_assistant', type: 'toolCall', name: 'todo' }),
+          ],
+        }),
+        expect.objectContaining({
+          info: expect.objectContaining({
+            role: 'toolResult',
+            toolCallId: 'tool-1',
+            toolName: 'todo',
+            content: 'updated',
+            details: { todos: [{ id: '1', text: 'Keep structure', status: 'pending' }] },
+          }),
+        }),
       ],
     }))
+    const loaded = events.find((event) => event.type === 'transcript_snapshot')
+    expect(loaded.items[1].info.content).not.toContain('todo')
+    unsubscribe()
+  })
+
+  it('normalizes persisted JSONL message entries from opened sessions', async () => {
+    const userEntry = {
+      type: 'message',
+      id: 'jsonl-user',
+      parentId: 'model-change',
+      timestamp: '2026-06-01T04:26:33.522Z',
+      message: {
+        role: 'user',
+        content: [{ type: 'text', text: 'old prompt' }],
+        timestamp: 1780287993522,
+      },
+    }
+    const assistantEntry = {
+      type: 'message',
+      id: 'jsonl-assistant',
+      parentId: 'jsonl-user',
+      timestamp: '2026-06-01T04:26:33.523Z',
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: 'old answer' }],
+        stopReason: 'stop',
+        timestamp: 1780287993523,
+      },
+    }
+
+    expect(normalizeMessageRecord(userEntry)).toMatchObject({
+      id: 'jsonl-user',
+      role: 'user',
+      parentMessageId: 'model-change',
+      content: 'old prompt',
+      parts: [expect.objectContaining({ id: expect.any(String), messageId: 'jsonl-user', type: 'text', text: 'old prompt' })],
+    })
+    expect(normalizeMessageRecord(assistantEntry)).toMatchObject({
+      id: 'jsonl-assistant',
+      role: 'assistant',
+      parentMessageId: 'jsonl-user',
+      content: 'old answer',
+      parts: [expect.objectContaining({ id: expect.any(String), messageId: 'jsonl-assistant', type: 'text', text: 'old answer' })],
+    })
+  })
+
+  it('emits direct opencode transcript item arrays returned by get_messages', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess({
+      messages: [
+        {
+          info: {
+            id: 'msg_old_user',
+            role: 'user',
+            parentID: 'root',
+            time: { created: 1780287993522 },
+          },
+          parts: [{ id: 'prt_old_user', type: 'text', text: 'direct old prompt' }],
+        },
+        {
+          info: {
+            id: 'msg_old_assistant',
+            role: 'assistant',
+            parentID: 'msg_old_user',
+            time: { created: 1780287993523 },
+          },
+          parts: [{ id: 'prt_old_assistant', type: 'text', text: 'direct old answer' }],
+        },
+      ],
+    })
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+    const events = []
+    const unsubscribe = service.onSessionEvent(session.id, (event) => events.push(event))
+
+    await service.openSession(session.id)
+
+    const snapshot = events.find((event) => event.type === 'transcript_snapshot')
+    expect(snapshot?.items).toEqual([
+      expect.objectContaining({
+        info: expect.objectContaining({
+          id: 'msg_old_user',
+          role: 'user',
+          parentMessageId: 'root',
+          content: 'direct old prompt',
+          createdAt: '2026-06-01T04:26:33.522Z',
+        }),
+        parts: [expect.objectContaining({ id: 'prt_old_user', messageId: 'msg_old_user', type: 'text', text: 'direct old prompt' })],
+      }),
+      expect.objectContaining({
+        info: expect.objectContaining({
+          id: 'msg_old_assistant',
+          role: 'assistant',
+          parentMessageId: 'msg_old_user',
+          content: 'direct old answer',
+          createdAt: '2026-06-01T04:26:33.523Z',
+        }),
+        parts: [expect.objectContaining({ id: 'prt_old_assistant', messageId: 'msg_old_assistant', type: 'text', text: 'direct old answer' })],
+      }),
+    ])
+    unsubscribe()
+  })
+
+  it('falls back to persisted JSONL history when opened session get_messages is empty', async () => {
+    const directoryPath = makeTempRoot()
+    const sessionRoot = path.join(directoryPath, 'pi-native-sessions')
+    const sessionFile = writePiSessionFile(sessionRoot, directoryPath, '019-fallback-session', [
+      {
+        type: 'message',
+        id: 'jsonl-fallback-user',
+        parentId: null,
+        timestamp: '2026-06-01T04:26:33.522Z',
+        message: { role: 'user', content: [{ type: 'text', text: 'fallback old prompt' }] },
+      },
+      {
+        type: 'message',
+        id: 'jsonl-fallback-assistant',
+        parentId: 'jsonl-fallback-user',
+        timestamp: '2026-06-01T04:26:33.523Z',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'fallback old answer' }] },
+      },
+    ])
+    const userDataPath = path.join(directoryPath, 'user-data')
+    fs.mkdirSync(path.join(userDataPath, 'open-ass'), { recursive: true })
+    fs.writeFileSync(
+      path.join(userDataPath, 'open-ass', 'sessions.json'),
+      JSON.stringify([{ directoryPath, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]),
+    )
+    const fakeProcess = createFakeRpcProcess({ messages: [] })
+    const service = createAssistantService({
+      userDataPath,
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1', PI_CODING_AGENT_SESSION_DIR: sessionRoot },
+    })
+    const [session] = await service.listSessions()
+    const events = []
+    const unsubscribe = service.onSessionEvent(session.id, (event) => events.push(event))
+
+    await service.openSession(session.id)
+
+    expect(session.piSessionFile).toBe(sessionFile)
+    const snapshot = events.filter((event) => event.type === 'transcript_snapshot').at(-1)
+    expect(snapshot?.items).toEqual([
+      expect.objectContaining({
+        info: expect.objectContaining({ id: 'jsonl-fallback-user', content: 'fallback old prompt' }),
+      }),
+      expect.objectContaining({
+        info: expect.objectContaining({
+          id: 'jsonl-fallback-assistant',
+          parentMessageId: 'jsonl-fallback-user',
+          content: 'fallback old answer',
+        }),
+      }),
+    ])
     unsubscribe()
   })
 
@@ -387,13 +590,94 @@ describe('assistant service', () => {
     await service.sendCommand(session.id, 'status')
     await new Promise((resolve) => setImmediate(resolve))
 
-    expect(events.some((event) => event.type === 'messages' && event.messages[0]?.content === 'loaded')).toBe(true)
+    expect(events.some((event) => event.type === 'transcript_snapshot' && event.items[0]?.info.content === 'loaded')).toBe(true)
     expect(fakeProcess.writes.find((command) => command.type === 'prompt')).toMatchObject({
       type: 'prompt',
       message: 'status',
       streamingBehavior: 'followUp',
+      messageID: expect.stringMatching(/^msg_/),
+      textPartID: expect.stringMatching(/^prt_/),
+      parts: [expect.objectContaining({ id: expect.stringMatching(/^prt_/), type: 'text', text: 'status' })],
     })
-    expect(events.some((event) => event.type === 'text_delta' && event.delta === 'hello')).toBe(true)
+    expect(events.some((event) =>
+      event.type === 'transcript_part_delta' &&
+      event.messageId === 'msg_assistant' &&
+      event.delta === 'hello',
+    )).toBe(true)
+
+    unsubscribe()
+  })
+
+  it('refreshes canonical history from get_messages after agent_end', async () => {
+    const directoryPath = makeTempRoot()
+    const options = {
+      messages: [{ id: 'msg_initial', role: 'user', content: 'initial' }],
+    }
+    const fakeProcess = createFakeRpcProcess(options)
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+    const events = []
+    const unsubscribe = service.onSessionEvent(session.id, (event) => events.push(event))
+
+    await service.openSession(session.id)
+    options.messages = [{ id: 'msg_after', role: 'assistant', content: 'after refresh' }]
+    fakeProcess.stdout.emit('data', `${JSON.stringify({ type: 'agent_end' })}\n`)
+    await new Promise((resolve) => setImmediate(resolve))
+    await new Promise((resolve) => setImmediate(resolve))
+
+    const snapshots = events.filter((event) => event.type === 'transcript_snapshot')
+    expect(snapshots.at(-1)?.items).toEqual([
+      expect.objectContaining({
+        info: expect.objectContaining({ id: 'msg_after', content: 'after refresh' }),
+      }),
+    ])
+
+    unsubscribe()
+  })
+
+  it('loads paged transcript history with before and limit when supported', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess({
+      messages: {
+        items: [{ id: 'msg_old', role: 'user', content: 'older' }],
+        cursor: 'cursor_previous',
+        complete: false,
+      },
+    })
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+    const events = []
+    const unsubscribe = service.onSessionEvent(session.id, (event) => events.push(event))
+
+    const page = await service.loadTranscriptPage(session.id, { before: 'cursor_latest', limit: 25 })
+
+    expect(fakeProcess.writes.filter((command) => command.type === 'get_messages').at(-1)).toMatchObject({
+      type: 'get_messages',
+      before: 'cursor_latest',
+      limit: 25,
+    })
+    expect(page).toMatchObject({
+      cursor: 'cursor_previous',
+      complete: false,
+      mode: 'prepend',
+      items: [expect.objectContaining({ info: expect.objectContaining({ id: 'msg_old', content: 'older' }) })],
+    })
+    expect(events.at(-1)).toMatchObject({
+      type: 'transcript_snapshot',
+      cursor: 'cursor_previous',
+      complete: false,
+      mode: 'prepend',
+    })
 
     unsubscribe()
   })
@@ -620,13 +904,19 @@ describe('assistant service', () => {
     })
     const session = await service.createSession({ directoryPath })
 
-    const result = await service.runSlashCommand(session.id, 'fix', 'test')
+    const result = await service.runSlashCommand(session.id, 'fix', 'test', {
+      messageID: 'msg_custom',
+      textPartID: 'prt_custom',
+    })
 
     expect(result).toEqual({ handledBy: 'pi' })
     expect(fakeProcess.writes.find((command) => command.type === 'prompt')).toMatchObject({
       type: 'prompt',
       message: '/fix test',
       streamingBehavior: 'followUp',
+      messageID: 'msg_custom',
+      textPartID: 'prt_custom',
+      parts: [expect.objectContaining({ id: 'prt_custom', text: '/fix test' })],
     })
   })
 
@@ -841,10 +1131,70 @@ describe('assistant service', () => {
       }),
     ).toEqual([
       {
-        type: 'text_delta',
+        type: 'transcript_message_upsert',
+        sessionId: 'ses_test',
+        info: expect.objectContaining({ id: 'msg_1', role: 'assistant' }),
+      },
+      {
+        type: 'transcript_part_upsert',
+        sessionId: 'ses_test',
+        part: expect.objectContaining({
+          id: 'msg_1:text',
+          messageId: 'msg_1',
+          type: 'text',
+          text: '',
+        }),
+      },
+      {
+        type: 'transcript_part_delta',
         sessionId: 'ses_test',
         messageId: 'msg_1',
+        partId: 'msg_1:text',
+        partType: 'text',
         delta: 'abc',
+        raw: expect.objectContaining({ type: 'text_delta' }),
+      },
+    ])
+
+    expect(
+      normalizePiEvent('ses_test', {
+        type: 'message_update',
+        assistantMessageEvent: { type: 'text_delta', delta: 'keyed only', messageID: 'msg_keyed', partID: 'prt_keyed' },
+      }),
+    ).toEqual([
+      {
+        type: 'transcript_part_upsert',
+        sessionId: 'ses_test',
+        part: expect.objectContaining({
+          id: 'prt_keyed',
+          messageId: 'msg_keyed',
+          type: 'text',
+          text: '',
+        }),
+      },
+      {
+        type: 'transcript_part_delta',
+        sessionId: 'ses_test',
+        messageId: 'msg_keyed',
+        partId: 'prt_keyed',
+        partType: 'text',
+        delta: 'keyed only',
+        raw: expect.objectContaining({ type: 'text_delta' }),
+      },
+    ])
+
+    expect(
+      normalizePiEvent('ses_test', {
+        type: 'message_update',
+        assistantMessageEvent: { type: 'thinking_delta', delta: 'thought' },
+      }),
+    ).toEqual([
+      {
+        type: 'transcript_unkeyed_delta',
+        sessionId: 'ses_test',
+        content: 'thought',
+        partType: 'thinking',
+        raw: expect.objectContaining({ type: 'thinking_delta' }),
       },
     ])
 
@@ -852,9 +1202,39 @@ describe('assistant service', () => {
       normalizeMessageRecord({
         id: 'msg_1',
         role: 'assistant',
-        content: [{ type: 'text', text: 'hello' }],
+        content: [
+          { type: 'text', text: 'hello' },
+          { type: 'toolCall', id: 'tool-1', name: 'todo', arguments: { todos: [{ text: 'Ship' }] } },
+        ],
       }),
-    ).toMatchObject({ id: 'msg_1', role: 'assistant', content: 'hello' })
+    ).toMatchObject({
+      id: 'msg_1',
+      role: 'assistant',
+      content: 'hello',
+      raw: expect.objectContaining({ id: 'msg_1' }),
+      parts: [
+        expect.objectContaining({ id: expect.any(String), messageId: 'msg_1', type: 'text', text: 'hello' }),
+        expect.objectContaining({ id: 'tool-1', messageId: 'msg_1', type: 'toolCall', toolCallId: 'tool-1', name: 'todo' }),
+      ],
+    })
+
+    expect(
+      normalizeMessageRecord({
+        id: 'result_1',
+        role: 'toolResult',
+        toolCallId: 'tool-1',
+        toolName: 'todo',
+        content: [{ type: 'text', text: 'updated' }],
+        details: { todos: [{ text: 'Ship' }] },
+      }),
+    ).toMatchObject({
+      id: 'result_1',
+      role: 'toolResult',
+      toolCallId: 'tool-1',
+      toolName: 'todo',
+      content: 'updated',
+      details: { todos: [{ text: 'Ship' }] },
+    })
   })
 
   it('normalizes todo tool results and queue state for renderer events', () => {
