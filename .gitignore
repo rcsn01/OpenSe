@@ -4,3 +4,4 @@ supabase/.temp/
 supabase/migrations/.temp/
 .env
 opencode.jsonc
+src/apps/opense-desktop/electron/assistant-service.cjs

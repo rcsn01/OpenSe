@@ -18,6 +18,15 @@ const baseSession: AssistantSession = {
   status: 'closed',
 }
 
+const makeProjectSessions = (count: number) =>
+  Array.from({ length: count }, (_, index) => ({
+    ...baseSession,
+    id: `session-${index + 1}`,
+    displayName: `Session ${index + 1}`,
+    createdAt: `2026-06-03T00:${String(index).padStart(2, '0')}:00.000Z`,
+    updatedAt: `2026-06-03T00:${String(index).padStart(2, '0')}:00.000Z`,
+  }))
+
 const renderWorkspace = (initialEntries = ['/']) =>
   render(
     <MemoryRouter initialEntries={initialEntries}>
@@ -28,6 +37,11 @@ const renderWorkspace = (initialEntries = ['/']) =>
     </MemoryRouter>,
   )
 
+const expectPromptIds = () => expect.objectContaining({
+  messageID: expect.stringMatching(/^msg_/),
+  textPartID: expect.stringMatching(/^prt_/),
+})
+
 const installBridge = (overrides: Partial<OpenSeAssistantBridge> = {}) => {
   const listeners = new Map<string, (event: AssistantSessionEvent) => void>()
   const bridge: OpenSeAssistantBridge & {
@@ -37,6 +51,7 @@ const installBridge = (overrides: Partial<OpenSeAssistantBridge> = {}) => {
     listSessions: vi.fn(async () => []),
     createSession: vi.fn(async () => baseSession),
     openSession: vi.fn(async (sessionId) => ({ ...baseSession, id: sessionId, status: 'running' as const })),
+    loadTranscriptPage: vi.fn(async () => ({ items: [], complete: true, mode: 'replace' as const })),
     sendCommand: vi.fn(async () => undefined),
     runSlashCommand: vi.fn(async () => ({ handledBy: 'pi' as const })),
     runShellCommand: vi.fn(async () => undefined),
@@ -120,6 +135,62 @@ describe('AssistantWorkspace', () => {
     expect(screen.getByText(/Users\/dev\/project/)).toBeInTheDocument()
   })
 
+  it('toggles project sessions and expands or retracts in five-session chunks', async () => {
+    const sessions = makeProjectSessions(18)
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => sessions),
+      openSession: vi.fn(async (sessionId) => ({
+        ...(sessions.find((session) => session.id === sessionId) ?? baseSession),
+        id: sessionId,
+        status: 'running' as const,
+      })),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+
+    const project = await screen.findByRole('link', { name: /^project project$/i })
+    await waitFor(() => expect(bridge.openSession).toHaveBeenCalledWith('session-1'))
+
+    for (const label of ['Session 1', 'Session 5']) {
+      expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
+    }
+    expect(screen.queryByRole('link', { name: 'Session 6' })).not.toBeInTheDocument()
+
+    await user.click(project)
+    expect(screen.queryByRole('link', { name: 'Session 1' })).not.toBeInTheDocument()
+
+    await user.click(project)
+    expect(screen.getByRole('link', { name: 'Session 5' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Session 6' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /expand sessions in project/i }))
+    expect(screen.getByRole('link', { name: 'Session 10' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Session 11' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /retract sessions in project/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /expand sessions in project/i }))
+    expect(screen.getByRole('link', { name: 'Session 15' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Session 16' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /expand sessions in project/i }))
+    expect(screen.getByRole('link', { name: 'Session 18' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /expand sessions in project/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /retract sessions in project/i }))
+    expect(screen.getByRole('link', { name: 'Session 15' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Session 16' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /retract sessions in project/i }))
+    expect(screen.getByRole('link', { name: 'Session 10' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Session 11' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /retract sessions in project/i }))
+    expect(screen.getByRole('link', { name: 'Session 5' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Session 6' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /retract sessions in project/i })).not.toBeInTheDocument()
+  })
+
   it('opens a clicked session row and renders its emitted history', async () => {
     const openSession = vi.fn(async (sessionId: string) => {
       ;(window.openseAssistant as (OpenSeAssistantBridge & { emit: (event: AssistantSessionEvent) => void })).emit({
@@ -182,6 +253,47 @@ describe('AssistantWorkspace', () => {
     expect(await screen.findByText('direct route history')).toBeInTheDocument()
   })
 
+  it('renders transcript rows in canonical order instead of moving assistants under parent users', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'transcript_snapshot',
+        sessionId: 'session-1',
+        items: [
+          {
+            info: { id: 'msg_001_user', role: 'user', content: 'first user anchor', status: 'complete' },
+            parts: [{ id: 'prt_001', messageId: 'msg_001_user', type: 'text', text: 'first user anchor' }],
+          },
+          {
+            info: { id: 'msg_002_user', role: 'user', content: 'second user canonical position', status: 'complete' },
+            parts: [{ id: 'prt_002', messageId: 'msg_002_user', type: 'text', text: 'second user canonical position' }],
+          },
+          {
+            info: {
+              id: 'msg_003_assistant',
+              role: 'assistant',
+              parentMessageId: 'msg_001_user',
+              content: 'late assistant canonical position',
+              status: 'complete',
+            },
+            parts: [{ id: 'prt_003', messageId: 'msg_003_assistant', type: 'text', text: 'late assistant canonical position' }],
+          },
+        ],
+      })
+    })
+
+    await screen.findByText('late assistant canonical position')
+    const text = document.body.textContent ?? ''
+    expect(text.indexOf('first user anchor')).toBeLessThan(text.indexOf('second user canonical position'))
+    expect(text.indexOf('second user canonical position')).toBeLessThan(text.indexOf('late assistant canonical position'))
+  })
+
   it('creates a session through the project add button', async () => {
     const bridge = installBridge()
     const user = userEvent.setup()
@@ -217,6 +329,16 @@ describe('AssistantWorkspace', () => {
 
     act(() => {
       bridge.emit({
+        type: 'transcript_message_upsert',
+        sessionId: 'session-1',
+        info: {
+          id: 'assistant-1',
+          role: 'assistant',
+          content: '',
+          status: 'streaming',
+        },
+      })
+      bridge.emit({
         type: 'text_delta',
         sessionId: 'session-1',
         messageId: 'assistant-1',
@@ -241,6 +363,382 @@ describe('AssistantWorkspace', () => {
     expect(screen.queryByRole('button', { name: 'Delete session' })).not.toBeInTheDocument()
   })
 
+  it('renders structured user and assistant transcript parts', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'messages',
+        sessionId: 'session-1',
+        messages: [
+          {
+            id: 'user-structured',
+            role: 'user',
+            content: 'Please run this',
+            status: 'complete',
+            parts: [
+              { type: 'text', text: 'Please run this' },
+              { type: 'unknown', label: 'skillInvocation', value: { skill: 'review' } },
+            ],
+          },
+          {
+            id: 'assistant-structured',
+            role: 'assistant',
+            content: 'I will check it.',
+            status: 'complete',
+            parts: [
+              { type: 'text', text: 'I will check it.' },
+              { type: 'thinking', text: 'Looking at files.' },
+            ],
+          },
+        ],
+      })
+    })
+
+    expect(await screen.findByText('Please run this')).toBeInTheDocument()
+    expect(screen.getByText('Skill invocation')).toBeInTheDocument()
+    expect(screen.getByText('I will check it.')).toBeInTheDocument()
+    expect(screen.getByText('Looking at files.')).toBeInTheDocument()
+  })
+
+  it('pairs assistant tool calls with tool results through the registry', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'messages',
+        sessionId: 'session-1',
+        messages: [
+          {
+            id: 'assistant-tools',
+            role: 'assistant',
+            content: 'Plan:',
+            status: 'complete',
+            parts: [
+              { type: 'text', text: 'Plan:' },
+              {
+                type: 'toolCall',
+                id: 'todo-call',
+                name: 'todo',
+                arguments: { todos: [{ id: '1', text: 'Ship transcript renderer', status: 'in_progress' }] },
+              },
+              {
+                type: 'toolCall',
+                id: 'mystery-call',
+                name: 'mysteryTool',
+                arguments: { mode: 'safe' },
+              },
+            ],
+          },
+          {
+            id: 'todo-result',
+            role: 'toolResult',
+            content: 'updated',
+            status: 'complete',
+            toolCallId: 'todo-call',
+            toolName: 'todo',
+            details: { todos: [{ id: '1', text: 'Ship transcript renderer', status: 'completed' }] },
+          },
+        ],
+      })
+    })
+
+    expect(await screen.findByText('Plan:')).toBeInTheDocument()
+    expect(screen.getByText('Ship transcript renderer')).toBeInTheDocument()
+    expect(screen.getByText('completed')).toBeInTheDocument()
+    expect(screen.getByText('MysteryTool')).toBeInTheDocument()
+    expect(screen.queryByText('updated')).not.toBeInTheDocument()
+  })
+
+  it('renders nonstandard Pi roles as native transcript cards', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'messages',
+        sessionId: 'session-1',
+        messages: [
+          {
+            id: 'bash-role',
+            role: 'bashExecution',
+            content: 'src\npackage.json',
+            status: 'complete',
+            raw: { command: 'ls', output: 'src\npackage.json' },
+          },
+          { id: 'custom-role', role: 'custom', content: 'Custom note', status: 'complete' },
+          { id: 'branch-role', role: 'branchSummary', content: 'Branch note', status: 'complete' },
+          { id: 'compact-role', role: 'compactionSummary', content: 'Compaction note', status: 'complete' },
+        ],
+      })
+    })
+
+    expect(await screen.findByText('$ ls')).toBeInTheDocument()
+    expect(screen.getByText('Custom note')).toBeInTheDocument()
+    expect(screen.getByText('Branch note')).toBeInTheDocument()
+    expect(screen.getByText('Compaction note')).toBeInTheDocument()
+  })
+
+  it('updates streaming thinking and tool-call parts', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'transcript_message_upsert',
+        sessionId: 'session-1',
+        info: {
+          id: 'assistant-stream',
+          role: 'assistant',
+          content: '',
+          status: 'streaming',
+        },
+      })
+      bridge.emit({
+        type: 'message_part',
+        sessionId: 'session-1',
+        messageId: 'assistant-stream',
+        content: 'Simple',
+        partType: 'reasoning',
+        part: { type: 'thinking', text: 'Simple' },
+      })
+      bridge.emit({
+        type: 'message_part',
+        sessionId: 'session-1',
+        messageId: 'assistant-stream',
+        content: ' ping again',
+        partType: 'reasoning',
+        part: { type: 'thinking', text: ' ping again' },
+      })
+      bridge.emit({
+        type: 'message_part',
+        sessionId: 'session-1',
+        messageId: 'assistant-stream',
+        content: ", I'll respond.",
+        partType: 'reasoning',
+        part: { type: 'thinking', text: ", I'll respond." },
+      })
+      bridge.emit({
+        type: 'message_part',
+        sessionId: 'session-1',
+        messageId: 'assistant-stream',
+        content: '',
+        partType: 'toolCall',
+        partId: 'grep-call',
+        part: {
+          type: 'toolCall',
+          id: 'grep-call',
+          name: 'grep',
+          status: 'running',
+          arguments: { pattern: 'old-pattern' },
+        },
+      })
+      bridge.emit({
+        type: 'message_part',
+        sessionId: 'session-1',
+        messageId: 'assistant-stream',
+        content: '',
+        partType: 'toolCall',
+        partId: 'grep-call',
+        part: {
+          type: 'toolCall',
+          id: 'grep-call',
+          name: 'grep',
+          status: 'running',
+          arguments: { pattern: 'new-pattern' },
+        },
+      })
+    })
+
+    expect(await screen.findByText("Simple ping again, I'll respond.")).toBeInTheDocument()
+    expect(screen.getAllByText(/assistant streaming/i)).toHaveLength(1)
+    expect(screen.getByText('Grep: new-pattern')).toBeInTheDocument()
+    expect(screen.queryByText('Grep: old-pattern')).not.toBeInTheDocument()
+  })
+
+  it('keeps older chat history when a new turn snapshot is partial', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'messages',
+        sessionId: 'session-1',
+        replace: true,
+        messages: [
+          { id: 'old-user', role: 'user', content: 'older prompt', status: 'complete' },
+          { id: 'old-assistant', role: 'assistant', content: 'older answer', status: 'complete' },
+        ],
+      })
+    })
+
+    await user.type(screen.getByLabelText('Send command'), 'new prompt')
+    await user.click(screen.getByRole('button', { name: /send/i }))
+    const promptIds = vi.mocked(bridge.sendCommand).mock.calls.at(-1)?.[3]
+    expect(promptIds).toEqual(expectPromptIds())
+    if (!promptIds) throw new Error('Expected generated prompt ids')
+
+    act(() => {
+      bridge.emit({
+        type: 'messages',
+        sessionId: 'session-1',
+        messages: [
+          {
+            id: promptIds.messageID,
+            role: 'user',
+            content: 'new prompt',
+            status: 'complete',
+            parts: [{ type: 'text', id: promptIds.textPartID, messageId: promptIds.messageID, text: 'new prompt' }],
+          },
+          { id: 'new-assistant', role: 'assistant', parentMessageId: promptIds.messageID, content: 'new answer', status: 'complete' },
+        ],
+      })
+    })
+
+    expect(await screen.findByText('older prompt')).toBeInTheDocument()
+    expect(screen.getByText('older answer')).toBeInTheDocument()
+    expect(screen.getByText('new prompt')).toBeInTheDocument()
+    expect(screen.getByText('new answer')).toBeInTheDocument()
+    expect(screen.getAllByText('new prompt')).toHaveLength(1)
+  })
+
+  it('keeps legacy tool events out of canonical transcript rows', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'message',
+        sessionId: 'session-1',
+        message: { id: 'user-1', role: 'user', content: 'clear your todo', status: 'complete' },
+      })
+      bridge.emit({
+        type: 'tool',
+        sessionId: 'session-1',
+        tool: { id: 'todo-call', name: 'todo', status: 'running', summary: '{}' },
+      })
+      bridge.emit({
+        type: 'message',
+        sessionId: 'session-1',
+        message: { id: 'user-2', role: 'user', content: 'create new todo', status: 'complete' },
+      })
+      bridge.emit({
+        type: 'tool',
+        sessionId: 'session-1',
+        tool: { id: 'todo-call', name: 'todo', status: 'complete', summary: 'Cleared 8 todos' },
+      })
+    })
+
+    await screen.findByText('create new todo')
+    expect(screen.queryByText('Cleared 8 todos')).not.toBeInTheDocument()
+    const text = document.body.textContent ?? ''
+    expect(text.indexOf('clear your todo')).toBeLessThan(text.indexOf('create new todo'))
+  })
+
+  it('does not duplicate legacy tool events when structured tool results are present', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'message',
+        sessionId: 'session-1',
+        message: {
+          id: 'assistant-1',
+          role: 'assistant',
+          content: '',
+          status: 'streaming',
+          parts: [{ type: 'toolCall', id: 'todo-call', name: 'todo', arguments: {} }],
+        },
+      })
+      bridge.emit({
+        type: 'message',
+        sessionId: 'session-1',
+        message: {
+          id: 'todo-result',
+          role: 'toolResult',
+          content: 'Cleared 6 todos',
+          status: 'complete',
+          toolCallId: 'todo-call',
+          toolName: 'todo',
+        },
+      })
+      bridge.emit({
+        type: 'tool',
+        sessionId: 'session-1',
+        tool: { id: 'todo-call', name: 'todo', status: 'complete', summary: 'Cleared 6 todos' },
+      })
+    })
+
+    expect(await screen.findByText('Cleared 6 todos')).toBeInTheDocument()
+    expect(screen.getAllByText('Cleared 6 todos')).toHaveLength(1)
+  })
+
+  it('renders a no-id assistant reply below the newest user message', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'message',
+        sessionId: 'session-1',
+        message: { id: 'assistant-old', role: 'assistant', content: 'old answer', status: 'streaming' },
+      })
+      bridge.emit({
+        type: 'message',
+        sessionId: 'session-1',
+        message: { id: 'user-new', role: 'user', content: 'clear todo', status: 'complete' },
+      })
+      bridge.emit({
+        type: 'message_part',
+        sessionId: 'session-1',
+        content: 'Clear the todo list.',
+        partType: 'reasoning',
+        part: { type: 'thinking', text: 'Clear the todo list.' },
+      })
+    })
+
+    expect(await screen.findByText('Clear the todo list.')).toBeInTheDocument()
+    const text = document.body.textContent ?? ''
+    expect(text.indexOf('old answer')).toBeLessThan(text.indexOf('clear todo'))
+    expect(text.indexOf('clear todo')).toBeLessThan(text.indexOf('Clear the todo list.'))
+  })
+
   it('routes composer input by prefix', async () => {
     const bridge = installBridge({
       listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
@@ -255,19 +753,56 @@ describe('AssistantWorkspace', () => {
 
     await user.type(input, 'hello')
     await user.click(send)
-    expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello', 'followUp')
+    expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello', 'followUp', expectPromptIds())
 
     await user.type(input, '/compact')
     await user.click(send)
-    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'compact', '')
+    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'compact', '', undefined)
 
     await user.type(input, '/goal test')
     await user.click(send)
-    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'goal', 'test')
+    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'goal', 'test', undefined)
 
     await user.type(input, '!ls -la')
     await user.click(send)
     expect(bridge.runShellCommand).toHaveBeenCalledWith('session-1', 'ls -la')
+  })
+
+  it('echoes forwarded slash commands optimistically and reconciles by message id', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+      listCapabilities: vi.fn(async () => ({
+        commands: [{ name: 'review', source: 'prompt', description: 'Review changes.' }],
+      })),
+      runSlashCommand: vi.fn(async () => ({ handledBy: 'pi' as const })),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    await user.type(screen.getByLabelText('Send command'), '/review now')
+    await user.click(screen.getByRole('button', { name: /send/i }))
+
+    expect(await screen.findByText('/review now')).toBeInTheDocument()
+    const promptIds = vi.mocked(bridge.runSlashCommand).mock.calls.at(-1)?.[3]
+    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'review', 'now', expectPromptIds())
+    if (!promptIds) throw new Error('Expected forwarded slash prompt ids')
+
+    act(() => {
+      bridge.emit({
+        type: 'transcript_snapshot',
+        sessionId: 'session-1',
+        items: [
+          {
+            info: { id: promptIds.messageID, role: 'user', content: '/review now', status: 'complete' },
+            parts: [{ id: promptIds.textPartID, messageId: promptIds.messageID, type: 'text', text: '/review now' }],
+          },
+        ],
+      })
+    })
+
+    expect(screen.getAllByText('/review now')).toHaveLength(1)
   })
 
   it('sends on Enter and keeps Shift Enter as a newline', async () => {
@@ -285,10 +820,10 @@ describe('AssistantWorkspace', () => {
     expect(input).toHaveValue('hello\nthere')
 
     await user.keyboard('{Enter}')
-    expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello\nthere', 'followUp')
+    expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello\nthere', 'followUp', expectPromptIds())
 
     await user.type(input, '/goal test{Enter}')
-    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'goal', 'test')
+    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'goal', 'test', undefined)
 
     await user.type(input, '!pwd{Enter}')
     expect(bridge.runShellCommand).toHaveBeenCalledWith('session-1', 'pwd')
@@ -540,16 +1075,16 @@ describe('AssistantWorkspace', () => {
     const input = screen.getByLabelText('Send command')
 
     await user.type(input, 'steer now{Enter}')
-    expect(bridge.sendCommand).toHaveBeenLastCalledWith('session-1', 'steer now', 'steer')
+    expect(bridge.sendCommand).toHaveBeenLastCalledWith('session-1', 'steer now', 'steer', expectPromptIds())
 
     await user.type(input, 'queue with tab')
     await user.keyboard('{Tab}')
-    expect(bridge.sendCommand).toHaveBeenLastCalledWith('session-1', 'queue with tab', 'followUp')
+    expect(bridge.sendCommand).toHaveBeenLastCalledWith('session-1', 'queue with tab', 'followUp', expectPromptIds())
     expect(input).toHaveValue('')
 
     await user.type(input, 'queue with button')
     await user.click(screen.getByRole('button', { name: /queue/i }))
-    expect(bridge.sendCommand).toHaveBeenLastCalledWith('session-1', 'queue with button', 'followUp')
+    expect(bridge.sendCommand).toHaveBeenLastCalledWith('session-1', 'queue with button', 'followUp', expectPromptIds())
 
     await user.type(input, 'line one{Shift>}{Enter}{/Shift}line two')
     expect(input).toHaveValue('line one\nline two')
@@ -729,7 +1264,7 @@ describe('AssistantWorkspace', () => {
     await user.click(screen.getByRole('button', { name: /send/i }))
     await user.click(await screen.findByRole('option', { name: 'openai/gpt-test' }))
 
-    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'model', '')
+    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'model', '', undefined)
     expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
       id: 'builtin-model',
       value: 'openai',

@@ -19,6 +19,8 @@ export interface AppShellNavItem {
   ariaLabel?: string
   trailing?: ReactNode
   children?: ReactNode
+  isExpanded?: boolean
+  onClick?: () => void
   isActive?: (pathname: string, href: string) => boolean
 }
 
