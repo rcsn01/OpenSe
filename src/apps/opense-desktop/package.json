@@ -5,7 +5,7 @@
   "type": "commonjs",
   "main": "electron/main.cjs",
   "scripts": {
-    "build-assets": "pnpm --dir ../accounts build --mode desktop && pnpm --dir ../etl build --mode desktop && pnpm --dir ../stoqr build --mode desktop",
+    "build-assets": "pnpm --dir ../accounts build --mode desktop && pnpm --dir ../etl build --mode desktop && pnpm --dir ../stoqr build --mode desktop && pnpm --dir ../ass build --mode desktop",
     "dev": "node scripts/dev.cjs",
     "package": "pnpm build-assets && electron-builder --mac --win --linux",
     "package:all": "pnpm package",
@@ -29,6 +29,10 @@
       {
         "from": "../accounts/dist",
         "to": "apps/accounts"
+      },
+      {
+        "from": "../ass/dist",
+        "to": "apps/ass"
       },
       {
         "from": "../etl/dist",

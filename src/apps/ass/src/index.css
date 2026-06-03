@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@repo/ui/styles";
+@source "../../../packages/ui/src";
+
+:root {
+  --ass-transcript-grid: 18rem minmax(0, 1fr);
+  --ass-workspace-grid: 18rem minmax(0, 1fr) 20rem;
+}

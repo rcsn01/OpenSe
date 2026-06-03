@@ -4,6 +4,7 @@ const { pathToFileURL } = require('node:url')
 
 const APP_PREFIXES = {
   '/accounts': 'accounts',
+  '/ass': 'ass',
   '/etl': 'etl',
   '/stoqr': 'stoqr',
 }

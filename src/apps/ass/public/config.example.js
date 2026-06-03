@@ -1,0 +1,4 @@
+window.__OPENSE_CONFIG__ = {
+  VITE_OPENSE_RUNTIME_TARGET: "desktop",
+  VITE_ASS_ROUTER_BASENAME: "/ass"
+};
