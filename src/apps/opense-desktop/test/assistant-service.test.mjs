@@ -276,13 +276,12 @@ describe('assistant service', () => {
     const renamed = await service.runSlashCommand(session.id, 'name', 'New name')
     const details = await service.runSlashCommand(session.id, 'session', '')
     const model = await service.runSlashCommand(session.id, 'model', 'google/gemini-test')
-    const noArgModel = await service.runSlashCommand(session.id, 'model', '')
     const clone = await service.runSlashCommand(session.id, 'clone', '')
 
     expect(compact).toMatchObject({ handledBy: 'builtin', message: expect.stringContaining('notes') })
     expect(fakeProcess.writes.find((command) => command.type === 'compact')).toMatchObject({
       type: 'compact',
-      instructions: 'notes',
+      customInstructions: 'notes',
     })
     expect(fakeProcess.writes.find((command) => command.type === 'set_session_name')).toMatchObject({
       type: 'set_session_name',
@@ -296,12 +295,48 @@ describe('assistant service', () => {
       modelId: 'gemini-test',
     })
     expect(model).toMatchObject({ handledBy: 'builtin', message: 'Model set to google/gemini-test.' })
-    expect(noArgModel).toMatchObject({ handledBy: 'builtin', message: expect.stringContaining('Runtime controls') })
     expect(fakeProcess.writes.find((command) => command.type === 'clone')).toMatchObject({ type: 'clone' })
     expect(clone).toMatchObject({ handledBy: 'builtin', session: expect.objectContaining({ id: session.id }) })
   })
 
-  it('forwards unknown and extension slash commands through Pi prompt unchanged', async () => {
+  it('emits a synthetic select request for no-arg /model and resolves it locally', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess()
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+    const events = []
+    const unsubscribe = service.onSessionEvent(session.id, (event) => events.push(event))
+
+    const result = await service.runSlashCommand(session.id, 'model', '')
+    const requestEvent = events.find((event) => event.type === 'extension_ui')
+    const request = requestEvent?.request
+
+    expect(result).toEqual({ handledBy: 'builtin' })
+    expect(request).toMatchObject({
+      type: 'select',
+      title: 'Choose model',
+      options: [expect.objectContaining({ label: 'google/gemini-test' })],
+    })
+    expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/model')).toBeUndefined()
+
+    await service.respondToExtensionUi(session.id, { id: request.id, value: request.options[0].value })
+
+    expect(fakeProcess.writes.find((command) => command.type === 'set_model')).toMatchObject({
+      type: 'set_model',
+      provider: 'google',
+      modelId: 'gemini-test',
+    })
+    expect((await service.getSessionData(session.id)).model).toBe('google/gemini-test')
+
+    unsubscribe()
+  })
+
+  it('forwards discovered Pi slash commands through prompt unchanged', async () => {
     const directoryPath = makeTempRoot()
     const fakeProcess = createFakeRpcProcess()
     const service = createAssistantService({
@@ -319,6 +354,46 @@ describe('assistant service', () => {
       type: 'prompt',
       message: '/fix test',
       streamingBehavior: 'followUp',
+    })
+  })
+
+  it('does not send unavailable slash commands to the model as prompts', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess()
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+
+    const result = await service.runSlashCommand(session.id, 'missing', '')
+
+    expect(result).toMatchObject({
+      handledBy: 'builtin',
+      message: expect.stringContaining('/missing is not available'),
+    })
+    expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/missing')).toBeUndefined()
+  })
+
+  it('forwards Pi extension UI responses that are not Open-Ass synthetic requests', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess()
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+
+    await service.respondToExtensionUi(session.id, { id: 'pi-request-1', value: 'answer' })
+
+    expect(fakeProcess.writes.find((command) => command.type === 'extension_ui_response')).toMatchObject({
+      type: 'extension_ui_response',
+      id: 'pi-request-1',
+      value: 'answer',
     })
   })
 

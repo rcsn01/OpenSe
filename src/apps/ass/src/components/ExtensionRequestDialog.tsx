@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Button,
   Dialog,
@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Select,
   Textarea,
 } from '@repo/ui'
 import type { ExtensionUiRequest } from '../lib/assistantBridge'
@@ -19,19 +18,18 @@ type ExtensionRequestDialogProps = {
   onCancel: () => void
 }
 
-export const ExtensionRequestDialog = ({
+type NonSelectExtensionUiRequest = Exclude<ExtensionUiRequest, { type: 'select' }>
+
+const ExtensionRequestDialogContent = ({
   request,
   onRespond,
   onCancel,
-}: ExtensionRequestDialogProps) => {
-  const [value, setValue] = useState('')
-
-  useEffect(() => {
-    setValue(request && 'value' in request ? request.value ?? '' : '')
-  }, [request])
-
-  if (!request) return null
-
+}: {
+  request: NonSelectExtensionUiRequest
+  onRespond: (response: unknown) => void
+  onCancel: () => void
+}) => {
+  const [value, setValue] = useState('value' in request ? request.value ?? '' : '')
   const title = request.title ?? 'Assistant request'
   const message = request.message ?? 'Pi needs a response before it can continue.'
 
@@ -42,17 +40,6 @@ export const ExtensionRequestDialog = ({
           <DialogTitle className="text-base">{title}</DialogTitle>
           <DialogDescription>{message}</DialogDescription>
         </DialogHeader>
-
-        {request.type === 'select' ? (
-          <Select
-            aria-label={title}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            options={request.options}
-            placeholder="Choose an option"
-            className="border border-[var(--color-border)]"
-          />
-        ) : null}
 
         {request.type === 'confirm' ? (
           <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
@@ -92,7 +79,6 @@ export const ExtensionRequestDialog = ({
               type="button"
               size="sm"
               onClick={() => onRespond({ id: request.id, value })}
-              disabled={request.type === 'select' && !value}
             >
               Submit
             </Button>
@@ -100,5 +86,22 @@ export const ExtensionRequestDialog = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+export const ExtensionRequestDialog = ({
+  request,
+  onRespond,
+  onCancel,
+}: ExtensionRequestDialogProps) => {
+  if (!request || request.type === 'select') return null
+
+  return (
+    <ExtensionRequestDialogContent
+      key={request.id}
+      request={request}
+      onRespond={onRespond}
+      onCancel={onCancel}
+    />
   )
 }

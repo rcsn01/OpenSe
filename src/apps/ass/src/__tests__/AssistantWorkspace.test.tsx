@@ -179,6 +179,30 @@ describe('AssistantWorkspace', () => {
     expect(bridge.runShellCommand).toHaveBeenCalledWith('session-1', 'ls -la')
   })
 
+  it('sends on Enter and keeps Shift Enter as a newline', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    const input = screen.getByLabelText('Send command')
+
+    await user.type(input, 'hello{Shift>}{Enter}{/Shift}there')
+    expect(input).toHaveValue('hello\nthere')
+
+    await user.keyboard('{Enter}')
+    expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello\nthere')
+
+    await user.type(input, '/goal test{Enter}')
+    expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'goal', 'test')
+
+    await user.type(input, '!pwd{Enter}')
+    expect(bridge.runShellCommand).toHaveBeenCalledWith('session-1', 'pwd')
+  })
+
   it('renders slash autocomplete from capabilities', async () => {
     installBridge({
       listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
@@ -240,7 +264,7 @@ describe('AssistantWorkspace', () => {
     const input = screen.getByLabelText('Send command')
     await user.type(input, '/')
     await screen.findByRole('listbox', { name: 'Slash commands' })
-    await user.keyboard('{ArrowDown}{Enter}')
+    await user.keyboard('{ArrowDown}{Tab}')
 
     expect(input).toHaveValue('/review ')
   })
@@ -283,7 +307,7 @@ describe('AssistantWorkspace', () => {
     expect(await screen.findByText(/Name: project/)).toBeInTheDocument()
   })
 
-  it('renders extension UI requests and sends responses', async () => {
+  it('renders non-select extension UI requests as modal dialogs and sends responses', async () => {
     const bridge = installBridge({
       listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
     })
@@ -312,6 +336,99 @@ describe('AssistantWorkspace', () => {
     expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
       id: 'request-1',
       value: 'hello',
+    })
+  })
+
+  it('renders select extension UI requests inline and confirms with filtering and Enter', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'extension_ui',
+        sessionId: 'session-1',
+        request: {
+          id: 'select-1',
+          type: 'select',
+          title: 'Choose model',
+          message: 'Current model: google/gemini-test',
+          options: [
+            { label: 'google/gemini-test', value: 'google' },
+            { label: 'openai/gpt-test', value: 'openai' },
+          ],
+        },
+      })
+    })
+
+    expect(await screen.findByRole('listbox', { name: 'Choose model' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Filter Choose model'), 'open')
+    expect(screen.queryByRole('option', { name: /google\/gemini-test/i })).not.toBeInTheDocument()
+    await user.keyboard('{Enter}')
+
+    expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
+      id: 'select-1',
+      value: 'openai',
+    })
+    expect(bridge.sendCommand).not.toHaveBeenCalled()
+  })
+
+  it('supports mouse selection and Escape cancellation for inline select requests', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'extension_ui',
+        sessionId: 'session-1',
+        request: {
+          id: 'select-2',
+          type: 'select',
+          title: 'Choose option',
+          options: [
+            { label: 'First', value: 'first' },
+            { label: 'Second', value: 'second' },
+          ],
+        },
+      })
+    })
+
+    await user.click(await screen.findByRole('option', { name: 'Second' }))
+    expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
+      id: 'select-2',
+      value: 'second',
+    })
+
+    act(() => {
+      bridge.emit({
+        type: 'extension_ui',
+        sessionId: 'session-1',
+        request: {
+          id: 'select-3',
+          type: 'select',
+          title: 'Choose option',
+          options: [{ label: 'Only', value: 'only' }],
+        },
+      })
+    })
+
+    const filter = await screen.findByLabelText('Filter Choose option')
+    filter.focus()
+    await user.keyboard('{Escape}')
+    expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
+      id: 'select-3',
+      cancelled: true,
     })
   })
 })

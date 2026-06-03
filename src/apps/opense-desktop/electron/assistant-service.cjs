@@ -10,12 +10,13 @@ const VALID_PERMISSION_RESPONSE = new Set(['once', 'always', 'reject'])
 const MAX_TEXT_SIZE = 100_000
 const RPC_RESPONSE_TIMEOUT_MS = 30_000
 const MAX_STDERR_SIZE = 64_000
+const OPEN_ASS_UI_REQUEST_PREFIX = 'open_ass_ui_'
 const OPEN_ASS_BUILTIN_COMMANDS = [
   { name: 'compact', source: 'built-in', description: 'Compact the current session, optionally with custom instructions.' },
   { name: 'name', source: 'built-in', description: 'Rename the current session.' },
   { name: 'session', source: 'built-in', description: 'Show current session state and statistics.' },
   { name: 'clone', source: 'built-in', description: 'Clone the current Pi session and refresh the transcript.' },
-  { name: 'model', source: 'built-in', description: 'Switch models with provider/model, or use Runtime controls without an argument.' },
+  { name: 'model', source: 'built-in', description: 'Switch models with provider/model, or choose interactively without an argument.' },
 ]
 
 const nowIso = () => new Date().toISOString()
@@ -321,6 +322,49 @@ const modelLabelFromState = (state) =>
     ? `${state.model.provider ?? state.model.providerID ?? state.model.providerName ?? ''}/${state.model.id ?? state.model.modelId ?? state.model.modelID ?? ''}`.replace(/^\/|\/$/g, '')
     : undefined
 
+const modelProviderFromRecord = (model) =>
+  String(model?.provider ?? model?.providerID ?? model?.providerId ?? model?.providerName ?? '').trim()
+
+const modelIdFromRecord = (model) =>
+  String(model?.id ?? model?.modelID ?? model?.modelId ?? '').trim()
+
+const modelSelectionValue = (provider, modelId) => JSON.stringify({ provider, modelId })
+
+const parseModelSelectionValue = (value) => {
+  if (typeof value !== 'string') throw new Error('Model selection is invalid.')
+  if (value.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(value)
+      return {
+        provider: validateText(parsed.provider, 'Provider'),
+        modelId: validateText(parsed.modelId, 'Model'),
+      }
+    } catch {
+      throw new Error('Model selection is invalid.')
+    }
+  }
+  const separator = value.indexOf('/')
+  const provider = separator === -1 ? '' : value.slice(0, separator).trim()
+  const modelId = separator === -1 ? '' : value.slice(separator + 1).trim()
+  return {
+    provider: validateText(provider, 'Provider'),
+    modelId: validateText(modelId, 'Model'),
+  }
+}
+
+const normalizeModelSelectOptions = (models) => {
+  const items = Array.isArray(models?.models) ? models.models : Array.isArray(models) ? models : []
+  return items.flatMap((model) => {
+    const provider = modelProviderFromRecord(model)
+    const modelId = modelIdFromRecord(model)
+    if (!provider || !modelId) return []
+    return [{
+      label: modelLabelFromState({ model }) || `${provider}/${modelId}`,
+      value: modelSelectionValue(provider, modelId),
+    }]
+  })
+}
+
 const formatValue = (value) => {
   if (value == null || value === '') return 'n/a'
   if (typeof value === 'boolean') return value ? 'yes' : 'no'
@@ -373,6 +417,14 @@ const normalizeCommandList = (commands) => {
   }
 
   return normalized
+}
+
+const hasPiCommand = (commands, commandName) => {
+  const items = Array.isArray(commands?.commands) ? commands.commands : Array.isArray(commands) ? commands : []
+  return items.some((command) => {
+    const name = typeof command === 'string' ? command : command?.name
+    return typeof name === 'string' && name.replace(/^\//, '').trim() === commandName
+  })
 }
 
 const normalizeExtensionUiRequest = (request) => {
@@ -439,6 +491,7 @@ const createAssistantService = ({
   const sessionDir = path.join(rootDir, 'pi-sessions')
   const runtimeEnv = buildPiRuntimeEnv(env, spawnSync)
   const processes = new Map()
+  const pendingOpenAssUiRequests = new Map()
 
   const readRegistry = () => {
     const sessions = readJsonFile(registryPath, [])
@@ -479,6 +532,54 @@ const createAssistantService = ({
 
   const emitSessionEvent = (sessionId, event) => {
     emitter.emit(`session:${sessionId}`, event)
+  }
+
+  const cleanupOpenAssUiRequests = (sessionId) => {
+    for (const [requestId, request] of pendingOpenAssUiRequests.entries()) {
+      if (request.sessionId === sessionId) pendingOpenAssUiRequests.delete(requestId)
+    }
+  }
+
+  const createOpenAssUiRequestId = (kind) => `${OPEN_ASS_UI_REQUEST_PREFIX}${kind}_${crypto.randomUUID()}`
+
+  const requestOpenAssModelSelect = async (client) => {
+    const [state, models] = await Promise.all([
+      sendRpc(client, { type: 'get_state' }).catch(() => undefined),
+      sendRpc(client, { type: 'get_available_models' }).catch(() => ({ models: [] })),
+    ])
+    const options = normalizeModelSelectOptions(models)
+    if (!options.length) {
+      return {
+        handledBy: 'builtin',
+        message: 'No available models were reported by Pi. Set a model with /model provider/model.',
+      }
+    }
+
+    const requestId = createOpenAssUiRequestId('model')
+    pendingOpenAssUiRequests.set(requestId, {
+      sessionId: client.sessionId,
+      kind: 'model',
+    })
+    emitSessionEvent(client.sessionId, {
+      type: 'extension_ui',
+      sessionId: client.sessionId,
+      request: {
+        id: requestId,
+        type: 'select',
+        title: 'Choose model',
+        message: `Current model: ${modelLabelFromState(state) ?? 'Default'}`,
+        options,
+      },
+    })
+    return { handledBy: 'builtin' }
+  }
+
+  const respondToOpenAssUiRequest = async (client, request, response) => {
+    if (request.kind !== 'model') throw new Error('Unknown Open-Ass UI request.')
+    if (response.cancelled) return
+    const { provider, modelId } = parseModelSelectionValue(response.value)
+    await sendRpc(client, { type: 'set_model', provider, modelId })
+    await refreshRuntimeState(client)
   }
 
   const findPiCommand = () => {
@@ -684,6 +785,7 @@ const createAssistantService = ({
 
   const closeProcess = async (sessionId) => {
     const id = validateSessionId(sessionId)
+    cleanupOpenAssUiRequests(id)
     const client = processes.get(id)
     if (!client) {
       updateRegistrySession(id, { status: 'closed' })
@@ -757,7 +859,7 @@ const createAssistantService = ({
 
       if (commandName === 'compact') {
         const payload = { type: 'compact' }
-        if (trimmedArgs) payload.instructions = trimmedArgs
+        if (trimmedArgs) payload.customInstructions = trimmedArgs
         await sendRpc(client, payload)
         await emitMessages(client)
         return {
@@ -793,24 +895,32 @@ const createAssistantService = ({
       }
 
       if (commandName === 'model') {
-        if (!trimmedArgs) {
-          return { handledBy: 'builtin', message: 'Use Runtime controls to choose a model, or run /model provider/model.' }
+        if (trimmedArgs) {
+          const separator = trimmedArgs.indexOf('/')
+          const provider = separator === -1 ? '' : trimmedArgs.slice(0, separator).trim()
+          const modelId = separator === -1 ? '' : trimmedArgs.slice(separator + 1).trim()
+          if (!provider || !modelId) throw new Error('Use /model provider/model.')
+          await sendRpc(client, { type: 'set_model', provider, modelId })
+          await refreshRuntimeState(client)
+          return {
+            handledBy: 'builtin',
+            message: `Model set to ${provider}/${modelId}.`,
+            session: getRegisteredSession(sessionId),
+          }
         }
-        const separator = trimmedArgs.indexOf('/')
-        const provider = separator === -1 ? '' : trimmedArgs.slice(0, separator).trim()
-        const modelId = separator === -1 ? '' : trimmedArgs.slice(separator + 1).trim()
-        if (!provider || !modelId) throw new Error('Use /model provider/model.')
-        await sendRpc(client, { type: 'set_model', provider, modelId })
-        await refreshRuntimeState(client)
-        return {
-          handledBy: 'builtin',
-          message: `Model set to ${provider}/${modelId}.`,
-          session: getRegisteredSession(sessionId),
-        }
+        return requestOpenAssModelSelect(client)
       }
 
-      await sendRpc(client, { type: 'prompt', message: `/${slash}${suffix}`, streamingBehavior: 'followUp' })
-      return { handledBy: 'pi' }
+      const commands = await sendRpc(client, { type: 'get_commands' }).catch(() => ({ commands: [] }))
+      if (hasPiCommand(commands, commandName)) {
+        await sendRpc(client, { type: 'prompt', message: `/${slash}${suffix}`, streamingBehavior: 'followUp' })
+        return { handledBy: 'pi' }
+      }
+
+      return {
+        handledBy: 'builtin',
+        message: `/${commandName} is not available in Open-Ass for this session. Use one of the listed slash commands, or use Runtime controls for desktop-only actions.`,
+      }
     },
 
     runShellCommand: async (sessionId, command) => {
@@ -982,6 +1092,13 @@ const createAssistantService = ({
       const client = await ensureProcess(sessionId)
       const value = validateObject(response, 'Extension UI response')
       const id = validateText(value.id, 'Extension UI request id')
+      if (id.startsWith(OPEN_ASS_UI_REQUEST_PREFIX)) {
+        const request = pendingOpenAssUiRequests.get(id)
+        if (!request || request.sessionId !== client.sessionId) throw new Error('Open-Ass UI request was not found.')
+        pendingOpenAssUiRequests.delete(id)
+        await respondToOpenAssUiRequest(client, request, value)
+        return
+      }
       const payload = { type: 'extension_ui_response', id }
       if (value.cancelled) payload.cancelled = true
       else if ('confirmed' in value) payload.confirmed = Boolean(value.confirmed)
