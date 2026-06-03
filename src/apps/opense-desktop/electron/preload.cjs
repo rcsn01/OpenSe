@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('openseAssistant', {
   listSessions: () => ipcRenderer.invoke('assistant:list-sessions'),
   createSession: (input) => ipcRenderer.invoke('assistant:create-session', input),
   openSession: (sessionId) => ipcRenderer.invoke('assistant:open-session', sessionId),
-  sendCommand: (sessionId, command) => ipcRenderer.invoke('assistant:send-command', sessionId, command),
+  sendCommand: (sessionId, command, behavior) => ipcRenderer.invoke('assistant:send-command', sessionId, command, behavior),
   runSlashCommand: (sessionId, command, args) =>
     ipcRenderer.invoke('assistant:run-slash-command', sessionId, command, args),
   runShellCommand: (sessionId, command, agent) =>

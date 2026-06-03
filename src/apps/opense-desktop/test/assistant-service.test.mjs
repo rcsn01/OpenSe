@@ -10,6 +10,8 @@ const {
   createAssistantService,
   normalizeMessageRecord,
   normalizePiEvent,
+  normalizeQueueItem,
+  normalizeTodoDetails,
   parseEnvOutput,
   validateCommand,
   validateCreateSessionInput,
@@ -23,7 +25,7 @@ const makeTempRoot = () => {
   return tempRoot
 }
 
-const createFakeRpcProcess = () => {
+const createFakeRpcProcess = (options = {}) => {
   const child = new EventEmitter()
   child.stdout = new EventEmitter()
   child.stderr = new EventEmitter()
@@ -55,7 +57,7 @@ const createFakeRpcProcess = () => {
           }
         }
         if (command.type === 'get_messages') {
-          return [{ id: 'msg_loaded', role: 'user', content: [{ type: 'text', text: 'loaded' }] }]
+          return options.messages ?? [{ id: 'msg_loaded', role: 'user', content: [{ type: 'text', text: 'loaded' }] }]
         }
         if (command.type === 'get_commands') return { commands: [{ name: 'fix', source: 'prompt' }] }
         if (command.type === 'get_available_models') return { models: [{ provider: 'google', id: 'gemini-test' }] }
@@ -214,6 +216,26 @@ describe('assistant service', () => {
     expect(events.some((event) => event.type === 'text_delta' && event.delta === 'hello')).toBe(true)
 
     unsubscribe()
+  })
+
+  it('allows active-turn steering prompts without changing follow-up defaults', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess()
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+
+    await service.sendCommand(session.id, 'steer now', 'steer')
+    await service.sendCommand(session.id, 'queue later')
+
+    expect(fakeProcess.writes.filter((command) => command.type === 'prompt')).toEqual([
+      expect.objectContaining({ message: 'steer now', streamingBehavior: 'steer' }),
+      expect.objectContaining({ message: 'queue later', streamingBehavior: 'followUp' }),
+    ])
   })
 
   it('forwards runtime setters over Pi RPC and refreshes state', async () => {
@@ -377,6 +399,29 @@ describe('assistant service', () => {
     expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/missing')).toBeUndefined()
   })
 
+  it('handles /todos as a native Open-Ass command', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess()
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+
+    const result = await service.runSlashCommand(session.id, 'todos', '')
+
+    expect(result).toMatchObject({
+      handledBy: 'builtin',
+      message: expect.stringContaining('native Open-Ass'),
+    })
+    expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/todos')).toBeUndefined()
+
+    await service.executeTuiCommand(session.id, '/todos')
+    expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/todos')).toBeUndefined()
+  })
+
   it('forwards Pi extension UI responses that are not Open-Ass synthetic requests', async () => {
     const directoryPath = makeTempRoot()
     const fakeProcess = createFakeRpcProcess()
@@ -420,6 +465,142 @@ describe('assistant service', () => {
         content: [{ type: 'text', text: 'hello' }],
       }),
     ).toMatchObject({ id: 'msg_1', role: 'assistant', content: 'hello' })
+  })
+
+  it('normalizes todo tool results and queue state for renderer events', () => {
+    expect(
+      normalizeTodoDetails({
+        todos: [
+          { id: 'a', text: 'Build UI', status: 'in_progress', explanation: 'working' },
+          { id: 2, content: 'Old item', done: true },
+        ],
+      }),
+    ).toEqual([
+      { id: 'a', content: 'Build UI', status: 'in_progress', explanation: 'working' },
+      { id: '2', content: 'Old item', status: 'completed', explanation: undefined },
+    ])
+
+    expect(normalizeQueueItem('follow this up')).toEqual({ content: 'follow this up' })
+    expect(normalizeQueueItem({ id: 7, message: 'steer this', timestamp: '2026-06-03T00:00:00.000Z' })).toEqual({
+      id: '7',
+      content: 'steer this',
+      createdAt: '2026-06-03T00:00:00.000Z',
+    })
+
+    expect(
+      normalizePiEvent('ses_test', {
+        type: 'turn_end',
+        toolResults: [
+          {
+            toolCallId: 'tool-1',
+            toolName: 'todo',
+            content: [{ type: 'text', text: 'updated' }],
+            details: { todos: [{ id: '1', text: 'Ship it', status: 'pending' }] },
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        type: 'todos',
+        sessionId: 'ses_test',
+        todos: [{ id: '1', content: 'Ship it', status: 'pending', explanation: undefined }],
+      },
+      expect.objectContaining({ type: 'tool', sessionId: 'ses_test' }),
+    ])
+
+    expect(
+      normalizePiEvent('ses_test', {
+        type: 'queue_update',
+        steering: ['watch tests'],
+        followUp: [{ content: 'summarize', createdAt: '2026-06-03T00:00:00.000Z' }],
+      }),
+    ).toEqual([
+      {
+        type: 'metadata',
+        sessionId: 'ses_test',
+        metadata: {
+          queue: {
+            steering: [{ content: 'watch tests' }],
+            followUp: [{ content: 'summarize', createdAt: '2026-06-03T00:00:00.000Z' }],
+          },
+          steerQueue: {
+            active: true,
+            queuedCount: 2,
+            canSteer: true,
+            canQueue: true,
+            hint: 'Enter steers the active turn. Tab queues a follow-up.',
+          },
+        },
+      },
+    ])
+  })
+
+  it('emits steer queue metadata on agent lifecycle events', () => {
+    expect(normalizePiEvent('ses_test', { type: 'agent_start' })).toEqual([
+      { type: 'status', sessionId: 'ses_test', status: 'running' },
+      {
+        type: 'metadata',
+        sessionId: 'ses_test',
+        metadata: {
+          steerQueue: {
+            active: true,
+            queuedCount: 0,
+            canSteer: true,
+            canQueue: true,
+            hint: 'Enter steers the active turn. Tab queues a follow-up.',
+          },
+        },
+      },
+    ])
+
+    expect(normalizePiEvent('ses_test', { type: 'agent_end' })).toContainEqual({
+      type: 'metadata',
+      sessionId: 'ses_test',
+      metadata: {
+        steerQueue: {
+          active: false,
+          queuedCount: 0,
+          canSteer: false,
+          canQueue: false,
+          hint: '',
+        },
+      },
+    })
+  })
+
+  it('emits latest persisted todos when messages are loaded', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess({
+      messages: [
+        { id: 'msg_loaded', role: 'user', content: [{ type: 'text', text: 'loaded' }] },
+        {
+          id: 'tool_loaded',
+          role: 'toolResult',
+          toolName: 'todo',
+          content: [{ type: 'text', text: 'updated' }],
+          details: { todos: [{ id: '1', text: 'Persisted todo', status: 'pending' }] },
+        },
+      ],
+    })
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const events = []
+    const session = await service.createSession({ directoryPath })
+    const unsubscribe = service.onSessionEvent(session.id, (event) => events.push(event))
+
+    await service.openSession(session.id)
+
+    expect(events).toContainEqual({
+      type: 'todos',
+      sessionId: session.id,
+      todos: [{ id: '1', content: 'Persisted todo', status: 'pending', explanation: undefined }],
+    })
+
+    unsubscribe()
   })
 
   it('does not turn fire-and-forget extension UI status events into dialogs', () => {

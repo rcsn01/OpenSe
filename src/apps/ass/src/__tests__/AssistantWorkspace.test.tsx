@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -164,7 +164,7 @@ describe('AssistantWorkspace', () => {
 
     await user.type(input, 'hello')
     await user.click(send)
-    expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello')
+    expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello', 'followUp')
 
     await user.type(input, '/compact')
     await user.click(send)
@@ -194,7 +194,7 @@ describe('AssistantWorkspace', () => {
     expect(input).toHaveValue('hello\nthere')
 
     await user.keyboard('{Enter}')
-    expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello\nthere')
+    expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello\nthere', 'followUp')
 
     await user.type(input, '/goal test{Enter}')
     expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'goal', 'test')
@@ -223,6 +223,169 @@ describe('AssistantWorkspace', () => {
     expect(await screen.findByRole('listbox', { name: 'Slash commands' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: /\/compact/i })).toBeInTheDocument()
     expect(screen.getByText('built-in')).toBeInTheDocument()
+  })
+
+  it('renders todos above the composer and in the sidebar with native ordering', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'todos',
+        sessionId: 'session-1',
+        todos: [
+          { id: '3', content: 'Done task', status: 'completed' },
+          { id: '2', content: 'Pending task', status: 'pending' },
+          { id: '4', content: 'Cancelled task', status: 'cancelled' },
+          { id: '1', content: 'Active task', status: 'in_progress', explanation: 'working now' },
+        ],
+      })
+    })
+
+    const composer = screen.getByLabelText('Send command').closest('form')
+    expect(composer).not.toBeNull()
+    const composerState = within(composer as HTMLElement)
+
+    expect(composerState.getByText('Active task')).toBeInTheDocument()
+    expect(composerState.getByText('Pending task')).toBeInTheDocument()
+    expect(composerState.getByText('Done task')).toBeInTheDocument()
+    expect(composerState.queryByText('Cancelled task')).not.toBeInTheDocument()
+    expect(composerState.getByText('working now')).toBeInTheDocument()
+
+    const text = (composer as HTMLElement).textContent ?? ''
+    expect(text.indexOf('Active task')).toBeLessThan(text.indexOf('Pending task'))
+    expect(text.indexOf('Pending task')).toBeLessThan(text.indexOf('Done task'))
+    expect(screen.getByText('Work state')).toBeInTheDocument()
+  })
+
+  it('renders queued steering and follow-up state', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'metadata',
+        sessionId: 'session-1',
+        metadata: {
+          queue: {
+            steering: [{ id: 's1', content: 'Watch the failing test' }],
+            followUp: [{ id: 'f1', content: 'Summarize changes' }],
+          },
+          steerQueue: {
+            active: true,
+            queuedCount: 2,
+            canSteer: true,
+            canQueue: true,
+            hint: 'Enter steers the active turn. Tab queues a follow-up.',
+          },
+        },
+      })
+    })
+
+    const composer = screen.getByLabelText('Send command').closest('form') as HTMLElement
+    const composerState = within(composer)
+
+    expect(composerState.getByText('Watch the failing test')).toBeInTheDocument()
+    expect(composerState.getByText('Summarize changes')).toBeInTheDocument()
+    expect(composerState.getByText('2 queued')).toBeInTheDocument()
+    expect(composerState.getByText(/Enter steers/)).toBeInTheDocument()
+  })
+
+  it('uses active steering keyboard behavior and explicit queue action', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'metadata',
+        sessionId: 'session-1',
+        metadata: {
+          steerQueue: {
+            active: true,
+            queuedCount: 0,
+            canSteer: true,
+            canQueue: true,
+            hint: 'Enter steers the active turn. Tab queues a follow-up.',
+          },
+        },
+      })
+    })
+
+    const input = screen.getByLabelText('Send command')
+
+    await user.type(input, 'steer now{Enter}')
+    expect(bridge.sendCommand).toHaveBeenLastCalledWith('session-1', 'steer now', 'steer')
+
+    await user.type(input, 'queue with tab')
+    await user.keyboard('{Tab}')
+    expect(bridge.sendCommand).toHaveBeenLastCalledWith('session-1', 'queue with tab', 'followUp')
+    expect(input).toHaveValue('')
+
+    await user.type(input, 'queue with button')
+    await user.click(screen.getByRole('button', { name: /queue/i }))
+    expect(bridge.sendCommand).toHaveBeenLastCalledWith('session-1', 'queue with button', 'followUp')
+
+    await user.type(input, 'line one{Shift>}{Enter}{/Shift}line two')
+    expect(input).toHaveValue('line one\nline two')
+  })
+
+  it('keeps inline select keyboard priority over active steering', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'metadata',
+        sessionId: 'session-1',
+        metadata: {
+          steerQueue: {
+            active: true,
+            queuedCount: 0,
+            canSteer: true,
+            canQueue: true,
+            hint: 'Enter steers the active turn. Tab queues a follow-up.',
+          },
+        },
+      })
+      bridge.emit({
+        type: 'extension_ui',
+        sessionId: 'session-1',
+        request: {
+          id: 'select-active',
+          type: 'select',
+          title: 'Choose option',
+          options: [{ label: 'Only', value: 'only' }],
+        },
+      })
+    })
+
+    const filter = await screen.findByLabelText('Filter Choose option')
+    filter.focus()
+    await user.keyboard('{Enter}')
+
+    expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
+      id: 'select-active',
+      value: 'only',
+    })
+    expect(bridge.sendCommand).not.toHaveBeenCalled()
   })
 
   it('filters slash autocomplete after typing a query', async () => {
