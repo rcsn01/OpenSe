@@ -10,7 +10,11 @@ export type AssistantStatus = {
 export type AssistantSession = {
   id: string
   directoryPath: string
+  piSessionId?: string
   piSessionFile?: string
+  firstMessage?: string
+  messageCount?: number
+  parentSessionPath?: string
   displayName: string
   createdAt: string
   updatedAt: string

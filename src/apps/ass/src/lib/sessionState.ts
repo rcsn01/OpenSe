@@ -273,11 +273,21 @@ export const reduceSessionEvent = (
 export const applySessionList = (
   state: SessionViewState,
   sessions: AssistantSession[],
-): SessionViewState => ({
-  ...state,
-  sessions,
-  activeSessionId: state.activeSessionId ?? sessions[0]?.id ?? null,
-})
+): SessionViewState => {
+  const activeSession = state.activeSessionId
+    ? state.sessions.find((session) => session.id === state.activeSessionId)
+    : null
+  const nextSessions =
+    activeSession && !sessions.some((session) => session.id === activeSession.id)
+      ? [activeSession, ...sessions]
+      : sessions
+
+  return {
+    ...state,
+    sessions: nextSessions,
+    activeSessionId: state.activeSessionId ?? nextSessions[0]?.id ?? null,
+  }
+}
 
 export const addSession = (
   state: SessionViewState,

@@ -16,6 +16,9 @@ export interface AppShellNavItem {
   href: string
   label: string
   icon: ReactNode
+  ariaLabel?: string
+  trailing?: ReactNode
+  children?: ReactNode
   isActive?: (pathname: string, href: string) => boolean
 }
 
@@ -93,14 +96,21 @@ export function AppShellLayout({
       : defaultIsActive(currentPath, item.href)
 
     return (
-      <SideNavItem
-        key={item.href}
-        active={isActive}
-        renderLink={(props) => renderNavLink(item, props)}
-      >
-        {item.icon}
-        {item.label}
-      </SideNavItem>
+      <div key={item.href} className="group/item relative">
+        <SideNavItem
+          active={isActive}
+          renderLink={(props) => renderNavLink(item, props)}
+        >
+          {item.icon}
+          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+        </SideNavItem>
+        {item.trailing ? (
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover/item:opacity-100 focus-within:opacity-100">
+            {item.trailing}
+          </div>
+        ) : null}
+        {item.children}
+      </div>
     )
   }
 

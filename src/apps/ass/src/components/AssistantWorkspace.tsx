@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import {
   AppShellLayout,
+  type AppShellNavGroup,
   Badge,
   BasePage,
   Button,
@@ -41,6 +42,7 @@ import {
   type AssistantCommand,
   type AssistantQueueItem,
   type AssistantQueueState,
+  type AssistantSession,
   type AssistantStatus,
   type AssistantSteerQueueState,
   type AssistantTodo,
@@ -72,6 +74,9 @@ const formatProjectName = (path: string) => {
   const parts = path.split('/').filter(Boolean)
   return parts[parts.length - 1] ?? path
 }
+
+const formatSessionLabel = (session: { displayName?: string; firstMessage?: string; piSessionId?: string; id: string }) =>
+  session.displayName || session.firstMessage || session.piSessionId || session.id
 
 const MessageBubble = ({ message }: { message: AssistantTranscriptMessage }) => {
   const isUser = message.role === 'user'
@@ -492,29 +497,39 @@ export const AssistantWorkspace = () => {
   }, [bridge])
 
   useEffect(() => {
-    if (!bridge || !state.activeSessionId) return
-    const unsubscribe = bridge.onSessionEvent(state.activeSessionId, (event) => {
-      dispatch({ type: 'event', event })
-    })
-    return unsubscribe
-  }, [bridge, state.activeSessionId])
-
-  useEffect(() => {
-    if (!bridge || !state.activeSessionId) {
+    const sessionId = state.activeSessionId
+    if (!bridge || !sessionId) {
       setCapabilities(null)
       return
     }
+
     let cancelled = false
-    bridge
-      .listCapabilities(state.activeSessionId)
-      .then((next) => {
-        if (!cancelled) setCapabilities(next)
-      })
-      .catch(() => {
-        if (!cancelled) setCapabilities(null)
-      })
+    setCapabilities(null)
+
+    const unsubscribe = bridge.onSessionEvent(sessionId, (event) => {
+      dispatch({ type: 'event', event })
+    })
+
+    const loadActiveSession = async () => {
+      try {
+        const session = await bridge.openSession(sessionId)
+        if (cancelled) return
+        dispatch({ type: 'add-session', session })
+        const nextCapabilities = await bridge.listCapabilities(session.id)
+        if (!cancelled) setCapabilities(nextCapabilities)
+      } catch (error) {
+        if (!cancelled) {
+          setCapabilities(null)
+          dispatch({ type: 'error', error: error instanceof Error ? error.message : String(error) })
+        }
+      }
+    }
+
+    void loadActiveSession()
+
     return () => {
       cancelled = true
+      unsubscribe()
     }
   }, [bridge, state.activeSessionId])
 
@@ -549,12 +564,14 @@ export const AssistantWorkspace = () => {
     if (selectSelection >= filteredSelectOptions.length) setSelectSelection(0)
   }, [filteredSelectOptions.length, selectSelection])
 
-  const createSession = async () => {
+  const createSession = useCallback(async (directoryPath?: string) => {
     if (!bridge) return
     setCreating(true)
     dispatch({ type: 'error', error: null })
     try {
-      const session = await bridge.createSession()
+      const session = directoryPath
+        ? await bridge.createSession({ directoryPath })
+        : await bridge.createSession()
       if (!session) return
       dispatch({ type: 'add-session', session })
       navigate(`/sessions/${session.id}`)
@@ -563,7 +580,7 @@ export const AssistantWorkspace = () => {
     } finally {
       setCreating(false)
     }
-  }
+  }, [bridge, navigate])
 
   const handleSlashCommandResult = (result: SlashCommandResult, sessionId = activeSession?.id) => {
     if (result.handledBy !== 'builtin') return
@@ -833,39 +850,88 @@ export const AssistantWorkspace = () => {
     await bridge.respondToQuestion(activeSession.id, requestId, [[label]])
   }
 
+  const projectNavGroups = useMemo<AppShellNavGroup[]>(() => {
+    const projects = new Map<string, AssistantSession[]>()
+    for (const session of state.sessions) {
+      const sessions = projects.get(session.directoryPath) ?? []
+      sessions.push(session)
+      projects.set(session.directoryPath, sessions)
+    }
+
+    return [
+      {
+        title: 'PROJECTS',
+        trailing: (
+          <Button
+            type="button"
+            size="xs"
+            variant="ghost"
+            aria-label="Add directory"
+            onClick={() => void createSession()}
+            loading={creating}
+            className="h-6 w-6 p-0"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        ),
+        items: Array.from(projects.entries()).map(([directoryPath, sessions]) => {
+          const projectName = formatProjectName(directoryPath)
+          const activeProjectSession = sessions.find((session) => session.id === state.activeSessionId)
+          const targetSession = activeProjectSession ?? sessions[0]
+
+          return {
+            href: `/sessions/${targetSession.id}`,
+            label: projectName,
+            ariaLabel: `Project ${projectName}`,
+            icon: <FolderOpen className="h-4 w-4" />,
+            isActive: () => directoryPath === activeSession?.directoryPath,
+            trailing: (
+              <Button
+                type="button"
+                size="xs"
+                variant="ghost"
+                aria-label={`New session in ${projectName}`}
+                onClick={() => void createSession(directoryPath)}
+                loading={creating}
+                className="h-6 w-6 p-0"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            ),
+            children: (
+              <div className="mt-0.5 flex flex-col gap-0.5 pl-7 pr-1">
+                {sessions.map((session) => (
+                  <NavLink
+                    key={session.id}
+                    to={`/sessions/${session.id}`}
+                    onClick={() => dispatch({ type: 'activate', sessionId: session.id })}
+                    className={cn(
+                      'block truncate rounded-[var(--radius-sm)] px-2 py-1 text-xs leading-5 text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
+                      session.id === state.activeSessionId && 'font-medium text-[var(--color-foreground)]',
+                    )}
+                  >
+                    {formatSessionLabel(session)}
+                  </NavLink>
+                ))}
+              </div>
+            ),
+          }
+        }),
+      },
+    ]
+  }, [activeSession?.directoryPath, createSession, creating, state.activeSessionId, state.sessions])
+
   const shell = (
     <AppShellLayout
       brand={{ icon: <Bot />, name: 'Open-Ass', version: 'v1' }}
-      navGroups={[
-        {
-          title: 'PROJECTS',
-          trailing: (
-            <Button
-              type="button"
-              size="xs"
-              variant="ghost"
-              aria-label="Add directory"
-              onClick={createSession}
-              loading={creating}
-              className="h-6 w-6 p-0"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-          ),
-          items: state.sessions.map((session) => ({
-            href: `/sessions/${session.id}`,
-            label: formatProjectName(session.directoryPath),
-            icon: <FolderOpen className="h-4 w-4" />,
-            isActive: () => session.id === state.activeSessionId,
-          })),
-        },
-      ]}
+      navGroups={projectNavGroups}
       currentPath={activeSession ? `/sessions/${activeSession.id}` : '/'}
       renderNavLink={(item, { className, children }) => {
         const targetSession = state.sessions.find((session) => item.href === `/sessions/${session.id}`)
         return (
           <NavLink
             to={item.href}
+            aria-label={item.ariaLabel}
             className={className}
             onClick={() => {
               if (targetSession) dispatch({ type: 'activate', sessionId: targetSession.id })
@@ -945,7 +1011,7 @@ export const AssistantWorkspace = () => {
                     description="Open-Ass starts Pi in the selected workspace and keeps that session visible across Desktop restarts."
                   />
                   <div className="mt-4 flex justify-center">
-                    <Button type="button" onClick={createSession} loading={creating}>
+                    <Button type="button" onClick={() => void createSession()} loading={creating}>
                       <FolderOpen className="h-4 w-4" />
                       Choose directory
                     </Button>

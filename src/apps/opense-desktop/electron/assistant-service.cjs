@@ -11,6 +11,9 @@ const MAX_TEXT_SIZE = 100_000
 const RPC_RESPONSE_TIMEOUT_MS = 30_000
 const MAX_STDERR_SIZE = 64_000
 const OPEN_ASS_UI_REQUEST_PREFIX = 'open_ass_ui_'
+const OPEN_ASS_SESSION_ID_PREFIX = 'ses_'
+const PI_AGENT_DIR_ENV = 'PI_CODING_AGENT_DIR'
+const PI_SESSION_DIR_ENV = 'PI_CODING_AGENT_SESSION_DIR'
 const PI_TUI_BUILTIN_COMMANDS = [
   { name: 'settings', source: 'builtin', description: 'Open settings menu' },
   { name: 'model', source: 'builtin', description: 'Select model (opens selector UI)' },
@@ -42,6 +45,13 @@ const OPEN_ASS_ONLY_COMMAND_NAMES = new Set(OPEN_ASS_ONLY_COMMANDS.map((command)
 
 const nowIso = () => new Date().toISOString()
 
+const expandHomePath = (value, homeDir = os.homedir()) => {
+  if (typeof value !== 'string' || value.trim() === '') return value
+  if (value === '~') return homeDir
+  if (value.startsWith('~/') || value.startsWith('~\\')) return path.join(homeDir, value.slice(2))
+  return value
+}
+
 const ensureDirectory = (directoryPath) => {
   fs.mkdirSync(directoryPath, { recursive: true })
 }
@@ -65,6 +75,46 @@ const validateSessionId = (sessionId) => {
   }
   return sessionId
 }
+
+const sessionIdFromPath = (filePath) => {
+  const hash = crypto.createHash('sha256').update(path.resolve(filePath)).digest('hex').slice(0, 32)
+  return `${OPEN_ASS_SESSION_ID_PREFIX}${hash}`
+}
+
+const encodePiCwd = (cwd) => `--${path.resolve(cwd).replace(/^[/\\]/, '').replace(/[/\\:]/g, '-')}--`
+
+const getPiAgentDir = (env = process.env) => {
+  const configured = env[PI_AGENT_DIR_ENV]
+  return path.resolve(expandHomePath(configured || path.join(os.homedir(), '.pi', 'agent')))
+}
+
+const readPiSettingsSessionDir = (agentDir) => {
+  const settings = readJsonFile(path.join(agentDir, 'settings.json'), {})
+  const sessionDir = typeof settings?.sessionDir === 'string' ? settings.sessionDir.trim() : ''
+  return sessionDir ? path.resolve(expandHomePath(sessionDir)) : undefined
+}
+
+const resolvePiSessionDir = (cwd, env = process.env) => {
+  const envSessionDir = typeof env[PI_SESSION_DIR_ENV] === 'string' ? env[PI_SESSION_DIR_ENV].trim() : ''
+  if (envSessionDir) return path.resolve(expandHomePath(envSessionDir))
+
+  const agentDir = getPiAgentDir(env)
+  const settingsSessionDir = readPiSettingsSessionDir(agentDir)
+  if (settingsSessionDir) return settingsSessionDir
+
+  return path.join(agentDir, 'sessions', encodePiCwd(cwd))
+}
+
+const resolveComparablePath = (value) => {
+  const resolved = path.resolve(value)
+  try {
+    return fs.realpathSync(resolved)
+  } catch {
+    return resolved
+  }
+}
+
+const sameResolvedPath = (left, right) => resolveComparablePath(left) === resolveComparablePath(right)
 
 const validateDirectoryPath = (directoryPath) => {
   if (typeof directoryPath !== 'string' || directoryPath.trim() === '') {
@@ -174,6 +224,9 @@ const sanitizeSession = (session, fallbackDirectoryPath) => {
     directoryPath,
     piSessionId: typeof session.piSessionId === 'string' ? session.piSessionId : id,
     piSessionFile: typeof session.piSessionFile === 'string' ? session.piSessionFile : undefined,
+    firstMessage: typeof session.firstMessage === 'string' ? session.firstMessage : undefined,
+    messageCount: typeof session.messageCount === 'number' ? session.messageCount : undefined,
+    parentSessionPath: typeof session.parentSessionPath === 'string' ? session.parentSessionPath : undefined,
     displayName: String(session.displayName || session.title || path.basename(directoryPath) || directoryPath),
     title: session.title == null ? undefined : String(session.title),
     createdAt: typeof session.createdAt === 'string' ? session.createdAt : nowIso(),
@@ -193,6 +246,103 @@ const isUsablePiSessionFile = (filePath) => {
   } catch {
     return false
   }
+}
+
+const readJsonLines = (filePath) => {
+  const content = fs.readFileSync(filePath, 'utf8')
+  return content
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .flatMap((line) => {
+      try {
+        return [JSON.parse(line)]
+      } catch {
+        return []
+      }
+    })
+}
+
+const messageActivityTime = (entry) => {
+  if (entry?.type !== 'message') return undefined
+  const role = entry.message?.role
+  if (role !== 'user' && role !== 'assistant') return undefined
+  const messageTimestamp = entry.message?.timestamp
+  if (typeof messageTimestamp === 'number' && Number.isFinite(messageTimestamp)) return messageTimestamp
+  const entryTimestamp = Date.parse(entry.timestamp)
+  return Number.isNaN(entryTimestamp) ? undefined : entryTimestamp
+}
+
+const parsePiSessionFile = (filePath, projectDirectoryPath) => {
+  try {
+    if (!isUsablePiSessionFile(filePath)) return null
+    const entries = readJsonLines(filePath)
+    if (!entries.length || entries[0]?.type !== 'session') return null
+    const header = entries[0]
+    if (typeof header.cwd !== 'string' || !sameResolvedPath(header.cwd, projectDirectoryPath)) return null
+
+    const stats = fs.statSync(filePath)
+    let latestName
+    let firstMessage
+    let messageCount = 0
+    let latestActivityTime
+
+    for (const entry of entries) {
+      if (entry?.type === 'session_info') latestName = entry.name?.trim() || undefined
+      if (entry?.type !== 'message') {
+        continue
+      }
+
+      messageCount++
+      const activityTime = messageActivityTime(entry)
+      if (typeof activityTime === 'number') latestActivityTime = Math.max(latestActivityTime ?? 0, activityTime)
+
+      if (firstMessage || entry.message?.role !== 'user') continue
+      const text = contentToText(entry.message?.content ?? entry.message?.text ?? entry.message?.message).replace(/\s+/g, ' ').trim()
+      if (text) firstMessage = text
+    }
+
+    const createdAt = typeof header.timestamp === 'string' && !Number.isNaN(Date.parse(header.timestamp))
+      ? new Date(header.timestamp).toISOString()
+      : stats.birthtime.toISOString()
+    const updatedAt = latestActivityTime
+      ? new Date(latestActivityTime).toISOString()
+      : createdAt
+
+    return sanitizeSession({
+      id: sessionIdFromPath(filePath),
+      directoryPath: header.cwd,
+      piSessionId: typeof header.id === 'string' ? header.id : sessionIdFromPath(filePath),
+      piSessionFile: path.resolve(filePath),
+      displayName: latestName || firstMessage || header.id || path.basename(filePath, '.jsonl'),
+      title: latestName,
+      firstMessage,
+      messageCount,
+      parentSessionPath: typeof header.parentSession === 'string' ? header.parentSession : undefined,
+      createdAt,
+      updatedAt,
+      status: 'closed',
+    })
+  } catch {
+    return null
+  }
+}
+
+const scanPiSessionsForProject = (projectDirectoryPath, env = process.env) => {
+  const directoryPath = validateDirectoryPath(projectDirectoryPath)
+  const sessionDirectory = resolvePiSessionDir(directoryPath, env)
+  let entries
+  try {
+    entries = fs.readdirSync(sessionDirectory, { withFileTypes: true })
+  } catch {
+    return []
+  }
+
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.jsonl'))
+    .map((entry) => parsePiSessionFile(path.join(sessionDirectory, entry.name), directoryPath))
+    .filter(Boolean)
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
 }
 
 const contentToText = (content) => {
@@ -226,6 +376,12 @@ const normalizeMessageRecord = (message, index = 0) => {
     createdAt: typeof message?.timestamp === 'string' ? message.timestamp : typeof message?.createdAt === 'string' ? message.createdAt : undefined,
     status: message?.stopReason === 'error' ? 'error' : message?.stopReason === 'aborted' ? 'error' : 'complete',
   }
+}
+
+const getRpcMessagesArray = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.messages)) return payload.messages
+  return []
 }
 
 const normalizeTodoStatus = (value, fallback) => {
@@ -656,15 +812,16 @@ const createAssistantService = ({
   const emitter = new EventEmitter()
   const rootDir = path.join(userDataPath, 'open-ass')
   const registryPath = path.join(rootDir, 'sessions.json')
-  const sessionDir = path.join(rootDir, 'pi-sessions')
   const runtimeEnv = buildPiRuntimeEnv(env, spawnSync)
   const processes = new Map()
+  const runtimeSessions = new Map()
   const pendingOpenAssUiRequests = new Map()
 
   const readRegistry = () => {
     const sessions = readJsonFile(registryPath, [])
+    const runtime = Array.from(runtimeSessions.values())
     if (!Array.isArray(sessions)) return []
-    return sessions.filter((session) => {
+    return [...runtime, ...sessions].filter((session) => {
       try {
         sanitizeSession(session)
         return true
@@ -674,7 +831,147 @@ const createAssistantService = ({
     })
   }
 
-  const writeRegistry = (sessions) => writeJsonFile(registryPath, sessions.map((session) => sanitizeSession(session)))
+  const readRegisteredProjects = () => {
+    const seen = new Set()
+    const projects = []
+    const registry = readJsonFile(registryPath, [])
+    for (const item of Array.isArray(registry) ? registry : []) {
+      const rawDirectoryPath = item?.directoryPath
+      if (typeof rawDirectoryPath !== 'string' || rawDirectoryPath.trim() === '') continue
+      const directoryPath = path.resolve(rawDirectoryPath)
+      if (seen.has(directoryPath)) continue
+      seen.add(directoryPath)
+      projects.push({
+        directoryPath,
+        createdAt: typeof item.createdAt === 'string' ? item.createdAt : nowIso(),
+        updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : nowIso(),
+      })
+    }
+    return projects
+  }
+
+  const writeProjectRegistry = (projects) => {
+    const seen = new Set()
+    const normalized = []
+    for (const project of projects) {
+      const directoryPath = normalizeRegistryDirectoryPath(project.directoryPath)
+      if (seen.has(directoryPath)) continue
+      seen.add(directoryPath)
+      normalized.push({
+        directoryPath,
+        createdAt: typeof project.createdAt === 'string' ? project.createdAt : nowIso(),
+        updatedAt: typeof project.updatedAt === 'string' ? project.updatedAt : nowIso(),
+      })
+    }
+    writeJsonFile(registryPath, normalized)
+  }
+
+  const registerProject = (directoryPath) => {
+    const resolvedDirectory = validateDirectoryPath(directoryPath)
+    const projects = readRegisteredProjects()
+    const existing = projects.find((project) => project.directoryPath === resolvedDirectory)
+    if (existing) {
+      writeProjectRegistry(projects.map((project) =>
+        project.directoryPath === resolvedDirectory ? { ...project, updatedAt: nowIso() } : project,
+      ))
+      return existing
+    }
+    const project = { directoryPath: resolvedDirectory, createdAt: nowIso(), updatedAt: nowIso() }
+    writeProjectRegistry([project, ...projects])
+    return project
+  }
+
+  const migrateRegistrySessions = () => {
+    const registry = readJsonFile(registryPath, [])
+    if (!Array.isArray(registry)) return
+    let shouldRewriteProjects = false
+
+    for (const entry of registry) {
+      let session
+      try {
+        session = sanitizeSession(entry)
+      } catch {
+        continue
+      }
+
+      registerProject(session.directoryPath)
+      if (!isUsablePiSessionFile(session.piSessionFile)) {
+        runtimeSessions.set(session.id, session)
+        continue
+      }
+
+      const targetDir = resolvePiSessionDir(session.directoryPath, runtimeEnv)
+      const targetPath = path.join(targetDir, path.basename(session.piSessionFile))
+      if (sameResolvedPath(path.dirname(session.piSessionFile), targetDir) || isUsablePiSessionFile(targetPath)) {
+        shouldRewriteProjects = true
+        continue
+      }
+
+      ensureDirectory(targetDir)
+      fs.copyFileSync(session.piSessionFile, targetPath)
+      shouldRewriteProjects = true
+    }
+
+    if (shouldRewriteProjects) writeProjectRegistry(readRegisteredProjects())
+  }
+
+  const listKnownSessions = () => {
+    migrateRegistrySessions()
+    const byFile = new Map()
+    const byId = new Map()
+
+    for (const project of readRegisteredProjects()) {
+      if (!fs.existsSync(project.directoryPath)) continue
+      for (const session of scanPiSessionsForProject(project.directoryPath, runtimeEnv)) {
+        byFile.set(path.resolve(session.piSessionFile), session)
+        byId.set(session.id, session)
+      }
+    }
+
+    for (const session of runtimeSessions.values()) {
+      const sanitized = sanitizeSession(session)
+      const active = processes.has(sanitized.id)
+      const fileKey = sanitized.piSessionFile ? path.resolve(sanitized.piSessionFile) : undefined
+      const scanned = fileKey ? byFile.get(fileKey) : undefined
+      const merged = scanned
+        ? sanitizeSession({
+            ...scanned,
+            id: active ? sanitized.id : scanned.id,
+            status: sanitized.status,
+            model: sanitized.model ?? scanned.model,
+            agent: sanitized.agent ?? scanned.agent,
+            shareUrl: sanitized.shareUrl ?? scanned.shareUrl,
+            lastError: sanitized.lastError ?? scanned.lastError,
+          })
+        : sanitized
+      if (scanned && fileKey) byFile.set(fileKey, merged)
+      if (scanned && scanned.id !== merged.id) byId.delete(scanned.id)
+      byId.set(merged.id, merged)
+    }
+
+    return Array.from(byId.values()).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+  }
+
+  const resolveKnownSession = (sessionId) => {
+    const id = validateSessionId(sessionId)
+    const session = listKnownSessions().find((item) => item.id === id)
+    if (!session) throw new Error('Open-Ass session was not found.')
+    return session
+  }
+
+  const resolveProjectSessionReference = (currentSession, reference) => {
+    const value = validateText(reference, 'Session id').trim()
+    const candidates = listKnownSessions().filter((session) => sameResolvedPath(session.directoryPath, currentSession.directoryPath))
+    const matches = candidates.filter((session) =>
+      session.id === value ||
+      session.piSessionId === value ||
+      session.id.startsWith(value) ||
+      (session.piSessionId && session.piSessionId.startsWith(value)),
+    )
+    if (matches.length === 1) return matches[0]
+    if (matches.length > 1) throw new Error(`Session prefix "${value}" is ambiguous.`)
+    throw new Error(`No Pi session matching "${value}" was found for this project.`)
+  }
 
   const updateRegistrySession = (sessionId, updates) => {
     const id = validateSessionId(sessionId)
@@ -682,8 +979,12 @@ const createAssistantService = ({
     const nextSessions = sessions.map((session) =>
       session.id === id ? sanitizeSession({ ...session, ...updates, updatedAt: nowIso() }, session.directoryPath) : session,
     )
-    writeRegistry(nextSessions)
-    return nextSessions.find((session) => session.id === id)
+    const updated = nextSessions.find((session) => session.id === id)
+    if (updated) {
+      runtimeSessions.set(id, updated)
+      registerProject(updated.directoryPath)
+    }
+    return updated
   }
 
   const upsertRegistrySession = (session) => {
@@ -694,8 +995,10 @@ const createAssistantService = ({
       index === -1
         ? [sanitized, ...sessions]
         : sessions.map((item) => (item.id === sanitized.id ? { ...item, ...sanitized, updatedAt: nowIso() } : item))
-    writeRegistry(nextSessions)
-    return nextSessions.find((item) => item.id === sanitized.id)
+    const next = nextSessions.find((item) => item.id === sanitized.id)
+    runtimeSessions.set(sanitized.id, next)
+    registerProject(sanitized.directoryPath)
+    return next
   }
 
   const emitSessionEvent = (sessionId, event) => {
@@ -748,8 +1051,8 @@ const createAssistantService = ({
   }
 
   const requestOpenAssForkSelect = async (client) => {
-    const messages = await sendRpc(client, { type: 'get_messages' }).catch(() => [])
-    const options = (Array.isArray(messages) ? messages : [])
+    const messages = getRpcMessagesArray(await sendRpc(client, { type: 'get_messages' }).catch(() => []))
+    const options = messages
       .map(normalizeMessageRecord)
       .filter((message) => message.role === 'user' && message.id && message.content.trim())
       .slice(-20)
@@ -776,25 +1079,20 @@ const createAssistantService = ({
 
   const requestOpenAssResumeSelect = async (client) => {
     const current = getRegisteredSession(client.sessionId)
-    const sessions = readRegistry()
+    const sessions = listKnownSessions()
+      .filter((session) => sameResolvedPath(session.directoryPath, current.directoryPath))
       .filter((session) => session.id !== current.id)
-      .sort((a, b) => {
-        const sameDirectoryA = a.directoryPath === current.directoryPath ? 1 : 0
-        const sameDirectoryB = b.directoryPath === current.directoryPath ? 1 : 0
-        if (sameDirectoryA !== sameDirectoryB) return sameDirectoryB - sameDirectoryA
-        return Date.parse(b.updatedAt) - Date.parse(a.updatedAt)
-      })
 
     if (!sessions.length) {
-      return { handledBy: 'builtin', message: 'No other Open-Ass sessions are available to resume.' }
+      return { handledBy: 'builtin', message: 'No other Pi sessions are available to resume for this project.' }
     }
 
     return requestOpenAssUi(client, 'resume', {
       type: 'select',
       title: 'Resume session',
-      message: 'Choose a known Open-Ass session.',
+      message: 'Choose a Pi session from this project.',
       options: sessions.map((session) => ({
-        label: `${session.displayName} - ${path.basename(session.directoryPath) || session.directoryPath}`,
+        label: session.displayName || session.firstMessage || session.piSessionId,
         value: session.id,
       })),
     })
@@ -804,20 +1102,30 @@ const createAssistantService = ({
     const resolved = path.resolve(validateText(filePath, 'JSONL session path'))
     if (!isUsablePiSessionFile(resolved)) throw new Error('Import requires an existing .jsonl session file.')
 
-    const existing = readRegistry().find((session) => path.resolve(session.piSessionFile ?? '') === resolved)
+    const existing = listKnownSessions().find((session) => path.resolve(session.piSessionFile ?? '') === resolved)
     if (existing) {
       const opened = await service.openSession(existing.id)
       return { handledBy: 'builtin', message: `Opened imported session ${opened.displayName}.`, session: opened }
     }
 
     const current = getRegisteredSession(client.sessionId)
+    const targetDir = resolvePiSessionDir(current.directoryPath, runtimeEnv)
+    ensureDirectory(targetDir)
+    const importedPath = path.join(targetDir, path.basename(resolved))
+    if (!isUsablePiSessionFile(importedPath)) fs.copyFileSync(resolved, importedPath)
+    const parsed = parsePiSessionFile(importedPath, current.directoryPath)
+    if (parsed) {
+      const imported = await service.openSession(parsed.id)
+      return { handledBy: 'builtin', message: `Imported session from ${resolved}.`, session: imported }
+    }
+
     const timestamp = nowIso()
     const session = upsertRegistrySession({
       id: crypto.randomUUID(),
       piSessionId: crypto.randomUUID(),
-      piSessionFile: resolved,
+      piSessionFile: importedPath,
       directoryPath: current.directoryPath,
-      displayName: path.basename(resolved, '.jsonl') || current.displayName,
+      displayName: path.basename(importedPath, '.jsonl') || current.displayName,
       createdAt: timestamp,
       updatedAt: timestamp,
       status: 'starting',
@@ -851,8 +1159,8 @@ const createAssistantService = ({
     const rpcText = await sendRpc(client, { type: 'get_last_assistant_text' }).catch(() => undefined)
     let text = typeof rpcText === 'string' ? rpcText : typeof rpcText?.text === 'string' ? rpcText.text : ''
     if (!text.trim()) {
-      const messages = await sendRpc(client, { type: 'get_messages' }).catch(() => [])
-      const assistant = (Array.isArray(messages) ? messages : [])
+      const messages = getRpcMessagesArray(await sendRpc(client, { type: 'get_messages' }).catch(() => []))
+      const assistant = messages
         .map(normalizeMessageRecord)
         .reverse()
         .find((message) => message.role === 'assistant' && message.content.trim())
@@ -896,7 +1204,7 @@ const createAssistantService = ({
       return { handledBy: 'builtin', message: 'Forked session.', session: getRegisteredSession(client.sessionId) }
     }
     if (request.kind === 'resume') {
-      const session = await service.openSession(validateSessionId(String(response.value ?? '')))
+      const session = await service.openSession(resolveProjectSessionReference(getRegisteredSession(client.sessionId), String(response.value ?? '')).id)
       return { handledBy: 'builtin', message: `Resumed ${session.displayName}.`, session }
     }
     if (request.kind === 'quit') {
@@ -998,13 +1306,11 @@ const createAssistantService = ({
     const existing = processes.get(session.id)
     if (existing && existing.child.exitCode === null) return existing
 
-    ensureDirectory(sessionDir)
     const pi = findPiCommand()
     if (!pi) throw new Error('Pi CLI was not found on PATH. Install Pi or set PI_BIN_PATH.')
 
-    const args = ['--mode', 'rpc', '--session-dir', sessionDir]
+    const args = ['--mode', 'rpc']
     if (isUsablePiSessionFile(session.piSessionFile)) args.push('--session', session.piSessionFile)
-    else args.push('--session-id', session.piSessionId ?? session.id)
     if (session.title || session.displayName) args.push('--name', session.title || session.displayName)
 
     emitSessionEvent(session.id, { type: 'status', sessionId: session.id, status: 'starting' })
@@ -1077,17 +1383,14 @@ const createAssistantService = ({
   }
 
   const getRegisteredSession = (sessionId) => {
-    const id = validateSessionId(sessionId)
-    const session = readRegistry().find((item) => item.id === id)
-    if (!session) throw new Error('Open-Ass session was not found.')
-    return session
+    return resolveKnownSession(sessionId)
   }
 
   const ensureProcess = async (sessionId) => startProcess(getRegisteredSession(sessionId))
 
   const emitMessages = async (client) => {
-    const messages = await sendRpc(client, { type: 'get_messages' }).catch(() => [])
-    const normalized = Array.isArray(messages) ? messages.map(normalizeMessageRecord) : []
+    const messages = getRpcMessagesArray(await sendRpc(client, { type: 'get_messages' }).catch(() => []))
+    const normalized = messages.map(normalizeMessageRecord)
     emitSessionEvent(client.sessionId, { type: 'messages', sessionId: client.sessionId, messages: normalized })
     const todos = extractLatestTodosFromMessages(messages)
     if (todos) emitSessionEvent(client.sessionId, { type: 'todos', sessionId: client.sessionId, todos })
@@ -1139,13 +1442,14 @@ const createAssistantService = ({
       return { available: true, version: pi.version, serverUrl: 'pi-rpc' }
     },
 
-    listSessions: async () => readRegistry(),
+    listSessions: async () => listKnownSessions(),
 
     createSession: async (input) => {
       const validated = validateCreateSessionInput(input)
       const directoryPath = validated.directoryPath ?? (await chooseDirectory())
       if (!directoryPath) return null
       const resolvedDirectory = validateDirectoryPath(directoryPath)
+      registerProject(resolvedDirectory)
       const timestamp = nowIso()
       const id = crypto.randomUUID()
       const session = upsertRegistrySession({
@@ -1161,14 +1465,16 @@ const createAssistantService = ({
         status: 'starting',
       })
       const client = await startProcess(session)
-      return readRegistry().find((item) => item.id === client.sessionId) ?? session
+      return listKnownSessions().find((item) => item.id === client.sessionId) ?? session
     },
 
     openSession: async (sessionId) => {
       const session = getRegisteredSession(sessionId)
+      registerProject(session.directoryPath)
+      runtimeSessions.set(session.id, sanitizeSession({ ...session, status: 'starting' }))
       const client = await startProcess(session)
       await emitMessages(client)
-      return readRegistry().find((item) => item.id === session.id) ?? session
+      return listKnownSessions().find((item) => item.id === session.id) ?? session
     },
 
     sendCommand: async (sessionId, command, behavior) => {
@@ -1302,7 +1608,7 @@ const createAssistantService = ({
 
       if (commandName === 'resume') {
         if (trimmedArgs) {
-          const session = await service.openSession(validateSessionId(trimmedArgs))
+          const session = await service.openSession(resolveProjectSessionReference(getRegisteredSession(sessionId), trimmedArgs).id)
           return { handledBy: 'builtin', message: `Resumed ${session.displayName}.`, session }
         }
         return requestOpenAssResumeSelect(client)
@@ -1389,7 +1695,7 @@ const createAssistantService = ({
     deleteSession: async (sessionId) => {
       const id = validateSessionId(sessionId)
       await closeProcess(id)
-      writeRegistry(readRegistry().filter((session) => session.id !== id))
+      runtimeSessions.delete(id)
     },
 
     renameSession: async (sessionId, title) => {
@@ -1578,6 +1884,7 @@ const createAssistantService = ({
 
     _test: {
       buildPiRuntimeEnv,
+      getRpcMessagesArray,
       normalizePiEvent,
       normalizeMessageRecord,
       parseEnvOutput,
@@ -1650,12 +1957,18 @@ const registerAssistantIpc = ({ ipcMain, service }) => {
 module.exports = {
   buildPiRuntimeEnv,
   createAssistantService,
+  encodePiCwd,
+  getRpcMessagesArray,
   normalizeMessageRecord,
   normalizePiEvent,
   normalizeTodoDetails,
   normalizeQueueItem,
+  parsePiSessionFile,
   parseEnvOutput,
   registerAssistantIpc,
+  resolvePiSessionDir,
+  scanPiSessionsForProject,
+  sessionIdFromPath,
   validateCommand,
   validateCreateSessionInput,
   validateDirectoryPath,

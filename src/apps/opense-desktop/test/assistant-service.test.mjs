@@ -8,11 +8,14 @@ import assistantModule from '../electron/assistant-service.cjs'
 const {
   buildPiRuntimeEnv,
   createAssistantService,
+  getRpcMessagesArray,
   normalizeMessageRecord,
   normalizePiEvent,
   normalizeQueueItem,
   normalizeTodoDetails,
   parseEnvOutput,
+  resolvePiSessionDir,
+  scanPiSessionsForProject,
   validateCommand,
   validateCreateSessionInput,
   validateSessionId,
@@ -23,6 +26,19 @@ let tempRoot
 const makeTempRoot = () => {
   tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'open-ass-test-'))
   return tempRoot
+}
+
+const writePiSessionFile = (sessionRoot, cwd, name, entries = []) => {
+  fs.mkdirSync(sessionRoot, { recursive: true })
+  const filePath = path.join(sessionRoot, `${name}.jsonl`)
+  fs.writeFileSync(
+    filePath,
+    [
+      JSON.stringify({ type: 'session', version: 3, id: name, timestamp: '2026-01-01T00:00:00.000Z', cwd }),
+      ...entries.map((entry) => JSON.stringify(entry)),
+    ].join('\n'),
+  )
+  return filePath
 }
 
 const createFakeRpcProcess = (options = {}) => {
@@ -109,6 +125,14 @@ describe('assistant service', () => {
     expect(() => validateCreateSessionInput({ directoryPath: '/does/not/exist' })).toThrow(/does not exist/)
   })
 
+  it('normalizes documented Pi get_messages response shapes', () => {
+    const messages = [{ id: 'msg1', role: 'user', content: 'hello' }]
+
+    expect(getRpcMessagesArray(messages)).toEqual(messages)
+    expect(getRpcMessagesArray({ messages })).toEqual(messages)
+    expect(getRpcMessagesArray({ other: messages })).toEqual([])
+  })
+
   it('loads login shell environment so the desktop process can find terminal-installed Pi', () => {
     expect(parseEnvOutput('PATH=/opt/homebrew/bin:/usr/bin\nPI_BIN_PATH=/opt/homebrew/bin/pi\n')).toEqual({
       PATH: '/opt/homebrew/bin:/usr/bin',
@@ -127,7 +151,7 @@ describe('assistant service', () => {
     expect(env.OPENCODE_CLIENT).toBe('desktop')
   })
 
-  it('persists the Open-Ass session registry and starts Pi in RPC mode', async () => {
+  it('persists the opened project and starts new Pi sessions in native RPC mode', async () => {
     const directoryPath = makeTempRoot()
     const fakeProcess = createFakeRpcProcess()
     const spawn = vi.fn(() => fakeProcess)
@@ -147,9 +171,11 @@ describe('assistant service', () => {
     expect(sessions).toHaveLength(1)
     expect(spawn).toHaveBeenCalledWith(
       'pi',
-      expect.arrayContaining(['--mode', 'rpc', '--session-dir']),
+      expect.arrayContaining(['--mode', 'rpc']),
       expect.objectContaining({ cwd: directoryPath, env: expect.objectContaining({ OPENCODE_CLIENT: 'desktop' }) }),
     )
+    expect(spawn.mock.calls[0][1]).not.toContain('--session-dir')
+    expect(spawn.mock.calls[0][1]).not.toContain('--session-id')
     expect(fakeProcess.writes.map((command) => command.type)).toContain('get_state')
     expect(fakeProcess.writes.map((command) => command.type)).toContain('get_messages')
   })
@@ -189,7 +215,159 @@ describe('assistant service', () => {
     const args = spawn.mock.calls[0][1]
 
     expect(args).not.toContain('--session')
-    expect(args).toEqual(expect.arrayContaining(['--session-id', 'ses_existing']))
+    expect(args).not.toContain('--session-id')
+  })
+
+  it('scans Pi JSONL sessions for only the requested project and sorts by latest activity', () => {
+    const directoryPath = makeTempRoot()
+    const otherDirectoryPath = fs.mkdtempSync(path.join(os.tmpdir(), 'open-ass-other-'))
+    const sessionRoot = path.join(directoryPath, 'pi-native-sessions')
+
+    const older = writePiSessionFile(sessionRoot, directoryPath, '019-old', [
+      { type: 'session_info', id: 'info1', parentId: null, timestamp: '2026-01-01T00:00:01.000Z', name: 'Older name' },
+      {
+        type: 'message',
+        id: 'msg1',
+        parentId: 'info1',
+        timestamp: '2026-01-01T00:00:02.000Z',
+        message: { role: 'user', content: [{ type: 'text', text: 'first older message' }], timestamp: Date.parse('2026-01-01T00:00:02.000Z') },
+      },
+    ])
+    const newer = writePiSessionFile(sessionRoot, directoryPath, '019-new', [
+      { type: 'session_info', id: 'info2', parentId: null, timestamp: '2026-01-01T00:00:01.000Z', name: 'First name' },
+      { type: 'session_info', id: 'info3', parentId: 'info2', timestamp: '2026-01-01T00:00:03.000Z', name: 'Latest name' },
+      {
+        type: 'message',
+        id: 'msg2',
+        parentId: 'info3',
+        timestamp: '2026-01-01T00:00:04.000Z',
+        message: { role: 'user', content: [{ type: 'text', text: 'first newer message' }], timestamp: Date.parse('2026-01-01T00:00:04.000Z') },
+      },
+      {
+        type: 'message',
+        id: 'msg3',
+        parentId: 'msg2',
+        timestamp: '2026-01-01T00:00:05.000Z',
+        message: { role: 'assistant', content: [{ type: 'text', text: 'assistant reply' }], timestamp: Date.parse('2026-01-01T00:00:05.000Z') },
+      },
+    ])
+    writePiSessionFile(sessionRoot, otherDirectoryPath, '019-other', [
+      {
+        type: 'message',
+        id: 'msg4',
+        parentId: null,
+        timestamp: '2026-01-01T00:00:06.000Z',
+        message: { role: 'user', content: 'other project' },
+      },
+    ])
+
+    const sessions = scanPiSessionsForProject(directoryPath, { PI_CODING_AGENT_SESSION_DIR: sessionRoot })
+
+    expect(resolvePiSessionDir(directoryPath, { PI_CODING_AGENT_SESSION_DIR: sessionRoot })).toBe(sessionRoot)
+    expect(sessions.map((session) => session.piSessionFile)).toEqual([newer, older])
+    expect(sessions[0]).toMatchObject({
+      piSessionId: '019-new',
+      displayName: 'Latest name',
+      firstMessage: 'first newer message',
+      messageCount: 2,
+    })
+
+    fs.rmSync(otherDirectoryPath, { recursive: true, force: true })
+  })
+
+  it('opens scanned Pi sessions with --session and resolves /resume prefixes in the current project', async () => {
+    const directoryPath = makeTempRoot()
+    const sessionRoot = path.join(directoryPath, 'pi-native-sessions')
+    const firstFile = writePiSessionFile(sessionRoot, directoryPath, '019-first-session', [
+      {
+        type: 'message',
+        id: 'msg1',
+        parentId: null,
+        timestamp: '2026-01-01T00:00:02.000Z',
+        message: { role: 'user', content: 'first session', timestamp: Date.parse('2026-01-01T00:00:02.000Z') },
+      },
+    ])
+    const secondFile = writePiSessionFile(sessionRoot, directoryPath, '019-second-session', [
+      {
+        type: 'message',
+        id: 'msg2',
+        parentId: null,
+        timestamp: '2026-01-01T00:00:03.000Z',
+        message: { role: 'user', content: 'second session', timestamp: Date.parse('2026-01-01T00:00:03.000Z') },
+      },
+    ])
+    const userDataPath = path.join(directoryPath, 'user-data')
+    fs.mkdirSync(path.join(userDataPath, 'open-ass'), { recursive: true })
+    fs.writeFileSync(
+      path.join(userDataPath, 'open-ass', 'sessions.json'),
+      JSON.stringify([{ directoryPath, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]),
+    )
+
+    const processes = [
+      createFakeRpcProcess(),
+      createFakeRpcProcess({
+        messages: {
+          messages: [
+            { id: 'msg_resumed_user', role: 'user', content: 'resumed user' },
+            { id: 'msg_resumed_assistant', role: 'assistant', content: 'resumed assistant' },
+          ],
+        },
+      }),
+    ]
+    const spawn = vi.fn(() => processes.shift() ?? createFakeRpcProcess())
+    const service = createAssistantService({
+      userDataPath,
+      spawn,
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1', PI_CODING_AGENT_SESSION_DIR: sessionRoot },
+    })
+
+    const sessions = await service.listSessions()
+    const first = sessions.find((session) => session.piSessionId === '019-first-session')
+    const second = sessions.find((session) => session.piSessionId === '019-second-session')
+    const events = []
+    const unsubscribe = service.onSessionEvent(second.id, (event) => events.push(event))
+
+    await service.openSession(first.id)
+    const resumed = await service.runSlashCommand(first.id, 'resume', '019-second')
+
+    expect(spawn.mock.calls[0][1]).toEqual(expect.arrayContaining(['--session', firstFile]))
+    expect(spawn.mock.calls[1][1]).toEqual(expect.arrayContaining(['--session', secondFile]))
+    expect(resumed).toMatchObject({ handledBy: 'builtin', session: expect.objectContaining({ id: second.id }) })
+    expect(events.some((event) => event.type === 'messages' && event.messages.some((message) => message.content === 'resumed assistant'))).toBe(true)
+    unsubscribe()
+  })
+
+  it('emits normalized transcript messages from get_messages objects', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess({
+      messages: {
+        messages: [
+          { id: 'msg_user', role: 'user', content: [{ type: 'text', text: 'object user' }] },
+          { id: 'msg_assistant', role: 'assistant', content: [{ type: 'text', text: 'object assistant' }] },
+        ],
+      },
+    })
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+    const events = []
+    const unsubscribe = service.onSessionEvent(session.id, (event) => events.push(event))
+
+    await service.openSession(session.id)
+
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'messages',
+      messages: [
+        expect.objectContaining({ role: 'user', content: 'object user' }),
+        expect.objectContaining({ role: 'assistant', content: 'object assistant' }),
+      ],
+    }))
+    unsubscribe()
   })
 
   it('loads messages and forwards prompt calls over Pi RPC JSONL', async () => {
@@ -494,7 +672,7 @@ describe('assistant service', () => {
 
     const result = await service.runSlashCommand(session.id, 'resume', '')
 
-    expect(result).toMatchObject({ handledBy: 'builtin', message: expect.stringContaining('No other Open-Ass sessions') })
+    expect(result).toMatchObject({ handledBy: 'builtin', message: expect.stringContaining('No other Pi sessions') })
     expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/resume')).toBeUndefined()
   })
 
