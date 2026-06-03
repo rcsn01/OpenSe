@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState, type FormEvent, type KeyboardEvent, type RefObject } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import {
   AppShellLayout,
@@ -43,6 +43,7 @@ import {
   type AssistantCommand,
   type AssistantStatus,
   type AssistantTranscriptMessage,
+  type ExtensionUiRequest,
 } from '../lib/assistantBridge'
 
 type Action =
@@ -137,6 +138,79 @@ const slashCommandMatchesQuery = (command: AssistantCommand, query: string) => {
   return haystack.includes(query.toLowerCase())
 }
 
+type SelectExtensionUiRequest = Extract<ExtensionUiRequest, { type: 'select' }>
+
+type InlineSelectPickerProps = {
+  request: SelectExtensionUiRequest
+  filter: string
+  selection: number
+  inputRef: RefObject<HTMLInputElement | null>
+  options: SelectExtensionUiRequest['options']
+  onFilterChange: (value: string) => void
+  onKeyDown: (event: KeyboardEvent<HTMLElement>) => void
+  onSelect: (option: SelectExtensionUiRequest['options'][number]) => void
+  onCancel: () => void
+}
+
+const InlineSelectPicker = ({
+  request,
+  filter,
+  selection,
+  inputRef,
+  options,
+  onFilterChange,
+  onKeyDown,
+  onSelect,
+  onCancel,
+}: InlineSelectPickerProps) => {
+  const title = request.title ?? 'Choose an option'
+  const message = request.message ?? 'Select an option to continue.'
+
+  return (
+    <div className="mb-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-2 shadow-lg">
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium text-[var(--color-foreground)]">{title}</div>
+          <div className="truncate text-xs text-[var(--color-muted-foreground)]">{message}</div>
+        </div>
+        <Button type="button" size="xs" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+      <input
+        ref={inputRef}
+        aria-label={`Filter ${title}`}
+        value={filter}
+        onChange={(event) => onFilterChange(event.target.value)}
+        onKeyDown={onKeyDown}
+        className="mb-2 h-8 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      />
+      <div role="listbox" aria-label={title} className="max-h-56 space-y-1 overflow-y-auto">
+        {options.length ? (
+          options.map((option, index) => (
+            <button
+              key={`${option.value}:${index}`}
+              type="button"
+              role="option"
+              aria-selected={index === selection}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => onSelect(option)}
+              className={cn(
+                'flex w-full items-center rounded-[var(--radius-sm)] px-2 py-2 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
+                index === selection ? 'bg-[var(--color-muted)]' : 'hover:bg-[var(--color-muted)]',
+              )}
+            >
+              <span className="min-w-0 truncate">{option.label}</span>
+            </button>
+          ))
+        ) : (
+          <div className="px-2 py-3 text-sm text-[var(--color-muted-foreground)]">No matching options.</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export const AssistantWorkspace = () => {
   const [state, dispatch] = useReducer(reducer, initialSessionViewState)
   const [status, setStatus] = useState<AssistantStatus | null>(null)
@@ -147,9 +221,12 @@ export const AssistantWorkspace = () => {
   const [command, setCommand] = useState('')
   const [slashSelection, setSlashSelection] = useState(0)
   const [dismissedSlashText, setDismissedSlashText] = useState<string | null>(null)
+  const [selectFilter, setSelectFilter] = useState('')
+  const [selectSelection, setSelectSelection] = useState(0)
   const [capabilities, setCapabilities] = useState<AssistantCapabilities | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const commandInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const selectInputRef = useRef<HTMLInputElement | null>(null)
   const navigate = useNavigate()
   const { sessionId: routeSessionId } = useParams()
   const bridge = getAssistantBridge()
@@ -171,6 +248,8 @@ export const AssistantWorkspace = () => {
   const extensionTitle = typeof metadata.extensionTitle === 'string' ? metadata.extensionTitle : ''
   const editorText = typeof metadata.editorText === 'string' ? metadata.editorText : ''
   const extensionNotification = asRecord(metadata.extensionNotification)
+  const selectRequest = state.extensionRequest?.type === 'select' ? state.extensionRequest : null
+  const dialogExtensionRequest = state.extensionRequest?.type === 'select' ? null : state.extensionRequest
   const availableModels = Array.isArray(capabilities?.models) ? capabilities.models : []
   const currentModel = availableModels.find((model) => getModelLabel(model) === activeSession?.model)
   const currentModelValue = currentModel ? `${getModelProvider(currentModel)}\t${getModelId(currentModel)}` : ''
@@ -184,6 +263,14 @@ export const AssistantWorkspace = () => {
     return slashCommands.filter((item) => slashCommandMatchesQuery(item, slashQuery)).slice(0, 8)
   }, [slashCommands, slashQuery])
   const slashMenuOpen = slashQuery != null && dismissedSlashText !== command && filteredSlashCommands.length > 0
+  const filteredSelectOptions = useMemo(() => {
+    if (!selectRequest) return []
+    const query = selectFilter.trim().toLowerCase()
+    if (!query) return selectRequest.options
+    return selectRequest.options.filter((option) =>
+      `${option.label} ${option.value}`.toLowerCase().includes(query),
+    )
+  }, [selectFilter, selectRequest])
 
   useEffect(() => {
     let cancelled = false
@@ -262,6 +349,19 @@ export const AssistantWorkspace = () => {
     if (slashSelection >= filteredSlashCommands.length) setSlashSelection(0)
   }, [filteredSlashCommands.length, slashSelection])
 
+  useEffect(() => {
+    setSelectFilter('')
+    setSelectSelection(0)
+    if (!selectRequest) return
+    const focusInput = () => selectInputRef.current?.focus()
+    if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(focusInput)
+    else focusInput()
+  }, [selectRequest])
+
+  useEffect(() => {
+    if (selectSelection >= filteredSelectOptions.length) setSelectSelection(0)
+  }, [filteredSelectOptions.length, selectSelection])
+
   const createSession = async () => {
     if (!bridge) return
     setCreating(true)
@@ -301,8 +401,25 @@ export const AssistantWorkspace = () => {
     if (state.activeSessionId === sessionId) navigate('/')
   }
 
+  const respondToExtensionUi = async (response: unknown) => {
+    if (!bridge || !activeSession) return
+    await bridge.respondToExtensionUi(activeSession.id, response)
+    dispatch({ type: 'clear-extension-request' })
+  }
+
+  const closeExtensionRequest = () => {
+    if (activeSession && bridge && state.extensionRequest) {
+      void bridge.respondToExtensionUi(activeSession.id, {
+        id: state.extensionRequest.id,
+        cancelled: true,
+      })
+    }
+    dispatch({ type: 'clear-extension-request' })
+  }
+
   const sendCommand = async (event: FormEvent) => {
     event.preventDefault()
+    if (selectRequest) return
     if (!bridge || !activeSession || !command.trim()) return
     const nextCommand = command.trim()
     const route = (() => {
@@ -385,7 +502,49 @@ export const AssistantWorkspace = () => {
     setDismissedSlashText(null)
   }
 
+  const confirmSelectOption = (option?: SelectExtensionUiRequest['options'][number]) => {
+    if (!selectRequest || !option) return
+    void respondToExtensionUi({ id: selectRequest.id, value: option.value })
+  }
+
+  const handleSelectKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (!selectRequest) return false
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (filteredSelectOptions.length) {
+        setSelectSelection((index) => (index + 1) % filteredSelectOptions.length)
+      }
+      return true
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      if (filteredSelectOptions.length) {
+        setSelectSelection((index) => (index - 1 + filteredSelectOptions.length) % filteredSelectOptions.length)
+      }
+      return true
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      confirmSelectOption(filteredSelectOptions[selectSelection] ?? filteredSelectOptions[0])
+      return true
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeExtensionRequest()
+      return true
+    }
+    return false
+  }
+
   const handleCommandKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (handleSelectKeyDown(event)) return
+
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      event.currentTarget.form?.requestSubmit()
+      return
+    }
+
     if (!slashMenuOpen) return
     if (event.key === 'ArrowDown') {
       event.preventDefault()
@@ -393,7 +552,7 @@ export const AssistantWorkspace = () => {
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
       setSlashSelection((index) => (index - 1 + filteredSlashCommands.length) % filteredSlashCommands.length)
-    } else if (event.key === 'Enter' || event.key === 'Tab') {
+    } else if (event.key === 'Tab') {
       event.preventDefault()
       insertSlashCommand(filteredSlashCommands[slashSelection] ?? filteredSlashCommands[0])
     } else if (event.key === 'Escape') {
@@ -516,22 +675,6 @@ export const AssistantWorkspace = () => {
   const respondQuestion = async (requestId: string, label: string) => {
     if (!bridge || !activeSession) return
     await bridge.respondToQuestion(activeSession.id, requestId, [[label]])
-  }
-
-  const respondToExtensionUi = async (response: unknown) => {
-    if (!bridge || !activeSession) return
-    await bridge.respondToExtensionUi(activeSession.id, response)
-    dispatch({ type: 'clear-extension-request' })
-  }
-
-  const closeExtensionRequest = () => {
-    if (activeSession && bridge && state.extensionRequest) {
-      void bridge.respondToExtensionUi(activeSession.id, {
-        id: state.extensionRequest.id,
-        cancelled: true,
-      })
-    }
-    dispatch({ type: 'clear-extension-request' })
   }
 
   const shell = (
@@ -768,7 +911,23 @@ export const AssistantWorkspace = () => {
                 </div>
 
                 <form onSubmit={sendCommand} className="border-t border-[var(--color-border)] p-3">
-                  {slashMenuOpen ? (
+                  {selectRequest ? (
+                    <InlineSelectPicker
+                      request={selectRequest}
+                      filter={selectFilter}
+                      selection={selectSelection}
+                      inputRef={selectInputRef}
+                      options={filteredSelectOptions}
+                      onFilterChange={(value) => {
+                        setSelectFilter(value)
+                        setSelectSelection(0)
+                      }}
+                      onKeyDown={handleSelectKeyDown}
+                      onSelect={confirmSelectOption}
+                      onCancel={closeExtensionRequest}
+                    />
+                  ) : null}
+                  {!selectRequest && slashMenuOpen ? (
                     <div className="mb-2 max-h-64 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-1 shadow-lg">
                       <div role="listbox" aria-label="Slash commands" className="space-y-1">
                         {filteredSlashCommands.map((item, index) => (
@@ -813,9 +972,9 @@ export const AssistantWorkspace = () => {
                       rows={2}
                       placeholder="Send a prompt, /command, or !shell command..."
                       className="min-h-12 flex-1 resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-                      disabled={activeSession.status !== 'running' && activeSession.status !== 'starting'}
+                      disabled={Boolean(selectRequest) || (activeSession.status !== 'running' && activeSession.status !== 'starting')}
                     />
-                    <Button type="submit" size="md" loading={sending} disabled={!command.trim()}>
+                    <Button type="submit" size="md" loading={sending} disabled={Boolean(selectRequest) || !command.trim()}>
                       <Send className="h-4 w-4" />
                       Send
                     </Button>
@@ -1133,7 +1292,7 @@ export const AssistantWorkspace = () => {
     >
       {shell}
       <ExtensionRequestDialog
-        request={state.extensionRequest}
+        request={dialogExtensionRequest}
         onRespond={(response) => void respondToExtensionUi(response)}
         onCancel={closeExtensionRequest}
       />
