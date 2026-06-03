@@ -1170,17 +1170,6 @@ export const AssistantWorkspace = () => {
               <div className="space-y-3 text-xs">
                 <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">
                   <div className="mb-2 flex items-center gap-2 font-medium">
-                    <ListTodo className="h-3.5 w-3.5" />
-                    Work state
-                  </div>
-                  <WorkState todos={todos} queue={queueState} steerQueue={steerQueueState} compact />
-                  {!todos.length && !((queueState?.steering?.length ?? 0) || (queueState?.followUp?.length ?? 0)) && !steerQueueState?.active ? (
-                    <p className="text-[var(--color-muted-foreground)]">No work state.</p>
-                  ) : null}
-                </section>
-
-                <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">
-                  <div className="mb-2 flex items-center gap-2 font-medium">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     Permissions
                   </div>
