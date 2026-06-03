@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AssistantWorkspace } from '../components/AssistantWorkspace'
 import type {
@@ -18,10 +18,13 @@ const baseSession: AssistantSession = {
   status: 'closed',
 }
 
-const renderWorkspace = () =>
+const renderWorkspace = (initialEntries = ['/']) =>
   render(
-    <MemoryRouter>
-      <AssistantWorkspace />
+    <MemoryRouter initialEntries={initialEntries}>
+      <Routes>
+        <Route path="/" element={<AssistantWorkspace />} />
+        <Route path="/sessions/:sessionId" element={<AssistantWorkspace />} />
+      </Routes>
     </MemoryRouter>,
   )
 
@@ -97,9 +100,12 @@ describe('AssistantWorkspace', () => {
     expect(screen.getAllByText('Pi CLI was not found on PATH.').length).toBeGreaterThan(0)
   })
 
-  it('renders persisted sessions as project directory tabs', async () => {
-    installBridge({
-      listSessions: vi.fn(async () => [baseSession]),
+  it('renders persisted sessions as active project tabs with plain session links', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [
+        { ...baseSession, displayName: 'Current work', firstMessage: 'first prompt' },
+      ]),
+      openSession: vi.fn(async (sessionId) => ({ ...baseSession, id: sessionId, displayName: 'Current work', status: 'running' as const })),
     })
 
     renderWorkspace()
@@ -108,9 +114,72 @@ describe('AssistantWorkspace', () => {
     expect(screen.queryByText('MAIN')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /sessions/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add directory/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /^project$/i })).toBeInTheDocument()
-    expect((await screen.findAllByText('project')).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('link', { name: /^project project$/i })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
+    expect(screen.getByRole('link', { name: /^current work$/i })).not.toHaveClass('bg-[var(--color-side-nav-active-bg)]')
+    await waitFor(() => expect(bridge.openSession).toHaveBeenCalledWith('session-1'))
     expect(screen.getByText(/Users\/dev\/project/)).toBeInTheDocument()
+  })
+
+  it('opens a clicked session row and renders its emitted history', async () => {
+    const openSession = vi.fn(async (sessionId: string) => {
+      ;(window.openseAssistant as (OpenSeAssistantBridge & { emit: (event: AssistantSessionEvent) => void })).emit({
+        type: 'messages',
+        sessionId,
+        messages: [
+          {
+            id: `history-${sessionId}`,
+            role: 'user',
+            content: sessionId === 'session-2' ? 'older prompt' : 'current prompt',
+            createdAt: '2026-06-03T00:00:00.000Z',
+            status: 'complete',
+          },
+        ],
+      })
+      return { ...baseSession, id: sessionId, displayName: sessionId === 'session-2' ? 'Older work' : 'Current work', status: 'running' as const }
+    })
+    installBridge({
+      listSessions: vi.fn(async () => [
+        { ...baseSession, id: 'session-1', displayName: 'Current work' },
+        { ...baseSession, id: 'session-2', displayName: 'Older work' },
+      ]),
+      openSession,
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+
+    await user.click(await screen.findByRole('link', { name: /^older work$/i }))
+
+    await waitFor(() => expect(openSession).toHaveBeenCalledWith('session-2'))
+    expect(await screen.findByText('older prompt')).toBeInTheDocument()
+  })
+
+  it('opens a direct session route and renders history after subscribing', async () => {
+    const openSession = vi.fn(async (sessionId: string) => {
+      ;(window.openseAssistant as (OpenSeAssistantBridge & { emit: (event: AssistantSessionEvent) => void })).emit({
+        type: 'messages',
+        sessionId,
+        messages: [
+          {
+            id: 'direct-history',
+            role: 'assistant',
+            content: 'direct route history',
+            createdAt: '2026-06-03T00:00:00.000Z',
+            status: 'complete',
+          },
+        ],
+      })
+      return { ...baseSession, id: sessionId, displayName: 'Direct session', status: 'running' as const }
+    })
+    installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, id: 'session-1', displayName: 'Current work' }]),
+      openSession,
+    })
+
+    renderWorkspace(['/sessions/session-2'])
+
+    await waitFor(() => expect(openSession).toHaveBeenCalledWith('session-2'))
+    expect(await screen.findByText('direct route history')).toBeInTheDocument()
   })
 
   it('creates a session through the project add button', async () => {
@@ -123,6 +192,19 @@ describe('AssistantWorkspace', () => {
 
     await waitFor(() => expect(bridge.createSession).toHaveBeenCalledWith())
     expect((await screen.findAllByText('project')).length).toBeGreaterThan(0)
+  })
+
+  it('creates a new Pi session inside an existing project group', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [baseSession]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+
+    await user.click(await screen.findByRole('button', { name: /new session in project/i }))
+
+    await waitFor(() => expect(bridge.createSession).toHaveBeenCalledWith({ directoryPath: baseSession.directoryPath }))
   })
 
   it('applies streaming transcript updates with a trimmed session toolbar', async () => {
@@ -658,6 +740,12 @@ describe('AssistantWorkspace', () => {
     const resumedSession = { ...baseSession, id: 'session-2', displayName: 'resumed' }
     const bridge = installBridge({
       listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+      openSession: vi.fn(async (sessionId) => ({
+        ...baseSession,
+        id: sessionId,
+        displayName: sessionId === 'session-2' ? 'resumed' : 'project',
+        status: 'running' as const,
+      })),
       runSlashCommand: vi.fn(async () => ({
         handledBy: 'builtin' as const,
         uiRequest: {
@@ -686,8 +774,48 @@ describe('AssistantWorkspace', () => {
       id: 'builtin-quit',
       confirmed: true,
     })
-    expect(await screen.findByText('resumed')).toBeInTheDocument()
+    expect((await screen.findAllByText('resumed')).length).toBeGreaterThan(0)
     expect(await screen.findByText('Resumed resumed.')).toBeInTheDocument()
+  })
+
+  it('reopens a built-in resume result and displays the resumed transcript', async () => {
+    const resumedSession = { ...baseSession, id: 'session-2', displayName: 'resumed' }
+    const openSession = vi.fn(async (sessionId: string) => {
+      if (sessionId === 'session-2') {
+        ;(window.openseAssistant as (OpenSeAssistantBridge & { emit: (event: AssistantSessionEvent) => void })).emit({
+          type: 'messages',
+          sessionId,
+          messages: [
+            {
+              id: 'resumed-history',
+              role: 'assistant',
+              content: 'resumed transcript history',
+              createdAt: '2026-06-03T00:00:00.000Z',
+              status: 'complete',
+            },
+          ],
+        })
+      }
+      return { ...baseSession, id: sessionId, displayName: sessionId === 'session-2' ? 'resumed' : 'project', status: 'running' as const }
+    })
+    installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+      openSession,
+      runSlashCommand: vi.fn(async () => ({
+        handledBy: 'builtin' as const,
+        session: resumedSession,
+      })),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    await user.type(screen.getByLabelText('Send command'), '/resume')
+    await user.click(screen.getByRole('button', { name: /send/i }))
+
+    await waitFor(() => expect(openSession).toHaveBeenCalledWith('session-2'))
+    expect(await screen.findByText('resumed transcript history')).toBeInTheDocument()
   })
 
   it('renders non-select extension UI requests as modal dialogs and sends responses', async () => {
