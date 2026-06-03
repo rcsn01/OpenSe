@@ -87,17 +87,26 @@ export interface SideNavGroupProps {
   category?: SideNavCategory
   /** Custom title (overrides category when provided) */
   title?: string
+  /** Optional action rendered beside the group label */
+  trailing?: ReactNode
   children: ReactNode
 }
 
-export function SideNavGroup({ category, title, children }: SideNavGroupProps) {
+export function SideNavGroup({ category, title, trailing, children }: SideNavGroupProps) {
   const label = title ?? (category ? SIDE_NAV_CATEGORIES[category] : undefined)
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="group flex flex-col gap-0.5">
       {label && (
-        <SubLabel as="div" className="px-2 uppercase tracking-wider">
-          {label}
-        </SubLabel>
+        <div className="flex min-h-7 items-center justify-between gap-2 px-2">
+          <SubLabel as="div" className="uppercase tracking-wider">
+            {label}
+          </SubLabel>
+          {trailing ? (
+            <div className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              {trailing}
+            </div>
+          ) : null}
+        </div>
       )}
       <div className="flex flex-col gap-0.5">{children}</div>
     </div>

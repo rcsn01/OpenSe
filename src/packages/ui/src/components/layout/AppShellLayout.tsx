@@ -22,6 +22,7 @@ export interface AppShellNavItem {
 export interface AppShellNavGroup {
   category?: SideNavCategory
   title?: string
+  trailing?: ReactNode
   items: AppShellNavItem[]
 }
 
@@ -118,6 +119,7 @@ export function AppShellLayout({
               key={group.title ?? group.category ?? group.items.map((item) => item.href).join(':')}
               category={group.category}
               title={group.title}
+              trailing={group.trailing}
             >
               {group.items.map(renderNavItem)}
             </SideNavGroup>

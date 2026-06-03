@@ -13,7 +13,6 @@ import {
 import {
   Bot,
   CheckCircle2,
-  CircleStop,
   Clock3,
   CornerDownLeft,
   FolderOpen,
@@ -22,15 +21,11 @@ import {
   ListTodo,
   MessageSquare,
   PanelLeft,
-  Play,
   Plus,
-  RotateCcw,
   Send,
   Share2,
   ShieldCheck,
   Terminal,
-  Trash2,
-  Undo2,
   Wrench,
 } from 'lucide-react'
 import { ExtensionRequestDialog } from './ExtensionRequestDialog'
@@ -51,6 +46,7 @@ import {
   type AssistantTodo,
   type AssistantTranscriptMessage,
   type ExtensionUiRequest,
+  type SlashCommandResult,
 } from '../lib/assistantBridge'
 
 type Action =
@@ -58,6 +54,7 @@ type Action =
   | { type: 'add-session'; session: Parameters<typeof addSession>[1] }
   | { type: 'event'; event: Parameters<typeof reduceSessionEvent>[1] }
   | { type: 'activate'; sessionId: string | null }
+  | { type: 'set-extension-request'; request: ExtensionUiRequest }
   | { type: 'clear-extension-request' }
   | { type: 'error'; error: string | null }
 
@@ -66,13 +63,14 @@ const reducer = (state: typeof initialSessionViewState, action: Action) => {
   if (action.type === 'add-session') return addSession(state, action.session)
   if (action.type === 'event') return reduceSessionEvent(state, action.event)
   if (action.type === 'activate') return { ...state, activeSessionId: action.sessionId }
+  if (action.type === 'set-extension-request') return { ...state, extensionRequest: action.request }
   if (action.type === 'clear-extension-request') return { ...state, extensionRequest: null }
   return { ...state, error: action.error }
 }
 
-const formatDirectory = (path: string) => {
+const formatProjectName = (path: string) => {
   const parts = path.split('/').filter(Boolean)
-  return parts.length > 2 ? `.../${parts.slice(-2).join('/')}` : path
+  return parts[parts.length - 1] ?? path
 }
 
 const MessageBubble = ({ message }: { message: AssistantTranscriptMessage }) => {
@@ -108,20 +106,30 @@ type RuntimeState = {
   autoRetryEnabled?: boolean
 }
 
-const TODO_STATUS_ORDER: Record<string, number> = {
-  in_progress: 0,
-  pending: 1,
-  completed: 2,
-  cancelled: 3,
+const canonicalTodos = (todos: AssistantTodo[], includeCancelled = false) =>
+  todos.filter((todo) => includeCancelled || todo.status !== 'cancelled')
+
+const selectCollapsedTodos = (todos: AssistantTodo[]) => {
+  const visible = canonicalTodos(todos)
+  if (visible.length <= 5) return visible
+
+  const progressIndex = visible.findIndex((todo) => todo.status !== 'completed')
+  if (progressIndex === -1) return visible.slice(-5)
+
+  let start = Math.max(0, progressIndex - 2)
+  let end = Math.min(visible.length, progressIndex + 3)
+
+  while (end - start < 5) {
+    if (start > 0) start -= 1
+    else if (end < visible.length) end += 1
+    else break
+  }
+
+  return visible.slice(start, end)
 }
 
-const orderTodos = (todos: AssistantTodo[], includeCancelled = false) =>
-  [...todos]
-    .filter((todo) => includeCancelled || todo.status !== 'cancelled')
-    .sort((a, b) => (TODO_STATUS_ORDER[a.status] ?? 10) - (TODO_STATUS_ORDER[b.status] ?? 10))
-
 const todoCounts = (todos: AssistantTodo[], includeCancelled = false) =>
-  orderTodos(todos, includeCancelled).reduce(
+  canonicalTodos(todos, includeCancelled).reduce(
     (counts, todo) => ({ ...counts, [todo.status]: (counts[todo.status] ?? 0) + 1 }),
     {} as Record<string, number>,
   )
@@ -134,15 +142,15 @@ const todoStatusLabel = (status: string) => {
 
 const TodoRows = ({
   todos,
-  limit,
+  expanded = false,
   includeCancelled = false,
 }: {
   todos: AssistantTodo[]
-  limit?: number
+  expanded?: boolean
   includeCancelled?: boolean
 }) => {
-  const ordered = orderTodos(todos, includeCancelled)
-  const visible = typeof limit === 'number' ? ordered.slice(0, limit) : ordered
+  const ordered = canonicalTodos(todos, includeCancelled)
+  const visible = expanded ? ordered : selectCollapsedTodos(todos)
   const hidden = ordered.length - visible.length
 
   if (!ordered.length) return <p className="text-xs text-[var(--color-muted-foreground)]">No todos.</p>
@@ -198,14 +206,18 @@ const WorkState = ({
   queue,
   steerQueue,
   compact = false,
+  todosExpanded = false,
+  onToggleTodos,
 }: {
   todos: AssistantTodo[]
   queue?: AssistantQueueState
   steerQueue?: AssistantSteerQueueState
   compact?: boolean
+  todosExpanded?: boolean
+  onToggleTodos?: () => void
 }) => {
   const counts = todoCounts(todos)
-  const hasTodos = orderTodos(todos).length > 0
+  const hasTodos = canonicalTodos(todos).length > 0
   const steeringItems = queue?.steering ?? []
   const followUpItems = queue?.followUp ?? []
   const hasQueue = steeringItems.length > 0 || followUpItems.length > 0
@@ -235,7 +247,23 @@ const WorkState = ({
       ) : null}
 
       {hasTodos ? (
-        <div className={cn('rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-2', compact && 'border-0 bg-transparent p-0')}>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={todosExpanded}
+          aria-label={todosExpanded ? 'Collapse todos' : 'Expand todos'}
+          onClick={onToggleTodos}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              onToggleTodos?.()
+            }
+          }}
+          className={cn(
+            'cursor-pointer rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
+            compact && 'border-0 bg-transparent p-0',
+          )}
+        >
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium">
             <ListTodo className="h-3.5 w-3.5" />
             <span>Todos</span>
@@ -243,7 +271,7 @@ const WorkState = ({
             {counts.pending ? <Badge>{counts.pending} pending</Badge> : null}
             {counts.completed ? <Badge>{counts.completed} done</Badge> : null}
           </div>
-          <TodoRows todos={todos} limit={compact ? undefined : 5} />
+          <TodoRows todos={todos} expanded={todosExpanded || compact} includeCancelled={todosExpanded} />
         </div>
       ) : null}
     </div>
@@ -365,13 +393,13 @@ export const AssistantWorkspace = () => {
   const [status, setStatus] = useState<AssistantStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [openingId, setOpeningId] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [command, setCommand] = useState('')
   const [slashSelection, setSlashSelection] = useState(0)
   const [dismissedSlashText, setDismissedSlashText] = useState<string | null>(null)
   const [selectFilter, setSelectFilter] = useState('')
   const [selectSelection, setSelectSelection] = useState(0)
+  const [expandedTodoSessionIds, setExpandedTodoSessionIds] = useState<Record<string, boolean>>({})
   const [capabilities, setCapabilities] = useState<AssistantCapabilities | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const commandInputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -387,6 +415,7 @@ export const AssistantWorkspace = () => {
   const messages = activeSession ? state.messagesBySessionId[activeSession.id] ?? [] : []
   const toolEvents = activeSession ? state.toolsBySessionId[activeSession.id] ?? [] : []
   const todos = activeSession ? state.todosBySessionId[activeSession.id] ?? [] : []
+  const todosExpanded = activeSession ? Boolean(expandedTodoSessionIds[activeSession.id]) : false
   const diffs = activeSession ? state.diffsBySessionId[activeSession.id] ?? [] : []
   const permissions = activeSession ? state.permissionsBySessionId[activeSession.id] ?? [] : []
   const questions = activeSession ? state.questionsBySessionId[activeSession.id] ?? [] : []
@@ -422,6 +451,13 @@ export const AssistantWorkspace = () => {
       `${option.label} ${option.value}`.toLowerCase().includes(query),
     )
   }, [selectFilter, selectRequest])
+  const toggleTodosExpanded = () => {
+    if (!activeSession) return
+    setExpandedTodoSessionIds((current) => ({
+      ...current,
+      [activeSession.id]: !current[activeSession.id],
+    }))
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -529,32 +565,36 @@ export const AssistantWorkspace = () => {
     }
   }
 
-  const openSession = async (sessionId: string) => {
-    if (!bridge) return
-    setOpeningId(sessionId)
-    dispatch({ type: 'error', error: null })
-    try {
-      const session = await bridge.openSession(sessionId)
-      dispatch({ type: 'add-session', session })
-      navigate(`/sessions/${session.id}`)
-    } catch (error) {
-      dispatch({ type: 'error', error: error instanceof Error ? error.message : String(error) })
-    } finally {
-      setOpeningId(null)
+  const handleSlashCommandResult = (result: SlashCommandResult, sessionId = activeSession?.id) => {
+    if (result.handledBy !== 'builtin') return
+    if (result.session) {
+      dispatch({ type: 'add-session', session: result.session })
+      navigate(`/sessions/${result.session.id}`)
     }
-  }
-
-  const deleteSession = async (sessionId: string) => {
-    if (!bridge) return
-    await bridge.deleteSession(sessionId)
-    const sessions = await bridge.listSessions()
-    dispatch({ type: 'set-sessions', sessions })
-    if (state.activeSessionId === sessionId) navigate('/')
+    if (result.uiRequest) dispatch({ type: 'set-extension-request', request: result.uiRequest })
+    const messageSessionId = result.session?.id ?? sessionId
+    if (result.message && messageSessionId) {
+      dispatch({
+        type: 'event',
+        event: {
+          type: 'message',
+          sessionId: messageSessionId,
+          message: {
+            id: `builtin-${Date.now()}`,
+            role: 'system',
+            content: result.message,
+            createdAt: new Date().toISOString(),
+            status: 'complete',
+          },
+        },
+      })
+    }
   }
 
   const respondToExtensionUi = async (response: unknown) => {
     if (!bridge || !activeSession) return
-    await bridge.respondToExtensionUi(activeSession.id, response)
+    const result = await bridge.respondToExtensionUi(activeSession.id, response)
+    if (result) handleSlashCommandResult(result, activeSession.id)
     dispatch({ type: 'clear-extension-request' })
   }
 
@@ -610,25 +650,7 @@ export const AssistantWorkspace = () => {
         await bridge.runShellCommand(activeSession.id, route.command)
       } else if (route.type === 'slash') {
         const result = await bridge.runSlashCommand(activeSession.id, route.command, route.args)
-        if (result.handledBy === 'builtin') {
-          if (result.session) dispatch({ type: 'add-session', session: result.session })
-          if (result.message) {
-            dispatch({
-              type: 'event',
-              event: {
-                type: 'message',
-                sessionId: activeSession.id,
-                message: {
-                  id: `builtin-${Date.now()}`,
-                  role: 'system',
-                  content: result.message,
-                  createdAt: new Date().toISOString(),
-                  status: 'complete',
-                },
-              },
-            })
-          }
-        }
+        handleSlashCommandResult(result, activeSession.id)
       } else {
         await bridge.sendCommand(activeSession.id, route.command, behavior)
       }
@@ -723,17 +745,6 @@ export const AssistantWorkspace = () => {
     }
   }
 
-  const abortActiveSession = async () => {
-    if (!bridge || !activeSession) return
-    await bridge.abort(activeSession.id)
-  }
-
-  const restartActiveSession = async () => {
-    if (!bridge || !activeSession) return
-    await bridge.closeSession(activeSession.id)
-    await openSession(activeSession.id)
-  }
-
   const runSessionAction = async (name: string, action: () => Promise<void>) => {
     setBusyAction(name)
     dispatch({ type: 'error', error: null })
@@ -748,23 +759,6 @@ export const AssistantWorkspace = () => {
     } finally {
       setBusyAction(null)
     }
-  }
-
-  const renameActiveSession = async () => {
-    if (!bridge || !activeSession) return
-    const title = window.prompt('Rename session', activeSession.title ?? activeSession.displayName)
-    if (!title?.trim()) return
-    await runSessionAction('rename', async () => {
-      const session = await bridge.renameSession(activeSession.id, title.trim())
-      dispatch({ type: 'add-session', session })
-    })
-  }
-
-  const revertLastUserMessage = async () => {
-    if (!bridge || !activeSession) return
-    const message = [...messages].reverse().find((item) => item.role === 'user')
-    if (!message) return
-    await runSessionAction('revert', () => bridge.revertSession(activeSession.id, message.id))
   }
 
   const forkActiveSession = async () => {
@@ -844,81 +838,47 @@ export const AssistantWorkspace = () => {
       brand={{ icon: <Bot />, name: 'Open-Ass', version: 'v1' }}
       navGroups={[
         {
-          category: 'main',
-          items: [
-            {
-              href: '/',
-              label: 'Sessions',
-              icon: <MessageSquare className="h-4 w-4" />,
-              isActive: () => true,
-            },
-          ],
+          title: 'PROJECTS',
+          trailing: (
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              aria-label="Add directory"
+              onClick={createSession}
+              loading={creating}
+              className="h-6 w-6 p-0"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          ),
+          items: state.sessions.map((session) => ({
+            href: `/sessions/${session.id}`,
+            label: formatProjectName(session.directoryPath),
+            icon: <FolderOpen className="h-4 w-4" />,
+            isActive: () => session.id === state.activeSessionId,
+          })),
         },
       ]}
-      currentPath="/"
-      renderNavLink={(item, { className, children }) => (
-        <NavLink to={item.href} className={className}>
-          {children}
-        </NavLink>
-      )}
+      currentPath={activeSession ? `/sessions/${activeSession.id}` : '/'}
+      renderNavLink={(item, { className, children }) => {
+        const targetSession = state.sessions.find((session) => item.href === `/sessions/${session.id}`)
+        return (
+          <NavLink
+            to={item.href}
+            className={className}
+            onClick={() => {
+              if (targetSession) dispatch({ type: 'activate', sessionId: targetSession.id })
+            }}
+          >
+            {children}
+          </NavLink>
+        )
+      }}
       profileFallback="OA"
     >
       <BasePage contentClassName="h-full p-0" containerClassName="h-full min-h-0">
-        <div className="grid h-full min-h-0 grid-cols-1 overflow-hidden lg:grid-cols-[var(--ass-transcript-grid)] xl:grid-cols-[var(--ass-workspace-grid)]">
-          <aside className="flex min-h-0 flex-col border-b border-[var(--color-border)] bg-[var(--color-surface)] lg:border-b-0 lg:border-r">
-            <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-3 py-2">
-              <div>
-                <h1 className="text-sm font-semibold text-[var(--color-heading)]">Open-Ass</h1>
-                <p className="text-xs text-[var(--color-muted-foreground)]">Pi sessions</p>
-              </div>
-              <Button type="button" size="xs" onClick={createSession} loading={creating}>
-                <Plus className="h-3.5 w-3.5" />
-                Directory
-              </Button>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto p-2">
-              {state.sessions.length === 0 ? (
-                <div className="px-2 py-8">
-                  <EmptyState
-                    title="No Open-Ass sessions"
-                    description="Choose a local directory to start Pi in that workspace."
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  {state.sessions.map((session) => (
-                    <button
-                      key={session.id}
-                      type="button"
-                      onClick={() => {
-                        dispatch({ type: 'activate', sessionId: session.id })
-                        navigate(`/sessions/${session.id}`)
-                      }}
-                      className={cn(
-                        'group flex w-full items-start gap-2 rounded-[var(--radius-md)] px-2 py-2 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
-                        session.id === state.activeSessionId
-                          ? 'bg-[var(--color-muted)] text-[var(--color-foreground)]'
-                          : 'hover:bg-[var(--color-muted)]',
-                      )}
-                    >
-                      <PanelLeft className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-muted-foreground)]" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{session.displayName}</span>
-                        <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
-                          {formatDirectory(session.directoryPath)}
-                        </span>
-                      </span>
-                      <Badge variant={session.status === 'running' ? 'success' : 'default'}>
-                        {session.status}
-                      </Badge>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </aside>
-
+        <div className="grid h-full min-h-0 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_20rem]">
           <section className="flex min-h-0 flex-col bg-[var(--color-background)]">
             <header className="flex min-h-14 items-center justify-between gap-3 border-b border-[var(--color-border)] px-3 py-2">
               <div className="min-w-0">
@@ -946,29 +906,6 @@ export const AssistantWorkspace = () => {
                     type="button"
                     size="icon"
                     variant="ghost"
-                    aria-label="Open session"
-                    onClick={() => void openSession(activeSession.id)}
-                    loading={openingId === activeSession.id}
-                  >
-                    <Play className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" size="icon" variant="ghost" aria-label="Abort" onClick={abortActiveSession}>
-                    <CircleStop className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Rename session"
-                    onClick={() => void renameActiveSession()}
-                    loading={busyAction === 'rename'}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
                     aria-label="Share session"
                     onClick={() => void toggleShareActiveSession()}
                     loading={busyAction === 'share'}
@@ -984,28 +921,6 @@ export const AssistantWorkspace = () => {
                     loading={busyAction === 'fork'}
                   >
                     <GitFork className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Undo last message"
-                    onClick={() => void revertLastUserMessage()}
-                    loading={busyAction === 'revert'}
-                  >
-                    <Undo2 className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" size="icon" variant="ghost" aria-label="Restart" onClick={restartActiveSession}>
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Delete session"
-                    onClick={() => void deleteSession(activeSession.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ) : null}
@@ -1073,7 +988,13 @@ export const AssistantWorkspace = () => {
                 </div>
 
                 <form onSubmit={sendCommand} className="border-t border-[var(--color-border)] p-3">
-                  <WorkState todos={todos} queue={queueState} steerQueue={steerQueueState} />
+                  <WorkState
+                    todos={todos}
+                    queue={queueState}
+                    steerQueue={steerQueueState}
+                    todosExpanded={todosExpanded}
+                    onToggleTodos={toggleTodosExpanded}
+                  />
                   {selectRequest ? (
                     <InlineSelectPicker
                       request={selectRequest}

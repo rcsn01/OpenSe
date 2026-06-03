@@ -11,14 +11,34 @@ const MAX_TEXT_SIZE = 100_000
 const RPC_RESPONSE_TIMEOUT_MS = 30_000
 const MAX_STDERR_SIZE = 64_000
 const OPEN_ASS_UI_REQUEST_PREFIX = 'open_ass_ui_'
-const OPEN_ASS_BUILTIN_COMMANDS = [
-  { name: 'compact', source: 'built-in', description: 'Compact the current session, optionally with custom instructions.' },
-  { name: 'name', source: 'built-in', description: 'Rename the current session.' },
-  { name: 'session', source: 'built-in', description: 'Show current session state and statistics.' },
-  { name: 'clone', source: 'built-in', description: 'Clone the current Pi session and refresh the transcript.' },
-  { name: 'model', source: 'built-in', description: 'Switch models with provider/model, or choose interactively without an argument.' },
-  { name: 'todos', source: 'built-in', description: 'Show the current todo state in the native Open-Ass UI.' },
+const PI_TUI_BUILTIN_COMMANDS = [
+  { name: 'settings', source: 'builtin', description: 'Open settings menu' },
+  { name: 'model', source: 'builtin', description: 'Select model (opens selector UI)' },
+  { name: 'scoped-models', source: 'builtin', description: 'Enable/disable models for Ctrl+P cycling' },
+  { name: 'export', source: 'builtin', description: 'Export session (HTML default, or specify path: .html/.jsonl)' },
+  { name: 'import', source: 'builtin', description: 'Import and resume a session from a JSONL file' },
+  { name: 'share', source: 'builtin', description: 'Share session as a secret GitHub gist' },
+  { name: 'copy', source: 'builtin', description: 'Copy last agent message to clipboard' },
+  { name: 'name', source: 'builtin', description: 'Set session display name' },
+  { name: 'session', source: 'builtin', description: 'Show session info and stats' },
+  { name: 'changelog', source: 'builtin', description: 'Show changelog entries' },
+  { name: 'hotkeys', source: 'builtin', description: 'Show all keyboard shortcuts' },
+  { name: 'fork', source: 'builtin', description: 'Create a new fork from a previous user message' },
+  { name: 'clone', source: 'builtin', description: 'Duplicate the current session at the current position' },
+  { name: 'tree', source: 'builtin', description: 'Navigate session tree (switch branches)' },
+  { name: 'login', source: 'builtin', description: 'Configure provider authentication' },
+  { name: 'logout', source: 'builtin', description: 'Remove provider authentication' },
+  { name: 'new', source: 'builtin', description: 'Start a new session' },
+  { name: 'compact', source: 'builtin', description: 'Manually compact the session context' },
+  { name: 'resume', source: 'builtin', description: 'Resume a different session' },
+  { name: 'reload', source: 'builtin', description: 'Reload keybindings, extensions, skills, prompts, and themes' },
+  { name: 'quit', source: 'builtin', description: 'Quit Pi' },
 ]
+const OPEN_ASS_ONLY_COMMANDS = [
+  { name: 'todos', source: 'open-ass', description: 'Show the current todo state in the native Open-Ass UI.' },
+]
+const PI_TUI_BUILTIN_COMMAND_NAMES = new Set(PI_TUI_BUILTIN_COMMANDS.map((command) => command.name))
+const OPEN_ASS_ONLY_COMMAND_NAMES = new Set(OPEN_ASS_ONLY_COMMANDS.map((command) => command.name))
 
 const nowIso = () => new Date().toISOString()
 
@@ -483,19 +503,76 @@ const formatSessionResult = (state, stats) => {
   return lines.join('\n')
 }
 
+const formatUnsupportedBuiltinCommandMessage = (commandName) => {
+  const command = PI_TUI_BUILTIN_COMMANDS.find((item) => item.name === commandName) ?? OPEN_ASS_ONLY_COMMANDS.find((item) => item.name === commandName)
+  const description = command?.description ? ` Pi TUI uses it to: ${command.description}.` : ''
+  return `/${commandName} is a Pi TUI built-in command, but Open-Ass does not expose that TUI workflow yet.${description}`
+}
+
+const formatOpenAssFallbackPanelMessage = (commandName) => {
+  const command = PI_TUI_BUILTIN_COMMANDS.find((item) => item.name === commandName)
+  const description = command?.description ? `\n\nPi TUI behavior: ${command.description}.` : ''
+  return `/${commandName} is handled inside Open-Ass for this session.${description}\n\nUse the Session sidebar and Runtime controls for the Open-Ass-native workflow.`
+}
+
+const formatHotkeysMessage = () => [
+  'Hotkeys',
+  'Enter: send',
+  'Shift+Enter: newline',
+  'Tab during an active turn: queue a follow-up',
+  '/: open slash command autocomplete',
+  'Arrow Up/Down: move through slash commands or picker options',
+  'Escape: dismiss autocomplete or cancel a picker',
+].join('\n')
+
+const formatChangelogMessage = () => [
+  'Changelog',
+  'Open-Ass now handles Pi built-in slash commands natively where Pi RPC exposes the behavior.',
+  'Extension, prompt, and skill commands still execute through Pi unchanged.',
+  'Extension UI requests are rendered with Open-Ass pickers and dialogs.',
+].join('\n')
+
+const formatSettingsMessage = (state) => [
+  'Settings',
+  `Model: ${formatValue(modelLabelFromState(state))}`,
+  `Thinking: ${formatValue(state?.thinkingLevel)}`,
+  `Steering: ${formatValue(state?.steeringMode)}`,
+  `Follow-up: ${formatValue(state?.followUpMode)}`,
+  `Auto compaction: ${formatValue(state?.autoCompactionEnabled)}`,
+  `Auto retry: ${formatValue(state?.autoRetryEnabled)}`,
+  '',
+  'Use the Runtime controls sidebar to change these settings.',
+].join('\n')
+
+const getDefaultClipboard = () => {
+  try {
+    return require('electron')?.clipboard ?? null
+  } catch {
+    return null
+  }
+}
+
+const getCommandItems = (commands) => (
+  Array.isArray(commands?.commands) ? commands.commands : Array.isArray(commands) ? commands : []
+)
+
+const getCommandName = (command) => {
+  const name = typeof command === 'string' ? command : command?.name
+  return typeof name === 'string' ? name.replace(/^\//, '').trim() : ''
+}
+
 const normalizeCommandList = (commands) => {
-  const items = Array.isArray(commands?.commands) ? commands.commands : Array.isArray(commands) ? commands : []
+  const items = getCommandItems(commands)
   const normalized = []
   const seen = new Set()
 
-  for (const command of [...OPEN_ASS_BUILTIN_COMMANDS, ...items]) {
+  for (const command of [...PI_TUI_BUILTIN_COMMANDS, ...OPEN_ASS_ONLY_COMMANDS, ...items]) {
     const record = typeof command === 'string' ? { name: command } : command
-    const name = typeof record?.name === 'string' ? record.name.replace(/^\//, '').trim() : ''
+    const name = getCommandName(record)
     if (!name) continue
     const source = typeof record.source === 'string' ? record.source : 'prompt'
-    const key = `${source}:${name}`
-    if (seen.has(key)) continue
-    seen.add(key)
+    if (seen.has(name)) continue
+    seen.add(name)
     normalized.push({
       ...record,
       name,
@@ -508,11 +585,7 @@ const normalizeCommandList = (commands) => {
 }
 
 const hasPiCommand = (commands, commandName) => {
-  const items = Array.isArray(commands?.commands) ? commands.commands : Array.isArray(commands) ? commands : []
-  return items.some((command) => {
-    const name = typeof command === 'string' ? command : command?.name
-    return typeof name === 'string' && name.replace(/^\//, '').trim() === commandName
-  })
+  return getCommandItems(commands).some((command) => getCommandName(command) === commandName)
 }
 
 const normalizeExtensionUiRequest = (request) => {
@@ -541,10 +614,16 @@ const normalizeExtensionUiMetadata = (request) => {
   }
   if (method === 'setWidget') {
     const key = String(request.widgetKey ?? 'default')
+    const rawLines = request.widgetLines ?? request.lines ?? request.content ?? request.widgetContent
+    const lines = Array.isArray(rawLines)
+      ? rawLines.map(String)
+      : typeof rawLines === 'string'
+        ? rawLines.split(/\r?\n/)
+        : []
     return {
       extensionWidgets: {
         [key]: {
-          lines: Array.isArray(request.widgetLines) ? request.widgetLines.map(String) : [],
+          lines,
           placement: request.widgetPlacement,
         },
       },
@@ -569,6 +648,7 @@ const createAssistantService = ({
   spawn = childProcess.spawn,
   spawnSync = childProcess.spawnSync,
   chooseDirectory = async () => null,
+  clipboard = getDefaultClipboard(),
   env = process.env,
 } = {}) => {
   if (!userDataPath) throw new Error('userDataPath is required.')
@@ -630,6 +710,22 @@ const createAssistantService = ({
 
   const createOpenAssUiRequestId = (kind) => `${OPEN_ASS_UI_REQUEST_PREFIX}${kind}_${crypto.randomUUID()}`
 
+  const requestOpenAssUi = (client, kind, request, data = {}) => {
+    const requestId = createOpenAssUiRequestId(kind)
+    const uiRequest = { ...request, id: requestId }
+    pendingOpenAssUiRequests.set(requestId, {
+      sessionId: client.sessionId,
+      kind,
+      data,
+    })
+    emitSessionEvent(client.sessionId, {
+      type: 'extension_ui',
+      sessionId: client.sessionId,
+      request: uiRequest,
+    })
+    return { handledBy: 'builtin', uiRequest }
+  }
+
   const requestOpenAssModelSelect = async (client) => {
     const [state, models] = await Promise.all([
       sendRpc(client, { type: 'get_state' }).catch(() => undefined),
@@ -643,31 +739,172 @@ const createAssistantService = ({
       }
     }
 
-    const requestId = createOpenAssUiRequestId('model')
-    pendingOpenAssUiRequests.set(requestId, {
-      sessionId: client.sessionId,
-      kind: 'model',
+    return requestOpenAssUi(client, 'model', {
+      type: 'select',
+      title: 'Choose model',
+      message: `Current model: ${modelLabelFromState(state) ?? 'Default'}`,
+      options,
     })
-    emitSessionEvent(client.sessionId, {
-      type: 'extension_ui',
-      sessionId: client.sessionId,
-      request: {
-        id: requestId,
-        type: 'select',
-        title: 'Choose model',
-        message: `Current model: ${modelLabelFromState(state) ?? 'Default'}`,
-        options,
-      },
+  }
+
+  const requestOpenAssForkSelect = async (client) => {
+    const messages = await sendRpc(client, { type: 'get_messages' }).catch(() => [])
+    const options = (Array.isArray(messages) ? messages : [])
+      .map(normalizeMessageRecord)
+      .filter((message) => message.role === 'user' && message.id && message.content.trim())
+      .slice(-20)
+      .reverse()
+      .map((message) => ({
+        label: `${message.content.replace(/\s+/g, ' ').slice(0, 120)}${message.content.length > 120 ? '...' : ''}`,
+        value: message.id,
+      }))
+
+    if (!options.length) {
+      return {
+        handledBy: 'builtin',
+        message: 'No previous user messages are available to fork from. Use /clone to duplicate the current session.',
+      }
+    }
+
+    return requestOpenAssUi(client, 'fork', {
+      type: 'select',
+      title: 'Fork session',
+      message: 'Choose the user message to fork from.',
+      options,
     })
-    return { handledBy: 'builtin' }
+  }
+
+  const requestOpenAssResumeSelect = async (client) => {
+    const current = getRegisteredSession(client.sessionId)
+    const sessions = readRegistry()
+      .filter((session) => session.id !== current.id)
+      .sort((a, b) => {
+        const sameDirectoryA = a.directoryPath === current.directoryPath ? 1 : 0
+        const sameDirectoryB = b.directoryPath === current.directoryPath ? 1 : 0
+        if (sameDirectoryA !== sameDirectoryB) return sameDirectoryB - sameDirectoryA
+        return Date.parse(b.updatedAt) - Date.parse(a.updatedAt)
+      })
+
+    if (!sessions.length) {
+      return { handledBy: 'builtin', message: 'No other Open-Ass sessions are available to resume.' }
+    }
+
+    return requestOpenAssUi(client, 'resume', {
+      type: 'select',
+      title: 'Resume session',
+      message: 'Choose a known Open-Ass session.',
+      options: sessions.map((session) => ({
+        label: `${session.displayName} - ${path.basename(session.directoryPath) || session.directoryPath}`,
+        value: session.id,
+      })),
+    })
+  }
+
+  const importPiSessionFile = async (client, filePath) => {
+    const resolved = path.resolve(validateText(filePath, 'JSONL session path'))
+    if (!isUsablePiSessionFile(resolved)) throw new Error('Import requires an existing .jsonl session file.')
+
+    const existing = readRegistry().find((session) => path.resolve(session.piSessionFile ?? '') === resolved)
+    if (existing) {
+      const opened = await service.openSession(existing.id)
+      return { handledBy: 'builtin', message: `Opened imported session ${opened.displayName}.`, session: opened }
+    }
+
+    const current = getRegisteredSession(client.sessionId)
+    const timestamp = nowIso()
+    const session = upsertRegistrySession({
+      id: crypto.randomUUID(),
+      piSessionId: crypto.randomUUID(),
+      piSessionFile: resolved,
+      directoryPath: current.directoryPath,
+      displayName: path.basename(resolved, '.jsonl') || current.displayName,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      status: 'starting',
+    })
+    const imported = await service.openSession(session.id)
+    return { handledBy: 'builtin', message: `Imported session from ${resolved}.`, session: imported }
+  }
+
+  const exportSession = async (client, outputPath) => {
+    const trimmedOutputPath = typeof outputPath === 'string' ? outputPath.trim() : ''
+    if (trimmedOutputPath.endsWith('.jsonl')) {
+      const state = await sendRpc(client, { type: 'get_state' })
+      const source = state?.sessionFile
+      if (!isUsablePiSessionFile(source)) throw new Error('Pi did not report an exportable JSONL session file.')
+      ensureDirectory(path.dirname(path.resolve(trimmedOutputPath)))
+      fs.copyFileSync(source, path.resolve(trimmedOutputPath))
+      return { handledBy: 'builtin', message: `Exported session to ${path.resolve(trimmedOutputPath)}.` }
+    }
+
+    const payload = { type: 'export_html' }
+    if (trimmedOutputPath) payload.outputPath = trimmedOutputPath
+    const result = await sendRpc(client, payload)
+    const exportedPath = typeof result?.path === 'string' && result.path ? result.path : trimmedOutputPath
+    return {
+      handledBy: 'builtin',
+      message: exportedPath ? `Exported session to ${exportedPath}.` : 'Exported session.',
+    }
+  }
+
+  const copyLastAssistantText = async (client) => {
+    const rpcText = await sendRpc(client, { type: 'get_last_assistant_text' }).catch(() => undefined)
+    let text = typeof rpcText === 'string' ? rpcText : typeof rpcText?.text === 'string' ? rpcText.text : ''
+    if (!text.trim()) {
+      const messages = await sendRpc(client, { type: 'get_messages' }).catch(() => [])
+      const assistant = (Array.isArray(messages) ? messages : [])
+        .map(normalizeMessageRecord)
+        .reverse()
+        .find((message) => message.role === 'assistant' && message.content.trim())
+      text = assistant?.content ?? ''
+    }
+    if (!text.trim()) return { handledBy: 'builtin', message: 'No assistant message is available to copy.' }
+    if (!clipboard?.writeText) return { handledBy: 'builtin', message: 'Clipboard access is not available in this process.' }
+    clipboard.writeText(text)
+    return { handledBy: 'builtin', message: 'Copied the last assistant message to the clipboard.' }
+  }
+
+  const reloadSessionProcess = async (sessionId) => {
+    await closeProcess(sessionId)
+    const client = await startProcess(getRegisteredSession(sessionId))
+    await refreshRuntimeState(client)
+    await emitMessages(client)
+    return { handledBy: 'builtin', message: 'Reloaded Pi RPC process and refreshed session state.', session: getRegisteredSession(sessionId) }
   }
 
   const respondToOpenAssUiRequest = async (client, request, response) => {
-    if (request.kind !== 'model') throw new Error('Unknown Open-Ass UI request.')
-    if (response.cancelled) return
-    const { provider, modelId } = parseModelSelectionValue(response.value)
-    await sendRpc(client, { type: 'set_model', provider, modelId })
-    await refreshRuntimeState(client)
+    if (response.cancelled) return { handledBy: 'builtin', message: `${request.kind} cancelled.` }
+    if (request.kind === 'model') {
+      const { provider, modelId } = parseModelSelectionValue(response.value)
+      await sendRpc(client, { type: 'set_model', provider, modelId })
+      await refreshRuntimeState(client)
+      return { handledBy: 'builtin', message: `Model set to ${provider}/${modelId}.`, session: getRegisteredSession(client.sessionId) }
+    }
+    if (request.kind === 'name') {
+      const name = validateText(String(response.value ?? ''), 'Session name')
+      await sendRpc(client, { type: 'set_session_name', name })
+      const session = updateRegistrySession(client.sessionId, { title: name, displayName: name }) ?? getRegisteredSession(client.sessionId)
+      return { handledBy: 'builtin', message: `Renamed session to ${name}.`, session }
+    }
+    if (request.kind === 'export') return exportSession(client, String(response.value ?? ''))
+    if (request.kind === 'import') return importPiSessionFile(client, String(response.value ?? ''))
+    if (request.kind === 'fork') {
+      const entryId = validateText(String(response.value ?? ''), 'Message id')
+      await sendRpc(client, { type: 'fork', entryId })
+      await refreshRuntimeState(client)
+      await emitMessages(client)
+      return { handledBy: 'builtin', message: 'Forked session.', session: getRegisteredSession(client.sessionId) }
+    }
+    if (request.kind === 'resume') {
+      const session = await service.openSession(validateSessionId(String(response.value ?? '')))
+      return { handledBy: 'builtin', message: `Resumed ${session.displayName}.`, session }
+    }
+    if (request.kind === 'quit') {
+      if (!response.confirmed) return { handledBy: 'builtin', message: 'Quit cancelled.' }
+      await closeProcess(client.sessionId)
+      return { handledBy: 'builtin', message: 'Closed the Pi RPC process for this Open-Ass session.', session: getRegisteredSession(client.sessionId) }
+    }
+    throw new Error('Unknown Open-Ass UI request.')
   }
 
   const findPiCommand = () => {
@@ -882,7 +1119,6 @@ const createAssistantService = ({
       return
     }
     client.closing = true
-    client.child.kill('SIGTERM')
     await new Promise((resolve) => {
       const timeout = setTimeout(() => {
         client.child.kill('SIGKILL')
@@ -892,6 +1128,7 @@ const createAssistantService = ({
         clearTimeout(timeout)
         resolve()
       })
+      client.child.kill('SIGTERM')
     })
   }
 
@@ -959,10 +1196,24 @@ const createAssistantService = ({
       }
 
       if (commandName === 'name') {
+        if (!trimmedArgs) {
+          return requestOpenAssUi(client, 'name', {
+            type: 'input',
+            title: 'Rename session',
+            message: 'Enter a new Open-Ass session name.',
+            value: getRegisteredSession(sessionId).displayName,
+            placeholder: 'Session name',
+          })
+        }
         const name = validateText(trimmedArgs, 'Session name')
         await sendRpc(client, { type: 'set_session_name', name })
         const session = updateRegistrySession(sessionId, { title: name, displayName: name }) ?? getRegisteredSession(sessionId)
         return { handledBy: 'builtin', message: `Renamed session to ${name}.`, session }
+      }
+
+      if (commandName === 'settings') {
+        const state = await sendRpc(client, { type: 'get_state' }).catch(() => undefined)
+        return { handledBy: 'builtin', message: formatSettingsMessage(state) }
       }
 
       if (commandName === 'session') {
@@ -984,6 +1235,42 @@ const createAssistantService = ({
         }
       }
 
+      if (commandName === 'new') {
+        const result = await sendRpc(client, { type: 'new_session' })
+        if (result?.cancelled) return { handledBy: 'builtin', message: 'New session cancelled.' }
+        await refreshRuntimeState(client)
+        await emitMessages(client)
+        return {
+          handledBy: 'builtin',
+          message: 'Started new session.',
+          session: getRegisteredSession(sessionId),
+        }
+      }
+
+      if (commandName === 'export') {
+        if (!trimmedArgs) {
+          return requestOpenAssUi(client, 'export', {
+            type: 'input',
+            title: 'Export session',
+            message: 'Enter an output path ending in .html or .jsonl.',
+            placeholder: '/path/to/session.html',
+          })
+        }
+        return exportSession(client, trimmedArgs)
+      }
+
+      if (commandName === 'import') {
+        if (!trimmedArgs) {
+          return requestOpenAssUi(client, 'import', {
+            type: 'input',
+            title: 'Import session',
+            message: 'Enter the path to a Pi JSONL session file.',
+            placeholder: '/path/to/session.jsonl',
+          })
+        }
+        return importPiSessionFile(client, trimmedArgs)
+      }
+
       if (commandName === 'model') {
         if (trimmedArgs) {
           const separator = trimmedArgs.indexOf('/')
@@ -1001,10 +1288,65 @@ const createAssistantService = ({
         return requestOpenAssModelSelect(client)
       }
 
+      if (commandName === 'copy') return copyLastAssistantText(client)
+
+      if (commandName === 'fork') {
+        if (trimmedArgs) {
+          await sendRpc(client, { type: 'fork', entryId: validateText(trimmedArgs, 'Message id') })
+          await refreshRuntimeState(client)
+          await emitMessages(client)
+          return { handledBy: 'builtin', message: 'Forked session.', session: getRegisteredSession(sessionId) }
+        }
+        return requestOpenAssForkSelect(client)
+      }
+
+      if (commandName === 'resume') {
+        if (trimmedArgs) {
+          const session = await service.openSession(validateSessionId(trimmedArgs))
+          return { handledBy: 'builtin', message: `Resumed ${session.displayName}.`, session }
+        }
+        return requestOpenAssResumeSelect(client)
+      }
+
+      if (commandName === 'reload') return reloadSessionProcess(sessionId)
+
+      if (commandName === 'quit') {
+        return requestOpenAssUi(client, 'quit', {
+          type: 'confirm',
+          title: 'Close Pi session',
+          message: 'Close the Pi RPC process for this Open-Ass session? The desktop app will stay open.',
+        })
+      }
+
+      if (commandName === 'changelog') return { handledBy: 'builtin', message: formatChangelogMessage() }
+
+      if (commandName === 'hotkeys') return { handledBy: 'builtin', message: formatHotkeysMessage() }
+
+      if (['scoped-models', 'share', 'tree', 'login', 'logout'].includes(commandName)) {
+        if (commandName === 'share') {
+          const session = await service.shareSession(sessionId)
+          return {
+            handledBy: 'builtin',
+            message: session.shareUrl
+              ? `Session shared: ${session.shareUrl}`
+              : formatOpenAssFallbackPanelMessage(commandName),
+            session,
+          }
+        }
+        return { handledBy: 'builtin', message: formatOpenAssFallbackPanelMessage(commandName) }
+      }
+
       if (commandName === 'todos') {
         return {
           handledBy: 'builtin',
           message: 'Todos are shown in the native Open-Ass work-state panel.',
+        }
+      }
+
+      if (PI_TUI_BUILTIN_COMMAND_NAMES.has(commandName) || OPEN_ASS_ONLY_COMMAND_NAMES.has(commandName)) {
+        return {
+          handledBy: 'builtin',
+          message: formatUnsupportedBuiltinCommandMessage(commandName),
         }
       }
 
@@ -1193,8 +1535,7 @@ const createAssistantService = ({
         const request = pendingOpenAssUiRequests.get(id)
         if (!request || request.sessionId !== client.sessionId) throw new Error('Open-Ass UI request was not found.')
         pendingOpenAssUiRequests.delete(id)
-        await respondToOpenAssUiRequest(client, request, value)
-        return
+        return respondToOpenAssUiRequest(client, request, value)
       }
       const payload = { type: 'extension_ui_response', id }
       if (value.cancelled) payload.cancelled = true
@@ -1202,13 +1543,22 @@ const createAssistantService = ({
       else if ('value' in value) payload.value = value.value
       else payload.cancelled = true
       writeRpcEvent(client, payload)
+      return undefined
     },
 
     executeTuiCommand: async (sessionId, command) => {
       if (!sessionId) return
       const client = await ensureProcess(sessionId)
       const message = validateCommand(command)
-      if (message.trim() === '/todos') return
+      const trimmed = message.trim()
+      if (trimmed.startsWith('/')) {
+        const [slash, ...args] = trimmed.slice(1).split(/\s+/)
+        const commandName = slash.trim()
+        if (PI_TUI_BUILTIN_COMMAND_NAMES.has(commandName) || OPEN_ASS_ONLY_COMMAND_NAMES.has(commandName)) {
+          await service.runSlashCommand(sessionId, commandName, args.join(' '))
+          return
+        }
+      }
       await sendRpc(client, { type: 'prompt', message, streamingBehavior: 'followUp' })
     },
 
