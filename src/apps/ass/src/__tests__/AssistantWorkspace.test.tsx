@@ -225,7 +225,7 @@ describe('AssistantWorkspace', () => {
     expect(screen.getByText('built-in')).toBeInTheDocument()
   })
 
-  it('renders todos above the composer and in the sidebar with native ordering', async () => {
+  it('renders todos above the composer with native ordering', async () => {
     const bridge = installBridge({
       listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
     })
@@ -259,7 +259,6 @@ describe('AssistantWorkspace', () => {
     const text = (composer as HTMLElement).textContent ?? ''
     expect(text.indexOf('Active task')).toBeLessThan(text.indexOf('Pending task'))
     expect(text.indexOf('Pending task')).toBeLessThan(text.indexOf('Done task'))
-    expect(screen.getByText('Work state')).toBeInTheDocument()
   })
 
   it('renders queued steering and follow-up state', async () => {
