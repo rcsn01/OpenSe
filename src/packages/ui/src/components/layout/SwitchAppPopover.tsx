@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { appendAppPath, getRuntimeConfigValue, isDesktopRuntime } from "@repo/shared/runtime-config";
+import { useEffect, useRef, useState } from "react";
+import { buildSwitchableAppHref, getSwitchableApps } from "@repo/shared/switchable-apps";
 import { cn } from "../../lib/cn";
 import { SWITCHABLE_APP_ICONS } from "./AppBrandIcons";
 
@@ -13,30 +13,6 @@ export interface SwitchAppPopoverProps {
   onClose: (options?: CloseOptions) => void;
 }
 
-type AppSwitcherItem = {
-  key: "ass" | "etl" | "stoqr";
-  label: string;
-  url: string;
-  /** Path to append to base URL when switching (e.g. /dashboard to skip landing) */
-  path?: string;
-  icon: ReactNode;
-};
-
-const DEFAULT_APP_URLS = {
-  ass: "http://localhost:5995",
-  etl: "http://localhost:5992",
-  stoqr: "http://localhost:5993",
-} as const;
-
-function buildAppUrl(base: string, path?: string): string {
-  if (!path) return base;
-  return appendAppPath(base, path);
-}
-
-function shouldShowAss(): boolean {
-  return isDesktopRuntime() || Boolean(getRuntimeConfigValue("VITE_ASS_PUBLIC_URL"));
-}
-
 export function SwitchAppPopover({
   open,
   triggerEl,
@@ -46,50 +22,13 @@ export function SwitchAppPopover({
   const firstItemRef = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
-  const apps = useMemo(() => {
-    const EtlIcon = SWITCHABLE_APP_ICONS.etl;
-    const StoqrIcon = SWITCHABLE_APP_ICONS.stoqr;
-    const AssIcon = SWITCHABLE_APP_ICONS.ass;
-    const assUrl =
-      getRuntimeConfigValue("VITE_ASS_PUBLIC_URL") ||
-      DEFAULT_APP_URLS.ass;
-    const etlUrl =
-      getRuntimeConfigValue("VITE_ETL_PUBLIC_URL") ||
-      getRuntimeConfigValue("VITE_ETL_URL") ||
-      DEFAULT_APP_URLS.etl;
-    const stoqrUrl =
-      getRuntimeConfigValue("VITE_STOQR_PUBLIC_URL") ||
-      getRuntimeConfigValue("VITE_STOQR_URL") ||
-      DEFAULT_APP_URLS.stoqr;
-    const switchableApps: AppSwitcherItem[] = [
-      {
-        key: "etl",
-        label: "ETL",
-        url: etlUrl,
-        path: "/dashboard",
-        icon: <EtlIcon className="h-5 w-5" />,
-      },
-      {
-        key: "stoqr",
-        label: "StoQR",
-        url: stoqrUrl,
-        path: "/dashboard",
-        icon: <StoqrIcon className="h-5 w-5" />,
-      },
-    ];
-
-    if (shouldShowAss()) {
-      switchableApps.push({
-        key: "ass",
-        label: "Ass",
-        url: assUrl,
-        path: "/",
-        icon: <AssIcon className="h-5 w-5" />,
-      });
-    }
-
-    return switchableApps;
-  }, []);
+  const apps = getSwitchableApps().map((app) => {
+    const Icon = SWITCHABLE_APP_ICONS[app.key];
+    return {
+      ...app,
+      icon: <Icon className="h-5 w-5" />,
+    };
+  });
 
   useEffect(() => {
     if (!open || !triggerEl) return;
@@ -156,9 +95,9 @@ export function SwitchAppPopover({
 
   if (!open || !triggerEl) return null;
 
-  const handleSelect = (app: AppSwitcherItem) => {
+  const handleSelect = (app: (typeof apps)[number]) => {
     onClose();
-    window.location.assign(buildAppUrl(app.url, app.path));
+    window.location.assign(buildSwitchableAppHref(app));
   };
 
   return (

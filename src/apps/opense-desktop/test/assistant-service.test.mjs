@@ -1394,4 +1394,22 @@ describe('assistant service', () => {
       },
     ])
   })
+
+  it('ignores todo-list extension widgets because Open-Ass has a dedicated todo panel', () => {
+    expect(
+      normalizePiEvent('ses_test', {
+        type: 'extension_ui_request',
+        id: 'widget_1',
+        method: 'setWidget',
+        widgetKey: 'todo-list',
+        widgetLines: ['Todos 1 active', '◐ #1 Ship feature'],
+      }),
+    ).toEqual([
+      {
+        type: 'metadata',
+        sessionId: 'ses_test',
+        metadata: {},
+      },
+    ])
+  })
 })

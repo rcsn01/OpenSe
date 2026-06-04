@@ -595,8 +595,7 @@ describe('AssistantWorkspace', () => {
       })
     })
 
-    await user.type(screen.getByLabelText('Send command'), 'new prompt')
-    await user.click(screen.getByRole('button', { name: /send/i }))
+    await user.type(screen.getByLabelText('Send command'), 'new prompt{Enter}')
     const promptIds = vi.mocked(bridge.sendCommand).mock.calls.at(-1)?.[3]
     expect(promptIds).toEqual(expectPromptIds())
     if (!promptIds) throw new Error('Expected generated prompt ids')
@@ -749,22 +748,16 @@ describe('AssistantWorkspace', () => {
     await screen.findAllByText('project')
 
     const input = screen.getByLabelText('Send command')
-    const send = screen.getByRole('button', { name: /send/i })
-
-    await user.type(input, 'hello')
-    await user.click(send)
+    await user.type(input, 'hello{Enter}')
     expect(bridge.sendCommand).toHaveBeenCalledWith('session-1', 'hello', 'followUp', expectPromptIds())
 
-    await user.type(input, '/compact')
-    await user.click(send)
+    await user.type(input, '/compact{Enter}')
     expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'compact', '', undefined)
 
-    await user.type(input, '/goal test')
-    await user.click(send)
+    await user.type(input, '/goal test{Enter}')
     expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'goal', 'test', undefined)
 
-    await user.type(input, '!ls -la')
-    await user.click(send)
+    await user.type(input, '!ls -la{Enter}')
     expect(bridge.runShellCommand).toHaveBeenCalledWith('session-1', 'ls -la')
   })
 
@@ -781,8 +774,7 @@ describe('AssistantWorkspace', () => {
     renderWorkspace()
     await screen.findAllByText('project')
 
-    await user.type(screen.getByLabelText('Send command'), '/review now')
-    await user.click(screen.getByRole('button', { name: /send/i }))
+    await user.type(screen.getByLabelText('Send command'), '/review now{Enter}')
 
     expect(await screen.findByText('/review now')).toBeInTheDocument()
     const promptIds = vi.mocked(bridge.runSlashCommand).mock.calls.at(-1)?.[3]
@@ -1010,6 +1002,42 @@ describe('AssistantWorkspace', () => {
     expect(composerState.queryByText('Cancelled expand task')).not.toBeInTheDocument()
   })
 
+  it('hides the todo-list extension widget because todos have a dedicated panel', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'metadata',
+        sessionId: 'session-1',
+        metadata: {
+          extensionStatuses: {
+            'approval-mode': 'DEFAULT',
+            memory: 'Idle',
+          },
+          extensionWidgets: {
+            'todo-list': {
+              lines: ['Todos 1 active · 2 pending', '◐ #1 Ship feature'],
+            },
+            'steer-hint': {
+              lines: ['Enter steers the active turn.'],
+            },
+          },
+        },
+      })
+    })
+
+    expect(screen.getByText('Extension UI')).toBeInTheDocument()
+    expect(screen.getByText('approval-mode')).toBeInTheDocument()
+    expect(screen.getByText('steer-hint')).toBeInTheDocument()
+    expect(screen.queryByText('todo-list')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ship feature')).not.toBeInTheDocument()
+  })
+
   it('renders queued steering and follow-up state', async () => {
     const bridge = installBridge({
       listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
@@ -1233,8 +1261,7 @@ describe('AssistantWorkspace', () => {
     renderWorkspace()
     await screen.findAllByText('project')
 
-    await user.type(screen.getByLabelText('Send command'), '/session')
-    await user.click(screen.getByRole('button', { name: /send/i }))
+    await user.type(screen.getByLabelText('Send command'), '/session{Enter}')
 
     expect(await screen.findByText(/Name: project/)).toBeInTheDocument()
   })
@@ -1260,8 +1287,7 @@ describe('AssistantWorkspace', () => {
     renderWorkspace()
     await screen.findAllByText('project')
 
-    await user.type(screen.getByLabelText('Send command'), '/model')
-    await user.click(screen.getByRole('button', { name: /send/i }))
+    await user.type(screen.getByLabelText('Send command'), '/model{Enter}')
     await user.click(await screen.findByRole('option', { name: 'openai/gpt-test' }))
 
     expect(bridge.runSlashCommand).toHaveBeenCalledWith('session-1', 'model', '', undefined)
@@ -1301,8 +1327,7 @@ describe('AssistantWorkspace', () => {
     renderWorkspace()
     await screen.findAllByText('project')
 
-    await user.type(screen.getByLabelText('Send command'), '/quit')
-    await user.click(screen.getByRole('button', { name: /send/i }))
+    await user.type(screen.getByLabelText('Send command'), '/quit{Enter}')
     await user.click(await screen.findByRole('button', { name: 'Confirm' }))
 
     expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
@@ -1346,8 +1371,7 @@ describe('AssistantWorkspace', () => {
     renderWorkspace()
     await screen.findAllByText('project')
 
-    await user.type(screen.getByLabelText('Send command'), '/resume')
-    await user.click(screen.getByRole('button', { name: /send/i }))
+    await user.type(screen.getByLabelText('Send command'), '/resume{Enter}')
 
     await waitFor(() => expect(openSession).toHaveBeenCalledWith('session-2'))
     expect(await screen.findByText('resumed transcript history')).toBeInTheDocument()

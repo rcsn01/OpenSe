@@ -3,6 +3,9 @@ export type RuntimeConfig = Partial<Record<string, string>>
 declare global {
   interface Window {
     __OPENSE_CONFIG__?: RuntimeConfig
+    openseDesktop?: {
+      configure?: (accountsUrl: string) => Promise<unknown>
+    }
   }
 }
 
@@ -23,8 +26,14 @@ export const getRuntimeConfigValue = (
   return fallback
 }
 
-export const isDesktopRuntime = () =>
-  getRuntimeConfigValue('VITE_OPENSE_RUNTIME_TARGET') === 'desktop'
+export const isDesktopRuntime = () => {
+  if (getRuntimeConfigValue('VITE_OPENSE_RUNTIME_TARGET') === 'desktop') {
+    return true
+  }
+
+  if (typeof window === 'undefined') return false
+  return Boolean(window.openseDesktop?.configure)
+}
 
 export const isMobileRuntime = () =>
   getRuntimeConfigValue('VITE_OPENSE_RUNTIME_TARGET') === 'mobile'

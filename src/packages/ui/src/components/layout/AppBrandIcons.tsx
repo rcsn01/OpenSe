@@ -1,8 +1,11 @@
 import { Bot, Boxes, Palette, type LucideIcon, Workflow } from "lucide-react";
+import type { SwitchableAppKey } from "@repo/shared/switchable-apps";
 
-export type SwitchableAppKey = "ass" | "etl" | "stoqr" | "ui-design";
+export type { SwitchableAppKey } from "@repo/shared/switchable-apps";
 
-export const SWITCHABLE_APP_ICONS: Record<SwitchableAppKey, LucideIcon> = {
+export type AppBrandIconKey = SwitchableAppKey | "ui-design";
+
+export const SWITCHABLE_APP_ICONS: Record<AppBrandIconKey, LucideIcon> = {
   ass: Bot,
   etl: Workflow,
   stoqr: Boxes,

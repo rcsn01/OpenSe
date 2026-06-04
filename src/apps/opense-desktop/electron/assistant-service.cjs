@@ -1121,6 +1121,7 @@ const normalizeExtensionUiMetadata = (request) => {
   }
   if (method === 'setWidget') {
     const key = String(request.widgetKey ?? 'default')
+    if (key === 'todo-list') return {}
     const rawLines = request.widgetLines ?? request.lines ?? request.content ?? request.widgetContent
     const lines = Array.isArray(rawLines)
       ? rawLines.map(String)
