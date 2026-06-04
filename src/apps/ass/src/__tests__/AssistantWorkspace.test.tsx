@@ -569,7 +569,7 @@ describe('AssistantWorkspace', () => {
     })
 
     expect(await screen.findByText("Simple ping again, I'll respond.")).toBeInTheDocument()
-    expect(screen.getAllByText(/assistant streaming/i)).toHaveLength(1)
+    expect(screen.getByLabelText('Assistant')).toHaveAttribute('aria-busy', 'true')
     expect(screen.getByText('Grep: new-pattern')).toBeInTheDocument()
     expect(screen.queryByText('Grep: old-pattern')).not.toBeInTheDocument()
   })
