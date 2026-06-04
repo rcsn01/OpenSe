@@ -6,6 +6,8 @@ import {
   Badge,
   BasePage,
   Button,
+  Dropdown,
+  DropdownItem,
   EmptyState,
   SideNavItem,
   Spinner,
@@ -13,9 +15,14 @@ import {
   cn,
 } from '@repo/ui'
 import {
+  buildConfiguredAccountsProfileUrl,
+  buildConfiguredAccountsSettingsUrl,
+} from '@repo/shared/utils'
+import {
   Bot,
   Check,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   CornerDownLeft,
   FolderOpen,
@@ -24,9 +31,11 @@ import {
   MessageSquare,
   PanelLeft,
   Plus,
+  Settings,
   Share2,
 } from 'lucide-react'
 import { ExtensionRequestDialog } from './ExtensionRequestDialog'
+import { PiTerminalView } from './PiTerminalView'
 import { TranscriptRenderer } from './TranscriptRenderer'
 import {
   addSession,
@@ -486,6 +495,7 @@ export const AssistantWorkspace = () => {
   const [visibleProjectSessionCounts, setVisibleProjectSessionCounts] = useState<Record<string, number>>({})
   const [capabilities, setCapabilities] = useState<AssistantCapabilities | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
+  const [chatDisplayMode, setChatDisplayMode] = useState<'modern' | 'terminal'>('modern')
   const [loadingOlderTranscript, setLoadingOlderTranscript] = useState(false)
   const commandInputRef = useRef<HTMLTextAreaElement | null>(null)
   const inlinePickerFocusRef = useRef<HTMLInputElement | HTMLDivElement | null>(null)
@@ -532,6 +542,8 @@ export const AssistantWorkspace = () => {
   const availableModels = Array.isArray(capabilities?.models) ? capabilities.models : []
   const currentModel = availableModels.find((model) => getModelLabel(model) === activeSession?.model)
   const currentModelValue = currentModel ? `${getModelProvider(currentModel)}\t${getModelId(currentModel)}` : ''
+  const currentModelLabel = currentModel ? getModelLabel(currentModel) : activeSession?.model ?? 'Default model'
+  const currentThinkingLabel = runtimeState.thinkingLevel ?? 'off'
   const slashQuery = command.match(/^\/([^\s]*)$/)?.[1]
   const slashCommands = useMemo(
     () => (capabilities?.commands ?? []).map(normalizeCommand).filter((item): item is AssistantCommand => Boolean(item)),
@@ -1208,28 +1220,60 @@ export const AssistantWorkspace = () => {
               </p>
             ) : null}
           </div>
-          {activeSession ? (
+          {status?.available ? (
             <div className="flex shrink-0 items-center gap-1">
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label="Share session"
-                onClick={() => void toggleShareActiveSession()}
-                loading={busyAction === 'share'}
+              {activeSession ? (
+                <>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Share session"
+                    onClick={() => void toggleShareActiveSession()}
+                    loading={busyAction === 'share'}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Fork session"
+                    onClick={() => void forkActiveSession()}
+                    loading={busyAction === 'fork'}
+                  >
+                    <GitFork className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : null}
+              <Dropdown
+                align="right"
+                trigger={(open) => (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Chat display settings"
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                )}
               >
-                <Share2 className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label="Fork session"
-                onClick={() => void forkActiveSession()}
-                loading={busyAction === 'fork'}
-              >
-                <GitFork className="h-4 w-4" />
-              </Button>
+                <DropdownItem
+                  onClick={() => setChatDisplayMode('modern')}
+                  icon={chatDisplayMode === 'modern' ? <Check className="h-4 w-4" /> : <span className="h-4 w-4" />}
+                >
+                  Modern
+                </DropdownItem>
+                <DropdownItem
+                  onClick={() => setChatDisplayMode('terminal')}
+                  icon={chatDisplayMode === 'terminal' ? <Check className="h-4 w-4" /> : <span className="h-4 w-4" />}
+                >
+                  Terminal
+                </DropdownItem>
+              </Dropdown>
             </div>
           ) : null}
         </div>
@@ -1256,11 +1300,17 @@ export const AssistantWorkspace = () => {
         )
       }}
       profileFallback="OA"
+      onProfileClick={() => {
+        window.location.assign(buildConfiguredAccountsProfileUrl())
+      }}
+      onSettingsClick={() => {
+        window.location.assign(buildConfiguredAccountsSettingsUrl())
+      }}
     >
       <BasePage contentClassName="h-full p-0" containerClassName="h-full min-h-0">
         <div className="h-full min-h-0 overflow-hidden">
           <section className="relative flex h-full min-h-0 flex-col bg-[var(--color-background)]">
-            {activeSession && hasExtensionUiState ? (
+            {chatDisplayMode === 'modern' && activeSession && hasExtensionUiState ? (
               <section className="absolute right-4 top-4 z-20 max-h-[45vh] w-[min(22rem,calc(100%-2rem))] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-xs shadow-lg">
                 <div className="mb-2 flex items-center gap-2 font-medium">
                   <PanelLeft className="h-3.5 w-3.5" />
@@ -1322,6 +1372,12 @@ export const AssistantWorkspace = () => {
                   description={status?.error ?? 'Install the Pi CLI and restart OpenSe Desktop.'}
                 />
               </div>
+            ) : chatDisplayMode === 'terminal' && bridge ? (
+              <PiTerminalView
+                bridge={bridge}
+                directoryPath={activeSession?.directoryPath}
+                visible={chatDisplayMode === 'terminal'}
+              />
             ) : !activeSession ? (
               <div className="grid min-h-0 flex-1 place-items-center p-6">
                 <div className="max-w-md">
@@ -1363,7 +1419,7 @@ export const AssistantWorkspace = () => {
                   )}
                 </div>
 
-                <form onSubmit={sendCommand} className="border-t border-[var(--color-border)] p-3">
+                <form onSubmit={sendCommand} className="p-3">
                   <WorkState
                     todos={todos}
                     queue={queueState}
@@ -1421,7 +1477,7 @@ export const AssistantWorkspace = () => {
                       </div>
                     </div>
                   ) : null}
-                  <div className="flex items-end gap-2">
+                  <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-3 py-2 focus-within:ring-2 focus-within:ring-[var(--color-ring)]">
                     <label className="sr-only" htmlFor="ass-command">
                       Send command
                     </label>
@@ -1433,60 +1489,78 @@ export const AssistantWorkspace = () => {
                       onKeyDown={handleCommandKeyDown}
                       rows={2}
                       placeholder="Send a prompt, /command, or !shell command..."
-                      className="min-h-12 flex-1 resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                      className="min-h-12 w-full resize-none border-0 bg-transparent p-0 text-sm focus-visible:outline-none"
                       disabled={Boolean(inlineOptionRequest) || (activeSession.status !== 'running' && activeSession.status !== 'starting')}
                     />
-                    {steerQueueState?.active ? (
-                      <Button
-                        type="button"
-                        size="md"
-                        variant="secondary"
-                        loading={sending}
-                        disabled={Boolean(inlineOptionRequest) || !command.trim()}
-                        onClick={() => void submitComposer('followUp')}
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        Queue
-                      </Button>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 grid gap-2 text-xs text-[var(--color-muted-foreground)] sm:grid-cols-2">
-                    <label className="block">
-                      <span className="mb-1 block">Model</span>
-                      <select
-                        value={currentModelValue}
-                        onChange={(event) => void setRuntimeModel(event.target.value)}
-                        disabled={!availableModels.length || busyAction === 'model'}
-                        className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-2 text-xs text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-                      >
-                        <option value="">{activeSession.model ?? 'Default model'}</option>
-                        {availableModels.map((model) => {
-                          const provider = getModelProvider(model)
-                          const modelId = getModelId(model)
-                          if (!provider || !modelId) return null
-                          return (
-                            <option key={`${provider}/${modelId}`} value={`${provider}\t${modelId}`}>
-                              {getModelLabel(model)}
-                            </option>
-                          )
-                        })}
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block">Thinking</span>
-                      <select
-                        value={runtimeState.thinkingLevel ?? 'off'}
-                        onChange={(event) => void setThinkingLevel(event.target.value as RuntimeState['thinkingLevel'])}
-                        disabled={busyAction === 'thinking'}
-                        className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-2 text-xs text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-                      >
-                        {['off', 'minimal', 'low', 'medium', 'high', 'xhigh'].map((level) => (
-                          <option key={level} value={level}>
-                            {level}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <div className="mt-2 flex flex-wrap items-center justify-end gap-4 text-xs text-[var(--color-muted-foreground)]">
+                      {steerQueueState?.active ? (
+                        <Button
+                          type="button"
+                          size="md"
+                          variant="secondary"
+                          loading={sending}
+                          disabled={Boolean(inlineOptionRequest) || !command.trim()}
+                          onClick={() => void submitComposer('followUp')}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          Queue
+                        </Button>
+                      ) : null}
+                      <label className="min-w-0">
+                        <span className="sr-only">Model</span>
+                        <span
+                          className={cn(
+                            'relative inline-flex max-w-[16rem] items-center gap-1 rounded-[var(--radius-sm)] focus-within:ring-2 focus-within:ring-[var(--color-ring)]',
+                            (!availableModels.length || busyAction === 'model') && 'opacity-60',
+                          )}
+                        >
+                          <span className="truncate text-xs text-[var(--color-foreground)]">{currentModelLabel}</span>
+                          <ChevronDown className="h-3 w-3 shrink-0 text-[var(--color-muted-foreground)]" aria-hidden="true" />
+                          <select
+                            value={currentModelValue}
+                            onChange={(event) => void setRuntimeModel(event.target.value)}
+                            disabled={!availableModels.length || busyAction === 'model'}
+                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                          >
+                            <option value="">{activeSession.model ?? 'Default model'}</option>
+                            {availableModels.map((model) => {
+                              const provider = getModelProvider(model)
+                              const modelId = getModelId(model)
+                              if (!provider || !modelId) return null
+                              return (
+                                <option key={`${provider}/${modelId}`} value={`${provider}\t${modelId}`}>
+                                  {getModelLabel(model)}
+                                </option>
+                              )
+                            })}
+                          </select>
+                        </span>
+                      </label>
+                      <label className="min-w-0">
+                        <span className="sr-only">Thinking</span>
+                        <span
+                          className={cn(
+                            'relative inline-flex items-center gap-1 rounded-[var(--radius-sm)] focus-within:ring-2 focus-within:ring-[var(--color-ring)]',
+                            busyAction === 'thinking' && 'opacity-60',
+                          )}
+                        >
+                          <span className="text-xs text-[var(--color-foreground)]">{currentThinkingLabel}</span>
+                          <ChevronDown className="h-3 w-3 shrink-0 text-[var(--color-muted-foreground)]" aria-hidden="true" />
+                          <select
+                            value={runtimeState.thinkingLevel ?? 'off'}
+                            onChange={(event) => void setThinkingLevel(event.target.value as RuntimeState['thinkingLevel'])}
+                            disabled={busyAction === 'thinking'}
+                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                          >
+                            {['off', 'minimal', 'low', 'medium', 'high', 'xhigh'].map((level) => (
+                              <option key={level} value={level}>
+                                {level}
+                              </option>
+                            ))}
+                          </select>
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 </form>
               </>

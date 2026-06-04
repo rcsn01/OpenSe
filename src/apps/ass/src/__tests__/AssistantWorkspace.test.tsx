@@ -6,6 +6,7 @@ import { AssistantWorkspace } from '../components/AssistantWorkspace'
 import type {
   AssistantSession,
   AssistantSessionEvent,
+  AssistantTerminalEvent,
   OpenSeAssistantBridge,
 } from '../lib/assistantBridge'
 
@@ -44,9 +45,20 @@ const expectPromptIds = () => expect.objectContaining({
 
 const installBridge = (overrides: Partial<OpenSeAssistantBridge> = {}) => {
   const listeners = new Map<string, (event: AssistantSessionEvent) => void>()
+  const terminalListeners = new Map<string, (event: AssistantTerminalEvent) => void>()
   const bridge: OpenSeAssistantBridge & {
     emit: (event: AssistantSessionEvent) => void
+    emitTerminal: (event: AssistantTerminalEvent) => void
   } = {
+    startTerminal: vi.fn(async (input) => ({
+      id: 'term-test',
+      directoryPath: input?.directoryPath ?? '/Users/dev/chosen-terminal-project',
+      status: 'running' as const,
+      initialData: 'Pi TUI',
+    })),
+    writeTerminal: vi.fn(async () => undefined),
+    resizeTerminal: vi.fn(async () => undefined),
+    stopTerminal: vi.fn(async () => undefined),
     getStatus: vi.fn(async () => ({ available: true, version: 'pi-test' })),
     listSessions: vi.fn(async () => []),
     createSession: vi.fn(async () => baseSession),
@@ -84,8 +96,15 @@ const installBridge = (overrides: Partial<OpenSeAssistantBridge> = {}) => {
       listeners.set(sessionId, callback)
       return () => listeners.delete(sessionId)
     }),
+    onTerminalEvent: vi.fn((terminalId, callback) => {
+      terminalListeners.set(terminalId, callback)
+      return () => terminalListeners.delete(terminalId)
+    }),
     emit: (event) => {
       listeners.get(event.sessionId)?.(event)
+    },
+    emitTerminal: (event) => {
+      terminalListeners.get(event.id)?.(event)
     },
     ...overrides,
   }
@@ -133,6 +152,100 @@ describe('AssistantWorkspace', () => {
     expect(screen.getByRole('link', { name: /^current work$/i })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
     await waitFor(() => expect(bridge.openSession).toHaveBeenCalledWith('session-1'))
     expect(screen.queryByText(/Users\/dev\/project/)).not.toBeInTheDocument()
+  })
+
+  it('switches between Modern and Terminal display modes without stopping the terminal', async () => {
+    const user = userEvent.setup()
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [baseSession]),
+      openSession: vi.fn(async (sessionId) => ({ ...baseSession, id: sessionId, status: 'running' as const })),
+    })
+
+    renderWorkspace(['/sessions/session-1'])
+
+    expect(await screen.findByRole('textbox', { name: /send command/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /chat display settings/i }))
+    await user.click(await screen.findByText('Terminal'))
+
+    await waitFor(() => {
+      expect(bridge.startTerminal).toHaveBeenCalledWith({ directoryPath: baseSession.directoryPath })
+    })
+    expect(screen.getByTestId('pi-terminal-view')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /send command/i })).not.toBeInTheDocument()
+    expect(screen.queryByText('No messages yet')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /chat display settings/i }))
+    await user.click(await screen.findByText('Modern'))
+
+    expect(await screen.findByRole('textbox', { name: /send command/i })).toBeInTheDocument()
+    expect(bridge.stopTerminal).not.toHaveBeenCalled()
+  })
+
+  it('starts Terminal mode through the directory picker when no session is active', async () => {
+    const user = userEvent.setup()
+    const bridge = installBridge()
+
+    renderWorkspace()
+
+    expect(await screen.findByText('Choose a directory')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /chat display settings/i }))
+    await user.click(await screen.findByText('Terminal'))
+
+    await waitFor(() => {
+      expect(bridge.startTerminal).toHaveBeenCalledWith(undefined)
+    })
+    expect(screen.getByTestId('pi-terminal-view')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /send command/i })).not.toBeInTheDocument()
+  })
+
+  it('shows an inline Terminal startup error and tolerates WebGL initialization failure', async () => {
+    const user = userEvent.setup()
+    ;(globalThis as { __OPENSE_TEST_WEBGL_FAIL__?: boolean }).__OPENSE_TEST_WEBGL_FAIL__ = true
+    installBridge({
+      listSessions: vi.fn(async () => [baseSession]),
+      startTerminal: vi.fn(async () => {
+        throw new Error('terminal failed')
+      }),
+    })
+
+    try {
+      renderWorkspace(['/sessions/session-1'])
+      await screen.findByRole('textbox', { name: /send command/i })
+      await user.click(screen.getByRole('button', { name: /chat display settings/i }))
+      await user.click(await screen.findByText('Terminal'))
+
+      expect(await screen.findByText('terminal failed')).toBeInTheDocument()
+      expect(screen.getByTestId('pi-terminal-view')).toBeInTheDocument()
+    } finally {
+      ;(globalThis as { __OPENSE_TEST_WEBGL_FAIL__?: boolean }).__OPENSE_TEST_WEBGL_FAIL__ = false
+    }
+  })
+
+  it('does not surface xterm renderer cleanup failures when leaving Terminal mode', async () => {
+    const user = userEvent.setup()
+    ;(globalThis as { __OPENSE_TEST_XTERM_DISPOSE_FAIL__?: boolean }).__OPENSE_TEST_XTERM_DISPOSE_FAIL__ = true
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    installBridge({
+      listSessions: vi.fn(async () => [baseSession]),
+      openSession: vi.fn(async (sessionId) => ({ ...baseSession, id: sessionId, status: 'running' as const })),
+    })
+
+    try {
+      renderWorkspace(['/sessions/session-1'])
+      expect(await screen.findByRole('textbox', { name: /send command/i })).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: /chat display settings/i }))
+      await user.click(await screen.findByText('Terminal'))
+      expect(await screen.findByTestId('pi-terminal-view')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: /chat display settings/i }))
+      await user.click(await screen.findByText('Modern'))
+
+      expect(await screen.findByRole('textbox', { name: /send command/i })).toBeInTheDocument()
+      expect(consoleError).not.toHaveBeenCalledWith(expect.stringContaining('xterm dispose failed'))
+    } finally {
+      ;(globalThis as { __OPENSE_TEST_XTERM_DISPOSE_FAIL__?: boolean }).__OPENSE_TEST_XTERM_DISPOSE_FAIL__ = false
+      consoleError.mockRestore()
+    }
   })
 
   it('toggles project sessions and expands or retracts in five-session chunks', async () => {

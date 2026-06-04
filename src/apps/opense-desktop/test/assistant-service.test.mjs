@@ -19,6 +19,9 @@ const {
   validateCommand,
   validateCreateSessionInput,
   validateSessionId,
+  validateStartTerminalInput,
+  validateTerminalId,
+  validateTerminalWriteData,
 } = assistantModule
 
 let tempRoot
@@ -105,6 +108,27 @@ const createFakeRpcProcess = (options = {}) => {
   return child
 }
 
+const createFakePtyProcess = () => {
+  const child = new EventEmitter()
+  child.writes = []
+  child.resizes = []
+  child.killed = false
+  child.write = (data) => {
+    child.writes.push(data)
+  }
+  child.resize = (cols, rows) => {
+    child.resizes.push([cols, rows])
+  }
+  child.kill = () => {
+    child.killed = true
+    child.emit('exit', 0, 'SIGTERM')
+  }
+  child.emitData = (data) => {
+    child.emit('data', data)
+  }
+  return child
+}
+
 describe('assistant service', () => {
   afterEach(() => {
     if (tempRoot) {
@@ -119,10 +143,125 @@ describe('assistant service', () => {
     expect(() => validateSessionId('../bad')).toThrow(/session id/)
     expect(validateCommand('hello')).toBe('hello')
     expect(() => validateCommand('')).toThrow(/Command/)
+    expect(validateTerminalId('term_test')).toBe('term_test')
+    expect(() => validateTerminalId('ses_test')).toThrow(/terminal id/)
+    expect(validateTerminalWriteData('hello')).toBe('hello')
+    expect(() => validateTerminalWriteData('x'.repeat(100_001))).toThrow(/too large/)
 
     const directoryPath = makeTempRoot()
     expect(validateCreateSessionInput({ directoryPath })).toEqual({ directoryPath })
     expect(() => validateCreateSessionInput({ directoryPath: '/does/not/exist' })).toThrow(/does not exist/)
+    expect(validateStartTerminalInput({ directoryPath })).toEqual({ directoryPath })
+    expect(() => validateStartTerminalInput({ directoryPath: '/does/not/exist' })).toThrow(/does not exist/)
+  })
+
+  it('starts native Pi TUI terminals with node-pty and reuses one process per directory', async () => {
+    const directoryPath = makeTempRoot()
+    const fakePty = createFakePtyProcess()
+    const ptySpawn = vi.fn(() => fakePty)
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      ptySpawn,
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+
+    const first = await service.startTerminal({ directoryPath })
+    const second = await service.startTerminal({ directoryPath })
+
+    expect(first).toMatchObject({ id: expect.stringMatching(/^term_/), directoryPath, status: 'running' })
+    expect(second.id).toBe(first.id)
+    expect(ptySpawn).toHaveBeenCalledTimes(1)
+    expect(ptySpawn).toHaveBeenCalledWith(
+      'pi',
+      [],
+      expect.objectContaining({
+        cwd: directoryPath,
+        cols: 80,
+        rows: 24,
+        name: 'xterm-256color',
+        env: expect.objectContaining({ TERM: 'xterm-256color', OPENCODE_CLIENT: 'desktop' }),
+      }),
+    )
+  })
+
+  it('prompts for a terminal directory when none is provided and returns null on cancel', async () => {
+    const directoryPath = makeTempRoot()
+    const ptySpawn = vi.fn(() => createFakePtyProcess())
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      ptySpawn,
+      chooseDirectory: vi.fn(async () => directoryPath),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+
+    const session = await service.startTerminal()
+
+    expect(session).toMatchObject({ directoryPath, status: 'running' })
+    expect(ptySpawn).toHaveBeenCalledTimes(1)
+
+    const cancelled = createAssistantService({
+      userDataPath: path.join(directoryPath, 'cancelled-user-data'),
+      ptySpawn,
+      chooseDirectory: vi.fn(async () => null),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    await expect(cancelled.startTerminal()).resolves.toBeNull()
+  })
+
+  it('emits terminal data, replays recent output, writes input, resizes, and reports exit', async () => {
+    const directoryPath = makeTempRoot()
+    const fakePty = createFakePtyProcess()
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      ptySpawn: vi.fn(() => fakePty),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const terminal = await service.startTerminal({ directoryPath })
+    const events = []
+    const unsubscribe = service.onTerminalEvent(terminal.id, (event) => events.push(event))
+
+    fakePty.emitData('hello')
+    await service.writeTerminal(terminal.id, 'input')
+    await service.resizeTerminal(terminal.id, 120, 40)
+    const reattached = await service.startTerminal({ directoryPath })
+    fakePty.emit('exit', 7, 'SIGTERM')
+
+    expect(events).toContainEqual({ type: 'data', id: terminal.id, data: 'hello' })
+    expect(fakePty.writes).toEqual(['input'])
+    expect(fakePty.resizes).toEqual([[120, 40]])
+    expect(reattached.initialData).toBe('hello')
+    expect(events).toContainEqual({
+      type: 'status',
+      id: terminal.id,
+      status: 'exited',
+      exitCode: 7,
+      signal: 'SIGTERM',
+    })
+    unsubscribe()
+  })
+
+  it('stops RPC and terminal processes on dispose', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeRpc = createFakeRpcProcess()
+    const fakePty = createFakePtyProcess()
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeRpc),
+      ptySpawn: vi.fn(() => fakePty),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+
+    await service.createSession({ directoryPath })
+    await service.startTerminal({ directoryPath })
+    service.dispose()
+
+    expect(fakeRpc.signalCode).toBe('SIGTERM')
+    expect(fakePty.killed).toBe(true)
   })
 
   it('normalizes documented Pi get_messages response shapes', () => {

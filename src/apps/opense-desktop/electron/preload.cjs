@@ -8,6 +8,10 @@ contextBridge.exposeInMainWorld('openseDesktop', {
 })
 
 contextBridge.exposeInMainWorld('openseAssistant', {
+  startTerminal: (input) => ipcRenderer.invoke('assistant:start-terminal', input),
+  writeTerminal: (terminalId, data) => ipcRenderer.invoke('assistant:write-terminal', terminalId, data),
+  resizeTerminal: (terminalId, cols, rows) => ipcRenderer.invoke('assistant:resize-terminal', terminalId, cols, rows),
+  stopTerminal: (terminalId) => ipcRenderer.invoke('assistant:stop-terminal', terminalId),
   getStatus: () => ipcRenderer.invoke('assistant:get-status'),
   listSessions: () => ipcRenderer.invoke('assistant:list-sessions'),
   createSession: (input) => ipcRenderer.invoke('assistant:create-session', input),
@@ -55,6 +59,16 @@ contextBridge.exposeInMainWorld('openseAssistant', {
     return () => {
       ipcRenderer.removeListener(channel, listener)
       void ipcRenderer.invoke('assistant:unsubscribe-session', sessionId)
+    }
+  },
+  onTerminalEvent: (terminalId, callback) => {
+    const channel = `assistant:terminal-event:${terminalId}`
+    const listener = (_event, payload) => callback(payload)
+    ipcRenderer.on(channel, listener)
+    void ipcRenderer.invoke('assistant:subscribe-terminal', terminalId)
+    return () => {
+      ipcRenderer.removeListener(channel, listener)
+      void ipcRenderer.invoke('assistant:unsubscribe-terminal', terminalId)
     }
   },
 })

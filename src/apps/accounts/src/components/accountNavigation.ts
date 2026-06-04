@@ -11,7 +11,7 @@ export const accountNavigationItems: AccountNavigationItem[] = [
   { to: '/account/billing', label: 'Billing' },
   { to: '/account/seats', label: 'Seat Assignments' },
   { to: '/account/activity', label: 'Activity Log' },
-  { to: '/account/preferences', label: 'Preferences' },
+  { to: '/account/settings', label: 'Settings' },
 ]
 
 export const isAccountNavItemActive = (pathname: string, itemPath: string) => {

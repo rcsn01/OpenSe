@@ -7,6 +7,8 @@ export interface ProfileDropdownProps {
   profileSrc?: string
   /** Fallback/initials when no image */
   profileFallback?: string
+  /** Callback when Profile is clicked */
+  onProfileClick?: () => void
   /** Callback when Settings is clicked */
   onSettingsClick?: () => void
   /** Callback when Log out is clicked */
@@ -16,16 +18,23 @@ export interface ProfileDropdownProps {
 }
 
 /**
- * Shared profile dropdown with Settings and Log out.
+ * Shared profile dropdown with Profile, Settings, and Log out.
  * Use with onLogout from useAuth().logout() for consistent logout across apps.
  */
 export function ProfileDropdown({
   profileSrc,
   profileFallback,
+  onProfileClick,
   onSettingsClick,
   onLogout,
   children,
 }: ProfileDropdownProps) {
+  const hasVisibleItems = Boolean(children || onProfileClick || onSettingsClick || onLogout)
+
+  if (!hasVisibleItems) {
+    return <Avatar src={profileSrc} fallback={profileFallback} size="sm" />
+  }
+
   return (
     <Dropdown
       align="right"
@@ -42,11 +51,16 @@ export function ProfileDropdown({
       )}
     >
       {children}
-      <DropdownItem onClick={onSettingsClick}>Settings</DropdownItem>
-      <DropdownSeparator />
-      <DropdownItem onClick={onLogout} destructive>
-        Log out
-      </DropdownItem>
+      {onProfileClick ? <DropdownItem onClick={onProfileClick}>Profile</DropdownItem> : null}
+      {onSettingsClick ? <DropdownItem onClick={onSettingsClick}>Settings</DropdownItem> : null}
+      {onLogout ? (
+        <>
+          {(children || onProfileClick || onSettingsClick) ? <DropdownSeparator /> : null}
+          <DropdownItem onClick={onLogout} destructive>
+            Log out
+          </DropdownItem>
+        </>
+      ) : null}
     </Dropdown>
   )
 }

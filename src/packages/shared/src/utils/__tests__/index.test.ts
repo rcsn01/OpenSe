@@ -1,12 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   buildAccountsAuthUrl,
   buildAccountsForwardQuery,
   buildAccountsOnboardingUrl,
+  buildAccountsProfileUrl,
   buildAccountsSettingsUrl,
+  buildConfiguredAccountsProfileUrl,
+  buildConfiguredAccountsSettingsUrl,
   cn,
   createAccountsRedirects,
   formatCurrency,
+  getConfiguredAccountsUrl,
   getSafeAccountsReturnTo,
   appendAppPath,
   parseCsv,
@@ -14,6 +18,10 @@ import {
 } from '../index'
 
 describe('utils/index', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   describe('formatCurrency', () => {
     it('returns em dash for null-like values', () => {
       expect(formatCurrency(null)).toBe('—')
@@ -46,21 +54,83 @@ describe('utils/index', () => {
   })
 
   describe('buildAccountsSettingsUrl', () => {
-    it('points app settings actions to the Accounts profile center', () => {
+    it('points app settings actions to the Accounts settings page', () => {
       expect(buildAccountsSettingsUrl({ accountsUrl: 'https://accounts.example.com/' })).toBe(
-        'https://accounts.example.com/account/profile',
+        'https://accounts.example.com/account/settings',
       )
     })
 
     it('preserves desktop app base paths', () => {
       expect(buildAccountsSettingsUrl({ accountsUrl: 'opense://desktop/accounts' })).toBe(
-        'opense://desktop/accounts/account/profile',
+        'opense://desktop/accounts/account/settings',
       )
     })
 
     it('preserves mobile app base paths', () => {
       expect(buildAccountsSettingsUrl({ accountsUrl: 'opense://mobile/accounts' })).toBe(
-        'opense://mobile/accounts/account/profile',
+        'opense://mobile/accounts/account/settings',
+      )
+    })
+  })
+
+  describe('buildAccountsProfileUrl', () => {
+    it('points app profile actions to the Accounts profile page', () => {
+      expect(buildAccountsProfileUrl({ accountsUrl: 'https://accounts.example.com/' })).toBe(
+        'https://accounts.example.com/account/profile',
+      )
+    })
+  })
+
+  describe('configured accounts URLs', () => {
+    it('uses the supplied fallback when runtime config is unavailable', () => {
+      vi.stubGlobal('window', {
+        location: {
+          protocol: 'https:',
+          hostname: 'ui.example.com',
+        },
+        __OPENSE_CONFIG__: {},
+      })
+
+      expect(getConfiguredAccountsUrl('https://accounts.test')).toBe('https://accounts.test')
+      expect(buildConfiguredAccountsProfileUrl('https://accounts.test')).toBe(
+        'https://accounts.test/account/profile',
+      )
+      expect(buildConfiguredAccountsSettingsUrl('https://accounts.test')).toBe(
+        'https://accounts.test/account/settings',
+      )
+    })
+
+    it('infers the local Accounts app when config is missing in local dev', () => {
+      vi.stubGlobal('window', {
+        location: {
+          protocol: 'http:',
+          hostname: 'localhost',
+        },
+        __OPENSE_CONFIG__: {},
+      })
+
+      expect(getConfiguredAccountsUrl('https://accounts.test')).toBe('http://localhost:5991')
+      expect(buildConfiguredAccountsProfileUrl('https://accounts.test')).toBe(
+        'http://localhost:5991/account/profile',
+      )
+      expect(buildConfiguredAccountsSettingsUrl('https://accounts.test')).toBe(
+        'http://localhost:5991/account/settings',
+      )
+    })
+
+    it('ignores placeholder example Accounts URLs in local dev', () => {
+      vi.stubGlobal('window', {
+        location: {
+          protocol: 'http:',
+          hostname: '127.0.0.1',
+        },
+        __OPENSE_CONFIG__: {
+          VITE_ACCOUNTS_URL: 'https://accounts.example.com',
+        },
+      })
+
+      expect(buildConfiguredAccountsSettingsUrl('https://accounts.test')).toBe(
+        'http://127.0.0.1:5991/account/settings',
       )
     })
   })
@@ -120,7 +190,8 @@ describe('utils/index', () => {
         appName: 'Open-ETL',
       })
 
-      expect(redirects.settings()).toBe('https://accounts.example.com/account/profile')
+      expect(redirects.profile()).toBe('https://accounts.example.com/account/profile')
+      expect(redirects.settings()).toBe('https://accounts.example.com/account/settings')
       expect(new URL(redirects.auth('signin')).searchParams.get('returnTo')).toBe('https://etl.example.com/dashboard')
     })
   })

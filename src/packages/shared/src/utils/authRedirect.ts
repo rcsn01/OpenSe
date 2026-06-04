@@ -1,3 +1,5 @@
+import { getRuntimeConfigValue } from '../runtime-config'
+
 export type AuthMode = 'signin' | 'signup'
 
 interface BuildAccountsRedirectUrlOptions {
@@ -13,9 +15,11 @@ interface BuildAccountsAuthUrlOptions extends BuildAccountsRedirectUrlOptions {
 
 type BuildAccountsOnboardingUrlOptions = BuildAccountsRedirectUrlOptions
 
-interface BuildAccountsSettingsUrlOptions {
+interface BuildAccountsProfileUrlOptions {
   accountsUrl: string
 }
+
+type BuildAccountsSettingsUrlOptions = BuildAccountsProfileUrlOptions
 
 interface CreateAccountsRedirectsConfig {
   accountsUrl: string
@@ -42,6 +46,12 @@ export interface BuildAccountsForwardQueryOptions extends AccountsReturnToValida
 }
 
 const DEFAULT_REDIRECT_PATH = '/dashboard'
+const DEFAULT_ACCOUNTS_URL = 'https://accounts.rcsn01.com'
+const LOCAL_ACCOUNTS_PORT = '5991'
+const PLACEHOLDER_ACCOUNTS_URLS = new Set([
+  'https://accounts.example.com',
+  'http://accounts.example.com',
+])
 
 export const DEFAULT_LOCAL_APP_RETURN_URLS = [
   'http://localhost:5992',
@@ -134,7 +144,46 @@ export const buildAccountsOnboardingUrl = ({
 }
 
 export const buildAccountsSettingsUrl = ({ accountsUrl }: BuildAccountsSettingsUrlOptions): string => {
+  return appendAppPath(accountsUrl, '/account/settings')
+}
+
+export const buildAccountsProfileUrl = ({ accountsUrl }: BuildAccountsProfileUrlOptions): string => {
   return appendAppPath(accountsUrl, '/account/profile')
+}
+
+const isLocalHostname = (hostname: string) => {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname === '::1'
+}
+
+const getLocalAccountsUrl = (): string | null => {
+  if (typeof window === 'undefined') return null
+
+  const { protocol, hostname } = window.location
+  if (protocol !== 'http:' && protocol !== 'https:') return null
+  if (!isLocalHostname(hostname)) return null
+
+  return `${protocol}//${hostname}:${LOCAL_ACCOUNTS_PORT}`
+}
+
+const isPlaceholderAccountsUrl = (value: string) => {
+  return PLACEHOLDER_ACCOUNTS_URLS.has(value.replace(/\/+$/, ''))
+}
+
+export const getConfiguredAccountsUrl = (fallback = DEFAULT_ACCOUNTS_URL): string => {
+  const configuredUrl = getRuntimeConfigValue('VITE_ACCOUNTS_URL')
+  if (configuredUrl && !isPlaceholderAccountsUrl(configuredUrl)) {
+    return configuredUrl
+  }
+
+  return getLocalAccountsUrl() ?? fallback
+}
+
+export const buildConfiguredAccountsProfileUrl = (fallback?: string): string => {
+  return buildAccountsProfileUrl({ accountsUrl: getConfiguredAccountsUrl(fallback) })
+}
+
+export const buildConfiguredAccountsSettingsUrl = (fallback?: string): string => {
+  return buildAccountsSettingsUrl({ accountsUrl: getConfiguredAccountsUrl(fallback) })
 }
 
 export const createAccountsRedirects = ({
@@ -151,6 +200,7 @@ export const createAccountsRedirects = ({
       appName,
       redirectPath: options.redirectPath ?? defaultRedirectPath,
     }),
+  profile: () => buildAccountsProfileUrl({ accountsUrl }),
   settings: () => buildAccountsSettingsUrl({ accountsUrl }),
   onboarding: (options: AccountsRedirectOptions = {}) =>
     buildAccountsOnboardingUrl({

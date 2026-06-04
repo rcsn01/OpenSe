@@ -33,6 +33,8 @@ export interface TopBarProps {
   profileFallback?: string
   /** Additional class for the bar */
   className?: string
+  /** Optional callback for profile menu Profile item */
+  onProfileClick?: () => void
   /** Optional callback for profile menu Settings item */
   onSettingsClick?: () => void
   /** Optional callback for profile menu Log out item */
@@ -52,6 +54,7 @@ export function TopBar({
   profileFallback,
   onMenuClick,
   className,
+  onProfileClick,
   onSettingsClick,
   onLogout,
   searchContent,
@@ -146,6 +149,7 @@ export function TopBar({
             <ProfileDropdown
               profileSrc={profileSrc}
               profileFallback={profileFallback}
+              onProfileClick={onProfileClick}
               onSettingsClick={onSettingsClick}
               onLogout={onLogout}
             />

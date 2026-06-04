@@ -4,7 +4,9 @@ import {
   type AppShellNavItem,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
-import { Activity, Building2, CreditCard, Home, ShieldCheck, SlidersHorizontal, UserRound, Users } from 'lucide-react'
+import { useCurrentAccountProfileSummary } from '@repo/shared/account-profile'
+import { supabase } from '@repo/shared/supabase'
+import { Activity, Building2, CreditCard, Home, Settings, ShieldCheck, UserRound, Users } from 'lucide-react'
 import {
   accountNavigationItems,
 } from './accountNavigation'
@@ -17,13 +19,14 @@ const navIconsByPath = {
   '/account/billing': CreditCard,
   '/account/seats': Users,
   '/account/activity': Activity,
-  '/account/preferences': SlidersHorizontal,
+  '/account/settings': Settings,
 } as const
 
 export const AccountShell = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
+  const accountProfile = useCurrentAccountProfileSummary({ user, client: supabase })
 
   const navItems: AppShellNavItem[] = accountNavigationItems.map(({ to, label }) => {
     const Icon = navIconsByPath[to as keyof typeof navIconsByPath]
@@ -44,7 +47,10 @@ export const AccountShell = () => {
           {children}
         </NavLink>
       )}
-      onSettingsClick={() => navigate('/account/preferences')}
+      profileSrc={accountProfile.profileSrc}
+      profileFallback={accountProfile.profileFallback}
+      onProfileClick={() => navigate('/account/profile')}
+      onSettingsClick={() => navigate('/account/settings')}
       onLogout={() => void logout()}
     >
       <Outlet />

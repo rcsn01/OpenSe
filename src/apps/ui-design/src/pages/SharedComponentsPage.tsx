@@ -1455,6 +1455,13 @@ export function SharedComponentsPage() {
             <HStack wrap justify="between">
               <ProfileDropdown
                 profileFallback="JD"
+                onProfileClick={() =>
+                  toast({
+                    title: "Profile",
+                    message: "ProfileDropdown action.",
+                    variant: "info",
+                  })
+                }
                 onSettingsClick={() =>
                   toast({
                     title: "Settings",

@@ -92,8 +92,12 @@
   --color-muted: var(--shade-white-2);
   --color-muted-foreground: #64748b;
   --color-subtle-foreground: #94a3b8;
-  --color-border: #e2e8f0;
-  --color-border-hover: #cbd5e1;
+  --color-border: var(--shade-white-9);
+  --color-border-hover: color-mix(
+    in srgb,
+    var(--shade-black-1) 22%,
+    transparent
+  );
   --color-divider: color-mix(in srgb, var(--color-border) 86%, transparent);
   --color-ring: #2563eb;
   --color-card: var(--shade-white-1);
@@ -266,15 +270,23 @@
   );
   --color-info-foreground: #7dd3fc;
 
-  --color-background: var(--shade-black-1);
+  --color-background: var(--shade-black-2);
   --color-foreground: #f8fafc;
   --color-heading: var(--shade-white-3);
   --color-body: var(--shade-white-7);
   --color-muted: var(--shade-black-3);
   --color-muted-foreground: #94a3b8;
   --color-subtle-foreground: #cbd5e1;
-  --color-border: #334155;
-  --color-border-hover: #475569;
+  --color-border: color-mix(
+    in srgb,
+    var(--shade-white-1) 16%,
+    transparent
+  );
+  --color-border-hover: color-mix(
+    in srgb,
+    var(--shade-white-1) 24%,
+    transparent
+  );
   --color-divider: color-mix(in srgb, var(--shade-white-1) 16%, transparent);
   --color-ring: #3b82f6;
   --color-card: var(--shade-black-2);

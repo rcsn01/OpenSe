@@ -14,7 +14,7 @@ import {
 const timezoneOptions = ['Australia/Sydney', 'UTC', 'America/New_York', 'America/Los_Angeles', 'Europe/London', 'Europe/Berlin']
 const localeOptions = ['en-AU', 'en-US', 'en-GB']
 
-export const PreferencesPage = () => {
+export const SettingsPage = () => {
   const { setTheme } = useTheme()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -54,9 +54,9 @@ export const PreferencesPage = () => {
       const nextPreferences = await saveAccountPreferences(preferences)
       setPreferences(nextPreferences)
       setTheme(nextPreferences.theme)
-      setSuccess('Preferences saved.')
+      setSuccess('Settings saved.')
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to save preferences.')
+      setError(err?.message ?? 'Failed to save settings.')
     } finally {
       setSaving(false)
     }
@@ -64,15 +64,15 @@ export const PreferencesPage = () => {
 
   return (
     <AccountsPageShell
-      title="Preferences"
+      title="Settings"
       description="Set account defaults for appearance, notifications, locale, and launch behavior."
       loading={loading}
-      loadingLabel="Loading preferences..."
-      alert={<AccountsAlert error={error} success={success} errorTitle="Preference update failed" />}
+      loadingLabel="Loading settings..."
+      alert={<AccountsAlert error={error} success={success} errorTitle="Settings update failed" />}
       actions={
         <Button size="sm" onClick={() => void handleSave()} disabled={saving}>
           <Save className="h-4 w-4" />
-          {saving ? 'Saving...' : 'Save preferences'}
+          {saving ? 'Saving...' : 'Save settings'}
         </Button>
       }
     >
@@ -136,7 +136,7 @@ export const PreferencesPage = () => {
           />
         </AccountsSection>
 
-        <AccountsSection title="Preference metadata">
+        <AccountsSection title="Settings metadata">
           <dl className="grid gap-4">
             <AccountsField label="Last saved" value={preferences.updatedAt ? new Date(preferences.updatedAt).toLocaleString() : 'Not saved'} />
             <AccountsField label="Theme storage" value="Shared cookie and Supabase account preferences" />

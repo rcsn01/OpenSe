@@ -1,4 +1,5 @@
 export type AssistantSessionStatus = 'closed' | 'starting' | 'running' | 'error'
+export type AssistantTerminalStatus = 'running' | 'closed' | 'exited' | 'error'
 
 export type AssistantStatus = {
   available: boolean
@@ -25,6 +26,17 @@ export type AssistantSession = {
   shareUrl?: string
   lastError?: string
 }
+
+export type AssistantTerminalSession = {
+  id: string
+  directoryPath: string
+  status: AssistantTerminalStatus
+  initialData?: string
+}
+
+export type AssistantTerminalEvent =
+  | { type: 'data'; id: string; data: string }
+  | { type: 'status'; id: string; status: AssistantTerminalStatus; exitCode?: number; signal?: string; error?: string }
 
 export type AssistantMessageRole =
   | 'user'
@@ -311,6 +323,14 @@ export type CreateSessionInput = {
 }
 
 export type OpenSeAssistantBridge = {
+  startTerminal: (input?: { directoryPath?: string }) => Promise<AssistantTerminalSession | null>
+  writeTerminal: (terminalId: string, data: string) => Promise<void>
+  resizeTerminal: (terminalId: string, cols: number, rows: number) => Promise<void>
+  stopTerminal: (terminalId: string) => Promise<void>
+  onTerminalEvent: (
+    terminalId: string,
+    callback: (event: AssistantTerminalEvent) => void,
+  ) => () => void
   getStatus: () => Promise<AssistantStatus>
   listSessions: () => Promise<AssistantSession[]>
   createSession: (input?: CreateSessionInput) => Promise<AssistantSession | null>

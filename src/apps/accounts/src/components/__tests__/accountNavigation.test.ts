@@ -15,6 +15,17 @@ describe('account navigation', () => {
     })
   })
 
+  it('uses Settings as the canonical settings navigation entry', () => {
+    expect(accountNavigationItems).toContainEqual({
+      to: '/account/settings',
+      label: 'Settings',
+    })
+    expect(accountNavigationItems).not.toContainEqual({
+      to: '/account/preferences',
+      label: 'Preferences',
+    })
+  })
+
   it('matches active route including nested paths', () => {
     expect(isAccountNavItemActive('/account/profile', '/account/profile')).toBe(true)
     expect(isAccountNavItemActive('/account/profile/avatar', '/account/profile')).toBe(true)

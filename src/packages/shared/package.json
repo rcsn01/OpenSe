@@ -6,6 +6,7 @@
   "exports": {
     "./supabase": "./src/supabase.ts",
     "./organisation-invites": "./src/organisation-invites.ts",
+    "./account-profile": "./src/account-profile.ts",
     "./stoqr/dashboard": "./src/stoqr/dashboard.ts",
     "./auth": "./src/auth/index.ts",
     "./auth/context": "./src/auth/AuthContext.tsx",
