@@ -66,10 +66,16 @@ const statusForTool = (call?: ToolCallPart, result?: AssistantTranscriptItem) =>
   return call?.status ?? 'running'
 }
 
-const MarkdownText = ({ text, inverse = false }: { text: string; inverse?: boolean }) => {
+const MarkdownText = ({ text, inverse = false, prose = false }: { text: string; inverse?: boolean; prose?: boolean }) => {
   const blocks = text.split(/\n{2,}/)
   return (
-    <div className={cn('space-y-2 break-words', inverse ? 'text-current' : 'text-[var(--color-foreground)]')}>
+    <div
+      className={cn(
+        'break-words',
+        prose ? 'space-y-3 text-[15px] leading-7 text-[var(--color-foreground)]' : 'space-y-2',
+        inverse ? 'text-current' : !prose && 'text-[var(--color-foreground)]',
+      )}
+    >
       {blocks.map((block, blockIndex) => {
         const lines = block.split('\n')
         const first = lines[0] ?? ''
@@ -79,10 +85,12 @@ const MarkdownText = ({ text, inverse = false }: { text: string; inverse?: boole
             <pre
               key={blockIndex}
               className={cn(
-                'm-0 overflow-x-auto rounded-[var(--radius-sm)] border px-2 py-1.5 font-mono text-xs leading-5',
+                'm-0 mb-1 overflow-x-auto font-mono text-xs leading-5',
                 inverse
-                  ? 'border-white/30 bg-black/15 text-current'
-                  : 'border-[var(--color-border)] bg-[var(--color-muted)] text-[var(--color-foreground)]',
+                  ? 'rounded-[var(--radius-sm)] border border-white/30 bg-black/15 px-2 py-1.5 text-current'
+                  : prose
+                    ? 'text-[var(--color-muted-foreground)]'
+                    : 'rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-muted)] px-2 py-1.5 text-[var(--color-foreground)]',
               )}
             >
               {body}
@@ -122,6 +130,9 @@ const JsonDetails = ({ title, value }: { title: string; value: unknown }) => {
     </details>
   )
 }
+
+const toolOutputPreClass =
+  'mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] p-2 font-mono text-xs text-[var(--color-muted-foreground)]'
 
 const ToolFrame = ({
   icon,
@@ -202,11 +213,7 @@ const BashToolRenderer: ToolRenderer = ({ call, result }) => {
   return (
     <ToolFrame icon={<Terminal className="h-4 w-4" />} title={command || 'Bash'} status={statusForTool(call, result)}>
       {command ? <pre className="m-0 whitespace-pre-wrap font-mono text-xs text-[var(--color-foreground)]">$ {command}</pre> : null}
-      {output ? (
-        <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] p-2 font-mono text-xs text-[var(--color-muted-foreground)]">
-          {output}
-        </pre>
-      ) : null}
+      {output ? <pre className={cn('m-0 whitespace-pre-wrap', toolOutputPreClass)}>{output}</pre> : null}
       <JsonDetails title="Arguments" value={call?.arguments} />
     </ToolFrame>
   )
@@ -293,11 +300,7 @@ const RoleCard = ({ info }: { info: AssistantTranscriptMessageInfo }) => {
     return (
       <ToolFrame icon={<Terminal className="h-4 w-4" />} title={command || title} status={info.status}>
         {command ? <pre className="m-0 whitespace-pre-wrap font-mono text-xs text-[var(--color-foreground)]">$ {command}</pre> : null}
-        {output ? (
-          <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] p-2 font-mono text-xs text-[var(--color-muted-foreground)]">
-            {output}
-          </pre>
-        ) : null}
+        {output ? <pre className={cn('m-0 whitespace-pre-wrap', toolOutputPreClass)}>{output}</pre> : null}
       </ToolFrame>
     )
   }
@@ -317,18 +320,21 @@ const MessageParts = ({
   item: AssistantTranscriptItem
   toolResults: Map<string, AssistantTranscriptItem>
 }) => {
-  const inverse = item.info.role === 'user'
+  const isUser = item.info.role === 'user'
+  const inverse = isUser
+  const prose = !isUser
   const parts = normalizeParts(item)
   if (!parts.length && item.info.role !== 'assistant' && item.info.role !== 'user') return <RoleCard info={item.info} />
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {parts.map((part) => {
-        if (part.type === 'text') return <MarkdownText key={part.id} text={part.text} inverse={inverse} />
+        if (part.type === 'text') return <MarkdownText key={part.id} text={part.text} inverse={inverse} prose={prose} />
         if (part.type === 'thinking') {
+          if (!part.text.trim()) return null
           return (
-            <div key={part.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
-              <div className="mb-1 font-medium uppercase">Thinking</div>
-              <MarkdownText text={part.text} />
+            <div key={part.id} className="text-xs text-[var(--color-muted-foreground)]">
+              <div className="mb-1 font-medium uppercase tracking-wide">Thinking</div>
+              <MarkdownText text={part.text} prose />
             </div>
           )
         }
@@ -341,6 +347,24 @@ const MessageParts = ({
     </div>
   )
 }
+
+const AssistantTurn = ({
+  streaming,
+  children,
+}: {
+  streaming?: boolean
+  children: ReactNode
+}) => (
+  <div className="flex justify-start">
+    <article
+      aria-label="Assistant"
+      aria-busy={streaming || undefined}
+      className="w-full py-4 text-[var(--color-foreground)]"
+    >
+      {children}
+    </article>
+  </div>
+)
 
 const MessageItem = ({
   item,
@@ -361,20 +385,17 @@ const MessageItem = ({
     return <RoleCard key={item.info.id} info={item.info} />
   }
 
+  if (isAssistant) {
+    return (
+      <AssistantTurn key={item.info.id} streaming={item.info.status === 'streaming'}>
+        <MessageParts item={item} toolResults={toolResults} />
+      </AssistantTurn>
+    )
+  }
+
   return (
-    <div key={item.info.id} className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
-      <article
-        className={cn(
-          'max-w-[78ch] text-sm leading-6',
-          isUser
-            ? 'rounded-[var(--radius-md)] border border-[var(--color-primary)] bg-[var(--color-primary)] px-3 py-2 text-[var(--color-primary-foreground)]'
-            : 'w-full text-[var(--color-foreground)]',
-        )}
-      >
-        <div className="mb-1 text-[11px] font-medium uppercase text-current opacity-70">
-          {item.info.role}
-          {item.info.status === 'streaming' ? ' streaming' : ''}
-        </div>
+    <div key={item.info.id} className="flex justify-end py-2">
+      <article className="max-w-[78ch] rounded-[var(--radius-md)] border border-[var(--color-primary)] bg-[var(--color-primary)] px-3 py-2 text-sm leading-6 text-[var(--color-primary-foreground)]">
         <MessageParts item={item} toolResults={toolResults} />
       </article>
     </div>
@@ -393,12 +414,9 @@ const LivePreview = ({ parts }: { parts: AssistantTranscriptPart[] }) => {
     parts,
   }
   return (
-    <div className="flex justify-start">
-      <article className="w-full max-w-[78ch] text-sm leading-6 text-[var(--color-foreground)]">
-        <div className="mb-1 text-[11px] font-medium uppercase text-current opacity-70">live output</div>
-        <MessageParts item={item} toolResults={new Map()} />
-      </article>
-    </div>
+    <AssistantTurn streaming>
+      <MessageParts item={item} toolResults={new Map()} />
+    </AssistantTurn>
   )
 }
 
