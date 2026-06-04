@@ -1055,6 +1055,13 @@ export const AssistantWorkspace = () => {
     })
   }
 
+  const initializePiConfig = async () => {
+    if (!bridge || !activeSession?.directoryPath) return
+    await runSessionAction('initialize', async () => {
+      await bridge.initializePiConfig({ directoryPath: activeSession.directoryPath })
+    })
+  }
+
   const toggleProjectSessions = (directoryPath: string, currentCount: number, totalCount: number) => {
     setVisibleProjectSessionCounts((counts) => ({
       ...counts,
@@ -1118,12 +1125,15 @@ export const AssistantWorkspace = () => {
           const canExpandSessions = visibleSessionCount > 0 && visibleSessionCount < sessions.length
           const canRetractSessions = visibleSessionCount > SESSION_NAV_STEP
 
+          const isProjectActive =
+            chatDisplayMode === 'terminal' && directoryPath === activeSession?.directoryPath
+
           return {
             href: `/sessions/${targetSession.id}`,
             label: projectName,
             ariaLabel: `Project ${projectName}`,
             icon: <FolderOpen className="h-4 w-4" />,
-            isActive: () => false,
+            isActive: () => isProjectActive,
             onClick: () => toggleProjectSessions(directoryPath, visibleSessionCount, sessions.length),
             isExpanded: visibleSessionCount > 0,
             trailing: (
@@ -1143,7 +1153,8 @@ export const AssistantWorkspace = () => {
               <div className="mt-0.5 flex flex-col gap-0.5">
                 {visibleSessions.map((session) => {
                   const sessionLabel = formatSessionLabel(session)
-                  const isSessionActive = session.id === state.activeSessionId
+                  const isSessionActive =
+                    chatDisplayMode !== 'terminal' && session.id === state.activeSessionId
                   return (
                     <SideNavItem
                       key={session.id}
@@ -1194,7 +1205,7 @@ export const AssistantWorkspace = () => {
         }),
       },
     ]
-  }, [activeSession?.directoryPath, createSession, creating, state.activeSessionId, state.sessions, visibleProjectSessionCounts])
+  }, [activeSession?.directoryPath, chatDisplayMode, createSession, creating, state.activeSessionId, state.sessions, visibleProjectSessionCounts])
 
   const shell = (
     <AppShellLayout
@@ -1224,6 +1235,17 @@ export const AssistantWorkspace = () => {
             <div className="flex shrink-0 items-center gap-1">
               {activeSession ? (
                 <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    aria-label="Initialise Pi config in this project"
+                    onClick={() => void initializePiConfig()}
+                    loading={busyAction === 'initialize'}
+                    disabled={!activeSession.directoryPath}
+                  >
+                    Initialise
+                  </Button>
                   <Button
                     type="button"
                     size="icon"

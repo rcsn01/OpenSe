@@ -1,3 +1,4 @@
+import childProcess from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -20,6 +21,11 @@ const {
   validateCreateSessionInput,
   validateSessionId,
   validateStartTerminalInput,
+  validateInitializePiConfigInput,
+  installPiConfigFromGitHub,
+  installExtensionDependencies,
+  listExtensionPackageDirs,
+  PI_CONFIG_TARBALL_URL,
   validateTerminalId,
   validateTerminalWriteData,
 } = assistantModule
@@ -1657,5 +1663,84 @@ describe('assistant service', () => {
         metadata: {},
       },
     ])
+  })
+})
+
+describe('installPiConfigFromGitHub', () => {
+  it('downloads and extracts the .pi folder into the target directory', async () => {
+    const directoryPath = makeTempRoot()
+    const fixtureRoot = path.join(directoryPath, 'fixture')
+    const repoRoot = path.join(fixtureRoot, 'Pi-Config-main')
+    fs.mkdirSync(path.join(repoRoot, '.pi', 'extensions'), { recursive: true })
+    fs.writeFileSync(path.join(repoRoot, '.pi', 'features.json'), JSON.stringify({ flags: { test: true } }))
+    const archivePath = path.join(directoryPath, 'fixture.tar.gz')
+    childProcess.execFileSync('tar', ['-czf', archivePath, '-C', fixtureRoot, 'Pi-Config-main'])
+
+    const archiveBytes = fs.readFileSync(archivePath)
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () =>
+        archiveBytes.buffer.slice(archiveBytes.byteOffset, archiveBytes.byteOffset + archiveBytes.byteLength),
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await installPiConfigFromGitHub(directoryPath)
+
+    expect(fetchMock).toHaveBeenCalledWith(PI_CONFIG_TARBALL_URL, { redirect: 'follow' })
+    expect(result.piPath).toBe(path.join(directoryPath, '.pi'))
+    expect(JSON.parse(fs.readFileSync(path.join(directoryPath, '.pi', 'features.json'), 'utf8'))).toEqual({
+      flags: { test: true },
+    })
+    expect(result.extensionDependenciesInstalled).toEqual([])
+
+    vi.unstubAllGlobals()
+  })
+
+  it('runs npm install for extensions that ship a package.json', async () => {
+    const directoryPath = makeTempRoot()
+    const fixtureRoot = path.join(directoryPath, 'fixture')
+    const repoRoot = path.join(fixtureRoot, 'Pi-Config-main')
+    const extensionDir = path.join(repoRoot, '.pi', 'extensions', 'tools-web-fetch')
+    fs.mkdirSync(extensionDir, { recursive: true })
+    fs.writeFileSync(
+      path.join(extensionDir, 'package.json'),
+      JSON.stringify({ name: 'tools-web-fetch', private: true, dependencies: {} }),
+    )
+    const archivePath = path.join(directoryPath, 'fixture.tar.gz')
+    childProcess.execFileSync('tar', ['-czf', archivePath, '-C', fixtureRoot, 'Pi-Config-main'])
+
+    const archiveBytes = fs.readFileSync(archivePath)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        arrayBuffer: async () =>
+          archiveBytes.buffer.slice(archiveBytes.byteOffset, archiveBytes.byteOffset + archiveBytes.byteLength),
+      })),
+    )
+
+    const execSpy = vi.spyOn(childProcess, 'execFileSync')
+    try {
+      const result = await installPiConfigFromGitHub(directoryPath)
+      const npmInstallCall = execSpy.mock.calls.find(
+        (call) =>
+          String(call[0]).includes('npm') &&
+          Array.isArray(call[1]) &&
+          call[1][0] === 'install' &&
+          call[1][1] === '--omit=dev' &&
+          call[2]?.cwd === path.join(directoryPath, '.pi', 'extensions', 'tools-web-fetch'),
+      )
+      expect(npmInstallCall).toBeTruthy()
+      expect(result.extensionDependenciesInstalled).toEqual(['tools-web-fetch'])
+    } finally {
+      execSpy.mockRestore()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('refuses to overwrite an existing .pi folder by default', async () => {
+    const directoryPath = makeTempRoot()
+    fs.mkdirSync(path.join(directoryPath, '.pi'), { recursive: true })
+    await expect(installPiConfigFromGitHub(directoryPath)).rejects.toThrow(/already exists/i)
   })
 })

@@ -322,11 +322,23 @@ export type CreateSessionInput = {
   model?: { providerID: string; id: string; variant?: string }
 }
 
+export type InitializePiConfigInput = {
+  directoryPath: string
+  replace?: boolean
+}
+
+export type InitializePiConfigResult = {
+  directoryPath: string
+  piPath: string
+  extensionDependenciesInstalled: string[]
+}
+
 export type OpenSeAssistantBridge = {
   startTerminal: (input?: { directoryPath?: string }) => Promise<AssistantTerminalSession | null>
   writeTerminal: (terminalId: string, data: string) => Promise<void>
   resizeTerminal: (terminalId: string, cols: number, rows: number) => Promise<void>
   stopTerminal: (terminalId: string) => Promise<void>
+  initializePiConfig: (input: InitializePiConfigInput) => Promise<InitializePiConfigResult>
   onTerminalEvent: (
     terminalId: string,
     callback: (event: AssistantTerminalEvent) => void,

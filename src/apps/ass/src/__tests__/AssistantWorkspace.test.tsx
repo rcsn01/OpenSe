@@ -59,6 +59,11 @@ const installBridge = (overrides: Partial<OpenSeAssistantBridge> = {}) => {
     writeTerminal: vi.fn(async () => undefined),
     resizeTerminal: vi.fn(async () => undefined),
     stopTerminal: vi.fn(async () => undefined),
+    initializePiConfig: vi.fn(async (input) => ({
+      directoryPath: input.directoryPath,
+      piPath: `${input.directoryPath}/.pi`,
+      extensionDependenciesInstalled: ['tools-web-fetch'],
+    })),
     getStatus: vi.fn(async () => ({ available: true, version: 'pi-test' })),
     listSessions: vi.fn(async () => []),
     createSession: vi.fn(async () => baseSession),
@@ -152,6 +157,43 @@ describe('AssistantWorkspace', () => {
     expect(screen.getByRole('link', { name: /^current work$/i })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
     await waitFor(() => expect(bridge.openSession).toHaveBeenCalledWith('session-1'))
     expect(screen.queryByText(/Users\/dev\/project/)).not.toBeInTheDocument()
+  })
+
+  it('initialises Pi config in the active project directory', async () => {
+    const user = userEvent.setup()
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [baseSession]),
+      openSession: vi.fn(async (sessionId) => ({ ...baseSession, id: sessionId, status: 'running' as const })),
+    })
+
+    renderWorkspace(['/sessions/session-1'])
+    await screen.findByRole('textbox', { name: /send command/i })
+
+    await user.click(screen.getByRole('button', { name: /initialise pi config/i }))
+
+    await waitFor(() => {
+      expect(bridge.initializePiConfig).toHaveBeenCalledWith({ directoryPath: baseSession.directoryPath })
+    })
+  })
+
+  it('highlights the project instead of the session in Terminal display mode', async () => {
+    const user = userEvent.setup()
+    installBridge({
+      listSessions: vi.fn(async () => [
+        { ...baseSession, displayName: 'Current work', firstMessage: 'first prompt' },
+      ]),
+      openSession: vi.fn(async (sessionId) => ({ ...baseSession, id: sessionId, displayName: 'Current work', status: 'running' as const })),
+    })
+
+    renderWorkspace(['/sessions/session-1'])
+
+    await screen.findByRole('textbox', { name: /send command/i })
+    await user.click(screen.getByRole('button', { name: /chat display settings/i }))
+    await user.click(await screen.findByText('Terminal'))
+
+    expect(await screen.findByTestId('pi-terminal-view')).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /^project project$/i })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
+    expect(screen.getByRole('link', { name: /^current work$/i })).not.toHaveClass('bg-[var(--color-side-nav-active-bg)]')
   })
 
   it('switches between Modern and Terminal display modes without stopping the terminal', async () => {

@@ -2,14 +2,38 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 
+type TerminalMockOptions = {
+  theme?: { background?: string; foreground?: string; [key: string]: string | undefined }
+  [key: string]: unknown
+}
+
 vi.mock('@xterm/xterm', () => {
   class TerminalMock {
     cols = 80
     rows = 24
     element: HTMLElement | null = null
     onDataCallbacks = new Set<(data: string) => void>()
+    private _options: TerminalMockOptions = {}
 
-    constructor(_options?: unknown) {}
+    constructor(options?: TerminalMockOptions) {
+      if (options) this._options = { ...options }
+      const instances =
+        (globalThis as { __OPENSE_TEST_XTERM_INSTANCES?: TerminalMock[] }).__OPENSE_TEST_XTERM_INSTANCES ?? []
+      instances.push(this)
+      ;(globalThis as { __OPENSE_TEST_XTERM_INSTANCES?: TerminalMock[] }).__OPENSE_TEST_XTERM_INSTANCES = instances
+    }
+
+    get options() {
+      return this._options
+    }
+
+    set options(value: TerminalMockOptions) {
+      this._options = {
+        ...this._options,
+        ...value,
+        ...(value.theme ? { theme: { ...this._options.theme, ...value.theme } } : {}),
+      }
+    }
     loadAddon(addon: { activate?: (terminal: TerminalMock) => void }) {
       addon.activate?.(this)
     }

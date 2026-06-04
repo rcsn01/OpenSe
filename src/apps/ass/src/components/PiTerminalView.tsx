@@ -3,10 +3,12 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
+import { useTheme } from '@repo/ui'
 import type {
   AssistantTerminalSession,
   OpenSeAssistantBridge,
 } from '../lib/assistantBridge'
+import { getTerminalTheme } from '../lib/terminalTheme'
 
 type PiTerminalViewProps = {
   bridge: OpenSeAssistantBridge
@@ -15,6 +17,7 @@ type PiTerminalViewProps = {
 }
 
 export const PiTerminalView = ({ bridge, directoryPath, visible }: PiTerminalViewProps) => {
+  const { resolvedTheme } = useTheme()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -32,12 +35,7 @@ export const PiTerminalView = ({ bridge, directoryPath, visible }: PiTerminalVie
       fontSize: 13,
       lineHeight: 1.15,
       scrollback: 5000,
-      theme: {
-        background: '#0b0f14',
-        foreground: '#d6deeb',
-        cursor: '#f4f7fb',
-        selectionBackground: '#2b445f',
-      },
+      theme: getTerminalTheme(resolvedTheme),
     })
     const fitAddon = new FitAddon()
     terminal.loadAddon(fitAddon)
@@ -73,6 +71,12 @@ export const PiTerminalView = ({ bridge, directoryPath, visible }: PiTerminalVie
       terminalSessionIdRef.current = null
     }
   }, [])
+
+  useEffect(() => {
+    const terminal = terminalRef.current
+    if (!terminal) return
+    terminal.options.theme = { ...getTerminalTheme(resolvedTheme) }
+  }, [resolvedTheme])
 
   useEffect(() => {
     if (!visible) return
@@ -160,14 +164,14 @@ export const PiTerminalView = ({ bridge, directoryPath, visible }: PiTerminalVie
   }, [bridge, visible, session?.id])
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#0b0f14]" data-testid="pi-terminal-view">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--color-background)]" data-testid="pi-terminal-view">
       {error ? (
-        <div className="border-b border-red-500/40 bg-red-950/40 px-3 py-2 text-xs text-red-100">
+        <div className="border-b border-[var(--color-destructive)] bg-[color:color-mix(in_srgb,var(--color-destructive)_8%,transparent)] px-3 py-2 text-xs text-[var(--color-destructive)]">
           {error}
         </div>
       ) : null}
       {starting ? (
-        <div className="border-b border-white/10 px-3 py-2 text-xs text-slate-300">
+        <div className="border-b border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
           Starting Pi terminal...
         </div>
       ) : null}
