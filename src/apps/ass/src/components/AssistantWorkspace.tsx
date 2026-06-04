@@ -17,16 +17,12 @@ import {
   Clock3,
   CornerDownLeft,
   FolderOpen,
-  GitBranch,
   GitFork,
   ListTodo,
   MessageSquare,
   PanelLeft,
   Plus,
-  Send,
   Share2,
-  ShieldCheck,
-  Wrench,
 } from 'lucide-react'
 import { ExtensionRequestDialog } from './ExtensionRequestDialog'
 import { TranscriptRenderer } from './TranscriptRenderer'
@@ -125,6 +121,7 @@ const createOptimisticPromptItem = (
 })
 
 const FORWARDED_SLASH_COMMAND_SOURCES = new Set(['prompt', 'extension', 'skill'])
+const HIDDEN_EXTENSION_WIDGET_KEYS = new Set(['todo-list'])
 
 const isForwardedSlashCommand = (commands: AssistantCommand[], commandName: string) => {
   const command = commands.find((item) => item.name.toLowerCase() === commandName.toLowerCase())
@@ -455,18 +452,25 @@ export const AssistantWorkspace = () => {
   const transcriptHistory = activeSession ? state.historyBySessionId[activeSession.id] : undefined
   const todos = activeSession ? state.todosBySessionId[activeSession.id] ?? [] : []
   const todosExpanded = activeSession ? Boolean(expandedTodoSessionIds[activeSession.id]) : false
-  const diffs = activeSession ? state.diffsBySessionId[activeSession.id] ?? [] : []
-  const permissions = activeSession ? state.permissionsBySessionId[activeSession.id] ?? [] : []
-  const questions = activeSession ? state.questionsBySessionId[activeSession.id] ?? [] : []
   const metadata = activeSession ? state.metadataBySessionId[activeSession.id] ?? {} : {}
   const runtimeState = (metadata.state ?? capabilities?.state ?? {}) as RuntimeState
   const queueState = metadata.queue
   const steerQueueState = metadata.steerQueue
   const extensionStatuses = asRecord(metadata.extensionStatuses) as Record<string, string>
   const extensionWidgets = asRecord(metadata.extensionWidgets) as Record<string, { lines?: string[]; placement?: string }>
+  const visibleExtensionWidgets = Object.fromEntries(
+    Object.entries(extensionWidgets).filter(([key]) => !HIDDEN_EXTENSION_WIDGET_KEYS.has(key)),
+  )
   const extensionTitle = typeof metadata.extensionTitle === 'string' ? metadata.extensionTitle : ''
   const editorText = typeof metadata.editorText === 'string' ? metadata.editorText : ''
   const extensionNotification = asRecord(metadata.extensionNotification)
+  const hasExtensionUiState = Boolean(
+    extensionTitle ||
+    Object.keys(extensionStatuses).length ||
+    Object.keys(visibleExtensionWidgets).length ||
+    extensionNotification.message ||
+    editorText,
+  )
   const selectRequest = state.extensionRequest?.type === 'select' ? state.extensionRequest : null
   const dialogExtensionRequest = state.extensionRequest?.type === 'select' ? null : state.extensionRequest
   const availableModels = Array.isArray(capabilities?.models) ? capabilities.models : []
@@ -896,24 +900,6 @@ export const AssistantWorkspace = () => {
     })
   }
 
-  const setQueueMode = async (kind: 'steering' | 'followUp', mode: 'all' | 'one-at-a-time') => {
-    if (!bridge || !activeSession) return
-    await runSessionAction(kind, async () => {
-      if (kind === 'steering') await bridge.setSteeringMode(activeSession.id, mode)
-      else await bridge.setFollowUpMode(activeSession.id, mode)
-      await refreshCapabilities()
-    })
-  }
-
-  const setRuntimeFlag = async (kind: 'autoCompaction' | 'autoRetry', enabled: boolean) => {
-    if (!bridge || !activeSession) return
-    await runSessionAction(kind, async () => {
-      if (kind === 'autoCompaction') await bridge.setAutoCompaction(activeSession.id, enabled)
-      else await bridge.setAutoRetry(activeSession.id, enabled)
-      await refreshCapabilities()
-    })
-  }
-
   const toggleShareActiveSession = async () => {
     if (!bridge || !activeSession) return
     await runSessionAction('share', async () => {
@@ -922,19 +908,6 @@ export const AssistantWorkspace = () => {
         : await bridge.shareSession(activeSession.id)
       dispatch({ type: 'add-session', session })
     })
-  }
-
-  const respondPermission = async (
-    permissionId: string,
-    response: 'once' | 'always' | 'reject',
-  ) => {
-    if (!bridge || !activeSession) return
-    await bridge.respondToPermission(activeSession.id, permissionId, response)
-  }
-
-  const respondQuestion = async (requestId: string, label: string) => {
-    if (!bridge || !activeSession) return
-    await bridge.respondToQuestion(activeSession.id, requestId, [[label]])
   }
 
   const toggleProjectSessions = (directoryPath: string, currentCount: number, totalCount: number) => {
@@ -1097,8 +1070,8 @@ export const AssistantWorkspace = () => {
       profileFallback="OA"
     >
       <BasePage contentClassName="h-full p-0" containerClassName="h-full min-h-0">
-        <div className="grid h-full min-h-0 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_20rem]">
-          <section className="flex min-h-0 flex-col bg-[var(--color-background)]">
+        <div className="h-full min-h-0 overflow-hidden">
+          <section className="relative flex h-full min-h-0 flex-col bg-[var(--color-background)]">
             <header className="flex min-h-14 items-center justify-between gap-3 border-b border-[var(--color-border)] px-3 py-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -1144,6 +1117,57 @@ export const AssistantWorkspace = () => {
                 </div>
               ) : null}
             </header>
+
+            {activeSession && hasExtensionUiState ? (
+              <section className="absolute right-4 top-16 z-20 max-h-[45vh] w-[min(22rem,calc(100%-2rem))] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-xs shadow-lg">
+                <div className="mb-2 flex items-center gap-2 font-medium">
+                  <PanelLeft className="h-3.5 w-3.5" />
+                  Extension UI
+                </div>
+                <div className="space-y-2 text-[var(--color-muted-foreground)]">
+                  {extensionTitle ? (
+                    <div className="flex justify-between gap-2">
+                      <span>Title</span>
+                      <span className="truncate text-right text-[var(--color-foreground)]">{extensionTitle}</span>
+                    </div>
+                  ) : null}
+                  {Object.entries(extensionStatuses).map(([key, value]) => (
+                    <div key={key} className="flex justify-between gap-2">
+                      <span className="truncate">{key}</span>
+                      <Badge>{value || 'Idle'}</Badge>
+                    </div>
+                  ))}
+                  {Object.entries(visibleExtensionWidgets).map(([key, widget]) => (
+                    <div key={key} className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-muted)] p-2">
+                      <div className="mb-1 flex items-center justify-between gap-2 text-[var(--color-foreground)]">
+                        <span className="font-medium">{key}</span>
+                        {widget.placement ? <span>{widget.placement}</span> : null}
+                      </div>
+                      {widget.lines?.length ? (
+                        <pre className="m-0 whitespace-pre-wrap break-words font-mono text-[11px]">
+                          {widget.lines.join('\n')}
+                        </pre>
+                      ) : (
+                        <p>No widget content.</p>
+                      )}
+                    </div>
+                  ))}
+                  {extensionNotification.message ? (
+                    <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-muted)] p-2">
+                      <div className="mb-1 font-medium text-[var(--color-foreground)]">
+                        {String(extensionNotification.type ?? 'Notification')}
+                      </div>
+                      <p>{String(extensionNotification.message)}</p>
+                    </div>
+                  ) : null}
+                  {editorText ? (
+                    <Button type="button" size="xs" variant="secondary" onClick={() => setCommand(editorText)}>
+                      Use editor text
+                    </Button>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
 
             {loading ? (
               <div className="grid min-h-0 flex-1 place-items-center">
@@ -1268,10 +1292,6 @@ export const AssistantWorkspace = () => {
                       className="min-h-12 flex-1 resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
                       disabled={Boolean(selectRequest) || (activeSession.status !== 'running' && activeSession.status !== 'starting')}
                     />
-                    <Button type="submit" size="md" loading={sending} disabled={Boolean(selectRequest) || !command.trim()}>
-                      <Send className="h-4 w-4" />
-                      {steerQueueState?.active ? 'Steer' : 'Send'}
-                    </Button>
                     {steerQueueState?.active ? (
                       <Button
                         type="button"
@@ -1286,167 +1306,7 @@ export const AssistantWorkspace = () => {
                       </Button>
                     ) : null}
                   </div>
-                </form>
-              </>
-            )}
-          </section>
-
-          {activeSession ? (
-            <aside className="hidden min-h-0 flex-col overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-surface)] p-3 xl:flex">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--color-heading)]">Session</h3>
-                <Badge>{activeSession.status}</Badge>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">
-                  <div className="mb-2 flex items-center gap-2 font-medium">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Permissions
-                  </div>
-                  {permissions.length ? (
-                    <div className="space-y-3">
-                      {permissions.map((permission) => (
-                        <div key={permission.id} className="space-y-2">
-                          <p className="break-words text-[var(--color-foreground)]">{permission.permission}</p>
-                          <p className="break-words text-[var(--color-muted-foreground)]">
-                            {permission.patterns.join(', ') || 'No patterns'}
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            <Button type="button" size="xs" onClick={() => void respondPermission(permission.id, 'once')}>
-                              Once
-                            </Button>
-                            <Button type="button" size="xs" variant="secondary" onClick={() => void respondPermission(permission.id, 'always')}>
-                              Always
-                            </Button>
-                            <Button type="button" size="xs" variant="ghost" onClick={() => void respondPermission(permission.id, 'reject')}>
-                              Reject
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[var(--color-muted-foreground)]">No pending permissions.</p>
-                  )}
-                </section>
-
-                <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">
-                  <div className="mb-2 flex items-center gap-2 font-medium">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    Questions
-                  </div>
-                  {questions.length ? (
-                    <div className="space-y-3">
-                      {questions.map((request) => (
-                        <div key={request.id} className="space-y-2">
-                          {request.questions.map((question) => (
-                            <div key={question.header} className="space-y-2">
-                              <p className="font-medium">{question.question}</p>
-                              <div className="flex flex-wrap gap-1">
-                                {question.options.map((option) => (
-                                  <Button key={option.label} type="button" size="xs" onClick={() => void respondQuestion(request.id, option.label)}>
-                                    {option.label}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                          <Button type="button" size="xs" variant="ghost" onClick={() => void bridge?.rejectQuestion(activeSession.id, request.id)}>
-                            Reject
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[var(--color-muted-foreground)]">No pending questions.</p>
-                  )}
-                </section>
-
-                <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">
-                  <div className="mb-2 flex items-center gap-2 font-medium">
-                    <GitBranch className="h-3.5 w-3.5" />
-                    Changes
-                  </div>
-                  {diffs.length ? (
-                    <div className="space-y-1">
-                      {diffs.slice(0, 8).map((diff, index) => (
-                        <div key={`${diff.file}-${index}`} className="flex items-center justify-between gap-2">
-                          <span className="truncate">{diff.file ?? 'Change'}</span>
-                          <span className="text-[var(--color-muted-foreground)]">
-                            +{diff.additions} -{diff.deletions}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[var(--color-muted-foreground)]">No tracked changes.</p>
-                  )}
-                </section>
-
-                <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">
-                  <div className="mb-2 flex items-center gap-2 font-medium">
-                    <PanelLeft className="h-3.5 w-3.5" />
-                    Extension UI
-                  </div>
-                  {extensionTitle ||
-                  Object.keys(extensionStatuses).length ||
-                  Object.keys(extensionWidgets).length ||
-                  extensionNotification.message ||
-                  editorText ? (
-                    <div className="space-y-2 text-[var(--color-muted-foreground)]">
-                      {extensionTitle ? (
-                        <div className="flex justify-between gap-2">
-                          <span>Title</span>
-                          <span className="truncate text-right text-[var(--color-foreground)]">{extensionTitle}</span>
-                        </div>
-                      ) : null}
-                      {Object.entries(extensionStatuses).map(([key, value]) => (
-                        <div key={key} className="flex justify-between gap-2">
-                          <span className="truncate">{key}</span>
-                          <Badge>{value || 'Idle'}</Badge>
-                        </div>
-                      ))}
-                      {Object.entries(extensionWidgets).map(([key, widget]) => (
-                        <div key={key} className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-muted)] p-2">
-                          <div className="mb-1 flex items-center justify-between gap-2 text-[var(--color-foreground)]">
-                            <span className="font-medium">{key}</span>
-                            {widget.placement ? <span>{widget.placement}</span> : null}
-                          </div>
-                          {widget.lines?.length ? (
-                            <pre className="m-0 whitespace-pre-wrap break-words font-mono text-[11px]">
-                              {widget.lines.join('\n')}
-                            </pre>
-                          ) : (
-                            <p>No widget content.</p>
-                          )}
-                        </div>
-                      ))}
-                      {extensionNotification.message ? (
-                        <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-muted)] p-2">
-                          <div className="mb-1 font-medium text-[var(--color-foreground)]">
-                            {String(extensionNotification.type ?? 'Notification')}
-                          </div>
-                          <p>{String(extensionNotification.message)}</p>
-                        </div>
-                      ) : null}
-                      {editorText ? (
-                        <Button type="button" size="xs" variant="secondary" onClick={() => setCommand(editorText)}>
-                          Use editor text
-                        </Button>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="text-[var(--color-muted-foreground)]">No extension UI state.</p>
-                  )}
-                </section>
-
-                <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">
-                  <div className="mb-2 flex items-center gap-2 font-medium">
-                    <Wrench className="h-3.5 w-3.5" />
-                    Runtime controls
-                  </div>
-                  <div className="space-y-2 text-[var(--color-muted-foreground)]">
+                  <div className="mt-2 grid gap-2 text-xs text-[var(--color-muted-foreground)] sm:grid-cols-2">
                     <label className="block">
                       <span className="mb-1 block">Model</span>
                       <select
@@ -1468,7 +1328,6 @@ export const AssistantWorkspace = () => {
                         })}
                       </select>
                     </label>
-
                     <label className="block">
                       <span className="mb-1 block">Thinking</span>
                       <select
@@ -1484,88 +1343,11 @@ export const AssistantWorkspace = () => {
                         ))}
                       </select>
                     </label>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="block">
-                        <span className="mb-1 block">Steering</span>
-                        <select
-                          value={runtimeState.steeringMode ?? 'one-at-a-time'}
-                          onChange={(event) => void setQueueMode('steering', event.target.value as 'all' | 'one-at-a-time')}
-                          disabled={busyAction === 'steering'}
-                          className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-2 text-xs text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-                        >
-                          <option value="one-at-a-time">One</option>
-                          <option value="all">All</option>
-                        </select>
-                      </label>
-                      <label className="block">
-                        <span className="mb-1 block">Follow-up</span>
-                        <select
-                          value={runtimeState.followUpMode ?? 'one-at-a-time'}
-                          onChange={(event) => void setQueueMode('followUp', event.target.value as 'all' | 'one-at-a-time')}
-                          disabled={busyAction === 'followUp'}
-                          className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-2 text-xs text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-                        >
-                          <option value="one-at-a-time">One</option>
-                          <option value="all">All</option>
-                        </select>
-                      </label>
-                    </div>
-
-                    <label className="flex items-center justify-between gap-2">
-                      <span>Auto compaction</span>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(runtimeState.autoCompactionEnabled)}
-                        onChange={(event) => void setRuntimeFlag('autoCompaction', event.target.checked)}
-                        disabled={busyAction === 'autoCompaction'}
-                        className="h-4 w-4 accent-[var(--color-primary)]"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between gap-2">
-                      <span>Auto retry</span>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(runtimeState.autoRetryEnabled)}
-                        onChange={(event) => void setRuntimeFlag('autoRetry', event.target.checked)}
-                        disabled={busyAction === 'autoRetry'}
-                        className="h-4 w-4 accent-[var(--color-primary)]"
-                      />
-                    </label>
                   </div>
-                </section>
-
-                <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3">
-                  <div className="mb-2 flex items-center gap-2 font-medium">
-                    <Wrench className="h-3.5 w-3.5" />
-                    Runtime
-                  </div>
-                  <dl className="space-y-1 text-[var(--color-muted-foreground)]">
-                    <div className="flex justify-between gap-2">
-                      <dt>Model</dt>
-                      <dd className="truncate text-right">{activeSession.model ?? 'Default'}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>Agent</dt>
-                      <dd className="truncate text-right">{activeSession.agent ?? 'Default'}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>Tools</dt>
-                      <dd>{capabilities?.tools?.length ?? '...'}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>MCP</dt>
-                      <dd>{metadata.mcp || capabilities?.mcp ? 'Loaded' : 'None'}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt>LSP</dt>
-                      <dd>{metadata.lsp || capabilities?.lsp ? 'Loaded' : 'None'}</dd>
-                    </div>
-                  </dl>
-                </section>
-              </div>
-            </aside>
-          ) : null}
+                </form>
+              </>
+            )}
+          </section>
         </div>
       </BasePage>
     </AppShellLayout>

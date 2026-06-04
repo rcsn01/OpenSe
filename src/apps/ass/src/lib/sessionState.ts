@@ -865,10 +865,14 @@ export const reduceSessionEvent = (
             ...((existing.extensionStatuses as Record<string, unknown> | undefined) ?? {}),
             ...((event.metadata.extensionStatuses as Record<string, unknown> | undefined) ?? {}),
           },
-          extensionWidgets: {
-            ...((existing.extensionWidgets as Record<string, unknown> | undefined) ?? {}),
-            ...((event.metadata.extensionWidgets as Record<string, unknown> | undefined) ?? {}),
-          },
+          extensionWidgets: (() => {
+            const merged = {
+              ...((existing.extensionWidgets as Record<string, unknown> | undefined) ?? {}),
+              ...((event.metadata.extensionWidgets as Record<string, unknown> | undefined) ?? {}),
+            }
+            delete merged['todo-list']
+            return merged
+          })(),
         },
       },
     }

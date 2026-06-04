@@ -1,62 +1,10 @@
-import { Bot, Boxes, ChevronRight, Workflow, type LucideIcon } from 'lucide-react'
-import { appendAppPath, getRuntimeConfigValue, isDesktopRuntime } from '@repo/shared/runtime-config'
+import { ChevronRight } from 'lucide-react'
+import { buildSwitchableAppHref, getSwitchableApps } from '@repo/shared/switchable-apps'
+import { SWITCHABLE_APP_ICONS } from '@repo/ui'
 import { AccountsPageShell } from '../components/AccountsPageShell'
 
-type AppDestination = {
-  key: string
-  name: string
-  url: string
-  path?: string
-  icon: LucideIcon
-}
-
-const defaultAppUrls = {
-  ass: 'http://localhost:5995',
-  etl: 'http://localhost:5992',
-  stoqr: 'http://localhost:5993',
-} as const
-
-const buildAppUrl = (baseUrl: string, path?: string) => {
-  if (!path) return baseUrl
-  return appendAppPath(baseUrl, path)
-}
-
-const shouldShowAss = () =>
-  isDesktopRuntime() || Boolean(getRuntimeConfigValue('VITE_ASS_PUBLIC_URL'))
-
-const getAppDestinations = (): AppDestination[] => {
-  const destinations: AppDestination[] = [
-    {
-      key: 'etl',
-      name: 'Open-ETL',
-      url: getRuntimeConfigValue('VITE_ETL_PUBLIC_URL') ?? getRuntimeConfigValue('VITE_ETL_URL') ?? defaultAppUrls.etl,
-      path: '/dashboard',
-      icon: Workflow,
-    },
-    {
-      key: 'stoqr',
-      name: 'Open-StoQR',
-      url: getRuntimeConfigValue('VITE_STOQR_PUBLIC_URL') ?? getRuntimeConfigValue('VITE_STOQR_URL') ?? defaultAppUrls.stoqr,
-      path: '/dashboard',
-      icon: Boxes,
-    },
-  ]
-
-  if (shouldShowAss()) {
-    destinations.push({
-      key: 'ass',
-      name: 'Open-Ass',
-      url: getRuntimeConfigValue('VITE_ASS_PUBLIC_URL') ?? defaultAppUrls.ass,
-      path: '/',
-      icon: Bot,
-    })
-  }
-
-  return destinations
-}
-
 export const HomePage = () => {
-  const appDestinations = getAppDestinations()
+  const appDestinations = getSwitchableApps()
 
   return (
     <AccountsPageShell
@@ -65,8 +13,8 @@ export const HomePage = () => {
     >
       <div className="grid gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {appDestinations.map((app) => {
-          const Icon = app.icon
-          const href = buildAppUrl(app.url, app.path)
+          const Icon = SWITCHABLE_APP_ICONS[app.key]
+          const href = buildSwitchableAppHref(app)
 
           return (
             <a
@@ -77,7 +25,7 @@ export const HomePage = () => {
               <span className="grid h-10 w-10 shrink-0 place-items-center bg-[var(--color-muted)] sm:h-12 sm:w-12">
                 <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </span>
-              <span className="min-w-0 flex-1 text-sm font-semibold sm:flex-none">{app.name}</span>
+              <span className="min-w-0 flex-1 text-sm font-semibold sm:flex-none">{app.title}</span>
               <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-muted-foreground)] sm:hidden" />
             </a>
           )
