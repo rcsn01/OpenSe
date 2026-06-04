@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "opense-stack/**"
+      - "src/**"
       - ".github/workflows/publish-ghcr.yml"
   workflow_dispatch:
 
@@ -25,7 +25,6 @@ jobs:
           - etl
           - opense
           - stoqr
-          - ui-design
 
     steps:
       - name: Checkout
@@ -54,8 +53,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./opense-stack
-          file: ./opense-stack/Dockerfile
+          context: ./src
+          file: ./src/Dockerfile
           build-args: |
             APP_NAME=${{ matrix.app }}
           push: true
