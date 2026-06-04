@@ -5,7 +5,7 @@ while read local_ref local_sha remote_ref remote_sha
 do
   if [ "$remote_ref" = "refs/heads/main" ]; then
     echo "Pushing to main: running local production Docker builds first..."
-    cd opense-stack
+    cd src
     docker compose -f docker-compose.prod.yml build
   fi
 done
