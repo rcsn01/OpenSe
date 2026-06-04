@@ -256,6 +256,135 @@ const validateStartTerminalInput = (input) => {
   return { directoryPath }
 }
 
+const PI_CONFIG_REPO = 'rcsn01/Pi-Config'
+const PI_CONFIG_BRANCH = 'main'
+const PI_CONFIG_TARBALL_URL = `https://codeload.github.com/${PI_CONFIG_REPO}/tar.gz/${PI_CONFIG_BRANCH}`
+
+const validateInitializePiConfigInput = (input) => {
+  if (input == null || typeof input !== 'object' || Array.isArray(input)) {
+    throw new Error('Invalid initialise Pi config input.')
+  }
+  const directoryPath = validateDirectoryPath(input.directoryPath)
+  const replace = input.replace === true
+  return { directoryPath, replace }
+}
+
+const downloadFile = async (url, destination) => {
+  if (typeof fetch !== 'function') {
+    throw new Error('Network downloads are unavailable in this environment.')
+  }
+  const response = await fetch(url, { redirect: 'follow' })
+  if (!response.ok) {
+    throw new Error(`Failed to download Pi config (${response.status}).`)
+  }
+  const bytes = Buffer.from(await response.arrayBuffer())
+  fs.writeFileSync(destination, bytes)
+}
+
+const listExtensionPackageDirs = (piPath) => {
+  const extensionsRoot = path.join(piPath, 'extensions')
+  if (!fs.existsSync(extensionsRoot)) return []
+
+  const packageDirs = []
+  for (const entry of fs.readdirSync(extensionsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const extensionDir = path.join(extensionsRoot, entry.name)
+    if (fs.existsSync(path.join(extensionDir, 'package.json'))) {
+      packageDirs.push(extensionDir)
+    }
+  }
+  return packageDirs.sort()
+}
+
+const resolveNpmCommand = () => {
+  const candidates = process.platform === 'win32' ? ['npm.cmd', 'npm'] : ['npm']
+  for (const command of candidates) {
+    try {
+      childProcess.execFileSync(command, ['--version'], { stdio: 'pipe' })
+      return command
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  throw new Error('npm was not found on PATH. Install Node.js to initialise extension dependencies.')
+}
+
+const installExtensionDependencies = (piPath) => {
+  const packageDirs = listExtensionPackageDirs(piPath)
+  if (!packageDirs.length) return []
+
+  const npm = resolveNpmCommand()
+  const installed = []
+  const failures = []
+
+  for (const extensionDir of packageDirs) {
+    try {
+      childProcess.execFileSync(npm, ['install', '--omit=dev'], {
+        cwd: extensionDir,
+        stdio: 'pipe',
+        env: {
+          ...process.env,
+          npm_config_audit: 'false',
+          npm_config_fund: 'false',
+        },
+      })
+      installed.push(path.basename(extensionDir))
+    } catch (error) {
+      failures.push({
+        name: path.basename(extensionDir),
+        message: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  if (failures.length) {
+    const summary = failures.map((failure) => failure.name).join(', ')
+    throw new Error(
+      `Failed to install extension dependencies for: ${summary}. Ensure npm and network access are available.`,
+    )
+  }
+
+  return installed
+}
+
+const installPiConfigFromGitHub = async (directoryPath, options = {}) => {
+  const resolvedDirectory = validateDirectoryPath(directoryPath)
+  const targetPi = path.join(resolvedDirectory, '.pi')
+  if (fs.existsSync(targetPi) && !options.replace) {
+    throw new Error('`.pi` already exists in this directory. Remove it first to re-initialise.')
+  }
+
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pi-config-install-'))
+  const archivePath = path.join(tmpRoot, 'archive.tar.gz')
+  const extractRoot = path.join(tmpRoot, 'extract')
+
+  try {
+    await downloadFile(PI_CONFIG_TARBALL_URL, archivePath)
+    ensureDirectory(extractRoot)
+    childProcess.execFileSync('tar', ['-xzf', archivePath, '-C', extractRoot], { stdio: 'pipe' })
+
+    const entries = fs.readdirSync(extractRoot)
+    const repoRoot =
+      entries.length === 1 && fs.statSync(path.join(extractRoot, entries[0])).isDirectory()
+        ? path.join(extractRoot, entries[0])
+        : extractRoot
+    const sourcePi = path.join(repoRoot, '.pi')
+    if (!fs.existsSync(sourcePi) || !fs.statSync(sourcePi).isDirectory()) {
+      throw new Error('Downloaded Pi config did not include a `.pi` folder.')
+    }
+
+    if (fs.existsSync(targetPi)) {
+      fs.rmSync(targetPi, { recursive: true, force: true })
+    }
+    fs.cpSync(sourcePi, targetPi, { recursive: true })
+    const extensionDependenciesInstalled = installExtensionDependencies(targetPi)
+
+    return { directoryPath: resolvedDirectory, piPath: targetPi, extensionDependenciesInstalled }
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true })
+  }
+}
+
 const validateTerminalId = (terminalId) => {
   if (typeof terminalId !== 'string' || !VALID_ID.test(terminalId) || !terminalId.startsWith('term_')) {
     throw new Error('Invalid Open-Ass terminal id.')
@@ -2095,6 +2224,11 @@ const createAssistantService = ({
       closeTerminalProcess(getTerminal(terminalId))
     },
 
+    initializePiConfig: async (input) => {
+      const validated = validateInitializePiConfigInput(input)
+      return installPiConfigFromGitHub(validated.directoryPath, { replace: validated.replace })
+    },
+
     onTerminalEvent: (terminalId, callback) => {
       const id = validateTerminalId(terminalId)
       if (typeof callback !== 'function') throw new Error('Terminal event callback is required.')
@@ -2571,8 +2705,12 @@ const createAssistantService = ({
       validateDirectoryPath,
       validateSessionId,
       validateStartTerminalInput,
+      validateInitializePiConfigInput,
       validateTerminalId,
       validateTerminalWriteData,
+      installPiConfigFromGitHub,
+      installExtensionDependencies,
+      listExtensionPackageDirs,
       readRegistry,
     },
   }
@@ -2587,6 +2725,7 @@ const registerAssistantIpc = ({ ipcMain, service }) => {
     service.resizeTerminal(terminalId, cols, rows),
   )
   ipcMain.handle('assistant:stop-terminal', (_event, terminalId) => service.stopTerminal(terminalId))
+  ipcMain.handle('assistant:initialize-pi-config', (_event, input) => service.initializePiConfig(input))
   ipcMain.handle('assistant:get-status', () => service.getStatus())
   ipcMain.handle('assistant:list-sessions', () => service.listSessions())
   ipcMain.handle('assistant:create-session', (_event, input) => service.createSession(input))
@@ -2666,6 +2805,11 @@ module.exports = {
   validateDirectoryPath,
   validateSessionId,
   validateStartTerminalInput,
+  validateInitializePiConfigInput,
+  installPiConfigFromGitHub,
+  installExtensionDependencies,
+  listExtensionPackageDirs,
+  PI_CONFIG_TARBALL_URL,
   validateTerminalId,
   validateTerminalWriteData,
 }

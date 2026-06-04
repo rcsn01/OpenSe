@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('openseAssistant', {
   writeTerminal: (terminalId, data) => ipcRenderer.invoke('assistant:write-terminal', terminalId, data),
   resizeTerminal: (terminalId, cols, rows) => ipcRenderer.invoke('assistant:resize-terminal', terminalId, cols, rows),
   stopTerminal: (terminalId) => ipcRenderer.invoke('assistant:stop-terminal', terminalId),
+  initializePiConfig: (input) => ipcRenderer.invoke('assistant:initialize-pi-config', input),
   getStatus: () => ipcRenderer.invoke('assistant:get-status'),
   listSessions: () => ipcRenderer.invoke('assistant:list-sessions'),
   createSession: (input) => ipcRenderer.invoke('assistant:create-session', input),
