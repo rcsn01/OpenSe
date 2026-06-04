@@ -6,7 +6,7 @@ import { AuthProvider } from '@repo/shared/auth/context';
 import { getRouterBasename, getRouterMode } from '@repo/shared/runtime-config';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { ReactFlowProvider } from 'reactflow';
-import { buildAccountsAuthUrl, buildAccountsSettingsUrl } from './lib/authRedirect';
+import { buildAccountsAuthUrl, buildAccountsProfileUrl } from './lib/authRedirect';
 import { RootRedirect } from './RootRedirect';
 
 // Layouts
@@ -38,7 +38,7 @@ const DashboardIndexRedirect = () => {
 
 const AccountsProfileRedirect = () => {
   useEffect(() => {
-    window.location.assign(buildAccountsSettingsUrl());
+    window.location.assign(buildAccountsProfileUrl());
   }, []);
 
   return (

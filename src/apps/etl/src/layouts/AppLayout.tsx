@@ -7,6 +7,8 @@ import {
   type AppShellNavItem,
 } from '@repo/ui'
 import { useAuth } from '@repo/shared/auth/context'
+import { useCurrentAccountProfileSummary } from '@repo/shared/account-profile'
+import { supabase } from '@repo/shared/supabase'
 import { OrgSimple, useUserOrganisations } from '../hooks/queries/useOrganisations'
 import {
   TopBarSearchContent,
@@ -14,6 +16,7 @@ import {
 } from '../components/Search/TopBarSearch'
 import {
   buildAccountsOnboardingUrl,
+  buildAccountsProfileUrl,
   buildAccountsSettingsUrl,
 } from '../lib/authRedirect'
 
@@ -28,6 +31,7 @@ const EtlBrandIcon = SWITCHABLE_APP_ICONS.etl
 
 export const AppLayout = () => {
   const { session, user, loading, logout } = useAuth()
+  const accountProfile = useCurrentAccountProfileSummary({ user, client: supabase })
   const [signingOut, setSigningOut] = useState(false)
   const location = useLocation()
   const [pendingRedirect, setPendingRedirect] = useState(false)
@@ -145,7 +149,11 @@ export const AppLayout = () => {
             {children}
           </NavLink>
         )}
-        profileFallback={user?.user_metadata?.full_name?.[0] || user?.email?.[0] || 'U'}
+        profileSrc={accountProfile.profileSrc}
+        profileFallback={accountProfile.profileFallback}
+        onProfileClick={() => {
+          window.location.assign(buildAccountsProfileUrl())
+        }}
         onSettingsClick={() => {
           window.location.assign(buildAccountsSettingsUrl())
         }}

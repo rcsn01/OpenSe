@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import {
+  buildConfiguredAccountsProfileUrl,
+  buildConfiguredAccountsSettingsUrl,
+} from "@repo/shared/utils";
+import {
   AppLayout as SharedAppLayout,
   Button,
   SideNav,
@@ -9,7 +13,6 @@ import {
   SideNavGroupList,
   SideNavItem,
   useTheme,
-  useToast,
 } from "../components/ui";
 import {
   BarChart3,
@@ -90,7 +93,6 @@ const previewItems = [
 ];
 
 function AppLayoutContent() {
-  const { toast } = useToast();
   const { resolvedTheme, toggleTheme } = useTheme();
   const location = useLocation();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -126,19 +128,13 @@ function AppLayoutContent() {
     setIsMobileNavOpen(false);
   }, [location.hash, location.pathname]);
 
-  const handleLogout = () =>
-    toast({
-      title: "Log out",
-      message: "Demo: no auth in the shared UI gallery.",
-      variant: "default",
-    });
+  const openAccountProfile = () => {
+    window.location.assign(buildConfiguredAccountsProfileUrl());
+  };
 
-  const handleSettings = () =>
-    toast({
-      title: "Settings",
-      message: "This shell is built from shared layout components.",
-      variant: "info",
-    });
+  const openAccountSettings = () => {
+    window.location.assign(buildConfiguredAccountsSettingsUrl());
+  };
 
   const sidebar = (
     <>
@@ -221,8 +217,8 @@ function AppLayoutContent() {
     <SharedAppLayout
       sidebar={sidebar}
       profileFallback="U"
-      onSettingsClick={handleSettings}
-      onLogout={handleLogout}
+      onProfileClick={openAccountProfile}
+      onSettingsClick={openAccountSettings}
       mobileSidebar={{
         enabled: isMobileViewport,
         isOpen: isMobileNavOpen,

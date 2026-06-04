@@ -228,6 +228,29 @@ app.whenReady().then(async () => {
     }
   })
 
+  const terminalSubscriptions = new Map()
+  ipcMain.handle('assistant:subscribe-terminal', (event, terminalId) => {
+    const senderId = event.sender.id
+    const key = `${senderId}:${terminalId}`
+    if (terminalSubscriptions.has(key)) return
+
+    const unsubscribe = assistantService.onTerminalEvent(terminalId, (payload) => {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send(`assistant:terminal-event:${terminalId}`, payload)
+      }
+    })
+    terminalSubscriptions.set(key, unsubscribe)
+  })
+
+  ipcMain.handle('assistant:unsubscribe-terminal', (event, terminalId) => {
+    const key = `${event.sender.id}:${terminalId}`
+    const unsubscribe = terminalSubscriptions.get(key)
+    if (unsubscribe) {
+      unsubscribe()
+      terminalSubscriptions.delete(key)
+    }
+  })
+
   ipcMain.handle('desktop:open-external', async (_event, url) => {
     const parsed = new URL(url)
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {

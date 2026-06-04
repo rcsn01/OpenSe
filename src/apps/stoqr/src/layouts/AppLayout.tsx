@@ -1,5 +1,7 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@repo/shared/auth/context'
+import { useCurrentAccountProfileSummary } from '@repo/shared/account-profile'
+import { supabase } from '@repo/shared/supabase'
 import {
   LayoutDashboard,
   Package,
@@ -21,7 +23,7 @@ import {
 } from '../components/Search/TopBarSearch'
 import { useCompany } from '../contexts/CompanyContext'
 import { useMyPermissions } from '../hooks/queries/usePermissions'
-import { buildAccountsSettingsUrl } from '../lib/authRedirect'
+import { buildAccountsProfileUrl, buildAccountsSettingsUrl } from '../lib/authRedirect'
 
 const StoqrBrandIcon = SWITCHABLE_APP_ICONS.stoqr
 
@@ -46,9 +48,9 @@ export const AppLayout = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const accountProfile = useCurrentAccountProfileSummary({ user, client: supabase })
   const { companyId } = useCompany()
   const { data: permissions = [], isLoading: permissionsLoading } = useMyPermissions(companyId)
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
 
   const handleSignOut = async () => {
     await logout()
@@ -74,7 +76,11 @@ export const AppLayout = () => {
             {children}
           </NavLink>
         )}
-        profileFallback={userName?.[0] || 'U'}
+        profileSrc={accountProfile.profileSrc}
+        profileFallback={accountProfile.profileFallback}
+        onProfileClick={() => {
+          window.location.assign(buildAccountsProfileUrl())
+        }}
         onSettingsClick={() => {
           window.location.assign(buildAccountsSettingsUrl())
         }}

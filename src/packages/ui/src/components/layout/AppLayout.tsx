@@ -17,6 +17,8 @@ export interface AppLayoutProps {
   profileSrc?: string
   /** Profile fallback for default TopBar avatar */
   profileFallback?: string
+  /** Optional callback for profile menu Profile item */
+  onProfileClick?: () => void
   /** Optional callback for profile menu Settings item */
   onSettingsClick?: () => void
   /** Optional callback for profile menu Log out item */
@@ -48,6 +50,7 @@ export function AppLayout({
   topBar,
   profileSrc,
   profileFallback,
+  onProfileClick,
   onSettingsClick,
   onLogout,
   searchPlaceholder,
@@ -115,6 +118,7 @@ export function AppLayout({
       <SwitchAppTopBar
         profileSrc={profileSrc}
         profileFallback={profileFallback}
+        onProfileClick={onProfileClick}
         onSettingsClick={onSettingsClick}
         onLogout={onLogout}
         searchContent={searchContent}

@@ -6,19 +6,34 @@ import { AppLayout } from '../layouts/AppLayout'
 
 const mockUseAuth = vi.fn()
 const mockUseUserOrganisations = vi.fn()
+const appShellLayoutProps: any[] = []
 const assignMock = vi.fn()
 
 vi.mock('@repo/shared/auth/context', () => ({
   useAuth: () => mockUseAuth(),
 }))
 
+vi.mock('@repo/shared/account-profile', () => ({
+  useCurrentAccountProfileSummary: () => ({
+    profileSrc: 'https://example.com/avatar.png',
+    profileFallback: 'AU',
+  }),
+}))
+
+vi.mock('@repo/shared/supabase', () => ({
+  supabase: {},
+}))
+
 vi.mock('@repo/ui', () => ({
-  AppShellLayout: ({ children }: { children: ReactNode }) => (
-    <div>
-      <div>Protected app UI</div>
-      {children}
-    </div>
-  ),
+  AppShellLayout: (props: { children: ReactNode }) => {
+    appShellLayoutProps.push(props)
+    return (
+      <div>
+        <div>Protected app UI</div>
+        {props.children}
+      </div>
+    )
+  },
   SWITCHABLE_APP_ICONS: {
     etl: () => <span data-testid="etl-brand-icon" />,
   },
@@ -36,6 +51,7 @@ vi.mock('../components/Search/TopBarSearch', () => ({
 vi.mock('../lib/authRedirect', () => ({
   buildAccountsOnboardingUrl: (redirectPath?: string) =>
     `/accounts/onboarding?returnTo=${encodeURIComponent(redirectPath ?? '')}`,
+  buildAccountsProfileUrl: () => '/accounts/profile',
   buildAccountsSettingsUrl: () => '/accounts/settings',
 }))
 
@@ -65,6 +81,7 @@ describe('AppLayout organisation guard', () => {
       isError: false,
     })
     assignMock.mockReset()
+    appShellLayoutProps.length = 0
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: {
@@ -111,5 +128,21 @@ describe('AppLayout organisation guard', () => {
 
     expect(screen.getByText('Protected app UI')).toBeInTheDocument()
     expect(assignMock).not.toHaveBeenCalled()
+  })
+
+  it('passes account profile, settings, and logout actions into the app shell', () => {
+    renderAppLayout()
+
+    const props = appShellLayoutProps[appShellLayoutProps.length - 1] as any
+    expect(props.profileSrc).toBe('https://example.com/avatar.png')
+    expect(props.profileFallback).toBe('AU')
+    expect(props.onProfileClick).toEqual(expect.any(Function))
+    expect(props.onSettingsClick).toEqual(expect.any(Function))
+    expect(props.onLogout).toEqual(expect.any(Function))
+
+    props.onProfileClick()
+    expect(assignMock).toHaveBeenCalledWith('/accounts/profile')
+    props.onSettingsClick()
+    expect(assignMock).toHaveBeenCalledWith('/accounts/settings')
   })
 })

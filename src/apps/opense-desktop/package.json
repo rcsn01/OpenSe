@@ -21,6 +21,9 @@
         "schemes": ["opense"]
       }
     ],
+    "asarUnpack": [
+      "**/*.node"
+    ],
     "files": [
       "electron/**/*",
       "package.json"
@@ -54,6 +57,9 @@
       "target": ["AppImage", "deb"],
       "category": "Office"
     }
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0"
   },
   "devDependencies": {
     "electron": "39.8.10",

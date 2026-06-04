@@ -6,10 +6,11 @@ export { AuthRedirectPage } from './AuthRedirectPage'
 declare global {
   interface Window {
     openseDesktop?: {
-      openExternal: (url: string) => Promise<void>
+      configure?: (accountsUrl: string) => Promise<unknown>
+      openExternal?: (url: string) => Promise<void>
     }
     openseMobile?: {
-      openExternal: (url: string) => Promise<void>
+      openExternal?: (url: string) => Promise<void>
     }
   }
 }

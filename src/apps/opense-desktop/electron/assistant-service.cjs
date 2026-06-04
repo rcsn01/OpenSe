@@ -10,6 +10,10 @@ const VALID_PERMISSION_RESPONSE = new Set(['once', 'always', 'reject'])
 const MAX_TEXT_SIZE = 100_000
 const RPC_RESPONSE_TIMEOUT_MS = 30_000
 const MAX_STDERR_SIZE = 64_000
+const MAX_TERMINAL_REPLAY_SIZE = 200_000
+const MAX_TERMINAL_WRITE_SIZE = 100_000
+const DEFAULT_TERMINAL_COLS = 80
+const DEFAULT_TERMINAL_ROWS = 24
 const OPEN_ASS_UI_REQUEST_PREFIX = 'open_ass_ui_'
 const OPEN_ASS_SESSION_ID_PREFIX = 'ses_'
 const PI_AGENT_DIR_ENV = 'PI_CODING_AGENT_DIR'
@@ -241,6 +245,36 @@ const validateCreateSessionInput = (input) => {
         }
       : undefined
   return { directoryPath, title, agent, model }
+}
+
+const validateStartTerminalInput = (input) => {
+  if (input == null) return {}
+  if (typeof input !== 'object' || Array.isArray(input)) {
+    throw new Error('Invalid start terminal input.')
+  }
+  const directoryPath = input.directoryPath == null ? undefined : validateDirectoryPath(input.directoryPath)
+  return { directoryPath }
+}
+
+const validateTerminalId = (terminalId) => {
+  if (typeof terminalId !== 'string' || !VALID_ID.test(terminalId) || !terminalId.startsWith('term_')) {
+    throw new Error('Invalid Open-Ass terminal id.')
+  }
+  return terminalId
+}
+
+const validateTerminalWriteData = (data) => {
+  if (typeof data !== 'string') throw new Error('Terminal input must be text.')
+  if (data.length > MAX_TERMINAL_WRITE_SIZE) throw new Error('Terminal input is too large.')
+  return data
+}
+
+const validateTerminalDimension = (value, label) => {
+  const number = Number(value)
+  if (!Number.isInteger(number) || number < 2 || number > 500) {
+    throw new Error(`${label} must be between 2 and 500.`)
+  }
+  return number
 }
 
 const validateObject = (value, label) => {
@@ -1082,6 +1116,14 @@ const getDefaultClipboard = () => {
   }
 }
 
+const getDefaultPtySpawn = () => {
+  try {
+    return require('node-pty').spawn
+  } catch {
+    return null
+  }
+}
+
 const getCommandItems = (commands) => (
   Array.isArray(commands?.commands) ? commands.commands : Array.isArray(commands) ? commands : []
 )
@@ -1185,6 +1227,7 @@ const normalizeExtensionUiMetadata = (request) => {
 const createAssistantService = ({
   userDataPath,
   spawn = childProcess.spawn,
+  ptySpawn = getDefaultPtySpawn(),
   spawnSync = childProcess.spawnSync,
   chooseDirectory = async () => null,
   clipboard = getDefaultClipboard(),
@@ -1197,6 +1240,8 @@ const createAssistantService = ({
   const registryPath = path.join(rootDir, 'sessions.json')
   const runtimeEnv = buildPiRuntimeEnv(env, spawnSync)
   const processes = new Map()
+  const terminalProcesses = new Map()
+  const terminalProcessesByDirectory = new Map()
   const runtimeSessions = new Map()
   const pendingOpenAssUiRequests = new Map()
 
@@ -1386,6 +1431,98 @@ const createAssistantService = ({
 
   const emitSessionEvent = (sessionId, event) => {
     emitter.emit(`session:${sessionId}`, event)
+  }
+
+  const emitTerminalEvent = (terminalId, event) => {
+    emitter.emit(`terminal:${terminalId}`, event)
+  }
+
+  const appendTerminalReplay = (terminal, data) => {
+    terminal.replay = `${terminal.replay}${data}`.slice(-MAX_TERMINAL_REPLAY_SIZE)
+  }
+
+  const serializeTerminal = (terminal) => ({
+    id: terminal.id,
+    directoryPath: terminal.directoryPath,
+    status: terminal.status,
+    initialData: terminal.replay || undefined,
+  })
+
+  const removeTerminalProcess = (terminal) => {
+    terminalProcesses.delete(terminal.id)
+    if (terminalProcessesByDirectory.get(terminal.directoryKey) === terminal.id) {
+      terminalProcessesByDirectory.delete(terminal.directoryKey)
+    }
+  }
+
+  const attachTerminalDataListener = (terminal, child) => {
+    if (typeof child.onData === 'function') {
+      terminal.dataDisposable = child.onData((data) => {
+        const text = String(data)
+        appendTerminalReplay(terminal, text)
+        emitTerminalEvent(terminal.id, { type: 'data', id: terminal.id, data: text })
+      })
+      return
+    }
+    if (typeof child.on === 'function') {
+      child.on('data', (data) => {
+        const text = String(data)
+        appendTerminalReplay(terminal, text)
+        emitTerminalEvent(terminal.id, { type: 'data', id: terminal.id, data: text })
+      })
+    }
+  }
+
+  const attachTerminalExitListener = (terminal, child) => {
+    const onExit = (eventOrCode, maybeSignal) => {
+      if (terminal.closedNotified) return
+      terminal.closedNotified = true
+      const exitCode = typeof eventOrCode === 'object' && eventOrCode !== null ? eventOrCode.exitCode : eventOrCode
+      const signal = typeof eventOrCode === 'object' && eventOrCode !== null ? eventOrCode.signal : maybeSignal
+      const expected = terminal.closing
+      terminal.status = expected ? 'closed' : 'exited'
+      removeTerminalProcess(terminal)
+      emitTerminalEvent(terminal.id, {
+        type: 'status',
+        id: terminal.id,
+        status: terminal.status,
+        exitCode: typeof exitCode === 'number' ? exitCode : undefined,
+        signal: signal == null ? undefined : String(signal),
+      })
+    }
+
+    if (typeof child.onExit === 'function') {
+      terminal.exitDisposable = child.onExit(onExit)
+      return
+    }
+    if (typeof child.once === 'function') {
+      child.once('exit', onExit)
+    } else if (typeof child.on === 'function') {
+      child.on('exit', onExit)
+    }
+  }
+
+  const closeTerminalProcess = (terminal) => {
+    if (terminal.closedNotified) return
+    terminal.closing = true
+    terminal.dataDisposable?.dispose?.()
+    terminal.exitDisposable?.dispose?.()
+    try {
+      if (typeof terminal.child.kill === 'function') terminal.child.kill()
+    } finally {
+      if (terminal.closedNotified) return
+      terminal.closedNotified = true
+      terminal.status = 'closed'
+      removeTerminalProcess(terminal)
+      emitTerminalEvent(terminal.id, { type: 'status', id: terminal.id, status: 'closed' })
+    }
+  }
+
+  const getTerminal = (terminalId) => {
+    const id = validateTerminalId(terminalId)
+    const terminal = terminalProcesses.get(id)
+    if (!terminal) throw new Error('Open-Ass terminal was not found.')
+    return terminal
   }
 
   const cleanupOpenAssUiRequests = (sessionId) => {
@@ -1888,6 +2025,84 @@ const createAssistantService = ({
   }
 
   const service = {
+    startTerminal: async (input) => {
+      const validated = validateStartTerminalInput(input)
+      const directoryPath = validated.directoryPath ?? (await chooseDirectory())
+      if (!directoryPath) return null
+      const resolvedDirectory = validateDirectoryPath(directoryPath)
+      const directoryKey = resolveComparablePath(resolvedDirectory)
+      const existingId = terminalProcessesByDirectory.get(directoryKey)
+      const existing = existingId ? terminalProcesses.get(existingId) : null
+      if (existing && existing.status === 'running') return serializeTerminal(existing)
+
+      const pi = findPiCommand()
+      if (!pi) throw new Error('Pi CLI was not found on PATH. Install Pi or set PI_BIN_PATH.')
+      if (typeof ptySpawn !== 'function') throw new Error('node-pty is not available. Reinstall OpenSe Desktop dependencies.')
+
+      registerProject(resolvedDirectory)
+      const id = createTuiId('term')
+      const terminal = {
+        id,
+        directoryPath: resolvedDirectory,
+        directoryKey,
+        status: 'running',
+        replay: '',
+        child: null,
+        closing: false,
+        cols: DEFAULT_TERMINAL_COLS,
+        rows: DEFAULT_TERMINAL_ROWS,
+      }
+
+      const child = ptySpawn(pi.command, [], {
+        name: 'xterm-256color',
+        cols: terminal.cols,
+        rows: terminal.rows,
+        cwd: resolvedDirectory,
+        env: {
+          ...runtimeEnv,
+          TERM: 'xterm-256color',
+          COLORTERM: runtimeEnv.COLORTERM ?? 'truecolor',
+          OPENCODE_CLIENT: runtimeEnv.OPENCODE_CLIENT ?? 'desktop-terminal',
+        },
+      })
+      terminal.child = child
+      terminalProcesses.set(id, terminal)
+      terminalProcessesByDirectory.set(directoryKey, id)
+      attachTerminalDataListener(terminal, child)
+      attachTerminalExitListener(terminal, child)
+      emitTerminalEvent(id, { type: 'status', id, status: 'running' })
+      return serializeTerminal(terminal)
+    },
+
+    writeTerminal: async (terminalId, data) => {
+      const terminal = getTerminal(terminalId)
+      const text = validateTerminalWriteData(data)
+      if (terminal.status !== 'running') throw new Error('Open-Ass terminal is not running.')
+      terminal.child.write(text)
+    },
+
+    resizeTerminal: async (terminalId, cols, rows) => {
+      const terminal = getTerminal(terminalId)
+      const nextCols = validateTerminalDimension(cols, 'Terminal columns')
+      const nextRows = validateTerminalDimension(rows, 'Terminal rows')
+      if (terminal.status !== 'running') return
+      terminal.cols = nextCols
+      terminal.rows = nextRows
+      if (typeof terminal.child.resize === 'function') terminal.child.resize(nextCols, nextRows)
+    },
+
+    stopTerminal: async (terminalId) => {
+      closeTerminalProcess(getTerminal(terminalId))
+    },
+
+    onTerminalEvent: (terminalId, callback) => {
+      const id = validateTerminalId(terminalId)
+      if (typeof callback !== 'function') throw new Error('Terminal event callback is required.')
+      const eventName = `terminal:${id}`
+      emitter.on(eventName, callback)
+      return () => emitter.off(eventName, callback)
+    },
+
     getStatus: async () => {
       const pi = findPiCommand()
       if (!pi) return { available: false, error: 'Pi CLI was not found on PATH. Install Pi or set PI_BIN_PATH.' }
@@ -2340,6 +2555,9 @@ const createAssistantService = ({
       for (const sessionId of Array.from(processes.keys())) {
         void closeProcess(sessionId)
       }
+      for (const terminal of Array.from(terminalProcesses.values())) {
+        closeTerminalProcess(terminal)
+      }
     },
 
     _test: {
@@ -2352,6 +2570,9 @@ const createAssistantService = ({
       validateCreateSessionInput,
       validateDirectoryPath,
       validateSessionId,
+      validateStartTerminalInput,
+      validateTerminalId,
+      validateTerminalWriteData,
       readRegistry,
     },
   }
@@ -2360,6 +2581,12 @@ const createAssistantService = ({
 }
 
 const registerAssistantIpc = ({ ipcMain, service }) => {
+  ipcMain.handle('assistant:start-terminal', (_event, input) => service.startTerminal(input))
+  ipcMain.handle('assistant:write-terminal', (_event, terminalId, data) => service.writeTerminal(terminalId, data))
+  ipcMain.handle('assistant:resize-terminal', (_event, terminalId, cols, rows) =>
+    service.resizeTerminal(terminalId, cols, rows),
+  )
+  ipcMain.handle('assistant:stop-terminal', (_event, terminalId) => service.stopTerminal(terminalId))
   ipcMain.handle('assistant:get-status', () => service.getStatus())
   ipcMain.handle('assistant:list-sessions', () => service.listSessions())
   ipcMain.handle('assistant:create-session', (_event, input) => service.createSession(input))
@@ -2438,4 +2665,7 @@ module.exports = {
   validateCreateSessionInput,
   validateDirectoryPath,
   validateSessionId,
+  validateStartTerminalInput,
+  validateTerminalId,
+  validateTerminalWriteData,
 }

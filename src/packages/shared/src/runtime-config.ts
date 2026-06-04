@@ -5,6 +5,7 @@ declare global {
     __OPENSE_CONFIG__?: RuntimeConfig
     openseDesktop?: {
       configure?: (accountsUrl: string) => Promise<unknown>
+      openExternal?: (url: string) => Promise<void>
     }
   }
 }

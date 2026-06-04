@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePageTopBarSearch } from '../../components/Search/TopBarSearch'
@@ -15,10 +16,22 @@ vi.mock('@repo/shared/auth/context', () => ({
   }),
 }))
 
+vi.mock('@repo/shared/account-profile', () => ({
+  useCurrentAccountProfileSummary: () => ({
+    profileSrc: 'https://example.com/avatar.png',
+    profileFallback: 'OP',
+  }),
+}))
+
+vi.mock('@repo/shared/supabase', () => ({
+  supabase: {},
+}))
+
 vi.mock('@repo/shared/utils', () => ({
   buildAccountsSettingsUrl: () => '/accounts/settings',
   createAccountsRedirects: () => ({
     auth: () => '/accounts/auth',
+    profile: () => '/accounts/profile',
     settings: () => '/accounts/settings',
     onboarding: () => '/accounts/onboarding',
   }),
@@ -115,10 +128,20 @@ const renderRoute = (initialEntry: string) =>
   )
 
 describe('AppLayout', () => {
+  const assignMock = vi.fn()
+
   beforeEach(() => {
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: mockMatchMedia(false),
+    })
+    assignMock.mockReset()
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...window.location,
+        assign: assignMock,
+      },
     })
   })
 
@@ -159,5 +182,19 @@ describe('AppLayout', () => {
 
     expect(screen.getByRole('link', { name: 'Alerts' })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
     expect(screen.getByRole('link', { name: 'Organisations' })).not.toHaveClass('bg-[var(--color-side-nav-active-bg)]')
+  })
+
+  it('renders profile, settings, and logout menu actions from shared chrome', async () => {
+    const user = userEvent.setup()
+    renderRoute('/plain')
+
+    await user.click(screen.getByRole('button', { name: 'Open profile menu' }))
+
+    expect(screen.getByRole('button', { name: 'Profile' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Profile' }))
+    expect(assignMock).toHaveBeenCalledWith('/accounts/profile')
   })
 })

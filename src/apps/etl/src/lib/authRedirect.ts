@@ -21,5 +21,7 @@ export const buildAccountsAuthUrl = (mode: AuthMode) => {
 
 export const buildAccountsSettingsUrl = () => accountsRedirects.settings()
 
+export const buildAccountsProfileUrl = () => accountsRedirects.profile()
+
 export const buildAccountsOnboardingUrl = (redirectPath?: string) =>
   accountsRedirects.onboarding({ redirectPath })
