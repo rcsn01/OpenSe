@@ -115,7 +115,7 @@ describe('AssistantWorkspace', () => {
     expect(screen.getAllByText('Pi CLI was not found on PATH.').length).toBeGreaterThan(0)
   })
 
-  it('renders persisted sessions as active project tabs with plain session links', async () => {
+  it('renders sessions with project nav styling and highlights the active session', async () => {
     const bridge = installBridge({
       listSessions: vi.fn(async () => [
         { ...baseSession, displayName: 'Current work', firstMessage: 'first prompt' },
@@ -129,8 +129,8 @@ describe('AssistantWorkspace', () => {
     expect(screen.queryByText('MAIN')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /sessions/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add directory/i })).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /^project project$/i })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
-    expect(screen.getByRole('link', { name: /^current work$/i })).not.toHaveClass('bg-[var(--color-side-nav-active-bg)]')
+    expect(await screen.findByRole('link', { name: /^project project$/i })).not.toHaveClass('bg-[var(--color-side-nav-active-bg)]')
+    expect(screen.getByRole('link', { name: /^current work$/i })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
     await waitFor(() => expect(bridge.openSession).toHaveBeenCalledWith('session-1'))
     expect(screen.getByText(/Users\/dev\/project/)).toBeInTheDocument()
   })

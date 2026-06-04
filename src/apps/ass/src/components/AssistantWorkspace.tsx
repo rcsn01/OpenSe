@@ -7,6 +7,7 @@ import {
   BasePage,
   Button,
   EmptyState,
+  SideNavItem,
   Spinner,
   ThemeProvider,
   cn,
@@ -978,7 +979,7 @@ export const AssistantWorkspace = () => {
             label: projectName,
             ariaLabel: `Project ${projectName}`,
             icon: <FolderOpen className="h-4 w-4" />,
-            isActive: () => directoryPath === activeSession?.directoryPath,
+            isActive: () => false,
             onClick: () => toggleProjectSessions(directoryPath, visibleSessionCount, sessions.length),
             isExpanded: visibleSessionCount > 0,
             trailing: (
@@ -995,20 +996,30 @@ export const AssistantWorkspace = () => {
               </Button>
             ),
             children: (
-              <div className="mt-0.5 flex flex-col gap-0.5 pl-7 pr-1">
-                {visibleSessions.map((session) => (
-                  <NavLink
-                    key={session.id}
-                    to={`/sessions/${session.id}`}
-                    onClick={() => dispatch({ type: 'activate', sessionId: session.id })}
-                    className={cn(
-                      'block truncate rounded-[var(--radius-sm)] px-2 py-1 text-xs leading-5 text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
-                      session.id === state.activeSessionId && 'font-medium text-[var(--color-foreground)]',
-                    )}
-                  >
-                    {formatSessionLabel(session)}
-                  </NavLink>
-                ))}
+              <div className="mt-0.5 flex flex-col gap-0.5">
+                {visibleSessions.map((session) => {
+                  const sessionLabel = formatSessionLabel(session)
+                  const isSessionActive = session.id === state.activeSessionId
+                  return (
+                    <SideNavItem
+                      key={session.id}
+                      active={isSessionActive}
+                      renderLink={({ className, children: linkChildren }) => (
+                        <NavLink
+                          to={`/sessions/${session.id}`}
+                          aria-label={sessionLabel}
+                          className={className}
+                          onClick={() => dispatch({ type: 'activate', sessionId: session.id })}
+                        >
+                          {linkChildren}
+                        </NavLink>
+                      )}
+                    >
+                      <span className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">{sessionLabel}</span>
+                    </SideNavItem>
+                  )
+                })}
                 {canExpandSessions || canRetractSessions ? (
                   <div className="flex items-center justify-between gap-1 px-2 py-1">
                     {canExpandSessions ? (
