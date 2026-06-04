@@ -18,14 +18,14 @@ type ExtensionRequestDialogProps = {
   onCancel: () => void
 }
 
-type NonSelectExtensionUiRequest = Exclude<ExtensionUiRequest, { type: 'select' }>
+type NonInlineExtensionUiRequest = Exclude<ExtensionUiRequest, { type: 'select' | 'option-list' }>
 
 const ExtensionRequestDialogContent = ({
   request,
   onRespond,
   onCancel,
 }: {
-  request: NonSelectExtensionUiRequest
+  request: NonInlineExtensionUiRequest
   onRespond: (response: unknown) => void
   onCancel: () => void
 }) => {
@@ -94,7 +94,7 @@ export const ExtensionRequestDialog = ({
   onRespond,
   onCancel,
 }: ExtensionRequestDialogProps) => {
-  if (!request || request.type === 'select') return null
+  if (!request || request.type === 'select' || request.type === 'option-list') return null
 
   return (
     <ExtensionRequestDialogContent

@@ -40,6 +40,17 @@ const PI_TUI_BUILTIN_COMMANDS = [
 const OPEN_ASS_ONLY_COMMANDS = [
   { name: 'todos', source: 'open-ass', description: 'Show the current todo state in the native Open-Ass UI.' },
 ]
+const OPEN_ASS_FEATURE_FLAGS = [
+  { name: 'subagents', description: 'Parallel subagent delegation (scout/researcher/worker)', default: true, stage: 'experimental' },
+  { name: 'memories', description: 'Read and write persistent project memory (MEMORY.md)', default: false, stage: 'experimental' },
+  { name: 'websearch', description: 'Search the web via DuckDuckGo (no API key)', default: false, stage: 'experimental' },
+  { name: 'unified_exec', description: 'Use unified execution model for bash commands', default: false, stage: 'experimental' },
+  { name: 'shell_snapshot', description: 'Snapshot shell environment before each turn', default: false, stage: 'experimental' },
+  { name: 'auto_commit', description: 'Automatically git commit after each successful turn', default: false, stage: 'experimental' },
+  { name: 'parallel_tools', description: 'Execute independent tool calls in parallel', default: true, stage: 'beta' },
+  { name: 'stream_responses', description: 'Stream LLM responses token by token', default: true, stage: 'stable' },
+  { name: 'smart_compaction', description: 'Use intelligent compaction heuristic', default: true, stage: 'beta' },
+]
 const PI_TUI_BUILTIN_COMMAND_NAMES = new Set(PI_TUI_BUILTIN_COMMANDS.map((command) => command.name))
 const OPEN_ASS_ONLY_COMMAND_NAMES = new Set(OPEN_ASS_ONLY_COMMANDS.map((command) => command.name))
 
@@ -77,6 +88,18 @@ const writeJsonFile = (filePath, value) => {
   ensureDirectory(path.dirname(filePath))
   fs.writeFileSync(filePath, JSON.stringify(value, null, 2))
 }
+
+const featuresFilePath = (cwd) => path.join(cwd, '.pi', 'features.json')
+
+const readFeatureState = (cwd) => {
+  const state = readJsonFile(featuresFilePath(cwd), { flags: {} })
+  return state && typeof state === 'object' && !Array.isArray(state) && state.flags && typeof state.flags === 'object'
+    ? state
+    : { flags: {} }
+}
+
+const featureEnabled = (feature, state) =>
+  typeof state.flags?.[feature.name] === 'boolean' ? state.flags[feature.name] : Boolean(feature.default)
 
 const validateSessionId = (sessionId) => {
   if (typeof sessionId !== 'string' || !VALID_ID.test(sessionId)) {
@@ -1097,15 +1120,23 @@ const hasPiCommand = (commands, commandName) => {
 
 const normalizeExtensionUiRequest = (request) => {
   const method = String(request.method ?? 'notify')
+  const normalizeOption = (option) => {
+    if (typeof option === 'string') return { label: option, value: option }
+    return {
+      label: String(option.label ?? option.value ?? option),
+      value: String(option.value ?? option.label ?? option),
+      description: typeof option.description === 'string' ? option.description : undefined,
+      checked: typeof option.checked === 'boolean' ? option.checked : undefined,
+      disabled: typeof option.disabled === 'boolean' ? option.disabled : undefined,
+    }
+  }
+  const options = Array.isArray(request.options) ? request.options.map(normalizeOption) : []
   if (method === 'select') {
-    const options = Array.isArray(request.options)
-      ? request.options.map((option) =>
-          typeof option === 'string'
-            ? { label: option, value: option }
-            : { label: String(option.label ?? option.value ?? option), value: String(option.value ?? option.label ?? option) },
-        )
-      : []
     return { id: request.id, type: 'select', title: request.title, message: request.message, options }
+  }
+  if (method === 'optionList' || method === 'checklist') {
+    const selectionMode = method === 'checklist' ? 'multiple' : request.selectionMode === 'multiple' ? 'multiple' : 'single'
+    return { id: request.id, type: 'option-list', title: request.title, message: request.message, selectionMode, options }
   }
   if (method === 'confirm') return { id: request.id, type: 'confirm', title: request.title, message: request.message }
   if (method === 'input') return { id: request.id, type: 'input', title: request.title, placeholder: request.placeholder }
@@ -1402,6 +1433,23 @@ const createAssistantService = ({
     })
   }
 
+  const requestOpenAssFeaturesSelect = async (client) => {
+    const session = getRegisteredSession(client.sessionId)
+    const state = readFeatureState(session.directoryPath)
+    return requestOpenAssUi(client, 'features', {
+      type: 'option-list',
+      title: 'Feature Flags',
+      message: `Repository: ${session.directoryPath}`,
+      selectionMode: 'multiple',
+      options: OPEN_ASS_FEATURE_FLAGS.map((feature) => ({
+        label: feature.name,
+        value: feature.name,
+        description: `[${feature.stage}] ${feature.description}`,
+        checked: featureEnabled(feature, state),
+      })),
+    })
+  }
+
   const requestOpenAssForkSelect = async (client) => {
     const messages = getRpcMessagesArray(await sendRpc(client, { type: 'get_messages' }).catch(() => []))
     const options = messages
@@ -1560,6 +1608,17 @@ const createAssistantService = ({
     if (request.kind === 'resume') {
       const session = await service.openSession(resolveProjectSessionReference(getRegisteredSession(client.sessionId), String(response.value ?? '')).id)
       return { handledBy: 'builtin', message: `Resumed ${session.displayName}.`, session }
+    }
+    if (request.kind === 'features') {
+      const session = getRegisteredSession(client.sessionId)
+      const selected = new Set(Array.isArray(response.values) ? response.values.map(String) : [])
+      const state = readFeatureState(session.directoryPath)
+      for (const feature of OPEN_ASS_FEATURE_FLAGS) {
+        state.flags[feature.name] = selected.has(feature.name)
+      }
+      writeJsonFile(featuresFilePath(session.directoryPath), state)
+      const summary = OPEN_ASS_FEATURE_FLAGS.map((feature) => `${state.flags[feature.name] ? '●' : '○'} ${feature.name}`).join('\n')
+      return { handledBy: 'builtin', message: `Feature flags saved:\n${summary}` }
     }
     if (request.kind === 'quit') {
       if (!response.confirmed) return { handledBy: 'builtin', message: 'Quit cancelled.' }
@@ -1992,6 +2051,8 @@ const createAssistantService = ({
         return requestOpenAssModelSelect(client)
       }
 
+      if (commandName === 'features' && !trimmedArgs) return requestOpenAssFeaturesSelect(client)
+
       if (commandName === 'copy') return copyLastAssistantText(client)
 
       if (commandName === 'fork') {
@@ -2244,6 +2305,7 @@ const createAssistantService = ({
       const payload = { type: 'extension_ui_response', id }
       if (value.cancelled) payload.cancelled = true
       else if ('confirmed' in value) payload.confirmed = Boolean(value.confirmed)
+      else if ('values' in value) payload.values = Array.isArray(value.values) ? value.values : []
       else if ('value' in value) payload.value = value.value
       else payload.cancelled = true
       writeRpcEvent(client, payload)

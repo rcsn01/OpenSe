@@ -217,6 +217,20 @@ export type ExtensionUiRequest =
     }
   | {
       id: string
+      type: 'option-list'
+      title?: string
+      message?: string
+      selectionMode: 'single' | 'multiple'
+      options: Array<{
+        label: string
+        value: string
+        description?: string
+        checked?: boolean
+        disabled?: boolean
+      }>
+    }
+  | {
+      id: string
       type: 'confirm'
       title?: string
       message?: string

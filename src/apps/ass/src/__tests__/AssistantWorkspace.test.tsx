@@ -132,7 +132,7 @@ describe('AssistantWorkspace', () => {
     expect(await screen.findByRole('link', { name: /^project project$/i })).not.toHaveClass('bg-[var(--color-side-nav-active-bg)]')
     expect(screen.getByRole('link', { name: /^current work$/i })).toHaveClass('bg-[var(--color-side-nav-active-bg)]')
     await waitFor(() => expect(bridge.openSession).toHaveBeenCalledWith('session-1'))
-    expect(screen.getByText(/Users\/dev\/project/)).toBeInTheDocument()
+    expect(screen.queryByText(/Users\/dev\/project/)).not.toBeInTheDocument()
   })
 
   it('toggles project sessions and expands or retracts in five-session chunks', async () => {
@@ -1499,6 +1499,121 @@ describe('AssistantWorkspace', () => {
     expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
       id: 'select-3',
       cancelled: true,
+    })
+  })
+
+  it('renders option-list extension UI inline and selects with keyboard navigation', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'extension_ui',
+        sessionId: 'session-1',
+        request: {
+          id: 'options-1',
+          type: 'option-list',
+          title: 'Permission Mode',
+          message: 'Current mode: default',
+          selectionMode: 'single',
+          options: [
+            { label: 'Default', value: 'default', checked: true },
+            { label: 'Auto Review', value: 'auto-review', description: 'Guardian reviewed approvals' },
+          ],
+        },
+      })
+    })
+
+    expect(await screen.findByRole('listbox', { name: 'Permission Mode' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Default' })).toHaveAttribute('aria-selected', 'true')
+
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByRole('option', { name: /Auto Review/i })).toHaveAttribute('aria-selected', 'true')
+    await user.keyboard(' ')
+
+    expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
+      id: 'options-1',
+      value: 'auto-review',
+    })
+  })
+
+  it('cancels option-list requests with Escape', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'extension_ui',
+        sessionId: 'session-1',
+        request: {
+          id: 'options-2',
+          type: 'option-list',
+          title: 'Choose option',
+          selectionMode: 'single',
+          options: [{ label: 'Only', value: 'only' }],
+        },
+      })
+    })
+
+    await screen.findByRole('listbox', { name: 'Choose option' })
+    await user.keyboard('{Escape}')
+
+    expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
+      id: 'options-2',
+      cancelled: true,
+    })
+  })
+
+  it('toggles multiple option-list values and submits values with Enter', async () => {
+    const bridge = installBridge({
+      listSessions: vi.fn(async () => [{ ...baseSession, status: 'running' as const }]),
+    })
+    const user = userEvent.setup()
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+
+    renderWorkspace()
+    await screen.findAllByText('project')
+
+    act(() => {
+      bridge.emit({
+        type: 'extension_ui',
+        sessionId: 'session-1',
+        request: {
+          id: 'options-3',
+          type: 'option-list',
+          title: 'Pick tools',
+          selectionMode: 'multiple',
+          options: [
+            { label: 'Read', value: 'read', checked: true },
+            { label: 'Write', value: 'write' },
+          ],
+        },
+      })
+    })
+
+    expect(await screen.findByRole('option', { name: 'Read' })).toHaveAttribute('aria-checked', 'true')
+    await user.keyboard('{ArrowDown}')
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' }))
+    await user.keyboard(' ')
+    expect(screen.getByRole('option', { name: 'Write' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('option', { name: 'Write' })).toHaveAttribute('aria-selected', 'true')
+    await user.keyboard('{Enter}')
+
+    expect(bridge.respondToExtensionUi).toHaveBeenCalledWith('session-1', {
+      id: 'options-3',
+      values: ['read', 'write'],
     })
   })
 })

@@ -14,6 +14,7 @@ import {
 } from '@repo/ui'
 import {
   Bot,
+  Check,
   CheckCircle2,
   Clock3,
   CornerDownLeft,
@@ -347,68 +348,118 @@ const slashCommandMatchesQuery = (command: AssistantCommand, query: string) => {
 }
 
 type SelectExtensionUiRequest = Extract<ExtensionUiRequest, { type: 'select' }>
+type OptionListExtensionUiRequest = Extract<ExtensionUiRequest, { type: 'option-list' }>
+type InlineOptionPickerRequest = SelectExtensionUiRequest | OptionListExtensionUiRequest
+type InlineOptionPickerOption = InlineOptionPickerRequest['options'][number]
 
-type InlineSelectPickerProps = {
-  request: SelectExtensionUiRequest
+type InlineOptionPickerProps = {
+  request: InlineOptionPickerRequest
   filter: string
   selection: number
-  inputRef: RefObject<HTMLInputElement | null>
-  options: SelectExtensionUiRequest['options']
+  focusRef: RefObject<HTMLInputElement | HTMLDivElement | null>
+  options: InlineOptionPickerOption[]
+  checkedValues: Set<string>
   onFilterChange: (value: string) => void
   onKeyDown: (event: KeyboardEvent<HTMLElement>) => void
-  onSelect: (option: SelectExtensionUiRequest['options'][number]) => void
+  onSelect: (option: InlineOptionPickerOption) => void
+  onSubmit: () => void
   onCancel: () => void
 }
 
-const InlineSelectPicker = ({
+const InlineOptionPicker = ({
   request,
   filter,
   selection,
-  inputRef,
+  focusRef,
   options,
+  checkedValues,
   onFilterChange,
   onKeyDown,
   onSelect,
+  onSubmit,
   onCancel,
-}: InlineSelectPickerProps) => {
+}: InlineOptionPickerProps) => {
   const title = request.title ?? 'Choose an option'
   const message = request.message ?? 'Select an option to continue.'
+  const searchable = request.type === 'select'
+  const multiple = request.type === 'option-list' && request.selectionMode === 'multiple'
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
+
+  useEffect(() => {
+    optionRefs.current = optionRefs.current.slice(0, options.length)
+    optionRefs.current[selection]?.scrollIntoView?.({ block: 'nearest' })
+  }, [options.length, selection])
 
   return (
-    <div className="mb-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-2 shadow-lg">
+    <div
+      ref={searchable ? undefined : focusRef}
+      tabIndex={searchable ? undefined : 0}
+      onKeyDown={searchable ? undefined : onKeyDown}
+      className="mb-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-2 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+    >
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-sm font-medium text-[var(--color-foreground)]">{title}</div>
           <div className="truncate text-xs text-[var(--color-muted-foreground)]">{message}</div>
         </div>
-        <Button type="button" size="xs" variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          {multiple ? (
+            <Button type="button" size="xs" variant="secondary" onClick={onSubmit}>
+              Submit
+            </Button>
+          ) : null}
+          <Button type="button" size="xs" variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
       </div>
-      <input
-        ref={inputRef}
-        aria-label={`Filter ${title}`}
-        value={filter}
-        onChange={(event) => onFilterChange(event.target.value)}
-        onKeyDown={onKeyDown}
-        className="mb-2 h-8 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-      />
+      {searchable ? (
+        <input
+          ref={focusRef as RefObject<HTMLInputElement | null>}
+          aria-label={`Filter ${title}`}
+          value={filter}
+          onChange={(event) => onFilterChange(event.target.value)}
+          onKeyDown={onKeyDown}
+          className="mb-2 h-8 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+        />
+      ) : null}
       <div role="listbox" aria-label={title} className="max-h-56 space-y-1 overflow-y-auto">
         {options.length ? (
           options.map((option, index) => (
             <button
               key={`${option.value}:${index}`}
+              ref={(element) => {
+                optionRefs.current[index] = element
+              }}
               type="button"
               role="option"
               aria-selected={index === selection}
+              aria-checked={checkedValues.has(option.value)}
+              disabled={'disabled' in option ? option.disabled : false}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => onSelect(option)}
               className={cn(
-                'flex w-full items-center rounded-[var(--radius-sm)] px-2 py-2 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
+                'flex w-full items-start gap-2 rounded-[var(--radius-sm)] px-2 py-2 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50',
                 index === selection ? 'bg-[var(--color-muted)]' : 'hover:bg-[var(--color-muted)]',
               )}
             >
-              <span className="min-w-0 truncate">{option.label}</span>
+              {request.type === 'option-list' ? (
+                <span
+                  className={cn(
+                    'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--color-border)]',
+                    checkedValues.has(option.value) ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]' : 'bg-transparent',
+                  )}
+                  aria-hidden="true"
+                >
+                  {checkedValues.has(option.value) ? <Check className="h-3 w-3" /> : null}
+                </span>
+              ) : null}
+              <span className="min-w-0 flex-1 truncate">
+                <span>{option.label}</span>
+                {'description' in option && option.description ? (
+                  <span className="text-[var(--color-muted-foreground)]"> - {option.description}</span>
+                ) : null}
+              </span>
             </button>
           ))
         ) : (
@@ -430,13 +481,14 @@ export const AssistantWorkspace = () => {
   const [dismissedSlashText, setDismissedSlashText] = useState<string | null>(null)
   const [selectFilter, setSelectFilter] = useState('')
   const [selectSelection, setSelectSelection] = useState(0)
+  const [optionListCheckedValues, setOptionListCheckedValues] = useState<Set<string>>(() => new Set())
   const [expandedTodoSessionIds, setExpandedTodoSessionIds] = useState<Record<string, boolean>>({})
   const [visibleProjectSessionCounts, setVisibleProjectSessionCounts] = useState<Record<string, number>>({})
   const [capabilities, setCapabilities] = useState<AssistantCapabilities | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const [loadingOlderTranscript, setLoadingOlderTranscript] = useState(false)
   const commandInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const selectInputRef = useRef<HTMLInputElement | null>(null)
+  const inlinePickerFocusRef = useRef<HTMLInputElement | HTMLDivElement | null>(null)
   const navigate = useNavigate()
   const { sessionId: routeSessionId } = useParams()
   const bridge = getAssistantBridge()
@@ -472,8 +524,11 @@ export const AssistantWorkspace = () => {
     extensionNotification.message ||
     editorText,
   )
-  const selectRequest = state.extensionRequest?.type === 'select' ? state.extensionRequest : null
-  const dialogExtensionRequest = state.extensionRequest?.type === 'select' ? null : state.extensionRequest
+  const inlineOptionRequest =
+    state.extensionRequest?.type === 'select' || state.extensionRequest?.type === 'option-list'
+      ? state.extensionRequest
+      : null
+  const dialogExtensionRequest = inlineOptionRequest ? null : state.extensionRequest
   const availableModels = Array.isArray(capabilities?.models) ? capabilities.models : []
   const currentModel = availableModels.find((model) => getModelLabel(model) === activeSession?.model)
   const currentModelValue = currentModel ? `${getModelProvider(currentModel)}\t${getModelId(currentModel)}` : ''
@@ -487,14 +542,21 @@ export const AssistantWorkspace = () => {
     return slashCommands.filter((item) => slashCommandMatchesQuery(item, slashQuery)).slice(0, 8)
   }, [slashCommands, slashQuery])
   const slashMenuOpen = !steerQueueState?.active && slashQuery != null && dismissedSlashText !== command && filteredSlashCommands.length > 0
+  const activeSessionLabel = activeSession ? formatSessionLabel(activeSession) : 'Start a Pi session'
+  const activeSessionSubtitle = activeSession
+    ? ''
+    : status?.available
+      ? 'Choose a persisted session or start in a directory.'
+      : status?.error
   const filteredSelectOptions = useMemo(() => {
-    if (!selectRequest) return []
+    if (!inlineOptionRequest) return []
+    if (inlineOptionRequest.type === 'option-list') return inlineOptionRequest.options
     const query = selectFilter.trim().toLowerCase()
-    if (!query) return selectRequest.options
-    return selectRequest.options.filter((option) =>
+    if (!query) return inlineOptionRequest.options
+    return inlineOptionRequest.options.filter((option) =>
       `${option.label} ${option.value}`.toLowerCase().includes(query),
     )
-  }, [selectFilter, selectRequest])
+  }, [selectFilter, inlineOptionRequest])
   const toggleTodosExpanded = () => {
     if (!activeSession) return
     setExpandedTodoSessionIds((current) => ({
@@ -592,12 +654,25 @@ export const AssistantWorkspace = () => {
 
   useEffect(() => {
     setSelectFilter('')
-    setSelectSelection(0)
-    if (!selectRequest) return
-    const focusInput = () => selectInputRef.current?.focus()
+    setOptionListCheckedValues(
+      inlineOptionRequest?.type === 'option-list'
+        ? new Set(inlineOptionRequest.options.filter((option) => option.checked).map((option) => option.value))
+        : new Set(),
+    )
+    if (!inlineOptionRequest) {
+      setSelectSelection(0)
+      return
+    }
+    const selectedIndex =
+      inlineOptionRequest.type === 'option-list'
+        ? inlineOptionRequest.options.findIndex((option) => option.checked && !option.disabled)
+        : -1
+    const firstEnabledIndex = inlineOptionRequest.options.findIndex((option) => !('disabled' in option && option.disabled))
+    setSelectSelection(selectedIndex >= 0 ? selectedIndex : Math.max(firstEnabledIndex, 0))
+    const focusInput = () => inlinePickerFocusRef.current?.focus()
     if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(focusInput)
     else focusInput()
-  }, [selectRequest])
+  }, [inlineOptionRequest?.id])
 
   useEffect(() => {
     if (selectSelection >= filteredSelectOptions.length) setSelectSelection(0)
@@ -691,7 +766,7 @@ export const AssistantWorkspace = () => {
   }
 
   const submitComposer = async (behavior: 'steer' | 'followUp' = steerQueueState?.active ? 'steer' : 'followUp') => {
-    if (selectRequest) return
+    if (inlineOptionRequest) return
     if (!bridge || !activeSession || !command.trim()) return
     const nextCommand = command.trim()
     const route = (() => {
@@ -788,30 +863,61 @@ export const AssistantWorkspace = () => {
     setDismissedSlashText(null)
   }
 
-  const confirmSelectOption = (option?: SelectExtensionUiRequest['options'][number]) => {
-    if (!selectRequest || !option) return
-    void respondToExtensionUi({ id: selectRequest.id, value: option.value })
+  const confirmInlineOption = (option?: InlineOptionPickerOption) => {
+    if (!inlineOptionRequest || !option || ('disabled' in option && option.disabled)) return
+    if (inlineOptionRequest.type === 'option-list' && inlineOptionRequest.selectionMode === 'multiple') {
+      setOptionListCheckedValues((current) => {
+        const next = new Set(current)
+        if (next.has(option.value)) next.delete(option.value)
+        else next.add(option.value)
+        return next
+      })
+      return
+    }
+    void respondToExtensionUi({ id: inlineOptionRequest.id, value: option.value })
+  }
+
+  const submitInlineOptions = () => {
+    if (!inlineOptionRequest) return
+    if (inlineOptionRequest.type === 'option-list' && inlineOptionRequest.selectionMode === 'multiple') {
+      void respondToExtensionUi({ id: inlineOptionRequest.id, values: Array.from(optionListCheckedValues) })
+      return
+    }
+    confirmInlineOption(filteredSelectOptions[selectSelection] ?? filteredSelectOptions[0])
+  }
+
+  const moveInlineSelection = (direction: 1 | -1) => {
+    if (!filteredSelectOptions.length) return
+    setSelectSelection((index) => {
+      for (let offset = 1; offset <= filteredSelectOptions.length; offset += 1) {
+        const nextIndex = (index + direction * offset + filteredSelectOptions.length) % filteredSelectOptions.length
+        const option = filteredSelectOptions[nextIndex]
+        if (!('disabled' in option && option.disabled)) return nextIndex
+      }
+      return index
+    })
   }
 
   const handleSelectKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (!selectRequest) return false
+    if (!inlineOptionRequest) return false
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      if (filteredSelectOptions.length) {
-        setSelectSelection((index) => (index + 1) % filteredSelectOptions.length)
-      }
+      moveInlineSelection(1)
       return true
     }
     if (event.key === 'ArrowUp') {
       event.preventDefault()
-      if (filteredSelectOptions.length) {
-        setSelectSelection((index) => (index - 1 + filteredSelectOptions.length) % filteredSelectOptions.length)
-      }
+      moveInlineSelection(-1)
       return true
     }
     if (event.key === 'Enter') {
       event.preventDefault()
-      confirmSelectOption(filteredSelectOptions[selectSelection] ?? filteredSelectOptions[0])
+      submitInlineOptions()
+      return true
+    }
+    if (event.key === ' ') {
+      event.preventDefault()
+      confirmInlineOption(filteredSelectOptions[selectSelection] ?? filteredSelectOptions[0])
       return true
     }
     if (event.key === 'Escape') {
@@ -821,6 +927,32 @@ export const AssistantWorkspace = () => {
     }
     return false
   }
+
+  useEffect(() => {
+    if (!inlineOptionRequest || inlineOptionRequest.type !== 'option-list') return
+    const handleDocumentKeyDown = (event: globalThis.KeyboardEvent) => {
+      const root = inlinePickerFocusRef.current
+      if (root && root.contains(document.activeElement)) return
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        moveInlineSelection(1)
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        moveInlineSelection(-1)
+      } else if (event.key === 'Enter') {
+        event.preventDefault()
+        submitInlineOptions()
+      } else if (event.key === ' ') {
+        event.preventDefault()
+        confirmInlineOption(filteredSelectOptions[selectSelection] ?? filteredSelectOptions[0])
+      } else if (event.key === 'Escape') {
+        event.preventDefault()
+        closeExtensionRequest()
+      }
+    }
+    document.addEventListener('keydown', handleDocumentKeyDown)
+    return () => document.removeEventListener('keydown', handleDocumentKeyDown)
+  }, [inlineOptionRequest, filteredSelectOptions, selectSelection, optionListCheckedValues])
 
   const handleCommandKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (handleSelectKeyDown(event)) return
@@ -1057,6 +1189,51 @@ export const AssistantWorkspace = () => {
       brand={{ icon: <Bot />, name: 'Open-Ass', version: 'v1' }}
       navGroups={projectNavGroups}
       currentPath={activeSession ? `/sessions/${activeSession.id}` : '/'}
+      searchContent={(
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate text-sm font-semibold text-[var(--color-heading)]">
+                {activeSessionLabel}
+              </h1>
+              {activeSession ? (
+                <Badge variant={activeSession.status === 'running' ? 'success' : 'default'}>
+                  {activeSession.status}
+                </Badge>
+              ) : null}
+            </div>
+            {activeSessionSubtitle ? (
+              <p className="hidden truncate text-xs text-[var(--color-muted-foreground)] sm:block">
+                {activeSessionSubtitle}
+              </p>
+            ) : null}
+          </div>
+          {activeSession ? (
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label="Share session"
+                onClick={() => void toggleShareActiveSession()}
+                loading={busyAction === 'share'}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label="Fork session"
+                onClick={() => void forkActiveSession()}
+                loading={busyAction === 'fork'}
+              >
+                <GitFork className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
       renderNavLink={(item, { className, children }) => {
         const targetSession = state.sessions.find((session) => item.href === `/sessions/${session.id}`)
         return (
@@ -1083,54 +1260,8 @@ export const AssistantWorkspace = () => {
       <BasePage contentClassName="h-full p-0" containerClassName="h-full min-h-0">
         <div className="h-full min-h-0 overflow-hidden">
           <section className="relative flex h-full min-h-0 flex-col bg-[var(--color-background)]">
-            <header className="flex min-h-14 items-center justify-between gap-3 border-b border-[var(--color-border)] px-3 py-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="truncate text-sm font-semibold text-[var(--color-heading)]">
-                    {activeSession?.displayName ?? 'Start a Pi session'}
-                  </h2>
-                  {activeSession ? (
-                    <Badge variant={activeSession.status === 'running' ? 'success' : 'default'}>
-                      {activeSession.status}
-                    </Badge>
-                  ) : null}
-                </div>
-                <p className="truncate text-xs text-[var(--color-muted-foreground)]">
-                  {activeSession
-                    ? `${activeSession.directoryPath}${activeSession.model ? ` - ${activeSession.model}` : ''}`
-                    : status?.available
-                      ? 'Choose a persisted session or start in a directory.'
-                      : status?.error}
-                </p>
-              </div>
-              {activeSession ? (
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Share session"
-                    onClick={() => void toggleShareActiveSession()}
-                    loading={busyAction === 'share'}
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Fork session"
-                    onClick={() => void forkActiveSession()}
-                    loading={busyAction === 'fork'}
-                  >
-                    <GitFork className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : null}
-            </header>
-
             {activeSession && hasExtensionUiState ? (
-              <section className="absolute right-4 top-16 z-20 max-h-[45vh] w-[min(22rem,calc(100%-2rem))] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-xs shadow-lg">
+              <section className="absolute right-4 top-4 z-20 max-h-[45vh] w-[min(22rem,calc(100%-2rem))] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 text-xs shadow-lg">
                 <div className="mb-2 flex items-center gap-2 font-medium">
                   <PanelLeft className="h-3.5 w-3.5" />
                   Extension UI
@@ -1240,23 +1371,25 @@ export const AssistantWorkspace = () => {
                     todosExpanded={todosExpanded}
                     onToggleTodos={toggleTodosExpanded}
                   />
-                  {selectRequest ? (
-                    <InlineSelectPicker
-                      request={selectRequest}
+                  {inlineOptionRequest ? (
+                    <InlineOptionPicker
+                      request={inlineOptionRequest}
                       filter={selectFilter}
                       selection={selectSelection}
-                      inputRef={selectInputRef}
+                      focusRef={inlinePickerFocusRef}
                       options={filteredSelectOptions}
+                      checkedValues={optionListCheckedValues}
                       onFilterChange={(value) => {
                         setSelectFilter(value)
                         setSelectSelection(0)
                       }}
                       onKeyDown={handleSelectKeyDown}
-                      onSelect={confirmSelectOption}
+                      onSelect={confirmInlineOption}
+                      onSubmit={submitInlineOptions}
                       onCancel={closeExtensionRequest}
                     />
                   ) : null}
-                  {!selectRequest && slashMenuOpen ? (
+                  {!inlineOptionRequest && slashMenuOpen ? (
                     <div className="mb-2 max-h-64 overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] p-1 shadow-lg">
                       <div role="listbox" aria-label="Slash commands" className="space-y-1">
                         {filteredSlashCommands.map((item, index) => (
@@ -1301,7 +1434,7 @@ export const AssistantWorkspace = () => {
                       rows={2}
                       placeholder="Send a prompt, /command, or !shell command..."
                       className="min-h-12 flex-1 resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-                      disabled={Boolean(selectRequest) || (activeSession.status !== 'running' && activeSession.status !== 'starting')}
+                      disabled={Boolean(inlineOptionRequest) || (activeSession.status !== 'running' && activeSession.status !== 'starting')}
                     />
                     {steerQueueState?.active ? (
                       <Button
@@ -1309,7 +1442,7 @@ export const AssistantWorkspace = () => {
                         size="md"
                         variant="secondary"
                         loading={sending}
-                        disabled={Boolean(selectRequest) || !command.trim()}
+                        disabled={Boolean(inlineOptionRequest) || !command.trim()}
                         onClick={() => void submitComposer('followUp')}
                       >
                         <MessageSquare className="h-4 w-4" />
