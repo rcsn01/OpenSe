@@ -893,6 +893,46 @@ describe('assistant service', () => {
     unsubscribe()
   })
 
+  it('emits a synthetic option-list request for no-arg /features and writes selected flags locally', async () => {
+    const directoryPath = makeTempRoot()
+    const fakeProcess = createFakeRpcProcess({ commands: [{ name: 'features', source: 'extension' }] })
+    const service = createAssistantService({
+      userDataPath: path.join(directoryPath, 'user-data'),
+      spawn: vi.fn(() => fakeProcess),
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+    })
+    const session = await service.createSession({ directoryPath })
+    const events = []
+    const unsubscribe = service.onSessionEvent(session.id, (event) => events.push(event))
+
+    const result = await service.runSlashCommand(session.id, 'features', '')
+    const requestEvent = events.find((event) => event.type === 'extension_ui')
+    const request = requestEvent?.request
+
+    expect(result).toMatchObject({
+      handledBy: 'builtin',
+      uiRequest: expect.objectContaining({
+        type: 'option-list',
+        title: 'Feature Flags',
+        selectionMode: 'multiple',
+      }),
+    })
+    expect(request.options).toContainEqual(expect.objectContaining({ value: 'subagents', checked: true }))
+    expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/features')).toBeUndefined()
+
+    await service.respondToExtensionUi(session.id, { id: request.id, values: ['memories', 'websearch'] })
+
+    const saved = JSON.parse(fs.readFileSync(path.join(directoryPath, '.pi', 'features.json'), 'utf8'))
+    expect(saved.flags).toMatchObject({
+      subagents: false,
+      memories: true,
+      websearch: true,
+    })
+
+    unsubscribe()
+  })
+
   it('forwards discovered Pi slash commands through prompt unchanged', async () => {
     const directoryPath = makeTempRoot()
     const fakeProcess = createFakeRpcProcess()
@@ -1119,6 +1159,14 @@ describe('assistant service', () => {
       type: 'extension_ui_response',
       id: 'pi-request-1',
       value: 'answer',
+    })
+
+    await service.respondToExtensionUi(session.id, { id: 'pi-request-2', values: ['one', 'two'] })
+
+    expect(fakeProcess.writes.find((command) => command.id === 'pi-request-2')).toMatchObject({
+      type: 'extension_ui_response',
+      id: 'pi-request-2',
+      values: ['one', 'two'],
     })
   })
 
@@ -1390,6 +1438,65 @@ describe('assistant service', () => {
           extensionStatuses: {
             agent: 'Working',
           },
+        },
+      },
+    ])
+  })
+
+  it('normalizes Pi optionList and checklist extension UI requests into renderer events', () => {
+    expect(
+      normalizePiEvent('ses_test', {
+        type: 'extension_ui_request',
+        id: 'options_1',
+        method: 'optionList',
+        title: 'Permission Mode',
+        message: 'Current mode: default',
+        selectionMode: 'single',
+        options: [
+          { label: 'Default', value: 'default', checked: true },
+          { label: 'Auto Review', value: 'auto-review', description: 'Reviewed approvals', disabled: true },
+        ],
+      }),
+    ).toEqual([
+      {
+        type: 'extension_ui',
+        sessionId: 'ses_test',
+        request: {
+          id: 'options_1',
+          type: 'option-list',
+          title: 'Permission Mode',
+          message: 'Current mode: default',
+          selectionMode: 'single',
+          options: [
+            { label: 'Default', value: 'default', description: undefined, checked: true, disabled: undefined },
+            { label: 'Auto Review', value: 'auto-review', description: 'Reviewed approvals', checked: undefined, disabled: true },
+          ],
+        },
+      },
+    ])
+
+    expect(
+      normalizePiEvent('ses_test', {
+        type: 'extension_ui_request',
+        id: 'options_2',
+        method: 'checklist',
+        title: 'Tools',
+        options: ['Read', 'Write'],
+      }),
+    ).toEqual([
+      {
+        type: 'extension_ui',
+        sessionId: 'ses_test',
+        request: {
+          id: 'options_2',
+          type: 'option-list',
+          title: 'Tools',
+          message: undefined,
+          selectionMode: 'multiple',
+          options: [
+            { label: 'Read', value: 'Read' },
+            { label: 'Write', value: 'Write' },
+          ],
         },
       },
     ])
