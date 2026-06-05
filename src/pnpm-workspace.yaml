@@ -1,6 +1,5 @@
 packages:
   - 'apps/accounts'
-  - 'apps/ass'
   - 'apps/etl'
   - 'apps/opense-desktop'
   - 'apps/opense-mobile'

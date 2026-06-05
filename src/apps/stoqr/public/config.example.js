@@ -3,7 +3,6 @@ window.__OPENSE_CONFIG__ = {
   VITE_SUPABASE_ANON_KEY: 'replace-with-supabase-anon-key',
   VITE_AUTH_COOKIE_DOMAIN: '.example.com',
   VITE_ACCOUNTS_URL: 'https://accounts.example.com',
-  VITE_ASS_PUBLIC_URL: 'https://ass.example.com',
   VITE_ETL_PUBLIC_URL: 'https://etl.example.com',
   VITE_OPENSE_PUBLIC_URL: 'https://opense.example.com',
   VITE_STOQR_PUBLIC_URL: 'https://stoqr.example.com',

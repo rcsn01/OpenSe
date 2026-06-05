@@ -1,10 +1,9 @@
 const fs = require('node:fs')
 const path = require('node:path')
-const { app, BrowserWindow, dialog, ipcMain, protocol, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, protocol, shell } = require('electron')
 const { fetchDiscoveryConfig, normalizeAccountsUrl, validateStoredDesktopConfig } = require('./discovery.cjs')
 const { createProtocolHandler } = require('./protocol-router.cjs')
 const { serializeDesktopRuntimeConfig } = require('./runtime-config.cjs')
-const { createAssistantService, registerAssistantIpc } = require('./assistant-service.cjs')
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -25,7 +24,6 @@ const useDevServers = process.env.OPENSE_DESKTOP_DEV_SERVERS === '1'
 
 const DEV_APP_URLS = {
   accounts: 'http://localhost:5991',
-  ass: 'http://localhost:5995',
   etl: 'http://localhost:5992',
   stoqr: 'http://localhost:5993',
 }
@@ -174,18 +172,6 @@ app.on('open-url', (event, url) => {
 app.whenReady().then(async () => {
   app.setAsDefaultProtocolClient('opense')
 
-  const assistantService = createAssistantService({
-    userDataPath: app.getPath('userData'),
-    chooseDirectory: async () => {
-      const result = await dialog.showOpenDialog(mainWindow, {
-        title: 'Choose a directory for Open-Ass',
-        properties: ['openDirectory', 'createDirectory'],
-      })
-      return result.canceled ? null : result.filePaths[0] ?? null
-    },
-  })
-  globalThis.__openseAssistantService = assistantService
-
   protocol.handle(
     'opense',
     createProtocolHandler({
@@ -203,54 +189,6 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('desktop:get-configuration', async () => readStoredDiscovery())
 
-  registerAssistantIpc({ ipcMain, service: assistantService })
-
-  const sessionSubscriptions = new Map()
-  ipcMain.handle('assistant:subscribe-session', (event, sessionId) => {
-    const senderId = event.sender.id
-    const key = `${senderId}:${sessionId}`
-    if (sessionSubscriptions.has(key)) return
-
-    const unsubscribe = assistantService.onSessionEvent(sessionId, (payload) => {
-      if (!event.sender.isDestroyed()) {
-        event.sender.send(`assistant:session-event:${sessionId}`, payload)
-      }
-    })
-    sessionSubscriptions.set(key, unsubscribe)
-  })
-
-  ipcMain.handle('assistant:unsubscribe-session', (event, sessionId) => {
-    const key = `${event.sender.id}:${sessionId}`
-    const unsubscribe = sessionSubscriptions.get(key)
-    if (unsubscribe) {
-      unsubscribe()
-      sessionSubscriptions.delete(key)
-    }
-  })
-
-  const terminalSubscriptions = new Map()
-  ipcMain.handle('assistant:subscribe-terminal', (event, terminalId) => {
-    const senderId = event.sender.id
-    const key = `${senderId}:${terminalId}`
-    if (terminalSubscriptions.has(key)) return
-
-    const unsubscribe = assistantService.onTerminalEvent(terminalId, (payload) => {
-      if (!event.sender.isDestroyed()) {
-        event.sender.send(`assistant:terminal-event:${terminalId}`, payload)
-      }
-    })
-    terminalSubscriptions.set(key, unsubscribe)
-  })
-
-  ipcMain.handle('assistant:unsubscribe-terminal', (event, terminalId) => {
-    const key = `${event.sender.id}:${terminalId}`
-    const unsubscribe = terminalSubscriptions.get(key)
-    if (unsubscribe) {
-      unsubscribe()
-      terminalSubscriptions.delete(key)
-    }
-  })
-
   ipcMain.handle('desktop:open-external', async (_event, url) => {
     const parsed = new URL(url)
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
@@ -265,13 +203,6 @@ app.whenReady().then(async () => {
   })
 
   await createMainWindow()
-})
-
-app.on('before-quit', () => {
-  try {
-    const assistantService = globalThis.__openseAssistantService
-    assistantService?.dispose?.()
-  } catch {}
 })
 
 app.on('activate', () => {

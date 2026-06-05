@@ -33,10 +33,6 @@ describe('desktop protocol router', () => {
       appName: 'accounts',
       appPath: '/login',
     })
-    expect(findDesktopAppRoute('/ass/sessions/one')).toEqual({
-      appName: 'ass',
-      appPath: '/sessions/one',
-    })
     expect(findDesktopAppRoute('/etl/dashboard')).toEqual({
       appName: 'etl',
       appPath: '/dashboard',
@@ -49,6 +45,10 @@ describe('desktop protocol router', () => {
 
   it('routes unknown paths back to Accounts instead of an unbundled app', () => {
     expect(findDesktopAppRoute('/opense/dashboard')).toEqual({
+      appName: 'accounts',
+      appPath: '/',
+    })
+    expect(findDesktopAppRoute('/ass/sessions/one')).toEqual({
       appName: 'accounts',
       appPath: '/',
     })
@@ -87,7 +87,7 @@ describe('desktop protocol router', () => {
       handler(new Request('opense://desktop/accounts/config.js')).then((response) => response.text()),
     ).resolves.toContain('ok')
     await expect(
-      handler(new Request('opense://desktop/ass/config.js')).then((response) => response.text()),
+      handler(new Request('opense://desktop/stoqr/config.js')).then((response) => response.text()),
     ).resolves.toContain('ok')
   })
 
@@ -101,10 +101,6 @@ describe('desktop protocol router', () => {
 
     expect(response.status).toBe(302)
     expect(response.headers.get('location')).toBe('opense://desktop/accounts/')
-
-    const assResponse = await handler(new Request('opense://desktop/ass'))
-    expect(assResponse.status).toBe(302)
-    expect(assResponse.headers.get('location')).toBe('opense://desktop/ass/')
   })
 
   it('redirects the legacy setup route into the Accounts setup route', async () => {

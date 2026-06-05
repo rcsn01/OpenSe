@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment node
+ */
 import childProcess from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -33,7 +36,7 @@ const {
 let tempRoot
 
 const makeTempRoot = () => {
-  tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'open-ass-test-'))
+  tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'open-pi-test-'))
   return tempRoot
 }
 
@@ -169,7 +172,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       ptySpawn,
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
 
     const first = await service.startTerminal({ directoryPath })
@@ -199,7 +202,7 @@ describe('assistant service', () => {
       ptySpawn,
       chooseDirectory: vi.fn(async () => directoryPath),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
 
     const session = await service.startTerminal()
@@ -212,7 +215,7 @@ describe('assistant service', () => {
       ptySpawn,
       chooseDirectory: vi.fn(async () => null),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     await expect(cancelled.startTerminal()).resolves.toBeNull()
   })
@@ -224,7 +227,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       ptySpawn: vi.fn(() => fakePty),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const terminal = await service.startTerminal({ directoryPath })
     const events = []
@@ -259,7 +262,7 @@ describe('assistant service', () => {
       spawn: vi.fn(() => fakeRpc),
       ptySpawn: vi.fn(() => fakePty),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
 
     await service.createSession({ directoryPath })
@@ -304,7 +307,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn,
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
 
     const session = await service.createSession({ directoryPath })
@@ -330,9 +333,9 @@ describe('assistant service', () => {
     const userDataPath = path.join(directoryPath, 'user-data')
     const staleSessionDirectory = path.join(directoryPath, 'stale-session-dir')
     fs.mkdirSync(staleSessionDirectory, { recursive: true })
-    fs.mkdirSync(path.join(userDataPath, 'open-ass'), { recursive: true })
+    fs.mkdirSync(path.join(userDataPath, 'open-pi'), { recursive: true })
     fs.writeFileSync(
-      path.join(userDataPath, 'open-ass', 'sessions.json'),
+      path.join(userDataPath, 'open-pi', 'sessions.json'),
       JSON.stringify([
         {
           id: 'ses_existing',
@@ -353,7 +356,7 @@ describe('assistant service', () => {
       userDataPath,
       spawn,
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
 
     await service.openSession('ses_existing')
@@ -363,9 +366,40 @@ describe('assistant service', () => {
     expect(args).not.toContain('--session-id')
   })
 
+  it('imports the legacy OpenSe open-ass registry when the Open Pi registry is absent', async () => {
+    const directoryPath = makeTempRoot()
+    const appDataPath = path.join(directoryPath, 'app-data')
+    const userDataPath = path.join(appDataPath, 'Open Pi')
+    const legacyRegistryPath = path.join(appDataPath, 'OpenSe', 'open-ass', 'sessions.json')
+    const newRegistryPath = path.join(userDataPath, 'open-pi', 'sessions.json')
+    const legacySessions = [
+      {
+        id: 'ses_legacy',
+        directoryPath,
+        displayName: 'Legacy session',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'closed',
+      },
+    ]
+    fs.mkdirSync(path.dirname(legacyRegistryPath), { recursive: true })
+    fs.writeFileSync(legacyRegistryPath, JSON.stringify(legacySessions))
+
+    const service = createAssistantService({
+      userDataPath,
+      appDataPath,
+      spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
+    })
+
+    expect(JSON.parse(fs.readFileSync(newRegistryPath, 'utf8'))).toEqual(legacySessions)
+    expect(await service.listSessions()).toEqual([expect.objectContaining({ id: 'ses_legacy' })])
+    expect(fs.existsSync(legacyRegistryPath)).toBe(true)
+  })
+
   it('scans Pi JSONL sessions for only the requested project and sorts by latest activity', () => {
     const directoryPath = makeTempRoot()
-    const otherDirectoryPath = fs.mkdtempSync(path.join(os.tmpdir(), 'open-ass-other-'))
+    const otherDirectoryPath = fs.mkdtempSync(path.join(os.tmpdir(), 'open-pi-other-'))
     const sessionRoot = path.join(directoryPath, 'pi-native-sessions')
 
     const older = writePiSessionFile(sessionRoot, directoryPath, '019-old', [
@@ -442,9 +476,9 @@ describe('assistant service', () => {
       },
     ])
     const userDataPath = path.join(directoryPath, 'user-data')
-    fs.mkdirSync(path.join(userDataPath, 'open-ass'), { recursive: true })
+    fs.mkdirSync(path.join(userDataPath, 'open-pi'), { recursive: true })
     fs.writeFileSync(
-      path.join(userDataPath, 'open-ass', 'sessions.json'),
+      path.join(userDataPath, 'open-pi', 'sessions.json'),
       JSON.stringify([{ directoryPath, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]),
     )
 
@@ -464,7 +498,7 @@ describe('assistant service', () => {
       userDataPath,
       spawn,
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1', PI_CODING_AGENT_SESSION_DIR: sessionRoot },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1', PI_CODING_AGENT_SESSION_DIR: sessionRoot },
     })
 
     const sessions = await service.listSessions()
@@ -515,7 +549,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
     const events = []
@@ -629,7 +663,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
     const events = []
@@ -683,9 +717,9 @@ describe('assistant service', () => {
       },
     ])
     const userDataPath = path.join(directoryPath, 'user-data')
-    fs.mkdirSync(path.join(userDataPath, 'open-ass'), { recursive: true })
+    fs.mkdirSync(path.join(userDataPath, 'open-pi'), { recursive: true })
     fs.writeFileSync(
-      path.join(userDataPath, 'open-ass', 'sessions.json'),
+      path.join(userDataPath, 'open-pi', 'sessions.json'),
       JSON.stringify([{ directoryPath, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]),
     )
     const fakeProcess = createFakeRpcProcess({ messages: [] })
@@ -693,7 +727,7 @@ describe('assistant service', () => {
       userDataPath,
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1', PI_CODING_AGENT_SESSION_DIR: sessionRoot },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1', PI_CODING_AGENT_SESSION_DIR: sessionRoot },
     })
     const [session] = await service.listSessions()
     const events = []
@@ -725,7 +759,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
     const events = []
@@ -763,7 +797,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
     const events = []
@@ -798,7 +832,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
     const events = []
@@ -834,7 +868,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -854,7 +888,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -867,14 +901,14 @@ describe('assistant service', () => {
     expect(fakeProcess.writes.filter((command) => command.type === 'get_state').length).toBeGreaterThan(1)
   })
 
-  it('lists Pi TUI built-ins, Open-Ass commands, and Pi RPC commands in TUI order', async () => {
+  it('lists Pi TUI built-ins, Open Pi commands, and Pi RPC commands in TUI order', async () => {
     const directoryPath = makeTempRoot()
     const fakeProcess = createFakeRpcProcess()
     const service = createAssistantService({
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -912,7 +946,7 @@ describe('assistant service', () => {
         expect.objectContaining({ name: 'model', source: 'builtin' }),
         expect.objectContaining({ name: 'resume', source: 'builtin' }),
         expect.objectContaining({ name: 'reload', source: 'builtin' }),
-        expect.objectContaining({ name: 'todos', source: 'open-ass' }),
+        expect.objectContaining({ name: 'todos', source: 'open-pi' }),
         expect.objectContaining({ name: 'fix', source: 'prompt' }),
       ]),
     )
@@ -931,7 +965,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -955,7 +989,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -1002,7 +1036,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
     const events = []
@@ -1045,7 +1079,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
     const events = []
@@ -1085,7 +1119,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -1117,7 +1151,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -1141,7 +1175,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -1158,7 +1192,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
       clipboard: { writeText: vi.fn() },
     })
     const session = await service.createSession({ directoryPath })
@@ -1200,7 +1234,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn,
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
       clipboard,
     })
     const session = await service.createSession({ directoryPath })
@@ -1221,7 +1255,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => processes.shift() ?? createFakeRpcProcess()),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const first = await service.createSession({ directoryPath })
     const second = await service.createSession({ directoryPath })
@@ -1251,7 +1285,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -1264,14 +1298,14 @@ describe('assistant service', () => {
     expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/missing')).toBeUndefined()
   })
 
-  it('handles /todos as a native Open-Ass command', async () => {
+  it('handles /todos as a native Open Pi command', async () => {
     const directoryPath = makeTempRoot()
     const fakeProcess = createFakeRpcProcess()
     const service = createAssistantService({
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -1279,7 +1313,7 @@ describe('assistant service', () => {
 
     expect(result).toMatchObject({
       handledBy: 'builtin',
-      message: expect.stringContaining('native Open-Ass'),
+      message: expect.stringContaining('native Open Pi'),
     })
     expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/todos')).toBeUndefined()
 
@@ -1287,14 +1321,14 @@ describe('assistant service', () => {
     expect(fakeProcess.writes.find((command) => command.type === 'prompt' && command.message === '/todos')).toBeUndefined()
   })
 
-  it('forwards Pi extension UI responses that are not Open-Ass synthetic requests', async () => {
+  it('forwards Pi extension UI responses that are not Open Pi synthetic requests', async () => {
     const directoryPath = makeTempRoot()
     const fakeProcess = createFakeRpcProcess()
     const service = createAssistantService({
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const session = await service.createSession({ directoryPath })
 
@@ -1549,7 +1583,7 @@ describe('assistant service', () => {
       userDataPath: path.join(directoryPath, 'user-data'),
       spawn: vi.fn(() => fakeProcess),
       spawnSync: vi.fn(() => ({ status: 0, stdout: '0.78.0' })),
-      env: { OPENASS_DISABLE_SHELL_ENV: '1' },
+      env: { OPEN_PI_DISABLE_SHELL_ENV: '1' },
     })
     const events = []
     const session = await service.createSession({ directoryPath })
@@ -1647,7 +1681,7 @@ describe('assistant service', () => {
     ])
   })
 
-  it('ignores todo-list extension widgets because Open-Ass has a dedicated todo panel', () => {
+  it('ignores todo-list extension widgets because Open Pi has a dedicated todo panel', () => {
     expect(
       normalizePiEvent('ses_test', {
         type: 'extension_ui_request',

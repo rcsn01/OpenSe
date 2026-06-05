@@ -86,8 +86,6 @@ describe('desktop discovery', () => {
       VITE_SUPABASE_ANON_KEY: 'sb_key',
       VITE_ACCOUNTS_URL: 'opense://desktop/accounts',
       VITE_ACCOUNTS_ROUTER_BASENAME: '/accounts',
-      VITE_ASS_PUBLIC_URL: 'opense://desktop/ass',
-      VITE_ASS_ROUTER_BASENAME: '/ass',
       VITE_ETL_PUBLIC_URL: 'opense://desktop/etl',
       VITE_STOQR_PUBLIC_URL: 'opense://desktop/stoqr',
     })
@@ -102,8 +100,6 @@ describe('desktop discovery', () => {
       VITE_OPENSE_RUNTIME_TARGET: 'desktop',
       VITE_ACCOUNTS_URL: 'opense://desktop/accounts',
       VITE_ACCOUNTS_ROUTER_BASENAME: '/accounts',
-      VITE_ASS_PUBLIC_URL: 'opense://desktop/ass',
-      VITE_ASS_ROUTER_BASENAME: '/ass',
       VITE_ETL_PUBLIC_URL: 'opense://desktop/etl',
       VITE_STOQR_PUBLIC_URL: 'opense://desktop/stoqr',
     })
