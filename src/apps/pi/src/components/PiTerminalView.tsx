@@ -18,6 +18,7 @@ type PiTerminalViewProps = {
 
 export const PiTerminalView = ({ bridge, directoryPath, visible }: PiTerminalViewProps) => {
   const { resolvedTheme } = useTheme()
+  const initialThemeRef = useRef(resolvedTheme)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -35,7 +36,7 @@ export const PiTerminalView = ({ bridge, directoryPath, visible }: PiTerminalVie
       fontSize: 13,
       lineHeight: 1.15,
       scrollback: 5000,
-      theme: getTerminalTheme(resolvedTheme),
+      theme: getTerminalTheme(initialThemeRef.current),
     })
     const fitAddon = new FitAddon()
     terminal.loadAddon(fitAddon)
