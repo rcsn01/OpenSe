@@ -18,21 +18,19 @@ describe('switchable-apps', () => {
     setRuntimeConfig({
       VITE_ETL_PUBLIC_URL: 'https://etl.example.com',
       VITE_STOQR_PUBLIC_URL: 'https://stoqr.example.com',
-      VITE_ASS_PUBLIC_URL: 'https://ass.example.com',
     })
 
     expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr'])
   })
 
-  it('returns ETL, StoQR, and Ass on desktop runtimes', () => {
+  it('returns ETL and StoQR on desktop runtimes', () => {
     setRuntimeConfig({
       VITE_OPENSE_RUNTIME_TARGET: 'desktop',
       VITE_ETL_PUBLIC_URL: 'opense://desktop/etl',
       VITE_STOQR_PUBLIC_URL: 'opense://desktop/stoqr',
-      VITE_ASS_PUBLIC_URL: 'opense://desktop/ass',
     })
 
-    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr', 'ass'])
+    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr'])
   })
 
   it('returns ETL and StoQR on mobile runtimes', () => {
@@ -40,23 +38,21 @@ describe('switchable-apps', () => {
       VITE_OPENSE_RUNTIME_TARGET: 'mobile',
       VITE_ETL_PUBLIC_URL: 'opense://mobile/etl',
       VITE_STOQR_PUBLIC_URL: 'opense://mobile/stoqr',
-      VITE_ASS_PUBLIC_URL: 'opense://mobile/ass',
     })
 
     expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr'])
   })
 
-  it('returns ETL, StoQR, and Ass when the Electron desktop bridge is present', () => {
+  it('returns ETL and StoQR when the Electron desktop bridge is present', () => {
     window.openseDesktop = {
       configure: async () => ({}),
     }
     setRuntimeConfig({
       VITE_ETL_PUBLIC_URL: 'http://localhost:5992',
       VITE_STOQR_PUBLIC_URL: 'http://localhost:5993',
-      VITE_ASS_PUBLIC_URL: 'http://localhost:5995',
     })
 
-    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr', 'ass'])
+    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr'])
   })
 
   it('builds dashboard links for ETL and StoQR', () => {

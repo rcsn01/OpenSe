@@ -1,6 +1,6 @@
-import { appendAppPath, getRuntimeConfigValue, isDesktopRuntime } from './runtime-config'
+import { appendAppPath, getRuntimeConfigValue } from './runtime-config'
 
-export type SwitchableAppKey = 'ass' | 'etl' | 'stoqr'
+export type SwitchableAppKey = 'etl' | 'stoqr'
 
 export type SwitchableApp = {
   key: SwitchableAppKey
@@ -19,11 +19,9 @@ type SwitchableAppDefinition = {
   urlKeys: string[]
   defaultUrl: string
   path: string
-  desktopOnly?: boolean
 }
 
 const DEFAULT_APP_URLS = {
-  ass: 'http://localhost:5995',
   etl: 'http://localhost:5992',
   stoqr: 'http://localhost:5993',
 } as const
@@ -45,15 +43,6 @@ const SWITCHABLE_APP_DEFINITIONS: SwitchableAppDefinition[] = [
     defaultUrl: DEFAULT_APP_URLS.stoqr,
     path: '/dashboard',
   },
-  {
-    key: 'ass',
-    label: 'Ass',
-    title: 'Open-Ass',
-    urlKeys: ['VITE_ASS_PUBLIC_URL'],
-    defaultUrl: DEFAULT_APP_URLS.ass,
-    path: '/',
-    desktopOnly: true,
-  },
 ]
 
 const resolveAppUrl = (urlKeys: string[], defaultUrl: string) => {
@@ -66,7 +55,7 @@ const resolveAppUrl = (urlKeys: string[], defaultUrl: string) => {
 
 /** Apps available in the unified switcher for the current runtime. */
 export const getSwitchableApps = (): SwitchableApp[] =>
-  SWITCHABLE_APP_DEFINITIONS.filter((app) => !app.desktopOnly || isDesktopRuntime()).map((app) => ({
+  SWITCHABLE_APP_DEFINITIONS.map((app) => ({
     key: app.key,
     label: app.label,
     title: app.title,

@@ -16,6 +16,8 @@ const DEFAULT_TERMINAL_COLS = 80
 const DEFAULT_TERMINAL_ROWS = 24
 const OPEN_ASS_UI_REQUEST_PREFIX = 'open_ass_ui_'
 const OPEN_ASS_SESSION_ID_PREFIX = 'ses_'
+const OPEN_PI_REGISTRY_DIR = 'open-pi'
+const LEGACY_OPEN_ASS_REGISTRY_DIR = 'open-ass'
 const PI_AGENT_DIR_ENV = 'PI_CODING_AGENT_DIR'
 const PI_SESSION_DIR_ENV = 'PI_CODING_AGENT_SESSION_DIR'
 const PI_TUI_BUILTIN_COMMANDS = [
@@ -42,7 +44,7 @@ const PI_TUI_BUILTIN_COMMANDS = [
   { name: 'quit', source: 'builtin', description: 'Quit Pi' },
 ]
 const OPEN_ASS_ONLY_COMMANDS = [
-  { name: 'todos', source: 'open-ass', description: 'Show the current todo state in the native Open-Ass UI.' },
+  { name: 'todos', source: 'open-pi', description: 'Show the current todo state in the native Open Pi UI.' },
 ]
 const OPEN_ASS_FEATURE_FLAGS = [
   { name: 'subagents', description: 'Parallel subagent delegation (scout/researcher/worker)', default: true, stage: 'experimental' },
@@ -107,7 +109,7 @@ const featureEnabled = (feature, state) =>
 
 const validateSessionId = (sessionId) => {
   if (typeof sessionId !== 'string' || !VALID_ID.test(sessionId)) {
-    throw new Error('Invalid Open-Ass session id.')
+    throw new Error('Invalid Open Pi session id.')
   }
   return sessionId
 }
@@ -387,7 +389,7 @@ const installPiConfigFromGitHub = async (directoryPath, options = {}) => {
 
 const validateTerminalId = (terminalId) => {
   if (typeof terminalId !== 'string' || !VALID_ID.test(terminalId) || !terminalId.startsWith('term_')) {
-    throw new Error('Invalid Open-Ass terminal id.')
+    throw new Error('Invalid Open Pi terminal id.')
   }
   return terminalId
 }
@@ -422,7 +424,7 @@ const parseEnvOutput = (output) => {
 }
 
 const loadLoginShellEnv = (env = process.env, spawnSync = childProcess.spawnSync) => {
-  if (env.OPENASS_DISABLE_SHELL_ENV === '1' || process.platform === 'win32') return {}
+  if (env.OPEN_PI_DISABLE_SHELL_ENV === '1' || env.OPENASS_DISABLE_SHELL_ENV === '1' || process.platform === 'win32') return {}
   const shell = env.SHELL || '/bin/zsh'
   try {
     const result = spawnSync(shell, ['-lc', 'env'], {
@@ -1199,13 +1201,13 @@ const formatSessionResult = (state, stats) => {
 const formatUnsupportedBuiltinCommandMessage = (commandName) => {
   const command = PI_TUI_BUILTIN_COMMANDS.find((item) => item.name === commandName) ?? OPEN_ASS_ONLY_COMMANDS.find((item) => item.name === commandName)
   const description = command?.description ? ` Pi TUI uses it to: ${command.description}.` : ''
-  return `/${commandName} is a Pi TUI built-in command, but Open-Ass does not expose that TUI workflow yet.${description}`
+  return `/${commandName} is a Pi TUI built-in command, but Open Pi does not expose that TUI workflow yet.${description}`
 }
 
 const formatOpenAssFallbackPanelMessage = (commandName) => {
   const command = PI_TUI_BUILTIN_COMMANDS.find((item) => item.name === commandName)
   const description = command?.description ? `\n\nPi TUI behavior: ${command.description}.` : ''
-  return `/${commandName} is handled inside Open-Ass for this session.${description}\n\nUse the Session sidebar and Runtime controls for the Open-Ass-native workflow.`
+  return `/${commandName} is handled inside Open Pi for this session.${description}\n\nUse the Session sidebar and Runtime controls for the Open Pi-native workflow.`
 }
 
 const formatHotkeysMessage = () => [
@@ -1220,9 +1222,9 @@ const formatHotkeysMessage = () => [
 
 const formatChangelogMessage = () => [
   'Changelog',
-  'Open-Ass now handles Pi built-in slash commands natively where Pi RPC exposes the behavior.',
+  'Open Pi now handles Pi built-in slash commands natively where Pi RPC exposes the behavior.',
   'Extension, prompt, and skill commands still execute through Pi unchanged.',
-  'Extension UI requests are rendered with Open-Ass pickers and dialogs.',
+  'Extension UI requests are rendered with Open Pi pickers and dialogs.',
 ].join('\n')
 
 const formatSettingsMessage = (state) => [
@@ -1238,6 +1240,7 @@ const formatSettingsMessage = (state) => [
 ].join('\n')
 
 const getDefaultClipboard = () => {
+  if (!process.versions.electron) return null
   try {
     return require('electron')?.clipboard ?? null
   } catch {
@@ -1355,6 +1358,7 @@ const normalizeExtensionUiMetadata = (request) => {
 
 const createAssistantService = ({
   userDataPath,
+  appDataPath,
   spawn = childProcess.spawn,
   ptySpawn = getDefaultPtySpawn(),
   spawnSync = childProcess.spawnSync,
@@ -1365,14 +1369,25 @@ const createAssistantService = ({
   if (!userDataPath) throw new Error('userDataPath is required.')
 
   const emitter = new EventEmitter()
-  const rootDir = path.join(userDataPath, 'open-ass')
+  const rootDir = path.join(userDataPath, OPEN_PI_REGISTRY_DIR)
   const registryPath = path.join(rootDir, 'sessions.json')
+  const legacyRegistryPath = path.join(appDataPath || path.dirname(userDataPath), 'OpenSe', LEGACY_OPEN_ASS_REGISTRY_DIR, 'sessions.json')
   const runtimeEnv = buildPiRuntimeEnv(env, spawnSync)
   const processes = new Map()
   const terminalProcesses = new Map()
   const terminalProcessesByDirectory = new Map()
   const runtimeSessions = new Map()
   const pendingOpenAssUiRequests = new Map()
+
+  const migrateLegacyRegistry = () => {
+    if (fs.existsSync(registryPath) || !fs.existsSync(legacyRegistryPath)) return
+
+    const sessions = readJsonFile(legacyRegistryPath, [])
+    if (!Array.isArray(sessions)) return
+    writeJsonFile(registryPath, sessions)
+  }
+
+  migrateLegacyRegistry()
 
   const readRegistry = () => {
     const sessions = readJsonFile(registryPath, [])
@@ -1512,7 +1527,7 @@ const createAssistantService = ({
   const resolveKnownSession = (sessionId) => {
     const id = validateSessionId(sessionId)
     const session = listKnownSessions().find((item) => item.id === id)
-    if (!session) throw new Error('Open-Ass session was not found.')
+    if (!session) throw new Error('Open Pi session was not found.')
     return session
   }
 
@@ -1650,7 +1665,7 @@ const createAssistantService = ({
   const getTerminal = (terminalId) => {
     const id = validateTerminalId(terminalId)
     const terminal = terminalProcesses.get(id)
-    if (!terminal) throw new Error('Open-Ass terminal was not found.')
+    if (!terminal) throw new Error('Open Pi terminal was not found.')
     return terminal
   }
 
@@ -1889,13 +1904,14 @@ const createAssistantService = ({
     if (request.kind === 'quit') {
       if (!response.confirmed) return { handledBy: 'builtin', message: 'Quit cancelled.' }
       await closeProcess(client.sessionId)
-      return { handledBy: 'builtin', message: 'Closed the Pi RPC process for this Open-Ass session.', session: getRegisteredSession(client.sessionId) }
+      return { handledBy: 'builtin', message: 'Closed the Pi RPC process for this Open Pi session.', session: getRegisteredSession(client.sessionId) }
     }
-    throw new Error('Unknown Open-Ass UI request.')
+    throw new Error('Unknown Open Pi UI request.')
   }
 
   const findPiCommand = () => {
     const candidates = [
+      runtimeEnv.OPEN_PI_BIN_PATH,
       runtimeEnv.OPENASS_PI_BIN_PATH,
       runtimeEnv.PI_BIN_PATH,
       'pi',
@@ -2206,7 +2222,7 @@ const createAssistantService = ({
     writeTerminal: async (terminalId, data) => {
       const terminal = getTerminal(terminalId)
       const text = validateTerminalWriteData(data)
-      if (terminal.status !== 'running') throw new Error('Open-Ass terminal is not running.')
+      if (terminal.status !== 'running') throw new Error('Open Pi terminal is not running.')
       terminal.child.write(text)
     },
 
@@ -2312,7 +2328,7 @@ const createAssistantService = ({
           return requestOpenAssUi(client, 'name', {
             type: 'input',
             title: 'Rename session',
-            message: 'Enter a new Open-Ass session name.',
+            message: 'Enter a new Open Pi session name.',
             value: getRegisteredSession(sessionId).displayName,
             placeholder: 'Session name',
           })
@@ -2428,7 +2444,7 @@ const createAssistantService = ({
         return requestOpenAssUi(client, 'quit', {
           type: 'confirm',
           title: 'Close Pi session',
-          message: 'Close the Pi RPC process for this Open-Ass session? The desktop app will stay open.',
+          message: 'Close the Pi RPC process for this Open Pi session? The desktop app will stay open.',
         })
       }
 
@@ -2453,7 +2469,7 @@ const createAssistantService = ({
       if (commandName === 'todos') {
         return {
           handledBy: 'builtin',
-          message: 'Todos are shown in the native Open-Ass work-state panel.',
+          message: 'Todos are shown in the native Open Pi work-state panel.',
         }
       }
 
@@ -2472,7 +2488,7 @@ const createAssistantService = ({
 
       return {
         handledBy: 'builtin',
-        message: `/${commandName} is not available in Open-Ass for this session. Use one of the listed slash commands, or use Runtime controls for desktop-only actions.`,
+        message: `/${commandName} is not available in Open Pi for this session. Use one of the listed slash commands, or use Runtime controls for desktop-only actions.`,
       }
     },
 
@@ -2647,7 +2663,7 @@ const createAssistantService = ({
       const id = validateText(value.id, 'Extension UI request id')
       if (id.startsWith(OPEN_ASS_UI_REQUEST_PREFIX)) {
         const request = pendingOpenAssUiRequests.get(id)
-        if (!request || request.sessionId !== client.sessionId) throw new Error('Open-Ass UI request was not found.')
+        if (!request || request.sessionId !== client.sessionId) throw new Error('Open Pi UI request was not found.')
         pendingOpenAssUiRequests.delete(id)
         return respondToOpenAssUiRequest(client, request, value)
       }

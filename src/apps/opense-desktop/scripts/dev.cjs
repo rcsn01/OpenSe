@@ -6,7 +6,6 @@ const packageRoot = path.resolve(__dirname, '..')
 
 const apps = [
   { name: 'accounts', port: 5991, args: ['--dir', '../accounts', 'dev'] },
-  { name: 'ass', port: 5995, args: ['--dir', '../ass', 'dev'] },
   { name: 'etl', port: 5992, args: ['--dir', '../etl', 'dev'] },
   { name: 'stoqr', port: 5993, args: ['--dir', '../stoqr', 'dev'] },
 ]
