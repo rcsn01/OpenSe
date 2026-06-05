@@ -2,7 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
 const { createReadStream, existsSync } = require('node:fs')
 const { createServer } = require('node:http')
 const { extname, join, resolve } = require('node:path')
-const { createAssistantService, registerAssistantIpc } = require('./assistant-service.cjs')
+const { createTerminalService, registerTerminalIpc } = require('./terminal-service.cjs')
 
 const DEFAULT_WEB_PORT = '5995'
 const APP_NAME = 'Open Pi'
@@ -11,7 +11,7 @@ const isDev = process.env.OPEN_PI_DESKTOP_DEV === '1'
 
 let mainWindow
 let staticServer
-let assistantService
+let terminalService
 
 app.setName(APP_NAME)
 app.setPath('userData', join(app.getPath('appData'), APP_NAME))
@@ -136,44 +136,21 @@ const createWindow = async () => {
 }
 
 const registerSubscriptions = () => {
-  const sessionSubscriptions = new Map()
-  ipcMain.handle('assistant:subscribe-session', (event, sessionId) => {
-    const senderId = event.sender.id
-    const key = `${senderId}:${sessionId}`
-    if (sessionSubscriptions.has(key)) return
-
-    const unsubscribe = assistantService.onSessionEvent(sessionId, (payload) => {
-      if (!event.sender.isDestroyed()) {
-        event.sender.send(`assistant:session-event:${sessionId}`, payload)
-      }
-    })
-    sessionSubscriptions.set(key, unsubscribe)
-  })
-
-  ipcMain.handle('assistant:unsubscribe-session', (event, sessionId) => {
-    const key = `${event.sender.id}:${sessionId}`
-    const unsubscribe = sessionSubscriptions.get(key)
-    if (unsubscribe) {
-      unsubscribe()
-      sessionSubscriptions.delete(key)
-    }
-  })
-
   const terminalSubscriptions = new Map()
-  ipcMain.handle('assistant:subscribe-terminal', (event, terminalId) => {
+  ipcMain.handle('terminal:subscribe', (event, terminalId) => {
     const senderId = event.sender.id
     const key = `${senderId}:${terminalId}`
     if (terminalSubscriptions.has(key)) return
 
-    const unsubscribe = assistantService.onTerminalEvent(terminalId, (payload) => {
+    const unsubscribe = terminalService.onTerminalEvent(terminalId, (payload) => {
       if (!event.sender.isDestroyed()) {
-        event.sender.send(`assistant:terminal-event:${terminalId}`, payload)
+        event.sender.send(`terminal:event:${terminalId}`, payload)
       }
     })
     terminalSubscriptions.set(key, unsubscribe)
   })
 
-  ipcMain.handle('assistant:unsubscribe-terminal', (event, terminalId) => {
+  ipcMain.handle('terminal:unsubscribe', (event, terminalId) => {
     const key = `${event.sender.id}:${terminalId}`
     const unsubscribe = terminalSubscriptions.get(key)
     if (unsubscribe) {
@@ -198,9 +175,8 @@ if (!lock) {
   })
 
   app.whenReady().then(() => {
-    assistantService = createAssistantService({
+    terminalService = createTerminalService({
       userDataPath: app.getPath('userData'),
-      appDataPath: app.getPath('appData'),
       chooseDirectory: async () => {
         const result = await dialog.showOpenDialog(mainWindow, {
           title: 'Choose a directory for Open Pi',
@@ -209,7 +185,7 @@ if (!lock) {
         return result.canceled ? null : result.filePaths[0] ?? null
       },
     })
-    registerAssistantIpc({ ipcMain, service: assistantService })
+    registerTerminalIpc({ ipcMain, service: terminalService })
     registerSubscriptions()
     return createWindow()
   }).catch((error) => {
@@ -225,7 +201,7 @@ if (!lock) {
 
   app.on('before-quit', () => {
     try {
-      assistantService?.dispose?.()
+      terminalService?.dispose?.()
     } catch {}
   })
 
