@@ -62,6 +62,9 @@ npx supabase db push
 # 4. Start Development
 ```bash
 pnpm dev
+pnpm dev:desktop
+pnpm mobile:sync:ios
+pnpm mobile:open:ios
 ```
 Or start a specific app:
 ```bash
