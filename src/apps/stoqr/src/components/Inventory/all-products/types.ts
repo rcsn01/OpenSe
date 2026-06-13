@@ -20,6 +20,7 @@ export type ProductListViewProps = {
   totalCount: number
   setPage: (page: number) => void
   folders: Folder[]
+  selectedFolderId: string | null
   onRefresh: () => void
   canUseInventory: boolean
   canEditInventory: boolean

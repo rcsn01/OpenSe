@@ -582,6 +582,7 @@ export const AllProductsTab = ({
             totalCount={totalCount}
             setPage={setPage}
             folders={folders}
+            selectedFolderId={folderView === 'folder' ? selectedFolderId : null}
             onRefresh={onRefresh}
             canUseInventory={canUseInventory}
             canEditInventory={canEditInventory}
