@@ -19,8 +19,6 @@ const STOQR_PUBLIC_URL =
   getRuntimeConfigValue('VITE_STOQR_PUBLIC_URL', 'http://localhost:5993') ??
   'http://localhost:5993'
 
-const LANDING_CONTEXT_KEY = 'opense-active-landing-context'
-
 const normalizeBaseUrl = (value: string) => value.replace(/\/$/, '')
 
 export const normalizeLandingContext = (
@@ -28,20 +26,6 @@ export const normalizeLandingContext = (
 ): LandingContext => {
   if (value === 'etl' || value === 'stoqr') {
     return value
-  }
-
-  return 'opense'
-}
-
-export const getLandingContextFromPathname = (
-  pathname: string,
-): LandingContext => {
-  if (pathname.startsWith('/etl')) {
-    return 'etl'
-  }
-
-  if (pathname.startsWith('/stoqr')) {
-    return 'stoqr'
   }
 
   return 'opense'
@@ -65,27 +49,6 @@ export const buildEtlDashboardUrl = () =>
 
 export const buildStoqrDashboardUrl = () =>
   `${normalizeBaseUrl(STOQR_PUBLIC_URL)}/dashboard`
-
-export const setActiveLandingContext = (context: LandingContext) => {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  window.sessionStorage.setItem(LANDING_CONTEXT_KEY, context)
-}
-
-const getActiveLandingContext = (): LandingContext => {
-  if (typeof window === 'undefined') {
-    return 'opense'
-  }
-
-  const value = window.sessionStorage.getItem(LANDING_CONTEXT_KEY)
-  if (value === 'etl' || value === 'stoqr') {
-    return value
-  }
-
-  return 'opense'
-}
 
 export const buildOpenSeAccountsAuthUrl = (mode: AuthMode) => {
   return buildSharedAccountsAuthUrl({
@@ -113,14 +76,6 @@ export const buildStoqrAccountsAuthUrl = (mode: AuthMode) => {
     appPublicUrl: STOQR_PUBLIC_URL,
     appName: 'Open-StoQR',
   })
-}
-
-export const buildAccountsAuthUrl = (mode: AuthMode) => {
-  if (getActiveLandingContext() === 'etl') {
-    return buildEtlAccountsAuthUrl(mode)
-  }
-
-  return buildOpenSeAccountsAuthUrl(mode)
 }
 
 export const buildGetStartedGuestUrl = (context: LandingContext) => {
