@@ -40,6 +40,7 @@ const createProps = (overrides: Partial<ProductListViewProps> = {}): ProductList
   totalCount: 3,
   setPage: vi.fn(),
   folders: [{ id: 'f-1', name: 'Electronics', parent_id: null }],
+  selectedFolderId: null,
   onRefresh: vi.fn(),
   canUseInventory: true,
   canEditInventory: true,
@@ -102,6 +103,67 @@ describe('ProductListView – AVAILABLE column shows stock/min format', () => {
 
     expect(screen.getAllByText('No permission to open detail')).toHaveLength(3)
     expect(screen.queryByRole('link', { name: 'Widget' })).not.toBeInTheDocument()
+  })
+})
+
+describe('ProductListView – FOLDER column location summary', () => {
+  it('shows a location count when no folder is selected and a product has stock in multiple folders', () => {
+    renderWithRouter(createProps({
+      products: [
+        {
+          id: 'p-1',
+          name: 'Widget',
+          sku: 'W-1',
+          quantity_on_hand: 15,
+          reorder_point: 5,
+          folder_id: 'f-1',
+          folder_stock_summary: [
+            { folder_id: 'f-1', quantity_on_hand: 10, reorder_point: 5 },
+            { folder_id: 'f-2', quantity_on_hand: 5, reorder_point: 2 },
+          ],
+          cost_price: 5,
+          selling_price: 20,
+        },
+      ],
+      totalCount: 1,
+      folders: [
+        { id: 'f-1', name: 'Electronics', parent_id: null },
+        { id: 'f-2', name: 'Reserve', parent_id: null },
+      ],
+    }))
+
+    expect(screen.getByText('2 Locations')).toBeInTheDocument()
+    expect(screen.queryByText(/Electronics 10/)).not.toBeInTheDocument()
+  })
+
+  it('shows the selected folder stock instead of a location count when a folder is selected', () => {
+    renderWithRouter(createProps({
+      selectedFolderId: 'f-2',
+      products: [
+        {
+          id: 'p-1',
+          name: 'Widget',
+          sku: 'W-1',
+          quantity_on_hand: 5,
+          reorder_point: 2,
+          folder_id: 'f-2',
+          folder_stock_summary: [
+            { folder_id: 'f-1', quantity_on_hand: 10, reorder_point: 5 },
+            { folder_id: 'f-2', quantity_on_hand: 5, reorder_point: 2 },
+          ],
+          cost_price: 5,
+          selling_price: 20,
+        },
+      ],
+      totalCount: 1,
+      folders: [
+        { id: 'f-1', name: 'Electronics', parent_id: null },
+        { id: 'f-2', name: 'Reserve', parent_id: null },
+      ],
+    }))
+
+    expect(screen.getByText('Reserve · 5')).toBeInTheDocument()
+    expect(screen.queryByText('2 Locations')).not.toBeInTheDocument()
   })
 })
 

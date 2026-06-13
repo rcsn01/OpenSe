@@ -24,6 +24,7 @@ export const ProductListView = ({
   totalCount,
   setPage,
   folders,
+  selectedFolderId,
   onRefresh,
   canUseInventory,
   canEditInventory,
@@ -33,6 +34,11 @@ export const ProductListView = ({
   const folderSummary = (product: { folder_id: string | null; folder_stock_summary?: Array<{ folder_id: string; quantity_on_hand: number }> }) => {
     const rows = product.folder_stock_summary ?? []
     if (rows.length === 0) return folderName(product.folder_id)
+    if (!selectedFolderId && rows.length > 1) return `${rows.length} Locations`
+    if (selectedFolderId) {
+      const selectedFolderRow = rows.find((row) => row.folder_id === selectedFolderId)
+      if (selectedFolderRow) return `${folderName(selectedFolderRow.folder_id)} · ${selectedFolderRow.quantity_on_hand}`
+    }
     if (rows.length === 1) return `${folderName(rows[0].folder_id)} · ${rows[0].quantity_on_hand}`
     return rows
       .slice(0, 2)
@@ -55,6 +61,7 @@ export const ProductListView = ({
               id: 'name',
               header: 'Name / SKU',
               sortKey: 'name',
+              width: 430,
               renderCell: (product) => (
                 canUseInventory ? (
                   <Link
@@ -80,7 +87,7 @@ export const ProductListView = ({
               id: 'folder_id',
               header: 'Folder',
               sortKey: 'folder_id',
-              width: 220,
+              width: 300,
               renderCell: (product) => <span className="text-sm text-[var(--color-muted-foreground)]">{folderSummary(product)}</span>,
             },
             {
@@ -161,7 +168,7 @@ export const ProductListView = ({
               ? 'Loading inventory data...'
               : <EmptyState title="No products found" description="Try adjusting filters or adding new items." />
           }
-          minTableWidth={900}
+          minTableWidth={984}
           tableLayout="fixed"
           theadClassName={selectedRowIds.size > 0 ? 'table-header-selected' : undefined}
           sortField={sortField}
