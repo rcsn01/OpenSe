@@ -79,9 +79,6 @@ a {
 
 .opense-navbar {
   font-family: var(--font-family);
-}
-
-.opense-navbar.is-scrolled {
   color: var(--color-foreground);
   background-color: color-mix(in srgb, var(--color-card) 88%, transparent);
   backdrop-filter: blur(20px);
@@ -89,22 +86,20 @@ a {
   box-shadow: var(--opense-shell-shadow-card);
 }
 
-.architecture-panel {
+.mobile-nav-details > summary::-webkit-details-marker {
   display: none;
 }
 
-.architecture-panel.is-active {
+.mobile-nav-details .close-icon {
+  display: none;
+}
+
+.mobile-nav-details[open] .menu-icon {
+  display: none;
+}
+
+.mobile-nav-details[open] .close-icon {
   display: block;
-}
-
-.architecture-control {
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--color-body);
-}
-
-.architecture-control.is-active {
-  background: var(--color-foreground);
-  color: var(--color-background);
 }
 
 .etl-static-preview {

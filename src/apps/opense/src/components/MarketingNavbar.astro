@@ -11,8 +11,7 @@ const getStartedHref = buildNavbarGetStartedPath(landingContext)
 ---
 
 <nav
-  class="opense-navbar fixed left-1/2 top-6 z-40 flex w-[90%] max-w-5xl -translate-x-1/2 items-center justify-between gap-4 rounded-full px-6 py-3 text-[var(--landing-navbar-transparent-foreground,var(--color-background))] transition-all duration-300"
-  data-navbar
+  class="opense-navbar fixed left-1/2 top-6 z-40 flex w-[90%] max-w-5xl -translate-x-1/2 items-center justify-between gap-4 rounded-full px-6 py-3 text-[var(--color-foreground)]"
 >
   <a href="/" data-testid="nav-opense-product" class="flex shrink-0 items-center gap-2 text-xl font-bold tracking-tight">
     <span class="grid h-9 w-9 place-items-center rounded-full bg-white/10">
@@ -36,52 +35,26 @@ const getStartedHref = buildNavbarGetStartedPath(landingContext)
       <span class="absolute inset-0 z-0 h-full w-full translate-y-full bg-black/20 transition-transform duration-300 ease-out group-hover:translate-y-0"></span>
       <span class="relative z-10">Get Started</span>
     </a>
-    <button type="button" class="grid h-8 w-8 place-items-center rounded-full md:hidden" data-mobile-menu-toggle aria-label="Toggle navigation" aria-expanded="false">
-      <Menu class="menu-icon h-5 w-5" />
-      <X class="close-icon hidden h-5 w-5" />
-    </button>
-  </div>
-
-  <div
-    class="absolute left-0 right-0 top-full mt-3 hidden flex-col gap-3 rounded-[1.5rem] p-4 text-[var(--color-foreground)] md:hidden"
-    data-mobile-menu
-    style="background-color:color-mix(in srgb,var(--color-card) 92%,transparent);backdrop-filter:blur(20px);box-shadow:var(--opense-shell-shadow-card)"
-  >
-    <a href="/etl" class="px-3 py-2 text-sm font-medium">Open-ETL</a>
-    <a href="/stoqr" class="px-3 py-2 text-sm font-medium">Open-StoQR</a>
-    <a
-      href={getStartedHref}
-      data-testid="nav-get-started"
-      class="inline-flex w-full justify-center rounded-full px-5 py-2 text-sm font-medium text-[var(--color-background)]"
-      style="background-color:var(--color-suiteNavy);box-shadow:var(--opense-shell-shadow-card)"
-    >
-      Get Started
-    </a>
+    <details class="mobile-nav-details md:hidden">
+      <summary class="grid h-8 w-8 cursor-pointer list-none place-items-center rounded-full" aria-label="Toggle navigation">
+        <Menu class="menu-icon h-5 w-5" />
+        <X class="close-icon h-5 w-5" />
+      </summary>
+      <div
+        class="absolute left-0 right-0 top-full mt-3 flex flex-col gap-3 rounded-[1.5rem] p-4 text-[var(--color-foreground)]"
+        style="background-color:color-mix(in srgb,var(--color-card) 92%,transparent);backdrop-filter:blur(20px);box-shadow:var(--opense-shell-shadow-card)"
+      >
+        <a href="/etl" class="px-3 py-2 text-sm font-medium">Open-ETL</a>
+        <a href="/stoqr" class="px-3 py-2 text-sm font-medium">Open-StoQR</a>
+        <a
+          href={getStartedHref}
+          data-testid="nav-get-started"
+          class="inline-flex w-full justify-center rounded-full px-5 py-2 text-sm font-medium text-[var(--color-background)]"
+          style="background-color:var(--color-suiteNavy);box-shadow:var(--opense-shell-shadow-card)"
+        >
+          Get Started
+        </a>
+      </div>
+    </details>
   </div>
 </nav>
-
-<script>
-  const navbar = document.querySelector<HTMLElement>('[data-navbar]')
-  const toggle = document.querySelector<HTMLButtonElement>('[data-mobile-menu-toggle]')
-  const menu = document.querySelector<HTMLElement>('[data-mobile-menu]')
-  const menuIcon = toggle?.querySelector<HTMLElement>('.menu-icon')
-  const closeIcon = toggle?.querySelector<HTMLElement>('.close-icon')
-
-  const syncScroll = () => {
-    const scrolled = window.scrollY > 24
-    navbar?.classList.toggle('is-scrolled', scrolled)
-  }
-
-  const setOpen = (open: boolean) => {
-    menu?.classList.toggle('hidden', !open)
-    menu?.classList.toggle('flex', open)
-    menuIcon?.classList.toggle('hidden', open)
-    closeIcon?.classList.toggle('hidden', !open)
-    toggle?.setAttribute('aria-expanded', String(open))
-  }
-
-  syncScroll()
-  window.addEventListener('scroll', syncScroll, { passive: true })
-  toggle?.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'))
-  menu?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setOpen(false)))
-</script>
