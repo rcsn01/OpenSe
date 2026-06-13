@@ -12,18 +12,18 @@ INSERT INTO public.organisations (
 VALUES
   (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'Acme Distribution',
+    'Maison Aurelia Retail',
     '11111111-1111-1111-1111-111111111111',
-    'cus_acme_001',
-    'sub_acme_001',
+    'cus_maison_aurelia_001',
+    'sub_maison_aurelia_001',
     'active'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    'Globex Manufacturing',
+    'Velvet Crown Atelier',
     '66666666-6666-6666-6666-666666666666',
-    'cus_globex_001',
-    'sub_globex_001',
+    'cus_velvet_crown_001',
+    'sub_velvet_crown_001',
     'suspended'
   )
 ON CONFLICT (id) DO NOTHING;

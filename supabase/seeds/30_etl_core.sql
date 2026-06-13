@@ -3,15 +3,15 @@
 
 INSERT INTO public.organisation_invites (id, org_id, email, invited_by, token)
 VALUES
-  ('c1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'newjoiner@acme.test', '33333333-3333-3333-3333-333333333333', 'token-org-acme-newjoiner'),
-  ('c2222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'analyst@globex.test', '66666666-6666-6666-6666-666666666666', 'token-org-globex-analyst')
+  ('c1111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'newstylist@maison-aurelia.test', '33333333-3333-3333-3333-333333333333', 'token-org-maison-aurelia-newstylist'),
+  ('c2222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'buyer@velvet-crown.test', '66666666-6666-6666-6666-666666666666', 'token-org-velvet-crown-buyer')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO etl.roles (id, org_id, name, description, role_rank)
 VALUES
-  ('19191919-1919-1919-1919-191919191901', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Admin', 'Full ETL administration for Acme', 900),
-  ('19191919-1919-1919-1919-191919191902', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Operator', 'Run and monitor ETL workflows for Acme', 600),
-  ('19191919-1919-1919-1919-191919191903', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'ETL Admin', 'Full ETL administration for Globex', 900)
+  ('19191919-1919-1919-1919-191919191901', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Admin', 'Full data administration for Maison Aurelia', 900),
+  ('19191919-1919-1919-1919-191919191902', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ETL Operator', 'Run and monitor retail data workflows for Maison Aurelia', 600),
+  ('19191919-1919-1919-1919-191919191903', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'ETL Admin', 'Full data administration for Velvet Crown', 900)
 ON CONFLICT (org_id, name) DO UPDATE
 SET description = EXCLUDED.description,
     role_rank = EXCLUDED.role_rank;
@@ -68,8 +68,8 @@ INSERT INTO etl.workflows (id, name, description, graph_data, owner_id, org_id, 
 VALUES
   (
     'd1111111-1111-1111-1111-111111111111',
-    'Acme Sales ETL',
-    'Imports daily sales CSV and normalises output.',
+    'Maison Aurelia Boutique Sales ETL',
+    'Imports daily point-of-sale exports and normalises channel revenue.',
     '{"nodes":[{"id":"source","type":"csv"},{"id":"transform","type":"map"},{"id":"sink","type":"postgres"}],"edges":[{"from":"source","to":"transform"},{"from":"transform","to":"sink"}]}'::jsonb,
     '22222222-2222-2222-2222-222222222222',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -77,8 +77,8 @@ VALUES
   ),
   (
     'd2222222-2222-2222-2222-222222222222',
-    'Inventory Reconciliation Template',
-    'Reusable template for nightly inventory sync.',
+    'Luxury Inventory Reconciliation Template',
+    'Reusable template for nightly boutique, concession, and online stock sync.',
     '{"nodes":[{"id":"api","type":"http"},{"id":"clean","type":"script"},{"id":"warehouse","type":"warehouse"}],"edges":[{"from":"api","to":"clean"},{"from":"clean","to":"warehouse"}]}'::jsonb,
     '11111111-1111-1111-1111-111111111111',
     NULL,
@@ -86,8 +86,8 @@ VALUES
   ),
   (
     'd3333333-3333-3333-3333-333333333333',
-    'Globex Procurement ETL',
-    'Extracts PO data and builds analytics mart.',
+    'Velvet Crown Procurement ETL',
+    'Extracts apparel purchase orders and builds merchandising analytics.',
     '{"nodes":[{"id":"source","type":"api"},{"id":"join","type":"join"},{"id":"export","type":"s3"}],"edges":[{"from":"source","to":"join"},{"from":"join","to":"export"}]}'::jsonb,
     '66666666-6666-6666-6666-666666666666',
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
@@ -98,7 +98,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO etl.workflow_executions (id, workflow_id, user_id, org_id, status, started_at, completed_at, error_message)
 VALUES
   ('e1111111-1111-1111-1111-111111111111', 'd1111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'success', timezone('utc'::text, now()) - interval '2 days', timezone('utc'::text, now()) - interval '2 days' + interval '6 minutes', NULL),
-  ('e2222222-2222-2222-2222-222222222222', 'd1111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'failed', timezone('utc'::text, now()) - interval '1 day', timezone('utc'::text, now()) - interval '1 day' + interval '3 minutes', 'Source file not found'),
+  ('e2222222-2222-2222-2222-222222222222', 'd1111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'failed', timezone('utc'::text, now()) - interval '1 day', timezone('utc'::text, now()) - interval '1 day' + interval '3 minutes', 'Boutique sales export missing from inbound folder'),
   ('e3333333-3333-3333-3333-333333333333', 'd3333333-3333-3333-3333-333333333333', '66666666-6666-6666-6666-666666666666', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'running', timezone('utc'::text, now()) - interval '30 minutes', NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
 
@@ -111,9 +111,9 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO etl.notification_settings (id, workflow_id, channel, enabled, config, created_by)
 VALUES
-  ('f4444444-4444-4444-4444-444444444441', 'd1111111-1111-1111-1111-111111111111', 'email', true, '{"recipients":["ops@acme.test"]}'::jsonb, '33333333-3333-3333-3333-333333333333'),
-  ('f4444444-4444-4444-4444-444444444442', 'd1111111-1111-1111-1111-111111111111', 'slack', true, '{"webhook":"https://hooks.slack.test/acme"}'::jsonb, '33333333-3333-3333-3333-333333333333'),
-  ('f4444444-4444-4444-4444-444444444443', 'd3333333-3333-3333-3333-333333333333', 'webhook', false, '{"url":"https://api.globex.test/webhooks/etl"}'::jsonb, '66666666-6666-6666-6666-666666666666')
+  ('f4444444-4444-4444-4444-444444444441', 'd1111111-1111-1111-1111-111111111111', 'email', true, '{"recipients":["ops@maison-aurelia.test"]}'::jsonb, '33333333-3333-3333-3333-333333333333'),
+  ('f4444444-4444-4444-4444-444444444442', 'd1111111-1111-1111-1111-111111111111', 'slack', true, '{"webhook":"https://hooks.slack.test/maison-aurelia"}'::jsonb, '33333333-3333-3333-3333-333333333333'),
+  ('f4444444-4444-4444-4444-444444444443', 'd3333333-3333-3333-3333-333333333333', 'webhook', false, '{"url":"https://api.velvet-crown.test/webhooks/etl"}'::jsonb, '66666666-6666-6666-6666-666666666666')
 ON CONFLICT (id) DO NOTHING;
 
 -- ------------------------------------------------------------
