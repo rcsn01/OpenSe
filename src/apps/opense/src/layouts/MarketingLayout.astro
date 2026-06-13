@@ -1,0 +1,46 @@
+---
+import '../index.css'
+import MarketingNavbar from '../components/MarketingNavbar.astro'
+import MarketingFooter from '../components/MarketingFooter.astro'
+
+interface Props {
+  title?: string
+  description?: string
+  landingContext?: 'opense' | 'etl' | 'stoqr'
+  includeFooter?: boolean
+}
+
+const {
+  title = 'OpenSe',
+  description = 'The open source SaaS stack for privacy-first data workflows and inventory operations.',
+  landingContext = 'opense',
+  includeFooter = true,
+} = Astro.props
+---
+
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <script is:inline src="/config.js"></script>
+  </head>
+  <body data-landing-context={landingContext}>
+    <div class="relative min-h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
+      <MarketingNavbar landingContext={landingContext} />
+      <main>
+        <slot />
+      </main>
+      {includeFooter ? <MarketingFooter /> : null}
+    </div>
+    <script>
+      const storageKey = 'opense-theme'
+      const cookieKey = 'opense-theme'
+      const storedTheme = window.localStorage.getItem(storageKey) || 'light'
+      document.documentElement.dataset.theme = storedTheme
+      document.cookie = `${cookieKey}=${storedTheme}; path=/; max-age=31536000; SameSite=Lax`
+    </script>
+  </body>
+</html>

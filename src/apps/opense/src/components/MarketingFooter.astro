@@ -1,0 +1,56 @@
+---
+const columns = [
+  {
+    title: 'Products',
+    items: [
+      { label: 'Open-ETL', href: '/etl' },
+      { label: 'Open-StoQR', href: '/stoqr' },
+    ],
+  },
+  {
+    title: 'Resources',
+    items: [{ label: 'Documentation' }, { label: 'GitHub Repository' }, { label: 'API Reference' }],
+  },
+  {
+    title: 'Legal',
+    items: [{ label: 'Privacy Policy' }, { label: 'Terms of Service' }, { label: 'License' }],
+  },
+]
+---
+
+<footer class="mt-16 border-t" style="border-color:var(--opense-shell-border);background-color:rgba(255,255,255,0.62)">
+  <div class="mx-auto grid max-w-6xl gap-10 px-6 py-10 md:grid-cols-[1.2fr_repeat(3,minmax(0,0.72fr))]">
+    <div>
+      <div class="flex items-center gap-3 text-xl font-semibold text-[var(--color-heading)]">
+        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[color:color-mix(in_srgb,var(--color-primary-hover)_18%,white)] text-xs font-bold uppercase text-[var(--color-primary-hover)]">
+          OS
+        </span>
+        <span>OpenSe</span>
+      </div>
+      <p class="mt-4 max-w-xs text-sm leading-6 text-[var(--color-body)]">
+        The open source SaaS stack for modern organizations. Built by Chu-Cheng Yu for Studio Project.
+      </p>
+    </div>
+
+    {columns.map((column) => (
+      <div>
+        <h3 class="text-sm font-semibold text-[var(--color-heading)]">{column.title}</h3>
+        <ul class="mt-4 space-y-3 text-sm text-[var(--color-body)]">
+          {column.items.map((item) => (
+            <li>
+              {item.href ? (
+                <a href={item.href} class="transition-colors duration-200 hover:text-[var(--color-heading)]">{item.label}</a>
+              ) : (
+                <span>{item.label}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+
+  <div class="border-t px-6 py-4 text-center text-sm text-[var(--color-muted-foreground)]" style="border-color:var(--opense-shell-border)">
+    © 2026 OpenSe Project. All rights reserved. UTS Studio.
+  </div>
+</footer>

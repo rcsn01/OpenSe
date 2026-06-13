@@ -1,0 +1,20 @@
+---
+import MarketingLayout from '../layouts/MarketingLayout.astro'
+---
+
+<MarketingLayout title="Redirecting | OpenSe" includeFooter={false}>
+  <section class="grid min-h-screen place-items-center px-6 text-center">
+    <div>
+      <h1 class="text-2xl font-semibold text-[var(--color-heading)]">Redirecting</h1>
+      <p class="mt-3 text-sm text-[var(--color-body)]">Taking you to the right sign-in page.</p>
+    </div>
+  </section>
+</MarketingLayout>
+
+<script>
+  import { buildGetStartedGuestUrl, normalizeLandingContext } from '../lib/authRedirect'
+
+  const params = new URLSearchParams(window.location.search)
+  const context = normalizeLandingContext(params.get('context'))
+  window.location.replace(buildGetStartedGuestUrl(context))
+</script>
