@@ -40,7 +40,7 @@ VALUES
 		1207,
 		'denied',
 		(timezone('utc'::text, now()) + interval '6 days')::date,
-		'Budget request denied before release.',
+		'Capsule buy request denied before market release.',
 		'33333333-3333-3333-3333-333333333333',
 		timezone('utc'::text, now()) - interval '3 days',
 		timezone('utc'::text, now()) - interval '2 days'
@@ -52,7 +52,7 @@ VALUES
 		1208,
 		'shipped_to_vendor',
 		(timezone('utc'::text, now()) - interval '5 days')::date,
-		'Vendor return dispatched after inspection completed.',
+		'Leather tote vendor return dispatched after boutique inspection.',
 		'11111111-1111-1111-1111-111111111111',
 		timezone('utc'::text, now()) - interval '11 days',
 		timezone('utc'::text, now()) - interval '1 day'
@@ -77,7 +77,7 @@ INSERT INTO stoqr.purchase_order_items (
 	unit_cost
 )
 VALUES
-	('a8989898-a898-a898-a898-a89898989898', '98989898-9898-9898-9898-989898989898', '84848484-8484-8484-8484-a00000000017', 18, 18, 7.50)
+	('a8989898-a898-a898-a898-a89898989898', '98989898-9898-9898-9898-989898989898', '84848484-8484-8484-8484-a00000000017', 18, 18, 275.00)
 ON CONFLICT (id) DO UPDATE
 SET
 	po_id = EXCLUDED.po_id,
@@ -105,7 +105,7 @@ VALUES
 		18,
 		'11111111-1111-1111-1111-111111111111',
 		timezone('utc'::text, now()) - interval '4 days',
-		'Received before return shipment was authorised.'
+		'Received before leather finish return was authorised.'
 	)
 ON CONFLICT (id) DO UPDATE
 SET

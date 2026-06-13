@@ -3,9 +3,9 @@
 
 INSERT INTO stoqr.roles (id, company_id, name, description, role_rank)
 VALUES
-  ('20202020-2020-2020-2020-202020202020', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Manager', 'Operational manager role for Acme', 800),
-  ('30303030-3030-3030-3030-303030303030', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Viewer', 'Read-only role for Acme', 300),
-  ('50505050-5050-5050-5050-505050505050', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Operator', 'Warehouse operator role for Globex', 600)
+  ('20202020-2020-2020-2020-202020202020', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Manager', 'Boutique operations manager role for Maison Aurelia', 800),
+  ('30303030-3030-3030-3030-303030303030', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Viewer', 'Read-only role for Maison Aurelia', 300),
+  ('50505050-5050-5050-5050-505050505050', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Operator', 'Stockroom operator role for Velvet Crown', 600)
 ON CONFLICT (company_id, name) DO UPDATE
 SET description = EXCLUDED.description,
     role_rank = EXCLUDED.role_rank;
@@ -165,7 +165,7 @@ INSERT INTO public.subscriptions (
 )
 VALUES
   (
-    'sub_stoqr_acme_001',
+    'sub_stoqr_maison_aurelia_001',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     'active',
     'price_stoqr_monthly_01',
@@ -176,7 +176,7 @@ VALUES
     NULL
   ),
   (
-    'sub_stoqr_globex_001',
+    'sub_stoqr_velvet_crown_001',
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     'past_due',
     'price_stoqr_yearly_01',

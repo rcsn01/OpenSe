@@ -11,10 +11,10 @@ INSERT INTO stoqr.folders (
   sort_order
 )
 VALUES
-  ('71717171-7171-7171-7171-717171717171', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'Warehouse Network', 'Main storage hierarchy for shared StoQR inventory.', timezone('utc'::text, now()) - interval '90 days', 1),
-  ('72727272-7272-7272-7272-727272727272', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'Dispatch & Returns', 'Outbound staging, finished goods, and returns triage.', timezone('utc'::text, now()) - interval '90 days', 2),
-  ('73737373-7373-7373-7373-737373737373', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '71717171-7171-7171-7171-717171717171', 'PCR Consumables', 'Tips, plates, and core assay consumables.', timezone('utc'::text, now()) - interval '90 days', 1),
-  ('74747474-7474-7474-7474-747474747474', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '71717171-7171-7171-7171-717171717171', 'Safety & Sanitation', 'PPE, disinfectants, and facility support stock.', timezone('utc'::text, now()) - interval '90 days', 2)
+  ('71717171-7171-7171-7171-717171717171', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'Flagship Backroom', 'Main stock hierarchy for boutique and beauty counter inventory.', timezone('utc'::text, now()) - interval '90 days', 1),
+  ('72727272-7272-7272-7272-727272727272', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NULL, 'Online Dispatch & Returns', 'Ecommerce staging, client shipments, and return triage.', timezone('utc'::text, now()) - interval '90 days', 2),
+  ('73737373-7373-7373-7373-737373737373', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '71717171-7171-7171-7171-717171717171', 'Beauty Counter Reserve', 'Makeup, skincare, fragrance, and gifting reserve stock.', timezone('utc'::text, now()) - interval '90 days', 1),
+  ('74747474-7474-7474-7474-747474747474', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '71717171-7171-7171-7171-717171717171', 'Apparel & Accessories Vault', 'Ready-to-wear, handbags, shoes, jewelry, and boutique packaging.', timezone('utc'::text, now()) - interval '90 days', 2)
 ON CONFLICT (id) DO UPDATE
 SET
   parent_id = EXCLUDED.parent_id,
@@ -48,7 +48,7 @@ WHERE id = '84848484-8484-8484-8484-a00000000004';
 
 UPDATE stoqr.products
 SET
-  folder_id = '73737373-7373-7373-7373-737373737373',
+  folder_id = '74747474-7474-7474-7474-747474747474',
   quantity_on_hand = 32,
   min_stock_level = 10,
   max_stock_level = 60,
@@ -130,10 +130,10 @@ INSERT INTO stoqr.suppliers (
   created_at
 )
 VALUES
-  ('81818181-8181-8181-8181-818181818181', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'TechGlobal Inc.', 'Nadia Stone', 'procurement@techglobal.example', '+61 2 9000 1001', '12 Science Park, Sydney', 'https://techglobal.example', timezone('utc'::text, now()) - interval '120 days'),
-  ('82828282-8282-8282-8282-828282828282', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Apex Materials', 'Jon Lim', 'sales@apexmaterials.example', '+61 2 9000 1002', '8 Industry Ave, Melbourne', 'https://apexmaterials.example', timezone('utc'::text, now()) - interval '110 days'),
-  ('83838383-8383-8383-8383-838383838383', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Textile Wonders', 'Maya Cole', 'ops@textilewonders.example', '+61 2 9000 1003', '77 Freight Rd, Brisbane', 'https://textilewonders.example', timezone('utc'::text, now()) - interval '105 days'),
-  ('84818181-8481-8481-8481-848181818181', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'FastPack Logistics', 'Kai Morgan', 'hello@fastpack.example', '+61 2 9000 1004', '45 Packaging Close, Perth', 'https://fastpack.example', timezone('utc'::text, now()) - interval '100 days')
+  ('81818181-8181-8181-8181-818181818181', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Aurelia Beauty Lab', 'Nadia Stone', 'procurement@aurelia-beauty.example', '+61 2 9000 1001', '12 Vanity Arcade, Sydney', 'https://aurelia-beauty.example', timezone('utc'::text, now()) - interval '120 days'),
+  ('82828282-8282-8282-8282-828282828282', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Velvet Atelier Co', 'Jon Lim', 'sales@velvet-atelier.example', '+61 2 9000 1002', '8 Tailor Lane, Melbourne', 'https://velvet-atelier.example', timezone('utc'::text, now()) - interval '110 days'),
+  ('83838383-8383-8383-8383-838383838383', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Silken Row Wholesale', 'Maya Cole', 'ops@silken-row.example', '+61 2 9000 1003', '77 Draper Street, Brisbane', 'https://silken-row.example', timezone('utc'::text, now()) - interval '105 days'),
+  ('84818181-8481-8481-8481-848181818181', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Marque Packaging House', 'Kai Morgan', 'hello@marque-packaging.example', '+61 2 9000 1004', '45 Giftwrap Close, Perth', 'https://marque-packaging.example', timezone('utc'::text, now()) - interval '100 days')
 ON CONFLICT (id) DO UPDATE
 SET
   name = EXCLUDED.name,
@@ -156,12 +156,12 @@ INSERT INTO stoqr.purchase_orders (
   updated_at
 )
 VALUES
-  ('91919191-9191-9191-9191-919191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '81818181-8181-8181-8181-818181818181', 1201, 'received', (date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '16 days')::date, 'January replenishment', '11111111-1111-1111-1111-111111111111', date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '7 days', date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '14 days'),
-  ('92929292-9292-9292-9292-929292929292', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '82828282-8282-8282-8282-828282828282', 1202, 'received', (date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '15 days')::date, 'February reagents top-up', '11111111-1111-1111-1111-111111111111', date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '6 days', date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '13 days'),
-  ('93939393-9393-9393-9393-939393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84818181-8481-8481-8481-848181818181', 1203, 'received', (date_trunc('month', timezone('utc'::text, now())) - interval '20 days')::date, 'Quarterly bulk replenishment', '33333333-3333-3333-3333-333333333333', timezone('utc'::text, now()) - interval '24 days', timezone('utc'::text, now()) - interval '18 days'),
-  ('94949494-9494-9494-9494-949494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '83838383-8383-8383-8383-838383838383', 1204, 'partial_receipt', (timezone('utc'::text, now()) + interval '4 days')::date, 'Partial PPE restock', '33333333-3333-3333-3333-333333333333', timezone('utc'::text, now()) - interval '12 days', timezone('utc'::text, now()) - interval '4 days'),
-  ('95959595-9595-9595-9595-959595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '82828282-8282-8282-8282-828282828282', 1205, 'in_transit', (timezone('utc'::text, now()) + interval '9 days')::date, 'April fast follow order', '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '7 days', timezone('utc'::text, now()) - interval '7 days'),
-  ('96969696-9696-9696-9696-969696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '81818181-8181-8181-8181-818181818181', 1206, 'pending_approval', (timezone('utc'::text, now()) + interval '12 days')::date, 'Template-driven replenishment draft', '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '3 days', timezone('utc'::text, now()) - interval '3 days')
+  ('91919191-9191-9191-9191-919191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '81818181-8181-8181-8181-818181818181', 1201, 'received', (date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '16 days')::date, 'January beauty counter replenishment', '11111111-1111-1111-1111-111111111111', date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '7 days', date_trunc('month', timezone('utc'::text, now())) - interval '3 months' + interval '14 days'),
+  ('92929292-9292-9292-9292-929292929292', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '82828282-8282-8282-8282-828282828282', 1202, 'received', (date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '15 days')::date, 'February knitwear top-up', '11111111-1111-1111-1111-111111111111', date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '6 days', date_trunc('month', timezone('utc'::text, now())) - interval '2 months' + interval '13 days'),
+  ('93939393-9393-9393-9393-939393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84818181-8481-8481-8481-848181818181', 1203, 'received', (date_trunc('month', timezone('utc'::text, now())) - interval '20 days')::date, 'Quarterly luxury packaging replenishment', '33333333-3333-3333-3333-333333333333', timezone('utc'::text, now()) - interval '24 days', timezone('utc'::text, now()) - interval '18 days'),
+  ('94949494-9494-9494-9494-949494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '83838383-8383-8383-8383-838383838383', 1204, 'partial_receipt', (timezone('utc'::text, now()) + interval '4 days')::date, 'Partial eveningwear restock', '33333333-3333-3333-3333-333333333333', timezone('utc'::text, now()) - interval '12 days', timezone('utc'::text, now()) - interval '4 days'),
+  ('95959595-9595-9595-9595-959595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '82828282-8282-8282-8282-828282828282', 1205, 'in_transit', (timezone('utc'::text, now()) + interval '9 days')::date, 'April runway capsule fast follow order', '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '7 days', timezone('utc'::text, now()) - interval '7 days'),
+  ('96969696-9696-9696-9696-969696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '81818181-8181-8181-8181-818181818181', 1206, 'pending_approval', (timezone('utc'::text, now()) + interval '12 days')::date, 'Template-driven beauty replenishment draft', '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '3 days', timezone('utc'::text, now()) - interval '3 days')
 ON CONFLICT (id) DO UPDATE
 SET
   supplier_id = EXCLUDED.supplier_id,
@@ -260,20 +260,20 @@ INSERT INTO stoqr.inventory_transactions (
   created_at
 )
 VALUES
-  ('c1919191-c191-c191-c191-c19191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '71717171-7171-7171-7171-717171717171', '11111111-1111-1111-1111-111111111111', 'purchase', 'receiving', 40, 100, 'Initial replenishment', timezone('utc'::text, now()) - interval '25 days'),
-  ('c2929292-c292-c292-c292-c29292929292', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '71717171-7171-7171-7171-717171717171', '11111111-1111-1111-1111-111111111111', 'sale', 'manual', -12, 88, 'Outbound shipment', timezone('utc'::text, now()) - interval '18 days'),
-  ('c3939393-c393-c393-c393-c39393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'return', 'manual', 2, 90, 'Customer return', timezone('utc'::text, now()) - interval '14 days'),
-  ('c4949494-c494-c494-c494-c49494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '71717171-7171-7171-7171-717171717171', '33333333-3333-3333-3333-333333333333', 'purchase', 'receiving', 30, 120, 'Weekly inbound pallet', timezone('utc'::text, now()) - interval '6 days'),
-  ('c5959595-c595-c595-c595-c59595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -9, 111, 'Rush dispatch', timezone('utc'::text, now()) - interval '2 days'),
-  ('c6969696-c696-c696-c696-c69696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', '11111111-1111-1111-1111-111111111111', 'purchase', 'receiving', 20, 70, 'Restock East Coast', timezone('utc'::text, now()) - interval '20 days'),
-  ('c7979797-c797-c797-c797-c79797979797', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -15, 55, 'Routine outbound', timezone('utc'::text, now()) - interval '10 days'),
-  ('c8989898-c898-c898-c898-c89898989898', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'adjustment', 'manual', -15, 40, 'Expired reagent batch', timezone('utc'::text, now()) - interval '5 days'),
-  ('ca999999-ca99-ca99-ca99-ca9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000008', '73737373-7373-7373-7373-737373737373', '11111111-1111-1111-1111-111111111111', 'scan_in', 'scan', 18, 32, 'Transfer from staging', timezone('utc'::text, now()) - interval '7 days'),
-  ('cb999999-cb99-cb99-cb99-cb9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000008', '73737373-7373-7373-7373-737373737373', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -6, 26, 'Project allocation', timezone('utc'::text, now()) - interval '3 days'),
-  ('cc999999-cc99-cc99-cc99-cc9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000017', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'loss', 'receiving', -3, 12, 'Damaged in transit during receiving', timezone('utc'::text, now()) - interval '2 days'),
+  ('c1919191-c191-c191-c191-c19191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '71717171-7171-7171-7171-717171717171', '11111111-1111-1111-1111-111111111111', 'purchase', 'receiving', 40, 100, 'Initial beauty counter replenishment', timezone('utc'::text, now()) - interval '25 days'),
+  ('c2929292-c292-c292-c292-c29292929292', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '71717171-7171-7171-7171-717171717171', '11111111-1111-1111-1111-111111111111', 'sale', 'manual', -12, 88, 'Client order shipment', timezone('utc'::text, now()) - interval '18 days'),
+  ('c3939393-c393-c393-c393-c39393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'return', 'manual', 2, 90, 'Client return after shade exchange', timezone('utc'::text, now()) - interval '14 days'),
+  ('c4949494-c494-c494-c494-c49494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '71717171-7171-7171-7171-717171717171', '33333333-3333-3333-3333-333333333333', 'purchase', 'receiving', 30, 120, 'Weekly beauty counter carton', timezone('utc'::text, now()) - interval '6 days'),
+  ('c5959595-c595-c595-c595-c59595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000001', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -9, 111, 'Rush ecommerce dispatch', timezone('utc'::text, now()) - interval '2 days'),
+  ('c6969696-c696-c696-c696-c69696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', '11111111-1111-1111-1111-111111111111', 'purchase', 'receiving', 20, 70, 'Restock online knitwear allocation', timezone('utc'::text, now()) - interval '20 days'),
+  ('c7979797-c797-c797-c797-c79797979797', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -15, 55, 'Routine ecommerce outbound', timezone('utc'::text, now()) - interval '10 days'),
+  ('c8989898-c898-c898-c898-c89898989898', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000004', '72727272-7272-7272-7272-727272727272', '33333333-3333-3333-3333-333333333333', 'adjustment', 'manual', -15, 40, 'Seasonal markdown pullback', timezone('utc'::text, now()) - interval '5 days'),
+  ('ca999999-ca99-ca99-ca99-ca9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000008', '74747474-7474-7474-7474-747474747474', '11111111-1111-1111-1111-111111111111', 'scan_in', 'scan', 18, 32, 'Transfer from fitting-room staging', timezone('utc'::text, now()) - interval '7 days'),
+  ('cb999999-cb99-cb99-cb99-cb9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000008', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'sale', 'manual', -6, 26, 'Personal shopping allocation', timezone('utc'::text, now()) - interval '3 days'),
+  ('cc999999-cc99-cc99-cc99-cc9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000017', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'loss', 'receiving', -3, 12, 'Damaged leather finish during receiving', timezone('utc'::text, now()) - interval '2 days'),
   ('cd999999-cd99-cd99-cd99-cd9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000017', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'adjustment', 'manual', 1, 13, 'Counting error correction', timezone('utc'::text, now()) - interval '1 day'),
-  ('ce999999-ce99-ce99-ce99-ce9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000029', '73737373-7373-7373-7373-737373737373', '11111111-1111-1111-1111-111111111111', 'sale', 'manual', -20, 80, 'Bulk issue to production', timezone('utc'::text, now()) - interval '4 days'),
-  ('cf999999-cf99-cf99-cf99-cf9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000039', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'purchase', 'receiving', 8, 18, 'Safety stock top-up', timezone('utc'::text, now()) - interval '9 days'),
+  ('ce999999-ce99-ce99-ce99-ce9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000029', '73737373-7373-7373-7373-737373737373', '11111111-1111-1111-1111-111111111111', 'sale', 'manual', -20, 80, 'Fragrance counter tester and client sales allocation', timezone('utc'::text, now()) - interval '4 days'),
+  ('cf999999-cf99-cf99-cf99-cf9999999999', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000039', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'purchase', 'receiving', 8, 18, 'Small leather goods top-up', timezone('utc'::text, now()) - interval '9 days'),
   ('d0919191-d091-d091-d091-d09191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '84848484-8484-8484-8484-a00000000039', '74747474-7474-7474-7474-747474747474', '33333333-3333-3333-3333-333333333333', 'loss', 'manual', -4, 14, 'Missing item after shelf audit', timezone('utc'::text, now()) - interval '8 days')
 ON CONFLICT (id) DO UPDATE
 SET
@@ -304,14 +304,10 @@ SET
   folder_id = CASE
     WHEN ranked_products.product_number % 6 = 0 THEN '72727272-7272-7272-7272-727272727272'::uuid
     WHEN lower(COALESCE(ranked_products.custom_fields->>'SUPPLIER', '')) IN (
-      'eppendorf',
-      'thermofisher',
-      'roche',
-      'bio-rad',
-      'idt',
-      'qiagen',
-      'millennium science',
-      'mektronics'
+      'aurelia beauty lab',
+      'lumiere fragrance house',
+      'gilded home goods',
+      'couture supply studio'
     ) THEN '73737373-7373-7373-7373-737373737373'::uuid
     ELSE '74747474-7474-7474-7474-747474747474'::uuid
   END,
@@ -383,7 +379,7 @@ VALUES
   (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     '84848484-8484-8484-8484-a00000000008',
-    '73737373-7373-7373-7373-737373737373',
+    '74747474-7474-7474-7474-747474747474',
     4,
     10,
     12,
@@ -786,9 +782,9 @@ attachment_seed AS (
     )::uuid AS object_id,
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/' || product_seed.product_id::text || '/' ||
       CASE product_seed.product_number % 3
-        WHEN 0 THEN 'sds-' || lpad(product_seed.product_number::text, 3, '0') || '.pdf'
-        WHEN 1 THEN 'coa-' || lpad(product_seed.product_number::text, 3, '0') || '.pdf'
-        ELSE 'manual-' || lpad(product_seed.product_number::text, 3, '0') || '.pdf'
+        WHEN 0 THEN 'campaign-' || lpad(product_seed.product_number::text, 3, '0') || '.pdf'
+        WHEN 1 THEN 'care-card-' || lpad(product_seed.product_number::text, 3, '0') || '.pdf'
+        ELSE 'product-spec-' || lpad(product_seed.product_number::text, 3, '0') || '.pdf'
       END AS object_name,
     md5('stoqr-attachment-version:' || product_seed.product_id::text) AS object_version
   FROM (
@@ -857,7 +853,7 @@ INSERT INTO stoqr.report_schedules (
   created_at
 )
 VALUES
-  ('e1919191-e191-e191-e191-e19191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'weekly_stockout_warning', 'weekly', 1, NULL, '08:00:00'::time, ARRAY['operations@company.com'], '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '14 days')
+  ('e1919191-e191-e191-e191-e19191919191', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'weekly_stockout_warning', 'weekly', 1, NULL, '08:00:00'::time, ARRAY['operations@maison-aurelia.test'], '11111111-1111-1111-1111-111111111111', timezone('utc'::text, now()) - interval '14 days')
 ON CONFLICT (id) DO UPDATE
 SET
   report_type = EXCLUDED.report_type,
@@ -924,12 +920,12 @@ VALUES
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     'f1919191-f191-f191-f191-f19191919191',
     '84848484-8484-8484-8484-a00000000008',
-    '73737373-7373-7373-7373-737373737373',
+    '74747474-7474-7474-7474-747474747474',
     'low_stock',
     'high',
     'open',
-    'Gown Isolation Disposable in Warehouse Network / PCR Consumables is at 4 units, at or below its Low Stock Alert level of 12.',
-    '{"folder_id":"73737373-7373-7373-7373-737373737373","folder_name":"Warehouse Network / PCR Consumables","quantity_on_hand":4,"reorder_point":12,"recipient_roles":["role:20202020-2020-2020-2020-202020202020"]}'::jsonb,
+    'Silk Slip Dress - Black Orchid in Flagship Backroom / Apparel & Accessories Vault is at 4 units, at or below its Low Stock Alert level of 12.',
+    '{"folder_id":"74747474-7474-7474-7474-747474747474","folder_name":"Flagship Backroom / Apparel & Accessories Vault","quantity_on_hand":4,"reorder_point":12,"recipient_roles":["role:20202020-2020-2020-2020-202020202020"]}'::jsonb,
     timezone('utc'::text, now()) - interval '45 minutes'
   )
 ON CONFLICT (id) DO UPDATE
@@ -956,8 +952,8 @@ INSERT INTO stoqr.alert_delivery_logs (
 VALUES
   ('f3939393-f393-f393-f393-f39393939393', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'in_app', '33333333-3333-3333-3333-333333333333', 'sent', timezone('utc'::text, now()) - interval '45 minutes'),
   ('f4949494-f494-f494-f494-f49494949494', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'in_app', '44444444-4444-4444-4444-444444444444', 'sent', timezone('utc'::text, now()) - interval '45 minutes'),
-  ('f5959595-f595-f595-f595-f59595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'email', 'admin@acme.test', 'pending', NULL),
-  ('f6969696-f696-f696-f696-f69696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'email', 'editor@acme.test', 'pending', NULL)
+  ('f5959595-f595-f595-f595-f59595959595', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'email', 'admin@maison-aurelia.test', 'pending', NULL),
+  ('f6969696-f696-f696-f696-f69696969696', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'f2929292-f292-f292-f292-f29292929292', 'email', 'merch@maison-aurelia.test', 'pending', NULL)
 ON CONFLICT (id) DO UPDATE
 SET
   alert_event_id = EXCLUDED.alert_event_id,

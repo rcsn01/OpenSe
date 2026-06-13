@@ -50,7 +50,7 @@ VALUES
     99.75,
     'low',
     1,
-    'Minor webhook retry spikes observed.',
+    'Minor boutique sales webhook retry spikes observed.',
     timezone('utc'::text, now()) - interval '30 minutes'
   ),
   (
@@ -59,7 +59,7 @@ VALUES
     98.90,
     'medium',
     4,
-    'Inventory export queue slower than usual.',
+    'Boutique stock export queue slower than usual.',
     timezone('utc'::text, now()) - interval '30 minutes'
   )
 ON CONFLICT (id) DO NOTHING;
@@ -76,10 +76,10 @@ INSERT INTO public.platform_pricing_plans (
   is_active
 )
 VALUES
-  ('adadadad-adad-adad-adad-adadadadad01', 'etl', 'ETL Pro', 'monthly', 2900, false, NULL, NULL, true),
-  ('adadadad-adad-adad-adad-adadadadad02', 'etl', 'ETL Pro', 'yearly', 2500, false, NULL, NULL, true),
-  ('adadadad-adad-adad-adad-adadadadad03', 'stoqr', 'StoQR Growth', 'monthly', 1900, false, NULL, NULL, true),
-  ('adadadad-adad-adad-adad-adadadadad04', NULL, 'OpenSe Bundle', 'yearly', 3900, true, NULL, NULL, true)
+  ('adadadad-adad-adad-adad-adadadadad01', 'etl', 'Retail Data Pro', 'monthly', 2900, false, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad02', 'etl', 'Retail Data Pro', 'yearly', 2500, false, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad03', 'stoqr', 'Luxury Stockroom Growth', 'monthly', 1900, false, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad04', NULL, 'OpenSe Luxury Retail Bundle', 'yearly', 3900, true, NULL, NULL, true)
 ON CONFLICT (id) DO UPDATE
 SET
   stripe_product_id = EXCLUDED.stripe_product_id,
@@ -125,30 +125,30 @@ VALUES
   (
     'afafafaf-afaf-afaf-afaf-afafafafaf01',
     '11111111-1111-1111-1111-111111111111',
-    'pricing_plan_updated',
+    'luxury_stockroom_plan_updated',
     '{"plan_id":"adadadad-adad-adad-adad-adadadadad03","from":1700,"to":1900}'::jsonb,
     timezone('utc'::text, now()) - interval '2 days'
   ),
   (
     'afafafaf-afaf-afaf-afaf-afafafafaf02',
     '11111111-1111-1111-1111-111111111111',
-    'feature_flag_updated',
-    '{"flag_key":"stoqr.inventory-anomaly-alerts","rollout_status":"beta"}'::jsonb,
+    'retail_feature_flag_updated',
+    '{"flag_key":"stoqr.boutique-inventory-anomaly-alerts","rollout_status":"beta"}'::jsonb,
     timezone('utc'::text, now()) - interval '1 day'
   )
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.platform_feature_flags (id, app_code, flag_key, rollout_status, audience)
 VALUES
-  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b101', 'etl', 'etl.enhanced-lineage-graph', 'beta', 'Selected enterprise orgs'),
-  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b102', 'stoqr', 'stoqr.smart-reorder-assistant', 'enabled', 'All organisations')
+  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b101', 'etl', 'etl.enhanced-retail-lineage', 'beta', 'Selected retail orgs'),
+  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b102', 'stoqr', 'stoqr.smart-boutique-reorder-assistant', 'enabled', 'All organisations')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.platform_feature_flags (id, app_code, flag_key, rollout_status, audience)
 VALUES
-  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b103', 'etl', 'etl.ai-assisted-transformations', 'beta', 'Beta cohort'),
-  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b104', 'etl', 'etl.bulk-template-publish', 'enabled', 'All organisations'),
-  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b105', 'stoqr', 'stoqr.inventory-anomaly-alerts', 'disabled', 'Disabled globally')
+  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b103', 'etl', 'etl.ai-assisted-merchandising-transforms', 'beta', 'Beta cohort'),
+  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b104', 'etl', 'etl.bulk-retail-template-publish', 'enabled', 'All organisations'),
+  ('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b105', 'stoqr', 'stoqr.boutique-inventory-anomaly-alerts', 'disabled', 'Disabled globally')
 ON CONFLICT (flag_key) DO UPDATE
 SET
   app_code = EXCLUDED.app_code,
@@ -157,7 +157,7 @@ SET
 
 INSERT INTO public.platform_default_configurations (id, app_code, config_key, config_value)
 VALUES
-  ('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b201', 'etl', 'default_workflow_timeout_seconds', '900'),
+  ('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b201', 'etl', 'default_boutique_sync_timeout_seconds', '900'),
   ('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b202', 'stoqr', 'default_alert_severity', 'medium')
 ON CONFLICT (id) DO NOTHING;
 
@@ -184,15 +184,15 @@ VALUES
   (
     'b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b301',
     'etl',
-    'ETL 1.15.0',
-    'Pipeline run diagnostics and role-aware template publishing.',
+    'Retail Data 1.15.0',
+    'Boutique run diagnostics and role-aware merchandising template publishing.',
     timezone('utc'::text, now()) - interval '6 days'
   ),
   (
     'b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b302',
     'stoqr',
     'StoQR 1.10.0',
-    'Inventory alert feed improvements and bulk import recovery.',
+    'Boutique stock alert feed improvements and bulk import recovery.',
     timezone('utc'::text, now()) - interval '4 days'
   )
 ON CONFLICT (id) DO NOTHING;
@@ -202,15 +202,15 @@ VALUES
   (
     'b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b303',
     'etl',
-    'ETL 1.14.0',
-    'Template guardrails, workflow audit enrichment, and bug fixes.',
+    'Retail Data 1.14.0',
+    'Retail template guardrails, workflow audit enrichment, and bug fixes.',
     '2026-02-15T10:00:00.000Z'::timestamptz
   ),
   (
     'b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b304',
     'stoqr',
     'StoQR 1.9.2',
-    'Inventory report query performance improvements and pagination tuning.',
+    'Luxury stock report query performance improvements and pagination tuning.',
     '2026-02-12T08:30:00.000Z'::timestamptz
   )
 ON CONFLICT (id) DO NOTHING;
