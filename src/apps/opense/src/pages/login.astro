@@ -1,0 +1,17 @@
+---
+import MarketingLayout from '../layouts/MarketingLayout.astro'
+---
+
+<MarketingLayout title="Signing In | OpenSe" includeFooter={false}>
+  <section class="grid min-h-screen place-items-center px-6 text-center">
+    <div>
+      <h1 class="text-2xl font-semibold text-[var(--color-heading)]">Signing in</h1>
+      <p class="mt-3 text-sm text-[var(--color-body)]">Redirecting to Accounts.</p>
+    </div>
+  </section>
+</MarketingLayout>
+
+<script>
+  import { buildOpenSeAccountsAuthUrl } from '../lib/authRedirect'
+  window.location.replace(buildOpenSeAccountsAuthUrl('signin'))
+</script>

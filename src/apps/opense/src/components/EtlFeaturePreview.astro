@@ -1,0 +1,34 @@
+---
+interface Props {
+  tone: 'privacy' | 'workflow' | 'storage' | 'team' | 'monitoring' | 'code'
+}
+
+const { tone } = Astro.props
+const toneLabels = {
+  privacy: ['Local file', 'Browser shield', 'No raw upload'],
+  workflow: ['Import', 'Transform', 'Export'],
+  storage: ['Chunks', 'IndexedDB', 'Metadata only'],
+  team: ['Personal', 'Org template', 'Read only'],
+  monitoring: ['Queued', 'Running', 'Alert sent'],
+  code: ['Input', 'JS node', 'Output'],
+}
+---
+
+<div class={`etl-static-preview is-${tone}`} aria-hidden="true">
+  <div class="etl-static-preview__surface">
+    <div class="etl-static-preview__topbar">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="etl-static-preview__nodes">
+      {toneLabels[tone].map((label, index) => (
+        <div class:list={['etl-static-preview__node', index === 1 ? 'is-primary' : '']}>
+          <span class="etl-static-preview__dot"></span>
+          <span>{label}</span>
+        </div>
+      ))}
+    </div>
+    <svg viewBox="0 0 320 110" preserveAspectRatio="none" class="etl-static-preview__line">
+      <path d="M36 72 C92 18 128 102 170 54 C210 8 238 70 286 28" />
+    </svg>
+  </div>
+</div>

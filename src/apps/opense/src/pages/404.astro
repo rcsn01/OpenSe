@@ -1,0 +1,19 @@
+---
+import MarketingLayout from '../layouts/MarketingLayout.astro'
+---
+
+<MarketingLayout title="Not Found | OpenSe" includeFooter={false}>
+  <section class="grid min-h-screen place-items-center px-6 text-center">
+    <div>
+      <h1 class="text-3xl font-semibold text-[var(--color-heading)]">Page not found</h1>
+      <p class="mt-3 text-sm text-[var(--color-body)]">Returning to OpenSe.</p>
+      <a href="/" class="mt-6 inline-flex rounded-xl bg-[var(--color-foreground)] px-5 py-3 text-sm font-semibold text-white">Go home</a>
+    </div>
+  </section>
+</MarketingLayout>
+
+<script>
+  window.setTimeout(() => {
+    window.location.replace('/')
+  }, 100)
+</script>

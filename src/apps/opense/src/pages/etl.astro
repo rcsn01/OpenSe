@@ -1,0 +1,114 @@
+---
+import { Activity, Code2, Database, LockKeyhole, ShieldCheck, UsersRound, Workflow } from 'lucide-astro'
+import EtlFeaturePreview from '../components/EtlFeaturePreview.astro'
+import MarketingLayout from '../layouts/MarketingLayout.astro'
+import { buildNavbarGetStartedPath } from '../lib/authRedirect'
+
+const ctaHref = buildNavbarGetStartedPath('etl')
+const features = [
+  {
+    title: 'Privacy-First Processing',
+    description:
+      'Source datasets are processed entirely in your browser using IndexedDB. Raw records are never sent to a third-party backend.',
+    icon: ShieldCheck,
+    tone: 'privacy',
+  },
+  {
+    title: 'Visual Workflow Builder',
+    description:
+      'No-code and low-code pipeline authoring. Drag, drop, and connect nodes to filter, sort, join, pivot, and transform CSV data.',
+    icon: Workflow,
+    tone: 'workflow',
+  },
+  {
+    title: 'Local Browser Persistence',
+    description:
+      'Efficient local chunking and storage for large datasets during execution. Supabase stores definitions and lightweight run logs.',
+    icon: Database,
+    tone: 'storage',
+  },
+  {
+    title: 'Team & Governance',
+    description:
+      'Multi-organization workspaces with role-aware collaboration and read-only protection for important organization templates.',
+    icon: UsersRound,
+    tone: 'team',
+  },
+  {
+    title: 'Monitoring & Logs',
+    description:
+      'Detailed execution run logging with status, timing, and errors. Push workflow-level failures through email, Slack, or webhooks.',
+    icon: Activity,
+    tone: 'monitoring',
+  },
+  {
+    title: 'Code Node Overrides',
+    description:
+      'Use the optional Code Node for controlled, custom JavaScript transformations inside your visual pipeline.',
+    icon: Code2,
+    tone: 'code',
+  },
+] as const
+---
+
+<MarketingLayout landingContext="etl" title="Open-ETL | Privacy-First Data Workflows">
+  <div class="pointer-events-none absolute inset-0">
+    <div class="absolute inset-0 bg-[var(--color-background)]"></div>
+    <div class="absolute left-[-10rem] top-[-4rem] h-[24rem] w-[24rem] rounded-full blur-3xl" style="background-color:color-mix(in srgb,var(--color-primary-light) 78%,white)"></div>
+  </div>
+
+  <section class="relative mx-auto max-w-5xl px-6 pb-8 pt-[calc(6rem+4rem)] text-center">
+    <div class="flex justify-center">
+      <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-primary-hover)_12%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary-light)_40%,white)] text-[var(--color-primary-hover)]">
+        <Database class="h-5 w-5" />
+      </span>
+    </div>
+    <h1 class="mt-6 text-5xl font-semibold text-[var(--color-heading)] sm:text-6xl md:text-7xl">Open-ETL</h1>
+    <p class="mt-5 text-xl font-semibold text-[var(--color-primary-hover)] md:text-2xl">Centralized data workflows. Decentralized execution.</p>
+    <p class="mx-auto mt-6 max-w-4xl text-lg leading-8 text-[var(--color-body)] md:text-xl">
+      Import, process, visualize, and export data with a powerful drag-and-drop interface. Designed for privacy-sensitive sectors requiring strict data-minimization practices.
+    </p>
+  </section>
+
+  <section class="relative mx-auto max-w-7xl px-6 py-10">
+    <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {features.map((card) => {
+        const Icon = card.icon
+        return (
+          <article class="rounded-[1.35rem] border p-6" style="border-color:var(--opense-shell-border);background-color:color-mix(in srgb,var(--color-card) 88%,transparent);box-shadow:var(--opense-shell-shadow-card)">
+            <div data-testid="product-feature-preview" aria-hidden="true" class="mb-8 h-64 overflow-hidden rounded-[1.1rem] border p-4" style="border-color:color-mix(in srgb,var(--color-secondary) 10%,transparent);background-color:color-mix(in srgb,var(--color-background) 82%,white)">
+              <EtlFeaturePreview tone={card.tone} />
+            </div>
+            <h2 class="text-3xl font-semibold text-[var(--color-heading)]">{card.title}</h2>
+            <p class="mt-4 text-base leading-8 text-[var(--color-body)]">{card.description}</p>
+            <span class="mt-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-primary-hover)_12%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary-light)_40%,white)] text-[var(--color-primary-hover)]">
+              <Icon class="h-5 w-5" />
+            </span>
+          </article>
+        )
+      })}
+    </div>
+  </section>
+
+  <section class="relative mx-auto max-w-6xl px-6 py-10">
+    <div class="rounded-[1.75rem] px-6 py-12 text-center md:px-10 md:py-14" style="background-color:color-mix(in srgb,var(--color-heading) 86%,#202610);box-shadow:var(--opense-shell-shadow-lg)">
+      <div class="flex justify-center">
+        <span class="inline-flex h-14 w-14 items-center justify-center rounded-full border border-white/12 bg-white/5 text-white/90">
+          <LockKeyhole class="h-7 w-7" />
+        </span>
+      </div>
+      <h2 class="mt-6 text-4xl font-semibold text-white md:text-5xl">The Hybrid Data Model</h2>
+      <p class="mx-auto mt-5 max-w-3xl text-lg leading-8 text-white/78">
+        Workflow definitions, metadata, and analytics go to the cloud. Your actual CSV files and data transformations stay securely inside your browser's IndexedDB.
+      </p>
+      <a href={ctaHref} data-testid="etl-start-building-workflows" class="mt-8 inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[var(--color-heading)] transition-transform duration-200 hover:-translate-y-0.5">
+        Start Building Workflows
+      </a>
+    </div>
+  </section>
+</MarketingLayout>
+
+<script>
+  import { setActiveLandingContext } from '../lib/authRedirect'
+  setActiveLandingContext('etl')
+</script>

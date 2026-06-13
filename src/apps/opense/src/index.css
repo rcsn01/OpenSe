@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "@repo/ui/styles";
+@import "./components/stoqr-previews/StoqrPreviews.css";
+@source "./**/*.{astro,ts}";
 @source "../../../packages/ui/src";
 @source "../../etl/src";
 @source "../../stoqr/src";
@@ -73,4 +75,137 @@ body {
 
 a {
   color: inherit;
+}
+
+.opense-navbar {
+  font-family: var(--font-family);
+}
+
+.opense-navbar.is-scrolled {
+  color: var(--color-foreground);
+  background-color: color-mix(in srgb, var(--color-card) 88%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--opense-shell-shadow-card);
+}
+
+.architecture-panel {
+  display: none;
+}
+
+.architecture-panel.is-active {
+  display: block;
+}
+
+.architecture-control {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-body);
+}
+
+.architecture-control.is-active {
+  background: var(--color-foreground);
+  color: var(--color-background);
+}
+
+.etl-static-preview {
+  height: 100%;
+  width: 100%;
+}
+
+.etl-static-preview__surface {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border: 4px solid #dbe7f3;
+  border-radius: 1rem;
+  background: #ffffff;
+}
+
+.etl-static-preview__topbar {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 4px solid #dbe7f3;
+  padding: 1rem;
+}
+
+.etl-static-preview__topbar span {
+  height: 0.5rem;
+  width: 0.5rem;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.etl-static-preview__nodes {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.2rem;
+}
+
+.etl-static-preview__node {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: max-content;
+  max-width: 100%;
+  border: 2px solid #dbe7f3;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.75rem 0.9rem;
+}
+
+.etl-static-preview__node:nth-child(2) {
+  margin-left: auto;
+}
+
+.etl-static-preview__node:nth-child(3) {
+  margin-left: 16%;
+}
+
+.etl-static-preview__node.is-primary {
+  border-color: #93c5fd;
+  background: #dbeafe;
+}
+
+.etl-static-preview__dot {
+  height: 0.68rem;
+  width: 0.68rem;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.etl-static-preview__line {
+  position: absolute;
+  inset: auto 0 0;
+  height: 46%;
+  width: 100%;
+}
+
+.etl-static-preview__line path {
+  fill: none;
+  stroke: #60a5fa;
+  stroke-linecap: round;
+  stroke-width: 6;
+}
+
+.etl-static-preview.is-storage .etl-static-preview__dot,
+.etl-static-preview.is-team .etl-static-preview__dot {
+  background: #16a34a;
+}
+
+.etl-static-preview.is-monitoring .etl-static-preview__dot,
+.etl-static-preview.is-code .etl-static-preview__dot {
+  background: #f59e0b;
+}
+
+.stoqr-showcase-preview {
+  min-height: 28rem;
+}
+
+.stoqr-preview-wide-card {
+  margin-top: 0.7rem;
 }

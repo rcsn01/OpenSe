@@ -1,0 +1,54 @@
+---
+import singleServer from '../assets/architecture/single-server.svg?raw'
+import threeServer from '../assets/architecture/three-server.svg?raw'
+import threeServerWithBucket from '../assets/architecture/three-server-with-bucket.svg?raw'
+
+const diagrams = [
+  { title: 'Single Server', label: 'Simple deployment', svg: singleServer },
+  { title: 'Three Server', label: 'Scale services independently', svg: threeServer },
+  { title: 'Three Server + Bucket', label: 'Object storage ready', svg: threeServerWithBucket },
+]
+---
+
+<div class="architecture-carousel" data-architecture-carousel>
+  <div class="overflow-hidden rounded-[1rem] bg-white/70">
+    {diagrams.map((diagram, index) => (
+      <figure class:list={['architecture-panel', index === 0 ? 'is-active' : '']} data-architecture-panel>
+        <div class="mx-auto max-w-4xl [&_svg]:h-auto [&_svg]:w-full" set:html={diagram.svg} />
+        <figcaption class="px-4 pb-4 text-center">
+          <strong class="text-sm text-[var(--color-heading)]">{diagram.title}</strong>
+          <span class="ml-2 text-sm text-[var(--color-body)]">{diagram.label}</span>
+        </figcaption>
+      </figure>
+    ))}
+  </div>
+  <div class="mt-4 flex flex-wrap justify-center gap-2">
+    {diagrams.map((diagram, index) => (
+      <button
+        type="button"
+        class:list={['architecture-control rounded-full border px-4 py-2 text-xs font-semibold transition-colors', index === 0 ? 'is-active' : '']}
+        data-architecture-control
+        data-index={index}
+        style="border-color:var(--opense-shell-border)"
+      >
+        {diagram.title}
+      </button>
+    ))}
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-architecture-carousel]').forEach((carousel) => {
+    const panels = Array.from(carousel.querySelectorAll<HTMLElement>('[data-architecture-panel]'))
+    const controls = Array.from(carousel.querySelectorAll<HTMLButtonElement>('[data-architecture-control]'))
+
+    const setActive = (index: number) => {
+      panels.forEach((panel, panelIndex) => panel.classList.toggle('is-active', panelIndex === index))
+      controls.forEach((control, controlIndex) => control.classList.toggle('is-active', controlIndex === index))
+    }
+
+    controls.forEach((control) => {
+      control.addEventListener('click', () => setActive(Number(control.dataset.index || 0)))
+    })
+  })
+</script>
