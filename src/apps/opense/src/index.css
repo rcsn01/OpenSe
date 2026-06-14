@@ -73,6 +73,11 @@ body {
   font-family: 'Space Grotesk', 'Sora', sans-serif;
 }
 
+html,
+body {
+  overflow-x: clip;
+}
+
 a {
   color: inherit;
 }
