@@ -91,6 +91,21 @@ a {
   box-shadow: var(--opense-shell-shadow-card);
 }
 
+.opense-cta-dark {
+  background-color: var(--color-suiteNavy);
+  color: #fff !important;
+  box-shadow: var(--opense-shell-shadow-card);
+}
+
+.opense-cta-dark > * {
+  color: inherit;
+}
+
+.opense-cta-light {
+  background-color: #fff;
+  color: var(--color-heading) !important;
+}
+
 .mobile-nav-details > summary::-webkit-details-marker {
   display: none;
 }

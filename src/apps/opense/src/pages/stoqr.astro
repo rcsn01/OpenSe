@@ -1,5 +1,5 @@
 ---
-import { ArrowRight, BellRing, Boxes, CheckCircle2, ClipboardList, LayoutDashboard, PackageSearch, Printer, QrCode, ShieldCheck, ShoppingCart } from 'lucide-astro'
+import { ArrowRight, Boxes, CheckCircle2, ClipboardList, LayoutDashboard, PackageSearch, Printer, ShieldCheck, ShoppingCart } from 'lucide-astro'
 import dashboardImage from '../assets/marketing/stoqr/stoqr-dashboard.png'
 import inventoryImage from '../assets/marketing/stoqr/stoqr-inventory.png'
 import labelEditorImage from '../assets/marketing/stoqr/stoqr-label-editor.png'
@@ -12,7 +12,6 @@ import reportInventoryImage from '../assets/marketing/stoqr/stoqr-report-invento
 import reportPurchasingImage from '../assets/marketing/stoqr/stoqr-report-purchasing.png'
 import reportStockAccuracyImage from '../assets/marketing/stoqr/stoqr-report-stock-accuracy.png'
 import reportStockMovementImage from '../assets/marketing/stoqr/stoqr-report-stock-movement.png'
-import StoqrPreview from '../components/StoqrPreview.astro'
 import StoqrScreenshot from '../components/StoqrScreenshot.astro'
 import MarketingLayout from '../layouts/MarketingLayout.astro'
 import { buildNavbarGetStartedPath } from '../lib/authRedirect'
@@ -46,16 +45,6 @@ const features = [
       caption: 'Browse products, locations, quantities, SKU details, and low-stock states without losing context.',
     },
     bullets: ['Organize products by location, bin, type, or custom workflow.', 'Filter low-stock and out-of-stock items without hunting.', 'Keep SKU, quantity, and status details visible at once.'],
-  },
-  {
-    title: 'Scanner',
-    active: 'Scanner',
-    eyebrow: 'Move faster on the floor.',
-    description: 'Scan barcode and QR labels from the browser, match the right product instantly, then adjust stock.',
-    icon: QrCode,
-    tone: 'cool',
-    screenshot: null,
-    bullets: ['Use the camera scanner without installing a native app.', 'Match the scanned item to its product record immediately.', 'Adjust stock from the same scan action surface.'],
   },
   {
     title: 'Label Studio',
@@ -98,16 +87,6 @@ const features = [
       caption: 'Create and track purchase orders from request through receiving.',
     },
     bullets: ['Track supplier, approval, receiving, and delay status.', 'Connect reorder pressure to purchase order workflows.', 'Keep inbound replenishment visible to the inventory team.'],
-  },
-  {
-    title: 'Alerts',
-    active: 'Alerts',
-    eyebrow: 'Let the system raise its hand first.',
-    description: 'Configure low-stock, expiry, reorder, delivery, and connector notifications.',
-    icon: BellRing,
-    tone: 'warm',
-    screenshot: null,
-    bullets: ['Trigger alerts for low stock, expiry, delivery, and connectors.', 'Separate critical events from ordinary operational noise.', 'Route the right issue to the right team sooner.'],
   },
   {
     title: 'Organisation RBAC',
@@ -165,13 +144,6 @@ const workflowScreenshots = [
 ] as const
 
 const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [{ ...feature, screenshot: feature.screenshot }] : []))
-const mockFeatures = features.flatMap((feature) => (feature.screenshot ? [] : [feature]))
-
-const toneBackground = {
-  warm: 'linear-gradient(180deg,color-mix(in srgb,var(--color-warning-light) 36%,white) 0%,color-mix(in srgb,var(--color-background) 86%,white) 100%)',
-  cool: 'linear-gradient(180deg,color-mix(in srgb,var(--color-info-light) 34%,white) 0%,color-mix(in srgb,var(--color-background) 88%,white) 100%)',
-  plain: 'linear-gradient(180deg,white 0%,color-mix(in srgb,var(--color-background) 88%,white) 100%)',
-}
 ---
 
 <MarketingLayout landingContext="stoqr" title="Open-StoQR | Inventory Operations">
@@ -191,7 +163,7 @@ const toneBackground = {
       Track, scan, procure, report, and govern inventory operations from an open source product suite your team can inspect before they deploy it.
     </p>
     <div class="mt-9 flex flex-wrap items-center justify-center gap-4">
-      <a href={ctaHref} data-testid="stoqr-deploy-open-stoqr" class="inline-flex min-w-44 items-center justify-center whitespace-nowrap rounded-full bg-[var(--color-foreground)] px-7 py-3 text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
+      <a href={ctaHref} data-testid="stoqr-deploy-open-stoqr" class="opense-cta-dark inline-flex min-w-44 items-center justify-center whitespace-nowrap rounded-full px-7 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
       <a href="#stoqr-dashboard" class="inline-flex items-center justify-center rounded-full border border-[var(--opense-shell-border-strong)] bg-white/72 px-7 py-3 text-sm font-semibold text-[var(--color-heading)] transition-transform duration-200 hover:-translate-y-0.5">See the UI</a>
     </div>
   </section>
@@ -223,7 +195,7 @@ const toneBackground = {
                 ))}
               </ul>
               <div class="mt-10 flex flex-wrap items-center gap-5">
-                <a href={ctaHref} class="inline-flex min-w-40 items-center justify-center whitespace-nowrap rounded-full bg-[var(--color-foreground)] px-6 py-3 text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
+                <a href={ctaHref} class="opense-cta-dark inline-flex min-w-40 items-center justify-center whitespace-nowrap rounded-full px-6 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
                 <a href="#stoqr-reports" class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-secondary)]">
                   See all workflows
                   <ArrowRight class="h-4 w-4" />
@@ -255,46 +227,6 @@ const toneBackground = {
     </div>
   </section>
 
-  {mockFeatures.map((feature) => {
-    const Icon = feature.icon
-    return (
-      <section id={`stoqr-${feature.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} class="relative overflow-hidden border-t border-[color:var(--opense-shell-border)] px-6 py-20 md:py-28" style={`background:${toneBackground[feature.tone]}`}>
-        <div class="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-16">
-          <div class="max-w-xl">
-            <div class="flex items-center gap-4">
-              <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_16%,transparent)] bg-white/72 text-[var(--color-secondary)]">
-                <Icon class="h-5 w-5" />
-              </span>
-              <p class="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--color-secondary)]">{feature.eyebrow}</p>
-            </div>
-            <h2 class="mt-7 text-4xl font-semibold leading-[1.03] text-[var(--color-heading)] md:text-6xl">{feature.title}</h2>
-            <p class="mt-5 text-lg leading-8 text-[var(--color-body)] md:text-xl">{feature.description}</p>
-            <ul class="mt-10 space-y-6">
-              {feature.bullets.map((bullet) => (
-                <li class="flex gap-4 text-left text-base leading-7 text-[var(--color-foreground)]">
-                  <span class="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--color-secondary)]">
-                    <CheckCircle2 class="h-5 w-5" />
-                  </span>
-                  <span>{bullet}</span>
-                </li>
-              ))}
-            </ul>
-            <div class="mt-10 flex flex-wrap items-center gap-5">
-              <a href={ctaHref} class="inline-flex min-w-40 items-center justify-center whitespace-nowrap rounded-full bg-[var(--color-foreground)] px-6 py-3 text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
-              <a href="#stoqr-reports" class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-secondary)]">
-                See all workflows
-                <ArrowRight class="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-          <div data-testid="product-feature-preview" class="stoqr-showcase-preview w-full is-right">
-            <StoqrPreview active={feature.active} eyebrow={feature.eyebrow} title={feature.title} />
-          </div>
-        </div>
-      </section>
-    )
-  })}
-
   <section class="relative border-t border-[color:var(--opense-shell-border)] bg-white px-6 py-20 md:py-28">
     <div class="mx-auto max-w-7xl">
       <div class="mx-auto max-w-3xl text-center">
@@ -318,7 +250,7 @@ const toneBackground = {
   <section class="relative border-t border-[color:var(--opense-shell-border)] bg-[var(--color-foreground)] px-6 py-24 text-center text-white">
     <h2 class="mx-auto max-w-4xl text-5xl font-semibold md:text-7xl">Ready to organize your assets?</h2>
     <p class="mx-auto mt-6 max-w-3xl text-lg leading-8 text-white/76">Upgrade your team's efficiency with Open-StoQR. Open source, customizable, and easy to deploy for your organization.</p>
-    <a href={ctaHref} class="mt-9 inline-flex min-w-44 items-center justify-center whitespace-nowrap rounded-full bg-white px-7 py-3 text-sm font-semibold text-[var(--color-heading)] transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
+    <a href={ctaHref} class="opense-cta-light mt-9 inline-flex min-w-44 items-center justify-center whitespace-nowrap rounded-full px-7 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
   </section>
 
   <script is:inline>
@@ -392,15 +324,11 @@ const toneBackground = {
       margin: 0;
       opacity: 0;
       pointer-events: none;
-      transform: translateY(1rem) scale(0.985);
-      transition:
-        opacity 260ms ease,
-        transform 260ms ease;
+      transition: opacity 260ms ease;
     }
 
     .stoqr-scroll-showcase__figure.is-active {
       opacity: 1;
-      transform: translateY(0) scale(1);
     }
 
     .stoqr-scroll-showcase__media {
