@@ -30,7 +30,7 @@ const {
     {includeRuntimeConfig ? <script is:inline src="/config.js"></script> : null}
   </head>
   <body data-landing-context={landingContext}>
-    <div class="relative min-h-screen overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
+    <div class="relative min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
       <MarketingNavbar landingContext={landingContext} />
       <main>
         <slot />

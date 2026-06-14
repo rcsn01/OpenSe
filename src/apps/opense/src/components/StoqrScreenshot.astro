@@ -1,0 +1,65 @@
+---
+import type { ImageMetadata } from 'astro'
+
+interface Props {
+  src: ImageMetadata
+  alt: string
+  caption?: string
+  variant?: 'feature' | 'gallery'
+}
+
+const { src, alt, caption, variant = 'feature' } = Astro.props
+---
+
+<figure class:list={['stoqr-screenshot', `is-${variant}`]}>
+  <div class="stoqr-screenshot__media">
+    <img
+      src={src.src}
+      alt={alt}
+      width={src.width}
+      height={src.height}
+      loading="lazy"
+      decoding="async"
+      class="stoqr-screenshot__image"
+    />
+  </div>
+  {caption ? <figcaption class="stoqr-screenshot__caption">{caption}</figcaption> : null}
+</figure>
+
+<style>
+  .stoqr-screenshot {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0;
+  }
+
+  .stoqr-screenshot__media {
+    overflow: hidden;
+    border: 1px solid var(--opense-shell-border);
+    border-radius: 0.9rem;
+    background: white;
+    box-shadow: var(--opense-shell-shadow-card);
+  }
+
+  .stoqr-screenshot__image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .stoqr-screenshot__caption {
+    color: var(--color-body);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .stoqr-screenshot.is-gallery .stoqr-screenshot__media {
+    border-radius: 0.75rem;
+    box-shadow: none;
+  }
+
+  .stoqr-screenshot.is-gallery .stoqr-screenshot__caption {
+    padding-inline: 0.1rem;
+    font-size: 0.9rem;
+  }
+</style>
