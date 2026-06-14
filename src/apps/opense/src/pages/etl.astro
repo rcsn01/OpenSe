@@ -1,4 +1,7 @@
 ---
+import dashboardImage from '../assets/marketing/etl/etl-dashboard.png'
+import organisationTeamsImage from '../assets/marketing/etl/etl-organisation-teams.png'
+import workflowBuilderImage from '../assets/marketing/etl/etl-workflow-builder.png'
 import EtlFeaturePreview from '../components/EtlFeaturePreview.astro'
 import MarketingIcon from '../components/MarketingIcon.astro'
 import MarketingLayout from '../layouts/MarketingLayout.astro'
@@ -7,56 +10,112 @@ import { buildNavbarGetStartedPath } from '../lib/authRedirect'
 const ctaHref = buildNavbarGetStartedPath('etl')
 const features = [
   {
+    id: 'etl-dashboard',
+    title: 'Dashboard',
+    eyebrow: 'See workflow health before opening a run.',
+    description:
+      'Review active workflows, recent executions, health signals, and team activity from the first screen operators see.',
+    icon: 'layout',
+    preview: {
+      kind: 'screenshot',
+      src: dashboardImage,
+      alt: 'Open-ETL dashboard showing workflow activity, execution status, and operations metrics.',
+      caption: 'Workflow activity, execution health, and operational status in one dashboard.',
+    },
+    bullets: ['Track workflow status and recent runs at a glance.', 'Spot failures, queued work, and team activity early.', 'Give operators one place to start before editing pipelines.'],
+  },
+  {
+    id: 'etl-privacy-first-processing',
     title: 'Privacy-First Processing',
+    eyebrow: 'Keep raw source data on the device.',
     description:
       'Source datasets are processed entirely in your browser using IndexedDB. Raw records are never sent to a third-party backend.',
     icon: 'shield',
-    tone: 'privacy',
+    preview: {
+      kind: 'fallback',
+      tone: 'privacy',
+      caption: 'Browser-local processing keeps raw CSV records out of third-party backends.',
+    },
+    bullets: ['Process CSV files inside the browser runtime.', 'Persist source chunks locally with IndexedDB.', 'Send only workflow definitions, metadata, and run summaries to the cloud.'],
   },
   {
+    id: 'etl-visual-workflow-builder',
     title: 'Visual Workflow Builder',
+    eyebrow: 'Compose pipelines without losing escape hatches.',
     description:
       'No-code and low-code pipeline authoring. Drag, drop, and connect nodes to filter, sort, join, pivot, and transform CSV data.',
     icon: 'workflow',
-    tone: 'workflow',
+    preview: {
+      kind: 'screenshot',
+      src: workflowBuilderImage,
+      alt: 'Open-ETL visual workflow builder showing connected transform nodes on a canvas.',
+      caption: 'Drag, connect, and configure workflow nodes across a visual pipeline canvas.',
+    },
+    bullets: ['Build transformations from connected workflow nodes.', 'Filter, sort, join, pivot, and export without leaving the canvas.', 'Move from no-code steps to controlled code when needed.'],
   },
   {
+    id: 'etl-local-browser-persistence',
     title: 'Local Browser Persistence',
+    eyebrow: 'Work with larger files without uploading them.',
     description:
       'Efficient local chunking and storage for large datasets during execution. Supabase stores definitions and lightweight run logs.',
     icon: 'database',
-    tone: 'storage',
+    preview: {
+      kind: 'fallback',
+      tone: 'storage',
+      caption: 'Local chunks stay in browser storage while lightweight metadata syncs to the app backend.',
+    },
+    bullets: ['Chunk large datasets for browser-side execution.', 'Keep intermediate records close to the workflow runner.', 'Sync definitions and lightweight run logs without copying raw data.'],
   },
   {
+    id: 'etl-team-governance',
     title: 'Team & Governance',
+    eyebrow: 'Make shared workflows understandable and protected.',
     description:
       'Multi-organization workspaces with role-aware collaboration and read-only protection for important organization templates.',
     icon: 'users-round',
-    tone: 'team',
+    preview: {
+      kind: 'screenshot',
+      src: organisationTeamsImage,
+      alt: 'Open-ETL organization team screen showing members, roles, and workspace access controls.',
+      caption: 'Manage members, roles, and protected organization templates for shared workflow work.',
+    },
+    bullets: ['Separate personal work from organization templates.', 'Protect important workflows with read-only access where needed.', 'Invite team members into role-aware workspaces.'],
   },
   {
+    id: 'etl-monitoring-logs',
     title: 'Monitoring & Logs',
+    eyebrow: 'Keep run outcomes visible after execution.',
     description:
       'Detailed execution run logging with status, timing, and errors. Push workflow-level failures through email, Slack, or webhooks.',
     icon: 'activity',
-    tone: 'monitoring',
+    preview: {
+      kind: 'fallback',
+      tone: 'monitoring',
+      caption: 'Run logs capture execution status, timing, errors, and alert delivery.',
+    },
+    bullets: ['Review status, duration, and error context for each run.', 'Send workflow failures to email, Slack, or webhooks.', 'Keep execution history available without storing raw source files.'],
   },
   {
+    id: 'etl-code-node-overrides',
     title: 'Code Node Overrides',
+    eyebrow: 'Use code where visual steps are not enough.',
     description:
       'Use the optional Code Node for controlled, custom JavaScript transformations inside your visual pipeline.',
     icon: 'code',
-    tone: 'code',
+    preview: {
+      kind: 'fallback',
+      tone: 'code',
+      caption: 'Controlled JavaScript nodes handle custom transformations inside visual workflows.',
+    },
+    bullets: ['Add custom JavaScript transforms inside the workflow graph.', 'Keep bespoke logic explicit and reviewable.', 'Return transformed rows to the same browser-local pipeline.'],
   },
 ] as const
+
+const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
 ---
 
 <MarketingLayout landingContext="etl" title="Open-ETL | Privacy-First Data Workflows">
-  <div class="pointer-events-none absolute inset-0">
-    <div class="absolute inset-0 bg-[var(--color-background)]"></div>
-    <div class="absolute left-[-10rem] top-[-4rem] h-[24rem] w-[24rem] rounded-full blur-3xl" style="background-color:color-mix(in srgb,var(--color-primary-light) 78%,white)"></div>
-  </div>
-
   <section class="relative mx-auto max-w-5xl px-6 pb-8 pt-[calc(6rem+4rem)] text-center">
     <div class="flex justify-center">
       <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-primary-hover)_12%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary-light)_40%,white)] text-[var(--color-primary-hover)]">
@@ -70,22 +129,89 @@ const features = [
     </p>
   </section>
 
-  <section class="relative mx-auto max-w-7xl px-6 py-10">
-    <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-      {features.map((card) => {
-        return (
-          <article class="rounded-[1.35rem] border p-6" style="border-color:var(--opense-shell-border);background-color:color-mix(in srgb,var(--color-card) 88%,transparent);box-shadow:var(--opense-shell-shadow-card)">
-            <div data-testid="product-feature-preview" aria-hidden="true" class="mb-8 h-64 overflow-hidden rounded-[1.1rem] border p-4" style="border-color:color-mix(in srgb,var(--color-secondary) 10%,transparent);background-color:color-mix(in srgb,var(--color-background) 82%,white)">
-              <EtlFeaturePreview tone={card.tone} />
-            </div>
-            <h2 class="text-3xl font-semibold text-[var(--color-heading)]">{card.title}</h2>
-            <p class="mt-4 text-base leading-8 text-[var(--color-body)]">{card.description}</p>
-            <span class="mt-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-primary-hover)_12%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary-light)_40%,white)] text-[var(--color-primary-hover)]">
-              <MarketingIcon name={card.icon} class="h-5 w-5" />
-            </span>
-          </article>
-        )
-      })}
+  <section class="etl-scroll-showcase relative border-t border-[color:var(--opense-shell-border)] bg-white px-6 py-20 md:py-28" data-etl-scroll-showcase>
+    <div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-16">
+      <div class="etl-scroll-showcase__copy">
+        {features.map((feature) => {
+          const preview = feature.preview
+          return (
+            <article id={feature.id} data-etl-step={feature.id} data-testid="product-feature-preview" class="etl-scroll-showcase__step">
+              <div class="flex items-center gap-4">
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-primary-hover)_12%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary-light)_40%,white)] text-[var(--color-primary-hover)]">
+                  <MarketingIcon name={feature.icon} class="h-5 w-5" />
+                </span>
+                <p class="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--color-primary-hover)]">{feature.eyebrow}</p>
+              </div>
+              <h2 class="mt-7 text-4xl font-semibold leading-[1.03] text-[var(--color-heading)] md:text-6xl">{feature.title}</h2>
+              <p class="mt-5 text-lg leading-8 text-[var(--color-body)] md:text-xl">{feature.description}</p>
+              <ul class="mt-10 space-y-6">
+                {feature.bullets.map((bullet) => (
+                  <li class="flex gap-4 text-left text-base leading-7 text-[var(--color-foreground)]">
+                    <span class="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--color-primary-hover)]">
+                      <MarketingIcon name="check-circle" class="h-5 w-5" />
+                    </span>
+                    <span>{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+              <div class="mt-10 lg:hidden">
+                <figure class="etl-scroll-showcase__inline-preview">
+                  <div class:list={['etl-scroll-showcase__media', preview.kind === 'fallback' ? 'is-static' : '']}>
+                    {
+                      preview.kind === 'screenshot' ? (
+                        <img
+                          src={preview.src.src}
+                          alt={preview.alt}
+                          width={preview.src.width}
+                          height={preview.src.height}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <EtlFeaturePreview tone={preview.tone} />
+                      )
+                    }
+                  </div>
+                  <figcaption>{preview.caption}</figcaption>
+                </figure>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+
+      <div class="etl-scroll-showcase__visual hidden lg:block" aria-hidden="true">
+        <div class="etl-scroll-showcase__sticky">
+          {features.map((feature, index) => {
+            const preview = feature.preview
+            return (
+              <figure class:list={['etl-scroll-showcase__figure', index === 0 ? 'is-active' : '']} data-etl-image={feature.id}>
+                <div class:list={['etl-scroll-showcase__media', preview.kind === 'fallback' ? 'is-static' : '']}>
+                  {
+                    preview.kind === 'screenshot' ? (
+                      <img
+                        src={index === 0 ? preview.src.src : transparentPixel}
+                        data-etl-lazy-image
+                        data-src={preview.src.src}
+                        data-loaded={index === 0 ? 'true' : undefined}
+                        alt=""
+                        width={preview.src.width}
+                        height={preview.src.height}
+                        loading={index === 0 ? 'eager' : 'lazy'}
+                        decoding="async"
+                        fetchpriority={index === 0 ? 'high' : 'auto'}
+                      />
+                    ) : (
+                      <EtlFeaturePreview tone={preview.tone} />
+                    )
+                  }
+                </div>
+                <figcaption>{preview.caption}</figcaption>
+              </figure>
+            )
+          })}
+        </div>
+      </div>
     </div>
   </section>
 
@@ -105,4 +231,175 @@ const features = [
       </a>
     </div>
   </section>
+
+  <script is:inline data-astro-rerun>
+    ;(() => {
+      const cleanupKey = '__etlScrollShowcaseCleanup'
+      const showcase = document.querySelector('[data-etl-scroll-showcase]')
+      const previousCleanup = showcase?.[cleanupKey]
+      if (typeof previousCleanup === 'function') previousCleanup()
+
+      const steps = Array.from(showcase?.querySelectorAll('[data-etl-step]') ?? [])
+      const images = Array.from(showcase?.querySelectorAll('[data-etl-image]') ?? [])
+      const observers = []
+
+      const loadFigureImage = (figure) => {
+        const image = figure?.querySelector('[data-etl-lazy-image]')
+        if (!image || image.dataset.loaded === 'true') return
+
+        const src = image.dataset.src
+        if (src) image.setAttribute('src', src)
+        image.dataset.loaded = 'true'
+      }
+
+      const loadAroundStep = (id) => {
+        const activeIndex = images.findIndex((image) => image.getAttribute('data-etl-image') === id)
+        if (activeIndex < 0) return
+
+        ;[activeIndex - 1, activeIndex, activeIndex + 1].forEach((index) => {
+          loadFigureImage(images[index])
+        })
+      }
+
+      const setActiveStep = (id) => {
+        loadAroundStep(id)
+        images.forEach((image) => {
+          image.classList.toggle('is-active', image.getAttribute('data-etl-image') === id)
+        })
+        steps.forEach((step) => {
+          step.classList.toggle('is-active', step.getAttribute('data-etl-step') === id)
+        })
+      }
+
+      const firstStepId = steps[0]?.getAttribute('data-etl-step')
+      if (!firstStepId) return
+
+      setActiveStep(firstStepId)
+
+      if ('IntersectionObserver' in window) {
+        const activeObserver = new IntersectionObserver(
+          (entries) => {
+            const active = entries
+              .filter((entry) => entry.isIntersecting)
+              .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
+            const id = active?.target.getAttribute('data-etl-step')
+            if (id) setActiveStep(id)
+          },
+          {
+            rootMargin: '-24% 0px -36% 0px',
+            threshold: [0.2, 0.35, 0.5, 0.65, 0.8],
+          },
+        )
+
+        const preloadObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              const id = entry.target.getAttribute('data-etl-step')
+              if (entry.isIntersecting && id) loadAroundStep(id)
+            })
+          },
+          {
+            rootMargin: '80% 0px',
+            threshold: 0.01,
+          },
+        )
+
+        steps.forEach((step) => {
+          activeObserver.observe(step)
+          preloadObserver.observe(step)
+        })
+        observers.push(activeObserver, preloadObserver)
+      } else {
+        images.forEach(loadFigureImage)
+      }
+
+      showcase[cleanupKey] = () => {
+        observers.forEach((observer) => observer.disconnect())
+        delete showcase[cleanupKey]
+      }
+    })()
+  </script>
+
+  <style>
+    .etl-scroll-showcase__step {
+      display: grid;
+      align-content: center;
+      min-height: 72vh;
+      padding-block: 3.5rem;
+      opacity: 0.72;
+      transition:
+        opacity 220ms ease,
+        transform 220ms ease;
+    }
+
+    .etl-scroll-showcase__step.is-active {
+      opacity: 1;
+    }
+
+    .etl-scroll-showcase__visual {
+      position: relative;
+      min-width: 0;
+    }
+
+    .etl-scroll-showcase__sticky {
+      position: sticky;
+      top: 7rem;
+      height: min(45rem, calc(100vh - 9rem));
+    }
+
+    .etl-scroll-showcase__figure {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      align-content: center;
+      gap: 1rem;
+      margin: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 260ms ease;
+    }
+
+    .etl-scroll-showcase__figure.is-active {
+      opacity: 1;
+    }
+
+    .etl-scroll-showcase__inline-preview {
+      display: grid;
+      gap: 0.85rem;
+      margin: 0;
+    }
+
+    .etl-scroll-showcase__media {
+      overflow: hidden;
+    }
+
+    .etl-scroll-showcase__media.is-static {
+      aspect-ratio: 1719 / 1064;
+      border: 1px solid color-mix(in srgb, var(--color-secondary) 10%, transparent);
+      background: color-mix(in srgb, var(--color-background) 82%, white);
+      padding: 1rem;
+    }
+
+    .etl-scroll-showcase__media img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .etl-scroll-showcase__figure figcaption,
+    .etl-scroll-showcase__inline-preview figcaption {
+      max-width: 42rem;
+      color: var(--color-body);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1023px) {
+      .etl-scroll-showcase__step {
+        min-height: 0;
+        padding-block: 3rem;
+        opacity: 1;
+      }
+    }
+  </style>
 </MarketingLayout>

@@ -24,6 +24,18 @@ test.describe('OpenSe Landing', () => {
     await page.getByTestId('nav-open-etl-product').click();
     await expect(page).toHaveURL(`${openseUrl}/etl`);
     await expect(page.getByRole('heading', { name: /open-etl/i })).toBeVisible();
+    await expect(page.getByTestId('product-feature-preview')).toHaveCount(7);
+    for (const heading of [
+      'Dashboard',
+      'Privacy-First Processing',
+      'Visual Workflow Builder',
+      'Local Browser Persistence',
+      'Team & Governance',
+      'Monitoring & Logs',
+      'Code Node Overrides',
+    ]) {
+      await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+    }
 
     await page.goto('/');
     await page.getByTestId('nav-open-stoqr-product').click();
