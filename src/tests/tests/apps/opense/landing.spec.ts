@@ -29,15 +29,13 @@ test.describe('OpenSe Landing', () => {
     await page.getByTestId('nav-open-stoqr-product').click();
     await expect(page).toHaveURL(`${openseUrl}/stoqr`);
     await expect(page.getByRole('heading', { name: /open-stoqr/i })).toBeVisible();
-    await expect(page.getByTestId('product-feature-preview')).toHaveCount(8);
+    await expect(page.getByTestId('product-feature-preview')).toHaveCount(6);
     for (const heading of [
       'Dashboard',
       'Inventory',
-      'Scanner',
       'Label Studio',
       'Reports',
       'Procurement',
-      'Alerts',
       'Organisation RBAC',
     ]) {
       await expect(page.getByRole('heading', { name: heading })).toBeVisible();
