@@ -18,6 +18,8 @@ const {
   includeFooter = true,
   includeRuntimeConfig = false,
 } = Astro.props
+
+const { ClientRouter } = import.meta.env.PROD ? await import('astro:transitions') : { ClientRouter: null }
 ---
 
 <!doctype html>
@@ -27,6 +29,7 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <title>{title}</title>
+    {ClientRouter ? <ClientRouter /> : null}
     {includeRuntimeConfig ? <script is:inline src="/config.js"></script> : null}
   </head>
   <body data-landing-context={landingContext}>

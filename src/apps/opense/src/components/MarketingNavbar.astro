@@ -1,6 +1,6 @@
 ---
-import { Menu, Network, X } from 'lucide-astro'
 import { buildNavbarGetStartedPath, type LandingContext } from '../lib/authRedirect'
+import MarketingIcon from './MarketingIcon.astro'
 
 interface Props {
   landingContext: LandingContext
@@ -15,7 +15,7 @@ const getStartedHref = buildNavbarGetStartedPath(landingContext)
 >
   <a href="/" data-astro-prefetch data-testid="nav-opense-product" class="flex shrink-0 items-center gap-2 text-xl font-bold tracking-tight">
     <span class="grid h-9 w-9 place-items-center rounded-full bg-white/10">
-      <Network class="h-5 w-5" />
+      <MarketingIcon name="network" class="h-5 w-5" />
     </span>
     <span>OpenSe</span>
   </a>
@@ -36,8 +36,8 @@ const getStartedHref = buildNavbarGetStartedPath(landingContext)
     </a>
     <details class="mobile-nav-details md:hidden">
       <summary class="grid h-8 w-8 cursor-pointer list-none place-items-center rounded-full" aria-label="Toggle navigation">
-        <Menu class="menu-icon h-5 w-5" />
-        <X class="close-icon h-5 w-5" />
+        <MarketingIcon name="menu" class="menu-icon h-5 w-5" />
+        <MarketingIcon name="x" class="close-icon h-5 w-5" />
       </summary>
       <div
         class="absolute left-0 right-0 top-full mt-3 flex flex-col gap-3 rounded-[1.5rem] p-4 text-[var(--color-foreground)]"

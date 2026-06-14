@@ -1,6 +1,6 @@
 ---
-import { ArrowRight, Boxes, CheckCircle2, Command, Database, Network, Workflow } from 'lucide-astro'
 import ArchitectureCarousel from '../components/ArchitectureCarousel.astro'
+import MarketingIcon from '../components/MarketingIcon.astro'
 import MarketingLayout from '../layouts/MarketingLayout.astro'
 
 const productCards = [
@@ -9,7 +9,7 @@ const productCards = [
     description:
       'A visual, no-code workflow builder that processes your sensitive datasets locally in the browser. Say goodbye to exposing raw data to third-party backends.',
     href: '/etl',
-    icon: Database,
+    icon: 'database',
     accent: 'color-mix(in srgb, var(--color-primary-light) 74%, white)',
     bulletColor: 'var(--color-primary-hover)',
     ctaLabel: 'Learn more about ETL',
@@ -21,32 +21,32 @@ const productCards = [
     description:
       'Smart inventory tracking system with integrated QR/Barcode scanning, comprehensive reporting, and a custom label design studio.',
     href: '/stoqr',
-    icon: Boxes,
+    icon: 'boxes',
     accent: 'color-mix(in srgb, var(--color-warning-light) 68%, white)',
     bulletColor: 'var(--color-secondary)',
     ctaLabel: 'Learn more about StoQR',
     testId: 'launch-stoqr',
     bullets: ['Camera-based QR/Barcode scanning', 'Built-in Label Studio and printing', 'Automated low-stock alerts'],
   },
-]
+] as const
 
 const infrastructureHighlights = [
   {
     title: 'Postgres & Supabase',
     description: 'Robust relational data modeling utilizing PostgreSQL with Row Level Security managed by Supabase.',
-    icon: Database,
+    icon: 'database',
   },
   {
     title: 'Kubernetes Ready',
     description: 'Designed for container orchestration. Deploy via K8s, K3s, Docker, or Portainer environments.',
-    icon: Workflow,
+    icon: 'workflow',
   },
   {
     title: 'Monorepo Frontend',
     description: 'Turbo Repo architecture powering high-performance, modular product applications for ETL and StoQR.',
-    icon: Network,
+    icon: 'network',
   },
-]
+] as const
 ---
 
 <MarketingLayout landingContext="opense" title="OpenSe | Open Source SaaS Stack">
@@ -86,12 +86,11 @@ const infrastructureHighlights = [
 
   <section class="relative mx-auto grid max-w-6xl gap-6 px-6 py-12 lg:grid-cols-2">
     {productCards.map((card) => {
-      const Icon = card.icon
       return (
         <article class="relative overflow-hidden rounded-[1.7rem] border p-8 backdrop-blur" style="border-color:var(--opense-shell-border);background-color:color-mix(in srgb,var(--color-card) 88%,transparent);box-shadow:var(--opense-shell-shadow-card)">
           <div class="absolute right-[-2rem] top-[-2rem] h-28 w-28 rounded-full" style={`background-color:${card.accent}`}></div>
           <span class="relative inline-flex h-12 w-12 items-center justify-center rounded-2xl border" style={`border-color:var(--opense-shell-border);color:${card.bulletColor}`}>
-            <Icon class="h-6 w-6" />
+            <MarketingIcon name={card.icon} class="h-6 w-6" />
           </span>
           <h2 class="relative mt-8 text-4xl font-semibold text-[var(--color-heading)]">{card.title}</h2>
           <p class="relative mt-4 max-w-xl text-lg leading-8 text-[var(--color-body)]">{card.description}</p>
@@ -99,7 +98,7 @@ const infrastructureHighlights = [
             {card.bullets.map((bullet) => (
               <li class="flex items-center gap-3 text-[var(--color-foreground)]">
                 <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border" style={`border-color:color-mix(in srgb,var(--color-border) 82%,transparent);color:${card.bulletColor}`}>
-                  <CheckCircle2 class="h-3.5 w-3.5" />
+                  <MarketingIcon name="check-circle" class="h-3.5 w-3.5" />
                 </span>
                 <span class="text-base">{bullet}</span>
               </li>
@@ -107,7 +106,7 @@ const infrastructureHighlights = [
           </ul>
           <a href={card.href} data-astro-prefetch class="relative mt-10 inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold transition-colors duration-200" style="border-color:var(--opense-shell-border-strong);background-color:rgba(255,255,255,0.72);color:var(--color-heading)">
             {card.ctaLabel}
-            <ArrowRight class="h-4 w-4" />
+            <MarketingIcon name="arrow-right" class="h-4 w-4" />
           </a>
         </article>
       )
@@ -118,7 +117,7 @@ const infrastructureHighlights = [
     <div class="rounded-[2rem] border p-8 md:p-10" style="border-color:var(--opense-shell-border);background-color:color-mix(in srgb,var(--color-card) 80%,transparent);box-shadow:var(--opense-shell-shadow-card)">
       <div class="flex justify-center">
         <span class="inline-flex h-14 w-14 items-center justify-center rounded-full border bg-white/85 text-[var(--color-heading)]" style="border-color:var(--opense-shell-border)">
-          <Command class="h-7 w-7" />
+          <MarketingIcon name="command" class="h-7 w-7" />
         </span>
       </div>
       <h2 class="mt-6 text-center text-4xl font-semibold text-[var(--color-heading)] md:text-5xl">Own Your Infrastructure</h2>
@@ -130,11 +129,10 @@ const infrastructureHighlights = [
       </div>
       <div class="mt-10 grid gap-8 md:grid-cols-3">
         {infrastructureHighlights.map((item) => {
-          const Icon = item.icon
           return (
             <article class="flex items-start gap-4">
               <span class="mt-1 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/75 text-[var(--color-primary-hover)] shadow-sm">
-                <Icon class="h-5 w-5" />
+                <MarketingIcon name={item.icon} class="h-5 w-5" />
               </span>
               <div>
                 <h3 class="text-lg font-semibold text-[var(--color-heading)]">{item.title}</h3>

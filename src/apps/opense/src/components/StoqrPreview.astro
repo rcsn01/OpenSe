@@ -1,5 +1,5 @@
 ---
-import { Bell, Boxes, Building2, FileText, LayoutDashboard, Printer, ScanLine, Search, ShoppingCart } from 'lucide-astro'
+import MarketingIcon from './MarketingIcon.astro'
 
 interface Props {
   active: 'Dashboard' | 'Inventory' | 'Scanner' | 'Label Studio' | 'Reports' | 'Procurement' | 'Alerts' | 'Organisations'
@@ -9,14 +9,14 @@ interface Props {
 
 const { active, eyebrow, title } = Astro.props
 const menuItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, group: 'main' },
-  { label: 'Inventory', icon: Boxes, group: 'main' },
-  { label: 'Scanner', icon: ScanLine, group: 'main' },
-  { label: 'Label Studio', icon: Printer, group: 'main' },
-  { label: 'Reports', icon: FileText, group: 'main' },
-  { label: 'Procurement', icon: ShoppingCart, group: 'main' },
-  { label: 'Alerts', icon: Bell, group: 'configuration' },
-  { label: 'Organisations', icon: Building2, group: 'configuration' },
+  { label: 'Dashboard', icon: 'layout', group: 'main' },
+  { label: 'Inventory', icon: 'boxes', group: 'main' },
+  { label: 'Scanner', icon: 'scan', group: 'main' },
+  { label: 'Label Studio', icon: 'printer', group: 'main' },
+  { label: 'Reports', icon: 'file', group: 'main' },
+  { label: 'Procurement', icon: 'shopping', group: 'main' },
+  { label: 'Alerts', icon: 'bell', group: 'configuration' },
+  { label: 'Organisations', icon: 'building', group: 'configuration' },
 ] as const
 
 const rows = {
@@ -77,10 +77,9 @@ const rows = {
         <div class="stoqr-preview-menu">
           <p class="stoqr-preview-menu-heading">{group}</p>
           {menuItems.filter((item) => item.group === group).map((item) => {
-            const Icon = item.icon
             return (
               <span class:list={[item.label === active ? 'is-active' : '']}>
-                <Icon class="stoqr-preview-nav-icon" />
+                <MarketingIcon name={item.icon} class="stoqr-preview-nav-icon" />
                 {item.label}
               </span>
             )
@@ -91,7 +90,7 @@ const rows = {
     <main class="stoqr-preview-main">
       <div class="stoqr-preview-topbar">
         <div class="stoqr-preview-search">
-          <Search class="stoqr-preview-search-icon" />
+          <MarketingIcon name="search" class="stoqr-preview-search-icon" />
           <span>Search items...</span>
         </div>
         <div class="stoqr-preview-user-dot">I</div>
