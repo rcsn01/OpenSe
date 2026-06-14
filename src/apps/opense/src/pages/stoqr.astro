@@ -1,5 +1,4 @@
 ---
-import { Boxes, CheckCircle2, ClipboardList, FileChartColumn, KeyRound, LayoutDashboard, PackageSearch, Printer, ShieldCheck, ShoppingCart, TrendingUp, Users } from 'lucide-astro'
 import dashboardDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-dashboard-desktop.webp'
 import dashboardMobileImage from '../assets/marketing/stoqr/optimized/stoqr-dashboard-mobile.webp'
 import inventoryDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-inventory-desktop.webp'
@@ -24,6 +23,7 @@ import reportStockAccuracyDesktopImage from '../assets/marketing/stoqr/optimized
 import reportStockAccuracyMobileImage from '../assets/marketing/stoqr/optimized/stoqr-report-stock-accuracy-mobile.webp'
 import reportStockMovementDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-report-stock-movement-desktop.webp'
 import reportStockMovementMobileImage from '../assets/marketing/stoqr/optimized/stoqr-report-stock-movement-mobile.webp'
+import MarketingIcon from '../components/MarketingIcon.astro'
 import StoqrScreenshot from '../components/StoqrScreenshot.astro'
 import MarketingLayout from '../layouts/MarketingLayout.astro'
 
@@ -33,7 +33,7 @@ const features = [
     active: 'Dashboard',
     eyebrow: 'Know what needs attention now.',
     description: 'Watch inventory value, stock health, pending purchase orders, and critical alerts from one calm command center.',
-    icon: LayoutDashboard,
+    icon: 'layout',
     tone: 'warm',
     screenshot: {
       desktopSrc: dashboardDesktopImage,
@@ -48,7 +48,7 @@ const features = [
     active: 'Inventory',
     eyebrow: 'Every item, folder, SKU, and quantity in reach.',
     description: 'Browse products, locations, low-stock states, and custom fields without leaving the working surface.',
-    icon: PackageSearch,
+    icon: 'package',
     tone: 'plain',
     screenshot: {
       desktopSrc: inventoryDesktopImage,
@@ -63,7 +63,7 @@ const features = [
     active: 'Label Studio',
     eyebrow: 'Print labels that match the way you work.',
     description: 'Build product, shelf, and batch label templates with variable fields, SKU data, and barcode output.',
-    icon: Printer,
+    icon: 'printer',
     tone: 'warm',
     screenshot: {
       desktopSrc: labelEditorDesktopImage,
@@ -78,7 +78,7 @@ const features = [
     active: 'Label Studio',
     eyebrow: 'Send accurate labels to the floor.',
     description: 'Prepare print runs for products, shelves, and batches with the right template, quantity, and barcode data before work moves physical.',
-    icon: Printer,
+    icon: 'printer',
     tone: 'plain',
     screenshot: {
       desktopSrc: labelPrintDesktopImage,
@@ -93,7 +93,7 @@ const features = [
     active: 'Reports',
     eyebrow: 'Turn stock movement into decisions.',
     description: 'Review valuation, velocity, shrinkage, reorder candidates, supplier movement, and exports.',
-    icon: ClipboardList,
+    icon: 'clipboard',
     tone: 'plain',
     screenshot: {
       desktopSrc: reportInventoryDesktopImage,
@@ -108,7 +108,7 @@ const features = [
     active: 'Reports',
     eyebrow: 'Understand every stock change.',
     description: 'Track inbound, outbound, adjusted, and transferred inventory activity so movement history stays visible across teams and locations.',
-    icon: TrendingUp,
+    icon: 'trending',
     tone: 'cool',
     screenshot: {
       desktopSrc: reportStockMovementDesktopImage,
@@ -123,7 +123,7 @@ const features = [
     active: 'Reports',
     eyebrow: 'Catch count drift early.',
     description: 'Review discrepancies, shrinkage signals, and count status so the system record stays close to what is actually on the shelf.',
-    icon: FileChartColumn,
+    icon: 'file-chart',
     tone: 'plain',
     screenshot: {
       desktopSrc: reportStockAccuracyDesktopImage,
@@ -138,7 +138,7 @@ const features = [
     active: 'Reports',
     eyebrow: 'See replenishment pressure clearly.',
     description: 'Understand supplier activity, purchase order trends, and buying pressure before stock gaps reach the floor.',
-    icon: ClipboardList,
+    icon: 'clipboard',
     tone: 'warm',
     screenshot: {
       desktopSrc: reportPurchasingDesktopImage,
@@ -153,7 +153,7 @@ const features = [
     active: 'Procurement',
     eyebrow: 'Replenishment without the scramble.',
     description: 'Create purchase orders, manage suppliers, follow receiving workflows, and spot delayed replenishment.',
-    icon: ShoppingCart,
+    icon: 'shopping',
     tone: 'cool',
     screenshot: {
       desktopSrc: procurementPurchaseOrdersDesktopImage,
@@ -168,7 +168,7 @@ const features = [
     active: 'Procurement',
     eyebrow: 'Keep supplier context beside purchasing.',
     description: 'Manage supplier records, contacts, terms, and procurement relationships without disconnecting them from inventory demand.',
-    icon: Users,
+    icon: 'users',
     tone: 'plain',
     screenshot: {
       desktopSrc: procurementSuppliersDesktopImage,
@@ -183,7 +183,7 @@ const features = [
     active: 'Organisations',
     eyebrow: 'Access control that stays understandable.',
     description: 'Invite members, assign roles, control operational permissions, and keep team access clear.',
-    icon: ShieldCheck,
+    icon: 'shield',
     tone: 'plain',
     screenshot: {
       desktopSrc: organisationTeamsDesktopImage,
@@ -198,7 +198,7 @@ const features = [
     active: 'Organisations',
     eyebrow: 'Shape roles around real work.',
     description: 'Edit role permissions for inventory, procurement, reports, labels, and administration with clear controls.',
-    icon: KeyRound,
+    icon: 'key',
     tone: 'cool',
     screenshot: {
       desktopSrc: organisationRoleEditorDesktopImage,
@@ -217,7 +217,7 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
 <MarketingLayout landingContext="stoqr" title="Open-StoQR | Inventory Operations">
   <section class="relative mx-auto flex min-h-[92vh] max-w-7xl flex-col items-center justify-center px-6 pb-16 pt-[calc(6rem+4rem)] text-center">
     <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_18%,transparent)] bg-white text-[var(--color-secondary)]">
-      <Boxes class="h-6 w-6" />
+      <MarketingIcon name="boxes" class="h-6 w-6" />
     </span>
     <h1 class="mt-7 text-6xl font-semibold leading-none text-[var(--color-heading)] md:text-8xl">Open-StoQR</h1>
     <p class="mt-5 text-2xl font-semibold text-[color:color-mix(in_srgb,var(--color-secondary)_82%,#8e5f2b)] md:text-3xl">Physical inventory, digitally mastered.</p>
@@ -231,13 +231,12 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
     <div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-16">
       <div class="stoqr-scroll-showcase__copy">
         {screenshotFeatures.map((feature) => {
-          const Icon = feature.icon
           const stepId = `stoqr-${feature.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
           return (
             <article id={stepId} data-stoqr-step={stepId} data-testid="product-feature-preview" class="stoqr-scroll-showcase__step">
               <div class="flex items-center gap-4">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_16%,transparent)] bg-white text-[var(--color-secondary)]">
-                  <Icon class="h-5 w-5" />
+                  <MarketingIcon name={feature.icon} class="h-5 w-5" />
                 </span>
                 <p class="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--color-secondary)]">{feature.eyebrow}</p>
               </div>
@@ -247,7 +246,7 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
                 {feature.bullets.map((bullet) => (
                   <li class="flex gap-4 text-left text-base leading-7 text-[var(--color-foreground)]">
                     <span class="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--color-secondary)]">
-                      <CheckCircle2 class="h-5 w-5" />
+                      <MarketingIcon name="check-circle" class="h-5 w-5" />
                     </span>
                     <span>{bullet}</span>
                   </li>
