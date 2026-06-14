@@ -29,14 +29,22 @@ test.describe('OpenSe Landing', () => {
     await page.getByTestId('nav-open-stoqr-product').click();
     await expect(page).toHaveURL(`${openseUrl}/stoqr`);
     await expect(page.getByRole('heading', { name: /open-stoqr/i })).toBeVisible();
-    await expect(page.getByTestId('product-feature-preview')).toHaveCount(6);
+    await expect(page.getByTestId('product-feature-preview')).toHaveCount(12);
+    await expect(page.getByText('More StoQR Workflows')).toHaveCount(0);
+    await expect(page.getByText('The rest of the operating surface.')).toHaveCount(0);
     for (const heading of [
       'Dashboard',
       'Inventory',
       'Label Studio',
+      'Label Print',
       'Reports',
+      'Stock Movement Report',
+      'Stock Accuracy Report',
+      'Purchasing Report',
       'Procurement',
+      'Supplier Management',
       'Organisation RBAC',
+      'Role Editor',
     ]) {
       await expect(page.getByRole('heading', { name: heading })).toBeVisible();
     }

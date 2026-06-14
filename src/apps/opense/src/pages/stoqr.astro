@@ -1,22 +1,32 @@
 ---
-import { ArrowRight, Boxes, CheckCircle2, ClipboardList, LayoutDashboard, PackageSearch, Printer, ShieldCheck, ShoppingCart } from 'lucide-astro'
-import dashboardImage from '../assets/marketing/stoqr/stoqr-dashboard.png'
-import inventoryImage from '../assets/marketing/stoqr/stoqr-inventory.png'
-import labelEditorImage from '../assets/marketing/stoqr/stoqr-label-editor.png'
-import labelPrintImage from '../assets/marketing/stoqr/stoqr-label-print.png'
-import organisationRoleEditorImage from '../assets/marketing/stoqr/stoqr-organisation-role-editor.png'
-import organisationTeamsImage from '../assets/marketing/stoqr/stoqr-organisation-teams.png'
-import procurementPurchaseOrdersImage from '../assets/marketing/stoqr/stoqr-procurement-purchase-orders.png'
-import procurementSuppliersImage from '../assets/marketing/stoqr/stoqr-procurement-suppliers.png'
-import reportInventoryImage from '../assets/marketing/stoqr/stoqr-report-inventory.png'
-import reportPurchasingImage from '../assets/marketing/stoqr/stoqr-report-purchasing.png'
-import reportStockAccuracyImage from '../assets/marketing/stoqr/stoqr-report-stock-accuracy.png'
-import reportStockMovementImage from '../assets/marketing/stoqr/stoqr-report-stock-movement.png'
+import { Boxes, CheckCircle2, ClipboardList, FileChartColumn, KeyRound, LayoutDashboard, PackageSearch, Printer, ShieldCheck, ShoppingCart, TrendingUp, Users } from 'lucide-astro'
+import dashboardDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-dashboard-desktop.webp'
+import dashboardMobileImage from '../assets/marketing/stoqr/optimized/stoqr-dashboard-mobile.webp'
+import inventoryDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-inventory-desktop.webp'
+import inventoryMobileImage from '../assets/marketing/stoqr/optimized/stoqr-inventory-mobile.webp'
+import labelEditorDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-label-editor-desktop.webp'
+import labelEditorMobileImage from '../assets/marketing/stoqr/optimized/stoqr-label-editor-mobile.webp'
+import labelPrintDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-label-print-desktop.webp'
+import labelPrintMobileImage from '../assets/marketing/stoqr/optimized/stoqr-label-print-mobile.webp'
+import organisationRoleEditorDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-organisation-role-editor-desktop.webp'
+import organisationRoleEditorMobileImage from '../assets/marketing/stoqr/optimized/stoqr-organisation-role-editor-mobile.webp'
+import organisationTeamsDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-organisation-teams-desktop.webp'
+import organisationTeamsMobileImage from '../assets/marketing/stoqr/optimized/stoqr-organisation-teams-mobile.webp'
+import procurementPurchaseOrdersDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-procurement-purchase-orders-desktop.webp'
+import procurementPurchaseOrdersMobileImage from '../assets/marketing/stoqr/optimized/stoqr-procurement-purchase-orders-mobile.webp'
+import procurementSuppliersDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-procurement-suppliers-desktop.webp'
+import procurementSuppliersMobileImage from '../assets/marketing/stoqr/optimized/stoqr-procurement-suppliers-mobile.webp'
+import reportInventoryDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-report-inventory-desktop.webp'
+import reportInventoryMobileImage from '../assets/marketing/stoqr/optimized/stoqr-report-inventory-mobile.webp'
+import reportPurchasingDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-report-purchasing-desktop.webp'
+import reportPurchasingMobileImage from '../assets/marketing/stoqr/optimized/stoqr-report-purchasing-mobile.webp'
+import reportStockAccuracyDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-report-stock-accuracy-desktop.webp'
+import reportStockAccuracyMobileImage from '../assets/marketing/stoqr/optimized/stoqr-report-stock-accuracy-mobile.webp'
+import reportStockMovementDesktopImage from '../assets/marketing/stoqr/optimized/stoqr-report-stock-movement-desktop.webp'
+import reportStockMovementMobileImage from '../assets/marketing/stoqr/optimized/stoqr-report-stock-movement-mobile.webp'
 import StoqrScreenshot from '../components/StoqrScreenshot.astro'
 import MarketingLayout from '../layouts/MarketingLayout.astro'
-import { buildNavbarGetStartedPath } from '../lib/authRedirect'
 
-const ctaHref = buildNavbarGetStartedPath('stoqr')
 const features = [
   {
     title: 'Dashboard',
@@ -26,7 +36,8 @@ const features = [
     icon: LayoutDashboard,
     tone: 'warm',
     screenshot: {
-      src: dashboardImage,
+      desktopSrc: dashboardDesktopImage,
+      mobileSrc: dashboardMobileImage,
       alt: 'Open-StoQR dashboard showing stock health, inventory value, alerts, and purchase order status.',
       caption: 'Stock health, inventory value, purchase orders, and alerts in one operating view.',
     },
@@ -40,7 +51,8 @@ const features = [
     icon: PackageSearch,
     tone: 'plain',
     screenshot: {
-      src: inventoryImage,
+      desktopSrc: inventoryDesktopImage,
+      mobileSrc: inventoryMobileImage,
       alt: 'Open-StoQR inventory screen showing product folders, quantities, SKU details, and stock status.',
       caption: 'Browse products, locations, quantities, SKU details, and low-stock states without losing context.',
     },
@@ -54,11 +66,27 @@ const features = [
     icon: Printer,
     tone: 'warm',
     screenshot: {
-      src: labelEditorImage,
+      desktopSrc: labelEditorDesktopImage,
+      mobileSrc: labelEditorMobileImage,
       alt: 'Open-StoQR label editor showing barcode label layout controls and product data fields.',
       caption: 'Design reusable barcode and QR labels with product fields, layout controls, and print-ready output.',
     },
     bullets: ['Create reusable templates for products, shelves, and batches.', 'Include barcode, SKU, location, and quantity fields.', 'Prepare consistent labels for batch printing.'],
+  },
+  {
+    title: 'Label Print',
+    active: 'Label Studio',
+    eyebrow: 'Send accurate labels to the floor.',
+    description: 'Prepare print runs for products, shelves, and batches with the right template, quantity, and barcode data before work moves physical.',
+    icon: Printer,
+    tone: 'plain',
+    screenshot: {
+      desktopSrc: labelPrintDesktopImage,
+      mobileSrc: labelPrintMobileImage,
+      alt: 'Open-StoQR label print screen showing product labels prepared for printing.',
+      caption: 'Prepare consistent product, shelf, and batch labels for fast physical workflows.',
+    },
+    bullets: ['Preview labels before they reach the printer.', 'Batch product and shelf labels for warehouse work.', 'Keep physical labels aligned with live inventory data.'],
   },
   {
     title: 'Reports',
@@ -68,11 +96,57 @@ const features = [
     icon: ClipboardList,
     tone: 'plain',
     screenshot: {
-      src: reportInventoryImage,
+      desktopSrc: reportInventoryDesktopImage,
+      mobileSrc: reportInventoryMobileImage,
       alt: 'Open-StoQR inventory report showing stock status, values, and report totals.',
       caption: 'Review inventory value, stock status, and operational totals without rebuilding spreadsheets.',
     },
     bullets: ['Review valuation and movement without rebuilding sheets.', 'Find slow-moving and reorder candidate products.', 'Export operational views when finance or suppliers need them.'],
+  },
+  {
+    title: 'Stock Movement Report',
+    active: 'Reports',
+    eyebrow: 'Understand every stock change.',
+    description: 'Track inbound, outbound, adjusted, and transferred inventory activity so movement history stays visible across teams and locations.',
+    icon: TrendingUp,
+    tone: 'cool',
+    screenshot: {
+      desktopSrc: reportStockMovementDesktopImage,
+      mobileSrc: reportStockMovementMobileImage,
+      alt: 'Open-StoQR stock movement report showing inbound, outbound, and adjusted inventory activity.',
+      caption: 'Track inbound, outbound, and adjusted stock movement across the business.',
+    },
+    bullets: ['Separate receiving, usage, transfers, and corrections.', 'Find unusual movement before it becomes a reconciliation issue.', 'Give operators and managers the same movement trail.'],
+  },
+  {
+    title: 'Stock Accuracy Report',
+    active: 'Reports',
+    eyebrow: 'Catch count drift early.',
+    description: 'Review discrepancies, shrinkage signals, and count status so the system record stays close to what is actually on the shelf.',
+    icon: FileChartColumn,
+    tone: 'plain',
+    screenshot: {
+      desktopSrc: reportStockAccuracyDesktopImage,
+      mobileSrc: reportStockAccuracyMobileImage,
+      alt: 'Open-StoQR stock accuracy report showing discrepancies and inventory count status.',
+      caption: 'Spot discrepancies, shrinkage, and count issues before they become reporting problems.',
+    },
+    bullets: ['Surface count discrepancies by product and location.', 'Prioritize checks where accuracy risk is highest.', 'Keep audit work connected to live inventory records.'],
+  },
+  {
+    title: 'Purchasing Report',
+    active: 'Reports',
+    eyebrow: 'See replenishment pressure clearly.',
+    description: 'Understand supplier activity, purchase order trends, and buying pressure before stock gaps reach the floor.',
+    icon: ClipboardList,
+    tone: 'warm',
+    screenshot: {
+      desktopSrc: reportPurchasingDesktopImage,
+      mobileSrc: reportPurchasingMobileImage,
+      alt: 'Open-StoQR purchasing report showing supplier activity and replenishment trends.',
+      caption: 'Understand purchasing pressure, supplier activity, and replenishment trends.',
+    },
+    bullets: ['Track open purchase order volume and supplier activity.', 'Compare replenishment demand against stock status.', 'Give purchasing teams a focused operational report.'],
   },
   {
     title: 'Procurement',
@@ -82,11 +156,27 @@ const features = [
     icon: ShoppingCart,
     tone: 'cool',
     screenshot: {
-      src: procurementPurchaseOrdersImage,
+      desktopSrc: procurementPurchaseOrdersDesktopImage,
+      mobileSrc: procurementPurchaseOrdersMobileImage,
       alt: 'Open-StoQR purchase orders screen showing procurement order status and receiving workflow details.',
       caption: 'Create and track purchase orders from request through receiving.',
     },
     bullets: ['Track supplier, approval, receiving, and delay status.', 'Connect reorder pressure to purchase order workflows.', 'Keep inbound replenishment visible to the inventory team.'],
+  },
+  {
+    title: 'Supplier Management',
+    active: 'Procurement',
+    eyebrow: 'Keep supplier context beside purchasing.',
+    description: 'Manage supplier records, contacts, terms, and procurement relationships without disconnecting them from inventory demand.',
+    icon: Users,
+    tone: 'plain',
+    screenshot: {
+      desktopSrc: procurementSuppliersDesktopImage,
+      mobileSrc: procurementSuppliersMobileImage,
+      alt: 'Open-StoQR suppliers screen showing supplier records, contact details, and procurement relationships.',
+      caption: 'Manage supplier records, contact details, and procurement relationships in one place.',
+    },
+    bullets: ['Store supplier contact and ordering context in one roster.', 'Connect purchasing work to the right supplier records.', 'Keep vendor details available during replenishment decisions.'],
   },
   {
     title: 'Organisation RBAC',
@@ -96,65 +186,37 @@ const features = [
     icon: ShieldCheck,
     tone: 'plain',
     screenshot: {
-      src: organisationTeamsImage,
+      desktopSrc: organisationTeamsDesktopImage,
+      mobileSrc: organisationTeamsMobileImage,
       alt: 'Open-StoQR organization teams screen showing members, roles, and access management.',
       caption: 'Invite team members and organize access around the way the operation actually works.',
     },
     bullets: ['Invite members with roles that match their work.', 'Restrict sensitive settings and procurement controls.', 'Keep permissions readable as the organization grows.'],
   },
-] as const
-
-const workflowScreenshots = [
-  {
-    title: 'Label Print',
-    src: labelPrintImage,
-    alt: 'Open-StoQR label print screen showing product labels prepared for printing.',
-    caption: 'Prepare consistent product, shelf, and batch labels for fast physical workflows.',
-  },
-  {
-    title: 'Stock Movement Report',
-    src: reportStockMovementImage,
-    alt: 'Open-StoQR stock movement report showing inbound, outbound, and adjusted inventory activity.',
-    caption: 'Track inbound, outbound, and adjusted stock movement across the business.',
-  },
-  {
-    title: 'Stock Accuracy Report',
-    src: reportStockAccuracyImage,
-    alt: 'Open-StoQR stock accuracy report showing discrepancies and inventory count status.',
-    caption: 'Spot discrepancies, shrinkage, and count issues before they become reporting problems.',
-  },
-  {
-    title: 'Purchasing Report',
-    src: reportPurchasingImage,
-    alt: 'Open-StoQR purchasing report showing supplier activity and replenishment trends.',
-    caption: 'Understand purchasing pressure, supplier activity, and replenishment trends.',
-  },
-  {
-    title: 'Supplier Management',
-    src: procurementSuppliersImage,
-    alt: 'Open-StoQR suppliers screen showing supplier records, contact details, and procurement relationships.',
-    caption: 'Manage supplier records, contact details, and procurement relationships in one place.',
-  },
   {
     title: 'Role Editor',
-    src: organisationRoleEditorImage,
-    alt: 'Open-StoQR role editor showing permission controls for inventory, procurement, reports, labels, and administration.',
-    caption: 'Control permissions for inventory, procurement, reports, labels, and administration.',
+    active: 'Organisations',
+    eyebrow: 'Shape roles around real work.',
+    description: 'Edit role permissions for inventory, procurement, reports, labels, and administration with clear controls.',
+    icon: KeyRound,
+    tone: 'cool',
+    screenshot: {
+      desktopSrc: organisationRoleEditorDesktopImage,
+      mobileSrc: organisationRoleEditorMobileImage,
+      alt: 'Open-StoQR role editor showing permission controls for inventory, procurement, reports, labels, and administration.',
+      caption: 'Control permissions for inventory, procurement, reports, labels, and administration.',
+    },
+    bullets: ['Adjust permissions by workflow instead of buried settings.', 'Keep administrative access separate from daily inventory work.', 'Review role scope before assigning it to team members.'],
   },
 ] as const
 
+const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
 const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [{ ...feature, screenshot: feature.screenshot }] : []))
 ---
 
 <MarketingLayout landingContext="stoqr" title="Open-StoQR | Inventory Operations">
-  <div class="pointer-events-none absolute inset-0">
-    <div class="absolute inset-0 bg-[var(--color-background)]"></div>
-    <div class="absolute left-[-10rem] top-[-4rem] h-[28rem] w-[28rem] rounded-full blur-3xl" style="background-color:color-mix(in srgb,var(--color-warning-light) 52%,white)"></div>
-    <div class="absolute right-[-9rem] top-[22rem] h-[22rem] w-[22rem] rounded-full blur-3xl" style="background-color:color-mix(in srgb,var(--color-info-light) 34%,white)"></div>
-  </div>
-
   <section class="relative mx-auto flex min-h-[92vh] max-w-7xl flex-col items-center justify-center px-6 pb-16 pt-[calc(6rem+4rem)] text-center">
-    <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_18%,transparent)] bg-[color:color-mix(in_srgb,var(--color-warning-light)_48%,white)] text-[var(--color-secondary)]">
+    <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_18%,transparent)] bg-white text-[var(--color-secondary)]">
       <Boxes class="h-6 w-6" />
     </span>
     <h1 class="mt-7 text-6xl font-semibold leading-none text-[var(--color-heading)] md:text-8xl">Open-StoQR</h1>
@@ -162,10 +224,7 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
     <p class="mx-auto mt-6 max-w-4xl text-lg leading-8 text-[var(--color-body)] md:text-xl">
       Track, scan, procure, report, and govern inventory operations from an open source product suite your team can inspect before they deploy it.
     </p>
-    <div class="mt-9 flex flex-wrap items-center justify-center gap-4">
-      <a href={ctaHref} data-testid="stoqr-deploy-open-stoqr" class="opense-cta-dark inline-flex min-w-44 items-center justify-center whitespace-nowrap rounded-full px-7 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
-      <a href="#stoqr-dashboard" class="inline-flex items-center justify-center rounded-full border border-[var(--opense-shell-border-strong)] bg-white/72 px-7 py-3 text-sm font-semibold text-[var(--color-heading)] transition-transform duration-200 hover:-translate-y-0.5">See the UI</a>
-    </div>
+    <a href="#stoqr-dashboard" class="mt-9 inline-flex items-center justify-center rounded-full border border-[var(--opense-shell-border-strong)] bg-white px-7 py-3 text-sm font-semibold text-[var(--color-heading)] transition-transform duration-200 hover:-translate-y-0.5">See the UI</a>
   </section>
 
   <section class="stoqr-scroll-showcase relative border-t border-[color:var(--opense-shell-border)] bg-white px-6 py-20 md:py-28" data-stoqr-scroll-showcase>
@@ -177,7 +236,7 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
           return (
             <article id={stepId} data-stoqr-step={stepId} data-testid="product-feature-preview" class="stoqr-scroll-showcase__step">
               <div class="flex items-center gap-4">
-                <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_16%,transparent)] bg-white/72 text-[var(--color-secondary)]">
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_16%,transparent)] bg-white text-[var(--color-secondary)]">
                   <Icon class="h-5 w-5" />
                 </span>
                 <p class="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--color-secondary)]">{feature.eyebrow}</p>
@@ -194,15 +253,8 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
                   </li>
                 ))}
               </ul>
-              <div class="mt-10 flex flex-wrap items-center gap-5">
-                <a href={ctaHref} class="opense-cta-dark inline-flex min-w-40 items-center justify-center whitespace-nowrap rounded-full px-6 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
-                <a href="#stoqr-reports" class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-secondary)]">
-                  See all workflows
-                  <ArrowRight class="h-4 w-4" />
-                </a>
-              </div>
               <div class="mt-10 lg:hidden">
-                <StoqrScreenshot src={feature.screenshot.src} alt={feature.screenshot.alt} caption={feature.screenshot.caption} />
+                <StoqrScreenshot src={feature.screenshot.mobileSrc} alt={feature.screenshot.alt} caption={feature.screenshot.caption} />
               </div>
             </article>
           )
@@ -216,7 +268,18 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
             return (
               <figure class:list={['stoqr-scroll-showcase__figure', index === 0 ? 'is-active' : '']} data-stoqr-image={stepId}>
                 <div class="stoqr-scroll-showcase__media">
-                  <img src={feature.screenshot.src.src} alt="" width={feature.screenshot.src.width} height={feature.screenshot.src.height} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" />
+                  <img
+                    src={index === 0 ? feature.screenshot.desktopSrc.src : transparentPixel}
+                    data-stoqr-lazy-image
+                    data-src={feature.screenshot.desktopSrc.src}
+                    data-loaded={index === 0 ? 'true' : undefined}
+                    alt=""
+                    width={feature.screenshot.desktopSrc.width}
+                    height={feature.screenshot.desktopSrc.height}
+                    loading={index === 0 ? 'eager' : 'lazy'}
+                    decoding="async"
+                    fetchpriority={index === 0 ? 'high' : 'auto'}
+                  />
                 </div>
                 <figcaption>{feature.screenshot.caption}</figcaption>
               </figure>
@@ -227,65 +290,97 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
     </div>
   </section>
 
-  <section class="relative border-t border-[color:var(--opense-shell-border)] bg-white px-6 py-20 md:py-28">
-    <div class="mx-auto max-w-7xl">
-      <div class="mx-auto max-w-3xl text-center">
-        <p class="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--color-secondary)]">More StoQR Workflows</p>
-        <h2 class="mt-5 text-4xl font-semibold leading-[1.04] text-[var(--color-heading)] md:text-6xl">The rest of the operating surface.</h2>
-        <p class="mt-5 text-lg leading-8 text-[var(--color-body)]">
-          StoQR carries the supporting work too: label batches, reporting, suppliers, and permission controls stay close to the inventory system.
-        </p>
-      </div>
-      <div class="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {workflowScreenshots.map((screenshot) => (
-          <article class="rounded-[1rem] border bg-[var(--color-background)] p-4" style="border-color:var(--opense-shell-border);box-shadow:var(--opense-shell-shadow-card)">
-            <StoqrScreenshot src={screenshot.src} alt={screenshot.alt} caption={screenshot.caption} variant="gallery" />
-            <h3 class="mt-5 text-xl font-semibold text-[var(--color-heading)]">{screenshot.title}</h3>
-          </article>
-        ))}
-      </div>
-    </div>
+  <section class="relative border-t border-[color:var(--opense-shell-border)] bg-white px-6 py-24 text-center">
+    <h2 class="mx-auto max-w-4xl text-5xl font-semibold text-[var(--color-heading)] md:text-7xl">Ready to organize your assets?</h2>
+    <p class="mx-auto mt-6 max-w-3xl text-lg leading-8 text-[var(--color-body)]">Upgrade your team's efficiency with Open-StoQR. Open source, customizable, and easy to deploy for your organization.</p>
   </section>
 
-  <section class="relative border-t border-[color:var(--opense-shell-border)] bg-[var(--color-foreground)] px-6 py-24 text-center text-white">
-    <h2 class="mx-auto max-w-4xl text-5xl font-semibold md:text-7xl">Ready to organize your assets?</h2>
-    <p class="mx-auto mt-6 max-w-3xl text-lg leading-8 text-white/76">Upgrade your team's efficiency with Open-StoQR. Open source, customizable, and easy to deploy for your organization.</p>
-    <a href={ctaHref} class="opense-cta-light mt-9 inline-flex min-w-44 items-center justify-center whitespace-nowrap rounded-full px-7 py-3 text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5">Deploy Open-StoQR</a>
-  </section>
+  <script is:inline data-astro-rerun>
+    ;(() => {
+      const cleanupKey = '__stoqrScrollShowcaseCleanup'
+      const showcase = document.querySelector('[data-stoqr-scroll-showcase]')
+      const previousCleanup = showcase?.[cleanupKey]
+      if (typeof previousCleanup === 'function') previousCleanup()
 
-  <script is:inline>
-    const showcase = document.querySelector('[data-stoqr-scroll-showcase]')
-    const steps = Array.from(showcase?.querySelectorAll('[data-stoqr-step]') ?? [])
-    const images = Array.from(showcase?.querySelectorAll('[data-stoqr-image]') ?? [])
+      const steps = Array.from(showcase?.querySelectorAll('[data-stoqr-step]') ?? [])
+      const images = Array.from(showcase?.querySelectorAll('[data-stoqr-image]') ?? [])
+      const observers = []
 
-    const setActiveStep = (id) => {
-      images.forEach((image) => {
-        image.classList.toggle('is-active', image.getAttribute('data-stoqr-image') === id)
-      })
-      steps.forEach((step) => {
-        step.classList.toggle('is-active', step.getAttribute('data-stoqr-step') === id)
-      })
-    }
+      const loadFigureImage = (figure) => {
+        const image = figure?.querySelector('[data-stoqr-lazy-image]')
+        if (!image || image.dataset.loaded === 'true') return
 
-    if (steps.length > 0 && 'IntersectionObserver' in window) {
-      setActiveStep(steps[0].getAttribute('data-stoqr-step'))
+        const src = image.dataset.src
+        if (src) image.setAttribute('src', src)
+        image.dataset.loaded = 'true'
+      }
 
-      const observer = new IntersectionObserver(
-        (entries) => {
-          const active = entries
-            .filter((entry) => entry.isIntersecting)
-            .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-          const id = active?.target.getAttribute('data-stoqr-step')
-          if (id) setActiveStep(id)
-        },
-        {
-          rootMargin: '-24% 0px -36% 0px',
-          threshold: [0.2, 0.35, 0.5, 0.65, 0.8],
-        },
-      )
+      const loadAroundStep = (id) => {
+        const activeIndex = images.findIndex((image) => image.getAttribute('data-stoqr-image') === id)
+        if (activeIndex < 0) return
 
-      steps.forEach((step) => observer.observe(step))
-    }
+        ;[activeIndex - 1, activeIndex, activeIndex + 1].forEach((index) => {
+          loadFigureImage(images[index])
+        })
+      }
+
+      const setActiveStep = (id) => {
+        loadAroundStep(id)
+        images.forEach((image) => {
+          image.classList.toggle('is-active', image.getAttribute('data-stoqr-image') === id)
+        })
+        steps.forEach((step) => {
+          step.classList.toggle('is-active', step.getAttribute('data-stoqr-step') === id)
+        })
+      }
+
+      const firstStepId = steps[0]?.getAttribute('data-stoqr-step')
+      if (!firstStepId) return
+
+      setActiveStep(firstStepId)
+
+      if ('IntersectionObserver' in window) {
+        const activeObserver = new IntersectionObserver(
+          (entries) => {
+            const active = entries
+              .filter((entry) => entry.isIntersecting)
+              .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
+            const id = active?.target.getAttribute('data-stoqr-step')
+            if (id) setActiveStep(id)
+          },
+          {
+            rootMargin: '-24% 0px -36% 0px',
+            threshold: [0.2, 0.35, 0.5, 0.65, 0.8],
+          },
+        )
+
+        const preloadObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              const id = entry.target.getAttribute('data-stoqr-step')
+              if (entry.isIntersecting && id) loadAroundStep(id)
+            })
+          },
+          {
+            rootMargin: '80% 0px',
+            threshold: 0.01,
+          },
+        )
+
+        steps.forEach((step) => {
+          activeObserver.observe(step)
+          preloadObserver.observe(step)
+        })
+        observers.push(activeObserver, preloadObserver)
+      } else {
+        images.forEach(loadFigureImage)
+      }
+
+      showcase[cleanupKey] = () => {
+        observers.forEach((observer) => observer.disconnect())
+        delete showcase[cleanupKey]
+      }
+    })()
   </script>
 
   <style>
@@ -333,10 +428,6 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
 
     .stoqr-scroll-showcase__media {
       overflow: hidden;
-      border: 1px solid var(--opense-shell-border);
-      border-radius: 1rem;
-      background: white;
-      box-shadow: var(--opense-shell-shadow-lg);
     }
 
     .stoqr-scroll-showcase__media img {

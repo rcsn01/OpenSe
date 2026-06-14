@@ -13,9 +13,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@astrojs/check": "^0.9.4",
     "@repo/shared": "*",
     "@repo/ui": "*",
-    "@astrojs/check": "^0.9.4",
     "@tailwindcss/postcss": "^4.1.18",
     "astro": "^5.16.4",
     "lucide-astro": "^0.556.0",
