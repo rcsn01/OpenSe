@@ -174,14 +174,37 @@ configure_alert_dispatch() {
   local target="$1"
   local token="$2"
   local project_ref="${3:-}"
-  local function_url
+  local function_url=""
   local sql
+  local supabase_url
 
   if [[ "$target" == "remote" ]]; then
-    function_url="https://${project_ref}.functions.supabase.co/send-stoqr-alert-notifications"
+    if [[ -z "$project_ref" ]]; then
+      supabase_url="$(read_env_value VITE_SUPABASE_URL || true)"
+      if [[ -z "$supabase_url" ]]; then
+        supabase_url="$(read_env_value SUPABASE_URL || true)"
+      fi
+      if [[ "$supabase_url" =~ ^https://([a-z0-9-]+)\.supabase\.co/?$ ]]; then
+        project_ref="${BASH_REMATCH[1]}"
+      fi
+    fi
+
+    if [[ -z "$project_ref" ]]; then
+      read -r -p "Supabase project ref (or press Enter to provide a full function URL): " project_ref
+      if [[ -z "$project_ref" ]]; then
+        read -r -p "Full Edge Function URL: " function_url
+        [[ -n "$function_url" ]] || fail "A function URL is required for remote runtime config."
+      fi
+    fi
+
+    if [[ -z "$function_url" && -n "$project_ref" ]]; then
+      function_url="https://${project_ref}.functions.supabase.co/send-stoqr-alert-notifications"
+    fi
   else
     function_url="http://host.docker.internal:54321/functions/v1/send-stoqr-alert-notifications"
   fi
+
+
 
   sql="INSERT INTO stoqr.alert_dispatch_config (singleton, function_url, dispatch_token)
 VALUES (true, '${function_url}', '${token}')
@@ -202,6 +225,59 @@ SET function_url = EXCLUDED.function_url,
     warn "For local dispatch, keep functions running with: npx supabase functions serve"
   fi
 }
+
+setup_runtime_config() {
+  local app config_dir config_file
+  local supabase_url anon_key cookie_domain
+  local accounts_url etl_url opense_url stoqr_url ui_url
+
+  prompt_or_env() {
+    local key="$1"
+    local value
+    value="$(read_env_value "$key" || true)"
+    if [[ -z "$value" ]]; then
+      read -r -p "Enter ${key}: " value
+    fi
+    printf '%s' "$value"
+  }
+
+  supabase_url="$(prompt_or_env VITE_SUPABASE_URL)"
+  anon_key="$(prompt_or_env VITE_SUPABASE_ANON_KEY)"
+  cookie_domain="$(prompt_or_env VITE_AUTH_COOKIE_DOMAIN)"
+  accounts_url="$(prompt_or_env VITE_ACCOUNTS_URL)"
+  etl_url="$(prompt_or_env VITE_ETL_PUBLIC_URL)"
+  opense_url="$(prompt_or_env VITE_OPENSE_PUBLIC_URL)"
+  stoqr_url="$(prompt_or_env VITE_STOQR_PUBLIC_URL)"
+  ui_url="$(prompt_or_env VITE_UI_PUBLIC_URL)"
+
+  [[ -n "$supabase_url" ]] || fail "VITE_SUPABASE_URL is required."
+  [[ -n "$anon_key" ]] || fail "VITE_SUPABASE_ANON_KEY is required."
+
+  info "Writing runtime config.js files for frontend containers..."
+
+  for app in accounts etl opense stoqr ui-design; do
+    config_dir="$ROOT_DIR/src/apps/${app}/public"
+    config_file="$config_dir/config.js"
+
+    mkdir -p "$config_dir"
+
+    cat > "$config_file" <<EOF
+window.__OPENSE_CONFIG__ = {
+  VITE_SUPABASE_URL: '${supabase_url}',
+  VITE_SUPABASE_ANON_KEY: '${anon_key}',
+  VITE_AUTH_COOKIE_DOMAIN: '${cookie_domain}',
+  VITE_ACCOUNTS_URL: '${accounts_url}',
+  VITE_ETL_PUBLIC_URL: '${etl_url}',
+  VITE_OPENSE_PUBLIC_URL: '${opense_url}',
+  VITE_STOQR_PUBLIC_URL: '${stoqr_url}',
+  VITE_UI_PUBLIC_URL: '${ui_url}',
+};
+EOF
+
+    success "Wrote $config_file"
+  done
+}
+
 
 full_reset() {
   local target project_ref token
@@ -266,7 +342,8 @@ main_menu() {
   echo "Select an action:"
   echo "  1) Full reset (remote also deploys alert Edge Functions)"
   echo "  2) Insert DB seed data only"
-  echo "  3) Exit"
+  echo "  3) Setup frontend runtime config (config.js files)"
+  echo "  4) Exit"
   echo
   read -r -p "Action [1]: " action
   action="${action:-1}"
@@ -274,7 +351,8 @@ main_menu() {
   case "$action" in
     1) full_reset ;;
     2) insert_seed_data ;;
-    3) exit 0 ;;
+    3) setup_runtime_config ;;
+    4) exit 0 ;;
     *) fail "Unknown action: $action" ;;
   esac
 }
