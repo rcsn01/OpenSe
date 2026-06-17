@@ -72,19 +72,19 @@ test.describe('OpenSe Cross-App Redirects', () => {
     await expectAccountsLoginForAccountsApp(page);
   });
 
-  test('guest clicking ETL stays inside OpenSe and reaches the ETL landing page', async ({ page }) => {
+  test('guest clicking ETL navbar link stays inside OpenSe and reaches the ETL landing page', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByTestId('launch-etl')).toHaveAttribute('href', '/etl');
-    await page.getByTestId('launch-etl').click();
+    await expect(page.getByTestId('nav-open-etl-product')).toHaveAttribute('href', '/etl');
+    await page.getByTestId('nav-open-etl-product').click();
 
     await expect(page).toHaveURL(`${openseUrl}/etl`);
     await expect(page.getByRole('heading', { name: /open-etl/i })).toBeVisible();
   });
 
-  test('guest clicking StoQR stays inside OpenSe and reaches the StoQR landing page', async ({ page }) => {
+  test('guest clicking StoQR navbar link stays inside OpenSe and reaches the StoQR landing page', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByTestId('launch-stoqr')).toHaveAttribute('href', '/stoqr');
-    await page.getByTestId('launch-stoqr').click();
+    await expect(page.getByTestId('nav-open-stoqr-product')).toHaveAttribute('href', '/stoqr');
+    await page.getByTestId('nav-open-stoqr-product').click();
 
     await expect(page).toHaveURL(`${openseUrl}/stoqr`);
     await expect(page.getByRole('heading', { name: /open-stoqr/i })).toBeVisible();

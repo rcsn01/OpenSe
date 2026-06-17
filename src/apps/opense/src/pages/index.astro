@@ -1,34 +1,7 @@
 ---
-import ArchitectureCarousel from '../components/ArchitectureCarousel.astro'
+import ArchitectureAnimator from '../components/ArchitectureAnimator.astro'
 import MarketingIcon from '../components/MarketingIcon.astro'
 import MarketingLayout from '../layouts/MarketingLayout.astro'
-
-const productCards = [
-  {
-    title: 'Open-ETL',
-    description:
-      'A visual, no-code workflow builder that processes your sensitive datasets locally in the browser. Say goodbye to exposing raw data to third-party backends.',
-    href: '/etl',
-    icon: 'database',
-    accent: 'color-mix(in srgb, var(--color-primary-light) 74%, white)',
-    bulletColor: 'var(--color-primary-hover)',
-    ctaLabel: 'Learn more about ETL',
-    testId: 'launch-etl',
-    bullets: ['Privacy-first browser processing', 'Drag-and-drop workflow builder', 'Multi-organization role management'],
-  },
-  {
-    title: 'Open-StoQR',
-    description:
-      'Smart inventory tracking system with integrated QR/Barcode scanning, comprehensive reporting, and a custom label design studio.',
-    href: '/stoqr',
-    icon: 'boxes',
-    accent: 'color-mix(in srgb, var(--color-warning-light) 68%, white)',
-    bulletColor: 'var(--color-secondary)',
-    ctaLabel: 'Learn more about StoQR',
-    testId: 'launch-stoqr',
-    bullets: ['Camera-based QR/Barcode scanning', 'Built-in Label Studio and printing', 'Automated low-stock alerts'],
-  },
-] as const
 
 const infrastructureHighlights = [
   {
@@ -62,55 +35,6 @@ const infrastructureHighlights = [
     <p class="mx-auto mt-8 max-w-3xl text-lg leading-8 text-[var(--color-body)] md:text-xl">
       Empower your organization with enterprise-grade, privacy-first tools. Deploy Open-ETL for secure data processing and Open-StoQR for intelligent inventory management, all with zero vendor lock-in.
     </p>
-    <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
-      <a
-        href="/etl"
-        data-astro-prefetch
-        data-testid="launch-etl"
-        class="inline-flex items-center justify-center rounded-xl border border-transparent px-6 py-3 text-sm font-semibold transition-colors duration-200"
-        style="background-color:color-mix(in srgb,var(--color-primary-light) 88%,white);color:var(--color-heading);box-shadow:var(--opense-shell-shadow-card)"
-      >
-        Explore Open-ETL
-      </a>
-      <a
-        href="/stoqr"
-        data-astro-prefetch
-        data-testid="launch-stoqr"
-        class="inline-flex items-center justify-center rounded-xl border px-6 py-3 text-sm font-semibold transition-colors duration-200"
-        style="border-color:var(--opense-shell-border-strong);background-color:color-mix(in srgb,var(--color-card) 84%,transparent);color:var(--color-heading)"
-      >
-        Explore Open-StoQR
-      </a>
-    </div>
-  </section>
-
-  <section class="relative mx-auto grid max-w-6xl gap-6 px-6 py-12 lg:grid-cols-2">
-    {productCards.map((card) => {
-      return (
-        <article class="relative overflow-hidden rounded-[1.7rem] border p-8 backdrop-blur" style="border-color:var(--opense-shell-border);background-color:color-mix(in srgb,var(--color-card) 88%,transparent);box-shadow:var(--opense-shell-shadow-card)">
-          <div class="absolute right-[-2rem] top-[-2rem] h-28 w-28 rounded-full" style={`background-color:${card.accent}`}></div>
-          <span class="relative inline-flex h-12 w-12 items-center justify-center rounded-2xl border" style={`border-color:var(--opense-shell-border);color:${card.bulletColor}`}>
-            <MarketingIcon name={card.icon} class="h-6 w-6" />
-          </span>
-          <h2 class="relative mt-8 text-4xl font-semibold text-[var(--color-heading)]">{card.title}</h2>
-          <p class="relative mt-4 max-w-xl text-lg leading-8 text-[var(--color-body)]">{card.description}</p>
-          <ul class="relative mt-8 space-y-3">
-            {card.bullets.map((bullet) => (
-              <li class="flex items-center gap-3 text-[var(--color-foreground)]">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full border" style={`border-color:color-mix(in srgb,var(--color-border) 82%,transparent);color:${card.bulletColor}`}>
-                  <MarketingIcon name="check-circle" class="h-3.5 w-3.5" />
-                </span>
-                <span class="text-base">{bullet}</span>
-              </li>
-            ))}
-          </ul>
-          <a href={card.href} data-astro-prefetch class="relative mt-10 inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold transition-colors duration-200" style="border-color:var(--opense-shell-border-strong);background-color:rgba(255,255,255,0.72);color:var(--color-heading)">
-            {card.ctaLabel}
-            <MarketingIcon name="arrow-right" class="h-4 w-4" />
-          </a>
-        </article>
-      )
-    })}
   </section>
 
   <section class="relative mx-auto max-w-6xl px-6 py-12">
@@ -125,7 +49,7 @@ const infrastructureHighlights = [
         OpenSe is built on an open architecture. Whether you want to use our managed cloud or deploy entirely on your own K8s/Docker infrastructure, you remain in complete control.
       </p>
       <div class="mt-10 rounded-[1.5rem] border p-5" style="border-color:var(--opense-shell-border);background-color:rgba(255,255,255,0.58)">
-        <ArchitectureCarousel />
+        <ArchitectureAnimator />
       </div>
       <div class="mt-10 grid gap-8 md:grid-cols-3">
         {infrastructureHighlights.map((item) => {

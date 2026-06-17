@@ -16,10 +16,8 @@ test.describe('OpenSe Landing', () => {
     await expect(page.getByTestId('nav-open-stoqr-product')).toHaveAttribute('href', '/stoqr');
     await expect(page.getByText(/Open-ETL/i).first()).toBeVisible();
     await expect(page.getByText(/Open-StoQR/i).first()).toBeVisible();
-    await expect(page.getByTestId('launch-etl')).toBeVisible();
-    await expect(page.getByTestId('launch-stoqr')).toBeVisible();
-    await expect(page.getByTestId('launch-etl')).toHaveAttribute('href', '/etl');
-    await expect(page.getByTestId('launch-stoqr')).toHaveAttribute('href', '/stoqr');
+    await expect(page.getByTestId('launch-etl')).toHaveCount(0);
+    await expect(page.getByTestId('launch-stoqr')).toHaveCount(0);
 
     await page.getByTestId('nav-open-etl-product').click();
     await expect(page).toHaveURL(`${openseUrl}/etl`);
