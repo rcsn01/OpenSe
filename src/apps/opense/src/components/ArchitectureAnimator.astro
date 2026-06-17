@@ -1,0 +1,835 @@
+---
+const states = [
+  {
+    id: 'managed',
+    title: 'Managed Stack',
+    description: 'OpenSe and Supabase operated for you.',
+    viewBox: '80 30 700 280',
+  },
+  {
+    id: 'cloud-supabase',
+    title: 'Self-host in cloud',
+    description: 'OpenSe in your cloud, Supabase managed separately.',
+    viewBox: '72 25 700 280',
+  },
+  {
+    id: 'single-server',
+    title: 'Self-host On Premise',
+    description: 'OpenSe and Supabase on one on-premises server.',
+    viewBox: '112 30 700 280',
+  },
+  {
+    id: 'three-server',
+    title: 'Self-host High Availability',
+    description: 'Load-balanced OpenSe with synced Supabase storage.',
+    viewBox: '0 0 1000 360',
+  },
+] as const
+---
+
+<div class="architecture-animator" data-architecture-animator data-active-state={states[0].id} data-states={JSON.stringify(states)}>
+  <div class="architecture-animator__header">
+    <div>
+      <p class="architecture-animator__eyebrow">Deployment path</p>
+      <h3 class="architecture-animator__title" data-architecture-title>{states[0].title}</h3>
+      <p class="architecture-animator__description" data-architecture-description>{states[0].description}</p>
+    </div>
+    <div class="architecture-animator__controls" role="tablist" aria-label="Architecture deployment states">
+      {states.map((state, index) => (
+        <button
+          type="button"
+          class="architecture-animator__control"
+          data-architecture-control={index}
+          aria-selected={index === 0 ? 'true' : 'false'}
+          role="tab"
+        >
+          {state.title}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  <div class="architecture-animator__viewport">
+    <svg
+      class="architecture-animator__diagram"
+      data-architecture-diagram
+      viewBox="0 0 1000 360"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="OpenSe infrastructure deployment options"
+    >
+      <defs>
+        <marker id="architecture-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M 0 0 L 8 4 L 0 8 z" fill="currentColor"></path>
+        </marker>
+      </defs>
+      <g data-architecture-layer="connectors"></g>
+      <g data-architecture-layer="nodes"></g>
+    </svg>
+  </div>
+</div>
+
+<script>
+  type ArchitectureState = {
+    id: string
+    title: string
+    description: string
+    viewBox: string
+  }
+
+  type DiagramElementType =
+    | 'boundary'
+    | 'connector'
+    | 'disk'
+    | 'label'
+    | 'loadBalancer'
+    | 'panel'
+    | 'service'
+    | 'supabaseShell'
+    | 'user'
+
+  type DiagramElementDefinition = {
+    type: DiagramElementType
+    className?: string
+    enter?: 'left' | 'right' | 'up' | 'down'
+    exit?: 'left' | 'right' | 'up' | 'down'
+  }
+
+  type DiagramLayout = {
+    x: number
+    y: number
+    width?: number
+    height?: number
+    opacity?: number
+    text?: string
+    path?: string
+    labelSide?: 'left' | 'top'
+  }
+
+  type DiagramNode = {
+    id: string
+    definition: DiagramElementDefinition
+    element: SVGGElement
+    refs: {
+      rect?: SVGRectElement
+      rect2?: SVGRectElement
+      rect3?: SVGRectElement
+      text?: SVGTextElement
+      text2?: SVGTextElement
+      path?: SVGPathElement
+    }
+    current: Required<Pick<DiagramLayout, 'x' | 'y'>> & {
+      width: number
+      height: number
+      opacity: number
+      text: string
+      path: string
+      labelSide: 'left' | 'top'
+    }
+  }
+
+  const namespace = 'http://www.w3.org/2000/svg'
+  const defaultLayout = {
+    x: 0,
+    y: 0,
+    width: 120,
+    height: 48,
+    opacity: 1,
+    text: '',
+    path: '',
+    labelSide: 'top' as const,
+  }
+
+  const elements: Record<string, DiagramElementDefinition> = {
+    user: { type: 'user', enter: 'left', exit: 'left' },
+    frontendBoundary: { type: 'boundary', className: 'boundary--frontend' },
+    backendBoundary: { type: 'boundary', className: 'boundary--backend' },
+    managedOwner: { type: 'panel', className: 'panel--managed', enter: 'left', exit: 'left' },
+    aws: { type: 'panel', className: 'panel--cloud', enter: 'right', exit: 'left' },
+    officialSupabase: { type: 'panel', className: 'panel--cloud', enter: 'right', exit: 'left' },
+    server1: { type: 'panel', className: 'panel--server', enter: 'right', exit: 'left' },
+    server2: { type: 'panel', className: 'panel--server', enter: 'right', exit: 'right' },
+    server3: { type: 'panel', className: 'panel--server', enter: 'right', exit: 'right' },
+    openSe1: { type: 'service', className: 'service--opense' },
+    openSe2: { type: 'service', className: 'service--opense', enter: 'right', exit: 'right' },
+    openSe3: { type: 'service', className: 'service--opense', enter: 'right', exit: 'right' },
+    loadBalancer1: { type: 'loadBalancer', enter: 'up', exit: 'up' },
+    loadBalancer2: { type: 'loadBalancer', enter: 'down', exit: 'down' },
+    supabaseShell: { type: 'supabaseShell' },
+    disk1: { type: 'disk' },
+    disk2: { type: 'disk', enter: 'right', exit: 'right' },
+    disk3: { type: 'disk', enter: 'right', exit: 'right' },
+    reverseTunnel: { type: 'service', className: 'service--access', enter: 'left', exit: 'left' },
+    vpn: { type: 'service', className: 'service--access', enter: 'left', exit: 'left' },
+    openPort: { type: 'service', className: 'service--access', enter: 'left', exit: 'left' },
+    directAccess: { type: 'label', enter: 'left', exit: 'left' },
+    sync12: { type: 'label', enter: 'right', exit: 'right' },
+    sync23: { type: 'label', enter: 'right', exit: 'right' },
+    userToFrontend: { type: 'connector' },
+    userToBackend: { type: 'connector' },
+    accessToStack: { type: 'connector', enter: 'left', exit: 'left' },
+    loadBalancerToOpenSe1: { type: 'connector', enter: 'up', exit: 'up' },
+    loadBalancerToOpenSe2: { type: 'connector', enter: 'up', exit: 'up' },
+    loadBalancerToOpenSe3: { type: 'connector', enter: 'up', exit: 'up' },
+    loadBalancerToSupabase: { type: 'connector', enter: 'down', exit: 'down' },
+    syncDisk12: { type: 'connector', enter: 'right', exit: 'right' },
+    syncDisk23: { type: 'connector', enter: 'right', exit: 'right' },
+  }
+
+  const layouts: Array<Record<string, DiagramLayout>> = [
+    {
+      user: { x: 244, y: 164, width: 52, height: 28, text: 'You' },
+      frontendBoundary: { x: 350, y: 60, width: 330, height: 92, text: 'Frontend', labelSide: 'left' },
+      backendBoundary: { x: 350, y: 152, width: 330, height: 148, text: 'Backend', labelSide: 'left' },
+      managedOwner: { x: 405, y: 75, width: 250, height: 205, text: 'We manage for you' },
+      openSe1: { x: 430, y: 114, width: 200, height: 30, text: 'Open-Se' },
+      supabaseShell: { x: 420, y: 170, width: 220, height: 92, text: 'Supabase' },
+      disk1: { x: 445, y: 210, width: 170, height: 44, text: 'Disk 1' },
+      userToFrontend: { x: 0, y: 0, path: 'M296 171 C335 171 340 129 430 129' },
+      userToBackend: { x: 0, y: 0, path: 'M296 178 C335 178 354 231 445 231' },
+    },
+    {
+      user: { x: 220, y: 164, width: 52, height: 28, text: 'You' },
+      frontendBoundary: { x: 305, y: 56, width: 360, height: 88, text: 'Frontend', labelSide: 'left' },
+      backendBoundary: { x: 305, y: 144, width: 360, height: 155, text: 'Backend', labelSide: 'left' },
+      aws: { x: 390, y: 66, width: 260, height: 70, text: 'AWS' },
+      officialSupabase: { x: 390, y: 166, width: 260, height: 112, text: 'Official Supabase' },
+      openSe1: { x: 415, y: 98, width: 210, height: 30, text: 'Open-Se' },
+      supabaseShell: { x: 420, y: 199, width: 200, height: 72, text: 'Supabase' },
+      disk1: { x: 440, y: 229, width: 160, height: 38, text: 'Disk 1' },
+      userToFrontend: { x: 0, y: 0, path: 'M272 171 C315 171 324 113 415 113' },
+      userToBackend: { x: 0, y: 0, path: 'M272 178 C315 178 326 248 440 248' },
+    },
+    {
+      user: { x: 254, y: 164, width: 52, height: 28, text: 'You' },
+      frontendBoundary: { x: 360, y: 58, width: 340, height: 92, text: 'Frontend', labelSide: 'left' },
+      backendBoundary: { x: 360, y: 150, width: 340, height: 150, text: 'Backend', labelSide: 'left' },
+      server1: { x: 415, y: 75, width: 260, height: 205, text: 'On-Premises Server' },
+      openSe1: { x: 440, y: 115, width: 210, height: 30, text: 'Open-Se' },
+      supabaseShell: { x: 430, y: 170, width: 220, height: 92, text: 'Supabase' },
+      disk1: { x: 455, y: 210, width: 170, height: 44, text: 'Disk 1' },
+      userToFrontend: { x: 0, y: 0, path: 'M306 171 C345 171 350 130 440 130' },
+      userToBackend: { x: 0, y: 0, path: 'M306 178 C345 178 365 231 455 231' },
+    },
+    {
+      user: { x: 46, y: 166, width: 52, height: 28, text: 'You' },
+      frontendBoundary: { x: 300, y: 35, width: 650, height: 120, text: 'Frontend', labelSide: 'top' },
+      backendBoundary: { x: 300, y: 145, width: 650, height: 185, text: 'Backend', labelSide: 'left' },
+      server1: { x: 335, y: 70, width: 195, height: 235, text: 'On-Premises Server' },
+      server2: { x: 540, y: 70, width: 195, height: 235, text: 'On-Premises Server' },
+      server3: { x: 745, y: 70, width: 195, height: 235, text: 'On-Premises Server' },
+      loadBalancer1: { x: 350, y: 104, width: 575, height: 24, text: 'Load Balancer' },
+      openSe1: { x: 365, y: 150, width: 170, height: 28, text: 'Open-Se1' },
+      openSe2: { x: 560, y: 150, width: 170, height: 28, text: 'Open-Se2' },
+      openSe3: { x: 755, y: 150, width: 170, height: 28, text: 'Open-Se3' },
+      loadBalancer2: { x: 350, y: 196, width: 575, height: 24, text: 'Load Balancer' },
+      supabaseShell: { x: 350, y: 232, width: 575, height: 86, text: 'Supabase' },
+      disk1: { x: 365, y: 265, width: 160, height: 44, text: 'Disk 1' },
+      disk2: { x: 558, y: 265, width: 160, height: 44, text: 'Disk 2' },
+      disk3: { x: 751, y: 265, width: 160, height: 44, text: 'Disk 3' },
+      reverseTunnel: { x: 135, y: 62, width: 90, height: 50, text: 'Reverse Tunnel' },
+      vpn: { x: 135, y: 130, width: 90, height: 46, text: 'VPN' },
+      openPort: { x: 135, y: 197, width: 90, height: 46, text: 'Open Port' },
+      directAccess: { x: 135, y: 248, width: 90, height: 18, text: 'Direct Access' },
+      sync12: { x: 528, y: 281, width: 32, height: 18, text: 'Sync' },
+      sync23: { x: 721, y: 281, width: 32, height: 18, text: 'Sync' },
+      userToFrontend: { x: 0, y: 0, path: 'M98 172 L135 87 M98 180 L135 153 M98 180 L135 220 M225 87 C280 87 300 114 350 116' },
+      userToBackend: { x: 0, y: 0, path: 'M225 153 C280 153 300 205 350 208 M225 220 H350' },
+      accessToStack: {
+        x: 0,
+        y: 0,
+        path:
+          'M225 87 C285 87 300 116 350 116 M225 153 C285 153 300 164 365 164 M225 220 C285 220 300 208 350 208 M225 248 C285 248 300 208 350 208',
+      },
+      loadBalancerToOpenSe1: { x: 0, y: 0, path: 'M450 128 V150' },
+      loadBalancerToOpenSe2: { x: 0, y: 0, path: 'M645 128 V150' },
+      loadBalancerToOpenSe3: { x: 0, y: 0, path: 'M840 128 V150' },
+      loadBalancerToSupabase: { x: 0, y: 0, path: 'M638 220 V232' },
+      syncDisk12: { x: 0, y: 0, path: 'M525 287 H558' },
+      syncDisk23: { x: 0, y: 0, path: 'M718 287 H751' },
+    },
+  ]
+
+  const easeOutCubic = (value: number) => 1 - Math.pow(1 - value, 3)
+  const parseViewBox = (viewBox: string) => viewBox.split(/\s+/).map(Number)
+  const formatViewBox = (viewBox: number[]) => viewBox.map((value) => value.toFixed(2)).join(' ')
+
+  const createSvgElement = <ElementType extends SVGElement>(tag: string, className?: string) => {
+    const element = document.createElementNS(namespace, tag) as ElementType
+
+    if (className) {
+      element.setAttribute('class', className)
+    }
+
+    return element
+  }
+
+  const setAttributes = (element: SVGElement, attributes: Record<string, string | number>) => {
+    Object.entries(attributes).forEach(([name, value]) => {
+      element.setAttribute(name, String(value))
+    })
+  }
+
+  const splitLabel = (label: string) => {
+    if (label === 'Reverse Tunnel' || label === 'Open Port') {
+      return label.split(' ')
+    }
+
+    return [label]
+  }
+
+  const setText = (textElement: SVGTextElement, label: string, x: number, y: number, lineHeight = 13) => {
+    const lines = splitLabel(label)
+
+    textElement.textContent = ''
+    textElement.setAttribute('x', String(x))
+    textElement.setAttribute('y', String(y - ((lines.length - 1) * lineHeight) / 2))
+
+    lines.forEach((line, index) => {
+      const tspan = createSvgElement<SVGTSpanElement>('tspan')
+      tspan.textContent = line
+      tspan.setAttribute('x', String(x))
+      tspan.setAttribute('dy', index === 0 ? '0' : String(lineHeight))
+      textElement.appendChild(tspan)
+    })
+  }
+
+  const drawElement = (node: DiagramNode) => {
+    const { current, definition, element, refs } = node
+    const width = current.width
+    const height = current.height
+
+    element.setAttribute('transform', `translate(${current.x.toFixed(2)} ${current.y.toFixed(2)})`)
+    element.style.opacity = String(current.opacity)
+    element.toggleAttribute('aria-hidden', current.opacity < 0.04)
+
+    if (definition.type === 'connector') {
+      refs.path?.setAttribute('d', current.path)
+      return
+    }
+
+    if (refs.rect) {
+      setAttributes(refs.rect, { width, height })
+    }
+
+    if (definition.type === 'boundary') {
+      refs.text && setText(refs.text, current.text, current.labelSide === 'top' ? width / 2 : 14, current.labelSide === 'top' ? 16 : height / 2)
+      if (refs.text) {
+        refs.text.setAttribute(
+          'transform',
+          current.labelSide === 'left'
+            ? `rotate(-90 14 ${height / 2})`
+            : 'none',
+        )
+      }
+    }
+
+    if (definition.type === 'panel') {
+      refs.text && setText(refs.text, current.text, width / 2, 26)
+    }
+
+    if (definition.type === 'service' || definition.type === 'loadBalancer' || definition.type === 'user') {
+      refs.text && setText(refs.text, current.text, width / 2, height / 2 + 4)
+    }
+
+    if (definition.type === 'label') {
+      refs.text && setText(refs.text, current.text, width / 2, height / 2 + 4)
+    }
+
+    if (definition.type === 'supabaseShell') {
+      refs.text && setText(refs.text, current.text, width / 2, 20)
+    }
+
+    if (definition.type === 'disk') {
+      if (refs.rect2) {
+        setAttributes(refs.rect2, {
+          x: 10,
+          y: 7,
+          width: Math.max(width - 20, 20),
+          height: Math.max(height - 14, 20),
+        })
+      }
+
+      if (refs.rect3) {
+        setAttributes(refs.rect3, {
+          x: 20,
+          y: 10,
+          width: Math.max(width - 40, 20),
+          height: 18,
+        })
+      }
+
+      refs.text && setText(refs.text, 'Data', width / 2, 19)
+      refs.text2 && setText(refs.text2, current.text, width / 2, height - 6)
+    }
+  }
+
+  const createElementNode = (id: string, definition: DiagramElementDefinition) => {
+    const element = createSvgElement<SVGGElement>('g', `architecture-node architecture-node--${definition.type} ${definition.className ?? ''}`)
+    element.dataset.diagramElement = id
+
+    const refs: DiagramNode['refs'] = {}
+
+    if (definition.type === 'connector') {
+      refs.path = createSvgElement<SVGPathElement>('path')
+      refs.path.setAttribute('marker-end', 'url(#architecture-arrow)')
+      element.appendChild(refs.path)
+    } else if (definition.type === 'disk') {
+      refs.rect = createSvgElement<SVGRectElement>('rect', 'architecture-node__disk-outer')
+      refs.rect2 = createSvgElement<SVGRectElement>('rect', 'architecture-node__disk-inner')
+      refs.rect3 = createSvgElement<SVGRectElement>('rect', 'architecture-node__data')
+      refs.text = createSvgElement<SVGTextElement>('text', 'architecture-node__text architecture-node__text--data')
+      refs.text2 = createSvgElement<SVGTextElement>('text', 'architecture-node__text architecture-node__text--disk')
+      element.append(refs.rect, refs.rect2, refs.rect3, refs.text, refs.text2)
+    } else {
+      if (definition.type !== 'label') {
+        refs.rect = createSvgElement<SVGRectElement>('rect')
+        element.appendChild(refs.rect)
+      }
+
+      refs.text = createSvgElement<SVGTextElement>('text', 'architecture-node__text')
+      element.appendChild(refs.text)
+    }
+
+    const node: DiagramNode = {
+      id,
+      definition,
+      element,
+      refs,
+      current: { ...defaultLayout },
+    }
+
+    drawElement(node)
+
+    return node
+  }
+
+  const directionOffset = (direction: DiagramElementDefinition['enter'] = 'right') => {
+    if (direction === 'left') {
+      return { x: -90, y: 0 }
+    }
+
+    if (direction === 'up') {
+      return { x: 0, y: -48 }
+    }
+
+    if (direction === 'down') {
+      return { x: 0, y: 48 }
+    }
+
+    return { x: 90, y: 0 }
+  }
+
+  const completeLayout = (layout?: DiagramLayout) => ({ ...defaultLayout, ...layout })
+
+  const getEnteringLayout = (node: DiagramNode, target: DiagramLayout) => {
+    const offset = directionOffset(node.definition.enter)
+    const layout = completeLayout(target)
+
+    return { ...layout, x: layout.x + offset.x, y: layout.y + offset.y, opacity: 0 }
+  }
+
+  const getExitingLayout = (node: DiagramNode) => {
+    const offset = directionOffset(node.definition.exit)
+
+    return {
+      ...node.current,
+      x: node.current.x + offset.x,
+      y: node.current.y + offset.y,
+      opacity: 0,
+    }
+  }
+
+  const setupArchitectureAnimator = (root: HTMLElement) => {
+    if (root.dataset.ready === 'true') {
+      return
+    }
+
+    root.dataset.ready = 'true'
+
+    const states = JSON.parse(root.dataset.states ?? '[]') as ArchitectureState[]
+    const svg = root.querySelector<SVGSVGElement>('[data-architecture-diagram]')
+    const connectorLayer = svg?.querySelector<SVGGElement>('[data-architecture-layer="connectors"]')
+    const nodeLayer = svg?.querySelector<SVGGElement>('[data-architecture-layer="nodes"]')
+    const title = root.querySelector<HTMLElement>('[data-architecture-title]')
+    const description = root.querySelector<HTMLElement>('[data-architecture-description]')
+    const controls = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-architecture-control]'))
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (!svg || !connectorLayer || !nodeLayer || states.length === 0) {
+      return
+    }
+
+    const nodes = Object.entries(elements).map(([id, definition]) => {
+      const node = createElementNode(id, definition)
+      const layer = definition.type === 'connector' ? connectorLayer : nodeLayer
+      layer.appendChild(node.element)
+
+      return node
+    })
+
+    let activeIndex = 0
+    let frame = 0
+    let autoplay: number | undefined
+
+    const setActiveText = (index: number) => {
+      activeIndex = index
+      root.dataset.activeState = states[index].id
+      title && (title.textContent = states[index].title)
+      description && (description.textContent = states[index].description)
+
+      controls.forEach((control, controlIndex) => {
+        control.setAttribute('aria-selected', controlIndex === index ? 'true' : 'false')
+      })
+    }
+
+    const applyState = (index: number, immediate = false) => {
+      window.cancelAnimationFrame(frame)
+      setActiveText(index)
+
+      const targetLayouts = layouts[index]
+      const fromViewBox = parseViewBox(svg.getAttribute('viewBox') ?? states[activeIndex]?.viewBox ?? states[0].viewBox)
+      const toViewBox = parseViewBox(states[index].viewBox)
+      const animationNodes = nodes.map((node) => {
+        const target = targetLayouts[node.id]
+        const from = node.current.opacity <= 0.04 && target ? getEnteringLayout(node, target) : { ...node.current }
+        const to = target ? completeLayout(target) : getExitingLayout(node)
+
+        if (target?.text) {
+          node.current.text = target.text
+        }
+
+        if (target?.path) {
+          node.current.path = target.path
+        }
+
+        return { node, from, to }
+      })
+
+      if (immediate || reduceMotion) {
+        svg.setAttribute('viewBox', states[index].viewBox)
+        animationNodes.forEach(({ node, to }) => {
+          node.current = to
+          drawElement(node)
+        })
+        return
+      }
+
+      const start = performance.now()
+      const duration = 720
+
+      const tick = (now: number) => {
+        const progress = Math.min((now - start) / duration, 1)
+        const eased = easeOutCubic(progress)
+        const nextViewBox = fromViewBox.map((value, valueIndex) => value + (toViewBox[valueIndex] - value) * eased)
+
+        svg.setAttribute('viewBox', formatViewBox(nextViewBox))
+
+        animationNodes.forEach(({ node, from, to }) => {
+          node.current = {
+            x: from.x + (to.x - from.x) * eased,
+            y: from.y + (to.y - from.y) * eased,
+            width: from.width + (to.width - from.width) * eased,
+            height: from.height + (to.height - from.height) * eased,
+            opacity: from.opacity + (to.opacity - from.opacity) * eased,
+            text: to.text,
+            path: to.path,
+            labelSide: to.labelSide,
+          }
+          drawElement(node)
+        })
+
+        if (progress < 1) {
+          frame = window.requestAnimationFrame(tick)
+        }
+      }
+
+      frame = window.requestAnimationFrame(tick)
+    }
+
+    const stopAutoplay = () => {
+      if (autoplay) {
+        window.clearInterval(autoplay)
+        autoplay = undefined
+      }
+    }
+
+    controls.forEach((control, index) => {
+      control.addEventListener('click', () => {
+        stopAutoplay()
+        applyState(index)
+      })
+    })
+
+    applyState(0, true)
+
+    if (!reduceMotion) {
+      autoplay = window.setInterval(() => {
+        applyState((activeIndex + 1) % states.length)
+      }, 5200)
+    }
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-architecture-animator]').forEach(setupArchitectureAnimator)
+</script>
+
+<style>
+  .architecture-animator {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .architecture-animator__header {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .architecture-animator__eyebrow {
+    margin: 0;
+    color: var(--color-muted, var(--color-body));
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .architecture-animator__title {
+    margin: 0.25rem 0 0;
+    color: var(--color-heading);
+    font-size: clamp(1.25rem, 1rem + 1vw, 1.9rem);
+    font-weight: 650;
+    line-height: 1.1;
+  }
+
+  .architecture-animator__description {
+    margin: 0.35rem 0 0;
+    max-width: 38rem;
+    color: var(--color-body);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  .architecture-animator__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .architecture-animator__control {
+    min-height: 2.35rem;
+    border: 1px solid var(--opense-shell-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-card) 78%, transparent);
+    color: var(--color-body);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 650;
+    padding: 0.5rem 0.8rem;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .architecture-animator__control[aria-selected='true'] {
+    border-color: color-mix(in srgb, var(--color-primary-hover) 70%, var(--opense-shell-border));
+    background: color-mix(in srgb, var(--color-primary-light) 82%, white);
+    color: var(--color-heading);
+  }
+
+  .architecture-animator__viewport {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--opense-shell-border) 76%, transparent);
+    border-radius: 1rem;
+    background:
+      linear-gradient(rgba(23, 32, 51, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(23, 32, 51, 0.045) 1px, transparent 1px),
+      #ffffff;
+    background-size: 16px 16px;
+    aspect-ratio: 16 / 6.4;
+    box-shadow: inset 0 0 0 1px rgba(23, 32, 51, 0.03);
+  }
+
+  .architecture-animator__diagram {
+    display: block;
+    width: 100%;
+    height: 100%;
+    color: #22324d;
+  }
+
+  :global(.architecture-node) {
+    pointer-events: none;
+  }
+
+  :global(.architecture-node rect) {
+    vector-effect: non-scaling-stroke;
+  }
+
+  :global(.architecture-node--connector) {
+    color: #111827;
+  }
+
+  :global(.architecture-node--connector path) {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.6;
+    vector-effect: non-scaling-stroke;
+  }
+
+  :global(.architecture-node--boundary rect) {
+    fill: rgba(255, 255, 255, 0.18);
+    stroke-width: 1.6;
+  }
+
+  :global(.boundary--frontend rect) {
+    stroke: #5575a8;
+  }
+
+  :global(.boundary--backend rect) {
+    stroke: #8b67a1;
+  }
+
+  :global(.architecture-node--panel rect) {
+    fill: rgba(255, 255, 255, 0.55);
+    stroke: #111827;
+    stroke-width: 1.6;
+  }
+
+  :global(.architecture-node--service rect),
+  :global(.architecture-node--loadBalancer rect),
+  :global(.architecture-node--user rect) {
+    stroke-width: 1.6;
+  }
+
+  :global(.architecture-node--user rect) {
+    fill: #172033;
+    stroke: #ffffff;
+    rx: 5;
+  }
+
+  :global(.service--opense rect) {
+    fill: #f8c9c6;
+    stroke: #d05d57;
+    rx: 5;
+  }
+
+  :global(.service--access rect) {
+    fill: rgba(255, 255, 255, 0.72);
+    stroke: #d6a828;
+    rx: 7;
+  }
+
+  :global(.architecture-node--loadBalancer rect) {
+    fill: #f5bfe3;
+    stroke: #9f72a5;
+  }
+
+  :global(.architecture-node--supabaseShell rect) {
+    fill: rgba(255, 238, 178, 0.74);
+    stroke: #d6ad2d;
+    stroke-width: 2;
+    rx: 17;
+  }
+
+  :global(.architecture-node__disk-outer) {
+    fill: #d8ecd2;
+    stroke: #74b56a;
+    stroke-width: 1.8;
+    rx: 10;
+  }
+
+  :global(.architecture-node__disk-inner) {
+    fill: #d8ecd2;
+    stroke: #74b56a;
+    stroke-width: 1.6;
+    rx: 5;
+  }
+
+  :global(.architecture-node__data) {
+    fill: #718b67;
+    stroke: #4d6f48;
+    stroke-width: 1.5;
+  }
+
+  :global(.architecture-node__text) {
+    fill: #1f2933;
+    font-family:
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      sans-serif;
+    font-size: 13px;
+    font-weight: 750;
+    letter-spacing: 0;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    paint-order: stroke;
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-linejoin: round;
+    stroke-width: 2.5px;
+  }
+
+  :global(.architecture-node--user .architecture-node__text),
+  :global(.architecture-node__disk-outer + .architecture-node__disk-inner + .architecture-node__data + .architecture-node__text + .architecture-node__text) {
+    fill: #ffffff;
+    stroke: rgba(0, 0, 0, 0.28);
+  }
+
+  :global(.architecture-node--panel .architecture-node__text),
+  :global(.architecture-node--supabaseShell .architecture-node__text),
+  :global(.service--opense .architecture-node__text),
+  :global(.service--access .architecture-node__text),
+  :global(.architecture-node--loadBalancer .architecture-node__text) {
+    fill: #111827;
+    stroke: rgba(255, 255, 255, 0.85);
+  }
+
+  :global(.architecture-node__text--data) {
+    fill: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    stroke: rgba(0, 0, 0, 0.22);
+  }
+
+  :global(.architecture-node__text--disk) {
+    font-size: 12px;
+  }
+
+  :global(.architecture-node--boundary .architecture-node__text),
+  :global(.architecture-node--label .architecture-node__text) {
+    fill: #1f2933;
+    font-size: 12px;
+    stroke: rgba(255, 255, 255, 0.84);
+  }
+
+  @media (min-width: 900px) {
+    .architecture-animator__header {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+    }
+
+    .architecture-animator__controls {
+      justify-content: flex-end;
+      max-width: 35rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .architecture-animator__viewport {
+      aspect-ratio: 4 / 3;
+    }
+
+    .architecture-animator__control {
+      flex: 1 1 calc(50% - 0.5rem);
+      padding-inline: 0.6rem;
+    }
+  }
+</style>
