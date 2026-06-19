@@ -39,8 +39,8 @@ import webUi from '../assets/platform/web-ui.png'
     </div>
 
     <div class="mt-12 overflow-visible">
-      <div class="platform-stack relative isolate min-h-[31rem] sm:min-h-[39rem] lg:min-h-[54rem]" data-platform-stack>
-        <figure class="absolute left-0 top-0 w-[88%] max-w-[52rem] overflow-hidden rounded-lg" data-platform-shot="web">
+      <div class="platform-stack relative isolate mx-auto min-h-[29rem] w-full max-w-[56rem] sm:min-h-[38rem] lg:min-h-[48rem]" data-platform-stack>
+        <figure class="absolute left-0 top-0 w-[93%] max-w-[52rem] overflow-hidden rounded-lg" data-platform-shot="web">
           <img
             src={webUi.src}
             width={webUi.width}
@@ -52,7 +52,7 @@ import webUi from '../assets/platform/web-ui.png'
           />
         </figure>
 
-        <figure class="absolute left-0 top-[10.5rem] w-[88%] max-w-[52rem] overflow-hidden rounded-lg sm:top-[13rem] lg:top-[15rem]" data-platform-shot="desktop">
+        <figure class="absolute left-0 top-[8rem] w-[93%] max-w-[52rem] overflow-hidden rounded-lg sm:top-[10rem] lg:top-[11.5rem]" data-platform-shot="desktop">
           <img
             src={desktopUi.src}
             width={desktopUi.width}
@@ -64,7 +64,7 @@ import webUi from '../assets/platform/web-ui.png'
           />
         </figure>
 
-        <figure class="absolute right-0 top-16 w-[44%] min-w-[11rem] max-w-[18rem] overflow-hidden rounded-lg sm:top-20 lg:right-10 lg:top-28" data-platform-shot="phone">
+        <figure class="absolute left-[68%] top-16 w-[44%] min-w-[11rem] max-w-[18rem] overflow-hidden rounded-lg sm:top-20 lg:top-28" data-platform-shot="phone">
           <img
             src={phoneUi.src}
             width={phoneUi.width}
@@ -76,7 +76,43 @@ import webUi from '../assets/platform/web-ui.png'
           />
         </figure>
 
-        <div class="absolute inset-0 z-50 grid grid-cols-2 grid-rows-2" aria-hidden="true">
+        <figure class="absolute left-0 top-0 w-[93%] max-w-[52rem] overflow-hidden rounded-lg" data-platform-overlay="web" aria-hidden="true">
+          <img
+            src={webUi.src}
+            width={webUi.width}
+            height={webUi.height}
+            alt=""
+            class="block h-auto w-full"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+
+        <figure class="absolute left-0 top-[8rem] w-[93%] max-w-[52rem] overflow-hidden rounded-lg sm:top-[10rem] lg:top-[11.5rem]" data-platform-overlay="desktop" aria-hidden="true">
+          <img
+            src={desktopUi.src}
+            width={desktopUi.width}
+            height={desktopUi.height}
+            alt=""
+            class="block h-auto w-full"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+
+        <figure class="absolute left-[68%] top-16 w-[44%] min-w-[11rem] max-w-[18rem] overflow-hidden rounded-lg sm:top-20 lg:top-28" data-platform-overlay="phone" aria-hidden="true">
+          <img
+            src={phoneUi.src}
+            width={phoneUi.width}
+            height={phoneUi.height}
+            alt=""
+            class="block h-auto w-full"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+
+        <div class="absolute z-50 grid grid-cols-2 grid-rows-2" data-platform-hover-grid aria-hidden="true">
           <div data-platform-hover="web"></div>
           <div data-platform-hover="phone"></div>
           <div data-platform-hover="desktop"></div>
@@ -111,13 +147,13 @@ import webUi from '../assets/platform/web-ui.png'
 
 <style>
   .platform-stack [data-platform-shot] {
-    opacity: 0.96;
-    transition:
-      opacity 420ms ease,
-      transform 520ms ease,
-      z-index 0ms linear 120ms;
+    filter: brightness(0.96) saturate(0.95);
+    opacity: 1;
     transform: scale(1);
     transform-origin: center;
+    transition:
+      filter 420ms ease,
+      transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .platform-stack [data-platform-shot='web'] {
@@ -129,33 +165,30 @@ import webUi from '../assets/platform/web-ui.png'
   }
 
   .platform-stack [data-platform-shot='phone'] {
-    z-index: 30;
+    z-index: 5;
   }
 
-  .platform-stack:has([data-platform-hover='web']:hover) [data-platform-shot='web'],
-  .platform-stack:has([data-platform-hover='desktop']:hover) [data-platform-shot='desktop'],
-  .platform-stack:has([data-platform-hover='phone']:hover) [data-platform-shot='phone'],
-  .platform-stack[data-active-platform='web'] [data-platform-shot='web'],
-  .platform-stack[data-active-platform='desktop'] [data-platform-shot='desktop'],
-  .platform-stack[data-active-platform='phone'] [data-platform-shot='phone'] {
+  .platform-stack [data-platform-overlay] {
     z-index: 40;
-    opacity: 1;
-    animation: platform-stack-fade-in 420ms ease both;
-    transform: scale(1.035);
+    pointer-events: none;
+    filter: brightness(1) saturate(1);
+    opacity: 0;
+    transform: scale(0.985);
+    transform-origin: center;
     transition:
-      opacity 420ms ease,
-      transform 520ms ease,
-      z-index 0ms;
+      opacity 360ms ease,
+      filter 420ms ease,
+      transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  @keyframes platform-stack-fade-in {
-    from {
-      opacity: 0.72;
-    }
-
-    to {
-      opacity: 1;
-    }
+  .platform-stack:has([data-platform-hover='web']:hover) [data-platform-overlay='web'],
+  .platform-stack:has([data-platform-hover='desktop']:hover) [data-platform-overlay='desktop'],
+  .platform-stack:has([data-platform-hover='phone']:hover) [data-platform-overlay='phone'],
+  .platform-stack[data-active-platform='web'] [data-platform-overlay='web'],
+  .platform-stack[data-active-platform='desktop'] [data-platform-overlay='desktop'],
+  .platform-stack[data-active-platform='phone'] [data-platform-overlay='phone'] {
+    opacity: 1;
+    transform: scale(1.035);
   }
 </style>
 
@@ -167,6 +200,32 @@ import webUi from '../assets/platform/web-ui.png'
       }
 
       stack.dataset.platformStackReady = 'true'
+
+      const hoverGrid = stack.querySelector<HTMLElement>('[data-platform-hover-grid]')
+      const updateHoverGrid = () => {
+        if (!hoverGrid) {
+          return
+        }
+
+        const stackRect = stack.getBoundingClientRect()
+        const shotRects = [...stack.querySelectorAll<HTMLElement>('[data-platform-shot]')].map((shot) =>
+          shot.getBoundingClientRect()
+        )
+
+        if (!shotRects.length) {
+          return
+        }
+
+        const left = Math.min(...shotRects.map((rect) => rect.left)) - stackRect.left
+        const top = Math.min(...shotRects.map((rect) => rect.top)) - stackRect.top
+        const right = Math.max(...shotRects.map((rect) => rect.right)) - stackRect.left
+        const bottom = Math.max(...shotRects.map((rect) => rect.bottom)) - stackRect.top
+
+        hoverGrid.style.left = `${Math.max(0, left)}px`
+        hoverGrid.style.top = `${Math.max(0, top)}px`
+        hoverGrid.style.width = `${Math.max(0, right - left)}px`
+        hoverGrid.style.height = `${Math.max(0, bottom - top)}px`
+      }
 
       stack.querySelectorAll<HTMLElement>('[data-platform-hover]').forEach((target) => {
         const activateTarget = () => {
@@ -183,6 +242,13 @@ import webUi from '../assets/platform/web-ui.png'
 
       stack.addEventListener('pointerleave', clearTarget)
       stack.addEventListener('mouseleave', clearTarget)
+
+      stack.querySelectorAll('img').forEach((image) => {
+        image.addEventListener('load', updateHoverGrid)
+      })
+
+      window.addEventListener('resize', updateHoverGrid)
+      requestAnimationFrame(updateHoverGrid)
     })
   }
 
