@@ -6,7 +6,7 @@ import phoneUi from '../assets/platform/phone-ui.png'
 import webUi from '../assets/platform/web-ui.png'
 ---
 
-<MarketingLayout landingContext="opense" title="OpenSe | Open Source SaaS Stack">
+<MarketingLayout landingContext="opense" title="OpenSe | Open Source SaaS Stack" includeFooter={true}>
   <div class="pointer-events-none absolute inset-0">
     <div class="absolute inset-0 bg-[var(--color-background)]"></div>
     <div class="absolute inset-x-0 top-0 h-[26rem]" style="background:linear-gradient(180deg,color-mix(in srgb,var(--color-primary-light) 42%,var(--color-background)) 0%,transparent 100%)"></div>
@@ -14,28 +14,25 @@ import webUi from '../assets/platform/web-ui.png'
 
   <section class="relative mx-auto max-w-5xl px-6 pb-8 pt-[calc(6rem+4.5rem)] text-center">
     <h1 class="mx-auto max-w-4xl text-5xl font-semibold leading-[0.94] text-[var(--color-heading)] sm:text-6xl lg:text-[5.25rem]">
-      The Open Source <span style="color:color-mix(in srgb,var(--color-primary-hover) 78%,var(--color-heading))">SaaS Stack</span> for Modern Teams
+      Open Source<br />
+      <span style="color:color-mix(in srgb,var(--color-primary-hover) 82%,var(--color-heading))">Free,</span>
+      <span style="color:#8a5b2f">Forever</span>
     </h1>
     <p class="mx-auto mt-8 max-w-3xl text-lg leading-8 text-[var(--color-body)] md:text-xl">
-      Empower your organization with enterprise-grade, privacy-first tools. Deploy Open-ETL for secure data processing and Open-StoQR for intelligent inventory management, all with zero vendor lock-in.
+      Own the tools you use, own the data you use.
     </p>
   </section>
 
   <section class="relative mx-auto max-w-6xl px-6 py-12">
     <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
       <div>
-        <span class="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-primary-hover)]">Multi-platform</span>
         <h2 class="mt-4 max-w-3xl text-4xl font-semibold leading-tight text-[var(--color-heading)] md:text-5xl">
-          Work from the browser, desktop, or phone.
+          Multi-Platform. Browser, desktop, or phone.
         </h2>
         <p class="mt-5 max-w-2xl text-lg leading-8 text-[var(--color-body)]">
-          OpenSe products keep the same operational workflows available across the screens your team already uses.
+          Use OpenSe products anytime, anywhere, on any device.
         </p>
       </div>
-
-      <p class="text-sm leading-6 text-[var(--color-body)] lg:text-right">
-        The same inventory workspace scales from full dashboards to field-ready mobile views.
-      </p>
     </div>
 
     <div class="mt-12 overflow-visible">
@@ -122,21 +119,16 @@ import webUi from '../assets/platform/web-ui.png'
     </div>
   </section>
 
-  <section class="relative mx-auto max-w-6xl px-6 py-12">
+  <section class="relative mx-auto max-w-6xl px-6 pb-4 pt-12">
     <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
       <div>
-        <span class="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-primary-hover)]">Infrastructure</span>
         <h2 class="mt-4 max-w-3xl text-4xl font-semibold leading-tight text-[var(--color-heading)] md:text-5xl">
           Own Your Infrastructure
         </h2>
         <p class="mt-5 max-w-2xl text-lg leading-8 text-[var(--color-body)]">
-          OpenSe is built on an open architecture. Whether you want to use our managed cloud or deploy entirely on your own K8s/Docker infrastructure, you remain in complete control.
+          OpenSe lets you choose <strong style="color:color-mix(in srgb,var(--color-primary-hover) 82%,var(--color-heading))">where</strong> and <strong style="color:#8a5b2f">how</strong> you want to deploy, and keep your data.
         </p>
       </div>
-
-      <p class="text-sm leading-6 text-[var(--color-body)] lg:text-right">
-        Move between managed, cloud-hosted, on-premise, and high-availability deployment paths.
-      </p>
     </div>
 
     <div class="mt-10">
@@ -157,15 +149,15 @@ import webUi from '../assets/platform/web-ui.png'
   }
 
   .platform-stack [data-platform-shot='web'] {
-    z-index: 10;
-  }
-
-  .platform-stack [data-platform-shot='desktop'] {
     z-index: 20;
   }
 
+  .platform-stack [data-platform-shot='desktop'] {
+    z-index: 10;
+  }
+
   .platform-stack [data-platform-shot='phone'] {
-    z-index: 5;
+    z-index: 30;
   }
 
   .platform-stack [data-platform-overlay] {

@@ -21,8 +21,8 @@ const getStartedHref = buildNavbarGetStartedPath(landingContext)
   </a>
 
   <div class="hidden items-center gap-8 text-sm font-medium md:flex">
-    <a href="/etl" data-astro-prefetch data-testid="nav-open-etl-product" class="transition-transform duration-200 hover:-translate-y-px">Open-ETL</a>
     <a href="/stoqr" data-astro-prefetch data-testid="nav-open-stoqr-product" class="transition-transform duration-200 hover:-translate-y-px">Open-StoQR</a>
+    <a href="/etl" data-astro-prefetch data-testid="nav-open-etl-product" class="transition-transform duration-200 hover:-translate-y-px">Open-ETL</a>
   </div>
 
   <div class="flex shrink-0 items-center gap-3">
@@ -43,8 +43,8 @@ const getStartedHref = buildNavbarGetStartedPath(landingContext)
         class="absolute left-0 right-0 top-full mt-3 flex flex-col gap-3 rounded-[1.5rem] p-4 text-[var(--color-foreground)]"
         style="background-color:color-mix(in srgb,var(--color-card) 92%,transparent);backdrop-filter:blur(20px);box-shadow:var(--opense-shell-shadow-card)"
       >
-        <a href="/etl" data-astro-prefetch class="px-3 py-2 text-sm font-medium">Open-ETL</a>
         <a href="/stoqr" data-astro-prefetch class="px-3 py-2 text-sm font-medium">Open-StoQR</a>
+        <a href="/etl" data-astro-prefetch class="px-3 py-2 text-sm font-medium">Open-ETL</a>
         <a
           href={getStartedHref}
           data-testid="nav-get-started"
