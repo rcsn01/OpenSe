@@ -31,45 +31,83 @@ const states = [
 ] as const
 ---
 
-<div class="architecture-animator" data-architecture-animator data-active-state={states[0].id} data-states={JSON.stringify(states)}>
-  <div class="architecture-animator__header">
-    <div>
-      <p class="architecture-animator__eyebrow">Deployment path</p>
-      <h3 class="architecture-animator__title" data-architecture-title>{states[0].title}</h3>
-      <p class="architecture-animator__description" data-architecture-description>{states[0].description}</p>
-    </div>
-    <div class="architecture-animator__controls" role="tablist" aria-label="Architecture deployment states">
-      {states.map((state, index) => (
-        <button
-          type="button"
-          class="architecture-animator__control"
-          data-architecture-control={index}
-          aria-selected={index === 0 ? 'true' : 'false'}
-          role="tab"
-        >
-          {state.title}
-        </button>
-      ))}
-    </div>
-  </div>
+<div
+  class="architecture-animator"
+  data-architecture-animator
+  data-active-mode="cloud"
+  data-active-state={states[0].id}
+  data-states={JSON.stringify(states)}
+>
+  <div class="architecture-animator__layout">
+    <aside class="architecture-animator__config" aria-label="Architecture configuration">
+      <p class="architecture-animator__eyebrow">Configuration</p>
 
-  <div class="architecture-animator__viewport">
-    <svg
-      class="architecture-animator__diagram"
-      data-architecture-diagram
-      viewBox={viewBox(0, 0, 63, 23)}
-      preserveAspectRatio="xMidYMid meet"
-      role="img"
-      aria-label="OpenSe infrastructure deployment options"
-    >
-      <defs>
-        <marker id="architecture-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-          <path d="M 0 0 L 8 4 L 0 8 z" fill="currentColor"></path>
-        </marker>
-      </defs>
-      <g data-architecture-layer="connectors"></g>
-      <g data-architecture-layer="nodes"></g>
-    </svg>
+      <div class="architecture-animator__field">
+        <p class="architecture-animator__label">Location</p>
+        <div class="architecture-animator__segment" role="tablist" aria-label="Hosting location">
+          <button type="button" data-architecture-mode="cloud" aria-selected="true" role="tab">Cloud</button>
+          <button type="button" data-architecture-mode="on-premise" aria-selected="false" role="tab">On-Premise</button>
+        </div>
+      </div>
+
+      <div class="architecture-animator__field" data-architecture-option-group="cloud">
+        <p class="architecture-animator__label">Cloud setup</p>
+        <div class="architecture-animator__options" role="tablist" aria-label="Cloud deployment options">
+          <button type="button" data-architecture-control="0" aria-selected="true" role="tab">Official</button>
+          <button type="button" data-architecture-control="1" aria-selected="false" role="tab">Self-Host</button>
+        </div>
+      </div>
+
+      <div class="architecture-animator__field" data-architecture-provider-group hidden>
+        <p class="architecture-animator__label">Cloud provider</p>
+        <div class="architecture-animator__provider-options" role="tablist" aria-label="Self-hosted cloud provider options">
+          <button type="button" data-architecture-provider="AWS" aria-selected="true" role="tab">AWS</button>
+          <button type="button" data-architecture-provider="GCP" aria-selected="false" role="tab">GCP</button>
+          <button type="button" data-architecture-provider="Azure" aria-selected="false" role="tab">Azure</button>
+          <button type="button" data-architecture-provider="Any cloud" aria-selected="false" role="tab">Any cloud</button>
+        </div>
+      </div>
+
+      <div class="architecture-animator__field" data-architecture-option-group="on-premise" hidden>
+        <p class="architecture-animator__label">On-premise setup</p>
+        <div class="architecture-animator__options" role="tablist" aria-label="On-premise deployment options">
+          <button type="button" data-architecture-control="2" aria-selected="false" role="tab">Simple</button>
+          <button type="button" data-architecture-control="3" aria-selected="false" role="tab">High Availability</button>
+        </div>
+      </div>
+
+      <div class="architecture-animator__field" data-architecture-access-group hidden>
+        <p class="architecture-animator__label">Access method</p>
+        <div class="architecture-animator__access-options" role="tablist" aria-label="High availability access method options">
+          <button type="button" data-architecture-access="Reverse Tunnel" aria-selected="true" role="tab">Reverse Tunnel</button>
+          <button type="button" data-architecture-access="VPN" aria-selected="false" role="tab">VPN</button>
+          <button type="button" data-architecture-access="Open Port" aria-selected="false" role="tab">Open Port</button>
+          <button type="button" data-architecture-access="Direct Access" aria-selected="false" role="tab">Direct Access</button>
+        </div>
+      </div>
+
+    </aside>
+
+    <div class="architecture-animator__diagram-panel">
+      <div class="architecture-animator__viewport">
+        <svg
+          class="architecture-animator__diagram"
+          data-architecture-diagram
+          viewBox={viewBox(0, 0, 63, 23)}
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label="OpenSe infrastructure deployment options"
+        >
+          <defs>
+            <marker id="architecture-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M 0 0 L 8 4 L 0 8 z" fill="currentColor"></path>
+            </marker>
+          </defs>
+          <g data-architecture-layer="connectors"></g>
+          <g data-architecture-layer="nodes"></g>
+        </svg>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -170,12 +208,15 @@ const states = [
     reverseTunnel: { type: 'service', className: 'service--access', enter: 'left', exit: 'left' },
     vpn: { type: 'service', className: 'service--access', enter: 'left', exit: 'left' },
     openPort: { type: 'service', className: 'service--access', enter: 'left', exit: 'left' },
-    directAccess: { type: 'label', enter: 'left', exit: 'left' },
+    directAccess: { type: 'service', className: 'service--access', enter: 'left', exit: 'left' },
     sync12: { type: 'label', enter: 'right', exit: 'right' },
     sync23: { type: 'label', enter: 'right', exit: 'right' },
     userToFrontend: { type: 'connector' },
     userToBackend: { type: 'connector' },
+    userToAccess: { type: 'connector', enter: 'left', exit: 'left' },
     accessToStack: { type: 'connector', enter: 'left', exit: 'left' },
+    accessToTopLoadBalancer: { type: 'connector', enter: 'left', exit: 'left' },
+    accessToBottomLoadBalancer: { type: 'connector', enter: 'left', exit: 'left' },
     loadBalancerToOpenSe1: { type: 'connector', enter: 'up', exit: 'up' },
     loadBalancerToOpenSe2: { type: 'connector', enter: 'up', exit: 'up' },
     loadBalancerToOpenSe3: { type: 'connector', enter: 'up', exit: 'up' },
@@ -201,7 +242,7 @@ const states = [
       frontendBoundary: { x: unit(19), y: unit(3), width: unit(23), height: unit(7), text: 'Frontend', labelSide: 'left' },
       backendBoundary: { x: unit(19), y: unit(11), width: unit(23), height: unit(9), text: 'Backend', labelSide: 'left' },
       aws: { x: unit(23), y: unit(4), width: unit(18), height: unit(5), text: 'AWS' },
-      officialSupabase: { x: unit(23), y: unit(12), width: unit(18), height: unit(8), text: 'Official Supabase' },
+      officialSupabase: { x: unit(23), y: unit(12), width: unit(18), height: unit(8), text: 'Supabase Cloud' },
       openSe1: { x: unit(24), y: unit(6), width: unit(16), height: unit(2), text: 'Open-Se' },
       supabaseShell: { x: unit(24), y: unit(14), width: unit(16), height: unit(5), text: 'Supabase' },
       disk1: { x: unit(25), y: unit(16), width: unit(14), height: unit(2), text: 'Data' },
@@ -235,10 +276,10 @@ const states = [
       disk1: { x: unit(23), y: unit(19), width: unit(9), height: unit(2), text: 'Data' },
       disk2: { x: unit(35), y: unit(19), width: unit(10), height: unit(2), text: 'Data' },
       disk3: { x: unit(48), y: unit(19), width: unit(9), height: unit(2), text: 'Data' },
-      reverseTunnel: { x: unit(8), y: unit(4), width: unit(6), height: unit(3), text: 'Reverse Tunnel' },
-      vpn: { x: unit(8), y: unit(8), width: unit(6), height: unit(3), text: 'VPN' },
-      openPort: { x: unit(8), y: unit(12), width: unit(6), height: unit(3), text: 'Open Port' },
-      directAccess: { x: unit(8), y: unit(16), width: unit(6), height: unit(1), text: 'Direct Access' },
+      reverseTunnel: { x: unit(7), y: unit(10), width: unit(7), height: unit(2), text: 'Reverse Tunnel' },
+      vpn: { x: unit(7), y: unit(10), width: unit(7), height: unit(2), text: 'VPN' },
+      openPort: { x: unit(7), y: unit(10), width: unit(7), height: unit(2), text: 'Open Port' },
+      directAccess: { x: unit(7), y: unit(10), width: unit(7), height: unit(2), text: 'Direct Access' },
       sync12: { x: unit(32), y: unit(19), width: unit(3), height: unit(2), text: 'Sync' },
       sync23: { x: unit(45), y: unit(19), width: unit(3), height: unit(2), text: 'Sync' },
       userToFrontend: { x: unit(0), y: unit(0), path: unitPath('M6 11 L8 5 M6 11 L8 10 M6 11 L8 13 M14 5 C18 5 19 7 22 8') },
@@ -437,10 +478,19 @@ const states = [
     const svg = root.querySelector<SVGSVGElement>('[data-architecture-diagram]')
     const connectorLayer = svg?.querySelector<SVGGElement>('[data-architecture-layer="connectors"]')
     const nodeLayer = svg?.querySelector<SVGGElement>('[data-architecture-layer="nodes"]')
-    const title = root.querySelector<HTMLElement>('[data-architecture-title]')
-    const description = root.querySelector<HTMLElement>('[data-architecture-description]')
     const controls = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-architecture-control]'))
+    const modeButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-architecture-mode]'))
+    const optionGroups = Array.from(root.querySelectorAll<HTMLElement>('[data-architecture-option-group]'))
+    const providerGroup = root.querySelector<HTMLElement>('[data-architecture-provider-group]')
+    const providerButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-architecture-provider]'))
+    const accessGroup = root.querySelector<HTMLElement>('[data-architecture-access-group]')
+    const accessButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-architecture-access]'))
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const stateModes = ['cloud', 'cloud', 'on-premise', 'on-premise'] as const
+    const modeDefaults: Record<(typeof stateModes)[number], number> = {
+      cloud: 0,
+      'on-premise': 2,
+    }
 
     if (!svg || !connectorLayer || !nodeLayer || states.length === 0) {
       return
@@ -455,17 +505,96 @@ const states = [
     })
 
     let activeIndex = 0
+    let activeProvider = 'AWS'
+    let activeAccess = 'Reverse Tunnel'
     let frame = 0
-    let autoplay: number | undefined
+
+    const getHighAvailabilityLayouts = () => {
+      const {
+        reverseTunnel,
+        vpn,
+        openPort,
+        directAccess,
+        userToFrontend,
+        userToBackend,
+        accessToStack,
+        ...baseLayout
+      } = layouts[3]
+      const accessLayouts = {
+        'Reverse Tunnel': {
+          id: 'reverseTunnel',
+          layout: reverseTunnel,
+        },
+        VPN: {
+          id: 'vpn',
+          layout: vpn,
+        },
+        'Open Port': {
+          id: 'openPort',
+          layout: openPort,
+        },
+        'Direct Access': {
+          id: 'directAccess',
+          layout: directAccess,
+        },
+      } as const
+      const selectedAccess = accessLayouts[activeAccess as keyof typeof accessLayouts] ?? accessLayouts['Reverse Tunnel']
+
+      return {
+        ...baseLayout,
+        [selectedAccess.id]: selectedAccess.layout,
+        userToAccess: { x: unit(0), y: unit(0), path: unitPath('M6 11 H7') },
+        accessToTopLoadBalancer: { x: unit(0), y: unit(0), path: unitPath('M14 11 C17 11 19 8 22 8') },
+        accessToBottomLoadBalancer: { x: unit(0), y: unit(0), path: unitPath('M14 11 C17 11 19 15 22 15') },
+      }
+    }
+
+    const getTargetLayouts = (index: number) => {
+      if (index === 1) {
+        return { ...layouts[index], aws: { ...layouts[index].aws, text: activeProvider } }
+      }
+
+      if (index === 3) {
+        return getHighAvailabilityLayouts()
+      }
+
+      return layouts[index]
+    }
 
     const setActiveText = (index: number) => {
-      activeIndex = index
-      root.dataset.activeState = states[index].id
-      title && (title.textContent = states[index].title)
-      description && (description.textContent = states[index].description)
+      const mode = stateModes[index]
 
-      controls.forEach((control, controlIndex) => {
+      activeIndex = index
+      root.dataset.activeMode = mode
+      root.dataset.activeState = states[index].id
+
+      modeButtons.forEach((button) => {
+        button.setAttribute('aria-selected', button.dataset.architectureMode === mode ? 'true' : 'false')
+      })
+
+      optionGroups.forEach((group) => {
+        group.hidden = group.dataset.architectureOptionGroup !== mode
+      })
+
+      if (providerGroup) {
+        providerGroup.hidden = index !== 1
+      }
+
+      if (accessGroup) {
+        accessGroup.hidden = index !== 3
+      }
+
+      controls.forEach((control) => {
+        const controlIndex = Number(control.dataset.architectureControl)
         control.setAttribute('aria-selected', controlIndex === index ? 'true' : 'false')
+      })
+
+      providerButtons.forEach((button) => {
+        button.setAttribute('aria-selected', button.dataset.architectureProvider === activeProvider ? 'true' : 'false')
+      })
+
+      accessButtons.forEach((button) => {
+        button.setAttribute('aria-selected', button.dataset.architectureAccess === activeAccess ? 'true' : 'false')
       })
     }
 
@@ -473,7 +602,7 @@ const states = [
       window.cancelAnimationFrame(frame)
       setActiveText(index)
 
-      const targetLayouts = layouts[index]
+      const targetLayouts = getTargetLayouts(index)
       const fromViewBox = parseViewBox(svg.getAttribute('viewBox') ?? states[activeIndex]?.viewBox ?? states[0].viewBox)
       const toViewBox = parseViewBox(states[index].viewBox)
       const animationNodes = nodes.map((node) => {
@@ -533,27 +662,35 @@ const states = [
       frame = window.requestAnimationFrame(tick)
     }
 
-    const stopAutoplay = () => {
-      if (autoplay) {
-        window.clearInterval(autoplay)
-        autoplay = undefined
-      }
-    }
+    modeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const mode = button.dataset.architectureMode as keyof typeof modeDefaults
 
-    controls.forEach((control, index) => {
+        applyState(modeDefaults[mode] ?? 0)
+      })
+    })
+
+    controls.forEach((control) => {
       control.addEventListener('click', () => {
-        stopAutoplay()
-        applyState(index)
+        applyState(Number(control.dataset.architectureControl))
+      })
+    })
+
+    providerButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        activeProvider = button.dataset.architectureProvider ?? 'AWS'
+        applyState(1)
+      })
+    })
+
+    accessButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        activeAccess = button.dataset.architectureAccess ?? 'Reverse Tunnel'
+        applyState(3)
       })
     })
 
     applyState(0, true)
-
-    if (!reduceMotion) {
-      autoplay = window.setInterval(() => {
-        applyState((activeIndex + 1) % states.length)
-      }, 5200)
-    }
   }
 
   document.querySelectorAll<HTMLElement>('[data-architecture-animator]').forEach(setupArchitectureAnimator)
@@ -562,81 +699,105 @@ const states = [
 <style>
   .architecture-animator {
     display: grid;
-    gap: 1.25rem;
   }
 
-  .architecture-animator__header {
+  .architecture-animator__layout {
     display: grid;
-    gap: 1rem;
+    gap: 1.75rem;
+  }
+
+  .architecture-animator__config {
+    display: grid;
+    align-content: start;
+    gap: 1.15rem;
+  }
+
+  .architecture-animator__field {
+    display: grid;
+    gap: 0.55rem;
   }
 
   .architecture-animator__eyebrow {
     margin: 0;
-    color: var(--color-muted, var(--color-body));
+    color: color-mix(in srgb, var(--color-heading) 48%, transparent);
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0;
     text-transform: uppercase;
   }
 
-  .architecture-animator__title {
-    margin: 0.25rem 0 0;
+  .architecture-animator__label {
+    margin: 0;
     color: var(--color-heading);
-    font-size: clamp(1.25rem, 1rem + 1vw, 1.9rem);
-    font-weight: 650;
-    line-height: 1.1;
+    font-size: 0.78rem;
+    font-weight: 700;
   }
 
-  .architecture-animator__description {
-    margin: 0.35rem 0 0;
-    max-width: 38rem;
-    color: var(--color-body);
-    font-size: 0.95rem;
-    line-height: 1.55;
-  }
-
-  .architecture-animator__controls {
-    display: flex;
-    flex-wrap: wrap;
+  .architecture-animator__segment,
+  .architecture-animator__options,
+  .architecture-animator__provider-options,
+  .architecture-animator__access-options {
+    display: grid;
     gap: 0.5rem;
-    align-items: center;
   }
 
-  .architecture-animator__control {
+  .architecture-animator__segment {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .architecture-animator__options {
+    grid-template-columns: 1fr;
+  }
+
+  .architecture-animator__provider-options,
+  .architecture-animator__access-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .architecture-animator__segment button,
+  .architecture-animator__options button,
+  .architecture-animator__provider-options button,
+  .architecture-animator__access-options button {
     min-height: 2.35rem;
-    border: 1px solid var(--opense-shell-border);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-card) 78%, transparent);
+    border: 0;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.54);
     color: var(--color-body);
     cursor: pointer;
     font: inherit;
     font-size: 0.78rem;
     font-weight: 650;
     padding: 0.5rem 0.8rem;
+    text-align: center;
     transition:
       background-color 180ms ease,
       border-color 180ms ease,
       color 180ms ease;
   }
 
-  .architecture-animator__control[aria-selected='true'] {
-    border-color: color-mix(in srgb, var(--color-primary-hover) 70%, var(--opense-shell-border));
-    background: color-mix(in srgb, var(--color-primary-light) 82%, white);
+  .architecture-animator__segment button[aria-selected='true'],
+  .architecture-animator__options button[aria-selected='true'],
+  .architecture-animator__provider-options button[aria-selected='true'],
+  .architecture-animator__access-options button[aria-selected='true'] {
+    background: color-mix(in srgb, var(--color-primary-light) 76%, white);
     color: var(--color-heading);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--color-primary-hover) 32%, transparent),
+      0 8px 18px rgba(116, 132, 85, 0.12);
+  }
+
+  .architecture-animator__diagram-panel {
+    min-width: 0;
   }
 
   .architecture-animator__viewport {
     position: relative;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--opense-shell-border) 76%, transparent);
-    border-radius: 1rem;
-    background:
-      linear-gradient(rgba(23, 32, 51, 0.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(23, 32, 51, 0.045) 1px, transparent 1px),
-      #ffffff;
-    background-size: 16px 16px;
+    border: 0;
+    border-radius: 1.25rem;
+    background: rgba(255, 255, 255, 0.72);
     aspect-ratio: 16 / 6.4;
-    box-shadow: inset 0 0 0 1px rgba(23, 32, 51, 0.03);
+    box-shadow: 0 18px 48px rgba(35, 42, 58, 0.08);
   }
 
   .architecture-animator__diagram {
@@ -663,38 +824,38 @@ const states = [
     stroke: currentColor;
     stroke-linecap: round;
     stroke-linejoin: round;
-    stroke-width: 1.6;
+    stroke-width: 1.35;
     vector-effect: non-scaling-stroke;
   }
 
   :global(.architecture-node--boundary rect) {
-    fill: rgba(255, 255, 255, 0.18);
-    stroke-width: 1.6;
+    fill: rgba(255, 255, 255, 0.08);
+    stroke-width: 1.15;
   }
 
   :global(.boundary--frontend rect) {
-    stroke: #5575a8;
+    stroke: rgba(85, 117, 168, 0.7);
   }
 
   :global(.boundary--backend rect) {
-    stroke: #8b67a1;
+    stroke: rgba(139, 103, 161, 0.7);
   }
 
   :global(.architecture-node--panel rect) {
-    fill: rgba(255, 255, 255, 0.55);
-    stroke: #111827;
-    stroke-width: 1.6;
+    fill: rgba(255, 255, 255, 0.48);
+    stroke: rgba(17, 24, 39, 0.72);
+    stroke-width: 1.2;
   }
 
   :global(.architecture-node--service rect),
   :global(.architecture-node--loadBalancer rect),
   :global(.architecture-node--user rect) {
-    stroke-width: 1.6;
+    stroke-width: 1.2;
   }
 
   :global(.architecture-node--user rect) {
     fill: #172033;
-    stroke: #ffffff;
+    stroke: rgba(255, 255, 255, 0.72);
     rx: 5;
   }
 
@@ -718,14 +879,14 @@ const states = [
   :global(.architecture-node--supabaseShell rect) {
     fill: rgba(255, 238, 178, 0.74);
     stroke: #d6ad2d;
-    stroke-width: 2;
+    stroke-width: 1.35;
     rx: 17;
   }
 
   :global(.architecture-node__disk-outer) {
     fill: #6f9068;
     stroke: #4f7549;
-    stroke-width: 1.8;
+    stroke-width: 1.2;
     rx: 5;
   }
 
@@ -779,14 +940,14 @@ const states = [
   }
 
   @media (min-width: 900px) {
-    .architecture-animator__header {
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: end;
+    .architecture-animator__layout {
+      grid-template-columns: minmax(15.5rem, 0.34fr) minmax(0, 1fr);
+      align-items: start;
     }
 
-    .architecture-animator__controls {
-      justify-content: flex-end;
-      max-width: 35rem;
+    .architecture-animator__config {
+      box-shadow: 1px 0 0 rgba(23, 32, 51, 0.06);
+      padding-right: 1.35rem;
     }
   }
 
@@ -795,8 +956,10 @@ const states = [
       aspect-ratio: 4 / 3;
     }
 
-    .architecture-animator__control {
-      flex: 1 1 calc(50% - 0.5rem);
+    .architecture-animator__segment button,
+    .architecture-animator__options button,
+    .architecture-animator__provider-options button,
+    .architecture-animator__access-options button {
       padding-inline: 0.6rem;
     }
   }

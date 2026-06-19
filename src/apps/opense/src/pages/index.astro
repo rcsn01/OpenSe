@@ -1,25 +1,9 @@
 ---
 import ArchitectureAnimator from '../components/ArchitectureAnimator.astro'
-import MarketingIcon from '../components/MarketingIcon.astro'
 import MarketingLayout from '../layouts/MarketingLayout.astro'
-
-const infrastructureHighlights = [
-  {
-    title: 'Postgres & Supabase',
-    description: 'Robust relational data modeling utilizing PostgreSQL with Row Level Security managed by Supabase.',
-    icon: 'database',
-  },
-  {
-    title: 'Kubernetes Ready',
-    description: 'Designed for container orchestration. Deploy via K8s, K3s, Docker, or Portainer environments.',
-    icon: 'workflow',
-  },
-  {
-    title: 'Monorepo Frontend',
-    description: 'Turbo Repo architecture powering high-performance, modular product applications for ETL and StoQR.',
-    icon: 'network',
-  },
-] as const
+import desktopUi from '../assets/platform/desktop-ui.png'
+import phoneUi from '../assets/platform/phone-ui.png'
+import webUi from '../assets/platform/web-ui.png'
 ---
 
 <MarketingLayout landingContext="opense" title="OpenSe | Open Source SaaS Stack">
@@ -38,34 +22,170 @@ const infrastructureHighlights = [
   </section>
 
   <section class="relative mx-auto max-w-6xl px-6 py-12">
-    <div class="rounded-[2rem] border p-8 md:p-10" style="border-color:var(--opense-shell-border);background-color:color-mix(in srgb,var(--color-card) 80%,transparent);box-shadow:var(--opense-shell-shadow-card)">
-      <div class="flex justify-center">
-        <span class="inline-flex h-14 w-14 items-center justify-center rounded-full border bg-white/85 text-[var(--color-heading)]" style="border-color:var(--opense-shell-border)">
-          <MarketingIcon name="command" class="h-7 w-7" />
-        </span>
+    <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
+      <div>
+        <span class="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-primary-hover)]">Multi-platform</span>
+        <h2 class="mt-4 max-w-3xl text-4xl font-semibold leading-tight text-[var(--color-heading)] md:text-5xl">
+          Work from the browser, desktop, or phone.
+        </h2>
+        <p class="mt-5 max-w-2xl text-lg leading-8 text-[var(--color-body)]">
+          OpenSe products keep the same operational workflows available across the screens your team already uses.
+        </p>
       </div>
-      <h2 class="mt-6 text-center text-4xl font-semibold text-[var(--color-heading)] md:text-5xl">Own Your Infrastructure</h2>
-      <p class="mx-auto mt-5 max-w-3xl text-center text-lg leading-8 text-[var(--color-body)]">
-        OpenSe is built on an open architecture. Whether you want to use our managed cloud or deploy entirely on your own K8s/Docker infrastructure, you remain in complete control.
+
+      <p class="text-sm leading-6 text-[var(--color-body)] lg:text-right">
+        The same inventory workspace scales from full dashboards to field-ready mobile views.
       </p>
-      <div class="mt-10 rounded-[1.5rem] border p-5" style="border-color:var(--opense-shell-border);background-color:rgba(255,255,255,0.58)">
-        <ArchitectureAnimator />
-      </div>
-      <div class="mt-10 grid gap-8 md:grid-cols-3">
-        {infrastructureHighlights.map((item) => {
-          return (
-            <article class="flex items-start gap-4">
-              <span class="mt-1 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/75 text-[var(--color-primary-hover)] shadow-sm">
-                <MarketingIcon name={item.icon} class="h-5 w-5" />
-              </span>
-              <div>
-                <h3 class="text-lg font-semibold text-[var(--color-heading)]">{item.title}</h3>
-                <p class="mt-2 text-sm leading-6 text-[var(--color-body)]">{item.description}</p>
-              </div>
-            </article>
-          )
-        })}
+    </div>
+
+    <div class="mt-12 overflow-visible">
+      <div class="platform-stack relative isolate min-h-[31rem] sm:min-h-[39rem] lg:min-h-[54rem]" data-platform-stack>
+        <figure class="absolute left-0 top-0 w-[88%] max-w-[52rem] overflow-hidden rounded-lg" data-platform-shot="web">
+          <img
+            src={webUi.src}
+            width={webUi.width}
+            height={webUi.height}
+            alt="OpenSe web inventory interface showing product rows, filters, and folder navigation"
+            class="block h-auto w-full"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+
+        <figure class="absolute left-0 top-[10.5rem] w-[88%] max-w-[52rem] overflow-hidden rounded-lg sm:top-[13rem] lg:top-[15rem]" data-platform-shot="desktop">
+          <img
+            src={desktopUi.src}
+            width={desktopUi.width}
+            height={desktopUi.height}
+            alt="OpenSe desktop inventory interface in a native desktop window"
+            class="block h-auto w-full"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+
+        <figure class="absolute right-0 top-16 w-[44%] min-w-[11rem] max-w-[18rem] overflow-hidden rounded-lg sm:top-20 lg:right-10 lg:top-28" data-platform-shot="phone">
+          <img
+            src={phoneUi.src}
+            width={phoneUi.width}
+            height={phoneUi.height}
+            alt="OpenSe mobile inventory interface on a phone"
+            class="block h-auto w-full"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+
+        <div class="absolute inset-0 z-50 grid grid-cols-2 grid-rows-2" aria-hidden="true">
+          <div data-platform-hover="web"></div>
+          <div data-platform-hover="phone"></div>
+          <div data-platform-hover="desktop"></div>
+          <div data-platform-hover="phone"></div>
+        </div>
       </div>
     </div>
   </section>
+
+  <section class="relative mx-auto max-w-6xl px-6 py-12">
+    <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
+      <div>
+        <span class="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-primary-hover)]">Infrastructure</span>
+        <h2 class="mt-4 max-w-3xl text-4xl font-semibold leading-tight text-[var(--color-heading)] md:text-5xl">
+          Own Your Infrastructure
+        </h2>
+        <p class="mt-5 max-w-2xl text-lg leading-8 text-[var(--color-body)]">
+          OpenSe is built on an open architecture. Whether you want to use our managed cloud or deploy entirely on your own K8s/Docker infrastructure, you remain in complete control.
+        </p>
+      </div>
+
+      <p class="text-sm leading-6 text-[var(--color-body)] lg:text-right">
+        Move between managed, cloud-hosted, on-premise, and high-availability deployment paths.
+      </p>
+    </div>
+
+    <div class="mt-10">
+      <ArchitectureAnimator />
+    </div>
+  </section>
 </MarketingLayout>
+
+<style>
+  .platform-stack [data-platform-shot] {
+    opacity: 0.96;
+    transition:
+      opacity 420ms ease,
+      transform 520ms ease,
+      z-index 0ms linear 120ms;
+    transform: scale(1);
+    transform-origin: center;
+  }
+
+  .platform-stack [data-platform-shot='web'] {
+    z-index: 10;
+  }
+
+  .platform-stack [data-platform-shot='desktop'] {
+    z-index: 20;
+  }
+
+  .platform-stack [data-platform-shot='phone'] {
+    z-index: 30;
+  }
+
+  .platform-stack:has([data-platform-hover='web']:hover) [data-platform-shot='web'],
+  .platform-stack:has([data-platform-hover='desktop']:hover) [data-platform-shot='desktop'],
+  .platform-stack:has([data-platform-hover='phone']:hover) [data-platform-shot='phone'],
+  .platform-stack[data-active-platform='web'] [data-platform-shot='web'],
+  .platform-stack[data-active-platform='desktop'] [data-platform-shot='desktop'],
+  .platform-stack[data-active-platform='phone'] [data-platform-shot='phone'] {
+    z-index: 40;
+    opacity: 1;
+    animation: platform-stack-fade-in 420ms ease both;
+    transform: scale(1.035);
+    transition:
+      opacity 420ms ease,
+      transform 520ms ease,
+      z-index 0ms;
+  }
+
+  @keyframes platform-stack-fade-in {
+    from {
+      opacity: 0.72;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+</style>
+
+<script>
+  const setupPlatformStacks = () => {
+    document.querySelectorAll<HTMLElement>('[data-platform-stack]').forEach((stack) => {
+      if (stack.dataset.platformStackReady === 'true') {
+        return
+      }
+
+      stack.dataset.platformStackReady = 'true'
+
+      stack.querySelectorAll<HTMLElement>('[data-platform-hover]').forEach((target) => {
+        const activateTarget = () => {
+          stack.dataset.activePlatform = target.dataset.platformHover ?? ''
+        }
+
+        target.addEventListener('pointerenter', activateTarget)
+        target.addEventListener('mouseenter', activateTarget)
+      })
+
+      const clearTarget = () => {
+        delete stack.dataset.activePlatform
+      }
+
+      stack.addEventListener('pointerleave', clearTarget)
+      stack.addEventListener('mouseleave', clearTarget)
+    })
+  }
+
+  setupPlatformStacks()
+  document.addEventListener('astro:page-load', setupPlatformStacks)
+</script>
