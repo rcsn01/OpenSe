@@ -235,7 +235,7 @@ const states = [
       supabaseShell: { x: unit(26), y: unit(12), width: unit(15), height: unit(5), text: 'Supabase' },
       disk1: { x: unit(27), y: unit(14), width: unit(13), height: unit(2), text: 'Data' },
       userToFrontend: { x: unit(0), y: unit(0), path: unitPath('M18 11 C21 11 21 8 26 8') },
-      userToBackend: { x: unit(0), y: unit(0), path: unitPath('M18 11 C21 11 22 15 27 15') },
+      userToBackend: { x: unit(0), y: unit(0), path: unitPath('M18 11 C21 11 22 13 26 13') },
     },
     {
       user: { x: unit(14), y: unit(10), width: unit(3), height: unit(2), text: 'You' },
@@ -247,7 +247,7 @@ const states = [
       supabaseShell: { x: unit(24), y: unit(14), width: unit(16), height: unit(5), text: 'Supabase' },
       disk1: { x: unit(25), y: unit(16), width: unit(14), height: unit(2), text: 'Data' },
       userToFrontend: { x: unit(0), y: unit(0), path: unitPath('M17 11 C20 11 20 7 24 7') },
-      userToBackend: { x: unit(0), y: unit(0), path: unitPath('M17 11 C20 11 20 17 25 17') },
+      userToBackend: { x: unit(0), y: unit(0), path: unitPath('M17 11 C20 11 20 15 24 15') },
     },
     {
       user: { x: unit(16), y: unit(10), width: unit(3), height: unit(2), text: 'You' },
@@ -258,7 +258,7 @@ const states = [
       supabaseShell: { x: unit(27), y: unit(12), width: unit(15), height: unit(5), text: 'Supabase' },
       disk1: { x: unit(28), y: unit(14), width: unit(13), height: unit(2), text: 'Data' },
       userToFrontend: { x: unit(0), y: unit(0), path: unitPath('M19 11 C22 11 22 8 27 8') },
-      userToBackend: { x: unit(0), y: unit(0), path: unitPath('M19 11 C22 11 23 15 28 15') },
+      userToBackend: { x: unit(0), y: unit(0), path: unitPath('M19 11 C22 11 23 13 27 13') },
     },
     {
       user: { x: unit(3), y: unit(10), width: unit(3), height: unit(2), text: 'You' },
@@ -746,7 +746,7 @@ const states = [
   }
 
   .architecture-animator__options {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .architecture-animator__provider-options,
