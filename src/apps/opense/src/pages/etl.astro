@@ -94,20 +94,6 @@ const features = [
     },
     bullets: ['Review status, duration, and error context for each run.', 'Send workflow failures to email, Slack, or webhooks.', 'Keep execution history available without storing raw source files.'],
   },
-  {
-    id: 'etl-code-node-overrides',
-    title: 'Code Node Overrides',
-    eyebrow: 'Use code where visual steps are not enough.',
-    description:
-      'Use the optional Code Node for controlled, custom JavaScript transformations inside your visual pipeline.',
-    icon: 'code',
-    preview: {
-      kind: 'fallback',
-      tone: 'code',
-      caption: 'Controlled JavaScript nodes handle custom transformations inside visual workflows.',
-    },
-    bullets: ['Add custom JavaScript transforms inside the workflow graph.', 'Keep bespoke logic explicit and reviewable.', 'Return transformed rows to the same browser-local pipeline.'],
-  },
 ] as const
 
 const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
