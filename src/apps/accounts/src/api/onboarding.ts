@@ -5,8 +5,9 @@ import {
   getPendingOrganisationInvites as getSharedPendingOrganisationInvites,
   inviteOrganisationMember,
 } from '@repo/shared/organisation-invites'
+import { accountAppCodes, type AppCode } from './organisationBilling'
 
-export type AppCode = 'etl' | 'stoqr'
+export type { AppCode } from './organisationBilling'
 export type MemberRole = 'owner' | 'admin' | 'editor' | 'member'
 export type InviteRole = 'admin' | 'editor' | 'member'
 export type OnboardingStep = 'invites' | 'create' | 'invite-members' | 'blocked' | 'done'
@@ -35,7 +36,7 @@ interface MembershipRow {
   organisations: { name: string } | { name: string }[] | null
 }
 
-const appCodes: AppCode[] = ['etl', 'stoqr']
+const appCodes: AppCode[] = [...accountAppCodes]
 
 export interface OnboardingInstancePolicy {
   canCreateOrganisation: boolean

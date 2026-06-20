@@ -1,12 +1,17 @@
 import { supabase } from '@repo/shared/supabase'
+import {
+  firstPartyLandingAppCodes,
+  isLandingAppCode,
+  type LandingAppCode,
+} from '@repo/shared/app-registry'
 
 export type AccountThemePreference = 'light' | 'dark' | 'system'
-export type DefaultLandingApp = 'accounts' | 'etl' | 'stoqr'
+export type DefaultLandingApp = LandingAppCode
 
-const defaultLandingApps = ['accounts', 'etl', 'stoqr'] as const
+export const defaultLandingApps = ['accounts', ...firstPartyLandingAppCodes] as const
 
 const isDefaultLandingApp = (value: string | null | undefined): value is DefaultLandingApp =>
-  defaultLandingApps.includes(value as DefaultLandingApp)
+  isLandingAppCode(value)
 
 export interface AccountPreferences {
   theme: AccountThemePreference

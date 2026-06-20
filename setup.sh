@@ -11,6 +11,7 @@ NC='\033[0m'
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUPABASE_DIR="$ROOT_DIR/supabase"
+SUPABASE_CLI_PACKAGE="${SUPABASE_CLI_PACKAGE:-supabase@2.107.0}"
 
 SEED_FILES=(
   "supabase/seeds/00_cleanup.sql"
@@ -21,6 +22,7 @@ SEED_FILES=(
   "supabase/seeds/50_stoqr_catalog_inventory.sql"
   "supabase/seeds/55_stoqr_reports_demo.sql"
   "supabase/seeds/56_stoqr_procurement_workflows.sql"
+  "supabase/seeds/57_open_kb_demo.sql"
   "supabase/seeds/60_admin_audit.sql"
   "supabase/seeds/90_synthetic_volume.sql"
 )
@@ -50,7 +52,23 @@ fail() {
 }
 
 run_supabase() {
-  (cd "$ROOT_DIR" && npx supabase "$@")
+  (cd "$ROOT_DIR" && npx --yes "$SUPABASE_CLI_PACKAGE" "$@")
+}
+
+run_seed_files() {
+  local target="$1"
+  local seed_file seed_path
+
+  for seed_file in "${SEED_FILES[@]}"; do
+    seed_path="$ROOT_DIR/$seed_file"
+    [[ -f "$seed_path" ]] || fail "Missing seed file: $seed_file"
+    info "Running $seed_file"
+    if [[ "$target" == "remote" ]]; then
+      run_supabase db query --linked --file "$seed_path"
+    else
+      run_supabase db query --local --file "$seed_path"
+    fi
+  done
 }
 
 read_env_value() {
@@ -229,7 +247,7 @@ SET function_url = EXCLUDED.function_url,
 setup_runtime_config() {
   local app config_dir config_file
   local supabase_url anon_key cookie_domain
-  local accounts_url etl_url opense_url stoqr_url ui_url
+  local accounts_url etl_url open_kb_url opense_url stoqr_url ui_url
 
   prompt_or_env() {
     local key="$1"
@@ -246,6 +264,7 @@ setup_runtime_config() {
   cookie_domain="$(prompt_or_env VITE_AUTH_COOKIE_DOMAIN)"
   accounts_url="$(prompt_or_env VITE_ACCOUNTS_URL)"
   etl_url="$(prompt_or_env VITE_ETL_PUBLIC_URL)"
+  open_kb_url="$(prompt_or_env VITE_OPEN_KB_PUBLIC_URL)"
   opense_url="$(prompt_or_env VITE_OPENSE_PUBLIC_URL)"
   stoqr_url="$(prompt_or_env VITE_STOQR_PUBLIC_URL)"
   ui_url="$(prompt_or_env VITE_UI_PUBLIC_URL)"
@@ -255,7 +274,7 @@ setup_runtime_config() {
 
   info "Writing runtime config.js files for frontend containers..."
 
-  for app in accounts etl opense stoqr ui-design; do
+  for app in accounts etl open-kb opense stoqr ui-design; do
     config_dir="$ROOT_DIR/src/apps/${app}/public"
     config_file="$config_dir/config.js"
 
@@ -268,6 +287,7 @@ window.__OPENSE_CONFIG__ = {
   VITE_AUTH_COOKIE_DOMAIN: '${cookie_domain}',
   VITE_ACCOUNTS_URL: '${accounts_url}',
   VITE_ETL_PUBLIC_URL: '${etl_url}',
+  VITE_OPEN_KB_PUBLIC_URL: '${open_kb_url}',
   VITE_OPENSE_PUBLIC_URL: '${opense_url}',
   VITE_STOQR_PUBLIC_URL: '${stoqr_url}',
   VITE_UI_PUBLIC_URL: '${ui_url}',
@@ -280,10 +300,19 @@ EOF
 
 
 full_reset() {
+  local seed_after_reset="${1:-false}"
   local target project_ref token
 
   target="$(choose_target)"
-  confirm_destructive_reset "$target"
+  if [[ "$seed_after_reset" == "true" ]]; then
+    warn "Full reset will drop and recreate the ${target} database, then insert demo seed data."
+    read -r -p "Type RESET SEED to continue: " confirmation
+    if [[ "$confirmation" != "RESET SEED" ]]; then
+      fail "Reset cancelled."
+    fi
+  else
+    confirm_destructive_reset "$target"
+  fi
   token="$(get_dispatch_token)"
 
   if [[ "$target" == "remote" ]]; then
@@ -307,10 +336,16 @@ full_reset() {
 
     configure_alert_dispatch "$target" "$token"
   fi
+
+  if [[ "$seed_after_reset" == "true" ]]; then
+    info "Inserting seed data..."
+    run_seed_files "$target"
+    success "Seed data inserted. Login with founder@gmail.com / !Password1."
+  fi
 }
 
 insert_seed_data() {
-  local target seed_file seed_path
+  local target
 
   target="$(choose_target)"
   warn "Seed insertion runs the seed files in order. The first seed file cleans existing seeded rows."
@@ -319,18 +354,9 @@ insert_seed_data() {
     fail "Seed insertion cancelled."
   fi
 
-  for seed_file in "${SEED_FILES[@]}"; do
-    seed_path="$ROOT_DIR/$seed_file"
-    [[ -f "$seed_path" ]] || fail "Missing seed file: $seed_file"
-    info "Running $seed_file"
-    if [[ "$target" == "remote" ]]; then
-      run_supabase db query --linked --file "$seed_path"
-    else
-      run_supabase db query --file "$seed_path"
-    fi
-  done
+  run_seed_files "$target"
 
-  success "Seed data inserted."
+  success "Seed data inserted. Login with founder@gmail.com / !Password1."
 }
 
 main_menu() {
@@ -340,19 +366,21 @@ main_menu() {
   echo "  Local: local Supabase Docker database"
   echo
   echo "Select an action:"
-  echo "  1) Full reset (remote also deploys alert Edge Functions)"
-  echo "  2) Insert DB seed data only"
-  echo "  3) Setup frontend runtime config (config.js files)"
-  echo "  4) Exit"
+  echo "  1) Full reset + seed data (remote also deploys alert Edge Functions)"
+  echo "  2) Full reset schema only"
+  echo "  3) Insert DB seed data only"
+  echo "  4) Setup frontend runtime config (config.js files)"
+  echo "  5) Exit"
   echo
   read -r -p "Action [1]: " action
   action="${action:-1}"
 
   case "$action" in
-    1) full_reset ;;
-    2) insert_seed_data ;;
-    3) setup_runtime_config ;;
-    4) exit 0 ;;
+    1) full_reset true ;;
+    2) full_reset false ;;
+    3) insert_seed_data ;;
+    4) setup_runtime_config ;;
+    5) exit 0 ;;
     *) fail "Unknown action: $action" ;;
   esac
 }

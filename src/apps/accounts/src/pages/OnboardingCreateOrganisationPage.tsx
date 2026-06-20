@@ -30,7 +30,7 @@ export const OnboardingCreateOrganisationPage = () => {
   const navigate = useNavigate()
   const [orgName, setOrgName] = useState('')
   const [estimatedPeople, setEstimatedPeople] = useState('')
-  const [selectedApps, setSelectedApps] = useState<AppCode[]>(['etl', 'stoqr'])
+  const [selectedApps, setSelectedApps] = useState<AppCode[]>(() => onboardingAppOptions.map((app) => app.code))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [policy, setPolicy] = useState<OnboardingInstancePolicy | null>(null)

@@ -2,6 +2,12 @@ import { supabase } from '../supabase'
 import { appendAppPath, getRuntimeConfigValue, usesExternalOAuthRuntime } from '../runtime-config'
 import { validatePassword } from './validation'
 export { AuthRedirectPage } from './AuthRedirectPage'
+export {
+  buildAuthHandoffUrl,
+  buildAuthHandoffUrlFromSession,
+  consumeAuthHandoffFromUrl,
+  navigateWithAuthHandoff,
+} from './sessionHandoff'
 
 declare global {
   interface Window {

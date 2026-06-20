@@ -49,7 +49,7 @@ export const SharedLoginRoutePage = () => {
       return
     }
 
-    if (redirectBackToApp()) return
+    if (await redirectBackToApp()) return
 
     const nextPath = getInternalNextPath()
     if (nextPath) {

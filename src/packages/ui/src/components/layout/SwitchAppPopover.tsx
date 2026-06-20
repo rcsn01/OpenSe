@@ -97,7 +97,10 @@ export function SwitchAppPopover({
 
   const handleSelect = (app: (typeof apps)[number]) => {
     onClose();
-    window.location.assign(buildSwitchableAppHref(app));
+    const href = buildSwitchableAppHref(app);
+    void import("@repo/shared/auth/session-handoff").then(({ navigateWithAuthHandoff }) => {
+      void navigateWithAuthHandoff(href);
+    });
   };
 
   return (

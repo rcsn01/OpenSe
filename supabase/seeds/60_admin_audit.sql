@@ -79,7 +79,8 @@ VALUES
   ('adadadad-adad-adad-adad-adadadadad01', 'etl', 'Retail Data Pro', 'monthly', 2900, false, NULL, NULL, true),
   ('adadadad-adad-adad-adad-adadadadad02', 'etl', 'Retail Data Pro', 'yearly', 2500, false, NULL, NULL, true),
   ('adadadad-adad-adad-adad-adadadadad03', 'stoqr', 'Luxury Stockroom Growth', 'monthly', 1900, false, NULL, NULL, true),
-  ('adadadad-adad-adad-adad-adadadadad04', NULL, 'OpenSe Luxury Retail Bundle', 'yearly', 3900, true, NULL, NULL, true)
+  ('adadadad-adad-adad-adad-adadadadad04', NULL, 'OpenSe Luxury Retail Bundle', 'yearly', 3900, true, NULL, NULL, true),
+  ('adadadad-adad-adad-adad-adadadadad05', 'open-kb', 'Open-KB Team', 'monthly', 1900, false, NULL, NULL, true)
 ON CONFLICT (id) DO UPDATE
 SET
   stripe_product_id = EXCLUDED.stripe_product_id,

@@ -46,9 +46,10 @@ describe('onboarding UI helpers', () => {
   it('uses instance policy for selected app free-tier seats', () => {
     expect(getOnboardingAppSeatSummary(['etl'], 5)).toMatchObject([
       { code: 'etl', seats: 5, selected: true },
+      { code: 'open-kb', seats: 0, selected: false },
       { code: 'stoqr', seats: 0, selected: false },
     ])
-    expect(getOnboardingSelectedSeatTotal(['etl', 'stoqr'], 5)).toBe(10)
+    expect(getOnboardingSelectedSeatTotal(['etl', 'open-kb', 'stoqr'], 5)).toBe(15)
     expect(getOnboardingSelectedSeatTotal(['etl'], null)).toBeNull()
   })
 

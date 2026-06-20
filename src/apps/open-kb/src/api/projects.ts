@@ -1,0 +1,215 @@
+import { db } from '../supabaseClient'
+import type {
+  OpenKbProfile,
+  Project,
+  ProjectInput,
+  ProjectMember,
+  ProjectMemberInput,
+  ProjectSummary,
+  ProjectUpdateInput,
+} from '../types'
+
+const projectSelect = `
+  id,
+  organisation_id,
+  team_id,
+  name,
+  identifier,
+  description_text,
+  status,
+  visibility,
+  sort_order,
+  created_at,
+  updated_at,
+  team:teams!projects_team_id_fkey(id, name, slug, description_text, status)
+`
+
+const projectMemberSelect = `
+  id,
+  organisation_id,
+  project_id,
+  profile_id,
+  role,
+  created_by,
+  created_at,
+  updated_at,
+  deleted_at,
+  profile:profiles(id, email, full_name, username, avatar_url)
+`
+
+const normalizeIdentifier = (value: string) =>
+  value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 12)
+
+const normalizeSingle = <T,>(value: T | T[] | null | undefined): T | null => {
+  if (!value) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
+}
+
+type ProjectRow = Omit<Project, 'team'> & {
+  team?: Project['team'] | Project['team'][] | null
+}
+
+const normalizeProject = (row: ProjectRow): Project => ({
+  ...row,
+  team: normalizeSingle(row.team),
+})
+
+export const buildProjectIdentifier = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  const acronym = parts.map((part) => part[0]).join('')
+  return normalizeIdentifier(acronym.length >= 2 ? acronym : name) || 'KB'
+}
+
+export const fetchProjects = async (organisationId: string): Promise<Project[]> => {
+  const { data, error } = await db
+    .from('projects')
+    .select(projectSelect)
+    .eq('organisation_id', organisationId)
+    .is('deleted_at', null)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return ((data ?? []) as unknown as ProjectRow[]).map(normalizeProject)
+}
+
+export const fetchProject = async (organisationId: string, projectId: string): Promise<Project> => {
+  const { data, error } = await db
+    .from('projects')
+    .select(projectSelect)
+    .eq('organisation_id', organisationId)
+    .eq('id', projectId)
+    .is('deleted_at', null)
+    .single()
+
+  if (error) throw error
+
+  return normalizeProject(data as unknown as ProjectRow)
+}
+
+export const createProject = async (input: ProjectInput): Promise<Project> => {
+  const payload = {
+    organisation_id: input.organisation_id,
+    team_id: input.team_id || null,
+    name: input.name.trim(),
+    identifier: normalizeIdentifier(input.identifier),
+    description_text: input.description_text?.trim() || null,
+  }
+
+  const { data, error } = await db
+    .from('projects')
+    .insert(payload)
+    .select(projectSelect)
+    .single()
+
+  if (error) throw error
+
+  return normalizeProject(data as unknown as ProjectRow)
+}
+
+export const updateProject = async ({ id, organisation_id, ...input }: ProjectUpdateInput): Promise<Project> => {
+  const payload = {
+    ...input,
+    name: input.name?.trim(),
+    description_text: input.description_text?.trim() || input.description_text,
+    team_id: input.team_id === undefined ? undefined : input.team_id || null,
+  }
+
+  const { data, error } = await db
+    .from('projects')
+    .update(payload)
+    .eq('organisation_id', organisation_id)
+    .eq('id', id)
+    .select(projectSelect)
+    .single()
+
+  if (error) throw error
+
+  return normalizeProject(data as unknown as ProjectRow)
+}
+
+export const fetchProjectSummary = async (
+  organisationId: string,
+): Promise<ProjectSummary> => {
+  const [projects, issues, pages, cycles, modules] = await Promise.all([
+    db.from('projects').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
+    db.from('issues').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
+    db.from('pages').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
+    db.from('cycles').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
+    db.from('modules').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
+  ])
+
+  const error = [projects.error, issues.error, pages.error, cycles.error, modules.error].find(Boolean)
+  if (error) throw error
+
+  return {
+    project_count: projects.count ?? 0,
+    issue_count: issues.count ?? 0,
+    page_count: pages.count ?? 0,
+    cycle_count: cycles.count ?? 0,
+    module_count: modules.count ?? 0,
+  }
+}
+
+export const fetchProjectMembers = async (
+  organisationId: string,
+  projectId: string,
+): Promise<ProjectMember[]> => {
+  const { data, error } = await db
+    .from('project_members')
+    .select(projectMemberSelect)
+    .eq('organisation_id', organisationId)
+    .eq('project_id', projectId)
+    .is('deleted_at', null)
+    .order('role', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+
+  return ((data ?? []) as Array<ProjectMember & { profile: OpenKbProfile | OpenKbProfile[] | null }>).map((row) => ({
+    ...row,
+    profile: normalizeSingle(row.profile),
+  }))
+}
+
+export const upsertProjectMember = async (input: ProjectMemberInput): Promise<ProjectMember> => {
+  const { data, error } = await db
+    .from('project_members')
+    .upsert(
+      {
+        organisation_id: input.organisation_id,
+        project_id: input.project_id,
+        profile_id: input.profile_id,
+        role: input.role,
+        deleted_at: null,
+      },
+      { onConflict: 'project_id,profile_id' },
+    )
+    .select(projectMemberSelect)
+    .single()
+
+  if (error) throw error
+
+  const item = data as unknown as ProjectMember & { profile: OpenKbProfile | OpenKbProfile[] | null }
+  return {
+    ...item,
+    profile: normalizeSingle(item.profile),
+  }
+}
+
+export const removeProjectMember = async ({
+  organisationId,
+  memberId,
+}: {
+  organisationId: string
+  memberId: string
+}) => {
+  const { error } = await db
+    .from('project_members')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('organisation_id', organisationId)
+    .eq('id', memberId)
+
+  if (error) throw error
+}

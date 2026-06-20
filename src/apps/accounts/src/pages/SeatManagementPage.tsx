@@ -19,10 +19,10 @@ import {
   type SeatMember,
   type SeatMemberRole,
 } from '../api/seatAssignments'
-import type { AppCode } from '../api/organisationBilling'
+import { accountAppCodes, formatAppCodeLabel, type AppCode } from '../api/organisationBilling'
 import { AccountsPageShell, AccountsSection } from '../components/AccountsPageShell'
 
-const appCodes: AppCode[] = ['etl', 'stoqr']
+const appCodes: AppCode[] = [...accountAppCodes]
 
 const parseEmailList = (value: string): string[] => {
   return value
@@ -62,7 +62,7 @@ export const SeatManagementPage = () => {
     },
     ...appCodes.map((appCode): DataTableColumn<PendingSeatInvite> => ({
       id: appCode,
-      header: appCode.toUpperCase(),
+      header: formatAppCodeLabel(appCode),
       renderCell: (invite) => {
         const assigned = invite.assignedApps.includes(appCode)
         const key = `invite-seat:${invite.id}:${appCode}`
@@ -119,7 +119,7 @@ export const SeatManagementPage = () => {
     },
     ...appCodes.map((appCode): DataTableColumn<SeatMember> => ({
       id: appCode,
-      header: appCode.toUpperCase(),
+      header: formatAppCodeLabel(appCode),
       renderCell: (member) => {
         const assigned = member.assignedApps.includes(appCode)
         const key = `${member.orgMemberId}:${appCode}`
@@ -182,7 +182,7 @@ export const SeatManagementPage = () => {
         await assignSeat(member.orgMemberId, appCode)
       }
 
-      setSuccess(`${currentlyAssigned ? 'Removed' : 'Assigned'} ${appCode.toUpperCase()} seat for ${member.fullName ?? member.email ?? 'user'}.`)
+      setSuccess(`${currentlyAssigned ? 'Removed' : 'Assigned'} ${formatAppCodeLabel(appCode)} seat for ${member.fullName ?? member.email ?? 'user'}.`)
       await loadMembers({ showPageLoading: false })
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update seat assignment.'))
@@ -238,7 +238,7 @@ export const SeatManagementPage = () => {
         await assignInviteSeat(invite.id, appCode)
       }
 
-      setSuccess(`${currentlyAssigned ? 'Removed' : 'Assigned'} ${appCode.toUpperCase()} seat for ${invite.email}.`)
+      setSuccess(`${currentlyAssigned ? 'Removed' : 'Assigned'} ${formatAppCodeLabel(appCode)} seat for ${invite.email}.`)
       await loadMembers({ showPageLoading: false })
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update pending invite seat assignment.'))
@@ -270,7 +270,7 @@ export const SeatManagementPage = () => {
   return (
     <AccountsPageShell
       title="Seat Assignments"
-      description="Invite members and assign ETL and StoQR subscription seats in your organisation."
+      description="Invite members and assign OpenSe app seats in your organisation."
       loading={loading}
       loadingLabel="Loading seat assignments..."
       alert={

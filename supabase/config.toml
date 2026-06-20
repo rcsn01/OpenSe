@@ -6,8 +6,8 @@ project_id = "opense-stack"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "etl", "stoqr", "graphql_public"]
-extra_search_path = ["public", "etl", "stoqr", "extensions"]
+schemas = ["public", "etl", "stoqr", "open_kb", "graphql_public"]
+extra_search_path = ["public", "etl", "stoqr", "open_kb", "extensions"]
 max_rows = 1000
 
 [api.tls]
@@ -31,6 +31,7 @@ sql_paths = [
 	"./seeds/50_stoqr_catalog_inventory.sql",
 	"./seeds/55_stoqr_reports_demo.sql",
 	"./seeds/56_stoqr_procurement_workflows.sql",
+	"./seeds/57_open_kb_demo.sql",
 	"./seeds/60_admin_audit.sql",
 	"./seeds/90_synthetic_volume.sql"
 ]
@@ -82,4 +83,22 @@ port = 54327
 backend = "postgres"
 
 [functions.send-stoqr-alert-notifications]
+verify_jwt = false
+
+[functions.open-kb-github-webhook]
+verify_jwt = false
+
+[functions.open-kb-slack-events]
+verify_jwt = false
+
+[functions.open-kb-github-oauth]
+verify_jwt = false
+
+[functions.open-kb-slack-oauth]
+verify_jwt = false
+
+[functions.open-kb-github-sync-worker]
+verify_jwt = false
+
+[functions.open-kb-slack-sync-worker]
 verify_jwt = false

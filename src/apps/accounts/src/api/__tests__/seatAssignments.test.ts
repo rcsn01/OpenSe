@@ -55,7 +55,7 @@ describe('seatAssignments api', () => {
               full_name: 'Alice',
               email: 'alice@example.com',
               role: 'admin',
-              assigned_apps: ['etl', 'unknown', 'stoqr'],
+              assigned_apps: ['etl', 'open-kb', 'unknown', 'stoqr'],
             },
           ],
           error: null,
@@ -74,7 +74,7 @@ describe('seatAssignments api', () => {
         org_id: 'org-1',
         email: 'pending@example.com',
         created_at: '2026-05-20T00:00:00.000Z',
-        assigned_apps: ['etl', 'unknown', 'stoqr'],
+        assigned_apps: ['etl', 'open-kb', 'unknown', 'stoqr'],
       },
     ])
 
@@ -90,7 +90,7 @@ describe('seatAssignments api', () => {
           fullName: 'Alice',
           email: 'alice@example.com',
           role: 'admin',
-          assignedApps: ['etl', 'stoqr'],
+          assignedApps: ['etl', 'open-kb', 'stoqr'],
         },
       ],
       pendingInvites: [
@@ -99,7 +99,7 @@ describe('seatAssignments api', () => {
           orgId: 'org-1',
           email: 'pending@example.com',
           createdAt: '2026-05-20T00:00:00.000Z',
-          assignedApps: ['etl', 'stoqr'],
+          assignedApps: ['etl', 'open-kb', 'stoqr'],
         },
       ],
     })
@@ -229,25 +229,33 @@ describe('seatAssignments api', () => {
       'member@example.com',
       'second@example.com',
       '',
-    ], ['etl', 'stoqr'])
+    ], ['etl', 'open-kb', 'stoqr'])
 
     expect(mockInviteOrganisationMember).toHaveBeenCalledTimes(2)
     expect(mockInviteOrganisationMember).toHaveBeenNthCalledWith(1, 'org-1', 'member@example.com', 'member')
     expect(mockInviteOrganisationMember).toHaveBeenNthCalledWith(2, 'org-1', 'second@example.com', 'member')
-    expect(inviteUpsert).toHaveBeenCalledTimes(4)
+    expect(inviteUpsert).toHaveBeenCalledTimes(6)
     expect(inviteUpsert).toHaveBeenNthCalledWith(1, {
       invite_id: 'inv-1',
       app_code: 'etl',
     }, { onConflict: 'invite_id,app_code' })
     expect(inviteUpsert).toHaveBeenNthCalledWith(2, {
       invite_id: 'inv-1',
-      app_code: 'stoqr',
+      app_code: 'open-kb',
     }, { onConflict: 'invite_id,app_code' })
     expect(inviteUpsert).toHaveBeenNthCalledWith(3, {
+      invite_id: 'inv-1',
+      app_code: 'stoqr',
+    }, { onConflict: 'invite_id,app_code' })
+    expect(inviteUpsert).toHaveBeenNthCalledWith(4, {
       invite_id: 'inv-2',
       app_code: 'etl',
     }, { onConflict: 'invite_id,app_code' })
-    expect(inviteUpsert).toHaveBeenNthCalledWith(4, {
+    expect(inviteUpsert).toHaveBeenNthCalledWith(5, {
+      invite_id: 'inv-2',
+      app_code: 'open-kb',
+    }, { onConflict: 'invite_id,app_code' })
+    expect(inviteUpsert).toHaveBeenNthCalledWith(6, {
       invite_id: 'inv-2',
       app_code: 'stoqr',
     }, { onConflict: 'invite_id,app_code' })

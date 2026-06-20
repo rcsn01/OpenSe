@@ -287,6 +287,10 @@ describe('utils/index', () => {
         ...config,
         allowLocalAppOrigins: true,
       })).toBe('http://localhost:5992/dashboard')
+      expect(getSafeAccountsReturnTo('http://localhost:5995/dashboard', {
+        ...config,
+        allowLocalAppOrigins: true,
+      })).toBe('http://localhost:5995/dashboard')
       expect(getSafeAccountsReturnTo('http://localhost:7777/dashboard', {
         ...config,
         allowLocalAppOrigins: true,

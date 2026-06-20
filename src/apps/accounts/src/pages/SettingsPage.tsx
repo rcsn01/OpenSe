@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button, Select, Toggle, useTheme } from '@repo/ui'
 import { Save } from 'lucide-react'
+import { FIRST_PARTY_APPS } from '@repo/shared/app-registry'
 import { AccountsAlert, AccountsField, AccountsPageShell, AccountsSection } from '../components/AccountsPageShell'
 import {
   defaultAccountPreferences,
@@ -13,6 +14,14 @@ import {
 
 const timezoneOptions = ['Australia/Sydney', 'UTC', 'America/New_York', 'America/Los_Angeles', 'Europe/London', 'Europe/Berlin']
 const localeOptions = ['en-AU', 'en-US', 'en-GB']
+const defaultLandingAppOptions = [
+  { value: 'accounts', label: 'Accounts' },
+  ...FIRST_PARTY_APPS
+    .filter((app) => app.landingAppEligible)
+    .map((app) => ({ value: app.code, label: app.displayName })),
+]
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback
 
 export const SettingsPage = () => {
   const { setTheme } = useTheme()
@@ -29,8 +38,8 @@ export const SettingsPage = () => {
         setError(null)
         const nextPreferences = await getAccountPreferences()
         setPreferences(nextPreferences)
-      } catch (err: any) {
-        setError(err?.message ?? 'Failed to load preferences.')
+      } catch (err: unknown) {
+        setError(getErrorMessage(err, 'Failed to load preferences.'))
       } finally {
         setLoading(false)
       }
@@ -55,8 +64,8 @@ export const SettingsPage = () => {
       setPreferences(nextPreferences)
       setTheme(nextPreferences.theme)
       setSuccess('Settings saved.')
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to save settings.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to save settings.'))
     } finally {
       setSaving(false)
     }
@@ -128,11 +137,7 @@ export const SettingsPage = () => {
             id="preferences-default-app"
             value={preferences.defaultLandingApp}
             onChange={(event) => updatePreference('defaultLandingApp', event.target.value as DefaultLandingApp)}
-            options={[
-              { value: 'accounts', label: 'Accounts' },
-              { value: 'etl', label: 'ETL' },
-              { value: 'stoqr', label: 'StoQR' },
-            ]}
+            options={defaultLandingAppOptions}
           />
         </AccountsSection>
 

@@ -1,0 +1,49 @@
+@import "tailwindcss";
+@import "@repo/ui/styles";
+@source "../../../packages/ui/src";
+
+.open-kb-editor .ProseMirror {
+  min-height: 10rem;
+  outline: none;
+}
+
+.open-kb-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--color-muted-foreground);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.open-kb-editor .ProseMirror h2 {
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.5;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.open-kb-editor .ProseMirror ul,
+.open-kb-editor .ProseMirror ol {
+  padding-left: 1.25rem;
+}
+
+.open-kb-editor .ProseMirror ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.open-kb-editor .ProseMirror li[data-type='taskItem'] {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.open-kb-editor .ProseMirror a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.open-kb-editor .ProseMirror img {
+  border-radius: var(--radius-md);
+  max-width: 100%;
+}

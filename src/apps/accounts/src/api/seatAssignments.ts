@@ -5,7 +5,7 @@ import {
   inviteOrganisationMember,
   type OrganisationInviteForOrg,
 } from '@repo/shared/organisation-invites'
-import type { AppCode } from './organisationBilling'
+import { isAccountAppCode, type AppCode } from './organisationBilling'
 
 interface OrgContextRow {
   org_id: string
@@ -71,7 +71,7 @@ export const getSeatAssignmentSnapshot = async (): Promise<SeatAssignmentSnapsho
 
   const normalizedMembers: SeatMember[] = ((memberRows ?? []) as MemberAssignmentRow[]).map((member) => {
     const assignedApps = (member.assigned_apps ?? []).filter(
-      (appCode: string): appCode is AppCode => appCode === 'etl' || appCode === 'stoqr',
+      isAccountAppCode,
     )
 
     return {
@@ -94,7 +94,7 @@ export const getSeatAssignmentSnapshot = async (): Promise<SeatAssignmentSnapsho
       email: invite.email,
       createdAt: invite.created_at,
       assignedApps: (invite.assigned_apps ?? []).filter(
-        (appCode: string): appCode is AppCode => appCode === 'etl' || appCode === 'stoqr',
+        isAccountAppCode,
       ),
     })),
   }

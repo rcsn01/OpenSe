@@ -14,55 +14,63 @@ describe('switchable-apps', () => {
     delete window.openseDesktop
   })
 
-  it('returns ETL and StoQR on web runtimes', () => {
+  it('returns ETL, Open-KB, and StoQR on web runtimes', () => {
     setRuntimeConfig({
       VITE_ETL_PUBLIC_URL: 'https://etl.example.com',
+      VITE_OPEN_KB_PUBLIC_URL: 'https://open-kb.example.com',
       VITE_STOQR_PUBLIC_URL: 'https://stoqr.example.com',
     })
 
-    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr'])
+    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'open-kb', 'stoqr'])
   })
 
-  it('returns ETL and StoQR on desktop runtimes', () => {
+  it('returns ETL, Open-KB, and StoQR on desktop runtimes', () => {
     setRuntimeConfig({
       VITE_OPENSE_RUNTIME_TARGET: 'desktop',
       VITE_ETL_PUBLIC_URL: 'opense://desktop/etl',
+      VITE_OPEN_KB_PUBLIC_URL: 'opense://desktop/open-kb',
       VITE_STOQR_PUBLIC_URL: 'opense://desktop/stoqr',
     })
 
-    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr'])
+    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'open-kb', 'stoqr'])
   })
 
-  it('returns ETL and StoQR on mobile runtimes', () => {
+  it('returns ETL, Open-KB, and StoQR on mobile runtimes', () => {
     setRuntimeConfig({
       VITE_OPENSE_RUNTIME_TARGET: 'mobile',
       VITE_ETL_PUBLIC_URL: 'opense://mobile/etl',
+      VITE_OPEN_KB_PUBLIC_URL: 'opense://mobile/open-kb',
       VITE_STOQR_PUBLIC_URL: 'opense://mobile/stoqr',
     })
 
-    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr'])
+    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'open-kb', 'stoqr'])
   })
 
-  it('returns ETL and StoQR when the Electron desktop bridge is present', () => {
+  it('returns ETL, Open-KB, and StoQR when the Electron desktop bridge is present', () => {
     window.openseDesktop = {
       configure: async () => ({}),
     }
     setRuntimeConfig({
       VITE_ETL_PUBLIC_URL: 'http://localhost:5992',
+      VITE_OPEN_KB_PUBLIC_URL: 'http://localhost:5995',
       VITE_STOQR_PUBLIC_URL: 'http://localhost:5993',
     })
 
-    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'stoqr'])
+    expect(getSwitchableApps().map((app) => app.key)).toEqual(['etl', 'open-kb', 'stoqr'])
   })
 
-  it('builds dashboard links for ETL and StoQR', () => {
+  it('builds dashboard links for ETL, Open-KB, and StoQR', () => {
     setRuntimeConfig({
       VITE_ETL_PUBLIC_URL: 'https://etl.example.com',
+      VITE_OPEN_KB_PUBLIC_URL: 'https://open-kb.example.com',
       VITE_STOQR_PUBLIC_URL: 'https://stoqr.example.com',
     })
 
     const apps = getSwitchableApps()
-    expect(buildSwitchableAppHref(apps[0])).toBe('https://etl.example.com/dashboard')
-    expect(buildSwitchableAppHref(apps[1])).toBe('https://stoqr.example.com/dashboard')
+    expect(Object.fromEntries(apps.map((app) => [app.key, buildSwitchableAppHref(app)]))).toEqual({
+      etl: 'https://etl.example.com/dashboard',
+      'open-kb': 'https://open-kb.example.com/dashboard',
+      stoqr: 'https://stoqr.example.com/dashboard',
+    })
   })
 })

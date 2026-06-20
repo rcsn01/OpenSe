@@ -1,9 +1,9 @@
+import { FIRST_PARTY_APPS } from '@repo/shared/app-registry'
 import type { AppCode, MemberRole, OnboardingStatus, PendingInvite } from '../api/onboarding'
 
-export const onboardingAppOptions: Array<{ code: AppCode; name: string }> = [
-  { code: 'etl', name: 'ETL' },
-  { code: 'stoqr', name: 'StoQR' },
-]
+export const onboardingAppOptions: Array<{ code: AppCode; name: string }> = FIRST_PARTY_APPS
+  .filter((app) => app.seatEligible)
+  .map((app) => ({ code: app.code, name: app.displayName }))
 
 export const onboardingSizeOptions = [
   { value: '1-5', label: '1-5 people' },

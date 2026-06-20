@@ -1,6 +1,13 @@
 import { supabase } from '@repo/shared/supabase'
+import {
+  firstPartyBillingAppCodes,
+  getAppDisplayName as getSharedAppDisplayName,
+  isFirstPartySeatAppCode,
+  type FirstPartyAppCode,
+} from '@repo/shared/app-registry'
 
-export type AppCode = 'etl' | 'stoqr'
+export const accountAppCodes = [...firstPartyBillingAppCodes]
+export type AppCode = FirstPartyAppCode
 
 export interface OrgContext {
   orgId: string
@@ -43,10 +50,12 @@ interface AppSeatSummaryRow {
   assigned_seats: number
 }
 
-const appNameMap: Record<AppCode, string> = {
-  etl: 'ETL',
-  stoqr: 'StoQR',
-}
+export const getAppDisplayName = (appCode: AppCode) => getSharedAppDisplayName(appCode)
+
+export const formatAppCodeLabel = (appCode: AppCode) => getAppDisplayName(appCode)
+
+export const isAccountAppCode = (appCode: string): appCode is AppCode =>
+  isFirstPartySeatAppCode(appCode)
 
 const getCurrentOrgContext = async (): Promise<OrgContext> => {
   const { data, error } = await supabase
@@ -85,11 +94,11 @@ export const getOrganisationBillingSummary = async (): Promise<BillingSummary> =
 
   const apps: AppSeatBillingSummary[] = ((appSummaryRows ?? []) as AppSeatSummaryRow[])
     .filter(
-      (row): row is AppSeatSummaryRow => row.app_code === 'etl' || row.app_code === 'stoqr',
+      (row): row is AppSeatSummaryRow => isAccountAppCode(row.app_code),
     )
     .map((row) => ({
       appCode: row.app_code,
-      appName: row.app_name ?? appNameMap[row.app_code],
+      appName: row.app_name ?? getAppDisplayName(row.app_code),
       seatLimit: row.seat_limit,
       assignedSeats: row.assigned_seats,
     }))
