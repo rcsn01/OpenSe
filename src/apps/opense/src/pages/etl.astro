@@ -5,9 +5,7 @@ import workflowBuilderImage from '../assets/marketing/etl/etl-workflow-builder.p
 import EtlFeaturePreview from '../components/EtlFeaturePreview.astro'
 import MarketingIcon from '../components/MarketingIcon.astro'
 import MarketingLayout from '../layouts/MarketingLayout.astro'
-import { buildNavbarGetStartedPath } from '../lib/authRedirect'
 
-const ctaHref = buildNavbarGetStartedPath('etl')
 const features = [
   {
     id: 'etl-dashboard',
@@ -117,19 +115,13 @@ const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAA
 
 <MarketingLayout landingContext="etl" title="Open-ETL | Privacy-First Data Workflows">
   <section class="relative mx-auto max-w-5xl px-6 pb-8 pt-[calc(6rem+4rem)] text-center">
-    <div class="flex justify-center">
-      <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-primary-hover)_12%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary-light)_40%,white)] text-[var(--color-primary-hover)]">
-        <MarketingIcon name="database" class="h-5 w-5" />
-      </span>
-    </div>
-    <h1 class="mt-6 text-5xl font-semibold text-[var(--color-heading)] sm:text-6xl md:text-7xl">Open-ETL</h1>
-    <p class="mt-5 text-xl font-semibold text-[var(--color-primary-hover)] md:text-2xl">Centralized data workflows. Decentralized execution.</p>
-    <p class="mx-auto mt-6 max-w-4xl text-lg leading-8 text-[var(--color-body)] md:text-xl">
+    <p class="mt-7 text-4xl font-semibold leading-[1.03] text-[var(--color-heading)] md:text-6xl">Centralized data workflows. Decentralized execution.</p>
+    <p class="mx-auto mt-6 max-w-4xl text-lg leading-8 text-[var(--color-primary-hover)] md:text-xl">
       Import, process, visualize, and export data with a powerful drag-and-drop interface. Designed for privacy-sensitive sectors requiring strict data-minimization practices.
     </p>
   </section>
 
-  <section class="etl-scroll-showcase relative border-t border-[color:var(--opense-shell-border)] bg-white px-6 py-20 md:py-28" data-etl-scroll-showcase>
+  <section class="etl-scroll-showcase relative bg-white px-6 py-20 md:py-28" data-etl-scroll-showcase>
     <div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-16">
       <div class="etl-scroll-showcase__copy">
         {features.map((feature) => {
@@ -212,23 +204,6 @@ const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAA
           })}
         </div>
       </div>
-    </div>
-  </section>
-
-  <section class="relative mx-auto max-w-6xl px-6 py-10">
-    <div class="rounded-[1.75rem] px-6 py-12 text-center md:px-10 md:py-14" style="background-color:color-mix(in srgb,var(--color-heading) 86%,#202610);box-shadow:var(--opense-shell-shadow-lg)">
-      <div class="flex justify-center">
-        <span class="inline-flex h-14 w-14 items-center justify-center rounded-full border border-white/12 bg-white/5 text-white/90">
-          <MarketingIcon name="lock" class="h-7 w-7" />
-        </span>
-      </div>
-      <h2 class="mt-6 text-4xl font-semibold text-white md:text-5xl">The Hybrid Data Model</h2>
-      <p class="mx-auto mt-5 max-w-3xl text-lg leading-8 text-white/78">
-        Workflow definitions, metadata, and analytics go to the cloud. Your actual CSV files and data transformations stay securely inside your browser's IndexedDB.
-      </p>
-      <a href={ctaHref} data-testid="etl-start-building-workflows" class="mt-8 inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[var(--color-heading)] transition-transform duration-200 hover:-translate-y-0.5">
-        Start Building Workflows
-      </a>
     </div>
   </section>
 
