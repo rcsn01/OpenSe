@@ -215,19 +215,14 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
 ---
 
 <MarketingLayout landingContext="stoqr" title="Open-StoQR | Inventory Operations">
-  <section class="relative mx-auto flex min-h-[92vh] max-w-7xl flex-col items-center justify-center px-6 pb-16 pt-[calc(6rem+4rem)] text-center">
-    <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:color-mix(in_srgb,var(--color-secondary)_18%,transparent)] bg-white text-[var(--color-secondary)]">
-      <MarketingIcon name="boxes" class="h-6 w-6" />
-    </span>
-    <h1 class="mt-7 text-6xl font-semibold leading-none text-[var(--color-heading)] md:text-8xl">Open-StoQR</h1>
-    <p class="mt-5 text-2xl font-semibold text-[color:color-mix(in_srgb,var(--color-secondary)_82%,#8e5f2b)] md:text-3xl">Physical inventory, digitally mastered.</p>
-    <p class="mx-auto mt-6 max-w-4xl text-lg leading-8 text-[var(--color-body)] md:text-xl">
+  <section class="relative mx-auto max-w-5xl px-6 pb-8 pt-[calc(6rem+4rem)] text-center">
+    <p class="mt-7 text-4xl font-semibold leading-[1.03] text-[var(--color-heading)] md:text-6xl">Physical inventory, digitally mastered.</p>
+    <p class="mx-auto mt-6 max-w-4xl text-lg leading-8 text-[color:color-mix(in_srgb,var(--color-secondary)_82%,#8e5f2b)] md:text-xl">
       Track, scan, procure, report, and govern inventory operations from an open source product suite your team can inspect before they deploy it.
     </p>
-    <a href="#stoqr-dashboard" class="mt-9 inline-flex items-center justify-center rounded-full border border-[var(--opense-shell-border-strong)] bg-white px-7 py-3 text-sm font-semibold text-[var(--color-heading)] transition-transform duration-200 hover:-translate-y-0.5">See the UI</a>
   </section>
 
-  <section class="stoqr-scroll-showcase relative border-t border-[color:var(--opense-shell-border)] bg-white px-6 py-20 md:py-28" data-stoqr-scroll-showcase>
+  <section class="stoqr-scroll-showcase relative bg-white px-6 py-20 md:py-28" data-stoqr-scroll-showcase>
     <div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:gap-16">
       <div class="stoqr-scroll-showcase__copy">
         {screenshotFeatures.map((feature) => {
@@ -287,11 +282,6 @@ const screenshotFeatures = features.flatMap((feature) => (feature.screenshot ? [
         </div>
       </div>
     </div>
-  </section>
-
-  <section class="relative border-t border-[color:var(--opense-shell-border)] bg-white px-6 py-24 text-center">
-    <h2 class="mx-auto max-w-4xl text-5xl font-semibold text-[var(--color-heading)] md:text-7xl">Ready to organize your assets?</h2>
-    <p class="mx-auto mt-6 max-w-3xl text-lg leading-8 text-[var(--color-body)]">Upgrade your team's efficiency with Open-StoQR. Open source, customizable, and easy to deploy for your organization.</p>
   </section>
 
   <script is:inline data-astro-rerun>
