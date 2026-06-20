@@ -1,11 +1,11 @@
 import { isAllowedOrigin } from './cors.ts'
 
-export type AppCode = 'etl' | 'stoqr'
+export type AppCode = 'etl' | 'open-kb' | 'stoqr'
 
 export const parseAppCode = (value: unknown, fallback: AppCode = 'etl'): AppCode => {
   const appCode = typeof value === 'string' ? value : fallback
-  if (appCode !== 'etl' && appCode !== 'stoqr') {
-    throw new Error('appCode must be etl or stoqr')
+  if (appCode !== 'etl' && appCode !== 'open-kb' && appCode !== 'stoqr') {
+    throw new Error('appCode must be etl, open-kb, or stoqr')
   }
   return appCode
 }

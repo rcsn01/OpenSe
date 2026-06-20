@@ -1,6 +1,6 @@
 -- StoQR report and permission views.
 
-CREATE OR REPLACE VIEW stoqr.my_permissions
+CREATE VIEW stoqr.my_permissions
 WITH (security_invoker = true)
 AS
 WITH current_membership AS (
@@ -97,7 +97,7 @@ FROM expanded_permissions ep
 JOIN stoqr.app_permissions ap ON ap.code = ep.code
 WHERE ap.hidden = false;
 
-CREATE OR REPLACE VIEW stoqr.inventory_stats
+CREATE VIEW stoqr.inventory_stats
 WITH (security_invoker = true)
 AS
 SELECT
@@ -109,7 +109,7 @@ FROM stoqr.products p
 WHERE p.deleted_at IS NULL
 GROUP BY p.company_id;
 
-CREATE OR REPLACE VIEW stoqr.report_inventory_valuation
+CREATE VIEW stoqr.report_inventory_valuation
 WITH (security_invoker = true)
 AS
 SELECT
@@ -128,7 +128,7 @@ SELECT
 FROM stoqr.products p
 WHERE p.deleted_at IS NULL;
 
-CREATE OR REPLACE VIEW stoqr.report_stock_movements
+CREATE VIEW stoqr.report_stock_movements
 WITH (security_invoker = true)
 AS
 SELECT
@@ -149,7 +149,7 @@ FROM stoqr.inventory_transactions it
 JOIN stoqr.products p ON p.id = it.product_id
 LEFT JOIN public.profiles pr ON pr.id = it.performed_by;
 
-CREATE OR REPLACE VIEW stoqr.alert_products
+CREATE VIEW stoqr.alert_products
 WITH (security_invoker = true)
 AS
 SELECT
@@ -168,7 +168,7 @@ LEFT JOIN stoqr.product_folder_stocks pfs
  AND pfs.company_id = p.company_id
 WHERE p.deleted_at IS NULL;
 
-CREATE OR REPLACE VIEW stoqr.delivered_alert_events
+CREATE VIEW stoqr.delivered_alert_events
 WITH (security_invoker = true)
 AS
 SELECT DISTINCT ON (ae.id)

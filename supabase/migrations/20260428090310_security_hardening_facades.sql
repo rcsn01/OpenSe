@@ -2,7 +2,6 @@
 -- The remaining authenticated SECURITY DEFINER warnings are app-facing RPCs.
 -- Preserve their public RPC names, but move privileged implementations out of
 -- exposed schemas and replace them with SECURITY INVOKER facades.
-CREATE SCHEMA IF NOT EXISTS app_private;
 
 REVOKE ALL ON SCHEMA app_private FROM PUBLIC;
 GRANT USAGE ON SCHEMA app_private TO anon, authenticated, service_role;
@@ -28,6 +27,7 @@ BEGIN
     JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
       AND p.prosecdef
+      AND p.prorettype <> 'pg_catalog.trigger'::regtype
       AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
     ORDER BY p.proname, pg_get_function_identity_arguments(p.oid)
   LOOP
@@ -63,7 +63,7 @@ BEGIN
 
     EXECUTE format(
       $wrapper$
-      CREATE OR REPLACE FUNCTION public.%I(%s)
+      CREATE FUNCTION public.%I(%s)
       RETURNS %s
       LANGUAGE sql
       SECURITY INVOKER
@@ -162,8 +162,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA app_private REVOKE EXECUTE ON FUNCTIONS FROM 
 -- Move relocatable extensions out of the exposed public schema.
 -- The API extra_search_path already includes extensions, and existing columns,
 -- indexes, and triggers keep OID references to extension objects.
-CREATE SCHEMA IF NOT EXISTS extensions;
-
 ALTER EXTENSION citext SET SCHEMA extensions;
 ALTER EXTENSION pg_trgm SET SCHEMA extensions;
 ALTER EXTENSION moddatetime SET SCHEMA extensions;

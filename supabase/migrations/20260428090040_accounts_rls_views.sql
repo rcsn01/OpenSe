@@ -1,7 +1,7 @@
 
 -- Replace read-oriented app RPCs with direct table/view access protected by RLS.
 
-CREATE OR REPLACE VIEW public.account_org_context
+CREATE VIEW public.account_org_context
 WITH (security_invoker = true)
 AS
 SELECT
@@ -18,7 +18,7 @@ FROM public.organisation_members om
 JOIN public.organisations o ON o.id = om.org_id
 WHERE om.user_id = auth.uid();
 
-CREATE OR REPLACE VIEW public.account_organisation_profile
+CREATE VIEW public.account_organisation_profile
 WITH (security_invoker = true)
 AS
 SELECT
@@ -42,7 +42,7 @@ JOIN public.organisations o ON o.id = om.org_id
 LEFT JOIN public.profiles owner_profile ON owner_profile.id = o.owner_id
 WHERE om.user_id = auth.uid();
 
-CREATE OR REPLACE VIEW public.account_org_member_app_assignments
+CREATE VIEW public.account_org_member_app_assignments
 WITH (security_invoker = true)
 AS
 WITH primary_org AS (
@@ -77,7 +77,7 @@ LEFT JOIN public.profiles p ON p.id = om.user_id
 LEFT JOIN public.organisation_member_app_seats mas ON mas.org_member_id = om.id
 GROUP BY om.id, om.org_id, om.user_id, p.full_name, p.email, om.role, om.created_at;
 
-CREATE OR REPLACE VIEW public.account_org_app_seat_summary
+CREATE VIEW public.account_org_app_seat_summary
 WITH (security_invoker = true)
 AS
 WITH primary_org AS (
@@ -130,7 +130,7 @@ LEFT JOIN pending
   ON pending.org_id = po.org_id
  AND pending.app_code = a.code;
 
-CREATE OR REPLACE VIEW public.account_org_audit_events
+CREATE VIEW public.account_org_audit_events
 WITH (security_invoker = true)
 AS
 SELECT

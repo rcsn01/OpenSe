@@ -57,6 +57,7 @@ export const DEFAULT_LOCAL_APP_RETURN_URLS = [
   'http://localhost:5992',
   'http://localhost:5993',
   'http://localhost:5994',
+  'http://localhost:5995',
   'http://localhost:5999',
 ] as const
 

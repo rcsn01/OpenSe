@@ -3,9 +3,11 @@ import {
   getSafeAccountsReturnTo,
 } from '@repo/shared/utils'
 import { getRuntimeConfigValue } from '@repo/shared/runtime-config'
+import { buildAuthHandoffUrl } from '@repo/shared/auth/session-handoff'
 
 const APP_PUBLIC_URL_KEYS = [
   'VITE_ETL_PUBLIC_URL',
+  'VITE_OPEN_KB_PUBLIC_URL',
   'VITE_OPENSE_PUBLIC_URL',
   'VITE_STOQR_PUBLIC_URL',
   'VITE_UI_PUBLIC_URL',
@@ -54,12 +56,12 @@ export const buildPathWithQuery = (path: string) => {
   return `${path}?${query}`
 }
 
-export const redirectBackToApp = () => {
+export const redirectBackToApp = async () => {
   const returnTo = getReturnToFromQuery()
   if (!returnTo) {
     return false
   }
 
-  window.location.replace(returnTo)
+  window.location.replace(await buildAuthHandoffUrl(returnTo))
   return true
 }

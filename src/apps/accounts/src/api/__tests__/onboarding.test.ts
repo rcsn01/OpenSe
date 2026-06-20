@@ -358,7 +358,7 @@ describe('onboarding api', () => {
 
     await expect(createOrganisationForOnboarding({
       name: 'Acme',
-      selectedApps: ['etl'],
+      selectedApps: ['etl', 'open-kb'],
       freeSeatLimit: 5,
     })).resolves.toEqual({ orgId: 'org-1', orgName: 'Acme' })
 
@@ -368,11 +368,13 @@ describe('onboarding api', () => {
     expect(mockFrom).toHaveBeenCalledWith('organisation_invites')
     expect(membershipEq).toHaveBeenCalledWith('user_id', 'user-1')
     expect(membershipLimit).toHaveBeenCalledWith(1)
-    expect(seatUpdate).toHaveBeenCalledTimes(2)
+    expect(seatUpdate).toHaveBeenCalledTimes(3)
     expect(seatUpdate).toHaveBeenNthCalledWith(1, { seat_limit: 5 })
-    expect(seatUpdate).toHaveBeenNthCalledWith(2, { seat_limit: 0 })
+    expect(seatUpdate).toHaveBeenNthCalledWith(2, { seat_limit: 5 })
+    expect(seatUpdate).toHaveBeenNthCalledWith(3, { seat_limit: 0 })
     expect(seatUpdateEq).toHaveBeenNthCalledWith(1, 'app_code', 'etl')
-    expect(seatUpdateEq).toHaveBeenNthCalledWith(2, 'app_code', 'stoqr')
+    expect(seatUpdateEq).toHaveBeenNthCalledWith(2, 'app_code', 'open-kb')
+    expect(seatUpdateEq).toHaveBeenNthCalledWith(3, 'app_code', 'stoqr')
     expect(mockUpdateUser).toHaveBeenCalledWith({
       data: {
         theme: 'dark',

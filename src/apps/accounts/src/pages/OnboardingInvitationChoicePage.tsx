@@ -50,7 +50,7 @@ export const OnboardingInvitationChoicePage = () => {
       const status: OnboardingStatus = await getOnboardingStatus()
 
       if (!status.needsOnboarding) {
-        const redirected = redirectBackToApp()
+        const redirected = await redirectBackToApp()
         if (!redirected) {
           navigate(getOnboardingCompletedFallbackPath(), { replace: true })
         }
@@ -70,7 +70,7 @@ export const OnboardingInvitationChoicePage = () => {
       if (status.step === 'invite-members') {
         if (shouldSkipInviteMembersStep(status.role)) {
           await completeOrganisationOnboarding()
-          const redirected = redirectBackToApp()
+          const redirected = await redirectBackToApp()
           if (!redirected) {
             navigate(getOnboardingCompletedFallbackPath(), { replace: true })
           }
@@ -100,7 +100,7 @@ export const OnboardingInvitationChoicePage = () => {
       const invite = invites.find((candidate) => candidate.id === inviteId)
       await acceptOrganisationInvite(inviteId)
       if (shouldSkipInviteMembersStep(invite?.role)) {
-        const redirected = redirectBackToApp()
+        const redirected = await redirectBackToApp()
         if (!redirected) {
           navigate(getOnboardingCompletedFallbackPath(), { replace: true })
         }

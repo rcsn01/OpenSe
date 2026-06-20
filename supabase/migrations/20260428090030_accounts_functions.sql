@@ -39,7 +39,6 @@ AS $$
   LIMIT 1;
 $$;
 
-DROP POLICY IF EXISTS invite_app_seats_manage ON public.organisation_invite_app_seats;
 CREATE POLICY invite_app_seats_manage ON public.organisation_invite_app_seats
   FOR ALL USING (
     EXISTS (
@@ -196,6 +195,8 @@ DECLARE
   v_invite public.organisation_invites%ROWTYPE;
   v_user_id UUID := auth.uid();
   v_user_email TEXT := LOWER(BTRIM(auth.jwt() ->> 'email'));
+  v_org_member_id UUID;
+  v_app_codes TEXT[];
 BEGIN
   IF v_user_id IS NULL OR v_user_email IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
@@ -203,8 +204,8 @@ BEGIN
 
   SELECT *
   INTO v_invite
-  FROM public.organisation_invites
-  WHERE id = invite_id;
+  FROM public.organisation_invites oi
+  WHERE oi.id = accept_invite.invite_id;
 
   IF v_invite IS NULL THEN
     RAISE EXCEPTION 'Invite not found';
@@ -223,10 +224,24 @@ BEGIN
   END IF;
 
   INSERT INTO public.organisation_members (org_id, user_id, role)
-  VALUES (v_invite.org_id, v_user_id, 'member');
+  VALUES (v_invite.org_id, v_user_id, 'member')
+  RETURNING id INTO v_org_member_id;
 
-  DELETE FROM public.organisation_invites
-  WHERE id = invite_id;
+  SELECT COALESCE(ARRAY_AGG(ias.app_code ORDER BY ias.app_code), ARRAY[]::TEXT[])
+  INTO v_app_codes
+  FROM public.organisation_invite_app_seats ias
+  WHERE ias.invite_id = accept_invite.invite_id;
+
+  DELETE FROM public.organisation_invite_app_seats ias
+  WHERE ias.invite_id = accept_invite.invite_id;
+
+  INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
+  SELECT v_org_member_id, pending_app.app_code
+  FROM unnest(v_app_codes) AS pending_app(app_code)
+  ON CONFLICT (org_member_id, app_code) DO NOTHING;
+
+  DELETE FROM public.organisation_invites oi
+  WHERE oi.id = accept_invite.invite_id;
 
   RETURN true;
 END;
@@ -563,17 +578,8 @@ GRANT EXECUTE ON FUNCTION public.get_primary_org_for_user(UUID) TO authenticated
 GRANT EXECUTE ON FUNCTION public.accept_invite(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.accounts_get_onboarding_instance_policy() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.accounts_update_org_seat_limit(TEXT, INTEGER) TO authenticated;
-CREATE OR REPLACE FUNCTION app_private.can_manage_org_app_seat_limits(p_org_id UUID, p_user_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-SET search_path = public
-AS $$
-  SELECT app_private.is_org_admin(p_org_id, p_user_id);
-$$;
 
-CREATE OR REPLACE FUNCTION public.log_my_account_audit_event(
+CREATE FUNCTION public.log_my_account_audit_event(
   p_action TEXT,
   p_metadata JSONB DEFAULT '{}'::jsonb
 )
@@ -612,7 +618,7 @@ $$;
 
 
 
-CREATE OR REPLACE FUNCTION public.accounts_update_organisation_profile(
+CREATE FUNCTION public.accounts_update_organisation_profile(
   p_org_name TEXT,
   p_primary_contact_name TEXT DEFAULT NULL,
   p_primary_contact_email TEXT DEFAULT NULL
@@ -694,7 +700,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.accounts_update_billing_contact(
+CREATE FUNCTION public.accounts_update_billing_contact(
   p_billing_name TEXT DEFAULT NULL,
   p_billing_email TEXT DEFAULT NULL,
   p_billing_phone TEXT DEFAULT NULL
@@ -778,129 +784,4 @@ REVOKE ALL ON FUNCTION public.accounts_update_billing_contact(TEXT, TEXT, TEXT) 
 
 GRANT EXECUTE ON FUNCTION public.log_my_account_audit_event(TEXT, JSONB) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.accounts_update_organisation_profile(TEXT, TEXT, TEXT) TO authenticated;
-CREATE OR REPLACE FUNCTION public.accept_invite(invite_id UUID)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_invite public.organisation_invites%ROWTYPE;
-  v_user_id UUID := auth.uid();
-  v_user_email TEXT := LOWER(BTRIM(auth.jwt() ->> 'email'));
-  v_org_member_id UUID;
-  v_app_codes TEXT[];
-BEGIN
-  IF v_user_id IS NULL OR v_user_email IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  SELECT *
-  INTO v_invite
-  FROM public.organisation_invites oi
-  WHERE oi.id = accept_invite.invite_id;
-
-  IF v_invite IS NULL THEN
-    RAISE EXCEPTION 'Invite not found';
-  END IF;
-
-  IF LOWER(v_invite.email::TEXT) <> v_user_email THEN
-    RAISE EXCEPTION 'This invite does not belong to you';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM public.organisation_members om
-    WHERE om.user_id = v_user_id
-  ) THEN
-    RAISE EXCEPTION 'User already belongs to an organisation';
-  END IF;
-
-  INSERT INTO public.organisation_members (org_id, user_id, role)
-  VALUES (v_invite.org_id, v_user_id, 'member')
-  RETURNING id INTO v_org_member_id;
-
-  SELECT COALESCE(ARRAY_AGG(ias.app_code ORDER BY ias.app_code), ARRAY[]::TEXT[])
-  INTO v_app_codes
-  FROM public.organisation_invite_app_seats ias
-  WHERE ias.invite_id = accept_invite.invite_id;
-
-  DELETE FROM public.organisation_invite_app_seats ias
-  WHERE ias.invite_id = accept_invite.invite_id;
-
-  INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
-  SELECT v_org_member_id, pending_app.app_code
-  FROM unnest(v_app_codes) AS pending_app(app_code)
-  ON CONFLICT (org_member_id, app_code) DO NOTHING;
-
-  DELETE FROM public.organisation_invites oi
-  WHERE oi.id = accept_invite.invite_id;
-
-  RETURN true;
-END;
-$$;
-
-
--- Qualify accept_invite identifiers so invite_id is never ambiguous with table columns.
-
-CREATE OR REPLACE FUNCTION public.accept_invite(invite_id UUID)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_invite public.organisation_invites%ROWTYPE;
-  v_user_id UUID := auth.uid();
-  v_user_email TEXT := LOWER(BTRIM(auth.jwt() ->> 'email'));
-  v_org_member_id UUID;
-  v_app_codes TEXT[];
-BEGIN
-  IF v_user_id IS NULL OR v_user_email IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  SELECT *
-  INTO v_invite
-  FROM public.organisation_invites oi
-  WHERE oi.id = accept_invite.invite_id;
-
-  IF v_invite IS NULL THEN
-    RAISE EXCEPTION 'Invite not found';
-  END IF;
-
-  IF LOWER(v_invite.email::TEXT) <> v_user_email THEN
-    RAISE EXCEPTION 'This invite does not belong to you';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM public.organisation_members om
-    WHERE om.user_id = v_user_id
-  ) THEN
-    RAISE EXCEPTION 'User already belongs to an organisation';
-  END IF;
-
-  INSERT INTO public.organisation_members (org_id, user_id, role)
-  VALUES (v_invite.org_id, v_user_id, 'member')
-  RETURNING id INTO v_org_member_id;
-
-  SELECT COALESCE(ARRAY_AGG(ias.app_code ORDER BY ias.app_code), ARRAY[]::TEXT[])
-  INTO v_app_codes
-  FROM public.organisation_invite_app_seats ias
-  WHERE ias.invite_id = accept_invite.invite_id;
-
-  DELETE FROM public.organisation_invite_app_seats ias
-  WHERE ias.invite_id = accept_invite.invite_id;
-
-  INSERT INTO public.organisation_member_app_seats (org_member_id, app_code)
-  SELECT v_org_member_id, pending_app.app_code
-  FROM unnest(v_app_codes) AS pending_app(app_code)
-  ON CONFLICT (org_member_id, app_code) DO NOTHING;
-
-  DELETE FROM public.organisation_invites oi
-  WHERE oi.id = accept_invite.invite_id;
-
-  RETURN true;
-END;
-$$;
+GRANT EXECUTE ON FUNCTION public.accounts_update_billing_contact(TEXT, TEXT, TEXT) TO authenticated;

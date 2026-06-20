@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../supabase'
 import { reportAuthError } from './errorReporting'
+import { consumeAuthHandoffFromUrl } from './sessionHandoff'
 
 export interface AuthContextType {
   session: Session | null
@@ -38,6 +39,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const initializeSession = async () => {
       setLoading(true)
+      try {
+        await consumeAuthHandoffFromUrl()
+      } catch (error) {
+        reportAuthError('Failed to consume auth handoff', error)
+      }
       const { data } = await supabase.auth.getSession()
       if (!isMounted) return
 

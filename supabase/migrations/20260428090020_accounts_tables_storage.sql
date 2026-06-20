@@ -28,23 +28,23 @@ ALTER TABLE public.organisation_audit_events ENABLE ROW LEVEL SECURITY;
 -- billing contact fields, avatar storage, and account-scoped audit logging.
 
 ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS avatar_storage_path TEXT,
-  ADD COLUMN IF NOT EXISTS recovery_email TEXT;
+  ADD COLUMN avatar_storage_path TEXT,
+  ADD COLUMN recovery_email TEXT;
 
 ALTER TABLE public.organisations
-  ADD COLUMN IF NOT EXISTS primary_contact_name TEXT,
-  ADD COLUMN IF NOT EXISTS primary_contact_email TEXT,
-  ADD COLUMN IF NOT EXISTS billing_name TEXT,
-  ADD COLUMN IF NOT EXISTS billing_email TEXT,
-  ADD COLUMN IF NOT EXISTS billing_phone TEXT;
+  ADD COLUMN primary_contact_name TEXT,
+  ADD COLUMN primary_contact_email TEXT,
+  ADD COLUMN billing_name TEXT,
+  ADD COLUMN billing_email TEXT,
+  ADD COLUMN billing_phone TEXT;
 
-CREATE TABLE IF NOT EXISTS public.account_preferences (
+CREATE TABLE public.account_preferences (
   user_id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   theme TEXT NOT NULL DEFAULT 'light' CHECK (theme IN ('light', 'dark', 'system')),
   timezone TEXT NOT NULL DEFAULT 'UTC',
   locale TEXT NOT NULL DEFAULT 'en-AU',
   notification_preferences JSONB NOT NULL DEFAULT '{"product_updates": true, "security_alerts": true, "billing_alerts": true}'::jsonb,
-  default_landing_app TEXT NOT NULL DEFAULT 'accounts' CHECK (default_landing_app IN ('accounts', 'etl', 'stoqr')),
+  default_landing_app TEXT NOT NULL DEFAULT 'accounts' CHECK (default_landing_app IN ('accounts', 'etl', 'open-kb', 'stoqr')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ
 );
@@ -74,57 +74,40 @@ VALUES ('account-avatars', 'account-avatars', false)
 ON CONFLICT (id) DO UPDATE
 SET public = EXCLUDED.public;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'storage'
-      AND tablename = 'objects'
-      AND policyname = 'Users can manage their account avatars'
-  ) THEN
-    CREATE POLICY "Users can manage their account avatars" ON storage.objects
-      FOR ALL USING (
-        bucket_id = 'account-avatars'
-        AND (storage.foldername(name))[1] = auth.uid()::text
+CREATE POLICY "Users can manage their account avatars" ON storage.objects
+  FOR ALL USING (
+    bucket_id = 'account-avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'account-avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Users can view account avatars from their organisations" ON storage.objects
+  FOR SELECT USING (
+    bucket_id = 'account-avatars'
+    AND (
+      (storage.foldername(name))[1] = auth.uid()::text
+      OR EXISTS (
+        SELECT 1
+        FROM public.organisation_members viewer_membership
+        JOIN public.organisation_members avatar_owner_membership
+          ON avatar_owner_membership.org_id = viewer_membership.org_id
+        WHERE viewer_membership.user_id = auth.uid()
+          AND avatar_owner_membership.user_id::text = (storage.foldername(name))[1]
       )
-      WITH CHECK (
-        bucket_id = 'account-avatars'
-        AND (storage.foldername(name))[1] = auth.uid()::text
-      );
-  END IF;
+    )
+  );
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'storage'
-      AND tablename = 'objects'
-      AND policyname = 'Users can view account avatars from their organisations'
-  ) THEN
-    CREATE POLICY "Users can view account avatars from their organisations" ON storage.objects
-      FOR SELECT USING (
-        bucket_id = 'account-avatars'
-        AND (
-          (storage.foldername(name))[1] = auth.uid()::text
-          OR EXISTS (
-            SELECT 1
-            FROM public.organisation_members viewer_membership
-            JOIN public.organisation_members avatar_owner_membership
-              ON avatar_owner_membership.org_id = viewer_membership.org_id
-            WHERE viewer_membership.user_id = auth.uid()
-              AND avatar_owner_membership.user_id::text = (storage.foldername(name))[1]
-          )
-        )
-      );
-  END IF;
-END $$;
-
-CREATE TABLE IF NOT EXISTS public.organisation_invite_app_seats (
+CREATE TABLE public.organisation_invite_app_seats (
   invite_id UUID NOT NULL REFERENCES public.organisation_invites(id) ON DELETE CASCADE,
   app_code TEXT NOT NULL REFERENCES public.apps(code) ON DELETE CASCADE,
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   PRIMARY KEY (invite_id, app_code)
 );
 
-CREATE INDEX IF NOT EXISTS organisation_invite_app_seats_app_idx
+CREATE INDEX organisation_invite_app_seats_app_idx
   ON public.organisation_invite_app_seats (app_code);
 
 ALTER TABLE public.organisation_invite_app_seats ENABLE ROW LEVEL SECURITY;
@@ -132,7 +115,6 @@ ALTER TABLE public.organisation_invite_app_seats ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, DELETE ON TABLE public.organisation_invite_app_seats TO authenticated;
 GRANT ALL PRIVILEGES ON TABLE public.organisation_invite_app_seats TO service_role;
 
-DROP POLICY IF EXISTS invite_app_seats_select ON public.organisation_invite_app_seats;
 CREATE POLICY invite_app_seats_select ON public.organisation_invite_app_seats
   FOR SELECT USING (
     EXISTS (

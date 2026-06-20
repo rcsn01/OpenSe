@@ -1,6 +1,7 @@
 import { appendAppPath, getRuntimeConfigValue } from './runtime-config'
+import { FIRST_PARTY_APPS, type FirstPartyAppCode } from './app-registry'
 
-export type SwitchableAppKey = 'etl' | 'stoqr'
+export type SwitchableAppKey = FirstPartyAppCode
 
 export type SwitchableApp = {
   key: SwitchableAppKey
@@ -12,39 +13,6 @@ export type SwitchableApp = {
   path: string
 }
 
-type SwitchableAppDefinition = {
-  key: SwitchableAppKey
-  label: string
-  title: string
-  urlKeys: string[]
-  defaultUrl: string
-  path: string
-}
-
-const DEFAULT_APP_URLS = {
-  etl: 'http://localhost:5992',
-  stoqr: 'http://localhost:5993',
-} as const
-
-const SWITCHABLE_APP_DEFINITIONS: SwitchableAppDefinition[] = [
-  {
-    key: 'etl',
-    label: 'ETL',
-    title: 'Open-ETL',
-    urlKeys: ['VITE_ETL_PUBLIC_URL', 'VITE_ETL_URL'],
-    defaultUrl: DEFAULT_APP_URLS.etl,
-    path: '/dashboard',
-  },
-  {
-    key: 'stoqr',
-    label: 'StoQR',
-    title: 'Open-StoQR',
-    urlKeys: ['VITE_STOQR_PUBLIC_URL', 'VITE_STOQR_URL'],
-    defaultUrl: DEFAULT_APP_URLS.stoqr,
-    path: '/dashboard',
-  },
-]
-
 const resolveAppUrl = (urlKeys: string[], defaultUrl: string) => {
   for (const key of urlKeys) {
     const value = getRuntimeConfigValue(key)
@@ -55,12 +23,12 @@ const resolveAppUrl = (urlKeys: string[], defaultUrl: string) => {
 
 /** Apps available in the unified switcher for the current runtime. */
 export const getSwitchableApps = (): SwitchableApp[] =>
-  SWITCHABLE_APP_DEFINITIONS.map((app) => ({
-    key: app.key,
-    label: app.label,
+  FIRST_PARTY_APPS.map((app) => ({
+    key: app.code,
+    label: app.compactLabel,
     title: app.title,
-    url: resolveAppUrl(app.urlKeys, app.defaultUrl),
-    path: app.path,
+    url: resolveAppUrl([...app.envUrlKeys], app.localUrl),
+    path: app.defaultRoute,
   }))
 
 export const buildSwitchableAppHref = (app: Pick<SwitchableApp, 'url' | 'path'>) =>

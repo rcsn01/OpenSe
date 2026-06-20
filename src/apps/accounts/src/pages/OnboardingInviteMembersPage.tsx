@@ -33,7 +33,7 @@ export const OnboardingInviteMembersPage = () => {
 
   const completeAndRedirect = async () => {
     await completeOrganisationOnboarding()
-    const redirected = redirectBackToApp()
+    const redirected = await redirectBackToApp()
     if (!redirected) {
       navigate(getOnboardingCompletedFallbackPath(), { replace: true })
     }
@@ -47,7 +47,7 @@ export const OnboardingInviteMembersPage = () => {
       setStatus(nextStatus)
 
       if (!nextStatus.needsOnboarding) {
-        const redirected = redirectBackToApp()
+        const redirected = await redirectBackToApp()
         if (!redirected) {
           navigate(getOnboardingCompletedFallbackPath(), { replace: true })
         }

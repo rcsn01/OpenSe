@@ -19,6 +19,46 @@ Use the same pattern for Open-KB:
 - Frontend app: `src/apps/open-kb`.
 - Shared product/domain package, if needed: `src/packages/shared/src/open-kb/*`.
 
+## Current Implementation Status
+
+Implemented:
+
+- Open-KB app shell in `src/apps/open-kb`, registered in the app switcher and package workspace.
+- Organisation-scoped schema in `open_kb`, with projects belonging directly to `public.organisations`.
+- Plane product table coverage without Plane auth/session/workspace tables.
+- Open-KB roles, permissions, feature flags, app seats, storage bucket, RLS, and demo seed data.
+- Project list/create/detail/settings, project members, states, labels, and role/permission settings.
+- Issue list, board, richer filters, saved views, create/detail/edit, draft issues, comments, labels, assignees, mentions, attachments, blockers, relations, external links, subscribers, votes, issue/comment reactions, favorites, recent visits, and activity timeline.
+- Issue table, calendar, and Gantt-style views implemented on the shared filtered issue dataset, with saved-view support for every issue layout.
+- Bulk issue selection and edits, plus filtered issue CSV export and selected-project CSV issue import.
+- Richer analytics covering overdue and due-soon work, due-date health, completion trend, completion rate, and average completion age.
+- Notification inbox, mark-read actions, activity-to-subscriber notification fanout, and per-user issue notification preference toggle.
+- Organisation-level teams for grouping projects without reintroducing Plane workspaces, including team CRUD, project assignment, project list filtering, RLS hardening, and same-organisation project/team validation.
+- Deploy/public boards with project-level board management, limited anonymous read-only RPCs, and a public board route that only renders active boards for public projects.
+- API token UX behind the disabled-by-default feature flag, with browser-generated raw tokens, SHA-256 hash storage, copy-once display, metadata listing, and revoke controls.
+- Webhook management and delivery-log review in Settings, with HTTPS endpoints, hashed signing secrets, service-role-only log writes, and authenticated log review gated by `automation.manage`.
+- GitHub/Slack integration setup behind disabled-by-default feature flags, including repository/channel mapping UI, OAuth start/callback Edge Functions with signed short-lived state, hashed provider token storage, service-role-only sync event writes, and signed inbound Supabase Edge Function endpoints for GitHub and Slack events.
+- Inbound GitHub/Slack endpoints now re-check organisation feature flags at ingest time; GitHub sync logs have provider-event idempotency indexes and duplicate delivery handling.
+- Internal GitHub/Slack sync worker Edge Functions can process received provider events into local Open-KB issues and issue comments using idempotent external IDs, while remaining gated by worker secret and organisation feature flags.
+- GitHub/Slack sync workers now keep first-class attempt counts, `next_retry_at`, `processed_at`, and `last_error_text`, select only due rows, respect provider `Retry-After` rate-limit responses, isolate per-row failures, and move exhausted rows to `failed`.
+- GitHub/Slack OAuth callbacks now store provider token hashes on user-visible integration rows and encrypted provider credentials in a service-role-only `open_kb.integration_credentials` vault keyed by `OPEN_KB_INTEGRATION_CREDENTIAL_KEY`; raw provider credentials are not stored in client-readable tables.
+- GitHub sync worker can process outbound comment rows (`sync_direction = 'outbound'`, `status = 'outbound_pending'`) by decrypting the stored GitHub credential, resolving the mapped GitHub issue number, posting the Open-KB comment to GitHub, and applying the same per-row retry/backoff handling.
+- Open-KB issue comment creation now attempts a non-blocking outbound GitHub comment enqueue through `open_kb.enqueue_github_comment_sync(comment_id)`, a permission-checked RPC that validates the caller, feature flag, project access, repository mapping, and GitHub issue mapping before inserting a service-role-only sync row.
+- Open-KB issue comment creation also attempts a non-blocking outbound Slack enqueue through `open_kb.enqueue_slack_comment_sync(comment_id)`, fanning out one queued outbound message per mapped project Slack channel with permission checks, feature-flag gating, and idempotent duplicate protection.
+- Slack sync worker now separates inbound channel events from outbound message rows, decrypts the stored Slack credential, posts queued Open-KB comments via `chat.postMessage`, and records provider timestamps with the same retry/backoff handling.
+- Settings now includes an outbound provider sync queue review surface for GitHub/Slack comment sync rows, including status, attempt count, next retry/processed timestamps, last error display, and a permission-checked manual retry action through `open_kb.retry_provider_sync(provider, sync_id)`.
+- Settings now exposes provider connection status with reconnect and disconnect controls; disconnect uses `open_kb.disconnect_provider_integration(org_id, provider)` to revoke service-role-only encrypted credential rows, clear visible token hashes, mark the integration disconnected, and pause/disable related mappings.
+- Repeatable pgTAP database tests cover Open-KB auth/workspace migration exclusions, RLS enablement, service-role-only sync writes, SECURITY DEFINER exposure, self-contained permission behavior, and attachment storage policy boundaries.
+- Playwright route coverage now exercises Open-KB public board, dashboard, project, issue, draft, planning, page, intake, analytics, notification, settings, and wildcard routes with a mocked Supabase backend.
+- Stateful Playwright interaction coverage now exercises organisation-scoped project creation, issue creation, issue update, rich text comment creation, auth/seat bootstrap, public-board RPC data, and mocked PostgREST mutations.
+- Fixed the issue detail recent-visit effect so it no longer loops on mutation-object identity and blocks save/comment submissions.
+- Expanded pgTAP role-matrix coverage now exercises Owner, Admin, Editor, Viewer, default member, no-seat, and cross-organisation users against real Open-KB RLS reads/writes for projects, issues, settings permissions, and storage assets.
+- Local dev server now defaults to `127.0.0.1`, allows `OPEN_KB_DEV_HOST` / `OPEN_KB_DEV_PORT` overrides, and falls forward when port `5995` is already occupied.
+
+Still to implement for fuller Plane parity:
+
+- Broader outbound provider sync coverage: GitHub issue/repository writes, Slack channel management writes, scheduled worker deployment, and real provider sandbox testing, still hidden behind disabled-by-default feature flags until production review is complete.
+
 ## Non-Negotiables
 
 1. Do not import Plane as a black-box app. Rebuild the UI and data access in OpenSe style.
@@ -92,7 +132,7 @@ Core organisation/project tables:
 
 - `projects`, `project_member_invites`, `project_members`, `project_identifiers`, `project_deploy_boards`, `project_public_members`, `project_user_properties`
 - `organisation_themes`, `organisation_user_properties`, `organisation_user_links`, `organisation_home_preferences`, `organisation_user_preferences`, adapted from Plane tenant-level preference tables
-- `teams`, if Open-KB needs Plane-style project grouping; otherwise use existing OpenSe organisation membership and defer this table
+- `teams`, implemented as optional organisation-level project groupings with no workspace semantics
 
 Plane tenant tables that must not be created:
 
@@ -131,6 +171,7 @@ Notifications, webhooks, and integrations:
 - `notifications`, `user_notification_preferences`, `email_notification_logs`
 - `webhooks`, `webhook_logs`, `project_webhooks`
 - `integrations`, `organisation_integrations`, adapted from Plane tenant integration tables
+- `integration_credentials`, service-role-only encrypted provider credential storage for OAuth-backed provider API writes
 - `github_repositories`, `github_repository_syncs`, `github_issue_syncs`, `github_comment_syncs`
 - `slack_project_syncs`
 - `api_activity_logs`

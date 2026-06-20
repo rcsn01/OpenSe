@@ -4,7 +4,9 @@ import { Badge, Button, Input } from '@repo/ui'
 import { CreditCard, ExternalLink, Save } from 'lucide-react'
 import { AccountsAlert, AccountsField, AccountsPageShell, AccountsSection } from '../components/AccountsPageShell'
 import {
+  accountAppCodes,
   createBillingPortalSession,
+  formatAppCodeLabel,
   createCheckoutForSeatLimit,
   getOrganisationBillingSummary,
   updateSeatLimit,
@@ -16,6 +18,15 @@ import { canManageOrganisation, updateBillingContact } from '../api/organisation
 
 const formatSeatLimit = (seatLimit: number | null) => (seatLimit === null ? 'Unlimited' : String(seatLimit))
 const isWithinLimit = (assignedSeats: number, seatLimit: number | null) => seatLimit === null || assignedSeats <= seatLimit
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback
+const getSeatLimitDrafts = (apps: AppSeatBillingSummary[]): Record<AppCode, string> =>
+  Object.fromEntries(
+    accountAppCodes.map((appCode) => {
+      const seatLimit = apps.find((app) => app.appCode === appCode)?.seatLimit
+      return [appCode, seatLimit === null ? '' : String(seatLimit ?? 0)]
+    }),
+  ) as Record<AppCode, string>
 
 export const BillingPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -25,7 +36,7 @@ export const BillingPage = () => {
   const [success, setSuccess] = useState<string | null>(null)
   const [organisation, setOrganisation] = useState<OrgContext | null>(null)
   const [apps, setApps] = useState<AppSeatBillingSummary[]>([])
-  const [seatLimitDrafts, setSeatLimitDrafts] = useState<Record<AppCode, string>>({ etl: '0', stoqr: '0' })
+  const [seatLimitDrafts, setSeatLimitDrafts] = useState<Record<AppCode, string>>(() => getSeatLimitDrafts([]))
   const [billingName, setBillingName] = useState('')
   const [billingEmail, setBillingEmail] = useState('')
   const [billingPhone, setBillingPhone] = useState('')
@@ -43,12 +54,9 @@ export const BillingPage = () => {
       setBillingName(summary.organisation.billingName ?? '')
       setBillingEmail(summary.organisation.billingEmail ?? '')
       setBillingPhone(summary.organisation.billingPhone ?? '')
-      setSeatLimitDrafts({
-        etl: summary.apps.find((app) => app.appCode === 'etl')?.seatLimit === null ? '' : String(summary.apps.find((app) => app.appCode === 'etl')?.seatLimit ?? 0),
-        stoqr: summary.apps.find((app) => app.appCode === 'stoqr')?.seatLimit === null ? '' : String(summary.apps.find((app) => app.appCode === 'stoqr')?.seatLimit ?? 0),
-      })
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to load billing information.')
+      setSeatLimitDrafts(getSeatLimitDrafts(summary.apps))
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to load billing information.'))
     } finally {
       setLoading(false)
     }
@@ -87,10 +95,10 @@ export const BillingPage = () => {
       setError(null)
       setSuccess(null)
       await updateSeatLimit(appCode, parsed)
-      setSuccess(`${appCode.toUpperCase()} seat limit updated.`)
+      setSuccess(`${formatAppCodeLabel(appCode)} seat limit updated.`)
       await loadSummary()
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to update seat limit.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to update seat limit.'))
     } finally {
       setSavingKey(null)
     }
@@ -108,8 +116,8 @@ export const BillingPage = () => {
       setError(null)
       const url = await createCheckoutForSeatLimit(appCode, parsed)
       window.location.href = url
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to start checkout.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to start checkout.'))
       setSavingKey(null)
     }
   }
@@ -120,8 +128,8 @@ export const BillingPage = () => {
       setError(null)
       const url = await createBillingPortalSession()
       window.location.href = url
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to open billing portal.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to open billing portal.'))
       setSavingKey(null)
     }
   }
@@ -139,8 +147,8 @@ export const BillingPage = () => {
         billingPhone: nextOrganisation.billingPhone,
       } : previous)
       setSuccess('Billing contact updated.')
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to update billing contact.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to update billing contact.'))
     } finally {
       setSavingKey(null)
     }

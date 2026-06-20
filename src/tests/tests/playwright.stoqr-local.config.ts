@@ -17,7 +17,7 @@ export default defineConfig({
       testMatch: 'apps/stoqr/**/*.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
-        baseURL: process.env.BASE_URL_STOQR || 'http://localhost:5995',
+        baseURL: process.env.BASE_URL_STOQR || 'http://localhost:5993',
       },
     },
   ],

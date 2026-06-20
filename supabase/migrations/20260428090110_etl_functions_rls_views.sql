@@ -348,7 +348,7 @@ REVOKE ALL ON FUNCTION app_private.has_etl_permission(UUID, TEXT) FROM PUBLIC, a
 REVOKE ALL ON FUNCTION etl.enforce_template_immutability() FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION app_private.has_etl_permission(UUID, TEXT) TO authenticated;
-CREATE OR REPLACE VIEW etl.personal_usage_stats
+CREATE VIEW etl.personal_usage_stats
 WITH (security_invoker = true)
 AS
 SELECT
@@ -364,7 +364,7 @@ WHERE w.owner_id = auth.uid()
   AND we.started_at >= now() - INTERVAL '30 days'
 GROUP BY we.user_id, we.started_at::DATE;
 
-CREATE OR REPLACE VIEW etl.org_member_usage_stats
+CREATE VIEW etl.org_member_usage_stats
 WITH (security_invoker = true)
 AS
 SELECT
@@ -379,7 +379,7 @@ WHERE w.org_id IS NOT NULL
   AND we.started_at >= now() - INTERVAL '30 days'
 GROUP BY w.org_id, we.started_at::DATE;
 
-CREATE OR REPLACE VIEW etl.org_active_users
+CREATE VIEW etl.org_active_users
 WITH (security_invoker = true)
 AS
 SELECT

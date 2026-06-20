@@ -1,92 +1,46 @@
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'stoqr'
-      AND tablename = 'products'
-      AND policyname = 'Report viewers can view products'
-  ) THEN
-    CREATE POLICY "Report viewers can view products" ON stoqr.products
-      FOR SELECT USING (
-        deleted_at IS NULL
-        AND (
-          app_private.has_permission(company_id, 'reports.view')
-          OR app_private.has_permission(company_id, 'dashboard.view')
-          OR app_private.has_permission(company_id, 'alerts.view')
-        )
-      );
-  END IF;
+CREATE POLICY "Report viewers can view products" ON stoqr.products
+  FOR SELECT USING (
+    deleted_at IS NULL
+    AND (
+      app_private.has_permission(company_id, 'reports.view')
+      OR app_private.has_permission(company_id, 'dashboard.view')
+      OR app_private.has_permission(company_id, 'alerts.view')
+    )
+  );
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'stoqr'
-      AND tablename = 'product_folder_stocks'
-      AND policyname = 'Report viewers can view product folder stocks'
-  ) THEN
-    CREATE POLICY "Report viewers can view product folder stocks" ON stoqr.product_folder_stocks
-      FOR SELECT USING (
-        app_private.has_permission(company_id, 'reports.view')
-        OR app_private.has_permission(company_id, 'dashboard.view')
-        OR app_private.has_permission(company_id, 'alerts.view')
-      );
-  END IF;
+CREATE POLICY "Report viewers can view product folder stocks" ON stoqr.product_folder_stocks
+  FOR SELECT USING (
+    app_private.has_permission(company_id, 'reports.view')
+    OR app_private.has_permission(company_id, 'dashboard.view')
+    OR app_private.has_permission(company_id, 'alerts.view')
+  );
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'stoqr'
-      AND tablename = 'inventory_transactions'
-      AND policyname = 'Report viewers can view transactions'
-  ) THEN
-    CREATE POLICY "Report viewers can view transactions" ON stoqr.inventory_transactions
-      FOR SELECT USING (
-        app_private.has_permission(company_id, 'reports.view')
-        OR app_private.has_permission(company_id, 'dashboard.view')
-      );
-  END IF;
+CREATE POLICY "Report viewers can view transactions" ON stoqr.inventory_transactions
+  FOR SELECT USING (
+    app_private.has_permission(company_id, 'reports.view')
+    OR app_private.has_permission(company_id, 'dashboard.view')
+  );
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'stoqr'
-      AND tablename = 'purchase_orders'
-      AND policyname = 'Dashboard viewers can view purchase orders'
-  ) THEN
-    CREATE POLICY "Dashboard viewers can view purchase orders" ON stoqr.purchase_orders
-      FOR SELECT USING (app_private.has_permission(company_id, 'dashboard.view'));
-  END IF;
+CREATE POLICY "Dashboard viewers can view purchase orders" ON stoqr.purchase_orders
+  FOR SELECT USING (app_private.has_permission(company_id, 'dashboard.view'));
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'stoqr'
-      AND tablename = 'alert_delivery_logs'
-      AND policyname = 'Users can view own in-app alert deliveries'
-  ) THEN
-    CREATE POLICY "Users can view own in-app alert deliveries" ON stoqr.alert_delivery_logs
-      FOR SELECT USING (
-        channel = 'in_app'
-        AND recipient = auth.uid()::TEXT
-      );
-  END IF;
+CREATE POLICY "Users can view own in-app alert deliveries" ON stoqr.alert_delivery_logs
+  FOR SELECT USING (
+    channel = 'in_app'
+    AND recipient = auth.uid()::TEXT
+  );
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'stoqr'
-      AND tablename = 'alert_events'
-      AND policyname = 'Alert users can view delivered alert events'
-  ) THEN
-    CREATE POLICY "Alert users can view delivered alert events" ON stoqr.alert_events
-      FOR SELECT USING (
-        app_private.has_permission(company_id, 'alerts.use')
-        OR EXISTS (
-          SELECT 1
-          FROM stoqr.alert_delivery_logs adl
-          WHERE adl.alert_event_id = alert_events.id
-            AND adl.channel = 'in_app'
-            AND adl.recipient = auth.uid()::TEXT
-        )
-      );
-  END IF;
-END;
-$$;
+CREATE POLICY "Alert users can view delivered alert events" ON stoqr.alert_events
+  FOR SELECT USING (
+    app_private.has_permission(company_id, 'alerts.use')
+    OR EXISTS (
+      SELECT 1
+      FROM stoqr.alert_delivery_logs adl
+      WHERE adl.alert_event_id = alert_events.id
+        AND adl.channel = 'in_app'
+        AND adl.recipient = auth.uid()::TEXT
+    )
+  );
 CREATE POLICY "Public read app permissions" ON stoqr.app_permissions
   FOR SELECT USING (true);
 

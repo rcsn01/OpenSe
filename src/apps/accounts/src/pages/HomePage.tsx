@@ -1,9 +1,11 @@
 import { ChevronRight } from 'lucide-react'
+import { useAuth } from '@repo/shared/auth/context'
 import { buildSwitchableAppHref, getSwitchableApps } from '@repo/shared/switchable-apps'
 import { SWITCHABLE_APP_ICONS } from '@repo/ui'
 import { AccountsPageShell } from '../components/AccountsPageShell'
 
 export const HomePage = () => {
+  const { session } = useAuth()
   const appDestinations = getSwitchableApps()
 
   return (
@@ -20,6 +22,12 @@ export const HomePage = () => {
             <a
               key={app.key}
               href={href}
+              onClick={(event) => {
+                event.preventDefault()
+                void import('@repo/shared/auth/session-handoff').then(({ navigateWithAuthHandoff }) => {
+                  void navigateWithAuthHandoff(href, session)
+                })
+              }}
               className="flex min-h-16 items-center gap-3 bg-[var(--color-surface)] px-4 py-3 text-[var(--color-heading)] transition hover:bg-[var(--color-muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-ring)] sm:aspect-[4/3] sm:min-h-32 sm:flex-col sm:justify-center sm:p-4 sm:text-center"
             >
               <span className="grid h-10 w-10 shrink-0 place-items-center bg-[var(--color-muted)] sm:h-12 sm:w-12">
