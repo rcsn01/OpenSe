@@ -1,6 +1,6 @@
 import { test as base, expect, type Page, type Route } from '@playwright/test';
 
-const defaultSupabaseUrl = 'https://sllrsicziiasebqhytfr.supabase.co';
+const defaultSupabaseUrl = 'http://127.0.0.1:54321';
 
 const ORG_ID = '11110000-0000-4000-8000-00000000e2e0';
 const PROJECT_ID = '11110000-0000-4000-8000-00000000e2e1';

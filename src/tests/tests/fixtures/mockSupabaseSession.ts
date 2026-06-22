@@ -19,7 +19,7 @@ interface MockSupabaseSessionOptions {
   canCreateOrganisation?: boolean;
 }
 
-const defaultSupabaseUrl = 'https://sllrsicziiasebqhytfr.supabase.co';
+const defaultSupabaseUrl = 'http://127.0.0.1:54321';
 
 const getSupabaseStorageKey = (supabaseUrl: string) => {
   const projectRef = new URL(supabaseUrl).hostname.split('.')[0];

@@ -1,4 +1,15 @@
-import { Button, Dropdown, DropdownItem, DropdownSeparator, Tooltip, cn } from '@repo/ui'
+import {
+  Button,
+  Dropdown,
+  DropdownItem,
+  DropdownSeparator,
+  Tooltip,
+  cn,
+  tabBarActiveItemClassName,
+  tabBarClassName,
+  tabBarInactiveItemClassName,
+  tabBarItemClassName,
+} from '@repo/ui'
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { KeyboardEvent } from 'react'
@@ -77,8 +88,8 @@ export const ProjectTabBar = ({
   }
 
   return (
-    <div data-testid="open-kb-project-tab-nav" className="flex h-10 items-center gap-2 border-b border-[var(--color-border)]">
-      <nav className="flex min-w-0 flex-1 overflow-x-auto" aria-label="Project tabs">
+    <div data-testid="open-kb-project-tab-nav" className="flex h-10 items-center gap-2">
+      <nav className={cn(tabBarClassName, 'flex-1')} role="tablist" aria-label="Project tabs">
         {tabs.map((tab, index) => {
           const tabKey = tab.tab_key as ProjectTabKey
 
@@ -86,11 +97,11 @@ export const ProjectTabBar = ({
             <button
               key={tab.id}
               type="button"
+              role="tab"
+              aria-selected={activeTab === tabKey}
               className={cn(
-                'inline-flex h-10 shrink-0 items-center border-b-2 px-3 text-sm font-semibold transition-colors',
-                activeTab === tabKey
-                  ? 'border-[var(--color-foreground)] text-[var(--color-foreground)]'
-                  : 'border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]',
+                tabBarItemClassName,
+                activeTab === tabKey ? tabBarActiveItemClassName : tabBarInactiveItemClassName,
               )}
               onClick={() => onNavigate(tabKey)}
               onKeyDown={(event) => handleKeyDown(event, tab)}

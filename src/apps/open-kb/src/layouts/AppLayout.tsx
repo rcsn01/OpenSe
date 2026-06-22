@@ -6,6 +6,8 @@ import {
   ArrowLeft,
   Bell,
   CheckSquare,
+  ChevronDown,
+  Circle,
   FolderKanban,
   Home,
   PanelsTopLeft,
@@ -145,7 +147,7 @@ export const AppLayout = () => {
   }
 
   const projectTopBarContent = activeProject ? (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex h-9 min-w-0 max-w-full items-center gap-2 overflow-hidden">
       <Button
         type="button"
         variant="ghost"
@@ -156,22 +158,28 @@ export const AppLayout = () => {
       >
         <ArrowLeft className="h-4 w-4" />
       </Button>
-      <div className="min-w-0">
-        <div className="truncate text-sm font-semibold text-[var(--color-foreground)]">
-          {activeProject.name}
+      <div className="min-w-0 max-w-[min(52vw,34rem)] overflow-hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[#f7d36b] text-sm font-semibold text-slate-900">
+            {activeProject.name.slice(0, 1).toUpperCase()}
+          </span>
+          <span className="min-w-0 truncate text-base font-semibold leading-6 tracking-normal text-[var(--color-foreground)] sm:text-lg">
+            {activeProject.name}
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-[var(--color-muted-foreground)]" />
+          <button
+            type="button"
+            aria-label={activeProjectFavorite ? 'Remove project from favorites' : 'Add project to favorites'}
+            onClick={handleToggleProjectFavorite}
+            disabled={addFavorite.isPending || removeFavorite.isPending}
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] disabled:opacity-60"
+          >
+            <Star className={activeProjectFavorite ? 'h-4 w-4 fill-current' : 'h-4 w-4'} />
+          </button>
+          <Circle className="hidden h-3.5 w-3.5 shrink-0 text-[var(--color-muted-foreground)] sm:block" />
+          <span className="hidden shrink-0 text-sm font-medium text-[var(--color-muted-foreground)] sm:inline">Set status</span>
         </div>
       </div>
-      <Button
-        type="button"
-        variant={activeProjectFavorite ? 'primary' : 'ghost'}
-        size="icon"
-        aria-label={activeProjectFavorite ? 'Remove project from favorites' : 'Add project to favorites'}
-        onClick={handleToggleProjectFavorite}
-        loading={addFavorite.isPending || removeFavorite.isPending}
-        className="shrink-0"
-      >
-        <Star className="h-4 w-4" />
-      </Button>
     </div>
   ) : undefined
 
