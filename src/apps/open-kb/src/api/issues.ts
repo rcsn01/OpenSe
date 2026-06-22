@@ -1911,6 +1911,40 @@ export const fetchIssueAssignees = async (
   }))
 }
 
+export const fetchProjectIssueAssignees = async (
+  organisationId: string,
+  projectId: string,
+): Promise<IssueAssignee[]> => {
+  const { data, error } = await db
+    .from('issue_assignees')
+    .select('id, organisation_id, project_id, issue_id, profile_id')
+    .eq('organisation_id', organisationId)
+    .eq('project_id', projectId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+
+  const rows = (data ?? []) as Array<Omit<IssueAssignee, 'profile'>>
+  const profileIds = rows.map((row) => row.profile_id).filter((id): id is string => Boolean(id))
+  if (profileIds.length === 0) {
+    return rows.map((row) => ({ ...row, profile: null }))
+  }
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, email, full_name, username, avatar_url')
+    .in('id', profileIds)
+
+  if (profilesError) throw profilesError
+
+  const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile as OpenKbProfile]))
+  return rows.map((row) => ({
+    ...row,
+    profile: row.profile_id ? profileById.get(row.profile_id) ?? null : null,
+  }))
+}
+
 export const addIssueAssignee = async ({
   organisationId,
   projectId,

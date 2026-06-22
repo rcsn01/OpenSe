@@ -10,13 +10,12 @@ import {
   tabBarInactiveItemClassName,
   tabBarItemClassName,
 } from '@repo/ui'
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy, Edit3, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { ProjectTab } from '../../types'
 import {
   projectTabDefinitions,
-  requiredProjectTabKey,
   type ProjectTabGroup,
   type ProjectTabKey,
 } from '../../lib/projectTabs'
@@ -29,10 +28,12 @@ const groupLabels: Record<ProjectTabGroup, string> = {
 
 export type ProjectTabBarProps = {
   tabs: ProjectTab[]
-  activeTab: ProjectTabKey
+  activeTabId: string | null
   canEdit: boolean
-  onNavigate: (tabKey: ProjectTabKey) => void
+  onNavigate: (tab: ProjectTab) => void
   onAddTab: (tabKey: ProjectTabKey) => void
+  onRenameTab: (tab: ProjectTab) => void
+  onCopyTab: (tab: ProjectTab) => void
   onRemoveTab: (tab: ProjectTab) => void
   onMoveTab: (tab: ProjectTab, direction: 'left' | 'right') => void
   busy?: boolean
@@ -40,10 +41,12 @@ export type ProjectTabBarProps = {
 
 export const ProjectTabBar = ({
   tabs,
-  activeTab,
+  activeTabId,
   canEdit,
   onNavigate,
   onAddTab,
+  onRenameTab,
+  onCopyTab,
   onRemoveTab,
   onMoveTab,
   busy = false,
@@ -91,19 +94,20 @@ export const ProjectTabBar = ({
     <div data-testid="open-kb-project-tab-nav" className="flex h-10 items-center gap-2">
       <nav className={cn(tabBarClassName, 'flex-1')} role="tablist" aria-label="Project tabs">
         {tabs.map((tab, index) => {
-          const tabKey = tab.tab_key as ProjectTabKey
+          const isActive = activeTabId === tab.id
+          const isRequired = tab.metadata?.required === true
 
           return (
             <button
               key={tab.id}
               type="button"
               role="tab"
-              aria-selected={activeTab === tabKey}
+              aria-selected={isActive}
               className={cn(
                 tabBarItemClassName,
-                activeTab === tabKey ? tabBarActiveItemClassName : tabBarInactiveItemClassName,
+                isActive ? tabBarActiveItemClassName : tabBarInactiveItemClassName,
               )}
-              onClick={() => onNavigate(tabKey)}
+              onClick={() => onNavigate(tab)}
               onKeyDown={(event) => handleKeyDown(event, tab)}
               onContextMenu={(event) => {
                 if (!canEdit) return
@@ -112,6 +116,7 @@ export const ProjectTabBar = ({
               }}
             >
               {tab.label}
+              {isRequired ? <span className="sr-only"> required</span> : null}
             </button>
           )
         })}
@@ -176,18 +181,30 @@ export const ProjectTabBar = ({
           >
             Move right
           </DropdownItem>
-          {contextMenu.tab.tab_key !== requiredProjectTabKey ? (
-            <>
-              <DropdownSeparator />
-              <DropdownItem
-                destructive
-                icon={<Trash2 className="h-4 w-4" />}
-                disabled={busy}
-                onClick={() => handleContextAction(() => onRemoveTab(contextMenu.tab))}
-              >
-                Remove tab
-              </DropdownItem>
-            </>
+          <DropdownSeparator />
+          <DropdownItem
+            icon={<Edit3 className="h-4 w-4" />}
+            disabled={busy}
+            onClick={() => handleContextAction(() => onRenameTab(contextMenu.tab))}
+          >
+            Rename
+          </DropdownItem>
+          <DropdownItem
+            icon={<Copy className="h-4 w-4" />}
+            disabled={busy}
+            onClick={() => handleContextAction(() => onCopyTab(contextMenu.tab))}
+          >
+            Make a copy
+          </DropdownItem>
+          {contextMenu.tab.metadata?.required !== true ? (
+            <DropdownItem
+              destructive
+              icon={<Trash2 className="h-4 w-4" />}
+              disabled={busy}
+              onClick={() => handleContextAction(() => onRemoveTab(contextMenu.tab))}
+            >
+              Remove tab
+            </DropdownItem>
           ) : null}
         </div>
       ) : null}

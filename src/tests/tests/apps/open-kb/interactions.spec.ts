@@ -62,6 +62,8 @@ test.describe('Open-KB Interactions', () => {
     await openKbPage.goto(`/projects/${PROJECT_ID}/list`, { waitUntil: 'domcontentloaded' });
 
     await openKbPage.getByRole('button', { name: /^List$/ }).click({ button: 'right' });
+    await expect(openKbPage.getByRole('button', { name: 'Rename' })).toBeVisible();
+    await expect(openKbPage.getByRole('button', { name: 'Make a copy' })).toBeVisible();
     await expect(openKbPage.getByRole('button', { name: 'Remove tab' })).toHaveCount(0);
 
     await openKbPage.getByLabel('Add project tab').click();
@@ -73,9 +75,11 @@ test.describe('Open-KB Interactions', () => {
     await expect(openKbPage.getByRole('button', { name: /^Board$/ })).toBeVisible();
 
     await openKbPage.getByRole('button', { name: /^Board$/ }).click();
-    await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/board(?:[?#].*)?$`));
+    await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/board/[^/?#]+(?:[?#].*)?$`));
 
     await openKbPage.getByRole('button', { name: /^Board$/ }).click({ button: 'right' });
+    await expect(openKbPage.getByRole('button', { name: 'Rename' })).toBeVisible();
+    await expect(openKbPage.getByRole('button', { name: 'Make a copy' })).toBeVisible();
     const removeResponse = openKbPage.waitForResponse((response) =>
       response.url().includes('/rest/v1/project_tabs') && response.request().method() === 'PATCH',
     );

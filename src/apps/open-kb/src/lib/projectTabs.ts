@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   CalendarDays,
   ClipboardList,
   Columns3,
@@ -33,7 +32,6 @@ export const projectTabKeys = [
   'files',
   'drafts',
   'cycles',
-  'modules',
   'estimates',
   'pages',
   'settings',
@@ -66,8 +64,7 @@ export const projectTabDefinitions: ProjectTabDefinition[] = [
   { key: 'files', label: 'Files', path: 'files', group: 'other', icon: FolderOpen },
   { key: 'drafts', label: 'Drafts', path: 'drafts', group: 'existing', icon: ClipboardList },
   { key: 'cycles', label: 'Cycles', path: 'cycles', group: 'existing', icon: CalendarDays },
-  { key: 'modules', label: 'Modules', path: 'modules', group: 'existing', icon: BarChart3 },
-  { key: 'estimates', label: 'Estimates', path: 'estimates', group: 'existing', icon: BarChart3 },
+  { key: 'estimates', label: 'Estimates', path: 'estimates', group: 'existing', icon: Gauge },
   { key: 'pages', label: 'Pages', path: 'pages', group: 'existing', icon: FileText },
   { key: 'settings', label: 'Settings', path: 'settings', group: 'existing', icon: Settings },
 ]
@@ -77,7 +74,6 @@ export const defaultProjectTabKeys: ProjectTabKey[] = [
   'list',
   'drafts',
   'cycles',
-  'modules',
   'estimates',
   'pages',
   'settings',
@@ -104,3 +100,7 @@ export const getProjectTabPath = (projectId: string, key: ProjectTabKey) => {
   return `/projects/${projectId}/${path}`
 }
 
+export const getProjectTabInstancePath = (projectId: string, key: ProjectTabKey, tabId: string) => {
+  const path = projectTabDefinitionByKey.get(key)?.path ?? 'overview'
+  return `/projects/${projectId}/${path}/${tabId}`
+}
