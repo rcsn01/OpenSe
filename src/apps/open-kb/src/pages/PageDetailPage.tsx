@@ -9,7 +9,7 @@ import { RichTextEditor, type RichTextEditorValue } from '../components/editor'
 import { OpenKbPageShell } from '../components/OpenKbPageShell'
 import { useOrganisation } from '../contexts/OrganisationContext'
 import { usePage, usePageVersions, useUpdatePage } from '../hooks/queries/usePages'
-import { useAddFavorite, useFavorites, useRecordRecentVisit, useRemoveFavorite } from '../hooks/queries/usePersonal'
+import { useAddFavorite, useFavorites, useRecordRecentVisitOnce, useRemoveFavorite } from '../hooks/queries/usePersonal'
 import { useProjects } from '../hooks/queries/useProjects'
 import type { KnowledgePage, PageStatus, PageVersion } from '../types'
 
@@ -47,13 +47,14 @@ const PageDetailContent = ({
   organisationId: string
 }) => {
   const { user } = useAuth()
+  const profileId = user?.id ?? null
   const { data: projects = [] } = useProjects(organisationId)
   const { data: versions = [], isLoading: versionsLoading } = usePageVersions(organisationId, page.id)
-  const { data: favorites = [] } = useFavorites(organisationId, user?.id ?? null)
+  const { data: favorites = [] } = useFavorites(organisationId, profileId)
   const updatePage = useUpdatePage()
   const addFavorite = useAddFavorite()
   const removeFavorite = useRemoveFavorite()
-  const recordRecentVisit = useRecordRecentVisit()
+  const recordRecentVisitOnce = useRecordRecentVisitOnce()
   const [projectId, setProjectId] = useState(page.project_id ?? '')
   const [title, setTitle] = useState(page.title)
   const [slug, setSlug] = useState(page.slug ?? '')
@@ -68,11 +69,11 @@ const PageDetailContent = ({
   const currentFavorite = favorites.find((favorite) => favorite.name === 'page' && favorite.page_id === page.id)
 
   useEffect(() => {
-    if (!organisationId || !user) return
+    if (!organisationId || !profileId) return
 
-    recordRecentVisit.mutate({
+    recordRecentVisitOnce({
       organisationId,
-      profileId: user.id,
+      profileId,
       kind: 'page',
       projectId: page.project_id,
       pageId: page.id,
@@ -82,7 +83,17 @@ const PageDetailContent = ({
       route: `/pages/${page.id}`,
       identifier: page.project?.identifier ?? 'ORG',
     })
-  }, [organisationId, page, recordRecentVisit, user])
+  }, [
+    organisationId,
+    page.content_text,
+    page.id,
+    page.project?.identifier,
+    page.project_id,
+    page.status,
+    page.title,
+    profileId,
+    recordRecentVisitOnce,
+  ])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -107,7 +118,7 @@ const PageDetailContent = ({
   }
 
   const handleToggleFavorite = async () => {
-    if (!organisationId || !user) return
+    if (!organisationId || !profileId) return
 
     try {
       if (currentFavorite) {
@@ -116,7 +127,7 @@ const PageDetailContent = ({
       } else {
         await addFavorite.mutateAsync({
           organisationId,
-          profileId: user.id,
+          profileId,
           kind: 'page',
           projectId: page.project_id,
           pageId: page.id,
@@ -184,7 +195,7 @@ const PageDetailContent = ({
           variant={currentFavorite ? 'primary' : 'outline'}
           onClick={handleToggleFavorite}
           loading={addFavorite.isPending || removeFavorite.isPending}
-          disabled={!user}
+          disabled={!profileId}
         >
           <Star className="h-4 w-4" />
           {currentFavorite ? 'Starred' : 'Star'}

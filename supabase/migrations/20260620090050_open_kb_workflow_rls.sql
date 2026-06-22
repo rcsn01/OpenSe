@@ -1,5 +1,29 @@
 -- Open-KB project, issue, planning, page, and personal workflow RLS.
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+  open_kb.teams,
+  open_kb.project_deploy_boards,
+  open_kb.notifications,
+  open_kb.user_notification_preferences,
+  open_kb.issue_mentions,
+  open_kb.user_favorites,
+  open_kb.user_recent_visits,
+  open_kb.stickies,
+  open_kb.draft_issues
+TO authenticated;
+
+GRANT ALL PRIVILEGES ON TABLE
+  open_kb.teams,
+  open_kb.project_deploy_boards,
+  open_kb.notifications,
+  open_kb.user_notification_preferences,
+  open_kb.issue_mentions,
+  open_kb.user_favorites,
+  open_kb.user_recent_visits,
+  open_kb.stickies,
+  open_kb.draft_issues
+TO service_role;
+
 CREATE POLICY projects_insert ON open_kb.projects
   FOR INSERT TO authenticated
   WITH CHECK (open_kb.has_permission(organisation_id, 'projects.create'));

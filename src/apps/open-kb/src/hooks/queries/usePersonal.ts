@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useRef } from 'react'
 import {
   addFavorite,
   fetchFavorites,
@@ -6,6 +7,7 @@ import {
   recordRecentVisit,
   removeFavorite,
 } from '../../api/personal'
+import type { PersonalItemInput } from '../../api/personal'
 
 export const personalKeys = {
   favorites: (organisationId: string | null, profileId: string | null) =>
@@ -65,4 +67,30 @@ export const useRecordRecentVisit = () => {
       })
     },
   })
+}
+
+const recentVisitKey = (input: PersonalItemInput) => [
+  input.organisationId,
+  input.profileId,
+  input.kind,
+  input.projectId ?? '',
+  input.issueId ?? '',
+  input.pageId ?? '',
+].join(':')
+
+export const useRecordRecentVisitOnce = () => {
+  const { mutate } = useRecordRecentVisit()
+  const recordedKeysRef = useRef(new Set<string>())
+
+  return useCallback((input: PersonalItemInput) => {
+    const key = recentVisitKey(input)
+    if (recordedKeysRef.current.has(key)) return
+
+    recordedKeysRef.current.add(key)
+    mutate(input, {
+      onError: () => {
+        recordedKeysRef.current.delete(key)
+      },
+    })
+  }, [mutate])
 }

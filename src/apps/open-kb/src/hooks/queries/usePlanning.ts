@@ -32,25 +32,25 @@ export const planningKeys = {
     ['open-kb', 'issue-modules', organisationId, issueId] as const,
 }
 
-export const useCycles = (organisationId: string | null, projectId?: string | null) =>
+export const useCycles = (organisationId: string | null, projectId?: string | null, enabled = true) =>
   useQuery({
     queryKey: planningKeys.cycles(organisationId, projectId),
     queryFn: () => fetchCycles({ organisationId: organisationId ?? '', projectId }),
-    enabled: Boolean(organisationId),
+    enabled: Boolean(enabled && organisationId),
   })
 
-export const useModules = (organisationId: string | null, projectId?: string | null) =>
+export const useModules = (organisationId: string | null, projectId?: string | null, enabled = true) =>
   useQuery({
     queryKey: planningKeys.modules(organisationId, projectId),
     queryFn: () => fetchModules({ organisationId: organisationId ?? '', projectId }),
-    enabled: Boolean(organisationId),
+    enabled: Boolean(enabled && organisationId),
   })
 
-export const useEstimates = (organisationId: string | null, projectId?: string | null) =>
+export const useEstimates = (organisationId: string | null, projectId?: string | null, enabled = true) =>
   useQuery({
     queryKey: planningKeys.estimates(organisationId, projectId),
     queryFn: () => fetchEstimates({ organisationId: organisationId ?? '', projectId }),
-    enabled: Boolean(organisationId),
+    enabled: Boolean(enabled && organisationId),
   })
 
 export const useEstimatePoints = (organisationId: string | null, projectId?: string | null) =>

@@ -27,8 +27,8 @@ import {
   IssueGantt,
   IssueRow,
   IssueTable,
-  buildBoardColumns,
 } from '../components/issues/IssueViews'
+import { buildBoardColumns } from '../lib/issueViews'
 import {
   formatIssueKey,
   isIssuePriority,

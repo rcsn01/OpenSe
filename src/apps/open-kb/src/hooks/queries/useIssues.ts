@@ -32,6 +32,7 @@ import {
   fetchIssues,
   fetchIssueStates,
   fetchOrganisationMemberProfiles,
+  fetchProjectIssueAttachments,
   removeIssueAssignee,
   removeIssueAttachment,
   removeIssueBlocker,
@@ -74,6 +75,8 @@ export const issueKeys = {
     ['open-kb', 'issues', organisationId, 'comments', issueId] as const,
   attachments: (organisationId: string | null, issueId: string | null) =>
     ['open-kb', 'issues', organisationId, 'attachments', issueId] as const,
+  projectAttachments: (organisationId: string | null, projectId: string | null) =>
+    ['open-kb', 'issues', organisationId, 'project-attachments', projectId] as const,
   blockers: (organisationId: string | null, issueId: string | null) =>
     ['open-kb', 'issues', organisationId, 'blockers', issueId] as const,
   relations: (organisationId: string | null, issueId: string | null) =>
@@ -102,11 +105,11 @@ export const issueKeys = {
     ['open-kb', 'member-profiles', organisationId] as const,
 }
 
-export const useIssues = (organisationId: string | null, filters?: IssueFilters) =>
+export const useIssues = (organisationId: string | null, filters?: IssueFilters, enabled = true) =>
   useQuery({
     queryKey: issueKeys.list(organisationId, filters),
     queryFn: () => fetchIssues({ organisationId: organisationId ?? '', filters }),
-    enabled: enabledWhen(organisationId),
+    enabled: Boolean(enabled && organisationId),
   })
 
 export const useIssueViews = (organisationId: string | null) =>
@@ -130,18 +133,18 @@ export const useIssueActivities = (organisationId: string | null, issueId: strin
     enabled: enabledWhen(organisationId, issueId),
   })
 
-export const useIssueStates = (organisationId: string | null, projectId?: string | null) =>
+export const useIssueStates = (organisationId: string | null, projectId?: string | null, enabled = true) =>
   useQuery({
     queryKey: issueKeys.states(organisationId, projectId),
     queryFn: () => fetchIssueStates(organisationId ?? '', projectId),
-    enabled: enabledWhen(organisationId),
+    enabled: Boolean(enabled && organisationId),
   })
 
-export const useIssueLabels = (organisationId: string | null, projectId?: string | null) =>
+export const useIssueLabels = (organisationId: string | null, projectId?: string | null, enabled = true) =>
   useQuery({
     queryKey: issueKeys.labels(organisationId, projectId),
     queryFn: () => fetchIssueLabels(organisationId ?? '', projectId),
-    enabled: enabledWhen(organisationId),
+    enabled: Boolean(enabled && organisationId),
   })
 
 export const useIssueComments = (organisationId: string | null, issueId: string | null) =>
@@ -156,6 +159,13 @@ export const useIssueAttachments = (organisationId: string | null, issueId: stri
     queryKey: issueKeys.attachments(organisationId, issueId),
     queryFn: () => fetchIssueAttachments(organisationId ?? '', issueId ?? ''),
     enabled: enabledWhen(organisationId, issueId),
+  })
+
+export const useProjectIssueAttachments = (organisationId: string | null, projectId: string | null, enabled = true) =>
+  useQuery({
+    queryKey: issueKeys.projectAttachments(organisationId, projectId),
+    queryFn: () => fetchProjectIssueAttachments(organisationId ?? '', projectId ?? ''),
+    enabled: Boolean(enabled && organisationId && projectId),
   })
 
 export const useIssueBlockers = (organisationId: string | null, issueId: string | null) =>
@@ -228,11 +238,11 @@ export const useIssueMentions = (organisationId: string | null, issueId: string 
     enabled: enabledWhen(organisationId, issueId),
   })
 
-export const useOrganisationMemberProfiles = (organisationId: string | null) =>
+export const useOrganisationMemberProfiles = (organisationId: string | null, enabled = true) =>
   useQuery({
     queryKey: issueKeys.memberProfiles(organisationId),
     queryFn: () => fetchOrganisationMemberProfiles(organisationId ?? ''),
-    enabled: enabledWhen(organisationId),
+    enabled: Boolean(enabled && organisationId),
   })
 
 export const useCreateIssue = () => {

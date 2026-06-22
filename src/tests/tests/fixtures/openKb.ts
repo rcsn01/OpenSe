@@ -173,6 +173,30 @@ const pageRow = {
   },
 };
 
+const defaultProjectTabs = (projectId: string, organisationId = ORG_ID, createdBy = USER_ID) => [
+  { tab_key: 'overview', label: 'Overview', sort_order: 10 },
+  { tab_key: 'list', label: 'List', sort_order: 20 },
+  { tab_key: 'drafts', label: 'Drafts', sort_order: 30 },
+  { tab_key: 'cycles', label: 'Cycles', sort_order: 40 },
+  { tab_key: 'modules', label: 'Modules', sort_order: 50 },
+  { tab_key: 'estimates', label: 'Estimates', sort_order: 60 },
+  { tab_key: 'pages', label: 'Pages', sort_order: 70 },
+  { tab_key: 'settings', label: 'Settings', sort_order: 80 },
+].map(({ tab_key, label, sort_order }) => ({
+  id: `11110000-0000-4000-8000-${projectId.slice(-8)}${String(sort_order).padStart(4, '0')}`.slice(0, 36),
+  organisation_id: organisationId,
+  project_id: projectId,
+  tab_key,
+  label,
+  sort_order,
+  metadata: {},
+  created_by: createdBy,
+  updated_by: null,
+  created_at: now,
+  updated_at: now,
+  deleted_at: null,
+}));
+
 type MockRow = Record<string, any>;
 
 const buildIssueRelations = (row: MockRow, projects: MockRow[], states: MockRow[]) => ({
@@ -337,6 +361,8 @@ export const installOpenKbMockSupabase = async (page: Page) => {
     states: [clone(state)],
     issues: [clone(issue)],
     pages: [clone(pageRow)],
+    project_tabs: defaultProjectTabs(PROJECT_ID).map(clone),
+    project_messages: [],
     cycles: [],
     modules: [],
     estimates: [],
@@ -398,6 +424,10 @@ export const installOpenKbMockSupabase = async (page: Page) => {
       created.settings = created.settings ?? {};
       created.metadata = created.metadata ?? {};
       created.team = null;
+      store.project_tabs = [
+        ...(store.project_tabs ?? []),
+        ...defaultProjectTabs(created.id, created.organisation_id, created.created_by),
+      ];
     }
 
     if (table === 'issues') {

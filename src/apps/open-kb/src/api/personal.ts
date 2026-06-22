@@ -19,7 +19,7 @@ const personalItemSelect = `
   deleted_at
 `
 
-type PersonalItemInput = {
+export type PersonalItemInput = {
   organisationId: string
   profileId: string
   kind: OpenKbVisitKind

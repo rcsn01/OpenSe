@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Badge, Button, cn } from '@repo/ui'
-import type { Issue, IssueState } from '../../types'
+import type { Issue } from '../../types'
 import { buildCalendarDays, dayKey, formatShortDate, toDate } from '../../lib/dateFormatting'
 import { formatIssueKey, issuePriorityTone as priorityTone } from '../../lib/issueFormatting'
 
@@ -200,25 +200,4 @@ export const IssueGantt = ({ issues }: { issues: Issue[] }) => {
       </div>
     </section>
   )
-}
-
-export const buildBoardColumns = (states: IssueState[], issues: Issue[]) => {
-  const columns = states.map((state) => ({
-    id: state.id,
-    title: state.name,
-    color: state.color,
-    issues: issues.filter((issue) => issue.state_id === state.id),
-  }))
-  const uncategorised = issues.filter((issue) => !issue.state_id)
-
-  if (uncategorised.length > 0) {
-    columns.unshift({
-      id: 'none',
-      title: 'No state',
-      color: '#64748b',
-      issues: uncategorised,
-    })
-  }
-
-  return columns
 }

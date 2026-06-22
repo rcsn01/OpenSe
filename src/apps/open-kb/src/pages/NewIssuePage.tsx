@@ -47,7 +47,9 @@ export const NewIssuePage = () => {
   useEffect(() => {
     if (!draft) return
 
-    const timeout = window.setTimeout(() => {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
       setProjectId(draft.project_id)
       setTitle(draft.title ?? '')
       setPriority(draft.payload.priority ?? 'none')
@@ -58,9 +60,11 @@ export const NewIssuePage = () => {
         text: draft.description_text ?? '',
       })
       setEditorKey((current) => current + 1)
-    }, 0)
+    })
 
-    return () => window.clearTimeout(timeout)
+    return () => {
+      cancelled = true
+    }
   }, [draft])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

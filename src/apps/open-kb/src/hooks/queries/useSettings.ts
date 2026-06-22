@@ -81,18 +81,18 @@ export const useApiTokens = (organisationId: string | null, enabled: boolean) =>
     enabled: Boolean(organisationId && enabled),
   })
 
-export const useWebhooks = (organisationId: string | null) =>
+export const useWebhooks = (organisationId: string | null, enabled = true) =>
   useQuery({
     queryKey: settingsKeys.webhooks(organisationId),
     queryFn: () => fetchWebhooks(organisationId ?? ''),
-    enabled: Boolean(organisationId),
+    enabled: Boolean(organisationId && enabled),
   })
 
-export const useWebhookLogs = (organisationId: string | null) =>
+export const useWebhookLogs = (organisationId: string | null, enabled = true) =>
   useQuery({
     queryKey: settingsKeys.webhookLogs(organisationId),
     queryFn: () => fetchWebhookLogs(organisationId ?? ''),
-    enabled: Boolean(organisationId),
+    enabled: Boolean(organisationId && enabled),
   })
 
 export const useOrganisationIntegrations = (organisationId: string | null, enabled: boolean) =>

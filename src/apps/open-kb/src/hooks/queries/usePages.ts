@@ -12,11 +12,11 @@ export const pageKeys = {
     ['open-kb', 'pages', organisationId, 'versions', pageId] as const,
 }
 
-export const usePages = (organisationId: string | null, projectId?: string | null) =>
+export const usePages = (organisationId: string | null, projectId?: string | null, enabled = true) =>
   useQuery({
     queryKey: pageKeys.list(organisationId, projectId),
     queryFn: () => fetchPages({ organisationId: organisationId ?? '', projectId }),
-    enabled: Boolean(organisationId),
+    enabled: Boolean(enabled && organisationId),
   })
 
 export const usePage = (organisationId: string | null, pageId: string | null) =>

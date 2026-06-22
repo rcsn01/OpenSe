@@ -69,7 +69,7 @@ import {
   useRemoveIssueCycleLink,
   useRemoveIssueModuleLink,
 } from '../hooks/queries/usePlanning'
-import { useAddFavorite, useFavorites, useRecordRecentVisit, useRemoveFavorite } from '../hooks/queries/usePersonal'
+import { useAddFavorite, useFavorites, useRecordRecentVisitOnce, useRemoveFavorite } from '../hooks/queries/usePersonal'
 import type { Issue, IssueLinkType, IssuePriority, IssueRelationType } from '../types'
 import {
   formatIssueKey,
@@ -86,6 +86,7 @@ const IssueDetailContent = ({
 }) => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const profileId = user?.id ?? null
   const { data: states = [] } = useIssueStates(organisationId, issue.project_id)
   const { data: labels = [] } = useIssueLabels(organisationId, issue.project_id)
   const { data: labelLinks = [] } = useIssueLabelLinks(organisationId, issue.id)
@@ -108,7 +109,7 @@ const IssueDetailContent = ({
   const { data: issueReactions = [] } = useIssueReactions(organisationId, issue.id)
   const { data: commentReactions = [] } = useCommentReactions(organisationId, issue.id)
   const { data: activities = [], isLoading: activitiesLoading } = useIssueActivities(organisationId, issue.id)
-  const { data: favorites = [] } = useFavorites(organisationId, user?.id ?? null)
+  const { data: favorites = [] } = useFavorites(organisationId, profileId)
   const updateIssue = useUpdateIssue()
   const createComment = useCreateIssueComment()
   const uploadAttachment = useUploadIssueAttachment()
@@ -129,7 +130,7 @@ const IssueDetailContent = ({
   const removeCommentReaction = useRemoveCommentReaction()
   const addFavorite = useAddFavorite()
   const removeFavorite = useRemoveFavorite()
-  const { mutate: recordRecentVisit } = useRecordRecentVisit()
+  const recordRecentVisitOnce = useRecordRecentVisitOnce()
   const createLabel = useCreateIssueLabel()
   const addLabelLink = useAddIssueLabelLink()
   const removeLabelLink = useRemoveIssueLabelLink()
@@ -170,32 +171,83 @@ const IssueDetailContent = ({
 
   const issueKey = useMemo(
     () => formatIssueKey(issue),
-    [issue.project?.identifier, issue.sequence_id],
+    [issue],
   )
-  const assignedLabelIds = new Set(labelLinks.map((link) => link.label_id).filter(Boolean))
-  const assignedProfileIds = new Set(assignees.map((assignee) => assignee.profile_id).filter(Boolean))
-  const mentionedProfileIds = new Set(mentions.map((mention) => mention.profile_id).filter(Boolean))
-  const assignedCycleIds = new Set(cycleLinks.map((link) => link.cycle_id).filter(Boolean))
-  const assignedModuleIds = new Set(moduleLinks.map((link) => link.module_id).filter(Boolean))
-  const availableLabels = labels.filter((label) => !assignedLabelIds.has(label.id))
-  const availableAssignees = memberProfiles.filter((member) => !assignedProfileIds.has(member.profile_id))
-  const availableMentions = memberProfiles.filter((member) => !mentionedProfileIds.has(member.profile_id))
-  const availableCycles = cycles.filter((cycle) => !assignedCycleIds.has(cycle.id))
-  const availableModules = modules.filter((projectModule) => !assignedModuleIds.has(projectModule.id))
-  const blockerIssueIds = new Set(blockers.map((blocker) => blocker.blocker_issue_id).filter(Boolean))
-  const relationIssueKeys = new Set(relations.map((relation) => `${relation.related_issue_id}:${relation.relation_type}`))
-  const availableBlockerIssues = projectIssues.filter((item) => item.id !== issue.id && !blockerIssueIds.has(item.id))
-  const availableRelationIssues = projectIssues.filter((item) => item.id !== issue.id && !relationIssueKeys.has(`${item.id}:${relationType}`))
-  const currentSubscriber = subscribers.find((subscriber) => subscriber.profile_id === user?.id)
-  const currentVote = votes.find((vote) => vote.profile_id === user?.id)
-  const currentFavorite = favorites.find((favorite) => favorite.name === 'issue' && favorite.issue_id === issue.id)
+  const assignedLabelIds = useMemo(
+    () => new Set(labelLinks.map((link) => link.label_id).filter((id): id is string => Boolean(id))),
+    [labelLinks],
+  )
+  const assignedProfileIds = useMemo(
+    () => new Set(assignees.map((assignee) => assignee.profile_id).filter((id): id is string => Boolean(id))),
+    [assignees],
+  )
+  const mentionedProfileIds = useMemo(
+    () => new Set(mentions.map((mention) => mention.profile_id).filter((id): id is string => Boolean(id))),
+    [mentions],
+  )
+  const assignedCycleIds = useMemo(
+    () => new Set(cycleLinks.map((link) => link.cycle_id).filter((id): id is string => Boolean(id))),
+    [cycleLinks],
+  )
+  const assignedModuleIds = useMemo(
+    () => new Set(moduleLinks.map((link) => link.module_id).filter((id): id is string => Boolean(id))),
+    [moduleLinks],
+  )
+  const availableLabels = useMemo(
+    () => labels.filter((label) => !assignedLabelIds.has(label.id)),
+    [assignedLabelIds, labels],
+  )
+  const availableAssignees = useMemo(
+    () => memberProfiles.filter((member) => !assignedProfileIds.has(member.profile_id)),
+    [assignedProfileIds, memberProfiles],
+  )
+  const availableMentions = useMemo(
+    () => memberProfiles.filter((member) => !mentionedProfileIds.has(member.profile_id)),
+    [memberProfiles, mentionedProfileIds],
+  )
+  const availableCycles = useMemo(
+    () => cycles.filter((cycle) => !assignedCycleIds.has(cycle.id)),
+    [assignedCycleIds, cycles],
+  )
+  const availableModules = useMemo(
+    () => modules.filter((projectModule) => !assignedModuleIds.has(projectModule.id)),
+    [assignedModuleIds, modules],
+  )
+  const blockerIssueIds = useMemo(
+    () => new Set(blockers.map((blocker) => blocker.blocker_issue_id).filter((id): id is string => Boolean(id))),
+    [blockers],
+  )
+  const relationIssueKeys = useMemo(
+    () => new Set(relations.map((relation) => `${relation.related_issue_id}:${relation.relation_type}`)),
+    [relations],
+  )
+  const availableBlockerIssues = useMemo(
+    () => projectIssues.filter((item) => item.id !== issue.id && !blockerIssueIds.has(item.id)),
+    [blockerIssueIds, issue.id, projectIssues],
+  )
+  const availableRelationIssues = useMemo(
+    () => projectIssues.filter((item) => item.id !== issue.id && !relationIssueKeys.has(`${item.id}:${relationType}`)),
+    [issue.id, projectIssues, relationIssueKeys, relationType],
+  )
+  const currentSubscriber = useMemo(
+    () => subscribers.find((subscriber) => subscriber.profile_id === profileId),
+    [profileId, subscribers],
+  )
+  const currentVote = useMemo(
+    () => votes.find((vote) => vote.profile_id === profileId),
+    [profileId, votes],
+  )
+  const currentFavorite = useMemo(
+    () => favorites.find((favorite) => favorite.name === 'issue' && favorite.issue_id === issue.id),
+    [favorites, issue.id],
+  )
 
   useEffect(() => {
-    if (!organisationId || !user) return
+    if (!organisationId || !profileId) return
 
-    recordRecentVisit({
+    recordRecentVisitOnce({
       organisationId,
-      profileId: user.id,
+      profileId,
       kind: 'issue',
       projectId: issue.project_id,
       issueId: issue.id,
@@ -205,7 +257,17 @@ const IssueDetailContent = ({
       route: `/issues/${issue.id}`,
       identifier: issueKey,
     })
-  }, [issue, issueKey, organisationId, recordRecentVisit, user])
+  }, [
+    issue.description_text,
+    issue.id,
+    issue.priority,
+    issue.project_id,
+    issue.title,
+    issueKey,
+    organisationId,
+    profileId,
+    recordRecentVisitOnce,
+  ])
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -367,7 +429,7 @@ const IssueDetailContent = ({
   }
 
   const handleToggleSubscribe = async () => {
-    if (!user) return
+    if (!profileId) return
 
     try {
       if (currentSubscriber) {
@@ -378,7 +440,7 @@ const IssueDetailContent = ({
           organisationId,
           projectId: issue.project_id,
           issueId: issue.id,
-          profileId: user.id,
+          profileId,
         })
         toast.success('Subscribed to issue')
       }
@@ -388,7 +450,7 @@ const IssueDetailContent = ({
   }
 
   const handleToggleVote = async () => {
-    if (!user) return
+    if (!profileId) return
 
     try {
       if (currentVote) {
@@ -399,7 +461,7 @@ const IssueDetailContent = ({
           organisationId,
           projectId: issue.project_id,
           issueId: issue.id,
-          profileId: user.id,
+          profileId,
         })
         toast.success('Vote added')
       }
@@ -409,7 +471,7 @@ const IssueDetailContent = ({
   }
 
   const handleToggleFavorite = async () => {
-    if (!user) return
+    if (!profileId) return
 
     try {
       if (currentFavorite) {
@@ -418,7 +480,7 @@ const IssueDetailContent = ({
       } else {
         await addFavorite.mutateAsync({
           organisationId,
-          profileId: user.id,
+          profileId,
           kind: 'issue',
           projectId: issue.project_id,
           issueId: issue.id,
@@ -436,7 +498,7 @@ const IssueDetailContent = ({
   }
 
   const handleToggleIssueReaction = async (name: string, existingReactionId: string | null) => {
-    if (!user) return
+    if (!profileId) return
 
     try {
       if (existingReactionId) {
@@ -446,7 +508,7 @@ const IssueDetailContent = ({
           organisationId,
           projectId: issue.project_id,
           issueId: issue.id,
-          profileId: user.id,
+          profileId,
           name,
         })
       }
@@ -460,7 +522,7 @@ const IssueDetailContent = ({
     name: string,
     existingReactionId: string | null,
   ) => {
-    if (!user) return
+    if (!profileId) return
 
     try {
       if (existingReactionId) {
@@ -471,7 +533,7 @@ const IssueDetailContent = ({
           projectId: issue.project_id,
           issueId: issue.id,
           commentId,
-          profileId: user.id,
+          profileId,
           name,
         })
       }
@@ -659,7 +721,7 @@ const IssueDetailContent = ({
             variant={currentFavorite ? 'primary' : 'outline'}
             onClick={handleToggleFavorite}
             loading={addFavorite.isPending || removeFavorite.isPending}
-            disabled={!user}
+            disabled={!profileId}
           >
             <Star className="h-4 w-4" />
             {currentFavorite ? 'Starred' : 'Star'}
@@ -712,8 +774,8 @@ const IssueDetailContent = ({
             <span className="text-xs font-medium uppercase text-[var(--color-muted-foreground)]">Reactions</span>
             <ReactionBar
               reactions={issueReactions}
-              currentProfileId={user?.id ?? null}
-              disabled={!user}
+              currentProfileId={profileId}
+              disabled={!profileId}
               pending={addIssueReaction.isPending || removeIssueReaction.isPending}
               onToggle={handleToggleIssueReaction}
             />
@@ -759,7 +821,7 @@ const IssueDetailContent = ({
           removeAttachmentPending={removeAttachment.isPending}
           createLabelPending={createLabel.isPending}
           addLabelPending={addLabelLink.isPending}
-          currentProfileId={user?.id ?? null}
+          currentProfileId={profileId}
           onToggleSubscribe={handleToggleSubscribe}
           onToggleVote={handleToggleVote}
           onEstimatePointIdChange={setEstimatePointId}
@@ -822,7 +884,7 @@ const IssueDetailContent = ({
         comments={comments}
         isLoading={commentsLoading}
         commentReactions={commentReactions}
-        currentProfileId={user?.id ?? null}
+        currentProfileId={profileId}
         commentEditorKey={commentEditorKey}
         createPending={createComment.isPending}
         reactionPending={addCommentReaction.isPending || removeCommentReaction.isPending}

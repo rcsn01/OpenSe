@@ -248,6 +248,34 @@ CREATE POLICY github_comment_syncs_select ON open_kb.github_comment_syncs
   FOR SELECT TO authenticated
   USING (open_kb.has_permission(organisation_id, 'settings.integrations.manage'));
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
+  open_kb.api_tokens,
+  open_kb.webhooks,
+  open_kb.project_webhooks,
+  open_kb.webhook_logs,
+  open_kb.integrations,
+  open_kb.organisation_integrations,
+  open_kb.github_repositories,
+  open_kb.github_repository_syncs,
+  open_kb.github_issue_syncs,
+  open_kb.github_comment_syncs,
+  open_kb.slack_project_syncs
+TO authenticated;
+
+GRANT ALL PRIVILEGES ON TABLE
+  open_kb.api_tokens,
+  open_kb.webhooks,
+  open_kb.project_webhooks,
+  open_kb.webhook_logs,
+  open_kb.integrations,
+  open_kb.organisation_integrations,
+  open_kb.github_repositories,
+  open_kb.github_repository_syncs,
+  open_kb.github_issue_syncs,
+  open_kb.github_comment_syncs,
+  open_kb.slack_project_syncs
+TO service_role;
+
 GRANT SELECT ON TABLE open_kb.app_permissions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE open_kb.role_permissions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE open_kb.organisation_member_roles TO authenticated;

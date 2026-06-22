@@ -28,9 +28,12 @@ Implemented:
 - Plane product table coverage without Plane auth/session/workspace tables.
 - Open-KB roles, permissions, feature flags, app seats, storage bucket, RLS, and demo seed data.
 - Project list/create/detail/settings, project members, states, labels, and role/permission settings.
+- Project-level configurable tabs backed by `open_kb.project_tabs`, with shared per-project tab order, `List` as the required non-removable tab, add/remove/move controls gated by `projects.edit`, legacy `/projects/:projectId/issues` normalization to `/list`, and project routes for overview, list, board, timeline, dashboard, calendar, workflow, messages, note, gantt, workload, files, drafts, cycles, modules, estimates, pages, and settings.
+- Project-scoped tab content now reuses existing issue list/board/calendar/gantt views, planning/page/settings surfaces, issue attachments for files, a project note page marker, project dashboard/workflow/workload summaries, and a local rich-text project message thread in `open_kb.project_messages`.
 - Issue list, board, richer filters, saved views, create/detail/edit, draft issues, comments, labels, assignees, mentions, attachments, blockers, relations, external links, subscribers, votes, issue/comment reactions, favorites, recent visits, and activity timeline.
 - Issue table, calendar, and Gantt-style views implemented on the shared filtered issue dataset, with saved-view support for every issue layout.
 - Bulk issue selection and edits, plus filtered issue CSV export and selected-project CSV issue import.
+- Planning surfaces for cycles, modules, estimates, intake, analytics, pages, page version history, stickies, and local rich text editor implementation using upstream Tiptap/ProseMirror packages.
 - Richer analytics covering overdue and due-soon work, due-date health, completion trend, completion rate, and average completion age.
 - Notification inbox, mark-read actions, activity-to-subscriber notification fanout, and per-user issue notification preference toggle.
 - Organisation-level teams for grouping projects without reintroducing Plane workspaces, including team CRUD, project assignment, project list filtering, RLS hardening, and same-organisation project/team validation.
