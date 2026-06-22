@@ -23,7 +23,6 @@ import {
   useOrganisationMemberProfiles,
   useProjectIssueAttachments,
 } from '../hooks/queries/useIssues'
-import { useDraftIssues } from '../hooks/queries/useDrafts'
 import { useCreatePage, usePages } from '../hooks/queries/usePages'
 import { useCycleIssueLinks, useCycles, useEstimates, useModuleIssueLinks, useModules } from '../hooks/queries/usePlanning'
 import {
@@ -1361,7 +1360,6 @@ export const ProjectDetailPage = () => {
   const needsModules = routeTabKey === 'dashboard' || routeTabKey === 'list'
   const needsEstimates = routeTabKey === 'dashboard' || routeTabKey === 'estimates'
   const needsPages = routeTabKey === 'dashboard' || routeTabKey === 'note' || routeTabKey === 'pages'
-  const needsDrafts = routeTabKey === 'drafts'
   const needsMessages = routeTabKey === 'messages'
   const needsAttachments = routeTabKey === 'files'
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()))
@@ -1376,7 +1374,6 @@ export const ProjectDetailPage = () => {
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(organisationId, projectId)
   const { data: projectTabs = [], error: projectTabsError } = useProjectTabs(organisationId, projectId)
   const { data: issues = [] } = useIssues(organisationId, { project_id: projectId }, needsIssues)
-  const { data: drafts = [] } = useDraftIssues(organisationId, profileId, needsDrafts)
   const { data: states = [] } = useIssueStates(organisationId, projectId, needsStates)
   const { data: labels = [] } = useIssueLabels(organisationId, projectId, needsLabels)
   const { data: members = [] } = useOrganisationMemberProfiles(organisationId, needsMembers)
@@ -1424,10 +1421,6 @@ export const ProjectDetailPage = () => {
     }))
   }, [activeTab, issues, states])
   const recentIssues = useMemo(() => activeTab === 'overview' ? issues.slice(0, 8) : [], [activeTab, issues])
-  const projectDrafts = useMemo(
-    () => activeTab === 'drafts' ? drafts.filter((draft) => draft.project_id === projectId) : [],
-    [activeTab, drafts, projectId],
-  )
   const canEditProject = permissions.includes('projects.edit')
   const canManageMembers = permissions.includes('projects.members.manage')
   const canEditProjectTabs = canEditProject && !projectTabsError
@@ -1473,7 +1466,7 @@ export const ProjectDetailPage = () => {
   } : null, [project])
 
   useEffect(() => {
-    if (!projectId || (section !== 'issues' && section !== 'modules')) return
+    if (!projectId || (section !== 'issues' && section !== 'modules' && section !== 'drafts')) return
     navigate(`/projects/${projectId}/list`, { replace: true })
   }, [navigate, projectId, section])
 
@@ -1947,28 +1940,6 @@ export const ProjectDetailPage = () => {
                   </a>
                 ) : null}
               </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {activeTab === 'drafts' ? (
-        <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="flex h-12 items-center justify-between border-b border-[var(--color-border)] px-4">
-            <h2 className="text-sm font-semibold">Project drafts</h2>
-            <Link className="inline-flex h-8 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 text-xs font-medium hover:bg-[var(--color-muted)]" to={`/issues/new?project=${project.id}`}>
-              <Plus className="h-3.5 w-3.5" />
-              New
-            </Link>
-          </div>
-          <div className="divide-y divide-[var(--color-border)]">
-            {projectDrafts.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-[var(--color-muted-foreground)]">No draft issues for this project.</div>
-            ) : projectDrafts.map((draft) => (
-              <Link key={draft.id} to={`/issues/new?draft=${draft.id}`} className="block px-4 py-3 hover:bg-[var(--color-muted)]">
-                <div className="truncate text-sm font-medium">{draft.title || 'Untitled draft'}</div>
-                <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">{draft.status ?? 'draft'}</div>
-              </Link>
             ))}
           </div>
         </section>

@@ -16,7 +16,7 @@ WHERE tab_key = 'list'
 
 UPDATE open_kb.project_tabs
 SET deleted_at = COALESCE(deleted_at, timezone('utc'::text, now()))
-WHERE tab_key = 'modules'
+WHERE tab_key IN ('drafts', 'modules')
   AND deleted_at IS NULL;
 
 CREATE OR REPLACE FUNCTION open_kb.validate_project_tab()
@@ -53,8 +53,8 @@ BEGIN
     RAISE EXCEPTION 'Project tab keys cannot be changed';
   END IF;
 
-  IF NEW.tab_key = 'modules' AND NEW.deleted_at IS NULL THEN
-    RAISE EXCEPTION 'Modules project tabs are no longer supported';
+  IF NEW.tab_key IN ('drafts', 'modules') AND NEW.deleted_at IS NULL THEN
+    RAISE EXCEPTION 'This project tab is no longer supported';
   END IF;
 
   IF TG_OP = 'UPDATE'
@@ -87,7 +87,6 @@ BEGIN
   VALUES
     (NEW.organisation_id, NEW.id, 'overview', 'Overview', 10, '{}'::jsonb, NEW.created_by),
     (NEW.organisation_id, NEW.id, 'list', 'List', 20, '{"required": true}'::jsonb, NEW.created_by),
-    (NEW.organisation_id, NEW.id, 'drafts', 'Drafts', 30, '{}'::jsonb, NEW.created_by),
     (NEW.organisation_id, NEW.id, 'cycles', 'Cycles', 40, '{}'::jsonb, NEW.created_by),
     (NEW.organisation_id, NEW.id, 'estimates', 'Estimates', 60, '{}'::jsonb, NEW.created_by),
     (NEW.organisation_id, NEW.id, 'pages', 'Pages', 70, '{}'::jsonb, NEW.created_by),
