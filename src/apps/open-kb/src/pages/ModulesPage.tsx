@@ -1,19 +1,12 @@
 import { Link, useSearchParams } from 'react-router-dom'
-import { Badge, EmptyState, Select } from '@repo/ui'
+import { Select } from '@repo/ui'
 import { Plus } from 'lucide-react'
 import { OpenKbPageShell } from '../components/OpenKbPageShell'
+import { ModulesView } from '../components/modules/ModulesView'
 import { useOrganisation } from '../contexts/OrganisationContext'
-import { useModules } from '../hooks/queries/usePlanning'
+import { useIssues } from '../hooks/queries/useIssues'
+import { useModuleIssueLinks, useModules } from '../hooks/queries/usePlanning'
 import { useProjects } from '../hooks/queries/useProjects'
-import type { ModuleStatus } from '../types'
-
-const statusTone: Record<ModuleStatus, 'neutral' | 'info' | 'success' | 'danger' | 'warning'> = {
-  backlog: 'neutral',
-  planned: 'info',
-  in_progress: 'warning',
-  completed: 'success',
-  cancelled: 'danger',
-}
 
 export const ModulesPage = () => {
   const { organisationId } = useOrganisation()
@@ -21,6 +14,8 @@ export const ModulesPage = () => {
   const selectedProjectId = searchParams.get('project')
   const { data: projects = [], isLoading: projectsLoading } = useProjects(organisationId)
   const { data: modules = [], isLoading: modulesLoading } = useModules(organisationId, selectedProjectId)
+  const { data: issues = [], isLoading: issuesLoading } = useIssues(organisationId, { project_id: selectedProjectId })
+  const { data: moduleIssueLinks = [], isLoading: moduleLinksLoading } = useModuleIssueLinks(organisationId, selectedProjectId)
 
   const updateProject = (projectId: string) => {
     const next = new URLSearchParams(searchParams)
@@ -30,7 +25,7 @@ export const ModulesPage = () => {
   }
 
   return (
-    <OpenKbPageShell isLoading={projectsLoading || modulesLoading}>
+    <OpenKbPageShell isLoading={projectsLoading || modulesLoading || issuesLoading || moduleLinksLoading}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-normal">Modules</h1>
@@ -58,24 +53,13 @@ export const ModulesPage = () => {
         />
       </div>
 
-      {modules.length === 0 ? (
-        <EmptyState title="No modules found" description="Create a module to group related project work." />
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {modules.map((module) => (
-            <article key={module.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-              <div className="flex items-center justify-between gap-3">
-                <Badge variant="outline">{module.project?.identifier ?? 'Project'}</Badge>
-                <Badge variant={statusTone[module.status]}>{module.status}</Badge>
-              </div>
-              <h2 className="mt-4 line-clamp-2 text-base font-semibold">{module.name}</h2>
-              <p className="mt-3 line-clamp-3 min-h-16 text-sm text-[var(--color-muted-foreground)]">
-                {module.description_text || 'No module description yet.'}
-              </p>
-            </article>
-          ))}
-        </div>
-      )}
+      <ModulesView
+        modules={modules}
+        issues={issues}
+        moduleIssueLinks={moduleIssueLinks}
+        newModuleHref={selectedProjectId ? `/modules/new?project=${selectedProjectId}` : '/modules/new'}
+        className="min-h-[34rem] rounded-[var(--radius-md)] border border-[var(--color-border)]"
+      />
     </OpenKbPageShell>
   )
 }

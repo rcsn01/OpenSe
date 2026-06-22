@@ -5,11 +5,13 @@ import {
   createCycle,
   createEstimate,
   createModule,
+  fetchCycleIssueLinks,
   fetchCycles,
   fetchEstimatePoints,
   fetchEstimates,
   fetchIssueCycleLinks,
   fetchIssueModuleLinks,
+  fetchModuleIssueLinks,
   fetchModules,
   removeIssueCycleLink,
   removeIssueModuleLink,
@@ -28,8 +30,12 @@ export const planningKeys = {
     ['open-kb', 'estimate-points', organisationId, projectId ?? 'all'] as const,
   issueCycles: (organisationId: string | null, issueId: string | null) =>
     ['open-kb', 'issue-cycles', organisationId, issueId] as const,
+  cycleIssues: (organisationId: string | null, projectId?: string | null) =>
+    ['open-kb', 'cycle-issues', organisationId, projectId ?? 'all'] as const,
   issueModules: (organisationId: string | null, issueId: string | null) =>
     ['open-kb', 'issue-modules', organisationId, issueId] as const,
+  moduleIssues: (organisationId: string | null, projectId?: string | null) =>
+    ['open-kb', 'module-issues', organisationId, projectId ?? 'all'] as const,
 }
 
 export const useCycles = (organisationId: string | null, projectId?: string | null, enabled = true) =>
@@ -67,11 +73,25 @@ export const useIssueCycleLinks = (organisationId: string | null, issueId: strin
     enabled: Boolean(organisationId && issueId),
   })
 
+export const useCycleIssueLinks = (organisationId: string | null, projectId?: string | null, enabled = true) =>
+  useQuery({
+    queryKey: planningKeys.cycleIssues(organisationId, projectId),
+    queryFn: () => fetchCycleIssueLinks({ organisationId: organisationId ?? '', projectId }),
+    enabled: Boolean(enabled && organisationId),
+  })
+
 export const useIssueModuleLinks = (organisationId: string | null, issueId: string | null) =>
   useQuery({
     queryKey: planningKeys.issueModules(organisationId, issueId),
     queryFn: () => fetchIssueModuleLinks(organisationId ?? '', issueId ?? ''),
     enabled: Boolean(organisationId && issueId),
+  })
+
+export const useModuleIssueLinks = (organisationId: string | null, projectId?: string | null, enabled = true) =>
+  useQuery({
+    queryKey: planningKeys.moduleIssues(organisationId, projectId),
+    queryFn: () => fetchModuleIssueLinks({ organisationId: organisationId ?? '', projectId }),
+    enabled: Boolean(enabled && organisationId),
   })
 
 export const useCreateCycle = () => {

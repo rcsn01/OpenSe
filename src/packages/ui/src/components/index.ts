@@ -43,6 +43,10 @@ export {
   TabBar,
   ContentTabs,
   AccordionItem,
+  tabBarActiveItemClassName,
+  tabBarClassName,
+  tabBarInactiveItemClassName,
+  tabBarItemClassName,
   type TabItem,
   type ContentTab,
 } from "./ui/Tabs";

@@ -12,6 +12,15 @@ export type TabItem = {
   count?: number;
 };
 
+export const tabBarClassName =
+  "flex h-10 min-w-0 overflow-x-auto overflow-y-hidden border-b border-[var(--color-border)]";
+export const tabBarItemClassName =
+  "inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition-colors";
+export const tabBarActiveItemClassName =
+  "border-[var(--color-tab-active)] text-[var(--color-tab-active)]";
+export const tabBarInactiveItemClassName =
+  "border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-tab-active)]";
+
 interface TabBarProps {
   tabs: TabItem[];
   activeTab: string;
@@ -34,24 +43,21 @@ export function TabBar({
   inactiveItemClassName,
 }: TabBarProps) {
   const containerCls = cn(
-    className ?? "flex overflow-x-auto gap-2",
+    className ?? tabBarClassName,
     bottomSpacing && "mb-[var(--gap-4)]",
   );
-  const baseCls =
-    itemClassName ??
-    "rounded-full px-3 py-1.5 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap";
-  const activeCls =
-    activeItemClassName ??
-    "bg-[var(--color-surface-strong)] text-[var(--color-tab-active)]";
-  const inactiveCls =
-    inactiveItemClassName ??
-    "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]";
+  const baseCls = itemClassName ?? tabBarItemClassName;
+  const activeCls = activeItemClassName ?? tabBarActiveItemClassName;
+  const inactiveCls = inactiveItemClassName ?? tabBarInactiveItemClassName;
 
   return (
-    <nav className={containerCls}>
+    <nav className={containerCls} role="tablist">
       {tabs.map((t) => (
         <button
           key={t.id}
+          type="button"
+          role="tab"
+          aria-selected={t.id === activeTab}
           onClick={() => onTabChange(t.id)}
           className={cn(baseCls, t.id === activeTab ? activeCls : inactiveCls)}
         >

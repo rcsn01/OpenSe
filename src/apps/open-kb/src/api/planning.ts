@@ -355,6 +355,36 @@ export const fetchIssueCycleLinks = async (
   })
 }
 
+export const fetchCycleIssueLinks = async ({
+  organisationId,
+  projectId,
+}: {
+  organisationId: string
+  projectId?: string | null
+}): Promise<CycleIssueLink[]> => {
+  let query = db
+    .from('cycle_issues')
+    .select(cycleIssueSelect)
+    .eq('organisation_id', organisationId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+
+  if (projectId) {
+    query = query.eq('project_id', projectId)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+
+  return (data ?? []).map((row) => {
+    const item = row as unknown as CycleIssueLink & { cycle: Cycle | Cycle[] | null }
+    return {
+      ...item,
+      cycle: normalizeSingle(item.cycle),
+    }
+  })
+}
+
 export const addIssueCycleLink = async ({
   organisationId,
   projectId,
@@ -414,6 +444,36 @@ export const fetchIssueModuleLinks = async (
     .is('deleted_at', null)
     .order('created_at', { ascending: true })
 
+  if (error) throw error
+
+  return (data ?? []).map((row) => {
+    const item = row as unknown as ModuleIssueLink & { module: ProjectModule | ProjectModule[] | null }
+    return {
+      ...item,
+      module: normalizeSingle(item.module),
+    }
+  })
+}
+
+export const fetchModuleIssueLinks = async ({
+  organisationId,
+  projectId,
+}: {
+  organisationId: string
+  projectId?: string | null
+}): Promise<ModuleIssueLink[]> => {
+  let query = db
+    .from('module_issues')
+    .select(moduleIssueSelect)
+    .eq('organisation_id', organisationId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+
+  if (projectId) {
+    query = query.eq('project_id', projectId)
+  }
+
+  const { data, error } = await query
   if (error) throw error
 
   return (data ?? []).map((row) => {

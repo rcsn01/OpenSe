@@ -55,6 +55,93 @@ run_supabase() {
   (cd "$ROOT_DIR" && npx --yes "$SUPABASE_CLI_PACKAGE" "$@")
 }
 
+get_local_supabase_project_id() {
+  local project_id
+
+  project_id="$(grep -E '^project_id = ' "$SUPABASE_DIR/config.toml" | head -n 1 || true)"
+  project_id="${project_id#*= }"
+  project_id="${project_id%\"}"
+  project_id="${project_id#\"}"
+
+  printf '%s' "${project_id:-opense-stack}"
+}
+
+run_local_psql() {
+  local sql_file="${1:-}"
+  local project_id container_name
+
+  if [[ -n "$sql_file" && ! -f "$sql_file" ]]; then
+    fail "Missing SQL file: $sql_file"
+  fi
+
+  if command -v psql >/dev/null 2>&1; then
+    if [[ -n "$sql_file" ]]; then
+      PGPASSWORD="${LOCAL_SUPABASE_DB_PASSWORD:-postgres}" psql \
+        "${LOCAL_SUPABASE_DB_URL:-postgresql://postgres@127.0.0.1:54322/postgres}" \
+        -v ON_ERROR_STOP=1 \
+        -f "$sql_file"
+    else
+      PGPASSWORD="${LOCAL_SUPABASE_DB_PASSWORD:-postgres}" psql \
+        "${LOCAL_SUPABASE_DB_URL:-postgresql://postgres@127.0.0.1:54322/postgres}" \
+        -v ON_ERROR_STOP=1
+    fi
+    return
+  fi
+
+  command -v docker >/dev/null 2>&1 || fail "Local seed requires psql or Docker."
+
+  project_id="$(get_local_supabase_project_id)"
+  container_name="supabase_db_${project_id}"
+
+  if [[ -n "$sql_file" ]]; then
+    docker exec -i "$container_name" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < "$sql_file"
+  else
+    docker exec -i "$container_name" psql -U postgres -d postgres -v ON_ERROR_STOP=1
+  fi
+}
+
+run_local_psql_scalar() {
+  local sql="$1"
+  local project_id container_name
+
+  if command -v psql >/dev/null 2>&1; then
+    PGPASSWORD="${LOCAL_SUPABASE_DB_PASSWORD:-postgres}" psql \
+      "${LOCAL_SUPABASE_DB_URL:-postgresql://postgres@127.0.0.1:54322/postgres}" \
+      -v ON_ERROR_STOP=1 \
+      -tA \
+      -c "$sql"
+    return
+  fi
+
+  command -v docker >/dev/null 2>&1 || fail "Local database checks require psql or Docker."
+
+  project_id="$(get_local_supabase_project_id)"
+  container_name="supabase_db_${project_id}"
+  docker exec -i "$container_name" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -tA -c "$sql"
+}
+
+get_latest_migration_version() {
+  local latest
+
+  latest="$(find "$SUPABASE_DIR/migrations" -maxdepth 1 -type f -name '*.sql' -print | sort | tail -n 1)"
+  latest="${latest##*/}"
+  latest="${latest%%_*}"
+
+  printf '%s' "$latest"
+}
+
+ensure_local_migrations_current() {
+  local latest applied
+
+  latest="$(get_latest_migration_version)"
+  [[ -n "$latest" ]] || return 0
+
+  applied="$(run_local_psql_scalar "SELECT EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '${latest}');" 2>/dev/null || true)"
+  if [[ "$applied" != "t" ]]; then
+    fail "Local database schema is behind repo migrations. Run action 1, choose target 2 (Local Supabase database), and confirm RESET SEED."
+  fi
+}
+
 run_seed_files() {
   local target="$1"
   local seed_file seed_path
@@ -66,7 +153,7 @@ run_seed_files() {
     if [[ "$target" == "remote" ]]; then
       run_supabase db query --linked --file "$seed_path"
     else
-      run_supabase db query --local --file "$seed_path"
+      run_local_psql "$seed_path"
     fi
   done
 }
@@ -80,6 +167,33 @@ read_env_value() {
       line="$(grep -E "^${key}=" "$file" | tail -n 1 || true)"
       if [[ -n "$line" ]]; then
         value="${line#*=}"
+        value="${value%\"}"
+        value="${value#\"}"
+        value="${value%\'}"
+        value="${value#\'}"
+        printf '%s' "$value"
+        return 0
+      fi
+    fi
+  done
+
+  return 1
+}
+
+read_runtime_config_value() {
+  local key="$1"
+  local file line value
+
+  for file in \
+    "$ROOT_DIR/src/apps/open-kb/public/config.js" \
+    "$ROOT_DIR/src/apps/accounts/public/config.js" \
+    "$ROOT_DIR/src/apps/opense/public/config.js"; do
+    if [[ -f "$file" ]]; then
+      line="$(grep -E "^[[:space:]]*${key}:" "$file" | tail -n 1 || true)"
+      if [[ -n "$line" ]]; then
+        value="${line#*:}"
+        value="${value%%,*}"
+        value="${value#"${value%%[![:space:]]*}"}"
         value="${value%\"}"
         value="${value#\"}"
         value="${value%\'}"
@@ -235,7 +349,7 @@ SET function_url = EXCLUDED.function_url,
   if [[ "$target" == "remote" ]]; then
     run_supabase db query --linked "$sql"
   else
-    run_supabase db query "$sql"
+    printf '%s\n' "$sql" | run_local_psql
   fi
   success "Low-stock alert dispatch endpoint configured."
 
@@ -251,23 +365,40 @@ setup_runtime_config() {
 
   prompt_or_env() {
     local key="$1"
-    local value
+    local fallback="${2:-}"
+    local input prompt value
+
     value="$(read_env_value "$key" || true)"
     if [[ -z "$value" ]]; then
-      read -r -p "Enter ${key}: " value
+      value="$(read_runtime_config_value "$key" || true)"
     fi
+    if [[ -z "$value" ]]; then
+      value="$fallback"
+    fi
+
+    if [[ -n "$value" ]]; then
+      prompt="Enter ${key} [${value}]: "
+    else
+      prompt="Enter ${key}: "
+    fi
+
+    read -r -p "$prompt" input
+    if [[ -n "$input" ]]; then
+      value="$input"
+    fi
+
     printf '%s' "$value"
   }
 
   supabase_url="$(prompt_or_env VITE_SUPABASE_URL)"
   anon_key="$(prompt_or_env VITE_SUPABASE_ANON_KEY)"
   cookie_domain="$(prompt_or_env VITE_AUTH_COOKIE_DOMAIN)"
-  accounts_url="$(prompt_or_env VITE_ACCOUNTS_URL)"
-  etl_url="$(prompt_or_env VITE_ETL_PUBLIC_URL)"
-  open_kb_url="$(prompt_or_env VITE_OPEN_KB_PUBLIC_URL)"
-  opense_url="$(prompt_or_env VITE_OPENSE_PUBLIC_URL)"
-  stoqr_url="$(prompt_or_env VITE_STOQR_PUBLIC_URL)"
-  ui_url="$(prompt_or_env VITE_UI_PUBLIC_URL)"
+  accounts_url="$(prompt_or_env VITE_ACCOUNTS_URL "http://localhost:5991")"
+  etl_url="$(prompt_or_env VITE_ETL_PUBLIC_URL "http://localhost:5992")"
+  open_kb_url="$(prompt_or_env VITE_OPEN_KB_PUBLIC_URL "http://localhost:5995")"
+  opense_url="$(prompt_or_env VITE_OPENSE_PUBLIC_URL "http://localhost:5994")"
+  stoqr_url="$(prompt_or_env VITE_STOQR_PUBLIC_URL "http://localhost:5993")"
+  ui_url="$(prompt_or_env VITE_UI_PUBLIC_URL "http://localhost:5999")"
 
   [[ -n "$supabase_url" ]] || fail "VITE_SUPABASE_URL is required."
   [[ -n "$anon_key" ]] || fail "VITE_SUPABASE_ANON_KEY is required."
@@ -348,6 +479,10 @@ insert_seed_data() {
   local target
 
   target="$(choose_target)"
+  if [[ "$target" == "local" ]]; then
+    ensure_local_migrations_current
+  fi
+
   warn "Seed insertion runs the seed files in order. The first seed file cleans existing seeded rows."
   read -r -p "Type SEED to continue: " confirmation
   if [[ "$confirmation" != "SEED" ]]; then
