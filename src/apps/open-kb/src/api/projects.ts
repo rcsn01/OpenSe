@@ -265,7 +265,7 @@ export const defaultProjectTabsForProject = (
       tab_key: tabKey,
       label: definition?.label ?? tabKey,
       sort_order: (index + 1) * 10,
-      metadata: {},
+      metadata: tabKey === 'list' ? { required: true } : {},
       created_by: null,
       updated_by: null,
       created_at: new Date(0).toISOString(),

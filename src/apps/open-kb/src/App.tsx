@@ -20,8 +20,6 @@ const IssueDetailPage = lazy(() => import('./pages/IssueDetailPage').then((modul
 const DraftIssuesPage = lazy(() => import('./pages/DraftIssuesPage').then((module) => ({ default: module.DraftIssuesPage })))
 const CyclesPage = lazy(() => import('./pages/CyclesPage').then((module) => ({ default: module.CyclesPage })))
 const NewCyclePage = lazy(() => import('./pages/NewCyclePage').then((module) => ({ default: module.NewCyclePage })))
-const ModulesPage = lazy(() => import('./pages/ModulesPage').then((module) => ({ default: module.ModulesPage })))
-const NewModulePage = lazy(() => import('./pages/NewModulePage').then((module) => ({ default: module.NewModulePage })))
 const EstimatesPage = lazy(() => import('./pages/EstimatesPage').then((module) => ({ default: module.EstimatesPage })))
 const NewEstimatePage = lazy(() => import('./pages/NewEstimatePage').then((module) => ({ default: module.NewEstimatePage })))
 const PagesPage = lazy(() => import('./pages/PagesPage').then((module) => ({ default: module.PagesPage })))
@@ -127,6 +125,7 @@ export function App() {
                 <Route path="/projects" element={lazyRoute(<ProjectsPage />)} />
                 <Route path="/projects/:projectId" element={lazyRoute(<ProjectDetailPage />)} />
                 <Route path="/projects/:projectId/:section" element={lazyRoute(<ProjectDetailPage />)} />
+                <Route path="/projects/:projectId/:section/:tabId" element={lazyRoute(<ProjectDetailPage />)} />
               </Route>
               <Route element={<PermissionRoute permission="projects.create" />}>
                 <Route path="/projects/new" element={lazyRoute(<NewProjectPage />)} />
@@ -141,12 +140,10 @@ export function App() {
               </Route>
               <Route element={<PermissionRoute permission="planning.view" />}>
                 <Route path="/cycles" element={lazyRoute(<CyclesPage />)} />
-                <Route path="/modules" element={lazyRoute(<ModulesPage />)} />
                 <Route path="/estimates" element={lazyRoute(<EstimatesPage />)} />
               </Route>
               <Route element={<PermissionRoute permission="planning.manage" />}>
                 <Route path="/cycles/new" element={lazyRoute(<NewCyclePage />)} />
-                <Route path="/modules/new" element={lazyRoute(<NewModulePage />)} />
                 <Route path="/estimates/new" element={lazyRoute(<NewEstimatePage />)} />
               </Route>
               <Route element={<PermissionRoute permission="pages.view" />}>

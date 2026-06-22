@@ -31,11 +31,9 @@ describe('project tab registry', () => {
       'files',
       'drafts',
       'cycles',
-      'modules',
       'estimates',
       'pages',
       'settings',
     ]))
   })
 })
-
