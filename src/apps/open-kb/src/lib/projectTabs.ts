@@ -1,6 +1,5 @@
 import {
   CalendarDays,
-  ClipboardList,
   Columns3,
   FileText,
   FolderOpen,
@@ -30,7 +29,6 @@ export const projectTabKeys = [
   'gantt',
   'workload',
   'files',
-  'drafts',
   'cycles',
   'estimates',
   'pages',
@@ -62,7 +60,6 @@ export const projectTabDefinitions: ProjectTabDefinition[] = [
   { key: 'gantt', label: 'Gantt', path: 'gantt', group: 'other', icon: GanttChart },
   { key: 'workload', label: 'Workload', path: 'workload', group: 'other', icon: Users },
   { key: 'files', label: 'Files', path: 'files', group: 'other', icon: FolderOpen },
-  { key: 'drafts', label: 'Drafts', path: 'drafts', group: 'existing', icon: ClipboardList },
   { key: 'cycles', label: 'Cycles', path: 'cycles', group: 'existing', icon: CalendarDays },
   { key: 'estimates', label: 'Estimates', path: 'estimates', group: 'existing', icon: Gauge },
   { key: 'pages', label: 'Pages', path: 'pages', group: 'existing', icon: FileText },
@@ -72,7 +69,6 @@ export const projectTabDefinitions: ProjectTabDefinition[] = [
 export const defaultProjectTabKeys: ProjectTabKey[] = [
   'overview',
   'list',
-  'drafts',
   'cycles',
   'estimates',
   'pages',

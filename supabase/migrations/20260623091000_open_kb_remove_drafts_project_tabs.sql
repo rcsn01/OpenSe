@@ -1,9 +1,9 @@
--- Remove the standalone/project Modules and Drafts page surfaces. Module records
--- remain available for issue properties and List grouping.
+-- Remove the standalone/project Drafts page surface. Draft records remain
+-- available for issue creation autosave flows.
 
 UPDATE open_kb.project_tabs
 SET deleted_at = COALESCE(deleted_at, timezone('utc'::text, now()))
-WHERE tab_key IN ('drafts', 'modules')
+WHERE tab_key = 'drafts'
   AND deleted_at IS NULL;
 
 CREATE OR REPLACE FUNCTION open_kb.validate_project_tab()

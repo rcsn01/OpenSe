@@ -176,7 +176,6 @@ const pageRow = {
 const defaultProjectTabs = (projectId: string, organisationId = ORG_ID, createdBy = USER_ID) => [
   { tab_key: 'overview', label: 'Overview', sort_order: 10 },
   { tab_key: 'list', label: 'List', sort_order: 20 },
-  { tab_key: 'drafts', label: 'Drafts', sort_order: 30 },
   { tab_key: 'cycles', label: 'Cycles', sort_order: 40 },
   { tab_key: 'estimates', label: 'Estimates', sort_order: 60 },
   { tab_key: 'pages', label: 'Pages', sort_order: 70 },

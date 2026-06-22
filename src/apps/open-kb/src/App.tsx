@@ -17,7 +17,6 @@ const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage').then((m
 const IssuesPage = lazy(() => import('./pages/IssuesPage').then((module) => ({ default: module.IssuesPage })))
 const NewIssuePage = lazy(() => import('./pages/NewIssuePage').then((module) => ({ default: module.NewIssuePage })))
 const IssueDetailPage = lazy(() => import('./pages/IssueDetailPage').then((module) => ({ default: module.IssueDetailPage })))
-const DraftIssuesPage = lazy(() => import('./pages/DraftIssuesPage').then((module) => ({ default: module.DraftIssuesPage })))
 const CyclesPage = lazy(() => import('./pages/CyclesPage').then((module) => ({ default: module.CyclesPage })))
 const NewCyclePage = lazy(() => import('./pages/NewCyclePage').then((module) => ({ default: module.NewCyclePage })))
 const EstimatesPage = lazy(() => import('./pages/EstimatesPage').then((module) => ({ default: module.EstimatesPage })))
@@ -136,7 +135,6 @@ export function App() {
               </Route>
               <Route element={<PermissionRoute permission="issues.create" />}>
                 <Route path="/issues/new" element={lazyRoute(<NewIssuePage />)} />
-                <Route path="/drafts" element={lazyRoute(<DraftIssuesPage />)} />
               </Route>
               <Route element={<PermissionRoute permission="planning.view" />}>
                 <Route path="/cycles" element={lazyRoute(<CyclesPage />)} />

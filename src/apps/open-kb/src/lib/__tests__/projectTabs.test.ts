@@ -29,7 +29,6 @@ describe('project tab registry', () => {
       'gantt',
       'workload',
       'files',
-      'drafts',
       'cycles',
       'estimates',
       'pages',
