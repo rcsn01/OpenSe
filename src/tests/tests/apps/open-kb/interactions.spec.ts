@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { NEW_ISSUE_ID, NEW_PROJECT_ID, expect, test } from '../../fixtures/openKb';
+import { NEW_ISSUE_ID, NEW_PROJECT_ID, PROJECT_ID, expect, test } from '../../fixtures/openKb';
 
 const fillLastEditor = async (page: Page, text: string) => {
   const editor = page.locator('.open-kb-editor [contenteditable="true"]').last();
@@ -56,5 +56,31 @@ test.describe('Open-KB Interactions', () => {
     await expect((await commentResponse).ok()).toBeTruthy();
 
     await expect(openKbPage.getByText('This comment was created by the interaction coverage.')).toBeVisible();
+  });
+
+  test('adds, removes, and protects configurable project tabs', async ({ openKbPage }) => {
+    await openKbPage.goto(`/projects/${PROJECT_ID}/list`, { waitUntil: 'domcontentloaded' });
+
+    await openKbPage.getByRole('button', { name: /^List$/ }).click({ button: 'right' });
+    await expect(openKbPage.getByRole('button', { name: 'Remove tab' })).toHaveCount(0);
+
+    await openKbPage.getByLabel('Add project tab').click();
+    const addResponse = openKbPage.waitForResponse((response) =>
+      response.url().includes('/rest/v1/project_tabs') && response.request().method() === 'POST',
+    );
+    await openKbPage.getByRole('button', { name: 'Board', exact: true }).click();
+    await expect((await addResponse).ok()).toBeTruthy();
+    await expect(openKbPage.getByRole('button', { name: /^Board$/ })).toBeVisible();
+
+    await openKbPage.getByRole('button', { name: /^Board$/ }).click();
+    await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/board(?:[?#].*)?$`));
+
+    await openKbPage.getByRole('button', { name: /^Board$/ }).click({ button: 'right' });
+    const removeResponse = openKbPage.waitForResponse((response) =>
+      response.url().includes('/rest/v1/project_tabs') && response.request().method() === 'PATCH',
+    );
+    await openKbPage.getByRole('button', { name: 'Remove tab' }).click();
+    await expect((await removeResponse).ok()).toBeTruthy();
+    await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/list(?:[?#].*)?$`));
   });
 });

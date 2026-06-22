@@ -15,11 +15,11 @@ export const draftKeys = {
     ['open-kb', 'draft-issues', organisationId, 'detail', draftId] as const,
 }
 
-export const useDraftIssues = (organisationId: string | null, profileId: string | null) =>
+export const useDraftIssues = (organisationId: string | null, profileId: string | null, enabled = true) =>
   useQuery({
     queryKey: draftKeys.list(organisationId, profileId),
     queryFn: () => fetchDraftIssues({ organisationId: organisationId ?? '', profileId: profileId ?? '' }),
-    enabled: Boolean(organisationId && profileId),
+    enabled: Boolean(enabled && organisationId && profileId),
   })
 
 export const useDraftIssue = (organisationId: string | null, draftId: string | null) =>

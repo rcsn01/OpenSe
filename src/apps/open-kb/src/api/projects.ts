@@ -5,9 +5,15 @@ import type {
   ProjectInput,
   ProjectMember,
   ProjectMemberInput,
+  ProjectMessage,
+  ProjectMessageInput,
   ProjectSummary,
+  ProjectTab,
+  ProjectTabInput,
+  ProjectTabUpdateInput,
   ProjectUpdateInput,
 } from '../types'
+import { defaultProjectTabKeys, projectTabDefinitionByKey } from '../lib/projectTabs'
 
 const projectSelect = `
   id,
@@ -31,6 +37,38 @@ const projectMemberSelect = `
   profile_id,
   role,
   created_by,
+  created_at,
+  updated_at,
+  deleted_at,
+  profile:profiles(id, email, full_name, username, avatar_url)
+`
+
+const projectTabSelect = `
+  id,
+  organisation_id,
+  project_id,
+  tab_key,
+  label,
+  sort_order,
+  metadata,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at,
+  deleted_at
+`
+
+const projectMessageSelect = `
+  id,
+  organisation_id,
+  project_id,
+  profile_id,
+  description_json,
+  description_html,
+  description_text,
+  metadata,
+  created_by,
+  updated_by,
   created_at,
   updated_at,
   deleted_at,
@@ -212,4 +250,136 @@ export const removeProjectMember = async ({
     .eq('id', memberId)
 
   if (error) throw error
+}
+
+export const defaultProjectTabsForProject = (
+  organisationId: string,
+  projectId: string,
+): ProjectTab[] =>
+  defaultProjectTabKeys.map((tabKey, index) => {
+    const definition = projectTabDefinitionByKey.get(tabKey)
+    return {
+      id: `default-${projectId}-${tabKey}`,
+      organisation_id: organisationId,
+      project_id: projectId,
+      tab_key: tabKey,
+      label: definition?.label ?? tabKey,
+      sort_order: (index + 1) * 10,
+      metadata: {},
+      created_by: null,
+      updated_by: null,
+      created_at: new Date(0).toISOString(),
+      updated_at: null,
+      deleted_at: null,
+    }
+  })
+
+export const fetchProjectTabs = async (
+  organisationId: string,
+  projectId: string,
+): Promise<ProjectTab[]> => {
+  const { data, error } = await db
+    .from('project_tabs')
+    .select(projectTabSelect)
+    .eq('organisation_id', organisationId)
+    .eq('project_id', projectId)
+    .is('deleted_at', null)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+
+  const tabs = (data ?? []) as unknown as ProjectTab[]
+  return tabs.length > 0 ? tabs : defaultProjectTabsForProject(organisationId, projectId)
+}
+
+export const addProjectTab = async (input: ProjectTabInput): Promise<ProjectTab> => {
+  const payload = {
+    organisation_id: input.organisation_id,
+    project_id: input.project_id,
+    tab_key: input.tab_key,
+    label: input.label.trim(),
+    sort_order: input.sort_order ?? 0,
+    metadata: input.metadata ?? {},
+  }
+
+  const { data, error } = await db
+    .from('project_tabs')
+    .insert(payload)
+    .select(projectTabSelect)
+    .single()
+
+  if (error) throw error
+
+  return data as unknown as ProjectTab
+}
+
+export const updateProjectTab = async ({
+  id,
+  organisation_id,
+  project_id,
+  ...input
+}: ProjectTabUpdateInput): Promise<ProjectTab> => {
+  const payload = {
+    ...input,
+    label: input.label?.trim(),
+  }
+
+  const { data, error } = await db
+    .from('project_tabs')
+    .update(payload)
+    .eq('organisation_id', organisation_id)
+    .eq('project_id', project_id)
+    .eq('id', id)
+    .select(projectTabSelect)
+    .single()
+
+  if (error) throw error
+
+  return data as unknown as ProjectTab
+}
+
+export const removeProjectTab = async (input: Pick<ProjectTabUpdateInput, 'id' | 'organisation_id' | 'project_id'>) =>
+  updateProjectTab({ ...input, deleted_at: new Date().toISOString() })
+
+export const fetchProjectMessages = async (
+  organisationId: string,
+  projectId: string,
+): Promise<ProjectMessage[]> => {
+  const { data, error } = await db
+    .from('project_messages')
+    .select(projectMessageSelect)
+    .eq('organisation_id', organisationId)
+    .eq('project_id', projectId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return ((data ?? []) as Array<ProjectMessage & { profile: OpenKbProfile | OpenKbProfile[] | null }>).map((row) => ({
+    ...row,
+    profile: normalizeSingle(row.profile),
+  }))
+}
+
+export const createProjectMessage = async (input: ProjectMessageInput): Promise<ProjectMessage> => {
+  const { data, error } = await db
+    .from('project_messages')
+    .insert({
+      organisation_id: input.organisation_id,
+      project_id: input.project_id,
+      description_json: input.description_json,
+      description_html: input.description_html?.trim() || null,
+      description_text: input.description_text?.trim() || null,
+    })
+    .select(projectMessageSelect)
+    .single()
+
+  if (error) throw error
+
+  const item = data as unknown as ProjectMessage & { profile: OpenKbProfile | OpenKbProfile[] | null }
+  return {
+    ...item,
+    profile: normalizeSingle(item.profile),
+  }
 }

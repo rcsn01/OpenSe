@@ -11,6 +11,7 @@ const pageSelect = `
   content_html,
   content_text,
   status,
+  metadata,
   created_by,
   updated_by,
   created_at,
@@ -94,6 +95,7 @@ export const createPage = async (input: PageInput): Promise<KnowledgePage> => {
     content_html: input.content_html?.trim() || null,
     content_text: input.content_text?.trim() || null,
     status: input.status,
+    metadata: input.metadata ?? {},
   }
 
   const { data, error } = await db
@@ -141,6 +143,7 @@ export const updatePage = async ({ id, organisation_id, ...input }: PageUpdateIn
     content_html: input.content_html?.trim() || input.content_html,
     content_text: input.content_text?.trim() || input.content_text,
     project_id: input.project_id || null,
+    metadata: input.metadata,
   }
 
   const { data, error } = await db

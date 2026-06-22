@@ -66,6 +66,40 @@ export type ProjectSummary = {
   module_count: number
 }
 
+export type ProjectTab = {
+  id: string
+  organisation_id: string
+  project_id: string
+  tab_key: string
+  label: string
+  sort_order: number
+  metadata: Record<string, unknown>
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export type ProjectTabInput = {
+  organisation_id: string
+  project_id: string
+  tab_key: string
+  label: string
+  sort_order?: number
+  metadata?: Record<string, unknown>
+}
+
+export type ProjectTabUpdateInput = {
+  id: string
+  organisation_id: string
+  project_id: string
+  label?: string
+  sort_order?: number
+  metadata?: Record<string, unknown>
+  deleted_at?: string | null
+}
+
 export type ProjectDeployBoard = {
   id: string
   organisation_id: string
@@ -80,6 +114,31 @@ export type ProjectDeployBoard = {
   created_at: string
   updated_at: string | null
   deleted_at: string | null
+}
+
+export type ProjectMessage = {
+  id: string
+  organisation_id: string
+  project_id: string
+  profile_id: string | null
+  description_json: EditorDocument
+  description_html: string | null
+  description_text: string | null
+  metadata: Record<string, unknown>
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string | null
+  deleted_at: string | null
+  profile?: OpenKbProfile | null
+}
+
+export type ProjectMessageInput = {
+  organisation_id: string
+  project_id: string
+  description_json: EditorDocument
+  description_html?: string | null
+  description_text?: string | null
 }
 
 export type ProjectDeployBoardInput = {
@@ -773,6 +832,7 @@ export type KnowledgePage = {
   content_html: string | null
   content_text: string | null
   status: PageStatus
+  metadata: Record<string, unknown>
   created_by: string | null
   updated_by: string | null
   created_at: string
@@ -790,6 +850,7 @@ export type PageInput = {
   content_html?: string | null
   content_text?: string | null
   status: PageStatus
+  metadata?: Record<string, unknown>
 }
 
 export type PageUpdateInput = Partial<Omit<PageInput, 'organisation_id'>> & {

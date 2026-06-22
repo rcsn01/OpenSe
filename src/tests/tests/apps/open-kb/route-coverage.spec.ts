@@ -21,6 +21,24 @@ const authenticatedRoutes = [
   '/projects',
   '/projects/new',
   `/projects/${PROJECT_ID}`,
+  `/projects/${PROJECT_ID}/overview`,
+  `/projects/${PROJECT_ID}/list`,
+  `/projects/${PROJECT_ID}/board`,
+  `/projects/${PROJECT_ID}/timeline`,
+  `/projects/${PROJECT_ID}/dashboard`,
+  `/projects/${PROJECT_ID}/calendar`,
+  `/projects/${PROJECT_ID}/workflow`,
+  `/projects/${PROJECT_ID}/messages`,
+  `/projects/${PROJECT_ID}/note`,
+  `/projects/${PROJECT_ID}/gantt`,
+  `/projects/${PROJECT_ID}/workload`,
+  `/projects/${PROJECT_ID}/files`,
+  `/projects/${PROJECT_ID}/drafts`,
+  `/projects/${PROJECT_ID}/cycles`,
+  `/projects/${PROJECT_ID}/modules`,
+  `/projects/${PROJECT_ID}/estimates`,
+  `/projects/${PROJECT_ID}/pages`,
+  `/projects/${PROJECT_ID}/settings`,
   '/issues',
   '/issues/new',
   `/issues/${ISSUE_ID}`,
@@ -59,5 +77,10 @@ test.describe('Open-KB Route Coverage', () => {
   test('unknown authenticated route returns to dashboard', async ({ openKbPage }) => {
     await safeGoto(openKbPage, '/not-a-real-open-kb-route');
     await expect(openKbPage).toHaveURL(/\/dashboard(?:[?#].*)?$/);
+  });
+
+  test('legacy project issues route redirects to list', async ({ openKbPage }) => {
+    await safeGoto(openKbPage, `/projects/${PROJECT_ID}/issues`);
+    await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/list(?:[?#].*)?$`));
   });
 });

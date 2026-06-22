@@ -904,6 +904,23 @@ export const fetchIssueAttachments = async (
   return withSignedUrls((data ?? []) as unknown as IssueAttachment[])
 }
 
+export const fetchProjectIssueAttachments = async (
+  organisationId: string,
+  projectId: string,
+): Promise<IssueAttachment[]> => {
+  const { data, error } = await db
+    .from('issue_attachments')
+    .select(issueAttachmentSelect)
+    .eq('organisation_id', organisationId)
+    .eq('project_id', projectId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return withSignedUrls((data ?? []) as unknown as IssueAttachment[])
+}
+
 export const uploadIssueAttachment = async ({
   organisation_id,
   project_id,
