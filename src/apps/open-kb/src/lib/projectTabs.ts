@@ -30,7 +30,6 @@ export const projectTabKeys = [
   'workload',
   'files',
   'cycles',
-  'estimates',
   'pages',
   'settings',
 ] as const
@@ -61,7 +60,6 @@ export const projectTabDefinitions: ProjectTabDefinition[] = [
   { key: 'workload', label: 'Workload', path: 'workload', group: 'other', icon: Users },
   { key: 'files', label: 'Files', path: 'files', group: 'other', icon: FolderOpen },
   { key: 'cycles', label: 'Cycles', path: 'cycles', group: 'existing', icon: CalendarDays },
-  { key: 'estimates', label: 'Estimates', path: 'estimates', group: 'existing', icon: Gauge },
   { key: 'pages', label: 'Pages', path: 'pages', group: 'existing', icon: FileText },
   { key: 'settings', label: 'Settings', path: 'settings', group: 'existing', icon: Settings },
 ]
@@ -70,7 +68,6 @@ export const defaultProjectTabKeys: ProjectTabKey[] = [
   'overview',
   'list',
   'cycles',
-  'estimates',
   'pages',
   'settings',
 ]
@@ -87,7 +84,6 @@ export const isProjectTabKey = (value: string | null | undefined): value is Proj
 
 export const getProjectTabKeyFromSection = (section: string | undefined): ProjectTabKey => {
   if (!section) return 'overview'
-  if (section === 'issues') return 'list'
   return isProjectTabKey(section) ? section : 'overview'
 }
 

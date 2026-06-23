@@ -10,7 +10,7 @@ import { OpenKbPageShell } from '../components/OpenKbPageShell'
 import { useOrganisation } from '../contexts/OrganisationContext'
 import { usePage, usePageVersions, useUpdatePage } from '../hooks/queries/usePages'
 import { useAddFavorite, useFavorites, useRecordRecentVisitOnce, useRemoveFavorite } from '../hooks/queries/usePersonal'
-import { useProjects } from '../hooks/queries/useProjects'
+import { getProjectPagePath, getProjectPagesPath } from '../lib/projectRoutes'
 import type { KnowledgePage, PageStatus, PageVersion } from '../types'
 
 const statusOptions: Array<{ value: PageStatus; label: string }> = [
@@ -42,20 +42,20 @@ const isPageStatus = (value: string | null | undefined): value is PageStatus =>
 const PageDetailContent = ({
   page,
   organisationId,
+  routeProjectId,
 }: {
   page: KnowledgePage
   organisationId: string
+  routeProjectId: string
 }) => {
   const { user } = useAuth()
   const profileId = user?.id ?? null
-  const { data: projects = [] } = useProjects(organisationId)
   const { data: versions = [], isLoading: versionsLoading } = usePageVersions(organisationId, page.id)
   const { data: favorites = [] } = useFavorites(organisationId, profileId)
   const updatePage = useUpdatePage()
   const addFavorite = useAddFavorite()
   const removeFavorite = useRemoveFavorite()
   const recordRecentVisitOnce = useRecordRecentVisitOnce()
-  const [projectId, setProjectId] = useState(page.project_id ?? '')
   const [title, setTitle] = useState(page.title)
   const [slug, setSlug] = useState(page.slug ?? '')
   const [status, setStatus] = useState<PageStatus>(page.status)
@@ -80,8 +80,8 @@ const PageDetailContent = ({
       title: page.title,
       description: page.content_text,
       status: page.status,
-      route: `/pages/${page.id}`,
-      identifier: page.project?.identifier ?? 'ORG',
+      route: getProjectPagePath(routeProjectId, page.id),
+      identifier: page.project?.identifier ?? undefined,
     })
   }, [
     organisationId,
@@ -103,7 +103,7 @@ const PageDetailContent = ({
       await updatePage.mutateAsync({
         id: page.id,
         organisation_id: organisationId,
-        project_id: projectId || null,
+        project_id: routeProjectId,
         title,
         slug,
         status,
@@ -134,8 +134,8 @@ const PageDetailContent = ({
           title: page.title,
           description: page.content_text,
           status: page.status,
-          route: `/pages/${page.id}`,
-          identifier: page.project?.identifier ?? 'ORG',
+          route: getProjectPagePath(routeProjectId, page.id),
+          identifier: page.project?.identifier ?? undefined,
         })
         toast.success('Added favorite')
       }
@@ -153,7 +153,7 @@ const PageDetailContent = ({
       await updatePage.mutateAsync({
         id: page.id,
         organisation_id: organisationId,
-        project_id: version.project_id,
+        project_id: routeProjectId,
         title: version.title ?? page.title,
         slug: version.slug,
         status: nextStatus,
@@ -161,7 +161,6 @@ const PageDetailContent = ({
         content_html: version.description_html,
         content_text: version.description_text,
       })
-      setProjectId(version.project_id ?? '')
       setTitle(version.title ?? page.title)
       setSlug(version.slug ?? '')
       setStatus(nextStatus)
@@ -181,12 +180,12 @@ const PageDetailContent = ({
     <>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <Link to="/pages" className="inline-flex items-center gap-2 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
+          <Link to={getProjectPagesPath(routeProjectId)} className="inline-flex items-center gap-2 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
             <ArrowLeft className="h-4 w-4" />
             Pages
           </Link>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{page.project?.identifier ?? 'ORG'}</Badge>
+            <Badge variant="outline">{page.project?.identifier ?? 'Project'}</Badge>
             <Badge variant={statusTone[status]}>{status}</Badge>
           </div>
         </div>
@@ -205,18 +204,6 @@ const PageDetailContent = ({
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <form onSubmit={handleSubmit} className="space-y-5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="block space-y-2">
-              <span className="text-sm font-medium">Project</span>
-              <Select
-                className="border border-[var(--color-border)] bg-[var(--color-background)]"
-                value={projectId}
-                onChange={(event) => setProjectId(event.target.value)}
-                options={[
-                  { value: '', label: 'Organisation page' },
-                  ...projects.map((project) => ({ value: project.id, label: `${project.identifier} · ${project.name}` })),
-                ]}
-              />
-            </label>
             <label className="block space-y-2">
               <span className="text-sm font-medium">Status</span>
               <Select
@@ -308,11 +295,11 @@ const PageDetailContent = ({
 }
 
 export const PageDetailPage = () => {
-  const { pageId } = useParams()
+  const { projectId, pageId } = useParams()
   const { organisationId } = useOrganisation()
   const { data: page, isLoading } = usePage(organisationId, pageId ?? null)
 
-  if (!isLoading && !page) {
+  if (!isLoading && (!page || !projectId || page.project_id !== projectId)) {
     return (
       <OpenKbPageShell>
         <EmptyState title="Page not found" description="The page was deleted or is outside your Open-KB access." />
@@ -322,8 +309,8 @@ export const PageDetailPage = () => {
 
   return (
     <OpenKbPageShell isLoading={isLoading}>
-      {page && organisationId ? (
-        <PageDetailContent key={page.id} page={page} organisationId={organisationId} />
+      {page && organisationId && projectId ? (
+        <PageDetailContent key={page.id} page={page} organisationId={organisationId} routeProjectId={projectId} />
       ) : null}
     </OpenKbPageShell>
   )

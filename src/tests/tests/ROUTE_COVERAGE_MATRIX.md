@@ -65,10 +65,10 @@ Status legend:
 | `/public/boards/:slug` | covered-new | `apps/open-kb/route-coverage.spec.ts` |
 | `/dashboard` | covered-new | `apps/open-kb/route-coverage.spec.ts` |
 | `/teams`, `/projects`, `/projects/new`, `/projects/:projectId` | covered-new | `apps/open-kb/route-coverage.spec.ts` |
-| `/issues`, `/issues/new`, `/issues/:issueId`, `/drafts` | covered-new | `apps/open-kb/route-coverage.spec.ts` |
-| `/cycles`, `/cycles/new`, `/modules`, `/modules/new`, `/estimates`, `/estimates/new` | covered-new | `apps/open-kb/route-coverage.spec.ts` |
-| `/pages`, `/pages/new`, `/pages/:pageId`, `/stickies` | covered-new | `apps/open-kb/route-coverage.spec.ts` |
-| `/intake`, `/analytics`, `/notifications`, `/settings` | covered-new | `apps/open-kb/route-coverage.spec.ts` |
+| `/issues`, `/issues/new`, `/issues/:issueId`, `/drafts` | removed | project-scoped `/projects/:projectId/issues/:issueId` |
+| `/cycles`, `/cycles/new`, `/modules`, `/modules/new` | covered-new | `apps/open-kb/route-coverage.spec.ts` |
+| `/pages`, `/pages/new`, `/pages/:pageId`, `/stickies` | removed | project-scoped `/projects/:projectId/pages/*` |
+| `/intake`, `/analytics`, `/notifications`, `/settings` | covered-new | `apps/open-kb/route-coverage.spec.ts` (intake removed) |
 | `*` | covered-new | `apps/open-kb/route-coverage.spec.ts` |
 
 ## UI Design (`apps/ui-design/src/App.tsx`)

@@ -20,21 +20,22 @@ test.describe('Open-KB Interactions', () => {
     await expect(openKbPage.getByText('Customer Knowledge Base').first()).toBeVisible();
   });
 
-  test('creates an issue and redirects to the new issue detail page', async ({ openKbPage }) => {
-    await openKbPage.goto('/issues/new', { waitUntil: 'domcontentloaded' });
+  test('creates a task from the project list and opens the task detail page', async ({ openKbPage }) => {
+    await openKbPage.goto(`/projects/${PROJECT_ID}/list`, { waitUntil: 'domcontentloaded' });
 
+    await openKbPage.getByRole('button', { name: 'Add task' }).click();
     await openKbPage.getByLabel('Title').fill('Write importer acceptance tests');
     await openKbPage.getByLabel('Priority').selectOption('high');
     await fillLastEditor(openKbPage, 'Verify importer state, redirects, and permissions.');
-    await openKbPage.getByRole('button', { name: 'Create issue' }).click();
+    await openKbPage.getByRole('button', { name: 'Create task' }).click();
 
-    await expect(openKbPage).toHaveURL(new RegExp(`/issues/${NEW_ISSUE_ID}(?:[?#].*)?$`));
+    await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/issues/${NEW_ISSUE_ID}(?:[?#].*)?$`));
     await expect(openKbPage.getByLabel('Title', { exact: true })).toHaveValue('Write importer acceptance tests');
     await expect(openKbPage.getByLabel('Priority')).toHaveValue('high');
   });
 
-  test('updates an issue and adds a rich text comment', async ({ openKbPage }) => {
-    await openKbPage.goto('/issues/11110000-0000-4000-8000-00000000e2e2', { waitUntil: 'domcontentloaded' });
+  test('updates a task and adds a rich text comment', async ({ openKbPage }) => {
+    await openKbPage.goto(`/projects/${PROJECT_ID}/issues/11110000-0000-4000-8000-00000000e2e2`, { waitUntil: 'domcontentloaded' });
 
     await openKbPage.getByLabel('Title', { exact: true }).fill('Updated issue title from Playwright');
     await openKbPage.getByLabel('Priority').selectOption('urgent');

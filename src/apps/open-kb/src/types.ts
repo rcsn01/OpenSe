@@ -805,21 +805,6 @@ export type EstimatePoint = {
   estimate?: Estimate | null
 }
 
-export type EstimateWithPoints = Estimate & {
-  points: EstimatePoint[]
-}
-
-export type EstimateInput = {
-  organisation_id: string
-  project_id: string
-  name: string
-  description_text?: string | null
-  points: Array<{
-    name: string
-    value: number
-  }>
-}
-
 export type PageStatus = 'draft' | 'published' | 'archived'
 
 export type KnowledgePage = {

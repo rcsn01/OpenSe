@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Badge, Button, EmptyState, Input, Select } from '@repo/ui'
 import { ArrowLeft, Star } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
@@ -13,6 +13,7 @@ import { IssuePropertiesSidebar } from '../components/issues/IssuePropertiesSide
 import { ReactionBar } from '../components/issues/IssueReactions'
 import { OpenKbPageShell } from '../components/OpenKbPageShell'
 import { useOrganisation } from '../contexts/OrganisationContext'
+import { getProjectIssuePath, getProjectListPath } from '../lib/projectRoutes'
 import {
   useAddIssueBlocker,
   useAddIssueAssignee,
@@ -84,7 +85,6 @@ const IssueDetailContent = ({
   issue: Issue
   organisationId: string
 }) => {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const profileId = user?.id ?? null
   const { data: states = [] } = useIssueStates(organisationId, issue.project_id)
@@ -254,7 +254,7 @@ const IssueDetailContent = ({
       title: issue.title,
       description: issue.description_text,
       status: issue.priority,
-      route: `/issues/${issue.id}`,
+      route: getProjectIssuePath(issue.project_id, issue.id),
       identifier: issueKey,
     })
   }, [
@@ -487,7 +487,7 @@ const IssueDetailContent = ({
           title: issue.title,
           description: issue.description_text,
           status: issue.priority,
-          route: `/issues/${issue.id}`,
+          route: getProjectIssuePath(issue.project_id, issue.id),
           identifier: issueKey,
         })
         toast.success('Added favorite')
@@ -700,9 +700,9 @@ const IssueDetailContent = ({
     <>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <Link to="/issues" className="inline-flex items-center gap-2 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
+          <Link to={getProjectListPath(issue.project_id)} className="inline-flex items-center gap-2 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
             <ArrowLeft className="h-4 w-4" />
-            Issues
+            Tasks
           </Link>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge variant="outline">{issueKey}</Badge>
@@ -725,9 +725,6 @@ const IssueDetailContent = ({
           >
             <Star className="h-4 w-4" />
             {currentFavorite ? 'Starred' : 'Star'}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => navigate(`/issues/new?project=${issue.project_id}`)}>
-            New issue
           </Button>
         </div>
       </div>
@@ -897,14 +894,14 @@ const IssueDetailContent = ({
 }
 
 export const IssueDetailPage = () => {
-  const { issueId } = useParams()
+  const { projectId, issueId } = useParams()
   const { organisationId } = useOrganisation()
   const { data: issue, isLoading } = useIssue(organisationId, issueId ?? null)
 
-  if (!isLoading && !issue) {
+  if (!isLoading && (!issue || !projectId || issue.project_id !== projectId)) {
     return (
       <OpenKbPageShell>
-        <EmptyState title="Issue not found" description="The issue was deleted or is outside your Open-KB access." />
+        <EmptyState title="Task not found" description="The task was deleted or is outside your Open-KB access." />
       </OpenKbPageShell>
     )
   }

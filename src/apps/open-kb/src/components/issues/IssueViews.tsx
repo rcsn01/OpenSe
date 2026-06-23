@@ -3,6 +3,9 @@ import { Badge, Button, cn } from '@repo/ui'
 import type { Issue } from '../../types'
 import { buildCalendarDays, dayKey, formatShortDate, toDate } from '../../lib/dateFormatting'
 import { formatIssueKey, issuePriorityTone as priorityTone } from '../../lib/issueFormatting'
+import { getProjectIssuePath } from '../../lib/projectRoutes'
+
+const issuePath = (issue: Issue) => getProjectIssuePath(issue.project_id, issue.id)
 
 export const IssueRow = ({
   issue,
@@ -21,8 +24,8 @@ export const IssueRow = ({
       onChange={() => onToggle(issue.id)}
       aria-label={`Select ${formatIssueKey(issue)}`}
     />
-    <Link to={`/issues/${issue.id}`} className="font-mono text-xs text-[var(--color-muted-foreground)] hover:underline">{formatIssueKey(issue)}</Link>
-    <Link to={`/issues/${issue.id}`} className="min-w-0 truncate font-medium hover:underline">{issue.title}</Link>
+    <Link to={issuePath(issue)} className="font-mono text-xs text-[var(--color-muted-foreground)] hover:underline">{formatIssueKey(issue)}</Link>
+    <Link to={issuePath(issue)} className="min-w-0 truncate font-medium hover:underline">{issue.title}</Link>
     <span className="min-w-0 truncate text-[var(--color-muted-foreground)]">{issue.project?.name ?? 'Unknown project'}</span>
     <Badge variant={priorityTone[issue.priority]}>{issue.priority}</Badge>
     <span className="inline-flex min-w-0 items-center gap-2 text-[var(--color-muted-foreground)]">
@@ -34,7 +37,7 @@ export const IssueRow = ({
 
 export const IssueCard = ({ issue }: { issue: Issue }) => (
   <Link
-    to={`/issues/${issue.id}`}
+    to={issuePath(issue)}
     className="block rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm hover:border-[var(--color-border-hover)]"
   >
     <div className="flex items-center justify-between gap-3">
@@ -86,7 +89,7 @@ export const IssueTable = ({
             </td>
             <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</td>
             <td className="max-w-[28rem] px-3 py-2">
-              <Link to={`/issues/${issue.id}`} className="block truncate font-medium hover:underline">{issue.title}</Link>
+              <Link to={issuePath(issue)} className="block truncate font-medium hover:underline">{issue.title}</Link>
             </td>
             <td className="whitespace-nowrap px-3 py-2 text-[var(--color-muted-foreground)]">{issue.project?.name ?? 'Unknown project'}</td>
             <td className="px-3 py-2">
@@ -139,7 +142,7 @@ export const IssueCalendar = ({
               <div className="mb-2 text-xs font-medium">{day.getDate()}</div>
               <div className="space-y-1">
                 {dayIssues.slice(0, 4).map((issue) => (
-                  <Link key={issue.id} to={`/issues/${issue.id}`} className="block rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-xs hover:border-[var(--color-border-hover)]">
+                  <Link key={issue.id} to={issuePath(issue)} className="block rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-xs hover:border-[var(--color-border-hover)]">
                     <span className="block truncate font-medium">{issue.title}</span>
                     <span className="text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</span>
                   </Link>
@@ -182,7 +185,7 @@ export const IssueGantt = ({ issues }: { issues: Issue[] }) => {
           const width = Math.max(2, ((end.getTime() - start.getTime()) / 86_400_000 + 1) / totalDays * 100)
 
           return (
-            <Link key={issue.id} to={`/issues/${issue.id}`} className="grid min-h-14 grid-cols-[minmax(14rem,18rem)_minmax(24rem,1fr)] items-center hover:bg-[var(--color-muted)]">
+            <Link key={issue.id} to={issuePath(issue)} className="grid min-h-14 grid-cols-[minmax(14rem,18rem)_minmax(24rem,1fr)] items-center hover:bg-[var(--color-muted)]">
               <div className="min-w-0 px-3">
                 <div className="truncate text-sm font-medium">{issue.title}</div>
                 <div className="font-mono text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</div>

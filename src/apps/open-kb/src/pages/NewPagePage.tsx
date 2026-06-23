@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button, Input, Select } from '@repo/ui'
+import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { buildPageSlug } from '../api/pages'
 import { RichTextEditor, type RichTextEditorValue } from '../components/editor'
 import { OpenKbPageShell } from '../components/OpenKbPageShell'
 import { useOrganisation } from '../contexts/OrganisationContext'
 import { useCreatePage } from '../hooks/queries/usePages'
-import { useProjects } from '../hooks/queries/useProjects'
+import { useProject } from '../hooks/queries/useProjects'
+import { getProjectPagePath, getProjectPagesPath } from '../lib/projectRoutes'
 import type { PageStatus } from '../types'
 
 const statusOptions: Array<{ value: PageStatus; label: string }> = [
@@ -19,10 +21,9 @@ const statusOptions: Array<{ value: PageStatus; label: string }> = [
 
 export const NewPagePage = () => {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const { projectId = '' } = useParams()
   const { organisationId } = useOrganisation()
-  const { data: projects = [], isLoading } = useProjects(organisationId)
-  const [projectId, setProjectId] = useState(searchParams.get('project') ?? '')
+  const { data: project, isLoading } = useProject(organisationId, projectId)
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
   const [status, setStatus] = useState<PageStatus>('draft')
@@ -33,12 +34,12 @@ export const NewPagePage = () => {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!organisationId || !title.trim()) return
+    if (!organisationId || !projectId || !title.trim()) return
 
     try {
       const page = await createPage.mutateAsync({
         organisation_id: organisationId,
-        project_id: projectId || null,
+        project_id: projectId,
         title,
         slug: resolvedSlug,
         status,
@@ -47,43 +48,43 @@ export const NewPagePage = () => {
         content_text: content?.text ?? null,
       })
       toast.success('Page created')
-      navigate(`/pages/${page.id}`)
+      navigate(getProjectPagePath(projectId, page.id))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create page')
     }
   }
 
+  if (!isLoading && !project) {
+    return (
+      <OpenKbPageShell>
+        <div className="text-sm text-[var(--color-muted-foreground)]">Project not found.</div>
+      </OpenKbPageShell>
+    )
+  }
+
   return (
     <OpenKbPageShell isLoading={isLoading}>
       <div>
-        <h1 className="text-xl font-semibold tracking-normal">New page</h1>
-        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Create project notes or organisation-level knowledge.</p>
+        <Link to={getProjectPagesPath(projectId)} className="inline-flex items-center gap-2 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
+          <ArrowLeft className="h-4 w-4" />
+          Pages
+        </Link>
+        <h1 className="mt-3 text-xl font-semibold tracking-normal">New page</h1>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+          {project ? `${project.identifier} · ${project.name}` : 'Create a project page.'}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-4xl space-y-5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block space-y-2">
-            <span className="text-sm font-medium">Project</span>
-            <Select
-              className="border border-[var(--color-border)] bg-[var(--color-background)]"
-              value={projectId}
-              onChange={(event) => setProjectId(event.target.value)}
-              options={[
-                { value: '', label: 'Organisation page' },
-                ...projects.map((project) => ({ value: project.id, label: `${project.identifier} · ${project.name}` })),
-              ]}
-            />
-          </label>
-          <label className="block space-y-2">
-            <span className="text-sm font-medium">Status</span>
-            <Select
-              className="border border-[var(--color-border)] bg-[var(--color-background)]"
-              value={status}
-              onChange={(event) => setStatus(event.target.value as PageStatus)}
-              options={statusOptions}
-            />
-          </label>
-        </div>
+        <label className="block space-y-2">
+          <span className="text-sm font-medium">Status</span>
+          <Select
+            className="border border-[var(--color-border)] bg-[var(--color-background)]"
+            value={status}
+            onChange={(event) => setStatus(event.target.value as PageStatus)}
+            options={statusOptions}
+          />
+        </label>
         <label className="block space-y-2">
           <span className="text-sm font-medium">Title</span>
           <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Release checklist" required />
@@ -97,7 +98,7 @@ export const NewPagePage = () => {
           <RichTextEditor placeholder="Write the page content..." onChange={setContent} />
         </div>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate('/pages')}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => navigate(getProjectPagesPath(projectId))}>Cancel</Button>
           <Button type="submit" loading={createPage.isPending}>Create page</Button>
         </div>
       </form>

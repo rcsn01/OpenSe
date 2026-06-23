@@ -64,7 +64,7 @@ export const ProjectsPage = () => {
       </div>
 
       {filteredProjects.length === 0 ? (
-        <EmptyState title="No projects yet" description="Create a project to unlock issue workflows, pages, cycles, modules, and intake." />
+        <EmptyState title="No projects yet" description="Create a project to unlock tasks, pages, cycles, and modules." />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {filteredProjects.map((project) => (

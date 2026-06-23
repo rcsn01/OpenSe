@@ -7,10 +7,10 @@ import {
 } from '../projectTabs'
 
 describe('project tab registry', () => {
-  it('keeps List required and maps the legacy issues section to List', () => {
+  it('keeps List required', () => {
     expect(requiredProjectTabKey).toBe('list')
     expect(defaultProjectTabKeys).toContain('list')
-    expect(getProjectTabKeyFromSection('issues')).toBe('list')
+    expect(getProjectTabKeyFromSection('unknown-section')).toBe('overview')
   })
 
   it('deduplicates tab keys from screenshot and existing Open-KB tabs', () => {
@@ -30,7 +30,6 @@ describe('project tab registry', () => {
       'workload',
       'files',
       'cycles',
-      'estimates',
       'pages',
       'settings',
     ]))

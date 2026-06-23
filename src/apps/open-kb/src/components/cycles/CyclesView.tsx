@@ -5,6 +5,7 @@ import { CalendarDays, ChevronDown, ChevronRight, Circle, Info, ListFilter, More
 import type { Cycle, CycleIssueLink, Issue } from '../../types'
 import { dayKey, formatShortDate, toDate } from '../../lib/dateFormatting'
 import { formatIssueKey } from '../../lib/issueFormatting'
+import { getProjectIssuePath } from '../../lib/projectRoutes'
 
 type CycleTab = 'active' | 'upcoming' | 'completed'
 
@@ -184,7 +185,7 @@ const CycleSidebar = ({ model }: { model: CycleViewModel }) => (
   </aside>
 )
 
-const WorkItemsList = ({ model }: { model: CycleViewModel }) => (
+const WorkItemsList = ({ model, onCreateIssue }: { model: CycleViewModel; onCreateIssue?: () => void }) => (
   <section className="border-t border-[var(--color-border)]">
     <div className="flex h-12 items-center justify-between border-b border-[var(--color-border)] px-6">
       <div className="inline-flex items-center gap-2 text-base font-semibold">
@@ -196,7 +197,7 @@ const WorkItemsList = ({ model }: { model: CycleViewModel }) => (
     </div>
     <div className="divide-y divide-[var(--color-border)]">
       {model.issues.map((issue) => (
-        <Link key={issue.id} to={`/issues/${issue.id}`} className="grid min-h-12 grid-cols-[6rem_minmax(16rem,1fr)_auto] items-center gap-3 px-6 text-sm hover:bg-[var(--color-muted)]">
+        <Link key={issue.id} to={getProjectIssuePath(model.cycle.project_id, issue.id)} className="grid min-h-12 grid-cols-[6rem_minmax(16rem,1fr)_auto] items-center gap-3 px-6 text-sm hover:bg-[var(--color-muted)]">
           <span className="text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</span>
           <span className="min-w-0 truncate font-medium">{issue.title}</span>
           <div className="flex min-w-0 items-center gap-2 overflow-hidden">
@@ -221,10 +222,12 @@ const WorkItemsList = ({ model }: { model: CycleViewModel }) => (
           </div>
         </Link>
       ))}
-      <Link to={`/issues/new?project=${model.cycle.project_id}`} className="flex h-12 items-center gap-2 px-6 text-sm hover:bg-[var(--color-muted)]">
-        <Plus className="h-4 w-4" />
-        New work item
-      </Link>
+      {onCreateIssue ? (
+        <button type="button" onClick={onCreateIssue} className="flex h-12 w-full items-center gap-2 px-6 text-sm hover:bg-[var(--color-muted)]">
+          <Plus className="h-4 w-4" />
+          New work item
+        </button>
+      ) : null}
     </div>
   </section>
 )
@@ -234,12 +237,14 @@ export const CyclesView = ({
   issues,
   cycleIssueLinks,
   newCycleHref,
+  onCreateIssue,
   className,
 }: {
   cycles: Cycle[]
   issues: Issue[]
   cycleIssueLinks: CycleIssueLink[]
   newCycleHref: string
+  onCreateIssue?: () => void
   className?: string
 }) => {
   const [activeTab, setActiveTab] = useState<CycleTab>('active')
@@ -338,7 +343,7 @@ export const CyclesView = ({
                 <CycleSidebar model={expandedModel} />
                 <CycleBurndown model={expandedModel} />
               </div>
-              <WorkItemsList model={expandedModel} />
+              <WorkItemsList model={expandedModel} onCreateIssue={onCreateIssue} />
             </article>
           ) : null}
         </div>
