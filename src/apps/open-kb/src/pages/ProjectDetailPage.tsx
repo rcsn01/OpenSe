@@ -10,6 +10,7 @@ import { ProjectSettingsPanel } from '../components/projects/ProjectSettingsPane
 import { ProjectTabBar } from '../components/projects/ProjectTabBar'
 import { RichTextEditor, type RichTextEditorValue } from '../components/editor'
 import { useOrganisation } from '../contexts/OrganisationContext'
+import { CreateIssueDialog } from '../components/issues/CreateIssueDialog'
 import {
   IssueCalendar,
   IssueGantt,
@@ -24,7 +25,7 @@ import {
   useProjectIssueAttachments,
 } from '../hooks/queries/useIssues'
 import { useCreatePage, usePages } from '../hooks/queries/usePages'
-import { useCycleIssueLinks, useCycles, useEstimates, useModuleIssueLinks, useModules } from '../hooks/queries/usePlanning'
+import { useCycleIssueLinks, useCycles, useModuleIssueLinks, useModules } from '../hooks/queries/usePlanning'
 import {
   useAddProjectTab,
   useCreateProjectMessage,
@@ -51,6 +52,11 @@ import {
   requiredProjectTabKey,
   type ProjectTabKey,
 } from '../lib/projectTabs'
+import {
+  getProjectIssuePath,
+  getProjectNewPagePath,
+  getProjectPagePath,
+} from '../lib/projectRoutes'
 
 const emptyDocument = {
   type: 'doc',
@@ -78,7 +84,7 @@ const getCopiedTabLabel = (label: string, tabs: ProjectTab[]) => {
   return `${baseLabel} ${suffix}`
 }
 
-const IssueList = ({ issues, emptyTitle }: { issues: Issue[]; emptyTitle: string }) => {
+const IssueList = ({ issues, emptyTitle, projectId }: { issues: Issue[]; emptyTitle: string; projectId: string }) => {
   if (issues.length === 0) {
     return <EmptyState title={emptyTitle} description="" />
   }
@@ -87,7 +93,7 @@ const IssueList = ({ issues, emptyTitle }: { issues: Issue[]; emptyTitle: string
     <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
       <div className="divide-y divide-[var(--color-border)]">
         {issues.map((issue) => (
-          <Link key={issue.id} to={`/issues/${issue.id}`} className="grid gap-2 px-4 py-3 text-sm hover:bg-[var(--color-muted)] md:grid-cols-[7rem_minmax(0,1fr)_8rem_10rem] md:items-center">
+          <Link key={issue.id} to={getProjectIssuePath(projectId, issue.id)} className="grid gap-2 px-4 py-3 text-sm hover:bg-[var(--color-muted)] md:grid-cols-[7rem_minmax(0,1fr)_8rem_10rem] md:items-center">
             <span className="font-mono text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</span>
             <span className="min-w-0 truncate font-medium">{issue.title}</span>
             <Badge variant={priorityTone[issue.priority]}>{issue.priority}</Badge>
@@ -101,41 +107,6 @@ const IssueList = ({ issues, emptyTitle }: { issues: Issue[]; emptyTitle: string
     </div>
   )
 }
-
-const ProjectRecordSection = ({
-  title,
-  emptyTitle,
-  newHref,
-  items,
-}: {
-  title: string
-  emptyTitle: string
-  newHref: string
-  items: Array<{ id: string; name: string; description_text?: string | null; status?: string | null }>
-}) => (
-  <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-    <div className="flex h-12 items-center justify-between border-b border-[var(--color-border)] px-4">
-      <h2 className="text-sm font-semibold">{title}</h2>
-      <Link className="inline-flex h-8 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 text-xs font-medium hover:bg-[var(--color-muted)]" to={newHref}>
-        <Plus className="h-3.5 w-3.5" />
-        New
-      </Link>
-    </div>
-    <div className="divide-y divide-[var(--color-border)]">
-      {items.length === 0 ? (
-        <div className="px-4 py-8 text-center text-sm text-[var(--color-muted-foreground)]">{emptyTitle}</div>
-      ) : items.map((item) => (
-        <div key={item.id} className="px-4 py-3">
-          <div className="truncate text-sm font-medium">{item.name}</div>
-          <div className="mt-1 flex flex-wrap gap-2 text-xs text-[var(--color-muted-foreground)]">
-            {item.status ? <Badge variant="neutral">{item.status}</Badge> : null}
-            {item.description_text ? <span className="truncate">{item.description_text}</span> : null}
-          </div>
-        </div>
-      ))}
-    </div>
-  </section>
-)
 
 const EmptyAssignee = () => (
   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-[var(--color-muted-foreground)] text-[var(--color-muted-foreground)]">
@@ -184,21 +155,22 @@ const ProjectTopSlot = ({ children }: { children: ReactNode }) => (
 )
 
 const ProjectTaskToolbar = ({
-  projectId,
   label = 'Add task',
+  onCreateIssue,
 }: {
-  projectId: string
   label?: string
+  onCreateIssue: () => void
 }) => (
   <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4">
     <div className="flex items-center gap-0">
-      <Link
-        to={`/issues/new?project=${projectId}`}
+      <button
+        type="button"
+        onClick={onCreateIssue}
         className="inline-flex h-8 items-center gap-2 rounded-l-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm font-medium hover:bg-[var(--color-muted)]"
       >
         <Plus className="h-4 w-4" />
         {label}
-      </Link>
+      </button>
       <button
         type="button"
         className="inline-flex h-8 w-8 items-center justify-center rounded-r-[var(--radius-md)] border border-l-0 border-[var(--color-border)] hover:bg-[var(--color-muted)]"
@@ -247,7 +219,7 @@ const CompactAvatar = ({ value, tone = '#58c4d8' }: { value: string; tone?: stri
   </span>
 )
 
-const ProjectBoardCard = ({ issue, index }: { issue: Issue; index: number }) => {
+const ProjectBoardCard = ({ issue, index, projectId }: { issue: Issue; index: number; projectId: string }) => {
   const label = issueLabel(issue, index)
   const range = issue.start_date || issue.target_date
     ? `${formatShortDate(issue.start_date ?? issue.created_at.slice(0, 10))}${issue.target_date ? ` - ${formatShortDate(issue.target_date)}` : ''}`
@@ -255,7 +227,7 @@ const ProjectBoardCard = ({ issue, index }: { issue: Issue; index: number }) => 
 
   return (
     <Link
-      to={`/issues/${issue.id}`}
+      to={getProjectIssuePath(projectId, issue.id)}
       className="block rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] hover:border-[#7aa7ff]"
     >
       <div className="flex items-start gap-2">
@@ -278,12 +250,14 @@ const ProjectBoardCard = ({ issue, index }: { issue: Issue; index: number }) => 
 const ProjectBoardView = ({
   projectId,
   columns,
+  onCreateIssue,
 }: {
   projectId: string
   columns: ReturnType<typeof buildBoardColumns>
+  onCreateIssue: () => void
 }) => (
   <section className="-mx-2 flex min-h-0 flex-1 flex-col bg-[var(--color-background)]">
-    <ProjectTaskToolbar projectId={projectId} />
+    <ProjectTaskToolbar onCreateIssue={onCreateIssue} />
     <div className="min-h-0 flex-1 overflow-auto p-4">
       <div className="grid min-h-full grid-flow-col auto-cols-[19rem] gap-4">
         {columns.map((column) => (
@@ -294,15 +268,15 @@ const ProjectBoardView = ({
             </div>
             <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-3">
               {column.issues.length === 0 ? (
-                <Link to={`/issues/new?project=${projectId}`} className="flex h-14 items-center rounded-[var(--radius-md)] bg-[#eef0f2] px-4 text-sm font-medium text-[var(--color-muted-foreground)] hover:bg-[#e7e9ec]">
+                <button type="button" onClick={onCreateIssue} className="flex h-14 items-center rounded-[var(--radius-md)] bg-[#eef0f2] px-4 text-sm font-medium text-[var(--color-muted-foreground)] hover:bg-[#e7e9ec]">
                   <Plus className="mr-2 h-4 w-4" />
                   Add task
-                </Link>
-              ) : column.issues.map((issue, index) => <ProjectBoardCard key={issue.id} issue={issue} index={index} />)}
+                </button>
+              ) : column.issues.map((issue, index) => <ProjectBoardCard key={issue.id} issue={issue} index={index} projectId={projectId} />)}
               {column.issues.length > 0 ? (
-                <Link to={`/issues/new?project=${projectId}`} className="mt-1 px-4 py-2 text-sm font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
+                <button type="button" onClick={onCreateIssue} className="mt-1 px-4 py-2 text-left text-sm font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
                   + Add task
-                </Link>
+                </button>
               ) : null}
             </div>
           </section>
@@ -378,10 +352,12 @@ const ProjectTimelineView = ({
   projectId,
   issues,
   states,
+  onCreateIssue,
 }: {
   projectId: string
   issues: Issue[]
   states: IssueState[]
+  onCreateIssue: () => void
 }) => {
   const ranges = issues.map((issue) => {
     const start = toDate(issue.start_date) ?? toDate(issue.created_at.slice(0, 10)) ?? new Date()
@@ -400,7 +376,7 @@ const ProjectTimelineView = ({
 
   return (
     <section className="-mx-2 flex min-h-0 flex-1 flex-col bg-[var(--color-background)]">
-      <ProjectTaskToolbar projectId={projectId} />
+      <ProjectTaskToolbar onCreateIssue={onCreateIssue} />
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4 text-xs font-semibold text-[var(--color-muted-foreground)]">
         <div className="flex items-center gap-4">
           <button type="button" className="text-lg leading-none">&lt;</button>
@@ -444,7 +420,7 @@ const ProjectTimelineView = ({
                     return (
                       <Link
                         key={issue.id}
-                        to={`/issues/${issue.id}`}
+                        to={getProjectIssuePath(projectId, issue.id)}
                         className="absolute flex h-7 items-center gap-2 rounded-[4px] px-3 text-xs font-medium text-slate-800 shadow-sm"
                         style={{ left: `${left}%`, width: `${width}%`, top, backgroundColor: color }}
                       >
@@ -822,6 +798,7 @@ const ProjectIssueListTable = ({
   moduleIssueLinks,
   listViewConfig,
   onListViewChange,
+  onCreateIssue,
 }: {
   tabId: string | null
   projectId: string
@@ -835,6 +812,7 @@ const ProjectIssueListTable = ({
   moduleIssueLinks: ModuleIssueLink[]
   listViewConfig: ProjectIssueListViewConfig
   onListViewChange?: (config: ProjectIssueListViewConfig) => void
+  onCreateIssue: () => void
 }) => {
   const [filters, setFilters] = useState<ProjectIssueListFilters>(listViewConfig.filters)
   const [sort, setSort] = useState<ProjectIssueListSort>(listViewConfig.sort)
@@ -1104,13 +1082,14 @@ const ProjectIssueListTable = ({
     <section className="-mx-2 flex min-h-0 flex-1 flex-col bg-[var(--color-background)] text-sm">
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4">
         <div className="flex items-center gap-0">
-          <Link
-            to={`/issues/new?project=${projectId}`}
+          <button
+            type="button"
+            onClick={onCreateIssue}
             className="inline-flex h-8 items-center gap-2 rounded-l-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm font-medium hover:bg-[var(--color-muted)]"
           >
             <Plus className="h-4 w-4" />
             Add task
-          </Link>
+          </button>
           <button
             type="button"
             className="inline-flex h-8 w-8 items-center justify-center rounded-r-[var(--radius-md)] border border-l-0 border-[var(--color-border)] hover:bg-[var(--color-muted)]"
@@ -1265,26 +1244,25 @@ const ProjectIssueListTable = ({
         </div>
       </div>
 
-      <div className="grid h-9 shrink-0 border-b border-[var(--color-border)] text-xs text-[var(--color-muted-foreground)]" style={{ gridTemplateColumns }}>
-        <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Name</div>
-        {options.columns.assignee ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Assignee</div> : null}
-        {options.columns.dueDate ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Due date</div> : null}
-        {options.columns.effort ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Effort</div> : null}
-        {options.columns.priority ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Priority</div> : null}
-        {options.columns.status ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Status</div> : null}
-        <div className="flex items-center justify-center">
-          <Plus className="h-4 w-4" />
-        </div>
-      </div>
-
       <div className="min-h-0 flex-1 overflow-auto">
+        <div className="sticky top-0 z-10 grid h-9 border-b border-[var(--color-border)] bg-[var(--color-background)] text-xs text-[var(--color-muted-foreground)]" style={{ gridTemplateColumns }}>
+          <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Name</div>
+          {options.columns.assignee ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Assignee</div> : null}
+          {options.columns.dueDate ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Due date</div> : null}
+          {options.columns.effort ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Effort</div> : null}
+          {options.columns.priority ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Priority</div> : null}
+          {options.columns.status ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Status</div> : null}
+          <div className="flex items-center justify-center">
+            <Plus className="h-4 w-4" />
+          </div>
+        </div>
         {groups.map((group) => (
           <div key={group.id}>
             <ProjectIssueListGroupHeader group={group} groupBy={groupBy} />
 
             {group.issues.map((issue) => (
               <div key={issue.id} className={cx('grid border-b border-[var(--color-border)] hover:bg-[var(--color-muted)]/60', rowHeightClassName)} style={{ gridTemplateColumns }}>
-                <Link to={`/issues/${issue.id}`} className="flex min-w-0 items-center gap-2 border-r border-[var(--color-border)] px-7">
+                <Link to={getProjectIssuePath(projectId, issue.id)} className="flex min-w-0 items-center gap-2 border-r border-[var(--color-border)] px-7">
                   <Circle className="h-4 w-4 text-[var(--color-muted-foreground)]" />
                   <span className={cx('min-w-0 text-sm text-[var(--color-foreground)]', options.wrapTitles ? 'whitespace-normal py-2' : 'truncate')}>
                     {options.showIssueKeys ? <span className="mr-2 font-mono text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</span> : null}
@@ -1322,9 +1300,10 @@ const ProjectIssueListTable = ({
               </div>
             ))}
 
-            <Link
-              to={`/issues/new?project=${projectId}`}
-              className="grid h-9 border-b border-[var(--color-border)] text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]/50"
+            <button
+              type="button"
+              onClick={onCreateIssue}
+              className="grid h-9 w-full border-b border-[var(--color-border)] text-left text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]/50"
               style={{ gridTemplateColumns }}
             >
               <span className="flex items-center border-r border-[var(--color-border)] pl-14">Add task...</span>
@@ -1334,7 +1313,7 @@ const ProjectIssueListTable = ({
               {options.columns.priority ? <span className="border-r border-[var(--color-border)]" /> : null}
               {options.columns.status ? <span className="border-r border-[var(--color-border)]" /> : null}
               <span />
-            </Link>
+            </button>
           </div>
         ))}
         {groups.length === 0 ? (
@@ -1358,7 +1337,6 @@ export const ProjectDetailPage = () => {
   const needsMembers = routeTabKey === 'list' || routeTabKey === 'workload'
   const needsCycles = routeTabKey === 'dashboard' || routeTabKey === 'cycles' || routeTabKey === 'list'
   const needsModules = routeTabKey === 'dashboard' || routeTabKey === 'list'
-  const needsEstimates = routeTabKey === 'dashboard' || routeTabKey === 'estimates'
   const needsPages = routeTabKey === 'dashboard' || routeTabKey === 'note' || routeTabKey === 'pages'
   const needsMessages = routeTabKey === 'messages'
   const needsAttachments = routeTabKey === 'files'
@@ -1370,6 +1348,7 @@ export const ProjectDetailPage = () => {
   })
   const [renameTab, setRenameTab] = useState<ProjectTab | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [createIssueOpen, setCreateIssueOpen] = useState(false)
   const { data: permissions = [] } = useMyPermissions(organisationId)
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(organisationId, projectId)
   const { data: projectTabs = [], error: projectTabsError } = useProjectTabs(organisationId, projectId)
@@ -1382,7 +1361,6 @@ export const ProjectDetailPage = () => {
   const { data: cycleIssueLinks = [] } = useCycleIssueLinks(organisationId, projectId, routeTabKey === 'cycles' || routeTabKey === 'list')
   const { data: modules = [] } = useModules(organisationId, projectId, needsModules)
   const { data: moduleIssueLinks = [] } = useModuleIssueLinks(organisationId, projectId, routeTabKey === 'list')
-  const { data: estimates = [] } = useEstimates(organisationId, projectId, needsEstimates)
   const { data: pages = [] } = usePages(organisationId, projectId, needsPages)
   const { data: messages = [] } = useProjectMessages(organisationId, projectId, needsMessages)
   const { data: attachments = [] } = useProjectIssueAttachments(organisationId, projectId, needsAttachments)
@@ -1464,11 +1442,6 @@ export const ProjectDetailPage = () => {
     status: project.status,
     identifier: project.identifier,
   } : null, [project])
-
-  useEffect(() => {
-    if (!projectId || (section !== 'issues' && section !== 'modules' && section !== 'drafts')) return
-    navigate(`/projects/${projectId}/list`, { replace: true })
-  }, [navigate, projectId, section])
 
   useEffect(() => {
     if (!organisationId || !profileId || !projectVisit) return
@@ -1665,7 +1638,7 @@ export const ProjectDetailPage = () => {
         status: 'published',
         metadata: { project_note: true },
       })
-      navigate(`/pages/${note.id}`)
+      navigate(getProjectPagePath(projectId, note.id))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create project note')
     }
@@ -1747,7 +1720,7 @@ export const ProjectDetailPage = () => {
               <h2 className="text-sm font-semibold">Recent issues</h2>
               <Link className="text-sm font-medium text-[var(--color-primary)] hover:underline" to={`/projects/${project.id}/list`}>All issues</Link>
             </div>
-            <IssueList issues={recentIssues} emptyTitle="No issues in this project" />
+            <IssueList issues={recentIssues} emptyTitle="No issues in this project" projectId={project.id} />
           </section>
           <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <h2 className="text-sm font-semibold">State breakdown</h2>
@@ -1781,27 +1754,29 @@ export const ProjectDetailPage = () => {
           moduleIssueLinks={moduleIssueLinks}
           listViewConfig={activeListViewConfig}
           onListViewChange={canEditProjectTabs ? handleListViewChange : undefined}
+          onCreateIssue={() => setCreateIssueOpen(true)}
         />
       ) : null}
 
       {activeTab === 'board' ? (
-        <ProjectBoardView projectId={project.id} columns={boardColumns} />
+        <ProjectBoardView projectId={project.id} columns={boardColumns} onCreateIssue={() => setCreateIssueOpen(true)} />
       ) : null}
 
       {activeTab === 'timeline' ? (
-        <ProjectTimelineView projectId={project.id} issues={datedIssues.length > 0 ? datedIssues : issues} states={states} />
+        <ProjectTimelineView projectId={project.id} issues={datedIssues.length > 0 ? datedIssues : issues} states={states} onCreateIssue={() => setCreateIssueOpen(true)} />
       ) : null}
 
       {activeTab === 'dashboard' ? (
         <section className="-mx-2 min-h-0 flex-1 overflow-auto bg-[var(--color-background)]">
           <div className="flex h-14 items-center justify-between border-b border-[var(--color-border)] px-4">
-            <Link
-              to={`/issues/new?project=${project.id}`}
+            <button
+              type="button"
+              onClick={() => setCreateIssueOpen(true)}
               className="inline-flex h-8 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm font-medium hover:bg-[var(--color-muted)]"
             >
               <Plus className="h-4 w-4" />
               Add widget
-            </Link>
+            </button>
             <button type="button" className="text-xs font-medium text-[var(--color-muted-foreground)] underline">Send feedback</button>
           </div>
           <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1894,7 +1869,7 @@ export const ProjectDetailPage = () => {
                 <h2 className="text-sm font-semibold">{projectNote.title}</h2>
                 <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{projectNote.content_text || 'Project note page'}</p>
               </div>
-              <Link className="inline-flex h-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm font-medium hover:bg-[var(--color-muted)]" to={`/pages/${projectNote.id}`}>Open note</Link>
+              <Link className="inline-flex h-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm font-medium hover:bg-[var(--color-muted)]" to={getProjectPagePath(project.id, projectNote.id)}>Open note</Link>
             </div>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1951,33 +1926,38 @@ export const ProjectDetailPage = () => {
           issues={issues}
           cycleIssueLinks={cycleIssueLinks}
           newCycleHref={`/cycles/new?project=${project.id}`}
+          onCreateIssue={() => setCreateIssueOpen(true)}
           className="-mx-2"
         />
       ) : null}
 
-      {activeTab === 'estimates' ? (
-        <ProjectRecordSection title="Project estimates" emptyTitle="No estimates yet." newHref={`/estimates/new?project=${project.id}`} items={estimates} />
-      ) : null}
-
       {activeTab === 'pages' ? (
-        <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="flex h-12 items-center justify-between border-b border-[var(--color-border)] px-4">
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold">Project pages</h2>
-            <Link className="inline-flex h-8 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 text-xs font-medium hover:bg-[var(--color-muted)]" to={`/pages/new?project=${project.id}`}>
+            <Link className="inline-flex h-8 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 text-xs font-medium hover:bg-[var(--color-muted)]" to={getProjectNewPagePath(project.id)}>
               <Plus className="h-3.5 w-3.5" />
-              New
+              New page
             </Link>
           </div>
-          <div className="divide-y divide-[var(--color-border)]">
-            {pages.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-[var(--color-muted-foreground)]">No project pages yet.</div>
-            ) : pages.map((page) => (
-              <Link key={page.id} to={`/pages/${page.id}`} className="block px-4 py-3 hover:bg-[var(--color-muted)]">
-                <div className="truncate text-sm font-medium">{page.title}</div>
-                <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">{page.status}</div>
-              </Link>
-            ))}
-          </div>
+          {pages.length === 0 ? (
+            <EmptyState title="No project pages yet" description="Create a page to document decisions and knowledge." />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {pages.map((page) => (
+                <Link key={page.id} to={getProjectPagePath(project.id, page.id)} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-border-hover)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <Badge variant="outline">{project.identifier}</Badge>
+                    <Badge variant={page.status === 'published' ? 'success' : page.status === 'archived' ? 'warning' : 'neutral'}>{page.status}</Badge>
+                  </div>
+                  <h3 className="mt-4 line-clamp-2 text-base font-semibold">{page.title}</h3>
+                  <p className="mt-3 line-clamp-3 min-h-16 text-sm text-[var(--color-muted-foreground)]">
+                    {page.content_text || page.slug || 'No page content yet.'}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       ) : null}
 
@@ -1987,6 +1967,15 @@ export const ProjectDetailPage = () => {
           organisationId={organisationId ?? ''}
           canEditProject={canEditProject}
           canManageMembers={canManageMembers}
+        />
+      ) : null}
+
+      {organisationId && project ? (
+        <CreateIssueDialog
+          open={createIssueOpen}
+          onClose={() => setCreateIssueOpen(false)}
+          organisationId={organisationId}
+          projectId={project.id}
         />
       ) : null}
     </OpenKbPageShell>

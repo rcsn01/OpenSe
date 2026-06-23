@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Select } from '@repo/ui'
 import { Plus } from 'lucide-react'
 import { OpenKbPageShell } from '../components/OpenKbPageShell'
@@ -7,8 +7,10 @@ import { useOrganisation } from '../contexts/OrganisationContext'
 import { useIssues } from '../hooks/queries/useIssues'
 import { useCycleIssueLinks, useCycles } from '../hooks/queries/usePlanning'
 import { useProjects } from '../hooks/queries/useProjects'
+import { getProjectListPath } from '../lib/projectRoutes'
 
 export const CyclesPage = () => {
+  const navigate = useNavigate()
   const { organisationId } = useOrganisation()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedProjectId = searchParams.get('project')
@@ -58,6 +60,7 @@ export const CyclesPage = () => {
         issues={issues}
         cycleIssueLinks={cycleIssueLinks}
         newCycleHref={selectedProjectId ? `/cycles/new?project=${selectedProjectId}` : '/cycles/new'}
+        onCreateIssue={selectedProjectId ? () => navigate(getProjectListPath(selectedProjectId)) : undefined}
         className="min-h-[34rem] rounded-[var(--radius-md)] border border-[var(--color-border)]"
       />
     </OpenKbPageShell>

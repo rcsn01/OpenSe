@@ -177,7 +177,6 @@ const defaultProjectTabs = (projectId: string, organisationId = ORG_ID, createdB
   { tab_key: 'overview', label: 'Overview', sort_order: 10 },
   { tab_key: 'list', label: 'List', sort_order: 20 },
   { tab_key: 'cycles', label: 'Cycles', sort_order: 40 },
-  { tab_key: 'estimates', label: 'Estimates', sort_order: 60 },
   { tab_key: 'pages', label: 'Pages', sort_order: 70 },
   { tab_key: 'settings', label: 'Settings', sort_order: 80 },
 ].map(({ tab_key, label, sort_order }) => ({

@@ -14,18 +14,12 @@ const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then((module) => 
 const TeamsPage = lazy(() => import('./pages/TeamsPage').then((module) => ({ default: module.TeamsPage })))
 const NewProjectPage = lazy(() => import('./pages/NewProjectPage').then((module) => ({ default: module.NewProjectPage })))
 const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage').then((module) => ({ default: module.ProjectDetailPage })))
-const IssuesPage = lazy(() => import('./pages/IssuesPage').then((module) => ({ default: module.IssuesPage })))
-const NewIssuePage = lazy(() => import('./pages/NewIssuePage').then((module) => ({ default: module.NewIssuePage })))
 const IssueDetailPage = lazy(() => import('./pages/IssueDetailPage').then((module) => ({ default: module.IssueDetailPage })))
 const CyclesPage = lazy(() => import('./pages/CyclesPage').then((module) => ({ default: module.CyclesPage })))
 const NewCyclePage = lazy(() => import('./pages/NewCyclePage').then((module) => ({ default: module.NewCyclePage })))
-const EstimatesPage = lazy(() => import('./pages/EstimatesPage').then((module) => ({ default: module.EstimatesPage })))
-const NewEstimatePage = lazy(() => import('./pages/NewEstimatePage').then((module) => ({ default: module.NewEstimatePage })))
-const PagesPage = lazy(() => import('./pages/PagesPage').then((module) => ({ default: module.PagesPage })))
 const NewPagePage = lazy(() => import('./pages/NewPagePage').then((module) => ({ default: module.NewPagePage })))
 const PageDetailPage = lazy(() => import('./pages/PageDetailPage').then((module) => ({ default: module.PageDetailPage })))
 const StickiesPage = lazy(() => import('./pages/StickiesPage').then((module) => ({ default: module.StickiesPage })))
-const IntakePage = lazy(() => import('./pages/IntakePage').then((module) => ({ default: module.IntakePage })))
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then((module) => ({ default: module.NotificationsPage })))
 const PublicBoardPage = lazy(() => import('./pages/PublicBoardPage').then((module) => ({ default: module.PublicBoardPage })))
@@ -122,6 +116,9 @@ export function App() {
               <Route element={<PermissionRoute permission="projects.view" />}>
                 <Route path="/teams" element={lazyRoute(<TeamsPage />)} />
                 <Route path="/projects" element={lazyRoute(<ProjectsPage />)} />
+                <Route path="/projects/:projectId/issues/:issueId" element={lazyRoute(<IssueDetailPage />)} />
+                <Route path="/projects/:projectId/pages/new" element={lazyRoute(<NewPagePage />)} />
+                <Route path="/projects/:projectId/pages/:pageId" element={lazyRoute(<PageDetailPage />)} />
                 <Route path="/projects/:projectId" element={lazyRoute(<ProjectDetailPage />)} />
                 <Route path="/projects/:projectId/:section" element={lazyRoute(<ProjectDetailPage />)} />
                 <Route path="/projects/:projectId/:section/:tabId" element={lazyRoute(<ProjectDetailPage />)} />
@@ -129,31 +126,14 @@ export function App() {
               <Route element={<PermissionRoute permission="projects.create" />}>
                 <Route path="/projects/new" element={lazyRoute(<NewProjectPage />)} />
               </Route>
-              <Route element={<PermissionRoute permission="issues.view" />}>
-                <Route path="/issues" element={lazyRoute(<IssuesPage />)} />
-                <Route path="/issues/:issueId" element={lazyRoute(<IssueDetailPage />)} />
-              </Route>
-              <Route element={<PermissionRoute permission="issues.create" />}>
-                <Route path="/issues/new" element={lazyRoute(<NewIssuePage />)} />
-              </Route>
               <Route element={<PermissionRoute permission="planning.view" />}>
                 <Route path="/cycles" element={lazyRoute(<CyclesPage />)} />
-                <Route path="/estimates" element={lazyRoute(<EstimatesPage />)} />
               </Route>
               <Route element={<PermissionRoute permission="planning.manage" />}>
                 <Route path="/cycles/new" element={lazyRoute(<NewCyclePage />)} />
-                <Route path="/estimates/new" element={lazyRoute(<NewEstimatePage />)} />
               </Route>
               <Route element={<PermissionRoute permission="pages.view" />}>
-                <Route path="/pages" element={lazyRoute(<PagesPage />)} />
-                <Route path="/pages/:pageId" element={lazyRoute(<PageDetailPage />)} />
                 <Route path="/stickies" element={lazyRoute(<StickiesPage />)} />
-              </Route>
-              <Route element={<PermissionRoute permission="pages.manage" />}>
-                <Route path="/pages/new" element={lazyRoute(<NewPagePage />)} />
-              </Route>
-              <Route element={<PermissionRoute permission="intake.view" />}>
-                <Route path="/intake" element={lazyRoute(<IntakePage />)} />
               </Route>
               <Route element={<PermissionRoute permission="analytics.view" />}>
                 <Route path="/analytics" element={lazyRoute(<AnalyticsPage />)} />

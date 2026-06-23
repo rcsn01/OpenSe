@@ -4,6 +4,7 @@ import { Badge, Button, Input, Select } from '@repo/ui'
 import { Link2, Plus, X } from 'lucide-react'
 import type { Issue, IssueBlocker, IssueExternalLink, IssueLinkType, IssueRelation, IssueRelationType } from '../../types'
 import { formatIssueKey } from '../../lib/issueFormatting'
+import { getProjectIssuePath } from '../../lib/projectRoutes'
 
 const relationTypeOptions: Array<{ value: IssueRelationType; label: string }> = [
   { value: 'related', label: 'Related' },
@@ -91,7 +92,7 @@ export const IssueConnectionsSection = ({
             <p className="text-sm text-[var(--color-muted-foreground)]">No blockers.</p>
           ) : blockers.map((blocker) => (
             <div key={blocker.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-2">
-              <Link to={blocker.blocker_issue ? `/issues/${blocker.blocker_issue.id}` : '#'} className="min-w-0">
+              <Link to={blocker.blocker_issue ? getProjectIssuePath(blocker.blocker_issue.project_id, blocker.blocker_issue.id) : '#'} className="min-w-0">
                 <div className="font-mono text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(blocker.blocker_issue)}</div>
                 <div className="truncate text-sm font-medium">{blocker.blocker_issue?.title ?? 'Unknown issue'}</div>
               </Link>
@@ -125,7 +126,7 @@ export const IssueConnectionsSection = ({
             <p className="text-sm text-[var(--color-muted-foreground)]">No relations.</p>
           ) : relations.map((relation) => (
             <div key={relation.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-2">
-              <Link to={relation.related_issue ? `/issues/${relation.related_issue.id}` : '#'} className="min-w-0">
+              <Link to={relation.related_issue ? getProjectIssuePath(relation.related_issue.project_id, relation.related_issue.id) : '#'} className="min-w-0">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{relation.relation_type.replace('_', ' ')}</Badge>
                   <span className="font-mono text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(relation.related_issue)}</span>

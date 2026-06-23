@@ -5,6 +5,7 @@ import { useAuth } from '@repo/shared/auth/context'
 import { toast } from 'sonner'
 import { OpenKbPageShell } from '../components/OpenKbPageShell'
 import { useOrganisation } from '../contexts/OrganisationContext'
+import { getProjectIssuePath } from '../lib/projectRoutes'
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -155,8 +156,12 @@ export const NotificationsPage = () => {
                 </div>
               )
 
-              return target ? (
-                <Link key={notification.id} to={`/issues/${target}`} className="block px-4 py-3 hover:bg-[var(--color-muted)]">
+              const issueId = target
+              const projectId = notification.project_id ?? notification.payload?.project_id
+              const issueHref = issueId && projectId ? getProjectIssuePath(projectId, issueId) : null
+
+              return issueHref ? (
+                <Link key={notification.id} to={issueHref} className="block px-4 py-3 hover:bg-[var(--color-muted)]">
                   {content}
                 </Link>
               ) : (

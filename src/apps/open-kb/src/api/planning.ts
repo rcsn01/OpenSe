@@ -4,9 +4,7 @@ import type {
   CycleInput,
   CycleIssueLink,
   Estimate,
-  EstimateInput,
   EstimatePoint,
-  EstimateWithPoints,
   ModuleInput,
   ModuleIssueLink,
   ProjectModule,
@@ -37,20 +35,6 @@ const moduleSelect = `
   description_text,
   lead_profile_id,
   status,
-  created_by,
-  updated_by,
-  created_at,
-  updated_at,
-  deleted_at,
-  project:projects(id, name, identifier)
-`
-
-const estimateSelect = `
-  id,
-  organisation_id,
-  project_id,
-  name,
-  description_text,
   created_by,
   updated_by,
   created_at,
@@ -258,78 +242,6 @@ export const fetchEstimatePoints = async ({
       estimate: normalizeSingle(item.estimate),
     }
   })
-}
-
-export const fetchEstimates = async ({
-  organisationId,
-  projectId,
-}: {
-  organisationId: string
-  projectId?: string | null
-}): Promise<EstimateWithPoints[]> => {
-  let query = db
-    .from('estimates')
-    .select(estimateSelect)
-    .eq('organisation_id', organisationId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-
-  if (projectId) {
-    query = query.eq('project_id', projectId)
-  }
-
-  const { data, error } = await query
-  if (error) throw error
-
-  const estimates = (data ?? []) as unknown as Estimate[]
-  if (estimates.length === 0) return []
-
-  const points = await fetchEstimatePoints({ organisationId, projectId })
-  return estimates.map((estimate) => ({
-    ...estimate,
-    points: points.filter((point) => point.estimate_id === estimate.id),
-  }))
-}
-
-export const createEstimate = async (input: EstimateInput): Promise<EstimateWithPoints> => {
-  const { data, error } = await db
-    .from('estimates')
-    .insert({
-      organisation_id: input.organisation_id,
-      project_id: input.project_id,
-      name: input.name.trim(),
-      description_text: input.description_text?.trim() || null,
-    })
-    .select(estimateSelect)
-    .single()
-
-  if (error) throw error
-
-  const estimate = data as unknown as Estimate
-  const pointPayload = input.points
-    .filter((point) => point.name.trim())
-    .map((point, index) => ({
-      organisation_id: input.organisation_id,
-      project_id: input.project_id,
-      estimate_id: estimate.id,
-      name: point.name.trim(),
-      value: point.value,
-      sort_order: (index + 1) * 10,
-    }))
-
-  if (pointPayload.length > 0) {
-    const { error: pointsError } = await db
-      .from('estimate_points')
-      .insert(pointPayload)
-
-    if (pointsError) throw pointsError
-  }
-
-  const points = await fetchEstimatePoints({ organisationId: input.organisation_id, projectId: input.project_id })
-  return {
-    ...estimate,
-    points: points.filter((point) => point.estimate_id === estimate.id),
-  }
 }
 
 export const fetchIssueCycleLinks = async (

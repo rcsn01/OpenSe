@@ -24,8 +24,9 @@ import { toast } from 'sonner'
 import { useOrganisation } from '../contexts/OrganisationContext'
 import { useMyPermissions } from '../hooks/queries/usePermissions'
 import { useProjects } from '../hooks/queries/useProjects'
-import { useAddFavorite, useFavorites, useRemoveFavorite } from '../hooks/queries/usePersonal'
+import { useAddFavorite, useFavorites, useRecentVisits, useRemoveFavorite } from '../hooks/queries/usePersonal'
 import { buildAccountsProfileUrl, buildAccountsSettingsUrl } from '../lib/authRedirect'
+import { getProjectTasksPath, resolveTasksProjectId } from '../lib/projectRoutes'
 import { OrganisationSwitcher } from '../components/OrganisationSwitcher'
 
 const OpenKbBrandIcon = SWITCHABLE_APP_ICONS['open-kb']
@@ -44,12 +45,16 @@ export const AppLayout = () => {
   const { data: permissions = [], isLoading: permissionsLoading } = useMyPermissions(organisationId)
   const { data: projects = [], isLoading: projectsLoading } = useProjects(organisationId)
   const { data: favorites = [] } = useFavorites(organisationId, user?.id ?? null)
+  const { data: recentVisits = [] } = useRecentVisits(organisationId, user?.id ?? null)
   const addFavorite = useAddFavorite()
   const removeFavorite = useRemoveFavorite()
 
   const currentPath = `${location.pathname}${location.search}`
   const userId = user?.id ?? ''
-  const myTasksHref = userId ? `/issues?assignee=${encodeURIComponent(userId)}` : '/issues'
+  const tasksProjectId = resolveTasksProjectId({ projects, recentVisits, favorites })
+  const tasksHref = userId && tasksProjectId
+    ? getProjectTasksPath(tasksProjectId, userId)
+    : '/dashboard'
   const projectIdFromPath = location.pathname.startsWith('/projects/')
     ? location.pathname.split('/')[2]
     : null
@@ -66,11 +71,16 @@ export const AppLayout = () => {
       isActive: isSectionActive('/dashboard'),
     },
     {
-      href: myTasksHref,
-      label: 'My tasks',
+      href: tasksHref,
+      label: 'Tasks',
       icon: <CheckSquare className="h-5 w-5" />,
       permission: 'issues.view',
-      isActive: (pathname) => Boolean(userId && pathname.startsWith('/issues') && pathname.includes(`assignee=${encodeURIComponent(userId)}`)),
+      isActive: () => Boolean(
+        userId
+        && tasksProjectId
+        && currentPath.startsWith(`/projects/${tasksProjectId}/list`)
+        && currentPath.includes(`assignee=${encodeURIComponent(userId)}`),
+      ),
     },
     {
       href: '/notifications',

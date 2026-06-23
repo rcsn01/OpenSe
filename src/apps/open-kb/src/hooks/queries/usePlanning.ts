@@ -3,12 +3,10 @@ import {
   addIssueCycleLink,
   addIssueModuleLink,
   createCycle,
-  createEstimate,
   createModule,
   fetchCycleIssueLinks,
   fetchCycles,
   fetchEstimatePoints,
-  fetchEstimates,
   fetchIssueCycleLinks,
   fetchIssueModuleLinks,
   fetchModuleIssueLinks,
@@ -17,15 +15,12 @@ import {
   removeIssueModuleLink,
 } from '../../api/planning'
 import type { CycleInput, ModuleInput } from '../../types'
-import type { EstimateInput } from '../../types'
 
 export const planningKeys = {
   cycles: (organisationId: string | null, projectId?: string | null) =>
     ['open-kb', 'cycles', organisationId, projectId ?? 'all'] as const,
   modules: (organisationId: string | null, projectId?: string | null) =>
     ['open-kb', 'modules', organisationId, projectId ?? 'all'] as const,
-  estimates: (organisationId: string | null, projectId?: string | null) =>
-    ['open-kb', 'estimates', organisationId, projectId ?? 'all'] as const,
   estimatePoints: (organisationId: string | null, projectId?: string | null) =>
     ['open-kb', 'estimate-points', organisationId, projectId ?? 'all'] as const,
   issueCycles: (organisationId: string | null, issueId: string | null) =>
@@ -49,13 +44,6 @@ export const useModules = (organisationId: string | null, projectId?: string | n
   useQuery({
     queryKey: planningKeys.modules(organisationId, projectId),
     queryFn: () => fetchModules({ organisationId: organisationId ?? '', projectId }),
-    enabled: Boolean(enabled && organisationId),
-  })
-
-export const useEstimates = (organisationId: string | null, projectId?: string | null, enabled = true) =>
-  useQuery({
-    queryKey: planningKeys.estimates(organisationId, projectId),
-    queryFn: () => fetchEstimates({ organisationId: organisationId ?? '', projectId }),
     enabled: Boolean(enabled && organisationId),
   })
 
@@ -117,20 +105,6 @@ export const useCreateModule = () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['open-kb', 'modules', input.organisation_id] }),
         queryClient.invalidateQueries({ queryKey: ['open-kb', 'project-summary', input.organisation_id] }),
-      ])
-    },
-  })
-}
-
-export const useCreateEstimate = () => {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (input: EstimateInput) => createEstimate(input),
-    onSuccess: async (_estimate, input) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['open-kb', 'estimates', input.organisation_id] }),
-        queryClient.invalidateQueries({ queryKey: planningKeys.estimatePoints(input.organisation_id, input.project_id) }),
       ])
     },
   })
