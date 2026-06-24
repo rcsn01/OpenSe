@@ -17,16 +17,18 @@ Options:
 
 For remote Supabase setup, the script uses `SUPABASE_PROJECT_REF` or derives it from `VITE_SUPABASE_URL`/`SUPABASE_URL` when available. It also sets `STOQR_ALERT_DISPATCH_TOKEN` and the legacy `ALERT_EMAIL_DISPATCH_TOKEN` Edge Function secret to the same value so low-stock dispatch survives Edge Function redeploys.
 
-**⚠️ PROPRIETARY SOURCE CODE - VIEW ONLY**
+**PROPRIETARY SOURCE CODE - SOURCE AVAILABLE**
 
-This repository is hosted publicly for **educational and portfolio demonstration purposes only**. This project is **NOT Open Source**.
+This repository is hosted publicly for **educational and portfolio demonstration purposes only**. This project is **source-available, not open source**.
 
-### ⛔ Licensing & Usage Restrictions
+### Licensing & Usage Restrictions
 The source code in this repository is **Proprietary** property of Rcsn01.
 **Copyright (c) 2026 Rcsn01. All rights reserved.**
 
 * **You MAY**: View, read, and inspect the code for educational or review purposes.
-* **You MAY NOT**: Copy, modify, distribute, sublicense, sell, or use this code (in whole or in part) for any commercial or non-commercial purpose.
-* **You MAY NOT**: Use this code to train AI models or create derivative works.
+* **You MAY**: Run an unmodified local copy only for personal, noncommercial education, security review, audit, testing, or evaluation.
+* **You MAY NOT**: Use this code for any commercial, workplace, client, hosted, SaaS, production, or organizational purpose.
+* **You MAY NOT**: Copy, modify, fork, patch, distribute, sublicense, sell, package, mirror, host, or publish this code, including as binaries, packages, Docker/OCI images, or hosted demos.
+* **You MAY NOT**: Use this code to train, fine-tune, evaluate, benchmark, validate, improve, or create AI/ML models, datasets, embeddings, retrieval systems, or derivative products.
 
 For full legal terms, please refer to the [LICENSE](./LICENSE) file in this repository.
