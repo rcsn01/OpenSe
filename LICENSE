@@ -1,23 +1,177 @@
-PROPRIETARY LICENSE / SOURCE AVAILABLE AGREEMENT
+OPEN-SE SOURCE-AVAILABLE LICENSE
 
-Copyright (c) 2026 Rcsn01. All Rights Reserved.
+Copyright (c) 2026 Rcsn01. All rights reserved.
 
-1. OWNERSHIP
-This software and associated documentation files (the "Software") are proprietary and confidential. The Software is the sole intellectual property of Rcsn01.
+This software is source-available, not open source. Access to the source
+code does not grant permission to use, copy, modify, distribute, sell,
+sublicense, host, or exploit the software except as expressly allowed below.
 
-2. LICENSE GRANT (VIEWING ONLY)
-Permission is explicitly granted to view, read, and inspect the source code of the Software for educational, auditing, or evaluation purposes only.
+1. Definitions
 
-3. RESTRICTIONS
-You may NOT:
-   (a) Modify, copy, distribute, sublicense, or sell copies of the Software.
-   (b) Use the Software for any commercial purpose.
-   (c) Use the Software to create derivative works or competitive products.
-   (d) Reverse engineer, decompile, or disassemble the Software.
-   (e) Remove or alter any copyright, trademark, or proprietary notices.
+"Licensor" means Rcsn01.
 
-4. NO WARRANTY
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"Software" means this repository, including all source code, object code,
+build outputs, documentation, configuration, database schema, migrations,
+scripts, images, assets, and other materials provided by the Licensor,
+whether in whole or in part.
 
-5. VIOLATION
-Any unauthorized use of this Software is strictly prohibited and constitutes a violation of copyright law.
+"You" means the individual or legal entity accessing or using the Software.
+
+"Commercial Use" means any use, direct or indirect, that is connected to a
+business, trade, profession, employer, client, paid product, paid service,
+revenue-generating activity, commercial research, commercial evaluation, or
+other commercial advantage. Commercial Use includes, without limitation:
+
+- selling, licensing, renting, leasing, or otherwise monetizing the Software;
+- using the Software at or for a company, employer, client, contractor,
+  consultancy, agency, partnership, sole proprietorship, startup, nonprofit
+  operating commercially, or other organization;
+- using the Software internally for business operations, business analysis,
+  production workloads, employee workflows, client work, or professional
+  services;
+- incorporating the Software into, bundling it with, or depending on it for
+  any paid, sponsored, ad-supported, subscription, freemium, or otherwise
+  monetized product or service;
+- providing access to the Software as software-as-a-service, a hosted or
+  managed service, an API, a cloud service, a demo service, or any other
+  network-accessible service;
+- providing hosting, support, maintenance, consulting, integration,
+  customization, training, or implementation services related to the Software;
+- using the Software to develop, operate, benchmark, market, or improve a
+  competing product or service.
+
+"Modify" means to edit, adapt, translate, transform, patch, configure as a
+distributed product, merge with other code, create a fork, prepare a pull
+request, create a derivative work, or create any work based on the Software
+or any part of it.
+
+"Distribute" means to share, publish, transmit, upload, mirror, provide,
+transfer, make available, or give access to the Software or any copy of it,
+in source form, object form, container form, package form, hosted form, or
+any other form. Distribution includes, without limitation, publishing forks,
+mirrors, archives, binaries, packages, Docker or OCI images, VM images,
+installer bundles, hosted demos, and source snapshots.
+
+2. Limited License Grant
+
+Subject to your full compliance with this License, the Licensor grants you a
+limited, worldwide, royalty-free, non-exclusive, non-transferable,
+non-sublicensable license to:
+
+- view, read, inspect, and study the Software for personal education,
+  security review, audit, or evaluation; and
+- run an unmodified local copy of the Software only for personal,
+  noncommercial education, security review, audit, testing, or evaluation.
+
+This license does not allow production use, public use, hosted use,
+organizational use, workplace use, client use, or any Commercial Use.
+
+3. Restrictions
+
+You may not, and may not allow anyone else to:
+
+- use the Software for any Commercial Use;
+- Modify the Software;
+- copy the Software except for temporary technical copies strictly necessary
+  to exercise the limited rights granted in Section 2;
+- Distribute the Software;
+- sublicense, sell, rent, lease, lend, assign, transfer, or otherwise grant
+  rights in the Software to anyone else;
+- provide access to the Software over a network, as a hosted service, managed
+  service, SaaS offering, API, public demo, shared environment, or embedded
+  service;
+- package or publish the Software as a binary, container image, package,
+  installer, VM image, appliance, template, or similar artifact;
+- remove, alter, hide, or obscure any copyright, trademark, license, or other
+  proprietary notices;
+- use the Licensor's name, trademarks, logos, or branding except to identify
+  the Software truthfully and without implying endorsement;
+- reverse engineer, decompile, or disassemble any object code included with
+  the Software, except to the extent applicable law expressly prohibits this
+  restriction;
+- use the Software or any part of it to train, fine-tune, prompt-tune,
+  evaluate, benchmark, validate, improve, or create any machine learning,
+  artificial intelligence, large language model, code generation model,
+  embedding model, dataset, or model-derived product;
+- include the Software or any part of it in any dataset, corpus, index,
+  embedding database, retrieval system, code search product, or training
+  collection used for machine learning or artificial intelligence;
+- use output, structure, source code, architecture, designs, or other
+  non-public implementation details of the Software to create a derivative,
+  substitute, or competing product or service.
+
+4. Ownership and Reserved Rights
+
+The Licensor retains all right, title, and interest in and to the Software,
+including all copyrights, patents, trade secrets, trademarks, database
+rights, moral rights, and other intellectual property rights.
+
+No rights are granted except the limited rights expressly stated in this
+License. All other rights are reserved by the Licensor. This License does
+not transfer ownership of the Software or any intellectual property rights to
+you.
+
+5. Third-Party Materials
+
+The Software may include or depend on third-party materials that are subject
+to their own license terms. Those third-party terms apply only to the
+third-party materials and do not grant you additional rights to the
+Licensor's Software.
+
+6. Contributions
+
+This License does not grant you permission to Modify the Software or submit
+contributions based on unauthorized modifications.
+
+Unless the Licensor agrees otherwise in a separate written agreement, any
+idea, issue, suggestion, bug report, patch, pull request, code, document,
+design, or other contribution you submit may be used, copied, modified,
+distributed, sublicensed, and commercialized by the Licensor without
+restriction, payment, attribution obligation, or further permission from you.
+
+You represent that you have the right to submit any contribution you provide.
+
+7. Termination
+
+This License automatically terminates immediately if you violate any term of
+this License or do anything with the Software that is not expressly allowed.
+
+Upon termination, you must immediately stop using the Software and delete or
+destroy all copies of the Software in your possession or control, including
+source copies, object copies, build outputs, packages, containers, mirrors,
+archives, and backups, except to the extent retention is required by law.
+
+Termination does not limit any remedies available to the Licensor for your
+violation, including injunctive relief, damages, or recovery of fees where
+available under applicable law.
+
+8. Separate Commercial Licenses
+
+Commercial Use, modification, distribution, hosting, sublicensing, or any
+other use not expressly allowed by this License requires a separate written
+license from the Licensor.
+
+9. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NONINFRINGEMENT,
+SECURITY, ACCURACY, AVAILABILITY, OR ERROR-FREE OPERATION.
+
+10. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR WILL NOT BE LIABLE FOR
+ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE
+DAMAGES, OR FOR ANY LOSS OF PROFITS, REVENUE, DATA, GOODWILL, BUSINESS, OR
+USE, ARISING OUT OF OR RELATED TO THE SOFTWARE OR THIS LICENSE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+11. No Waiver
+
+Failure by the Licensor to enforce any term of this License is not a waiver
+of the right to enforce that term or any other term later.
+
+12. Severability
+
+If any provision of this License is held unenforceable, the remaining
+provisions remain in effect to the maximum extent permitted by law.
