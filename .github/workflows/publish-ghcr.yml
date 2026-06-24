@@ -23,6 +23,7 @@ jobs:
         app:
           - accounts
           - etl
+          - kb
           - opense
           - stoqr
 

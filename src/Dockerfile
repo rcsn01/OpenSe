@@ -4,7 +4,7 @@
 # Builds any public webapp in apps/* into a lightweight nginx image.
 #
 # Build args:
-#   APP_NAME  – folder name under apps/ (e.g. accounts, etl, stoqr)
+#   APP_NAME  – folder name under apps/ (e.g. accounts, etl, kb, stoqr)
 #
 # Runtime env config:
 #   mount or replace /usr/share/nginx/html/config.js to set window.__OPENSE_CONFIG__.
@@ -24,6 +24,7 @@ WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json ./
 COPY apps/accounts/package.json    apps/accounts/package.json
 COPY apps/etl/package.json         apps/etl/package.json
+COPY apps/kb/package.json          apps/kb/package.json
 COPY apps/opense/package.json      apps/opense/package.json
 COPY apps/stoqr/package.json       apps/stoqr/package.json
 COPY apps/ui-design/package.json   apps/ui-design/package.json

@@ -48,12 +48,16 @@ export const CreateIssueDialog = ({
   useEffect(() => {
     if (!open) return
 
-    setTitle('')
-    setPriority('none')
-    setStateId('')
-    setDescription(null)
-    setDraftId(null)
-    setEditorKey((current) => current + 1)
+    const resetId = window.setTimeout(() => {
+      setTitle('')
+      setPriority('none')
+      setStateId('')
+      setDescription(null)
+      setDraftId(null)
+      setEditorKey((current) => current + 1)
+    }, 0)
+
+    return () => window.clearTimeout(resetId)
   }, [open, projectId])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

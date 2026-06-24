@@ -93,6 +93,7 @@ const PageDetailContent = ({
     page.title,
     profileId,
     recordRecentVisitOnce,
+    routeProjectId,
   ])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

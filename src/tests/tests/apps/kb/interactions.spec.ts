@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { NEW_ISSUE_ID, NEW_PROJECT_ID, PROJECT_ID, expect, test } from '../../fixtures/openKb';
+import { ISSUE_ID, NEW_ISSUE_ID, NEW_PROJECT_ID, PROJECT_ID, expect, test } from '../../fixtures/openKb';
 
 const fillLastEditor = async (page: Page, text: string) => {
   const editor = page.locator('.open-kb-editor [contenteditable="true"]').last();
@@ -23,7 +23,7 @@ test.describe('Open-KB Interactions', () => {
   test('creates a task from the project list and opens the task detail page', async ({ openKbPage }) => {
     await openKbPage.goto(`/projects/${PROJECT_ID}/list`, { waitUntil: 'domcontentloaded' });
 
-    await openKbPage.getByRole('button', { name: 'Add task' }).click();
+    await openKbPage.getByRole('button', { name: 'Add task', exact: true }).click();
     await openKbPage.getByLabel('Title').fill('Write importer acceptance tests');
     await openKbPage.getByLabel('Priority').selectOption('high');
     await fillLastEditor(openKbPage, 'Verify importer state, redirects, and permissions.');
@@ -59,10 +59,28 @@ test.describe('Open-KB Interactions', () => {
     await expect(openKbPage.getByText('This comment was created by the interaction coverage.')).toBeVisible();
   });
 
+  test('opens a task preview pane from the project list and expands it', async ({ openKbPage }) => {
+    await openKbPage.goto(`/projects/${PROJECT_ID}/list`, { waitUntil: 'domcontentloaded' });
+
+    await openKbPage.getByRole('button', { name: /Mock Open-KB issue/ }).click();
+    await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/list/[^/]+/issues/${ISSUE_ID}(?:[?#].*)?$`));
+    await expect(openKbPage.locator('.bg-blue-50').filter({ hasText: 'Mock Open-KB issue' })).toBeVisible();
+    await expect(openKbPage.getByRole('button', { name: 'Close issue detail' })).toBeVisible();
+    await expect(openKbPage.getByLabel('Title', { exact: true })).toHaveValue('Mock Open-KB issue');
+
+    await openKbPage.getByRole('button', { name: 'Close issue detail' }).click();
+    await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/list/[^/?#]+(?:[?#].*)?$`));
+
+    await openKbPage.getByRole('button', { name: /Mock Open-KB issue/ }).click();
+    await openKbPage.getByRole('button', { name: 'Expand issue' }).click();
+    await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/issues/${ISSUE_ID}(?:[?#].*)?$`));
+    await expect(openKbPage.getByLabel('Title', { exact: true })).toHaveValue('Mock Open-KB issue');
+  });
+
   test('adds, removes, and protects configurable project tabs', async ({ openKbPage }) => {
     await openKbPage.goto(`/projects/${PROJECT_ID}/list`, { waitUntil: 'domcontentloaded' });
 
-    await openKbPage.getByRole('button', { name: /^List$/ }).click({ button: 'right' });
+    await openKbPage.getByRole('tab', { name: /^List/ }).click({ button: 'right' });
     await expect(openKbPage.getByRole('button', { name: 'Rename' })).toBeVisible();
     await expect(openKbPage.getByRole('button', { name: 'Make a copy' })).toBeVisible();
     await expect(openKbPage.getByRole('button', { name: 'Remove tab' })).toHaveCount(0);
@@ -73,12 +91,12 @@ test.describe('Open-KB Interactions', () => {
     );
     await openKbPage.getByRole('button', { name: 'Board', exact: true }).click();
     await expect((await addResponse).ok()).toBeTruthy();
-    await expect(openKbPage.getByRole('button', { name: /^Board$/ })).toBeVisible();
+    await expect(openKbPage.getByRole('tab', { name: /^Board$/ })).toBeVisible();
 
-    await openKbPage.getByRole('button', { name: /^Board$/ }).click();
+    await openKbPage.getByRole('tab', { name: /^Board$/ }).click();
     await expect(openKbPage).toHaveURL(new RegExp(`/projects/${PROJECT_ID}/board/[^/?#]+(?:[?#].*)?$`));
 
-    await openKbPage.getByRole('button', { name: /^Board$/ }).click({ button: 'right' });
+    await openKbPage.getByRole('tab', { name: /^Board$/ }).click({ button: 'right' });
     await expect(openKbPage.getByRole('button', { name: 'Rename' })).toBeVisible();
     await expect(openKbPage.getByRole('button', { name: 'Make a copy' })).toBeVisible();
     const removeResponse = openKbPage.waitForResponse((response) =>

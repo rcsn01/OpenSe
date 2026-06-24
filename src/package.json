@@ -5,7 +5,7 @@
   "workspaces": [
     "apps/accounts",
     "apps/etl",
-    "apps/open-kb",
+    "apps/kb",
     "apps/opense-desktop",
     "apps/opense-mobile",
     "apps/opense",
@@ -15,11 +15,12 @@
   ],
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev --filter=@repo/accounts --filter=@repo/etl --filter=@repo/open-kb --filter=@repo/opense --filter=@repo/stoqr --filter=@repo/ui-design",
+    "dev": "turbo run dev --filter=@repo/accounts --filter=@repo/etl --filter=@repo/kb --filter=@repo/opense --filter=@repo/stoqr --filter=@repo/ui-design",
     "dev:accounts": "pnpm --dir apps/accounts dev",
     "dev:desktop": "pnpm --dir apps/opense-desktop dev",
     "dev:etl": "pnpm --dir apps/etl dev",
-    "dev:open-kb": "pnpm --dir apps/open-kb dev",
+    "dev:kb": "pnpm --dir apps/kb dev",
+    "dev:open-kb": "pnpm dev:kb",
     "dev:opense": "pnpm --dir apps/opense dev",
     "dev:stoqr": "pnpm --dir apps/stoqr dev",
     "dev:ui-design": "pnpm --dir apps/ui-design dev",
