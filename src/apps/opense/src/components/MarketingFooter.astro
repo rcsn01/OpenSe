@@ -1,4 +1,6 @@
 ---
+const githubRepoUrl = 'https://github.com/rcsn01/OpenSe'
+
 const columns = [
   {
     title: 'Products',
@@ -9,11 +11,15 @@ const columns = [
   },
   {
     title: 'Resources',
-    items: [{ label: 'Documentation' }, { label: 'GitHub Repository' }, { label: 'API Reference' }],
+    items: [{ label: 'GitHub Repository', href: githubRepoUrl }],
   },
   {
     title: 'Legal',
-    items: [{ label: 'Privacy Policy' }, { label: 'Terms of Service' }, { label: 'License' }],
+    items: [
+      { label: 'Privacy Policy', href: `${githubRepoUrl}/blob/main/PRIVACYPOLICY.md` },
+      { label: 'Terms of Service', href: `${githubRepoUrl}/blob/main/TERMSOFSERVICE.md` },
+      { label: 'License', href: `${githubRepoUrl}/blob/main/LICENSE` },
+    ],
   },
 ]
 ---
@@ -28,7 +34,7 @@ const columns = [
         <span>OpenSe</span>
       </div>
       <p class="mt-4 max-w-xs text-sm leading-6 text-[var(--color-body)]">
-        The open source SaaS stack for modern organizations. Built by rcsn01.
+        The source-available SaaS stack for modern organizations. Built by rcsn01.
       </p>
     </div>
 
@@ -39,7 +45,14 @@ const columns = [
           {column.items.map((item) => (
             <li>
               {item.href ? (
-                <a href={item.href} class="transition-colors duration-200 hover:text-[var(--color-heading)]">{item.label}</a>
+                <a
+                  href={item.href}
+                  class="transition-colors duration-200 hover:text-[var(--color-heading)]"
+                  target={item.href.startsWith('http') ? '_blank' : undefined}
+                  rel={item.href.startsWith('http') ? 'noreferrer' : undefined}
+                >
+                  {item.label}
+                </a>
               ) : (
                 <span>{item.label}</span>
               )}
