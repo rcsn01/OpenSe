@@ -24,6 +24,8 @@ const authenticatedRoutes = [
   `/projects/${PROJECT_ID}/overview`,
   `/projects/${PROJECT_ID}/list`,
   `/projects/${PROJECT_ID}/list/11110000-0000-4000-8000-0000e2e10020`,
+  `/projects/${PROJECT_ID}/list/issues/${ISSUE_ID}`,
+  `/projects/${PROJECT_ID}/list/11110000-0000-4000-8000-0000e2e10020/issues/${ISSUE_ID}`,
   `/projects/${PROJECT_ID}/board`,
   `/projects/${PROJECT_ID}/timeline`,
   `/projects/${PROJECT_ID}/dashboard`,

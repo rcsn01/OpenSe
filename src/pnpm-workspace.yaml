@@ -1,7 +1,7 @@
 packages:
   - 'apps/accounts'
   - 'apps/etl'
-  - 'apps/open-kb'
+  - 'apps/kb'
   - 'apps/opense-desktop'
   - 'apps/opense-mobile'
   - 'apps/opense'

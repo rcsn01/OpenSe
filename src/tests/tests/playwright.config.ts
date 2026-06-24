@@ -44,7 +44,7 @@ const webServers = [
     gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
   },
   {
-    command: 'pnpm dev:open-kb',
+    command: 'pnpm dev:kb',
     url: process.env.BASE_URL_OPEN_KB || 'http://localhost:5995',
     reuseExistingServer,
     timeout: 120000,
@@ -107,8 +107,8 @@ export default defineConfig({
       },
     },
     {
-      name: 'open-kb-chromium',
-      testMatch: 'apps/open-kb/**/*.spec.ts',
+      name: 'kb-chromium',
+      testMatch: 'apps/kb/**/*.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
         baseURL: process.env.BASE_URL_OPEN_KB || 'http://localhost:5995',

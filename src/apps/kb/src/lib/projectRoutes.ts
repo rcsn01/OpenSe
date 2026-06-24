@@ -3,6 +3,11 @@ import type { OpenKbPersonalItem } from '../types'
 export const getProjectIssuePath = (projectId: string, issueId: string) =>
   `/projects/${projectId}/issues/${issueId}`
 
+export const getProjectListIssuePath = (projectId: string, issueId: string, tabId?: string | null) =>
+  tabId
+    ? `/projects/${projectId}/list/${tabId}/issues/${issueId}`
+    : `/projects/${projectId}/list/issues/${issueId}`
+
 export const getProjectPagePath = (projectId: string, pageId: string) =>
   `/projects/${projectId}/pages/${pageId}`
 

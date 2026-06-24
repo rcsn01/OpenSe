@@ -185,7 +185,7 @@ read_runtime_config_value() {
   local file line value
 
   for file in \
-    "$ROOT_DIR/src/apps/open-kb/public/config.js" \
+    "$ROOT_DIR/src/apps/kb/public/config.js" \
     "$ROOT_DIR/src/apps/accounts/public/config.js" \
     "$ROOT_DIR/src/apps/opense/public/config.js"; do
     if [[ -f "$file" ]]; then
@@ -405,7 +405,7 @@ setup_runtime_config() {
 
   info "Writing runtime config.js files for frontend containers..."
 
-  for app in accounts etl open-kb opense stoqr ui-design; do
+  for app in accounts etl kb opense stoqr ui-design; do
     config_dir="$ROOT_DIR/src/apps/${app}/public"
     config_file="$config_dir/config.js"
 

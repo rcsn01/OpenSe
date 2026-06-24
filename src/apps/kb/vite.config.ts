@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   server: {
     port: Number(process.env.OPEN_KB_DEV_PORT ?? 5995),
-    strictPort: false,
+    strictPort: true,
     host: process.env.OPEN_KB_DEV_HOST ?? true,
     allowedHosts: true,
   },

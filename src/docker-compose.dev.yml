@@ -55,6 +55,19 @@ services:
     ports:
       - "5992:5992"
 
+  kb:
+    <<: *base
+    depends_on:
+      install:
+        condition: service_completed_successfully
+    command:
+      - |
+        corepack enable &&
+        corepack prepare pnpm@9.15.0 --activate &&
+        pnpm --filter @repo/kb dev
+    ports:
+      - "5995:5995"
+
   opense:
     <<: *base
     depends_on:

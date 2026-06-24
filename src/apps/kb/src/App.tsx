@@ -117,6 +117,8 @@ export function App() {
                 <Route path="/teams" element={lazyRoute(<TeamsPage />)} />
                 <Route path="/projects" element={lazyRoute(<ProjectsPage />)} />
                 <Route path="/projects/:projectId/issues/:issueId" element={lazyRoute(<IssueDetailPage />)} />
+                <Route path="/projects/:projectId/:section/issues/:issueId" element={lazyRoute(<ProjectDetailPage />)} />
+                <Route path="/projects/:projectId/:section/:tabId/issues/:issueId" element={lazyRoute(<ProjectDetailPage />)} />
                 <Route path="/projects/:projectId/pages/new" element={lazyRoute(<NewPagePage />)} />
                 <Route path="/projects/:projectId/pages/:pageId" element={lazyRoute(<PageDetailPage />)} />
                 <Route path="/projects/:projectId" element={lazyRoute(<ProjectDetailPage />)} />

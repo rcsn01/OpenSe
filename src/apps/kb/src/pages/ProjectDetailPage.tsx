@@ -15,8 +15,10 @@ import {
   IssueCalendar,
   IssueGantt,
 } from '../components/issues/IssueViews'
+import { IssueDetailContent } from './IssueDetailPage'
 import { buildBoardColumns } from '../lib/issueViews'
 import {
+  useIssue,
   useIssues,
   useIssueLabels,
   useProjectIssueAssignees,
@@ -54,6 +56,7 @@ import {
 } from '../lib/projectTabs'
 import {
   getProjectIssuePath,
+  getProjectListIssuePath,
   getProjectNewPagePath,
   getProjectPagePath,
 } from '../lib/projectRoutes'
@@ -787,7 +790,6 @@ const ProjectIssueListGroupHeader = ({
 
 const ProjectIssueListTable = ({
   tabId,
-  projectId,
   issues,
   states,
   members,
@@ -798,10 +800,11 @@ const ProjectIssueListTable = ({
   moduleIssueLinks,
   listViewConfig,
   onListViewChange,
+  selectedIssueId,
+  onOpenIssue,
   onCreateIssue,
 }: {
   tabId: string | null
-  projectId: string
   issues: Issue[]
   states: IssueState[]
   members: OrganisationMemberProfile[]
@@ -812,6 +815,8 @@ const ProjectIssueListTable = ({
   moduleIssueLinks: ModuleIssueLink[]
   listViewConfig: ProjectIssueListViewConfig
   onListViewChange?: (config: ProjectIssueListViewConfig) => void
+  selectedIssueId?: string | null
+  onOpenIssue: (issue: Issue) => void
   onCreateIssue: () => void
 }) => {
   const [filters, setFilters] = useState<ProjectIssueListFilters>(listViewConfig.filters)
@@ -1079,7 +1084,7 @@ const ProjectIssueListTable = ({
   }
 
   return (
-    <section className="-mx-2 flex min-h-0 flex-1 flex-col bg-[var(--color-background)] text-sm">
+    <section className="flex min-h-0 flex-1 flex-col bg-[var(--color-background)] text-sm">
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4">
         <div className="flex items-center gap-0">
           <button
@@ -1261,14 +1266,14 @@ const ProjectIssueListTable = ({
             <ProjectIssueListGroupHeader group={group} groupBy={groupBy} />
 
             {group.issues.map((issue) => (
-              <div key={issue.id} className={cx('grid border-b border-[var(--color-border)] hover:bg-[var(--color-muted)]/60', rowHeightClassName)} style={{ gridTemplateColumns }}>
-                <Link to={getProjectIssuePath(projectId, issue.id)} className="flex min-w-0 items-center gap-2 border-r border-[var(--color-border)] px-7">
+              <div key={issue.id} className={cx('grid border-b border-[var(--color-border)] hover:bg-[var(--color-muted)]/60', selectedIssueId === issue.id ? 'bg-blue-50' : '', rowHeightClassName)} style={{ gridTemplateColumns }}>
+                <button type="button" onClick={() => onOpenIssue(issue)} className="flex min-w-0 items-center gap-2 border-r border-[var(--color-border)] px-7 text-left">
                   <Circle className="h-4 w-4 text-[var(--color-muted-foreground)]" />
                   <span className={cx('min-w-0 text-sm text-[var(--color-foreground)]', options.wrapTitles ? 'whitespace-normal py-2' : 'truncate')}>
                     {options.showIssueKeys ? <span className="mr-2 font-mono text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</span> : null}
                     {issue.title}
                   </span>
-                </Link>
+                </button>
                 {options.columns.assignee ? (
                   <div className="flex min-w-0 items-center border-r border-[var(--color-border)] px-2.5">
                     <AssigneeCell assignees={assigneesByIssueId.get(issue.id) ?? []} />
@@ -1324,11 +1329,58 @@ const ProjectIssueListTable = ({
   )
 }
 
+const ProjectIssuePreviewPane = ({
+  organisationId,
+  projectId,
+  issueId,
+  listHref,
+  expandedHref,
+  onClose,
+}: {
+  organisationId: string
+  projectId: string
+  issueId: string
+  listHref: string
+  expandedHref: string
+  onClose: () => void
+}) => {
+  const navigate = useNavigate()
+  const { data: issue, isLoading } = useIssue(organisationId, issueId)
+
+  if (isLoading) {
+    return (
+      <aside className="flex h-full w-full min-w-0 items-center justify-center border-l border-[var(--color-border)] bg-[var(--color-background)] text-sm text-[var(--color-muted-foreground)]">
+        Loading task...
+      </aside>
+    )
+  }
+
+  if (!issue || issue.project_id !== projectId) {
+    return (
+      <aside className="flex h-full w-full min-w-0 items-center justify-center border-l border-[var(--color-border)] bg-[var(--color-background)] p-6">
+        <EmptyState title="Task not found" description="The task was deleted or is outside this project." />
+      </aside>
+    )
+  }
+
+  return (
+    <IssueDetailContent
+      key={issue.id}
+      issue={issue}
+      organisationId={organisationId}
+      mode="pane"
+      backHref={listHref}
+      onClose={onClose}
+      onExpand={() => navigate(expandedHref)}
+    />
+  )
+}
+
 export const ProjectDetailPage = () => {
   const { user } = useAuth()
   const profileId = user?.id ?? null
   const navigate = useNavigate()
-  const { projectId = null, section, tabId = null } = useParams()
+  const { projectId = null, section, tabId = null, issueId = null } = useParams()
   const { organisationId } = useOrganisation()
   const routeTabKey = getProjectTabKeyFromSection(section)
   const needsIssues = ['overview', 'list', 'board', 'timeline', 'dashboard', 'calendar', 'gantt', 'workload', 'cycles'].includes(routeTabKey)
@@ -1386,6 +1438,7 @@ export const ProjectDetailPage = () => {
   }, [routeTabKey, tabId, visibleTabs])
   const activeTab = (activeTabInstance?.tab_key as ProjectTabKey | undefined) ?? routeTabKey
   const activeTabId = activeTabInstance?.id ?? null
+  const selectedListIssueId = activeTab === 'list' ? issueId : null
   const activeListViewConfig = useMemo(
     () => readListViewConfig(activeTabInstance?.metadata),
     [activeTabInstance?.metadata],
@@ -1462,6 +1515,11 @@ export const ProjectDetailPage = () => {
   const handleTabChange = (tab: ProjectTab) => {
     if (!projectId) return
     navigate(getProjectTabInstancePath(projectId, tab.tab_key as ProjectTabKey, tab.id))
+  }
+
+  const handleOpenListIssue = (issue: Issue) => {
+    if (!projectId) return
+    navigate(getProjectListIssuePath(projectId, issue.id, activeTabId))
   }
 
   const handleAddTab = async (tabKey: ProjectTabKey) => {
@@ -1740,22 +1798,39 @@ export const ProjectDetailPage = () => {
       ) : null}
 
       {activeTab === 'list' ? (
-        <ProjectIssueListTable
-          key={activeTabId ?? 'list'}
-          tabId={activeTabId}
-          projectId={project.id}
-          issues={issues}
-          states={states}
-          members={members}
-          assignees={projectIssueAssignees}
-          cycles={cycles}
-          cycleIssueLinks={cycleIssueLinks}
-          modules={modules}
-          moduleIssueLinks={moduleIssueLinks}
-          listViewConfig={activeListViewConfig}
-          onListViewChange={canEditProjectTabs ? handleListViewChange : undefined}
-          onCreateIssue={() => setCreateIssueOpen(true)}
-        />
+        <div className="-mx-2 flex min-h-0 flex-1 overflow-hidden bg-[var(--color-background)]">
+          <div className={cx('flex min-h-0 min-w-0 flex-col transition-[width] duration-150', selectedListIssueId ? 'w-[48%]' : 'w-full')}>
+            <ProjectIssueListTable
+              key={activeTabId ?? 'list'}
+              tabId={activeTabId}
+              issues={issues}
+              states={states}
+              members={members}
+              assignees={projectIssueAssignees}
+              cycles={cycles}
+              cycleIssueLinks={cycleIssueLinks}
+              modules={modules}
+              moduleIssueLinks={moduleIssueLinks}
+              listViewConfig={activeListViewConfig}
+              selectedIssueId={selectedListIssueId}
+              onOpenIssue={handleOpenListIssue}
+              onListViewChange={canEditProjectTabs ? handleListViewChange : undefined}
+              onCreateIssue={() => setCreateIssueOpen(true)}
+            />
+          </div>
+          {selectedListIssueId && organisationId ? (
+            <div className="min-h-0 min-w-0 flex-1">
+              <ProjectIssuePreviewPane
+                organisationId={organisationId}
+                projectId={project.id}
+                issueId={selectedListIssueId}
+                listHref={activeTabId && tabId ? getProjectTabInstancePath(project.id, 'list', activeTabId) : getProjectTabPath(project.id, 'list')}
+                expandedHref={getProjectIssuePath(project.id, selectedListIssueId)}
+                onClose={() => navigate(activeTabId && tabId ? getProjectTabInstancePath(project.id, 'list', activeTabId) : getProjectTabPath(project.id, 'list'))}
+              />
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {activeTab === 'board' ? (
