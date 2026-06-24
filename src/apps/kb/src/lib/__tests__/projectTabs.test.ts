@@ -1,10 +1,34 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('../../hooks/queries/useProjects', () => ({
+  useAddProjectTab: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useRemoveProjectTab: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useUpdateProjectTab: () => ({ isPending: false, mutateAsync: vi.fn() }),
+}))
+
 import {
   defaultProjectTabKeys,
   getProjectTabKeyFromSection,
   projectTabDefinitions,
   requiredProjectTabKey,
 } from '../projectTabs'
+import { getCopiedProjectTabLabel } from '../../components/projects/useProjectTabActions'
+import type { ProjectTab } from '../../types'
+
+const tab = (id: string, label: string): ProjectTab => ({
+  id,
+  organisation_id: 'org',
+  project_id: 'project',
+  tab_key: 'list',
+  label,
+  sort_order: 10,
+  metadata: {},
+  created_by: null,
+  updated_by: null,
+  created_at: '2026-06-01T00:00:00.000Z',
+  updated_at: null,
+  deleted_at: null,
+})
 
 describe('project tab registry', () => {
   it('keeps List required', () => {
@@ -33,5 +57,15 @@ describe('project tab registry', () => {
       'pages',
       'settings',
     ]))
+  })
+
+  it('generates copy labels without colliding with existing tabs', () => {
+    expect(getCopiedProjectTabLabel('List', [tab('1', 'List')])).toBe('List copy')
+    expect(getCopiedProjectTabLabel('List', [
+      tab('1', 'List'),
+      tab('2', 'List copy'),
+      tab('3', 'list copy 2'),
+    ])).toBe('List copy 3')
+    expect(getCopiedProjectTabLabel('   ', [])).toBe('Tab copy')
   })
 })
