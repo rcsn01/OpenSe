@@ -3,16 +3,16 @@ import { Badge, Button, EmptyState } from '@repo/ui'
 import { Bell, CheckCheck } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
 import { toast } from 'sonner'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { getProjectIssuePath } from '../lib/projectRoutes'
+import { OpenKbPageShell } from '../../components/OpenKbPageShell'
+import { useOrganisation } from '../../contexts/OrganisationContext'
+import { getProjectIssuePath } from '../../lib/projectRoutes'
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotificationPreference,
   useNotifications,
   useSetIssueNotificationsEnabled,
-} from '../hooks/queries/useNotifications'
+} from '../../hooks/queries/useNotifications'
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat(undefined, {

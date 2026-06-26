@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Badge, Button, Checkbox, Dropdown, DropdownSeparator, EmptyState, Radio } from '@repo/ui'
-import { ArrowUpDown, Calendar, ChevronDown, Circle, ListFilter, Plus, Search, SlidersHorizontal, TableProperties } from 'lucide-react'
+import { Badge, Button, Checkbox, Dropdown, DropdownSeparator, Radio } from '@repo/ui'
+import { ArrowUpDown, Calendar, CalendarDays, ChevronDown, Circle, ListFilter, MoreHorizontal, Plus, Search, SlidersHorizontal, TableProperties } from 'lucide-react'
 import { IssueDetailContent } from '../../issues/issue-detail/IssueDetailContent'
+import { CycleDetailContent, CycleProgressRing as DetailCycleProgressRing } from '../../cycles/CycleDetailContent'
+import { buildCycleDetailModel } from '../../cycles/cycleDetailModel'
+import { EntityPreviewPaneShell } from '../../entity-preview/EntityPreviewPaneShell'
 import { useIssue } from '../../../hooks/queries/useIssues'
 import type { Cycle, CycleIssueLink, Issue, IssueAssignee, IssuePriority, IssueState, ModuleIssueLink, OrganisationMemberProfile, ProjectModule } from '../../../types'
 import { formatIssueKey, issuePriorityOptions, issuePriorityTone as priorityTone } from '../../../lib/issueFormatting'
@@ -53,6 +56,7 @@ type ProjectIssueListGroup = {
   title: string
   issues: Issue[]
   module?: ProjectModule | null
+  cycle?: Cycle | null
 }
 
 const defaultProjectIssueListFilters: ProjectIssueListFilters = {
@@ -433,20 +437,23 @@ const groupProjectIssues = ({
 
   if (groupBy === 'cycle') {
     const groupsById = new Map<string, ProjectIssueListGroup>()
+    const cycleById = new Map(cycles.map((cycle) => [cycle.id, cycle]))
     if (options.showEmptyGroups) {
       cycles.forEach((cycle) => {
         groupsById.set(cycle.id, {
           id: cycle.id,
           title: cycle.name,
           issues: [],
+          cycle,
         })
       })
     }
     issues.forEach((issue) => {
       const link = cycleLinkByIssueId.get(issue.id)
       const id = link?.cycle_id ?? 'none'
-      const title = link?.cycle?.name ?? 'No cycle'
-      const existing: ProjectIssueListGroup = groupsById.get(id) ?? { id, title, issues: [] }
+      const cycle = id === 'none' ? null : link?.cycle ?? cycleById.get(id) ?? null
+      const title = cycle?.name ?? 'No cycle'
+      const existing: ProjectIssueListGroup = groupsById.get(id) ?? { id, title, issues: [], cycle }
       existing.issues.push(issue)
       groupsById.set(id, existing)
     })
@@ -526,17 +533,50 @@ const ModuleProgressRing = ({ progress }: { progress: number }) => (
   </span>
 )
 
+const CycleProgressRing = ({ progress, size = 28 }: { progress: number; size?: number }) => (
+  <span
+    className="inline-grid shrink-0 place-items-center rounded-full"
+    style={{
+      width: size,
+      height: size,
+      background: `conic-gradient(#16a34a 0 ${progress}%, #e5e7eb ${progress}% 100%)`,
+    }}
+  >
+    <span
+      className="rounded-full bg-[var(--color-background)]"
+      style={{
+        width: Math.max(8, size - 8),
+        height: Math.max(8, size - 8),
+      }}
+    />
+  </span>
+)
+
 const getModuleDateRangeLabel = (module: ProjectModule) =>
   module.created_at
     ? `${formatShortDate(module.created_at.slice(0, 10))} - ${formatShortDate((module.updated_at ?? module.created_at).slice(0, 10))}`
     : 'No dates'
 
+const getCycleDateRangeLabel = (cycle: Cycle) => {
+  if (!cycle.starts_at && !cycle.ends_at) return 'No dates'
+  const start = cycle.starts_at ? formatShortDate(cycle.starts_at) : 'No start'
+  const end = cycle.ends_at ? formatShortDate(cycle.ends_at) : 'No end'
+  return `${start} - ${end}`
+}
+
+const getCycleProjectInitial = (cycle: Cycle) =>
+  (cycle.project?.identifier || cycle.project?.name || 'P').slice(0, 1).toUpperCase()
+
 const ProjectIssueListGroupHeader = ({
   group,
   groupBy,
+  selected,
+  onOpenCycle,
 }: {
   group: ProjectIssueListGroup
   groupBy: ProjectIssueListGroupKey
+  selected?: boolean
+  onOpenCycle?: (cycle: Cycle) => void
 }) => {
   if (groupBy === 'module' && group.module) {
     const total = group.issues.length
@@ -567,6 +607,44 @@ const ProjectIssueListGroupHeader = ({
     )
   }
 
+  if (groupBy === 'cycle' && group.cycle) {
+    const total = group.issues.length
+    const completed = group.issues.filter(isProjectIssueComplete).length
+    const progress = total > 0 ? Math.round((completed / total) * 100) : 0
+
+    return (
+      <button
+        type="button"
+        className={cx(
+          'grid min-h-14 w-full grid-cols-[minmax(16rem,1fr)_auto] items-center gap-4 border-b border-[var(--color-border)] px-6 py-2 text-left hover:bg-[var(--color-muted)]/60',
+          selected && 'bg-blue-50',
+        )}
+        onClick={() => onOpenCycle?.(group.cycle!)}
+      >
+        <div className="flex min-w-0 items-center gap-4">
+          <ChevronDown className="h-4 w-4 shrink-0 fill-current text-[var(--color-muted-foreground)]" />
+          <CycleProgressRing progress={progress} />
+          <h2 className="min-w-0 truncate text-base font-semibold text-[var(--color-foreground)]">{group.title}</h2>
+        </div>
+        <div className="flex min-w-max items-center gap-6 text-sm text-[var(--color-muted-foreground)]">
+          <span className="inline-flex items-center gap-2">
+            <CycleProgressRing progress={progress} size={18} />
+            <span>{progress}% ({completed}/{total})</span>
+          </span>
+          <span className="font-semibold text-emerald-700">Leading 0</span>
+          <span className="hidden h-8 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 md:inline-flex">
+            <CalendarDays className="h-4 w-4" />
+            {getCycleDateRangeLabel(group.cycle)}
+          </span>
+          <span className="inline-grid h-8 w-8 place-items-center rounded-full bg-[#006aa6] text-sm font-semibold text-white">
+            {getCycleProjectInitial(group.cycle)}
+          </span>
+          <MoreHorizontal className="h-4 w-4" />
+        </div>
+      </button>
+    )
+  }
+
   return (
     <div className="flex h-14 items-center gap-2 border-b border-[var(--color-border)] px-2.5">
       <ChevronDown className="h-4 w-4 fill-current text-[var(--color-muted-foreground)]" />
@@ -589,7 +667,9 @@ export const ProjectIssueListTable = ({
   listViewConfig,
   onListViewChange,
   selectedIssueId,
+  selectedCycleId,
   onOpenIssue,
+  onOpenCycle,
   onCreateIssue,
 }: {
   tabId: string | null
@@ -604,7 +684,9 @@ export const ProjectIssueListTable = ({
   listViewConfig: ProjectIssueListViewConfig
   onListViewChange?: (config: ProjectIssueListViewConfig) => void
   selectedIssueId?: string | null
+  selectedCycleId?: string | null
   onOpenIssue: (issue: Issue) => void
+  onOpenCycle?: (cycle: Cycle) => void
   onCreateIssue: () => void
 }) => {
   const [filters, setFilters] = useState<ProjectIssueListFilters>(listViewConfig.filters)
@@ -877,7 +959,12 @@ export const ProjectIssueListTable = ({
         </div>
         {groups.map((group) => (
           <div key={group.id}>
-            <ProjectIssueListGroupHeader group={group} groupBy={groupBy} />
+            <ProjectIssueListGroupHeader
+              group={group}
+              groupBy={groupBy}
+              selected={Boolean(group.cycle && selectedCycleId === group.cycle.id)}
+              onOpenCycle={onOpenCycle}
+            />
 
             {group.issues.map((issue) => (
               <div key={issue.id} className={cx('grid border-b border-[var(--color-border)] hover:bg-[var(--color-muted)]/60', selectedIssueId === issue.id ? 'bg-blue-50' : '', rowHeightClassName)} style={{ gridTemplateColumns }}>
@@ -943,6 +1030,43 @@ export const ProjectIssueListTable = ({
   )
 }
 
+export const ProjectCyclePreviewPane = ({
+  cycleId,
+  cycles,
+  issues,
+  cycleIssueLinks,
+  onExpand,
+  onClose,
+}: {
+  cycleId: string
+  cycles: Cycle[]
+  issues: Issue[]
+  cycleIssueLinks: CycleIssueLink[]
+  onExpand: () => void
+  onClose: () => void
+}) => {
+  const cycle = cycles.find((item) => item.id === cycleId) ?? null
+  const model = useMemo(
+    () => cycle ? buildCycleDetailModel(cycle, issues, cycleIssueLinks) : null,
+    [cycle, cycleIssueLinks, issues],
+  )
+
+  return (
+    <EntityPreviewPaneShell
+      title={model?.cycle.name}
+      leading={model ? <DetailCycleProgressRing progress={model.progress} /> : null}
+      notFoundTitle={model ? undefined : 'Cycle not found'}
+      notFoundDescription={model ? undefined : 'The cycle was deleted or is outside this project.'}
+      expandLabel="Expand cycle"
+      closeLabel="Close cycle preview"
+      onExpand={model ? onExpand : undefined}
+      onClose={onClose}
+    >
+      {model ? <CycleDetailContent model={model} compact showWorkItems={false} /> : null}
+    </EntityPreviewPaneShell>
+  )
+}
+
 export const ProjectIssuePreviewPane = ({
   organisationId,
   projectId,
@@ -961,31 +1085,28 @@ export const ProjectIssuePreviewPane = ({
   const navigate = useNavigate()
   const { data: issue, isLoading } = useIssue(organisationId, issueId)
 
-  if (isLoading) {
-    return (
-      <aside className="flex h-full w-full min-w-0 items-center justify-center border-l border-[var(--color-border)] bg-[var(--color-background)] text-sm text-[var(--color-muted-foreground)]">
-        Loading task...
-      </aside>
-    )
-  }
-
-  if (!issue || issue.project_id !== projectId) {
-    return (
-      <aside className="flex h-full w-full min-w-0 items-center justify-center border-l border-[var(--color-border)] bg-[var(--color-background)] p-6">
-        <EmptyState title="Task not found" description="The task was deleted or is outside this project." />
-      </aside>
-    )
-  }
-
   return (
-    <IssueDetailContent
-      key={issue.id}
-      issue={issue}
-      organisationId={organisationId}
-      mode="pane"
-      backHref={listHref}
+    <EntityPreviewPaneShell
+      title={issue ? formatIssueKey(issue) : undefined}
+      isLoading={isLoading}
+      loadingLabel="Loading task..."
+      notFoundTitle={!isLoading && (!issue || issue.project_id !== projectId) ? 'Task not found' : undefined}
+      notFoundDescription={!isLoading && (!issue || issue.project_id !== projectId) ? 'The task was deleted or is outside this project.' : undefined}
+      expandLabel="Expand issue"
+      closeLabel="Close issue detail"
+      onExpand={issue && issue.project_id === projectId ? () => navigate(expandedHref) : undefined}
       onClose={onClose}
-      onExpand={() => navigate(expandedHref)}
-    />
+    >
+      {issue && issue.project_id === projectId ? (
+        <IssueDetailContent
+          key={issue.id}
+          issue={issue}
+          organisationId={organisationId}
+          mode="pane"
+          backHref={listHref}
+          hideToolbar
+        />
+      ) : null}
+    </EntityPreviewPaneShell>
   )
 }

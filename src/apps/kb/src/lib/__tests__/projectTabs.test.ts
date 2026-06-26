@@ -9,6 +9,7 @@ vi.mock('../../hooks/queries/useProjects', () => ({
 import {
   defaultProjectTabKeys,
   getProjectTabKeyFromSection,
+  getProjectTabInstancePath,
   projectTabDefinitions,
   requiredProjectTabKey,
 } from '../projectTabs'
@@ -34,10 +35,12 @@ describe('project tab registry', () => {
   it('keeps List required', () => {
     expect(requiredProjectTabKey).toBe('list')
     expect(defaultProjectTabKeys).toContain('list')
+    expect(defaultProjectTabKeys).not.toContain('cycles')
     expect(getProjectTabKeyFromSection('unknown-section')).toBe('overview')
+    expect(getProjectTabKeyFromSection('cycles')).toBe('overview')
   })
 
-  it('deduplicates tab keys from screenshot and existing Open-KB tabs', () => {
+  it('deduplicates tab keys and omits standalone Cycles tabs', () => {
     const keys = projectTabDefinitions.map((tab) => tab.key)
     expect(new Set(keys).size).toBe(keys.length)
     expect(keys).toEqual(expect.arrayContaining([
@@ -53,10 +56,10 @@ describe('project tab registry', () => {
       'gantt',
       'workload',
       'files',
-      'cycles',
       'pages',
       'settings',
     ]))
+    expect(keys).not.toContain('cycles')
   })
 
   it('generates copy labels without colliding with existing tabs', () => {
@@ -67,5 +70,10 @@ describe('project tab registry', () => {
       tab('3', 'list copy 2'),
     ])).toBe('List copy 3')
     expect(getCopiedProjectTabLabel('   ', [])).toBe('Tab copy')
+  })
+
+  it('keeps the pages tab on the pages route instead of the page detail route', () => {
+    expect(getProjectTabInstancePath('project', 'pages', 'tab-id')).toBe('/projects/project/pages')
+    expect(getProjectTabInstancePath('project', 'list', 'tab-id')).toBe('/projects/project/list/tab-id')
   })
 })

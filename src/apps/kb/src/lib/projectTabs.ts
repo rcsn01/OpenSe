@@ -29,7 +29,6 @@ export const projectTabKeys = [
   'gantt',
   'workload',
   'files',
-  'cycles',
   'pages',
   'settings',
 ] as const
@@ -59,7 +58,6 @@ export const projectTabDefinitions: ProjectTabDefinition[] = [
   { key: 'gantt', label: 'Gantt', path: 'gantt', group: 'other', icon: GanttChart },
   { key: 'workload', label: 'Workload', path: 'workload', group: 'other', icon: Users },
   { key: 'files', label: 'Files', path: 'files', group: 'other', icon: FolderOpen },
-  { key: 'cycles', label: 'Cycles', path: 'cycles', group: 'existing', icon: CalendarDays },
   { key: 'pages', label: 'Pages', path: 'pages', group: 'existing', icon: FileText },
   { key: 'settings', label: 'Settings', path: 'settings', group: 'existing', icon: Settings },
 ]
@@ -67,7 +65,6 @@ export const projectTabDefinitions: ProjectTabDefinition[] = [
 export const defaultProjectTabKeys: ProjectTabKey[] = [
   'overview',
   'list',
-  'cycles',
   'pages',
   'settings',
 ]
@@ -94,5 +91,8 @@ export const getProjectTabPath = (projectId: string, key: ProjectTabKey) => {
 
 export const getProjectTabInstancePath = (projectId: string, key: ProjectTabKey, tabId: string) => {
   const path = projectTabDefinitionByKey.get(key)?.path ?? 'overview'
+  if (key === 'pages') {
+    return `/projects/${projectId}/${path}`
+  }
   return `/projects/${projectId}/${path}/${tabId}`
 }

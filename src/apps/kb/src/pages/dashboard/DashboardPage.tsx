@@ -3,11 +3,11 @@ import type { ReactNode } from 'react'
 import { Badge, EmptyState } from '@repo/ui'
 import { Clock3, Plus, Star } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { useFavorites, useRecentVisits } from '../hooks/queries/usePersonal'
-import { useProjectSummary, useProjects } from '../hooks/queries/useProjects'
-import type { OpenKbPersonalItem } from '../types'
+import { OpenKbPageShell } from '../../components/OpenKbPageShell'
+import { useOrganisation } from '../../contexts/OrganisationContext'
+import { useFavorites, useRecentVisits } from '../../hooks/queries/usePersonal'
+import { useProjectSummary, useProjects } from '../../hooks/queries/useProjects'
+import type { OpenKbPersonalItem } from '../../types'
 
 const summaryItems = [
   ['Projects', 'project_count'],

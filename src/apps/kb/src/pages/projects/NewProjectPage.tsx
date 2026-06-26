@@ -3,12 +3,12 @@ import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Input, Select } from '@repo/ui'
 import { toast } from 'sonner'
-import { buildProjectIdentifier } from '../api/projects'
-import { RichTextEditor, type RichTextEditorValue } from '../components/editor'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { useCreateProject } from '../hooks/queries/useProjects'
-import { useTeams } from '../hooks/queries/useTeams'
+import { buildProjectIdentifier } from '../../api/projects'
+import { RichTextEditor, type RichTextEditorValue } from '../../components/editor'
+import { OpenKbPageShell } from '../../components/OpenKbPageShell'
+import { useOrganisation } from '../../contexts/OrganisationContext'
+import { useCreateProject } from '../../hooks/queries/useProjects'
+import { useTeams } from '../../hooks/queries/useTeams'
 
 export const NewProjectPage = () => {
   const navigate = useNavigate()

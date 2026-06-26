@@ -4,18 +4,17 @@ import { Badge, Button, Dialog, DialogContent, DialogFooter, DialogHeader, Dialo
 import { ArrowUpDown, ChevronDown, Circle, Download, ListFilter, Plus, Search, SlidersHorizontal, TableProperties } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@repo/shared/auth/context'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
-import { CyclesView } from '../components/cycles/CyclesView'
-import { ProjectSettingsPanel } from '../components/projects/ProjectSettingsPanel'
-import { ProjectTabBar } from '../components/projects/ProjectTabBar'
-import { RichTextEditor, type RichTextEditorValue } from '../components/editor'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { CreateIssueDialog } from '../components/issues/CreateIssueDialog'
+import { OpenKbPageShell } from '../../components/OpenKbPageShell'
+import { ProjectSettingsPanel } from '../../components/projects/ProjectSettingsPanel'
+import { ProjectTabBar } from '../../components/projects/ProjectTabBar'
+import { RichTextEditor, type RichTextEditorValue } from '../../components/editor'
+import { useOrganisation } from '../../contexts/OrganisationContext'
+import { CreateIssueDialog } from '../../components/issues/CreateIssueDialog'
 import {
   IssueCalendar,
   IssueGantt,
-} from '../components/issues/IssueViews'
-import { buildBoardColumns } from '../lib/issueViews'
+} from '../../components/issues/IssueViews'
+import { buildBoardColumns } from '../../lib/issueViews'
 import {
   useIssues,
   useIssueLabels,
@@ -23,22 +22,22 @@ import {
   useIssueStates,
   useOrganisationMemberProfiles,
   useProjectIssueAttachments,
-} from '../hooks/queries/useIssues'
-import { useCreatePage, usePages } from '../hooks/queries/usePages'
-import { useCycleIssueLinks, useCycles, useModuleIssueLinks, useModules } from '../hooks/queries/usePlanning'
+} from '../../hooks/queries/useIssues'
+import { useCreatePage, usePages } from '../../hooks/queries/usePages'
+import { useCycleIssueLinks, useCycles, useModuleIssueLinks, useModules } from '../../hooks/queries/usePlanning'
 import {
   useCreateProjectMessage,
   useProject,
   useProjectMessages,
   useProjectTabs,
-} from '../hooks/queries/useProjects'
-import { defaultProjectTabsForProject } from '../api/projects'
-import { useMyPermissions } from '../hooks/queries/usePermissions'
-import { useRecordRecentVisitOnce } from '../hooks/queries/usePersonal'
-import type { Issue, IssueState, ProjectTab } from '../types'
-import { formatFileSize } from '../lib/fileFormatting'
-import { formatIssueKey, issuePriorityTone as priorityTone } from '../lib/issueFormatting'
-import { dayKey, formatShortDate, startOfMonth, toDate } from '../lib/dateFormatting'
+} from '../../hooks/queries/useProjects'
+import { defaultProjectTabsForProject } from '../../api/projects'
+import { useMyPermissions } from '../../hooks/queries/usePermissions'
+import { useRecordRecentVisitOnce } from '../../hooks/queries/usePersonal'
+import type { Issue, IssueState, ProjectTab } from '../../types'
+import { formatFileSize } from '../../lib/fileFormatting'
+import { formatIssueKey, issuePriorityTone as priorityTone } from '../../lib/issueFormatting'
+import { dayKey, formatShortDate, startOfMonth, toDate } from '../../lib/dateFormatting'
 import {
   getProjectTabDefinition,
   getProjectTabKeyFromSection,
@@ -46,22 +45,25 @@ import {
   getProjectTabPath,
   isProjectTabKey,
   type ProjectTabKey,
-} from '../lib/projectTabs'
+} from '../../lib/projectTabs'
 import {
+  getProjectCyclePath,
   getProjectIssuePath,
+  getProjectListCyclePath,
   getProjectListIssuePath,
   getProjectNewPagePath,
   getProjectPagePath,
-} from '../lib/projectRoutes'
+} from '../../lib/projectRoutes'
 import {
+  ProjectCyclePreviewPane,
   ProjectIssueListTable,
   ProjectIssuePreviewPane,
-} from '../components/projects/project-list/ProjectIssueListTable'
+} from '../../components/projects/project-list/ProjectIssueListTable'
 import {
   cx,
   readListViewConfig,
-} from '../components/projects/project-list/projectIssueListLogic'
-import { useProjectTabActions } from '../components/projects/useProjectTabActions'
+} from '../../components/projects/project-list/projectIssueListLogic'
+import { useProjectTabActions } from '../../components/projects/useProjectTabActions'
 
 const emptyDocument = {
   type: 'doc',
@@ -388,14 +390,14 @@ export const ProjectDetailPage = () => {
   const { user } = useAuth()
   const profileId = user?.id ?? null
   const navigate = useNavigate()
-  const { projectId = null, section, tabId = null, issueId = null } = useParams()
+  const { projectId = null, section, tabId = null, issueId = null, cycleId = null } = useParams()
   const { organisationId } = useOrganisation()
   const routeTabKey = getProjectTabKeyFromSection(section)
-  const needsIssues = ['overview', 'list', 'board', 'timeline', 'dashboard', 'calendar', 'gantt', 'workload', 'cycles'].includes(routeTabKey)
+  const needsIssues = ['overview', 'list', 'board', 'timeline', 'dashboard', 'calendar', 'gantt', 'workload'].includes(routeTabKey)
   const needsStates = routeTabKey === 'overview' || routeTabKey === 'list' || routeTabKey === 'board' || routeTabKey === 'dashboard' || routeTabKey === 'workflow'
   const needsLabels = routeTabKey === 'dashboard' || routeTabKey === 'workflow'
   const needsMembers = routeTabKey === 'list' || routeTabKey === 'workload'
-  const needsCycles = routeTabKey === 'dashboard' || routeTabKey === 'cycles' || routeTabKey === 'list'
+  const needsCycles = routeTabKey === 'dashboard' || routeTabKey === 'list'
   const needsModules = routeTabKey === 'dashboard' || routeTabKey === 'list'
   const needsPages = routeTabKey === 'dashboard' || routeTabKey === 'note' || routeTabKey === 'pages'
   const needsMessages = routeTabKey === 'messages'
@@ -416,7 +418,7 @@ export const ProjectDetailPage = () => {
   const { data: members = [] } = useOrganisationMemberProfiles(organisationId, needsMembers)
   const { data: projectIssueAssignees = [] } = useProjectIssueAssignees(organisationId, projectId, routeTabKey === 'list')
   const { data: cycles = [] } = useCycles(organisationId, projectId, needsCycles)
-  const { data: cycleIssueLinks = [] } = useCycleIssueLinks(organisationId, projectId, routeTabKey === 'cycles' || routeTabKey === 'list')
+  const { data: cycleIssueLinks = [] } = useCycleIssueLinks(organisationId, projectId, routeTabKey === 'list')
   const { data: modules = [] } = useModules(organisationId, projectId, needsModules)
   const { data: moduleIssueLinks = [] } = useModuleIssueLinks(organisationId, projectId, routeTabKey === 'list')
   const { data: pages = [] } = usePages(organisationId, projectId, needsPages)
@@ -442,6 +444,7 @@ export const ProjectDetailPage = () => {
   const activeTab = (activeTabInstance?.tab_key as ProjectTabKey | undefined) ?? routeTabKey
   const activeTabId = activeTabInstance?.id ?? null
   const selectedListIssueId = activeTab === 'list' ? issueId : null
+  const selectedListCycleId = activeTab === 'list' ? cycleId : null
   const activeListViewConfig = useMemo(
     () => readListViewConfig(activeTabInstance?.metadata),
     [activeTabInstance?.metadata],
@@ -468,9 +471,18 @@ export const ProjectDetailPage = () => {
     activeTabId,
     activeTabInstance,
   })
+  const listHref = projectId
+    ? activeTabId && tabId
+      ? getProjectTabInstancePath(projectId, 'list', activeTabId)
+      : getProjectTabPath(projectId, 'list')
+    : '/projects'
   const handleOpenListIssue = (issue: Issue) => {
     if (!projectId) return
     navigate(getProjectListIssuePath(projectId, issue.id, activeTabId))
+  }
+  const handleOpenListCycle = (cycle: { id: string }) => {
+    if (!projectId) return
+    navigate(selectedListCycleId === cycle.id ? listHref : getProjectListCyclePath(projectId, cycle.id, activeTabId))
   }
 
   const stateCounts = useMemo(() => {
@@ -672,7 +684,7 @@ export const ProjectDetailPage = () => {
 
       {activeTab === 'list' ? (
         <div className="-mx-2 flex min-h-0 flex-1 overflow-hidden bg-[var(--color-background)]">
-          <div className={cx('flex min-h-0 min-w-0 flex-col transition-[width] duration-150', selectedListIssueId ? 'w-[48%]' : 'w-full')}>
+          <div className={cx('flex min-h-0 min-w-0 flex-col transition-[width] duration-150', selectedListIssueId || selectedListCycleId ? 'w-[48%]' : 'w-full')}>
             <ProjectIssueListTable
               key={activeTabId ?? 'list'}
               tabId={activeTabId}
@@ -686,7 +698,9 @@ export const ProjectDetailPage = () => {
               moduleIssueLinks={moduleIssueLinks}
               listViewConfig={activeListViewConfig}
               selectedIssueId={selectedListIssueId}
+              selectedCycleId={selectedListCycleId}
               onOpenIssue={handleOpenListIssue}
+              onOpenCycle={handleOpenListCycle}
               onListViewChange={canEditProjectTabs ? handleListViewChange : undefined}
               onCreateIssue={() => setCreateIssueOpen(true)}
             />
@@ -697,9 +711,21 @@ export const ProjectDetailPage = () => {
                 organisationId={organisationId}
                 projectId={project.id}
                 issueId={selectedListIssueId}
-                listHref={activeTabId && tabId ? getProjectTabInstancePath(project.id, 'list', activeTabId) : getProjectTabPath(project.id, 'list')}
+                listHref={listHref}
                 expandedHref={getProjectIssuePath(project.id, selectedListIssueId)}
-                onClose={() => navigate(activeTabId && tabId ? getProjectTabInstancePath(project.id, 'list', activeTabId) : getProjectTabPath(project.id, 'list'))}
+                onClose={() => navigate(listHref)}
+              />
+            </div>
+          ) : null}
+          {!selectedListIssueId && selectedListCycleId ? (
+            <div className="min-h-0 min-w-0 flex-1">
+              <ProjectCyclePreviewPane
+                cycleId={selectedListCycleId}
+                cycles={cycles}
+                issues={issues}
+                cycleIssueLinks={cycleIssueLinks}
+                onExpand={() => navigate(getProjectCyclePath(project.id, selectedListCycleId))}
+                onClose={() => navigate(listHref)}
               />
             </div>
           ) : null}
@@ -866,17 +892,6 @@ export const ProjectDetailPage = () => {
             ))}
           </div>
         </section>
-      ) : null}
-
-      {activeTab === 'cycles' ? (
-        <CyclesView
-          cycles={cycles}
-          issues={issues}
-          cycleIssueLinks={cycleIssueLinks}
-          newCycleHref={`/cycles/new?project=${project.id}`}
-          onCreateIssue={() => setCreateIssueOpen(true)}
-          className="-mx-2"
-        />
       ) : null}
 
       {activeTab === 'pages' ? (

@@ -1,5 +1,5 @@
 import { Badge } from '@repo/ui'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
+import { OpenKbPageShell } from '../../components/OpenKbPageShell'
 
 export const PlaceholderPage = ({ title }: { title: string }) => (
   <OpenKbPageShell>

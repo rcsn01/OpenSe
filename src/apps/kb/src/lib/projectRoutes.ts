@@ -8,6 +8,14 @@ export const getProjectListIssuePath = (projectId: string, issueId: string, tabI
     ? `/projects/${projectId}/list/${tabId}/issues/${issueId}`
     : `/projects/${projectId}/list/issues/${issueId}`
 
+export const getProjectCyclePath = (projectId: string, cycleId: string) =>
+  `/projects/${projectId}/cycles/${cycleId}`
+
+export const getProjectListCyclePath = (projectId: string, cycleId: string, tabId?: string | null) =>
+  tabId
+    ? `/projects/${projectId}/list/${tabId}/cycles/${cycleId}`
+    : `/projects/${projectId}/list/cycles/${cycleId}`
+
 export const getProjectPagePath = (projectId: string, pageId: string) =>
   `/projects/${projectId}/pages/${pageId}`
 
@@ -16,6 +24,12 @@ export const getProjectNewPagePath = (projectId: string) =>
 
 export const getProjectPagesPath = (projectId: string) =>
   `/projects/${projectId}/pages`
+
+export const getProjectCyclesPath = (projectId: string) =>
+  `/projects/${projectId}/cycles`
+
+export const getProjectNewCyclePath = (projectId: string) =>
+  `/projects/${projectId}/cycles/new`
 
 export const getProjectListPath = (projectId: string) =>
   `/projects/${projectId}/list`

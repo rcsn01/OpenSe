@@ -3,15 +3,15 @@ import { Badge, Button, EmptyState, Input, Select } from '@repo/ui'
 import { Activity, AlertTriangle, Clock3, Github, RotateCcw, Slack, Trash2 } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
 import { toast } from 'sonner'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
+import { OpenKbPageShell } from '../../components/OpenKbPageShell'
 import {
   ApiTokensSection,
   FeatureFlagsSection,
   RolePermissionsSection,
   WebhooksSection,
-} from '../components/settings/SettingsSections'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { useMyPermissions } from '../hooks/queries/usePermissions'
+} from '../../components/settings/SettingsSections'
+import { useOrganisation } from '../../contexts/OrganisationContext'
+import { useMyPermissions } from '../../hooks/queries/usePermissions'
 import {
   useAppPermissions,
   useApiTokens,
@@ -39,10 +39,10 @@ import {
   useWebhookLogs,
   useWebhooks,
   useUpdateFeatureFlags,
-} from '../hooks/queries/useSettings'
-import { useProjects } from '../hooks/queries/useProjects'
-import type { AppPermission, FeatureFlags, OpenKbOutboundProviderSync, OpenKbRole, OpenKbWebhookStatus } from '../types'
-import { formatDateTime } from '../lib/dateFormatting'
+} from '../../hooks/queries/useSettings'
+import { useProjects } from '../../hooks/queries/useProjects'
+import type { AppPermission, FeatureFlags, OpenKbOutboundProviderSync, OpenKbRole, OpenKbWebhookStatus } from '../../types'
+import { formatDateTime } from '../../lib/dateFormatting'
 import {
   generateApiToken,
   generateWebhookSecret,
@@ -51,7 +51,7 @@ import {
   providerSyncTitle,
   roleCanToggle,
   sha256Hex,
-} from '../lib/settingsUtils'
+} from '../../lib/settingsUtils'
 
 export const SettingsPage = () => {
   const { user } = useAuth()

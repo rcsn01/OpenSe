@@ -1,11 +1,11 @@
 import { useParams } from 'react-router-dom'
 import { EmptyState } from '@repo/ui'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { useIssue } from '../hooks/queries/useIssues'
-import { IssueDetailContent } from '../components/issues/issue-detail/IssueDetailContent'
+import { OpenKbPageShell } from '../../../components/OpenKbPageShell'
+import { useOrganisation } from '../../../contexts/OrganisationContext'
+import { useIssue } from '../../../hooks/queries/useIssues'
+import { IssueDetailContent } from '../../../components/issues/issue-detail/IssueDetailContent'
 
-export { IssueDetailContent } from '../components/issues/issue-detail/IssueDetailContent'
+export { IssueDetailContent } from '../../../components/issues/issue-detail/IssueDetailContent'
 export const IssueDetailPage = () => {
   const { projectId, issueId } = useParams()
   const { organisationId } = useOrganisation()

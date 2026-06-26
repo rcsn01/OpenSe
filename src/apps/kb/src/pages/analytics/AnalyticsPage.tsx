@@ -7,9 +7,9 @@ import {
   AnalyticsPanel,
   Badge,
 } from '@repo/ui'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { useAnalyticsSummary } from '../hooks/queries/useAnalytics'
+import { OpenKbPageShell } from '../../components/OpenKbPageShell'
+import { useOrganisation } from '../../contexts/OrganisationContext'
+import { useAnalyticsSummary } from '../../hooks/queries/useAnalytics'
 
 const percent = (value: number, total: number) =>
   total > 0 ? `${Math.round((value / total) * 100)}%` : '0%'
