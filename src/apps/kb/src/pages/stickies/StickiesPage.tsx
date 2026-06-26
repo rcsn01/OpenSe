@@ -4,18 +4,18 @@ import { Badge, Button, EmptyState, Input, Select } from '@repo/ui'
 import { Pencil, Plus, Save, StickyNote, Trash2, X } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
 import { toast } from 'sonner'
-import { RichTextEditor, type RichTextEditorValue } from '../components/editor'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { useMyPermissions } from '../hooks/queries/usePermissions'
-import { useProjects } from '../hooks/queries/useProjects'
+import { RichTextEditor, type RichTextEditorValue } from '../../components/editor'
+import { OpenKbPageShell } from '../../components/OpenKbPageShell'
+import { useOrganisation } from '../../contexts/OrganisationContext'
+import { useMyPermissions } from '../../hooks/queries/usePermissions'
+import { useProjects } from '../../hooks/queries/useProjects'
 import {
   useCreateSticky,
   useDeleteSticky,
   useStickies,
   useUpdateSticky,
-} from '../hooks/queries/useStickies'
-import type { OpenKbSticky } from '../types'
+} from '../../hooks/queries/useStickies'
+import type { OpenKbSticky } from '../../types'
 
 const formatDateTime = (value: string | null) => {
   if (!value) return 'Unknown'

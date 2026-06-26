@@ -134,6 +134,7 @@ export const IssueDetailContent = ({
   onClose,
   onExpand,
   backHref,
+  hideToolbar = false,
 }: {
   issue: Issue
   organisationId: string
@@ -141,6 +142,7 @@ export const IssueDetailContent = ({
   onClose?: () => void
   onExpand?: () => void
   backHref?: string
+  hideToolbar?: boolean
 }) => {
   const { user } = useAuth()
   const profileId = user?.id ?? null
@@ -802,8 +804,8 @@ export const IssueDetailContent = ({
   )
 
   return (
-    <div className={cn('flex min-h-0 flex-1 flex-col bg-[var(--color-background)] text-[var(--color-foreground)]', mode === 'pane' ? 'h-full border-l border-[var(--color-border)]' : 'mx-auto h-full w-full max-w-[calc(100vw-4rem)] rounded-[var(--radius-md)] border border-[var(--color-border)] shadow-[var(--shadow-sm)]')}>
-      {toolbar}
+    <div className={cn('flex min-h-0 flex-1 flex-col bg-[var(--color-background)] text-[var(--color-foreground)]', mode === 'pane' ? 'h-full' : 'mx-auto h-full w-full max-w-[calc(100vw-4rem)] rounded-[var(--radius-md)] border border-[var(--color-border)] shadow-[var(--shadow-sm)]')}>
+      {hideToolbar ? null : toolbar}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <form onSubmit={handleSave} className={cn('mx-auto w-full space-y-6 px-6 py-5', mode === 'pane' ? 'max-w-none' : 'max-w-[82rem]')}>

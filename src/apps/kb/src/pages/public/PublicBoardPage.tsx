@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Badge, EmptyState } from '@repo/ui'
 import { ClipboardList } from 'lucide-react'
-import { usePublicDeployBoard, usePublicDeployBoardIssues } from '../hooks/queries/useDeployBoards'
-import type { IssuePriority } from '../types'
+import { usePublicDeployBoard, usePublicDeployBoardIssues } from '../../hooks/queries/useDeployBoards'
+import type { IssuePriority } from '../../types'
 
 const priorityTone: Record<IssuePriority, 'neutral' | 'success' | 'warning' | 'danger' | 'info'> = {
   none: 'neutral',

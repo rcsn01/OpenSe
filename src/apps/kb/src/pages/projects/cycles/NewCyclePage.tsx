@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button, EmptyState, Input, Select, Textarea } from '@repo/ui'
 import { toast } from 'sonner'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { useCreateCycle } from '../hooks/queries/usePlanning'
-import { useProjects } from '../hooks/queries/useProjects'
-import type { CycleStatus } from '../types'
+import { OpenKbPageShell } from '../../../components/OpenKbPageShell'
+import { useOrganisation } from '../../../contexts/OrganisationContext'
+import { useCreateCycle } from '../../../hooks/queries/usePlanning'
+import { useProject } from '../../../hooks/queries/useProjects'
+import { getProjectCyclePath, getProjectListPath } from '../../../lib/projectRoutes'
+import type { CycleStatus } from '../../../types'
 
 const statusOptions: Array<{ value: CycleStatus; label: string }> = [
   { value: 'draft', label: 'Draft' },
@@ -18,26 +19,25 @@ const statusOptions: Array<{ value: CycleStatus; label: string }> = [
 
 export const NewCyclePage = () => {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const { projectId = '' } = useParams()
   const { organisationId } = useOrganisation()
-  const { data: projects = [], isLoading } = useProjects(organisationId)
-  const [projectId, setProjectId] = useState(searchParams.get('project') ?? '')
+  const { data: project, isLoading } = useProject(organisationId, projectId)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
   const [status, setStatus] = useState<CycleStatus>('draft')
   const createCycle = useCreateCycle()
-  const selectedProjectId = projectId || projects[0]?.id || ''
+  const listPath = getProjectListPath(projectId)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!organisationId || !selectedProjectId || !name.trim()) return
+    if (!organisationId || !project || !name.trim()) return
 
     try {
-      await createCycle.mutateAsync({
+      const cycle = await createCycle.mutateAsync({
         organisation_id: organisationId,
-        project_id: selectedProjectId,
+        project_id: project.id,
         name,
         description_text: description,
         starts_at: startsAt || null,
@@ -45,16 +45,16 @@ export const NewCyclePage = () => {
         status,
       })
       toast.success('Cycle created')
-      navigate('/cycles')
+      navigate(getProjectCyclePath(project.id, cycle.id))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create cycle')
     }
   }
 
-  if (!isLoading && projects.length === 0) {
+  if (!isLoading && !project) {
     return (
       <OpenKbPageShell>
-        <EmptyState title="Create a project first" description="Cycles are scoped to organisation projects." />
+        <EmptyState title="Project not found" description="The project was deleted or is outside your Open-KB access." />
       </OpenKbPageShell>
     )
   }
@@ -63,20 +63,12 @@ export const NewCyclePage = () => {
     <OpenKbPageShell isLoading={isLoading}>
       <div>
         <h1 className="text-xl font-semibold tracking-normal">New cycle</h1>
-        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Create a time-boxed planning cycle for a project.</p>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+          {project ? `${project.identifier} · ${project.name}` : 'Create a time-boxed planning cycle for this project.'}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-3xl space-y-5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <label className="block space-y-2">
-          <span className="text-sm font-medium">Project</span>
-          <Select
-            className="border border-[var(--color-border)] bg-[var(--color-background)]"
-            value={selectedProjectId}
-            onChange={(event) => setProjectId(event.target.value)}
-            options={projects.map((project) => ({ value: project.id, label: `${project.identifier} · ${project.name}` }))}
-            required
-          />
-        </label>
         <label className="block space-y-2">
           <span className="text-sm font-medium">Name</span>
           <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Sprint 12" required />
@@ -105,7 +97,7 @@ export const NewCyclePage = () => {
           <Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Scope, goals, and constraints..." />
         </label>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate('/cycles')}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => navigate(listPath)}>Cancel</Button>
           <Button type="submit" loading={createCycle.isPending}>Create cycle</Button>
         </div>
       </form>

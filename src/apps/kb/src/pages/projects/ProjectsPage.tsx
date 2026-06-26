@@ -1,10 +1,10 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { Badge, EmptyState, Select } from '@repo/ui'
 import { Plus } from 'lucide-react'
-import { OpenKbPageShell } from '../components/OpenKbPageShell'
-import { useOrganisation } from '../contexts/OrganisationContext'
-import { useProjects } from '../hooks/queries/useProjects'
-import { useTeams } from '../hooks/queries/useTeams'
+import { OpenKbPageShell } from '../../components/OpenKbPageShell'
+import { useOrganisation } from '../../contexts/OrganisationContext'
+import { useProjects } from '../../hooks/queries/useProjects'
+import { useTeams } from '../../hooks/queries/useTeams'
 
 export const ProjectsPage = () => {
   const { organisationId } = useOrganisation()

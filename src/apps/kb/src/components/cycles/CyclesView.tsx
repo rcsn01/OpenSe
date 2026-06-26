@@ -238,6 +238,7 @@ export const CyclesView = ({
   cycleIssueLinks,
   newCycleHref,
   onCreateIssue,
+  initialExpandedCycleId,
   className,
 }: {
   cycles: Cycle[]
@@ -245,13 +246,20 @@ export const CyclesView = ({
   cycleIssueLinks: CycleIssueLink[]
   newCycleHref: string
   onCreateIssue?: () => void
+  initialExpandedCycleId?: string | null
   className?: string
 }) => {
   const [activeTab, setActiveTab] = useState<CycleTab>('active')
   const [expandedCycleId, setExpandedCycleId] = useState<string | null>(null)
+  const [hasManualSelection, setHasManualSelection] = useState(false)
   const models = useMemo(() => buildCycleModels(cycles, issues, cycleIssueLinks), [cycleIssueLinks, cycles, issues])
-  const visibleModels = models.filter((model) => classifyCycle(model.cycle) === activeTab)
-  const expandedModel = visibleModels.find((model) => model.cycle.id === (expandedCycleId ?? visibleModels[0]?.cycle.id))
+  const initialExpandedModel = !hasManualSelection && initialExpandedCycleId
+    ? models.find((model) => model.cycle.id === initialExpandedCycleId) ?? null
+    : null
+  const visibleTab = initialExpandedModel ? classifyCycle(initialExpandedModel.cycle) : activeTab
+  const visibleExpandedCycleId = initialExpandedModel?.cycle.id ?? expandedCycleId
+  const visibleModels = models.filter((model) => classifyCycle(model.cycle) === visibleTab)
+  const expandedModel = visibleModels.find((model) => model.cycle.id === (visibleExpandedCycleId ?? visibleModels[0]?.cycle.id))
 
   return (
     <section className={cn('flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)]', className)}>
@@ -263,11 +271,12 @@ export const CyclesView = ({
               type="button"
               className={cn(
                 'h-10 border-b-2 px-2 text-sm font-medium transition-colors',
-                activeTab === tab.id
+                visibleTab === tab.id
                   ? 'border-[var(--color-foreground)] bg-[var(--color-muted)] text-[var(--color-foreground)]'
                   : 'border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]',
               )}
               onClick={() => {
+                setHasManualSelection(true)
                 setActiveTab(tab.id)
                 setExpandedCycleId(null)
               }}
@@ -300,7 +309,10 @@ export const CyclesView = ({
                   key={model.cycle.id}
                   type="button"
                   className="grid h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 text-left hover:bg-[var(--color-muted)]"
-                  onClick={() => setExpandedCycleId(isExpanded ? null : model.cycle.id)}
+                  onClick={() => {
+                    setHasManualSelection(true)
+                    setExpandedCycleId(isExpanded ? null : model.cycle.id)
+                  }}
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     {isExpanded ? <ChevronDown className="h-4 w-4 text-[var(--color-muted-foreground)]" /> : <ChevronRight className="h-4 w-4 text-[var(--color-muted-foreground)]" />}

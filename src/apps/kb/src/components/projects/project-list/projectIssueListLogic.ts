@@ -47,6 +47,7 @@ export type ProjectIssueListGroup = {
   title: string
   issues: Issue[]
   module?: ProjectModule | null
+  cycle?: Cycle | null
 }
 
 export const defaultProjectIssueListFilters: ProjectIssueListFilters = {
@@ -235,6 +236,9 @@ export const createToggle = <TValue extends string>(value: TValue, values: TValu
 
 export const isProjectIssueComplete = (issue: Issue) =>
   Boolean(issue.completed_at || issue.state?.group_key === 'completed' || issue.state?.name?.toLowerCase().includes('done') || issue.state?.name?.toLowerCase().includes('resolved'))
+
+export const isProjectIssueStarted = (issue: Issue) =>
+  ['started', 'in_progress'].includes(issue.state?.group_key ?? '') || ['in progress', 'investigating'].includes(issue.state?.name?.toLowerCase() ?? '')
 
 const compareValues = (left: string | number, right: string | number, direction: ProjectIssueListSortDirection) => {
   const comparison = typeof left === 'number' && typeof right === 'number'
@@ -461,20 +465,23 @@ export const groupProjectIssues = ({
 
   if (groupBy === 'cycle') {
     const groupsById = new Map<string, ProjectIssueListGroup>()
+    const cycleById = new Map(cycles.map((cycle) => [cycle.id, cycle]))
     if (options.showEmptyGroups) {
       cycles.forEach((cycle) => {
         groupsById.set(cycle.id, {
           id: cycle.id,
           title: cycle.name,
           issues: [],
+          cycle,
         })
       })
     }
     issues.forEach((issue) => {
       const link = cycleLinkByIssueId.get(issue.id)
       const id = link?.cycle_id ?? 'none'
-      const title = link?.cycle?.name ?? 'No cycle'
-      const existing: ProjectIssueListGroup = groupsById.get(id) ?? { id, title, issues: [] }
+      const cycle = id === 'none' ? null : link?.cycle ?? cycleById.get(id) ?? null
+      const title = cycle?.name ?? 'No cycle'
+      const existing: ProjectIssueListGroup = groupsById.get(id) ?? { id, title, issues: [], cycle }
       existing.issues.push(issue)
       groupsById.set(id, existing)
     })
