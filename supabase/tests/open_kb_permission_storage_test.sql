@@ -458,8 +458,6 @@ BEGIN
     'issues.delete',
     'planning.view',
     'planning.manage',
-    'pages.view',
-    'pages.manage',
     'intake.view',
     'intake.manage',
     'analytics.view',
@@ -478,8 +476,6 @@ BEGIN
     'issues.create',
     'issues.edit',
     'planning.view',
-    'pages.view',
-    'pages.manage',
     'intake.view',
     'analytics.view',
     'settings.view'
@@ -494,7 +490,6 @@ BEGIN
     'projects.view',
     'issues.view',
     'planning.view',
-    'pages.view',
     'intake.view',
     'analytics.view',
     'settings.view'

@@ -63,12 +63,6 @@ export const AnalyticsPage = () => {
         />
         <AnalyticsMetricCard
           surface="card"
-          label="Pages"
-          value={summary?.total_pages ?? 0}
-          detail="Knowledge base documents"
-        />
-        <AnalyticsMetricCard
-          surface="card"
           label="Intake"
           value={summary?.total_intake_requests ?? 0}
           detail="Requests awaiting or completing triage"

@@ -12,13 +12,12 @@ import type { OpenKbPersonalItem } from '../../types'
 const summaryItems = [
   ['Projects', 'project_count'],
   ['Issues', 'issue_count'],
-  ['Pages', 'page_count'],
   ['Cycles', 'cycle_count'],
   ['Modules', 'module_count'],
 ] as const
 
 const itemKindLabel = (item: OpenKbPersonalItem) =>
-  item.name === 'project' ? 'Project' : item.name === 'issue' ? 'Issue' : 'Page'
+  item.name === 'project' ? 'Project' : 'Issue'
 
 const PersonalList = ({
   title,
@@ -75,7 +74,7 @@ export const DashboardPage = () => {
         <div>
           <h1 className="text-2xl font-semibold tracking-normal">Open-KB</h1>
           <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            {organisationName ?? 'Organisation'} project work, issues, planning, and pages.
+            {organisationName ?? 'Organisation'} project work, issues, and planning.
           </p>
         </div>
         <Link
@@ -87,7 +86,7 @@ export const DashboardPage = () => {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {summaryItems.map(([label, key]) => (
           <div key={key} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <div className="text-xs font-medium uppercase text-[var(--color-muted-foreground)]">{label}</div>
@@ -101,20 +100,20 @@ export const DashboardPage = () => {
           title="Favorites"
           icon={<Star className="h-4 w-4 text-[var(--color-muted-foreground)]" />}
           items={favorites}
-          emptyTitle="Star projects, issues, or pages to keep them here."
+          emptyTitle="Star projects or issues to keep them here."
         />
         <PersonalList
           title="Recent visits"
           icon={<Clock3 className="h-4 w-4 text-[var(--color-muted-foreground)]" />}
           items={recentVisits}
-          emptyTitle="Open a project, issue, or page to build your history."
+          emptyTitle="Open a project or issue to build your history."
         />
       </div>
 
       {projects.length === 0 ? (
         <EmptyState
           title="No projects yet"
-          description="Create the first organisation-scoped project to start adding issues, pages, cycles, and modules."
+          description="Create the first organisation-scoped project to start adding issues, cycles, and modules."
         />
       ) : (
         <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">

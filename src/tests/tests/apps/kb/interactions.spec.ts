@@ -86,6 +86,8 @@ test.describe('Open-KB Interactions', () => {
     await expect(openKbPage.getByRole('button', { name: 'Remove tab' })).toHaveCount(0);
 
     await openKbPage.getByLabel('Add project tab').click();
+    await expect(openKbPage.getByRole('button', { name: 'Pages', exact: true })).toHaveCount(0);
+    await expect(openKbPage.getByRole('button', { name: 'Note', exact: true })).toHaveCount(0);
     const addResponse = openKbPage.waitForResponse((response) =>
       response.url().includes('/rest/v1/project_tabs') && response.request().method() === 'POST',
     );

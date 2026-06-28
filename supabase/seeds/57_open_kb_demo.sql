@@ -771,69 +771,6 @@ SET name = EXCLUDED.name,
     payload = EXCLUDED.payload,
     deleted_at = NULL;
 
-INSERT INTO open_kb.pages (id, organisation_id, project_id, title, slug, content_text, status, created_by)
-VALUES (
-  '11110000-0000-4000-8000-000000000601',
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  '11110000-0000-4000-8000-000000000001',
-  'Open-KB Architecture Notes',
-  'architecture-notes',
-  'Open-KB uses OpenSe organisations as its tenant boundary.',
-  'published',
-  '11111111-1111-1111-1111-111111111111'
-)
-ON CONFLICT (id) DO UPDATE
-SET title = EXCLUDED.title,
-    content_text = EXCLUDED.content_text,
-    status = EXCLUDED.status;
-
-INSERT INTO open_kb.pages (id, organisation_id, project_id, title, slug, content_text, status, created_by)
-VALUES (
-  '11110000-0000-4000-8000-000000000602',
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  '11110000-0000-4000-8000-000000000001',
-  'Open-KB Release Checklist',
-  'release-checklist',
-  'Verify seats, navigation, project CRUD, issue workflow, and page publishing before release.',
-  'draft',
-  '22222222-2222-2222-2222-222222222222'
-)
-ON CONFLICT (id) DO UPDATE
-SET title = EXCLUDED.title,
-    content_text = EXCLUDED.content_text,
-    status = EXCLUDED.status;
-
-INSERT INTO open_kb.page_versions (id, organisation_id, project_id, page_id, title, description_text, status, payload, created_by)
-VALUES
-  (
-    '11110000-0000-4000-8000-000000000611',
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11110000-0000-4000-8000-000000000001',
-    '11110000-0000-4000-8000-000000000601',
-    'Architecture notes v1',
-    'Initial notes describing organisation-scoped Open-KB tenancy.',
-    'published',
-    '{"version":1,"summary":"Initial page seed"}'::jsonb,
-    '11111111-1111-1111-1111-111111111111'
-  ),
-  (
-    '11110000-0000-4000-8000-000000000612',
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11110000-0000-4000-8000-000000000001',
-    '11110000-0000-4000-8000-000000000602',
-    'Release checklist draft',
-    'Draft checklist for smoke testing the seeded Open-KB instance.',
-    'draft',
-    '{"version":1,"summary":"Checklist draft"}'::jsonb,
-    '22222222-2222-2222-2222-222222222222'
-  )
-ON CONFLICT (id) DO UPDATE
-SET title = EXCLUDED.title,
-    description_text = EXCLUDED.description_text,
-    status = EXCLUDED.status,
-    payload = EXCLUDED.payload,
-    deleted_at = NULL;
-
 INSERT INTO open_kb.draft_issues (id, organisation_id, project_id, profile_id, title, description_text, status, payload, created_by)
 VALUES (
   '11110000-0000-4000-8000-000000000621',
@@ -853,32 +790,12 @@ SET title = EXCLUDED.title,
     payload = EXCLUDED.payload,
     deleted_at = NULL;
 
-INSERT INTO open_kb.stickies (id, organisation_id, project_id, profile_id, name, title, description_text, status, payload, created_by)
-VALUES (
-  '11110000-0000-4000-8000-000000000631',
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  '11110000-0000-4000-8000-000000000001',
-  '11111111-1111-1111-1111-111111111111',
-  'launch-note',
-  'Launch note',
-  'Remember to verify Open-KB from Accounts after assigning seats.',
-  'active',
-  '{"color":"yellow","x":120,"y":90}'::jsonb,
-  '11111111-1111-1111-1111-111111111111'
-)
-ON CONFLICT (id) DO UPDATE
-SET title = EXCLUDED.title,
-    description_text = EXCLUDED.description_text,
-    payload = EXCLUDED.payload,
-    deleted_at = NULL;
-
-INSERT INTO open_kb.user_favorites (id, organisation_id, project_id, issue_id, page_id, profile_id, name, title, created_by)
+INSERT INTO open_kb.user_favorites (id, organisation_id, project_id, issue_id, profile_id, name, title, created_by)
 VALUES
   (
     '11110000-0000-4000-8000-000000000641',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     '11110000-0000-4000-8000-000000000001',
-    NULL,
     NULL,
     '11111111-1111-1111-1111-111111111111',
     'project',
@@ -890,34 +807,21 @@ VALUES
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     '11110000-0000-4000-8000-000000000001',
     '11110000-0000-4000-8000-000000000502',
-    NULL,
     '11111111-1111-1111-1111-111111111111',
     'issue',
     'Wire Open-KB account seat assignment',
-    '11111111-1111-1111-1111-111111111111'
-  ),
-  (
-    '11110000-0000-4000-8000-000000000643',
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11110000-0000-4000-8000-000000000001',
-    NULL,
-    '11110000-0000-4000-8000-000000000601',
-    '11111111-1111-1111-1111-111111111111',
-    'page',
-    'Open-KB Architecture Notes',
     '11111111-1111-1111-1111-111111111111'
   )
 ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
     deleted_at = NULL;
 
-INSERT INTO open_kb.user_recent_visits (id, organisation_id, project_id, issue_id, page_id, profile_id, name, title, created_by)
+INSERT INTO open_kb.user_recent_visits (id, organisation_id, project_id, issue_id, profile_id, name, title, created_by)
 VALUES
   (
     '11110000-0000-4000-8000-000000000651',
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     '11110000-0000-4000-8000-000000000001',
-    NULL,
     NULL,
     '11111111-1111-1111-1111-111111111111',
     'project',
@@ -929,21 +833,9 @@ VALUES
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     '11110000-0000-4000-8000-000000000001',
     '11110000-0000-4000-8000-000000000501',
-    NULL,
     '11111111-1111-1111-1111-111111111111',
     'issue',
     'Implement Open-KB project foundation',
-    '11111111-1111-1111-1111-111111111111'
-  ),
-  (
-    '11110000-0000-4000-8000-000000000653',
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '11110000-0000-4000-8000-000000000001',
-    NULL,
-    '11110000-0000-4000-8000-000000000602',
-    '11111111-1111-1111-1111-111111111111',
-    'page',
-    'Open-KB Release Checklist',
     '11111111-1111-1111-1111-111111111111'
   )
 ON CONFLICT (id) DO UPDATE
@@ -1080,7 +972,7 @@ VALUES
     '11110000-0000-4000-8000-000000001001',
     'Knowledge Base Migration',
     'KBM',
-    'Move existing project knowledge, decisions, and release notes into Open-KB pages and issues.',
+  'Move existing project knowledge, decisions, and release notes into Open-KB issues.',
     'active',
     'private',
     20,
@@ -1328,7 +1220,7 @@ SET name = EXCLUDED.name,
 INSERT INTO open_kb.cycles (id, organisation_id, project_id, name, description_text, starts_at, ends_at, status, created_by)
 VALUES
   ('11110000-0000-4000-8000-000000001251', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 'Feedback Week 1', 'Triage customer feedback and turn validated requests into issues.', CURRENT_DATE - 3, CURRENT_DATE + 4, 'active', '11111111-1111-1111-1111-111111111111'),
-  ('11110000-0000-4000-8000-000000001252', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', 'Migration Sprint', 'Move docs, decisions, and release notes into Open-KB pages.', CURRENT_DATE, CURRENT_DATE + 14, 'active', '11111111-1111-1111-1111-111111111111'),
+  ('11110000-0000-4000-8000-000000001252', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', 'Migration Sprint', 'Move docs, decisions, and release notes into Open-KB issues.', CURRENT_DATE, CURRENT_DATE + 14, 'active', '11111111-1111-1111-1111-111111111111'),
   ('11110000-0000-4000-8000-000000001253', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001102', 'Provider Hardening', 'Exercise retry queues, provider settings, and webhook delivery logs.', CURRENT_DATE + 1, CURRENT_DATE + 15, 'draft', '11111111-1111-1111-1111-111111111111')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
@@ -1341,7 +1233,7 @@ SET name = EXCLUDED.name,
 INSERT INTO open_kb.modules (id, organisation_id, project_id, name, description_text, lead_profile_id, status, created_by)
 VALUES
   ('11110000-0000-4000-8000-000000001261', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 'Feedback Intake', 'Customer feedback intake and triage workflow.', '22222222-2222-2222-2222-222222222222', 'in_progress', '11111111-1111-1111-1111-111111111111'),
-  ('11110000-0000-4000-8000-000000001262', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', 'Documentation Import', 'Import old project notes into Open-KB pages.', '11111111-1111-1111-1111-111111111111', 'planned', '11111111-1111-1111-1111-111111111111'),
+  ('11110000-0000-4000-8000-000000001262', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', 'Documentation Import', 'Import old project notes into Open-KB issues.', '11111111-1111-1111-1111-111111111111', 'planned', '11111111-1111-1111-1111-111111111111'),
   ('11110000-0000-4000-8000-000000001263', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001102', 'Provider Sync', 'GitHub, Slack, and webhook provider queue reliability.', '33333333-3333-3333-3333-333333333333', 'in_progress', '11111111-1111-1111-1111-111111111111')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
@@ -1393,7 +1285,7 @@ INSERT INTO open_kb.issues (
 )
 VALUES
   ('11110000-0000-4000-8000-000000001301', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 1, 'Triage refund feedback from store teams', 'Group customer-facing refund feedback into actionable fixes.', 'high', '11110000-0000-4000-8000-000000001203', '11110000-0000-4000-8000-000000001242', '11110000-0000-4000-8000-000000001282', CURRENT_DATE + 2, 'cfo-1', '{"source":"seed","area":"feedback"}'::jsonb, '22222222-2222-2222-2222-222222222222'),
-  ('11110000-0000-4000-8000-000000001302', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 2, 'Draft customer release note template', 'Create a repeatable page template for customer-facing changes.', 'medium', '11110000-0000-4000-8000-000000001202', '11110000-0000-4000-8000-000000001242', '11110000-0000-4000-8000-000000001281', CURRENT_DATE + 5, 'cfo-2', '{"source":"seed","area":"release-notes"}'::jsonb, '33333333-3333-3333-3333-333333333333'),
+  ('11110000-0000-4000-8000-000000001302', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 2, 'Draft customer release note template', 'Create a repeatable release note template for customer-facing changes.', 'medium', '11110000-0000-4000-8000-000000001202', '11110000-0000-4000-8000-000000001242', '11110000-0000-4000-8000-000000001281', CURRENT_DATE + 5, 'cfo-2', '{"source":"seed","area":"release-notes"}'::jsonb, '33333333-3333-3333-3333-333333333333'),
   ('11110000-0000-4000-8000-000000001307', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 3, 'Slow Finder (Cancelled?)', 'Review whether Finder slowness reports are still valid after the last desktop patch.', 'low', '11110000-0000-4000-8000-000000001201', '11110000-0000-4000-8000-000000001242', '11110000-0000-4000-8000-000000001281', CURRENT_DATE + 1, 'cfo-3', '{"source":"seed","area":"desktop-feedback"}'::jsonb, '44444444-4444-4444-4444-444444444444'),
   ('11110000-0000-4000-8000-000000001308', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 4, 'Salesforce?', 'Confirm whether the sales team still needs a Salesforce import request path.', 'none', '11110000-0000-4000-8000-000000001201', '11110000-0000-4000-8000-000000001242', NULL, NULL, 'cfo-4', '{"source":"seed","area":"integrations"}'::jsonb, '22222222-2222-2222-2222-222222222222'),
   ('11110000-0000-4000-8000-000000001309', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 5, 'Some random automation stuff Raz mentioned about support queues', 'Turn the loose automation idea into a concrete intake workflow proposal.', 'medium', '11110000-0000-4000-8000-000000001201', '11110000-0000-4000-8000-000000001242', '11110000-0000-4000-8000-000000001282', CURRENT_DATE + 8, 'cfo-5', '{"source":"seed","area":"automation"}'::jsonb, '33333333-3333-3333-3333-333333333333'),
@@ -1402,8 +1294,8 @@ VALUES
   ('11110000-0000-4000-8000-000000001312', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 8, 'Pearl', 'Blocked on a product decision before the Pearl response can ship.', 'urgent', '11110000-0000-4000-8000-000000001204', '11110000-0000-4000-8000-000000001242', '11110000-0000-4000-8000-000000001282', CURRENT_DATE + 1, 'cfo-8', '{"source":"seed","blocked_by":"product decision"}'::jsonb, '33333333-3333-3333-3333-333333333333'),
   ('11110000-0000-4000-8000-000000001313', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 9, 'Tanya Plugin Adjustment', 'Customer-facing plugin adjustment is complete and ready for release notes.', 'medium', '11110000-0000-4000-8000-000000001205', '11110000-0000-4000-8000-000000001242', '11110000-0000-4000-8000-000000001281', CURRENT_DATE - 2, 'cfo-9', '{"source":"seed","area":"plugins"}'::jsonb, '22222222-2222-2222-2222-222222222222'),
   ('11110000-0000-4000-8000-000000001314', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000000002', 10, 'Insignia QR Code Scanner', 'Resolved scanner feedback and verified customer instructions.', 'low', '11110000-0000-4000-8000-000000001205', '11110000-0000-4000-8000-000000001242', '11110000-0000-4000-8000-000000001281', CURRENT_DATE - 1, 'cfo-10', '{"source":"seed","area":"scanner"}'::jsonb, '11111111-1111-1111-1111-111111111111'),
-  ('11110000-0000-4000-8000-000000001303', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', 1, 'Import architecture decision records', 'Create pages for prior architecture decisions and link them to migration issues.', 'urgent', '11110000-0000-4000-8000-000000001212', '11110000-0000-4000-8000-000000001243', '11110000-0000-4000-8000-000000001284', CURRENT_DATE + 7, 'kbm-1', '{"source":"seed","area":"docs"}'::jsonb, '11111111-1111-1111-1111-111111111111'),
-  ('11110000-0000-4000-8000-000000001304', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', 2, 'Build project launch handbook', 'Publish a handbook page that explains how Open-KB projects should be run.', 'medium', '11110000-0000-4000-8000-000000001211', '11110000-0000-4000-8000-000000001243', '11110000-0000-4000-8000-000000001283', CURRENT_DATE + 10, 'kbm-2', '{"source":"seed","area":"handbook"}'::jsonb, '44444444-4444-4444-4444-444444444444'),
+  ('11110000-0000-4000-8000-000000001303', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', 1, 'Import architecture decision records', 'Capture prior architecture decisions and link them to migration issues.', 'urgent', '11110000-0000-4000-8000-000000001212', '11110000-0000-4000-8000-000000001243', '11110000-0000-4000-8000-000000001284', CURRENT_DATE + 7, 'kbm-1', '{"source":"seed","area":"docs"}'::jsonb, '11111111-1111-1111-1111-111111111111'),
+  ('11110000-0000-4000-8000-000000001304', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', 2, 'Build project launch handbook', 'Publish a handbook that explains how Open-KB projects should be run.', 'medium', '11110000-0000-4000-8000-000000001211', '11110000-0000-4000-8000-000000001243', '11110000-0000-4000-8000-000000001283', CURRENT_DATE + 10, 'kbm-2', '{"source":"seed","area":"handbook"}'::jsonb, '44444444-4444-4444-4444-444444444444'),
   ('11110000-0000-4000-8000-000000001305', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001102', 1, 'Retry GitHub repository sync failures', 'Investigate failed GitHub issue sync queue items and improve retry visibility.', 'high', '11110000-0000-4000-8000-000000001222', '11110000-0000-4000-8000-000000001244', '11110000-0000-4000-8000-000000001286', CURRENT_DATE + 3, 'int-1', '{"source":"seed","provider":"github"}'::jsonb, '33333333-3333-3333-3333-333333333333'),
   ('11110000-0000-4000-8000-000000001306', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001102', 2, 'Verify Slack outbound comment sync', 'Confirm comments created in Open-KB can appear in the configured Slack channel.', 'low', '11110000-0000-4000-8000-000000001221', '11110000-0000-4000-8000-000000001244', '11110000-0000-4000-8000-000000001285', CURRENT_DATE + 9, 'int-2', '{"source":"seed","provider":"slack"}'::jsonb, '11111111-1111-1111-1111-111111111111')
 ON CONFLICT (id) DO UPDATE
@@ -1679,71 +1571,12 @@ ON CONFLICT (id) DO UPDATE
 SET payload = EXCLUDED.payload,
     deleted_at = NULL;
 
-INSERT INTO open_kb.pages (id, organisation_id, project_id, title, slug, content_text, status, created_by)
-VALUES
-  ('11110000-0000-4000-8000-000000001401', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', 'Migration Runbook', 'migration-runbook', 'Step-by-step runbook for moving legacy knowledge into Open-KB.', 'published', '11111111-1111-1111-1111-111111111111'),
-  ('11110000-0000-4000-8000-000000001402', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001102', 'Provider Reliability Notes', 'provider-reliability-notes', 'Operational notes for provider sync reliability.', 'published', '33333333-3333-3333-3333-333333333333')
-ON CONFLICT (id) DO UPDATE
-SET title = EXCLUDED.title,
-    content_text = EXCLUDED.content_text,
-    status = EXCLUDED.status,
-    deleted_at = NULL;
-
-INSERT INTO open_kb.project_pages (id, organisation_id, project_id, page_id, name, title, status, created_by)
-VALUES
-  ('11110000-0000-4000-8000-000000001411', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', '11110000-0000-4000-8000-000000001401', 'migration-runbook', 'Migration Runbook link', 'active', '11111111-1111-1111-1111-111111111111'),
-  ('11110000-0000-4000-8000-000000001412', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001102', '11110000-0000-4000-8000-000000001402', 'provider-reliability-notes', 'Provider Reliability Notes link', 'active', '11111111-1111-1111-1111-111111111111')
-ON CONFLICT (id) DO UPDATE
-SET status = EXCLUDED.status,
-    deleted_at = NULL;
-
-INSERT INTO open_kb.page_versions (id, organisation_id, project_id, page_id, title, description_text, status, payload, created_by)
-VALUES
-  ('11110000-0000-4000-8000-000000001421', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', '11110000-0000-4000-8000-000000001401', 'Migration Runbook v1', 'Initial migration runbook draft.', 'published', '{"version":1}'::jsonb, '11111111-1111-1111-1111-111111111111'),
-  ('11110000-0000-4000-8000-000000001422', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001102', '11110000-0000-4000-8000-000000001402', 'Provider Reliability Notes v1', 'Initial provider reliability notes.', 'published', '{"version":1}'::jsonb, '33333333-3333-3333-3333-333333333333')
-ON CONFLICT (id) DO UPDATE
-SET description_text = EXCLUDED.description_text,
-    payload = EXCLUDED.payload,
-    deleted_at = NULL;
-
-INSERT INTO open_kb.page_logs (id, organisation_id, project_id, page_id, actor_profile_id, name, title, payload, created_by)
-VALUES (
-  '11110000-0000-4000-8000-000000001423',
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  '11110000-0000-4000-8000-000000001101',
-  '11110000-0000-4000-8000-000000001401',
-  '11111111-1111-1111-1111-111111111111',
-  'page.published',
-  'Page published',
-  '{"status":"published"}'::jsonb,
-  '11111111-1111-1111-1111-111111111111'
-)
-ON CONFLICT (id) DO UPDATE
-SET payload = EXCLUDED.payload,
-    deleted_at = NULL;
-
-INSERT INTO open_kb.page_labels (id, organisation_id, project_id, page_id, name, title, payload, created_by)
-VALUES (
-  '11110000-0000-4000-8000-000000001424',
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  '11110000-0000-4000-8000-000000001101',
-  '11110000-0000-4000-8000-000000001401',
-  'migration',
-  'Migration page label',
-  '{"label_id":"11110000-0000-4000-8000-000000001234"}'::jsonb,
-  '11111111-1111-1111-1111-111111111111'
-)
-ON CONFLICT (id) DO UPDATE
-SET payload = EXCLUDED.payload,
-    deleted_at = NULL;
-
-INSERT INTO open_kb.descriptions (id, organisation_id, project_id, issue_id, page_id, name, title, description_text, created_by)
+INSERT INTO open_kb.descriptions (id, organisation_id, project_id, issue_id, name, title, description_text, created_by)
 VALUES (
   '11110000-0000-4000-8000-000000001425',
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   '11110000-0000-4000-8000-000000001101',
   '11110000-0000-4000-8000-000000001303',
-  NULL,
   'kbm-1-description',
   'KBM-1 rich description',
   'Rich text source snapshot for the migration issue.',
@@ -1753,13 +1586,12 @@ ON CONFLICT (id) DO UPDATE
 SET description_text = EXCLUDED.description_text,
     deleted_at = NULL;
 
-INSERT INTO open_kb.description_versions (id, organisation_id, project_id, issue_id, page_id, name, title, description_text, payload, created_by)
+INSERT INTO open_kb.description_versions (id, organisation_id, project_id, issue_id, name, title, description_text, payload, created_by)
 VALUES (
   '11110000-0000-4000-8000-000000001426',
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   '11110000-0000-4000-8000-000000001101',
   '11110000-0000-4000-8000-000000001303',
-  NULL,
   'kbm-1-description-version',
   'KBM-1 rich description v1',
   'First rich text description version for the migration issue.',
@@ -1773,7 +1605,7 @@ SET description_text = EXCLUDED.description_text,
 
 INSERT INTO open_kb.draft_issues (id, organisation_id, project_id, profile_id, title, description_text, status, payload, created_by)
 VALUES
-  ('11110000-0000-4000-8000-000000001501', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', '11111111-1111-1111-1111-111111111111', 'Draft: archive imported duplicate notes', 'Draft issue for deduplicating imported knowledge pages.', 'draft', '{"priority":"medium"}'::jsonb, '11111111-1111-1111-1111-111111111111'),
+  ('11110000-0000-4000-8000-000000001501', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001101', '11111111-1111-1111-1111-111111111111', 'Draft: archive imported duplicate notes', 'Draft issue for deduplicating imported knowledge notes.', 'draft', '{"priority":"medium"}'::jsonb, '11111111-1111-1111-1111-111111111111'),
   ('11110000-0000-4000-8000-000000001502', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11110000-0000-4000-8000-000000001102', '33333333-3333-3333-3333-333333333333', 'Draft: provider health dashboard', 'Draft issue for adding provider health metrics to analytics.', 'draft', '{"priority":"low"}'::jsonb, '33333333-3333-3333-3333-333333333333')
 ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
@@ -1903,23 +1735,6 @@ VALUES (
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     payload = EXCLUDED.payload,
-    deleted_at = NULL;
-
-INSERT INTO open_kb.file_assets (id, organisation_id, project_id, issue_id, page_id, name, title, status, payload, created_by)
-VALUES (
-  '11110000-0000-4000-8000-000000001613',
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-  '11110000-0000-4000-8000-000000001101',
-  NULL,
-  '11110000-0000-4000-8000-000000001401',
-  'migration-runbook.pdf',
-  'Migration runbook PDF',
-  'available',
-  '{"bucket":"open-kb-assets","path":"demo/migration-runbook.pdf","content_type":"application/pdf"}'::jsonb,
-  '11111111-1111-1111-1111-111111111111'
-)
-ON CONFLICT (id) DO UPDATE
-SET payload = EXCLUDED.payload,
     deleted_at = NULL;
 
 INSERT INTO open_kb.webhooks (id, organisation_id, name, title, url, secret_hash, events, status, description_text, created_by)

@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { RichTextEditor, type RichTextEditorValue } from '../editor'
 import { useCreateDraftIssue, useDeleteDraftIssue, useUpdateDraftIssue } from '../../hooks/queries/useDrafts'
 import { useCreateIssue, useIssueStates } from '../../hooks/queries/useIssues'
+import { useProjects } from '../../hooks/queries/useProjects'
 import { getProjectIssuePath } from '../../lib/projectRoutes'
 import type { IssuePriority } from '../../types'
 
@@ -23,21 +24,26 @@ export const CreateIssueDialog = ({
   onClose,
   organisationId,
   projectId,
+  globalMode = false,
 }: {
   open: boolean
   onClose: () => void
   organisationId: string
-  projectId: string
+  projectId?: string | null
+  globalMode?: boolean
 }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [selectedProjectId, setSelectedProjectId] = useState(projectId ?? '')
   const [title, setTitle] = useState('')
   const [priority, setPriority] = useState<IssuePriority>('none')
   const [stateId, setStateId] = useState('')
   const [description, setDescription] = useState<RichTextEditorValue | null>(null)
   const [editorKey, setEditorKey] = useState(0)
   const [draftId, setDraftId] = useState<string | null>(null)
-  const { data: states = [], isLoading: statesLoading } = useIssueStates(organisationId, projectId)
+  const effectiveProjectId = globalMode ? selectedProjectId : projectId ?? ''
+  const { data: projects = [], isLoading: projectsLoading } = useProjects(globalMode ? organisationId : null)
+  const { data: states = [], isLoading: statesLoading } = useIssueStates(organisationId, effectiveProjectId, Boolean(effectiveProjectId))
   const defaultState = states.find((state) => state.is_default) ?? states[0]
   const selectedStateId = stateId || defaultState?.id || ''
   const createIssue = useCreateIssue()
@@ -52,6 +58,7 @@ export const CreateIssueDialog = ({
       setTitle('')
       setPriority('none')
       setStateId('')
+      setSelectedProjectId(projectId ?? '')
       setDescription(null)
       setDraftId(null)
       setEditorKey((current) => current + 1)
@@ -62,12 +69,12 @@ export const CreateIssueDialog = ({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!organisationId || !projectId || !title.trim()) return
+    if (!organisationId || !effectiveProjectId || !title.trim()) return
 
     try {
       const issue = await createIssue.mutateAsync({
         organisation_id: organisationId,
-        project_id: projectId,
+        project_id: effectiveProjectId,
         title,
         priority,
         state_id: selectedStateId || null,
@@ -80,19 +87,19 @@ export const CreateIssueDialog = ({
       }
       toast.success('Task created')
       onClose()
-      navigate(getProjectIssuePath(projectId, issue.id))
+      navigate(getProjectIssuePath(effectiveProjectId, issue.id))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create task')
     }
   }
 
   const handleSaveDraft = async () => {
-    if (!organisationId || !projectId || !user) return
+    if (!organisationId || !effectiveProjectId || !user) return
     if (!title.trim() && !description?.text.trim()) return
 
     const input = {
       organisation_id: organisationId,
-      project_id: projectId,
+      project_id: effectiveProjectId,
       title: title.trim() || 'Untitled draft',
       description_json: description?.json ?? null,
       description_html: description?.html ?? null,
@@ -121,6 +128,22 @@ export const CreateIssueDialog = ({
           <DialogTitle>New task</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {globalMode ? (
+            <label className="block space-y-2">
+              <span className="text-sm font-medium">Project</span>
+              <Select
+                className="border border-[var(--color-border)] bg-[var(--color-background)]"
+                value={selectedProjectId}
+                onChange={(event) => {
+                  setSelectedProjectId(event.target.value)
+                  setStateId('')
+                }}
+                options={projects.map((project) => ({ value: project.id, label: project.name }))}
+                placeholder={projectsLoading ? 'Loading projects...' : 'Select a project'}
+                required
+              />
+            </label>
+          ) : null}
           <label className="block space-y-2">
             <span className="text-sm font-medium">State</span>
             <Select
@@ -128,7 +151,8 @@ export const CreateIssueDialog = ({
               value={selectedStateId}
               onChange={(event) => setStateId(event.target.value)}
               options={states.map((state) => ({ value: state.id, label: state.name }))}
-              placeholder={statesLoading ? 'Loading states...' : states.length === 0 ? 'No states yet' : undefined}
+              placeholder={!effectiveProjectId ? 'Select a project first' : statesLoading ? 'Loading states...' : states.length === 0 ? 'No states yet' : undefined}
+              disabled={!effectiveProjectId}
             />
           </label>
           <label className="block space-y-2">
@@ -158,12 +182,12 @@ export const CreateIssueDialog = ({
               type="button"
               variant="outline"
               onClick={handleSaveDraft}
-              disabled={!user || (!title.trim() && !description?.text.trim())}
+              disabled={!user || !effectiveProjectId || (!title.trim() && !description?.text.trim())}
               loading={createDraft.isPending || updateDraft.isPending}
             >
               Save draft
             </Button>
-            <Button type="submit" loading={createIssue.isPending}>Create task</Button>
+            <Button type="submit" disabled={!effectiveProjectId} loading={createIssue.isPending}>Create task</Button>
           </DialogFooter>
         </form>
       </DialogContent>

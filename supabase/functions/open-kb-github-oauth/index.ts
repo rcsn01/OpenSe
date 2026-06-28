@@ -109,7 +109,6 @@ const upsertIntegration = async (
     scopes: payload.scopes,
     project_id: null,
     issue_id: null,
-    page_id: null,
   }
 
   if (existing[0]) {

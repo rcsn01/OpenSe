@@ -170,21 +170,19 @@ export const updateProject = async ({ id, organisation_id, ...input }: ProjectUp
 export const fetchProjectSummary = async (
   organisationId: string,
 ): Promise<ProjectSummary> => {
-  const [projects, issues, pages, cycles, modules] = await Promise.all([
+  const [projects, issues, cycles, modules] = await Promise.all([
     db.from('projects').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
     db.from('issues').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
-    db.from('pages').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
     db.from('cycles').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
     db.from('modules').select('id', { count: 'exact', head: true }).eq('organisation_id', organisationId).is('deleted_at', null),
   ])
 
-  const error = [projects.error, issues.error, pages.error, cycles.error, modules.error].find(Boolean)
+  const error = [projects.error, issues.error, cycles.error, modules.error].find(Boolean)
   if (error) throw error
 
   return {
     project_count: projects.count ?? 0,
     issue_count: issues.count ?? 0,
-    page_count: pages.count ?? 0,
     cycle_count: cycles.count ?? 0,
     module_count: modules.count ?? 0,
   }

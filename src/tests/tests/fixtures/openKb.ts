@@ -5,7 +5,6 @@ const defaultSupabaseUrl = 'http://127.0.0.1:54321';
 const ORG_ID = '11110000-0000-4000-8000-00000000e2e0';
 const PROJECT_ID = '11110000-0000-4000-8000-00000000e2e1';
 const ISSUE_ID = '11110000-0000-4000-8000-00000000e2e2';
-const PAGE_ID = '11110000-0000-4000-8000-00000000e2e3';
 const STATE_ID = '11110000-0000-4000-8000-00000000e2e4';
 const USER_ID = '11110000-0000-4000-8000-00000000e2e5';
 const NEW_PROJECT_ID = '11110000-0000-4000-8000-00000000e261';
@@ -24,8 +23,6 @@ const permissionCodes = [
   'issues.delete',
   'planning.view',
   'planning.manage',
-  'pages.view',
-  'pages.manage',
   'intake.view',
   'intake.manage',
   'analytics.view',
@@ -150,34 +147,9 @@ const issue = {
   },
 };
 
-const pageRow = {
-  id: PAGE_ID,
-  organisation_id: ORG_ID,
-  project_id: PROJECT_ID,
-  title: 'Mock Open-KB page',
-  slug: 'mock-open-kb-page',
-  content_json: doc('Page used by route coverage.'),
-  content_html: '<p>Page used by route coverage.</p>',
-  content_text: 'Page used by route coverage.',
-  status: 'published',
-  metadata: {},
-  created_by: USER_ID,
-  updated_by: null,
-  created_at: now,
-  updated_at: now,
-  deleted_at: null,
-  project: {
-    id: PROJECT_ID,
-    name: project.name,
-    identifier: project.identifier,
-  },
-};
-
 const defaultProjectTabs = (projectId: string, organisationId = ORG_ID, createdBy = USER_ID) => [
   { tab_key: 'overview', label: 'Overview', sort_order: 10 },
   { tab_key: 'list', label: 'List', sort_order: 20 },
-  { tab_key: 'cycles', label: 'Cycles', sort_order: 40 },
-  { tab_key: 'pages', label: 'Pages', sort_order: 70 },
   { tab_key: 'settings', label: 'Settings', sort_order: 80 },
 ].map(({ tab_key, label, sort_order }) => ({
   id: `11110000-0000-4000-8000-${projectId.slice(-8)}${String(sort_order).padStart(4, '0')}`.slice(0, 36),
@@ -300,8 +272,6 @@ const rowsForTable = (
       return states;
     case 'issues':
       return store.issues.map((row) => buildIssueRelations(row, projects, states));
-    case 'pages':
-      return store.pages;
     case 'feature_flags':
       return [{
         organisation_id: ORG_ID,
@@ -357,7 +327,6 @@ export const installOpenKbMockSupabase = async (page: Page) => {
     projects: [clone(project)],
     states: [clone(state)],
     issues: [clone(issue)],
-    pages: [clone(pageRow)],
     project_tabs: defaultProjectTabs(PROJECT_ID).map(clone),
     project_messages: [],
     cycles: [],
@@ -366,7 +335,6 @@ export const installOpenKbMockSupabase = async (page: Page) => {
     estimate_points: [],
     intakes: [],
     draft_issues: [],
-    stickies: [],
     notifications: [],
     user_notification_preferences: [],
     user_favorites: [],
@@ -592,4 +560,4 @@ export const test = base.extend<OpenKbFixtures>({
   },
 });
 
-export { expect, PROJECT_ID, ISSUE_ID, PAGE_ID, NEW_PROJECT_ID, NEW_ISSUE_ID };
+export { expect, PROJECT_ID, ISSUE_ID, NEW_PROJECT_ID, NEW_ISSUE_ID };

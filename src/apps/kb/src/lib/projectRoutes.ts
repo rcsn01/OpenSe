@@ -1,4 +1,4 @@
-import type { OpenKbPersonalItem } from '../types'
+export type TaskSectionKey = 'overview' | 'list' | 'board' | 'timeline' | 'dashboard' | 'calendar' | 'gantt' | 'workload'
 
 export const getProjectIssuePath = (projectId: string, issueId: string) =>
   `/projects/${projectId}/issues/${issueId}`
@@ -16,15 +16,6 @@ export const getProjectListCyclePath = (projectId: string, cycleId: string, tabI
     ? `/projects/${projectId}/list/${tabId}/cycles/${cycleId}`
     : `/projects/${projectId}/list/cycles/${cycleId}`
 
-export const getProjectPagePath = (projectId: string, pageId: string) =>
-  `/projects/${projectId}/pages/${pageId}`
-
-export const getProjectNewPagePath = (projectId: string) =>
-  `/projects/${projectId}/pages/new`
-
-export const getProjectPagesPath = (projectId: string) =>
-  `/projects/${projectId}/pages`
-
 export const getProjectCyclesPath = (projectId: string) =>
   `/projects/${projectId}/cycles`
 
@@ -34,27 +25,8 @@ export const getProjectNewCyclePath = (projectId: string) =>
 export const getProjectListPath = (projectId: string) =>
   `/projects/${projectId}/list`
 
-export const getProjectTasksPath = (projectId: string, userId: string) =>
-  `/projects/${projectId}/list?assignee=${encodeURIComponent(userId)}`
+export const getTasksPath = (section: TaskSectionKey = 'list') =>
+  `/tasks/${section}`
 
-export const resolveTasksProjectId = ({
-  projects,
-  recentVisits,
-  favorites,
-}: {
-  projects: Array<{ id: string }>
-  recentVisits: OpenKbPersonalItem[]
-  favorites: OpenKbPersonalItem[]
-}) => {
-  const recentProject = recentVisits.find((item) => item.name === 'project' && item.project_id)?.project_id
-  if (recentProject && projects.some((project) => project.id === recentProject)) {
-    return recentProject
-  }
-
-  const favoriteProject = favorites.find((item) => item.name === 'project' && item.project_id)?.project_id
-  if (favoriteProject && projects.some((project) => project.id === favoriteProject)) {
-    return favoriteProject
-  }
-
-  return projects[0]?.id ?? null
-}
+export const getTasksListIssuePath = (issueId: string) =>
+  `/tasks/list/issues/${issueId}`

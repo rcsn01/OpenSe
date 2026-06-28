@@ -17,6 +17,7 @@ import {
   fetchIssueActivities,
   fetchIssueAttachments,
   fetchIssueAssignees,
+  fetchIssueAssigneesForIssues,
   fetchIssueBlockers,
   fetchIssueComments,
   fetchIssueLabelLinks,
@@ -100,6 +101,8 @@ export const issueKeys = {
     ['open-kb', 'issues', organisationId, 'label-links', issueId] as const,
   assignees: (organisationId: string | null, issueId: string | null) =>
     ['open-kb', 'issues', organisationId, 'assignees', issueId] as const,
+  visibleAssignees: (organisationId: string | null, issueIds: string[]) =>
+    ['open-kb', 'issues', organisationId, 'visible-assignees', issueIds] as const,
   projectAssignees: (organisationId: string | null, projectId: string | null) =>
     ['open-kb', 'issues', organisationId, 'project-assignees', projectId] as const,
   mentions: (organisationId: string | null, issueId: string | null) =>
@@ -239,6 +242,13 @@ export const useProjectIssueAssignees = (organisationId: string | null, projectI
     queryKey: issueKeys.projectAssignees(organisationId, projectId),
     queryFn: () => fetchProjectIssueAssignees(organisationId ?? '', projectId ?? ''),
     enabled: Boolean(enabled && organisationId && projectId),
+  })
+
+export const useIssueAssigneesForIssues = (organisationId: string | null, issueIds: string[], enabled = true) =>
+  useQuery({
+    queryKey: issueKeys.visibleAssignees(organisationId, issueIds),
+    queryFn: () => fetchIssueAssigneesForIssues(organisationId ?? '', issueIds),
+    enabled: Boolean(enabled && organisationId && issueIds.length > 0),
   })
 
 export const useIssueMentions = (organisationId: string | null, issueId: string | null) =>

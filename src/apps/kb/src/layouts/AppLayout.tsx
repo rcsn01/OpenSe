@@ -24,9 +24,9 @@ import { toast } from 'sonner'
 import { useOrganisation } from '../contexts/OrganisationContext'
 import { useMyPermissions } from '../hooks/queries/usePermissions'
 import { useProjects } from '../hooks/queries/useProjects'
-import { useAddFavorite, useFavorites, useRecentVisits, useRemoveFavorite } from '../hooks/queries/usePersonal'
+import { useAddFavorite, useFavorites, useRemoveFavorite } from '../hooks/queries/usePersonal'
 import { buildAccountsProfileUrl, buildAccountsSettingsUrl } from '../lib/authRedirect'
-import { getProjectTasksPath, resolveTasksProjectId } from '../lib/projectRoutes'
+import { getTasksPath } from '../lib/projectRoutes'
 import { OrganisationSwitcher } from '../components/OrganisationSwitcher'
 
 const OpenKbBrandIcon = SWITCHABLE_APP_ICONS['open-kb']
@@ -45,16 +45,10 @@ export const AppLayout = () => {
   const { data: permissions = [], isLoading: permissionsLoading } = useMyPermissions(organisationId)
   const { data: projects = [], isLoading: projectsLoading } = useProjects(organisationId)
   const { data: favorites = [] } = useFavorites(organisationId, user?.id ?? null)
-  const { data: recentVisits = [] } = useRecentVisits(organisationId, user?.id ?? null)
   const addFavorite = useAddFavorite()
   const removeFavorite = useRemoveFavorite()
 
   const currentPath = `${location.pathname}${location.search}`
-  const userId = user?.id ?? ''
-  const tasksProjectId = resolveTasksProjectId({ projects, recentVisits, favorites })
-  const tasksHref = userId && tasksProjectId
-    ? getProjectTasksPath(tasksProjectId, userId)
-    : '/dashboard'
   const projectIdFromPath = location.pathname.startsWith('/projects/')
     ? location.pathname.split('/')[2]
     : null
@@ -71,16 +65,11 @@ export const AppLayout = () => {
       isActive: isSectionActive('/dashboard'),
     },
     {
-      href: tasksHref,
+      href: getTasksPath('list'),
       label: 'Tasks',
       icon: <CheckSquare className="h-5 w-5" />,
       permission: 'issues.view',
-      isActive: () => Boolean(
-        userId
-        && tasksProjectId
-        && currentPath.startsWith(`/projects/${tasksProjectId}/list`)
-        && currentPath.includes(`assignee=${encodeURIComponent(userId)}`),
-      ),
+      isActive: isSectionActive('/tasks'),
     },
     {
       href: '/notifications',
@@ -170,9 +159,6 @@ export const AppLayout = () => {
       </Button>
       <div className="min-w-0 max-w-[min(52vw,34rem)] overflow-hidden">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[#f7d36b] text-sm font-semibold text-slate-900">
-            {activeProject.name.slice(0, 1).toUpperCase()}
-          </span>
           <span className="min-w-0 truncate text-base font-semibold leading-6 tracking-normal text-[var(--color-foreground)] sm:text-lg">
             {activeProject.name}
           </span>

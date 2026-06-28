@@ -23,7 +23,6 @@ import {
   useOrganisationMemberProfiles,
   useProjectIssueAttachments,
 } from '../../hooks/queries/useIssues'
-import { useCreatePage, usePages } from '../../hooks/queries/usePages'
 import { useCycleIssueLinks, useCycles, useModuleIssueLinks, useModules } from '../../hooks/queries/usePlanning'
 import {
   useCreateProjectMessage,
@@ -51,8 +50,6 @@ import {
   getProjectIssuePath,
   getProjectListCyclePath,
   getProjectListIssuePath,
-  getProjectNewPagePath,
-  getProjectPagePath,
 } from '../../lib/projectRoutes'
 import {
   ProjectCyclePreviewPane,
@@ -399,7 +396,6 @@ export const ProjectDetailPage = () => {
   const needsMembers = routeTabKey === 'list' || routeTabKey === 'workload'
   const needsCycles = routeTabKey === 'dashboard' || routeTabKey === 'list'
   const needsModules = routeTabKey === 'dashboard' || routeTabKey === 'list'
-  const needsPages = routeTabKey === 'dashboard' || routeTabKey === 'note' || routeTabKey === 'pages'
   const needsMessages = routeTabKey === 'messages'
   const needsAttachments = routeTabKey === 'files'
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()))
@@ -421,11 +417,9 @@ export const ProjectDetailPage = () => {
   const { data: cycleIssueLinks = [] } = useCycleIssueLinks(organisationId, projectId, routeTabKey === 'list')
   const { data: modules = [] } = useModules(organisationId, projectId, needsModules)
   const { data: moduleIssueLinks = [] } = useModuleIssueLinks(organisationId, projectId, routeTabKey === 'list')
-  const { data: pages = [] } = usePages(organisationId, projectId, needsPages)
   const { data: messages = [] } = useProjectMessages(organisationId, projectId, needsMessages)
   const { data: attachments = [] } = useProjectIssueAttachments(organisationId, projectId, needsAttachments)
   const createProjectMessage = useCreateProjectMessage()
-  const createPage = useCreatePage()
   const recordRecentVisitOnce = useRecordRecentVisitOnce()
 
   const visibleTabs = useMemo(() => {
@@ -501,10 +495,6 @@ export const ProjectDetailPage = () => {
     () => activeTab === 'dashboard' ? issues.filter((issue) => issue.completed_at || issue.state?.group_key === 'completed').length : 0,
     [activeTab, issues],
   )
-  const projectNote = useMemo(() => {
-    if (activeTab !== 'note') return null
-    return pages.find((page) => page.metadata?.project_note === true) ?? pages.find((page) => page.title.toLowerCase() === 'project note') ?? null
-  }, [activeTab, pages])
   const datedIssues = useMemo(() => {
     if (activeTab !== 'timeline') return []
     return [...issues].sort((a, b) => {
@@ -567,23 +557,6 @@ export const ProjectDetailPage = () => {
       toast.success('Message posted')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to post message')
-    }
-  }
-
-  const handleCreateNote = async () => {
-    if (!organisationId || !projectId) return
-
-    try {
-      const note = await createPage.mutateAsync({
-        organisation_id: organisationId,
-        project_id: projectId,
-        title: 'Project note',
-        status: 'published',
-        metadata: { project_note: true },
-      })
-      navigate(getProjectPagePath(projectId, note.id))
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create project note')
     }
   }
 
@@ -835,25 +808,6 @@ export const ProjectDetailPage = () => {
         </section>
       ) : null}
 
-      {activeTab === 'note' ? (
-        <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          {projectNote ? (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold">{projectNote.title}</h2>
-                <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{projectNote.content_text || 'Project note page'}</p>
-              </div>
-              <Link className="inline-flex h-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm font-medium hover:bg-[var(--color-muted)]" to={getProjectPagePath(project.id, projectNote.id)}>Open note</Link>
-            </div>
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-[var(--color-muted-foreground)]">No project note exists yet.</p>
-              <Button type="button" variant="outline" onClick={handleCreateNote} loading={createPage.isPending}>Create note</Button>
-            </div>
-          )}
-        </section>
-      ) : null}
-
       {activeTab === 'gantt' ? <IssueGantt issues={issues} /> : null}
 
       {activeTab === 'workload' ? (
@@ -891,36 +845,6 @@ export const ProjectDetailPage = () => {
               </div>
             ))}
           </div>
-        </section>
-      ) : null}
-
-      {activeTab === 'pages' ? (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold">Project pages</h2>
-            <Link className="inline-flex h-8 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 text-xs font-medium hover:bg-[var(--color-muted)]" to={getProjectNewPagePath(project.id)}>
-              <Plus className="h-3.5 w-3.5" />
-              New page
-            </Link>
-          </div>
-          {pages.length === 0 ? (
-            <EmptyState title="No project pages yet" description="Create a page to document decisions and knowledge." />
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {pages.map((page) => (
-                <Link key={page.id} to={getProjectPagePath(project.id, page.id)} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-border-hover)]">
-                  <div className="flex items-center justify-between gap-3">
-                    <Badge variant="outline">{project.identifier}</Badge>
-                    <Badge variant={page.status === 'published' ? 'success' : page.status === 'archived' ? 'warning' : 'neutral'}>{page.status}</Badge>
-                  </div>
-                  <h3 className="mt-4 line-clamp-2 text-base font-semibold">{page.title}</h3>
-                  <p className="mt-3 line-clamp-3 min-h-16 text-sm text-[var(--color-muted-foreground)]">
-                    {page.content_text || page.slug || 'No page content yet.'}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
         </section>
       ) : null}
 

@@ -806,6 +806,10 @@ img {
   background: var(--color-shell);
 }
 
+.app-sidebar {
+  border-right: 1px solid var(--color-border);
+}
+
 html[data-opense-runtime-target="mobile"] .app-layout {
   padding-right: var(--opense-safe-area-right);
   padding-bottom: var(--opense-safe-area-bottom);

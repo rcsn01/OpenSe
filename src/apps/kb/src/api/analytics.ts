@@ -81,14 +81,12 @@ const daysBetween = (start: string, end: string) => {
 export const fetchAnalyticsSummary = async (organisationId: string): Promise<OpenKbAnalyticsSummary> => {
   const [
     projects,
-    pages,
     cycles,
     modules,
     intakeRequests,
     issueRows,
   ] = await Promise.all([
     countTable('projects', organisationId),
-    countTable('pages', organisationId),
     countTable('cycles', organisationId),
     countTable('modules', organisationId),
     countTable('intake_issues', organisationId),
@@ -160,7 +158,6 @@ export const fetchAnalyticsSummary = async (organisationId: string): Promise<Ope
     total_issues: issues.length,
     open_issues: issues.length - completed,
     completed_issues: completed,
-    total_pages: pages,
     total_cycles: cycles,
     total_modules: modules,
     total_intake_requests: intakeRequests,

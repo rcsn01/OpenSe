@@ -61,7 +61,6 @@ export type ProjectUpdateInput = Partial<Pick<ProjectInput, 'name' | 'descriptio
 export type ProjectSummary = {
   project_count: number
   issue_count: number
-  page_count: number
   cycle_count: number
   module_count: number
 }
@@ -620,7 +619,7 @@ export type OpenKbNotificationPreference = {
   deleted_at: string | null
 }
 
-export type OpenKbVisitKind = 'project' | 'issue' | 'page'
+export type OpenKbVisitKind = 'project' | 'issue'
 
 export type OpenKbPersonalItemPayload = {
   route?: string
@@ -633,7 +632,6 @@ export type OpenKbPersonalItem = {
   organisation_id: string
   project_id: string | null
   issue_id: string | null
-  page_id: string | null
   profile_id: string | null
   name: OpenKbVisitKind
   title: string | null
@@ -644,39 +642,6 @@ export type OpenKbPersonalItem = {
   created_at: string
   updated_at: string | null
   deleted_at: string | null
-}
-
-export type OpenKbSticky = {
-  id: string
-  organisation_id: string
-  project_id: string | null
-  profile_id: string | null
-  title: string | null
-  description_json: EditorDocument
-  description_html: string | null
-  description_text: string | null
-  status: 'active' | 'archived' | string | null
-  metadata: Record<string, unknown>
-  created_by: string | null
-  created_at: string
-  updated_at: string | null
-  deleted_at: string | null
-  project: Pick<Project, 'id' | 'name' | 'identifier'> | null
-}
-
-export type OpenKbStickyInput = {
-  organisation_id: string
-  project_id?: string | null
-  profile_id: string
-  title: string
-  description_json: EditorDocument
-  description_html?: string | null
-  description_text?: string | null
-}
-
-export type OpenKbStickyUpdateInput = Partial<Omit<OpenKbStickyInput, 'profile_id'>> & {
-  id: string
-  organisation_id: string
 }
 
 export type SavedIssueView = {
@@ -805,66 +770,6 @@ export type EstimatePoint = {
   estimate?: Estimate | null
 }
 
-export type PageStatus = 'draft' | 'published' | 'archived'
-
-export type KnowledgePage = {
-  id: string
-  organisation_id: string
-  project_id: string | null
-  title: string
-  slug: string | null
-  content_json: EditorDocument
-  content_html: string | null
-  content_text: string | null
-  status: PageStatus
-  metadata: Record<string, unknown>
-  created_by: string | null
-  updated_by: string | null
-  created_at: string
-  updated_at: string | null
-  deleted_at: string | null
-  project?: IssueProject | null
-}
-
-export type PageInput = {
-  organisation_id: string
-  project_id?: string | null
-  title: string
-  slug?: string | null
-  content_json?: EditorDocument | null
-  content_html?: string | null
-  content_text?: string | null
-  status: PageStatus
-  metadata?: Record<string, unknown>
-}
-
-export type PageUpdateInput = Partial<Omit<PageInput, 'organisation_id'>> & {
-  id: string
-  organisation_id: string
-}
-
-export type PageVersion = {
-  id: string
-  organisation_id: string
-  project_id: string | null
-  page_id: string | null
-  title: string | null
-  slug: string | null
-  description_json: EditorDocument
-  description_html: string | null
-  description_text: string | null
-  status: PageStatus | string | null
-  payload: {
-    page_status?: PageStatus
-    captured_updated_at?: string | null
-    captured_created_at?: string | null
-  }
-  created_by: string | null
-  created_at: string
-  updated_at: string | null
-  deleted_at: string | null
-}
-
 export type IntakeStatus = 'open' | 'closed' | 'paused'
 
 export type IntakeIssueStatus = 'submitted' | 'accepted' | 'declined' | 'snoozed'
@@ -936,7 +841,6 @@ export type OpenKbAnalyticsSummary = {
   total_issues: number
   open_issues: number
   completed_issues: number
-  total_pages: number
   total_cycles: number
   total_modules: number
   total_intake_requests: number
