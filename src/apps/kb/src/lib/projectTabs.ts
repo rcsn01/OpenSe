@@ -1,14 +1,12 @@
 import {
   CalendarDays,
   Columns3,
-  FileText,
   FolderOpen,
   Gauge,
   GanttChart,
   LayoutDashboard,
   List,
   MessageSquare,
-  NotebookText,
   Settings,
   Split,
   Users,
@@ -25,11 +23,9 @@ export const projectTabKeys = [
   'calendar',
   'workflow',
   'messages',
-  'note',
   'gantt',
   'workload',
   'files',
-  'pages',
   'settings',
 ] as const
 
@@ -54,18 +50,15 @@ export const projectTabDefinitions: ProjectTabDefinition[] = [
   { key: 'calendar', label: 'Calendar', path: 'calendar', group: 'popular', icon: CalendarDays },
   { key: 'workflow', label: 'Workflow', path: 'workflow', group: 'other', icon: Workflow },
   { key: 'messages', label: 'Messages', path: 'messages', group: 'other', icon: MessageSquare },
-  { key: 'note', label: 'Note', path: 'note', group: 'other', icon: NotebookText },
   { key: 'gantt', label: 'Gantt', path: 'gantt', group: 'other', icon: GanttChart },
   { key: 'workload', label: 'Workload', path: 'workload', group: 'other', icon: Users },
   { key: 'files', label: 'Files', path: 'files', group: 'other', icon: FolderOpen },
-  { key: 'pages', label: 'Pages', path: 'pages', group: 'existing', icon: FileText },
   { key: 'settings', label: 'Settings', path: 'settings', group: 'existing', icon: Settings },
 ]
 
 export const defaultProjectTabKeys: ProjectTabKey[] = [
   'overview',
   'list',
-  'pages',
   'settings',
 ]
 
@@ -91,8 +84,5 @@ export const getProjectTabPath = (projectId: string, key: ProjectTabKey) => {
 
 export const getProjectTabInstancePath = (projectId: string, key: ProjectTabKey, tabId: string) => {
   const path = projectTabDefinitionByKey.get(key)?.path ?? 'overview'
-  if (key === 'pages') {
-    return `/projects/${projectId}/${path}`
-  }
   return `/projects/${projectId}/${path}/${tabId}`
 }

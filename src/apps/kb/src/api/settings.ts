@@ -217,7 +217,6 @@ export const createWebhook = async (input: OpenKbWebhookInput): Promise<OpenKbWe
       secret_hash: input.secret_hash || null,
       project_id: null,
       issue_id: null,
-      page_id: null,
     })
     .select(webhookSelect)
     .single()
@@ -242,7 +241,6 @@ export const updateWebhook = async ({
       description_text: input.description_text?.trim() || input.description_text,
       project_id: null,
       issue_id: null,
-      page_id: null,
     })
     .eq('organisation_id', organisation_id)
     .eq('id', id)
@@ -319,7 +317,6 @@ const ensureOrganisationIntegration = async (
       scopes: [],
       project_id: null,
       issue_id: null,
-      page_id: null,
     })
     .select(organisationIntegrationSelect)
     .single()
@@ -358,7 +355,6 @@ export const createGitHubRepository = async (input: OpenKbGitHubRepositoryInput)
       title: `${input.repository_owner.trim()}/${input.repository_name.trim()}`,
       status: 'active',
       issue_id: null,
-      page_id: null,
     })
     .select(githubRepositorySelect)
     .single()
@@ -537,7 +533,6 @@ export const createSlackProjectSync = async (input: OpenKbSlackProjectSyncInput)
       title: input.channel_name?.trim() || input.channel_id.trim(),
       status: 'active',
       issue_id: null,
-      page_id: null,
     })
     .select(slackProjectSyncSelect)
     .single()

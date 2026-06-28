@@ -44,7 +44,6 @@ export const createTeam = async (input: OpenKbTeamInput): Promise<OpenKbTeam> =>
     status: 'active',
     project_id: null,
     issue_id: null,
-    page_id: null,
   }
 
   const { data, error } = await db
@@ -66,7 +65,6 @@ export const updateTeam = async ({ id, organisation_id, ...input }: OpenKbTeamUp
     description_text: input.description_text?.trim() || input.description_text,
     project_id: null,
     issue_id: null,
-    page_id: null,
   }
 
   const { data, error } = await db

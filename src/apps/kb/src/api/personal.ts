@@ -6,7 +6,6 @@ const personalItemSelect = `
   organisation_id,
   project_id,
   issue_id,
-  page_id,
   profile_id,
   name,
   title,
@@ -25,7 +24,6 @@ export type PersonalItemInput = {
   kind: OpenKbVisitKind
   projectId?: string | null
   issueId?: string | null
-  pageId?: string | null
   title: string
   description?: string | null
   status?: string | null
@@ -35,16 +33,15 @@ export type PersonalItemInput = {
 
 const entityFilter = <T extends { eq: (column: string, value: string) => T }>(
   query: T,
-  input: Pick<PersonalItemInput, 'kind' | 'projectId' | 'issueId' | 'pageId'>,
+  input: Pick<PersonalItemInput, 'kind' | 'projectId' | 'issueId'>,
 ) : T => {
   if (input.kind === 'project') return query.eq('project_id', input.projectId ?? '')
-  if (input.kind === 'issue') return query.eq('issue_id', input.issueId ?? '')
-  return query.eq('page_id', input.pageId ?? '')
+  return query.eq('issue_id', input.issueId ?? '')
 }
 
 const findPersonalItem = async (
   table: 'user_favorites' | 'user_recent_visits',
-  input: Pick<PersonalItemInput, 'organisationId' | 'profileId' | 'kind' | 'projectId' | 'issueId' | 'pageId'>,
+  input: Pick<PersonalItemInput, 'organisationId' | 'profileId' | 'kind' | 'projectId' | 'issueId'>,
 ): Promise<OpenKbPersonalItem | null> => {
   let query = db
     .from(table)
@@ -74,7 +71,6 @@ const toRow = (input: PersonalItemInput) => ({
   name: input.kind,
   project_id: input.projectId ?? null,
   issue_id: input.issueId ?? null,
-  page_id: input.pageId ?? null,
   title: input.title.trim(),
   description_text: input.description?.trim() || null,
   status: input.status ?? 'active',

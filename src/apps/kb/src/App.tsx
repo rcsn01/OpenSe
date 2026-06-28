@@ -15,11 +15,9 @@ const TeamsPage = lazy(() => import('./pages/teams/TeamsPage').then((module) => 
 const NewProjectPage = lazy(() => import('./pages/projects/NewProjectPage').then((module) => ({ default: module.NewProjectPage })))
 const ProjectDetailPage = lazy(() => import('./pages/projects/ProjectDetailPage').then((module) => ({ default: module.ProjectDetailPage })))
 const IssueDetailPage = lazy(() => import('./pages/projects/issues/IssueDetailPage').then((module) => ({ default: module.IssueDetailPage })))
+const GlobalTasksPage = lazy(() => import('./pages/tasks/GlobalTasksPage').then((module) => ({ default: module.GlobalTasksPage })))
 const NewCyclePage = lazy(() => import('./pages/projects/cycles/NewCyclePage').then((module) => ({ default: module.NewCyclePage })))
 const CycleDetailPage = lazy(() => import('./pages/projects/cycles/CycleDetailPage').then((module) => ({ default: module.CycleDetailPage })))
-const NewPagePage = lazy(() => import('./pages/projects/pages/NewPagePage').then((module) => ({ default: module.NewPagePage })))
-const PageDetailPage = lazy(() => import('./pages/projects/pages/PageDetailPage').then((module) => ({ default: module.PageDetailPage })))
-const StickiesPage = lazy(() => import('./pages/stickies/StickiesPage').then((module) => ({ default: module.StickiesPage })))
 const AnalyticsPage = lazy(() => import('./pages/analytics/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })))
 const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage').then((module) => ({ default: module.NotificationsPage })))
 const PublicBoardPage = lazy(() => import('./pages/public/PublicBoardPage').then((module) => ({ default: module.PublicBoardPage })))
@@ -70,6 +68,11 @@ export const RootRedirect = () => {
 }
 
 const ProjectCyclesRedirect = () => {
+  const { projectId = '' } = useParams()
+  return <Navigate to={`/projects/${projectId}/list`} replace />
+}
+
+const RemovedProjectPagesRedirect = () => {
   const { projectId = '' } = useParams()
   return <Navigate to={`/projects/${projectId}/list`} replace />
 }
@@ -126,13 +129,20 @@ export function App() {
                 <Route path="/projects/:projectId/:section/:tabId/issues/:issueId" element={lazyRoute(<ProjectDetailPage />)} />
                 <Route path="/projects/:projectId/:section/cycles/:cycleId" element={lazyRoute(<ProjectDetailPage />)} />
                 <Route path="/projects/:projectId/:section/:tabId/cycles/:cycleId" element={lazyRoute(<ProjectDetailPage />)} />
-                <Route path="/projects/:projectId/pages/new" element={lazyRoute(<NewPagePage />)} />
-                <Route path="/projects/:projectId/pages/:pageId" element={lazyRoute(<PageDetailPage />)} />
+                <Route path="/projects/:projectId/pages" element={<RemovedProjectPagesRedirect />} />
+                <Route path="/projects/:projectId/pages/*" element={<RemovedProjectPagesRedirect />} />
+                <Route path="/projects/:projectId/note" element={<RemovedProjectPagesRedirect />} />
+                <Route path="/projects/:projectId/note/*" element={<RemovedProjectPagesRedirect />} />
                 <Route path="/projects/:projectId/cycles" element={<ProjectCyclesRedirect />} />
                 <Route path="/projects/:projectId/cycles/:cycleId" element={lazyRoute(<CycleDetailPage />)} />
                 <Route path="/projects/:projectId" element={lazyRoute(<ProjectDetailPage />)} />
                 <Route path="/projects/:projectId/:section" element={lazyRoute(<ProjectDetailPage />)} />
                 <Route path="/projects/:projectId/:section/:tabId" element={lazyRoute(<ProjectDetailPage />)} />
+              </Route>
+              <Route element={<PermissionRoute permission="issues.view" />}>
+                <Route path="/tasks" element={<Navigate to="/tasks/list" replace />} />
+                <Route path="/tasks/list/issues/:issueId" element={lazyRoute(<GlobalTasksPage />)} />
+                <Route path="/tasks/:section" element={lazyRoute(<GlobalTasksPage />)} />
               </Route>
               <Route element={<PermissionRoute permission="projects.create" />}>
                 <Route path="/projects/new" element={lazyRoute(<NewProjectPage />)} />
@@ -140,9 +150,7 @@ export function App() {
               <Route element={<PermissionRoute permission="planning.manage" />}>
                 <Route path="/projects/:projectId/cycles/new" element={lazyRoute(<NewCyclePage />)} />
               </Route>
-              <Route element={<PermissionRoute permission="pages.view" />}>
-                <Route path="/stickies" element={lazyRoute(<StickiesPage />)} />
-              </Route>
+              <Route path="/stickies" element={<Navigate to="/dashboard" replace />} />
               <Route element={<PermissionRoute permission="analytics.view" />}>
                 <Route path="/analytics" element={lazyRoute(<AnalyticsPage />)} />
               </Route>

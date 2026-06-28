@@ -36,11 +36,15 @@ describe('project tab registry', () => {
     expect(requiredProjectTabKey).toBe('list')
     expect(defaultProjectTabKeys).toContain('list')
     expect(defaultProjectTabKeys).not.toContain('cycles')
+    expect(defaultProjectTabKeys).not.toContain('pages')
+    expect(defaultProjectTabKeys).not.toContain('note')
     expect(getProjectTabKeyFromSection('unknown-section')).toBe('overview')
     expect(getProjectTabKeyFromSection('cycles')).toBe('overview')
+    expect(getProjectTabKeyFromSection('pages')).toBe('overview')
+    expect(getProjectTabKeyFromSection('note')).toBe('overview')
   })
 
-  it('deduplicates tab keys and omits standalone Cycles tabs', () => {
+  it('deduplicates tab keys and omits removed standalone tabs', () => {
     const keys = projectTabDefinitions.map((tab) => tab.key)
     expect(new Set(keys).size).toBe(keys.length)
     expect(keys).toEqual(expect.arrayContaining([
@@ -52,14 +56,14 @@ describe('project tab registry', () => {
       'calendar',
       'workflow',
       'messages',
-      'note',
       'gantt',
       'workload',
       'files',
-      'pages',
       'settings',
     ]))
     expect(keys).not.toContain('cycles')
+    expect(keys).not.toContain('pages')
+    expect(keys).not.toContain('note')
   })
 
   it('generates copy labels without colliding with existing tabs', () => {
@@ -72,8 +76,7 @@ describe('project tab registry', () => {
     expect(getCopiedProjectTabLabel('   ', [])).toBe('Tab copy')
   })
 
-  it('keeps the pages tab on the pages route instead of the page detail route', () => {
-    expect(getProjectTabInstancePath('project', 'pages', 'tab-id')).toBe('/projects/project/pages')
+  it('generates tab instance paths for configurable tabs', () => {
     expect(getProjectTabInstancePath('project', 'list', 'tab-id')).toBe('/projects/project/list/tab-id')
   })
 })

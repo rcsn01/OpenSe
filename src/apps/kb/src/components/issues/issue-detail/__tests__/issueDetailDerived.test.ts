@@ -81,7 +81,7 @@ describe('issue detail derived selections', () => {
     const relations: IssueRelation[] = [{ id: 'r1', organisation_id: 'org', project_id: 'project', issue_id: 'current', related_issue_id: 'related', relation_type: 'related', created_by: null, created_at: '2026-06-01T00:00:00.000Z', updated_at: null, deleted_at: null, related_issue: issues[3] }]
     const subscribers: IssueSubscriber[] = [{ id: 's1', organisation_id: 'org', project_id: 'project', issue_id: 'current', profile_id: 'p1', created_by: null, created_at: '2026-06-01T00:00:00.000Z', updated_at: null, deleted_at: null, profile: profile('p1') }]
     const votes: IssueVote[] = [{ id: 'v1', organisation_id: 'org', project_id: 'project', issue_id: 'current', profile_id: 'p1', created_by: null, created_at: '2026-06-01T00:00:00.000Z', updated_at: null, deleted_at: null }]
-    const favorites: OpenKbPersonalItem[] = [{ id: 'f1', organisation_id: 'org', project_id: 'project', issue_id: 'current', page_id: null, profile_id: 'p1', name: 'issue', title: 'current', description_text: null, status: null, payload: {}, created_by: null, created_at: '2026-06-01T00:00:00.000Z', updated_at: null, deleted_at: null }]
+    const favorites: OpenKbPersonalItem[] = [{ id: 'f1', organisation_id: 'org', project_id: 'project', issue_id: 'current', profile_id: 'p1', name: 'issue', title: 'current', description_text: null, status: null, payload: {}, created_by: null, created_at: '2026-06-01T00:00:00.000Z', updated_at: null, deleted_at: null }]
 
     const result = deriveIssueDetailSelections({
       issue: issues[0],

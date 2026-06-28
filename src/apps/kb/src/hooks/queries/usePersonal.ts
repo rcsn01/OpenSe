@@ -75,7 +75,6 @@ const recentVisitKey = (input: PersonalItemInput) => [
   input.kind,
   input.projectId ?? '',
   input.issueId ?? '',
-  input.pageId ?? '',
 ].join(':')
 
 export const useRecordRecentVisitOnce = () => {

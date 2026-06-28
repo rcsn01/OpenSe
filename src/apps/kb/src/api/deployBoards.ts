@@ -54,7 +54,6 @@ export const createProjectDeployBoard = async (input: ProjectDeployBoardInput): 
     organisation_id: input.organisation_id,
     project_id: input.project_id,
     issue_id: null,
-    page_id: null,
     name: input.title?.trim() || slug,
     slug,
     title: input.title?.trim() || null,
@@ -87,7 +86,6 @@ export const updateProjectDeployBoard = async ({
     name: input.title?.trim() || input.title,
     description_text: input.description_text?.trim() || input.description_text,
     issue_id: null,
-    page_id: null,
   }
 
   const { data, error } = await db

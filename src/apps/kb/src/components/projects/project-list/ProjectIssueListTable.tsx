@@ -671,6 +671,7 @@ export const ProjectIssueListTable = ({
   onOpenIssue,
   onOpenCycle,
   onCreateIssue,
+  showProjectColumn = false,
 }: {
   tabId: string | null
   issues: Issue[]
@@ -688,6 +689,7 @@ export const ProjectIssueListTable = ({
   onOpenIssue: (issue: Issue) => void
   onOpenCycle?: (cycle: Cycle) => void
   onCreateIssue: () => void
+  showProjectColumn?: boolean
 }) => {
   const [filters, setFilters] = useState<ProjectIssueListFilters>(listViewConfig.filters)
   const [sort, setSort] = useState<ProjectIssueListSort>(listViewConfig.sort)
@@ -725,6 +727,7 @@ export const ProjectIssueListTable = ({
   const assignableMembers = useMemo(() => getAssignableMembers(members, assignees), [assignees, members])
   const activeFilterCount = filters.stateIds.length + filters.assigneeIds.length + filters.priorities.length + filters.dueBuckets.length + (filters.query.trim() ? 1 : 0) + (filters.showCompleted ? 0 : 1)
   const visibleColumns = [
+    showProjectColumn ? '8rem' : null,
     options.columns.assignee ? '7.5rem' : null,
     options.columns.dueDate ? '7.5rem' : null,
     options.columns.effort ? '7.5rem' : null,
@@ -948,6 +951,7 @@ export const ProjectIssueListTable = ({
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="sticky top-0 z-10 grid h-9 border-b border-[var(--color-border)] bg-[var(--color-background)] text-xs text-[var(--color-muted-foreground)]" style={{ gridTemplateColumns }}>
           <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Name</div>
+          {showProjectColumn ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Project</div> : null}
           {options.columns.assignee ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Assignee</div> : null}
           {options.columns.dueDate ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Due date</div> : null}
           {options.columns.effort ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Effort</div> : null}
@@ -975,6 +979,13 @@ export const ProjectIssueListTable = ({
                     {issue.title}
                   </span>
                 </button>
+                {showProjectColumn ? (
+                  <div className="flex min-w-0 items-center border-r border-[var(--color-border)] px-2.5">
+                    <span className="inline-flex min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-muted)] px-2 py-0.5 text-xs font-medium text-[var(--color-muted-foreground)]">
+                      <span className="truncate">{issue.project?.identifier || issue.project?.name || 'Project'}</span>
+                    </span>
+                  </div>
+                ) : null}
                 {options.columns.assignee ? (
                   <div className="flex min-w-0 items-center border-r border-[var(--color-border)] px-2.5">
                     <AssigneeCell assignees={assigneesByIssueId.get(issue.id) ?? []} />
@@ -1013,6 +1024,7 @@ export const ProjectIssueListTable = ({
               style={{ gridTemplateColumns }}
             >
               <span className="flex items-center border-r border-[var(--color-border)] pl-14">Add task...</span>
+              {showProjectColumn ? <span className="border-r border-[var(--color-border)]" /> : null}
               {options.columns.assignee ? <span className="border-r border-[var(--color-border)]" /> : null}
               {options.columns.dueDate ? <span className="border-r border-[var(--color-border)]" /> : null}
               {options.columns.effort ? <span className="border-r border-[var(--color-border)]" /> : null}
@@ -1076,7 +1088,7 @@ export const ProjectIssuePreviewPane = ({
   onClose,
 }: {
   organisationId: string
-  projectId: string
+  projectId?: string | null
   issueId: string
   listHref: string
   expandedHref: string
@@ -1084,20 +1096,21 @@ export const ProjectIssuePreviewPane = ({
 }) => {
   const navigate = useNavigate()
   const { data: issue, isLoading } = useIssue(organisationId, issueId)
+  const isExpectedIssue = Boolean(issue && (!projectId || issue.project_id === projectId))
 
   return (
     <EntityPreviewPaneShell
       title={issue ? formatIssueKey(issue) : undefined}
       isLoading={isLoading}
       loadingLabel="Loading task..."
-      notFoundTitle={!isLoading && (!issue || issue.project_id !== projectId) ? 'Task not found' : undefined}
-      notFoundDescription={!isLoading && (!issue || issue.project_id !== projectId) ? 'The task was deleted or is outside this project.' : undefined}
+      notFoundTitle={!isLoading && !isExpectedIssue ? 'Task not found' : undefined}
+      notFoundDescription={!isLoading && !isExpectedIssue ? 'The task was deleted or is outside this view.' : undefined}
       expandLabel="Expand issue"
       closeLabel="Close issue detail"
-      onExpand={issue && issue.project_id === projectId ? () => navigate(expandedHref) : undefined}
+      onExpand={isExpectedIssue ? () => navigate(expandedHref) : undefined}
       onClose={onClose}
     >
-      {issue && issue.project_id === projectId ? (
+      {isExpectedIssue && issue ? (
         <IssueDetailContent
           key={issue.id}
           issue={issue}

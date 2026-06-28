@@ -67,7 +67,7 @@ Status legend:
 | `/teams`, `/projects`, `/projects/new`, `/projects/:projectId` | covered-new | `apps/kb/route-coverage.spec.ts` |
 | `/issues`, `/issues/new`, `/issues/:issueId`, `/drafts` | removed | project-scoped `/projects/:projectId/issues/:issueId` |
 | `/cycles`, `/cycles/new`, `/modules`, `/modules/new` | covered-new | `apps/kb/route-coverage.spec.ts` |
-| `/pages`, `/pages/new`, `/pages/:pageId`, `/stickies` | removed | project-scoped `/projects/:projectId/pages/*` |
+| `/pages`, `/pages/new`, `/pages/:pageId`, `/projects/:projectId/pages/*`, `/projects/:projectId/note/*`, `/stickies` | removed | stale routes redirect to List or Dashboard |
 | `/intake`, `/analytics`, `/notifications`, `/settings` | covered-new | `apps/kb/route-coverage.spec.ts` (intake removed) |
 | `*` | covered-new | `apps/kb/route-coverage.spec.ts` |
 
