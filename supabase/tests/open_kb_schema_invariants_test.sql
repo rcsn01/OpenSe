@@ -106,25 +106,22 @@ BEGIN
   FROM pg_class c
   JOIN pg_namespace n ON n.oid = c.relnamespace
   WHERE n.nspname = 'kb'
-    AND c.relkind = 'r'
+    AND c.relkind IN ('r', 'v')
     AND (
-      has_table_privilege('anon', c.oid, 'INSERT')
+      has_table_privilege('anon', c.oid, 'SELECT')
+      OR has_table_privilege('anon', c.oid, 'INSERT')
       OR has_table_privilege('anon', c.oid, 'UPDATE')
       OR has_table_privilege('anon', c.oid, 'DELETE')
-      OR (
-        has_table_privilege('anon', c.oid, 'SELECT')
-        AND c.relname NOT IN ('projects', 'project_deploy_boards', 'issues', 'states')
-      )
     );
 
   IF v_details IS NOT NULL THEN
-    RAISE EXCEPTION 'Open-KB tables must not be directly accessible to anon except public board read surfaces: %', v_details;
+    RAISE EXCEPTION 'Open-KB tables and views must not be directly accessible to anon; public board reads use the open-kb-public-deploy-board Edge Function: %', v_details;
   END IF;
 
-  IF NOT has_table_privilege('anon', 'kb.public_deploy_boards', 'SELECT')
-    OR NOT has_table_privilege('anon', 'kb.public_deploy_board_issues', 'SELECT')
+  IF NOT has_table_privilege('service_role', 'kb.public_deploy_boards', 'SELECT')
+    OR NOT has_table_privilege('service_role', 'kb.public_deploy_board_issues', 'SELECT')
   THEN
-    RAISE EXCEPTION 'Open-KB public deploy board views must be selectable by anon';
+    RAISE EXCEPTION 'Open-KB public deploy board views must remain selectable by service_role for the Edge Function';
   END IF;
 
   SELECT string_agg(n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')', ', ' ORDER BY n.nspname, p.proname)

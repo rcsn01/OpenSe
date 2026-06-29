@@ -231,3 +231,37 @@ ON public.platform_release_notes
 FOR ALL
 USING (false)
 WITH CHECK (false);
+
+
+
+-- Disable unused GraphQL. pg_graphql reflects every API-exposed schema through
+-- graphql.resolve, which surfaces all tables/views/functions to the anon and
+-- authenticated roles even when REST/RLS is otherwise locked down. No app in
+-- this repo uses GraphQL (graphql_public is also removed from the API schemas
+-- in supabase/config.toml), so drop the extension. Dropping it (CASCADE) also
+-- removes the resolver, event triggers, and graphql_public.graphql wrapper.
+DROP EXTENSION IF EXISTS pg_graphql CASCADE;
+
+-- The graphql/graphql_public schemas are owned by supabase_admin, so the
+-- migration role may not be able to drop the now-empty shells. Best-effort.
+DO $$
+BEGIN
+  BEGIN
+    EXECUTE 'DROP SCHEMA IF EXISTS graphql_public CASCADE';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    EXECUTE 'DROP SCHEMA IF EXISTS graphql CASCADE';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END;
+$$;
+
+-- Remove broad anonymous access to the public account/platform surface. Supabase
+-- pre-grants anon/authenticated table privileges across the public schema, so
+-- every account table and view shows up as anon-reachable in security advisors
+-- even though RLS denies the rows. RLS stays the boundary for signed-in users,
+-- so only the anon (and PUBLIC) grants are withdrawn here; authenticated and
+-- service_role keep the direct REST access the apps rely on.
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon;

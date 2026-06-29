@@ -6,7 +6,7 @@ project_id = "opense-stack"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "etl", "stoqr", "kb", "graphql_public"]
+schemas = ["public", "etl", "stoqr", "kb"]
 extra_search_path = ["public", "etl", "stoqr", "kb", "extensions"]
 max_rows = 1000
 
@@ -83,6 +83,9 @@ port = 54327
 backend = "postgres"
 
 [functions.send-stoqr-alert-notifications]
+verify_jwt = false
+
+[functions.open-kb-public-deploy-board]
 verify_jwt = false
 
 [functions.open-kb-github-webhook]

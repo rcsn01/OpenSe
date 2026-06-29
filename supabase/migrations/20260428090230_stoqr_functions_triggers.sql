@@ -1761,6 +1761,7 @@ CREATE POLICY "Admins can manage role permissions" ON stoqr.role_permissions
 REVOKE ALL ON FUNCTION public.ensure_stoqr_default_role(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ensure_stoqr_guest_role(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.assign_stoqr_default_role_for_seat() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.assign_stoqr_guest_role_for_seat() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION app_private.has_permission(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION app_private.prevent_owner_role_mutation() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION app_private.prevent_owner_role_permission_delete() FROM PUBLIC, anon, authenticated;
