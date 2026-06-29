@@ -31,84 +31,14 @@ GRANT ALL PRIVILEGES ON TABLE
   kb.draft_issues
 TO service_role;
 
-GRANT SELECT ON TABLE
-  kb.projects,
-  kb.project_deploy_boards,
-  kb.issues,
-  kb.states,
-  kb.public_deploy_boards,
-  kb.public_deploy_board_issues
-TO anon;
-
+-- Public deploy board reads are served by the open-kb-public-deploy-board Edge
+-- Function using the service role, so the anon role no longer needs any direct
+-- table or view grants. Authenticated/service_role keep view access for the
+-- in-app board management surfaces.
 GRANT SELECT ON TABLE
   kb.public_deploy_boards,
   kb.public_deploy_board_issues
 TO authenticated, service_role;
-
-CREATE POLICY public_projects_select ON kb.projects
-  FOR SELECT TO anon
-  USING (
-    visibility = 'public'
-    AND deleted_at IS NULL
-  );
-
-CREATE POLICY public_project_deploy_boards_select ON kb.project_deploy_boards
-  FOR SELECT TO anon
-  USING (
-    deleted_at IS NULL
-    AND COALESCE(status, 'active') = 'active'
-    AND EXISTS (
-      SELECT 1
-      FROM kb.projects p
-      WHERE p.id = project_deploy_boards.project_id
-        AND p.organisation_id = project_deploy_boards.organisation_id
-        AND p.deleted_at IS NULL
-        AND p.visibility = 'public'
-    )
-  );
-
-CREATE POLICY public_issues_select ON kb.issues
-  FOR SELECT TO anon
-  USING (
-    deleted_at IS NULL
-    AND archived_at IS NULL
-    AND EXISTS (
-      SELECT 1
-      FROM kb.projects p
-      JOIN kb.project_deploy_boards b
-        ON b.project_id = p.id
-       AND b.organisation_id = p.organisation_id
-       AND b.deleted_at IS NULL
-       AND COALESCE(b.status, 'active') = 'active'
-      WHERE p.id = issues.project_id
-        AND p.organisation_id = issues.organisation_id
-        AND p.deleted_at IS NULL
-        AND p.visibility = 'public'
-    )
-  );
-
-CREATE POLICY public_states_select ON kb.states
-  FOR SELECT TO anon
-  USING (
-    deleted_at IS NULL
-    AND EXISTS (
-      SELECT 1
-      FROM kb.issues i
-      JOIN kb.projects p
-        ON p.id = i.project_id
-       AND p.organisation_id = i.organisation_id
-       AND p.deleted_at IS NULL
-       AND p.visibility = 'public'
-      JOIN kb.project_deploy_boards b
-        ON b.project_id = p.id
-       AND b.organisation_id = p.organisation_id
-       AND b.deleted_at IS NULL
-       AND COALESCE(b.status, 'active') = 'active'
-      WHERE i.state_id = states.id
-        AND i.deleted_at IS NULL
-        AND i.archived_at IS NULL
-    )
-  );
 
 CREATE POLICY projects_insert ON kb.projects
   FOR INSERT TO authenticated

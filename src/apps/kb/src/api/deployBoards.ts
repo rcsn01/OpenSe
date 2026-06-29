@@ -1,4 +1,4 @@
-import { db } from '../supabaseClient'
+import { db, supabase } from '../supabaseClient'
 import type {
   ProjectDeployBoard,
   ProjectDeployBoardInput,
@@ -6,6 +6,11 @@ import type {
   PublicDeployBoard,
   PublicDeployBoardIssue,
 } from '../types'
+
+type PublicDeployBoardResponse = {
+  board: PublicDeployBoard | null
+  issues: PublicDeployBoardIssue[]
+}
 
 const projectDeployBoardSelect = `
   id,
@@ -121,44 +126,33 @@ export const deleteProjectDeployBoard = async ({
   if (error) throw error
 }
 
-export const fetchPublicDeployBoard = async (slug: string): Promise<PublicDeployBoard | null> => {
-  const { data, error } = await db
-    .from('public_deploy_boards')
-    .select('*')
-    .ilike('slug', slug.trim())
-    .maybeSingle()
+// Public deploy boards are unauthenticated reads. The anon role has no direct
+// table/view access, so these go through the open-kb-public-deploy-board Edge
+// Function, which applies the public/active/not-deleted filters with the
+// service role.
+const fetchPublicDeployBoardData = async (slug: string): Promise<PublicDeployBoardResponse> => {
+  const trimmed = slug.trim()
+  if (!trimmed) return { board: null, issues: [] }
+
+  const { data, error } = await supabase.functions.invoke<PublicDeployBoardResponse>(
+    'open-kb-public-deploy-board',
+    { body: { slug: trimmed } },
+  )
 
   if (error) throw error
 
-  return (data ?? null) as PublicDeployBoard | null
+  return {
+    board: data?.board ?? null,
+    issues: data?.issues ?? [],
+  }
+}
+
+export const fetchPublicDeployBoard = async (slug: string): Promise<PublicDeployBoard | null> => {
+  const { board } = await fetchPublicDeployBoardData(slug)
+  return board
 }
 
 export const fetchPublicDeployBoardIssues = async (slug: string): Promise<PublicDeployBoardIssue[]> => {
-  const { data, error } = await db
-    .from('public_deploy_board_issues')
-    .select(`
-      issue_id,
-      project_id,
-      sequence_id,
-      title,
-      description_text,
-      priority,
-      state_id,
-      state_name,
-      state_group_key,
-      state_color,
-      start_date,
-      target_date,
-      completed_at,
-      created_at,
-      updated_at
-    `)
-    .ilike('slug', slug.trim())
-    .order('state_sort_order', { ascending: true })
-    .order('sequence_id', { ascending: true, nullsFirst: false })
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-
-  return (data ?? []) as PublicDeployBoardIssue[]
+  const { issues } = await fetchPublicDeployBoardData(slug)
+  return issues
 }
