@@ -370,7 +370,7 @@ describe("AlertsPage", () => {
 
     renderAlertsRoute("/alerts/feed");
 
-    const alertsFeedTab = screen.getByRole("button", { name: /alerts feed/i });
+    const alertsFeedTab = screen.getByRole("tab", { name: /alerts feed/i });
     expect(within(alertsFeedTab).getByText("1")).toBeInTheDocument();
     expect(screen.getByText(/PCR Tips is at 4 units/i)).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /date \/ time/i })).toBeInTheDocument();
@@ -378,7 +378,7 @@ describe("AlertsPage", () => {
 
     await user.click(screen.getByLabelText("Select all visible alerts"));
     const acknowledgeButton = screen.getByRole("button", { name: "Acknowledge" });
-    expect(acknowledgeButton.closest("table")).not.toBeNull();
+    expect(acknowledgeButton.closest(".data-table-top-row")).not.toBeNull();
     await user.click(acknowledgeButton);
 
     expect(mockUpdateEventStatus).toHaveBeenCalledWith({
@@ -419,7 +419,7 @@ describe("AlertsPage", () => {
     renderAlertsRoute("/alerts/feed");
 
     const filterButton = screen.getByRole("button", { name: "Alert feed category filter" });
-    expect(filterButton.closest("table")).not.toBeNull();
+    expect(filterButton.closest(".data-table-top-row")).not.toBeNull();
 
     await user.click(filterButton);
     await user.click(screen.getByRole("button", { name: "Stock & Inventory" }));
@@ -462,7 +462,7 @@ describe("AlertsPage", () => {
     cleanup();
     renderAlertsRoute("/alerts/rules");
     const newTriggerButton = screen.getByRole("button", { name: "New Trigger" });
-    expect(newTriggerButton.closest("table")).not.toBeNull();
+    expect(newTriggerButton.closest(".data-table-top-row")).not.toBeNull();
     await user.click(newTriggerButton);
 
     expect(screen.getByTestId("location-path")).toHaveTextContent("/alerts/rules/new");
@@ -491,7 +491,7 @@ describe("AlertsPage", () => {
       "/alerts/feed",
     );
 
-    await user.click(screen.getByRole("button", { name: "Alert Rules" }));
+    await user.click(screen.getByRole("tab", { name: "Alert Rules" }));
 
     expect(screen.getByTestId("location-path")).toHaveTextContent(
       "/alerts/rules",

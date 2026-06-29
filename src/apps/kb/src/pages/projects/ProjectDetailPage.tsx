@@ -494,7 +494,8 @@ export const ProjectDetailPage = () => {
 
   if (projectError) {
     return (
-      <OpenKbPageShell topSlot={projectTopSlot}>
+      <OpenKbPageShell>
+        {projectTopSlot}
         <EmptyState title="Project not found" description={projectError instanceof Error ? projectError.message : ''} />
       </OpenKbPageShell>
     )
@@ -502,14 +503,16 @@ export const ProjectDetailPage = () => {
 
   if (!project) {
     return (
-      <OpenKbPageShell topSlot={projectTopSlot}>
+      <OpenKbPageShell>
+        {projectTopSlot}
         <EmptyState title={projectLoading ? 'Loading project...' : 'Project not found'} description="" />
       </OpenKbPageShell>
     )
   }
 
   return (
-    <OpenKbPageShell topSlot={projectTopSlot}>
+    <OpenKbPageShell>
+      {projectTopSlot}
       <Dialog open={Boolean(renameTab)} onClose={() => setRenameTab(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>

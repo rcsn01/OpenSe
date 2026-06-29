@@ -1,5 +1,5 @@
 import { type CSSProperties, type ReactNode, useMemo } from 'react';
-import { BasePage } from '@repo/ui';
+import { AppPageShell } from '@repo/ui';
 import { type PageTopBarSearchConfig, usePageTopBarSearch } from './Search/TopBarSearch';
 
 type ETLPageShellProps = {
@@ -21,10 +21,6 @@ const disabledSearchConfig: PageTopBarSearchConfig = {
   placeholder: '',
 };
 
-const defaultContentClassName = 'flex h-full min-h-0 overflow-hidden px-2 pb-8 pt-[18px]';
-const defaultContainerClassName =
-  '[&>*]:min-w-0 flex h-full min-h-0 min-w-0 flex-1 flex-col gap-6 overflow-hidden text-[var(--color-foreground)]';
-
 export const ETLPageShell = ({
   children,
   search,
@@ -32,9 +28,9 @@ export const ETLPageShell = ({
   loadingMessage,
   emptyStateTitle,
   emptyStateDescription,
-  contentClassName = defaultContentClassName,
+  contentClassName,
   contentStyle,
-  containerClassName = defaultContainerClassName,
+  containerClassName,
   containerStyle,
 }: ETLPageShellProps) => {
   const searchConfig = useMemo(
@@ -45,7 +41,7 @@ export const ETLPageShell = ({
   usePageTopBarSearch(searchConfig);
 
   return (
-    <BasePage
+    <AppPageShell
       isLoading={isLoading}
       loadingMessage={loadingMessage}
       emptyState={
@@ -59,6 +55,6 @@ export const ETLPageShell = ({
       containerStyle={containerStyle}
     >
       {children}
-    </BasePage>
+    </AppPageShell>
   );
 };

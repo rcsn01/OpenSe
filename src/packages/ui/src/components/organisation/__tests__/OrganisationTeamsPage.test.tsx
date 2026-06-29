@@ -66,8 +66,8 @@ describe('OrganisationTeamsPage', () => {
     const filterButton = screen.getByRole('button', { name: 'Team role filter' })
     const inviteButton = screen.getByRole('button', { name: 'Invite Members' })
 
-    expect(filterButton.closest('table')).not.toBeNull()
-    expect(inviteButton.closest('table')).not.toBeNull()
+    expect(filterButton.closest('.data-table-top-row')).not.toBeNull()
+    expect(inviteButton.closest('.data-table-top-row')).not.toBeNull()
 
     await user.click(filterButton)
     await user.click(screen.getByRole('button', { name: 'Member' }))

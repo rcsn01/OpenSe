@@ -155,9 +155,9 @@ describe('PurchaseOrdersTab', () => {
     const autoGenerateButton = screen.getByRole('button', { name: /auto-generate from alerts/i })
     const createButton = screen.getByRole('button', { name: /create po/i })
 
-    expect(filterButton.closest('table')).not.toBeNull()
-    expect(autoGenerateButton.closest('table')).not.toBeNull()
-    expect(createButton.closest('table')).not.toBeNull()
+    expect(filterButton.closest('.data-table-top-row')).not.toBeNull()
+    expect(autoGenerateButton.closest('.data-table-top-row')).not.toBeNull()
+    expect(createButton.closest('.data-table-top-row')).not.toBeNull()
     expect(filterButton.compareDocumentPosition(autoGenerateButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(autoGenerateButton.compareDocumentPosition(createButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })

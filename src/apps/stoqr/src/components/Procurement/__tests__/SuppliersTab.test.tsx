@@ -106,8 +106,8 @@ describe('SuppliersTab', () => {
     const filterButton = screen.getByRole('button', { name: 'View' })
     const addSupplierButton = screen.getByRole('button', { name: 'Add Supplier' })
 
-    expect(filterButton.closest('table')).not.toBeNull()
-    expect(addSupplierButton.closest('table')).not.toBeNull()
+    expect(filterButton.closest('.data-table-top-row')).not.toBeNull()
+    expect(addSupplierButton.closest('.data-table-top-row')).not.toBeNull()
 
     await user.click(filterButton)
     await user.click(screen.getByRole('button', { name: 'Has open POs' }))

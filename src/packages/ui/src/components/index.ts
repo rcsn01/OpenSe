@@ -112,6 +112,12 @@ export {
 } from "./layout/AppShellLayout";
 export { BasePage, type BasePageProps } from "./layout/BasePage";
 export {
+  AppPageShell,
+  APP_PAGE_SHELL_CONTAINER_CLASS_NAME,
+  APP_PAGE_SHELL_CONTENT_CLASS_NAME,
+  type AppPageShellProps,
+} from "./layout/AppPageShell";
+export {
   LANDING_NAVBAR_OFFSET,
   LANDING_NAVBAR_SCROLL_OFFSET,
   LandingNavbar,

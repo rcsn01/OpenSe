@@ -258,10 +258,9 @@ export const GlobalTasksPage = () => {
     return <Navigate to={getTasksPath('list')} replace />
   }
 
-  const topSlot = <GlobalTasksTabBar activeTab={activeTab} />
-
   return (
-    <OpenKbPageShell topSlot={topSlot}>
+    <OpenKbPageShell>
+      <GlobalTasksTabBar activeTab={activeTab} />
       {activeTab === 'overview' ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <section className="space-y-3">

@@ -4,6 +4,15 @@ import { describe, expect, it, vi } from 'vitest'
 import { TopBar } from '../TopBar'
 
 describe('TopBar search behavior', () => {
+  it('uses the shared top-bar height token', () => {
+    const { container } = render(<TopBar right={<div>Actions</div>} />)
+
+    expect(container.querySelector('.app-top-bar')).toHaveClass(
+      'h-[var(--app-top-bar-height)]',
+      'min-h-[var(--app-top-bar-height)]',
+    )
+  })
+
   it('clears the search input from the clear button', async () => {
     const user = userEvent.setup()
     const onSearchChange = vi.fn()

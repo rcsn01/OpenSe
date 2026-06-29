@@ -55,10 +55,10 @@ describe('OrganisationPage', () => {
   it('renders teams, permissions, usage and logs tabs', () => {
     renderOrganisationPage();
 
-    expect(screen.getByRole('button', { name: /teams/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /permissions/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^usage$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^logs$/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /teams/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /permissions/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^usage$/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^logs$/i })).toBeInTheDocument();
   });
 
   it('navigates from teams to permissions tab content', () => {
@@ -66,7 +66,7 @@ describe('OrganisationPage', () => {
 
     expect(screen.getByText('Teams content')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /permissions/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /permissions/i }));
 
     expect(screen.getByText('Permissions content')).toBeInTheDocument();
   });

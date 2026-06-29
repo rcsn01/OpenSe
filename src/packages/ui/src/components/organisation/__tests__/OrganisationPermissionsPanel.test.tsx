@@ -44,7 +44,7 @@ describe('OrganisationPermissionsPanel', () => {
     )
 
     const addRoleButton = screen.getByRole('button', { name: /add role/i })
-    expect(addRoleButton.closest('table')).not.toBeNull()
+    expect(addRoleButton.closest('.data-table-top-row')).not.toBeNull()
 
     await user.click(addRoleButton)
     await user.type(screen.getByPlaceholderText('New role name'), 'Reviewer')
