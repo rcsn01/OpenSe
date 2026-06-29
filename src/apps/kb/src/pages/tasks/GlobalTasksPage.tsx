@@ -20,25 +20,23 @@ import {
 } from '../../hooks/queries/useIssues'
 import { useCycleIssueLinks, useCycles, useModuleIssueLinks, useModules } from '../../hooks/queries/usePlanning'
 import { buildBoardColumns } from '../../lib/issueViews'
-import { dayKey, formatShortDate, startOfMonth, toDate } from '../../lib/dateFormatting'
+import { formatShortDate, startOfMonth, toDate } from '../../lib/dateFormatting'
 import { formatIssueKey, issuePriorityTone as priorityTone } from '../../lib/issueFormatting'
 import { getProjectIssuePath, getTasksListIssuePath, getTasksPath, type TaskSectionKey } from '../../lib/projectRoutes'
-import type { Issue, IssueState } from '../../types'
+import type { Issue } from '../../types'
 
-const taskSections = ['overview', 'list', 'board', 'timeline', 'dashboard', 'calendar', 'gantt', 'workload'] as const
+const taskSections = ['overview', 'list', 'board', 'dashboard', 'calendar', 'gantt', 'workload'] as const
 
 const taskTabs: Array<{ key: TaskSectionKey; label: string }> = [
   { key: 'overview', label: 'Overview' },
   { key: 'list', label: 'List' },
   { key: 'board', label: 'Board' },
-  { key: 'timeline', label: 'Timeline' },
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'calendar', label: 'Calendar' },
   { key: 'gantt', label: 'Gantt' },
   { key: 'workload', label: 'Workload' },
 ]
 
-const timelineFallbackTime = new Date('2026-06-01T00:00:00.000Z').getTime()
 const labelPalette = ['#bfdbfe', '#bbf7d0', '#fecaca', '#fed7aa', '#fde68a']
 
 const getIssueProjectLabel = (issue: Issue) => issue.project?.identifier || issue.project?.name || 'Project'
@@ -199,67 +197,6 @@ const BoardView = ({ columns, onCreateIssue }: { columns: ReturnType<typeof buil
   </section>
 )
 
-const TimelineView = ({ issues, states, onCreateIssue }: { issues: Issue[]; states: IssueState[]; onCreateIssue: () => void }) => {
-  const ranges = issues.map((issue) => {
-    const start = toDate(issue.start_date) ?? toDate(issue.created_at.slice(0, 10)) ?? new Date()
-    const end = toDate(issue.target_date) ?? new Date(start.getTime() + 6 * 86_400_000)
-    return { issue, start, end: end < start ? start : end }
-  })
-  const anchorTime = ranges[0]?.start.getTime() ?? timelineFallbackTime
-  const minTime = Math.min(...ranges.map((range) => range.start.getTime()), anchorTime - 21 * 86_400_000)
-  const maxTime = Math.max(...ranges.map((range) => range.end.getTime()), anchorTime + 70 * 86_400_000)
-  const totalDays = Math.max(1, Math.ceil((maxTime - minTime) / 86_400_000) + 1)
-  const weekCount = Math.max(8, Math.ceil(totalDays / 7))
-  const weeks = Array.from({ length: weekCount }, (_, index) => new Date(minTime + index * 7 * 86_400_000))
-  const groups: IssueState[] = states.length > 0
-    ? states
-    : [{ id: 'none', name: 'No state', color: '#64748b', sort_order: 0, organisation_id: '', project_id: null, group_key: 'backlog', is_default: false }]
-
-  return (
-    <section className="-mx-2 flex min-h-0 flex-1 flex-col bg-[var(--color-background)]">
-      <TaskToolbar onCreateIssue={onCreateIssue} />
-      <div className="min-h-0 flex-1 overflow-auto">
-        <div className="grid min-w-[1600px] grid-cols-[14rem_minmax(1200px,1fr)]">
-          <div className="sticky left-0 z-20 border-r border-[var(--color-border)] bg-[var(--color-background)]" />
-          <div className="grid h-12 border-b border-[var(--color-border)]" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(9rem, 1fr))` }}>
-            {weeks.map((week) => (
-              <div key={week.toISOString()} className="border-r border-[var(--color-border)] px-2 py-1">
-                <div className="text-xs font-semibold text-[var(--color-muted-foreground)]">{new Intl.DateTimeFormat(undefined, { month: 'short' }).format(week)}</div>
-                <div className="text-xs">{formatShortDate(dayKey(week))}</div>
-              </div>
-            ))}
-          </div>
-          {groups.map((state) => {
-            const stateRanges = ranges.filter((range) => range.issue.state_id === state.id)
-            return (
-              <div key={state.id} className="contents">
-                <div className="sticky left-0 z-20 flex h-36 items-start gap-2 border-b border-r border-[var(--color-border)] bg-[var(--color-background)] px-4 py-5">
-                  <ChevronDown className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-                  <span className="font-semibold">{state.name}</span>
-                </div>
-                <div className="relative h-36 border-b border-[var(--color-border)] bg-[repeating-linear-gradient(90deg,#f3f4f6_0,#f3f4f6_4.5rem,#fff_4.5rem,#fff_9rem)]">
-                  {stateRanges.map(({ issue, start, end }, index) => {
-                    const left = Math.max(0, ((start.getTime() - minTime) / 86_400_000 / totalDays) * 100)
-                    const width = Math.max(7, ((end.getTime() - start.getTime()) / 86_400_000 + 1) / totalDays * 100)
-                    const top = 18 + (index % 4) * 30
-                    const color = ['#6fd0e3', '#b9e96b', '#ffbf4b', '#ff9864'][index % 4]
-                    return (
-                      <Link key={issue.id} to={getProjectIssuePath(issue.project_id, issue.id)} className="absolute flex h-7 items-center gap-2 rounded-[4px] px-3 text-xs font-medium text-slate-800 shadow-sm" style={{ left: `${left}%`, width: `${width}%`, top, backgroundColor: color }}>
-                        <CompactAvatar value={getIssueProjectLabel(issue)} tone="rgba(255,255,255,0.45)" />
-                        <span className="truncate">{issue.title}</span>
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
-}
-
 const DashboardMetric = ({ label, value }: { label: string; value: number }) => (
   <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
     <h3 className="text-base font-semibold">{label}</h3>
@@ -277,7 +214,7 @@ export const GlobalTasksPage = () => {
   const [createIssueOpen, setCreateIssueOpen] = useState(false)
 
   const needsIssues = Boolean(activeTab)
-  const needsStates = activeTab === 'overview' || activeTab === 'list' || activeTab === 'board' || activeTab === 'dashboard' || activeTab === 'timeline'
+  const needsStates = activeTab === 'overview' || activeTab === 'list' || activeTab === 'board' || activeTab === 'dashboard'
   const needsMembers = activeTab === 'list' || activeTab === 'workload'
   const needsPlanning = activeTab === 'dashboard' || activeTab === 'list'
 
@@ -298,14 +235,6 @@ export const GlobalTasksPage = () => {
     () => issues.filter((issue) => issue.completed_at || issue.state?.group_key === 'completed').length,
     [issues],
   )
-  const datedIssues = useMemo(() => {
-    if (activeTab !== 'timeline') return []
-    return [...issues].sort((a, b) => {
-      const left = toDate(a.start_date ?? a.target_date ?? a.created_at.slice(0, 10))?.getTime() ?? 0
-      const right = toDate(b.start_date ?? b.target_date ?? b.created_at.slice(0, 10))?.getTime() ?? 0
-      return left - right
-    })
-  }, [activeTab, issues])
   const stateCounts = useMemo(() => states.map((state) => ({
     state,
     count: issues.filter((issue) => issue.state_id === state.id).length,
@@ -395,7 +324,6 @@ export const GlobalTasksPage = () => {
       ) : null}
 
       {activeTab === 'board' ? <BoardView columns={boardColumns} onCreateIssue={() => setCreateIssueOpen(true)} /> : null}
-      {activeTab === 'timeline' ? <TimelineView issues={datedIssues.length > 0 ? datedIssues : issues} states={states} onCreateIssue={() => setCreateIssueOpen(true)} /> : null}
 
       {activeTab === 'dashboard' ? (
         <section className="-mx-2 min-h-0 flex-1 overflow-auto bg-[var(--color-background)]">

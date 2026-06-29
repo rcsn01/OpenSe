@@ -1,4 +1,4 @@
-export type TaskSectionKey = 'overview' | 'list' | 'board' | 'timeline' | 'dashboard' | 'calendar' | 'gantt' | 'workload'
+export type TaskSectionKey = 'overview' | 'list' | 'board' | 'dashboard' | 'calendar' | 'gantt' | 'workload'
 
 export const getProjectIssuePath = (projectId: string, issueId: string) =>
   `/projects/${projectId}/issues/${issueId}`

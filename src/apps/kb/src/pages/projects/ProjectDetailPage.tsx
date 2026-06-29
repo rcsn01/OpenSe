@@ -18,6 +18,7 @@ import { buildBoardColumns } from '../../lib/issueViews'
 import {
   useIssues,
   useIssueLabels,
+  useIssueBlockersForIssues,
   useProjectIssueAssignees,
   useIssueStates,
   useOrganisationMemberProfiles,
@@ -33,7 +34,7 @@ import {
 import { defaultProjectTabsForProject } from '../../api/projects'
 import { useMyPermissions } from '../../hooks/queries/usePermissions'
 import { useRecordRecentVisitOnce } from '../../hooks/queries/usePersonal'
-import type { Issue, IssueState, ProjectTab } from '../../types'
+import type { Issue, ProjectTab } from '../../types'
 import { formatFileSize } from '../../lib/fileFormatting'
 import { formatIssueKey, issuePriorityTone as priorityTone } from '../../lib/issueFormatting'
 import { dayKey, formatShortDate, startOfMonth, toDate } from '../../lib/dateFormatting'
@@ -61,12 +62,12 @@ import {
   readListViewConfig,
 } from '../../components/projects/project-list/projectIssueListLogic'
 import { useProjectTabActions } from '../../components/projects/useProjectTabActions'
+import { ProjectTimeline } from '../../components/projects/project-timeline/ProjectTimeline'
 
 const emptyDocument = {
   type: 'doc',
   content: [{ type: 'paragraph' }],
 }
-const timelineFallbackTime = new Date('2026-06-01T00:00:00.000Z').getTime()
 
 const IssueList = ({ issues, emptyTitle, projectId }: { issues: Issue[]; emptyTitle: string; projectId: string }) => {
   if (issues.length === 0) {
@@ -292,97 +293,6 @@ const BarWidget = ({ title, columns }: { title: string; columns: Array<{ label: 
   )
 }
 
-const ProjectTimelineView = ({
-  projectId,
-  issues,
-  states,
-  onCreateIssue,
-}: {
-  projectId: string
-  issues: Issue[]
-  states: IssueState[]
-  onCreateIssue: () => void
-}) => {
-  const ranges = issues.map((issue) => {
-    const start = toDate(issue.start_date) ?? toDate(issue.created_at.slice(0, 10)) ?? new Date()
-    const end = toDate(issue.target_date) ?? new Date(start.getTime() + 6 * 86_400_000)
-    return { issue, start, end: end < start ? start : end }
-  })
-  const anchorTime = ranges[0]?.start.getTime() ?? timelineFallbackTime
-  const minTime = Math.min(...ranges.map((range) => range.start.getTime()), anchorTime - 21 * 86_400_000)
-  const maxTime = Math.max(...ranges.map((range) => range.end.getTime()), anchorTime + 70 * 86_400_000)
-  const totalDays = Math.max(1, Math.ceil((maxTime - minTime) / 86_400_000) + 1)
-  const weekCount = Math.max(8, Math.ceil(totalDays / 7))
-  const weeks = Array.from({ length: weekCount }, (_, index) => new Date(minTime + index * 7 * 86_400_000))
-  const groups: IssueState[] = states.length > 0
-    ? states
-    : [{ id: 'none', name: 'No state', color: '#64748b', sort_order: 0, organisation_id: '', project_id: projectId, group_key: 'backlog', is_default: false }]
-
-  return (
-    <section className="-mx-2 flex min-h-0 flex-1 flex-col bg-[var(--color-background)]">
-      <ProjectTaskToolbar onCreateIssue={onCreateIssue} />
-      <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4 text-xs font-semibold text-[var(--color-muted-foreground)]">
-        <div className="flex items-center gap-4">
-          <button type="button" className="text-lg leading-none">&lt;</button>
-          <span>Today</span>
-          <button type="button" className="text-lg leading-none">&gt;</button>
-        </div>
-        <div className="flex items-center gap-4">
-          <span>Weeks</span>
-          <span className="text-lg leading-none">-</span>
-          <span className="text-lg leading-none">+</span>
-        </div>
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto">
-        <div className="grid min-w-[1600px] grid-cols-[14rem_minmax(1200px,1fr)]">
-          <div className="sticky left-0 z-20 border-r border-[var(--color-border)] bg-[var(--color-background)]" />
-          <div className="grid h-12 border-b border-[var(--color-border)]" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(9rem, 1fr))` }}>
-            {weeks.map((week) => (
-              <div key={week.toISOString()} className="border-r border-[var(--color-border)] px-2 py-1">
-                <div className="text-xs font-semibold text-[var(--color-muted-foreground)]">
-                  {new Intl.DateTimeFormat(undefined, { month: 'short' }).format(week)}
-                </div>
-                <div className="text-xs">{formatShortDate(dayKey(week))}</div>
-              </div>
-            ))}
-          </div>
-
-          {groups.map((state) => {
-            const stateRanges = ranges.filter((range) => range.issue.state_id === state.id)
-            return (
-              <div key={state.id} className="contents">
-                <div className="sticky left-0 z-20 flex h-36 items-start gap-2 border-b border-r border-[var(--color-border)] bg-[var(--color-background)] px-4 py-5">
-                  <ChevronDown className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-                  <span className="font-semibold">{state.name}</span>
-                </div>
-                <div className="relative h-36 border-b border-[var(--color-border)] bg-[repeating-linear-gradient(90deg,#f3f4f6_0,#f3f4f6_4.5rem,#fff_4.5rem,#fff_9rem)]">
-                  {stateRanges.map(({ issue, start, end }, index) => {
-                    const left = Math.max(0, ((start.getTime() - minTime) / 86_400_000 / totalDays) * 100)
-                    const width = Math.max(7, ((end.getTime() - start.getTime()) / 86_400_000 + 1) / totalDays * 100)
-                    const top = 18 + (index % 4) * 30
-                    const color = ['#6fd0e3', '#b9e96b', '#ffbf4b', '#ff9864'][index % 4]
-                    return (
-                      <Link
-                        key={issue.id}
-                        to={getProjectIssuePath(projectId, issue.id)}
-                        className="absolute flex h-7 items-center gap-2 rounded-[4px] px-3 text-xs font-medium text-slate-800 shadow-sm"
-                        style={{ left: `${left}%`, width: `${width}%`, top, backgroundColor: color }}
-                      >
-                        <CompactAvatar value={issue.updated_by || issue.created_by || 'U'} tone="rgba(255,255,255,0.45)" />
-                        <span className="truncate">{issue.title}</span>
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
-}
-
 export const ProjectDetailPage = () => {
   const { user } = useAuth()
   const profileId = user?.id ?? null
@@ -395,7 +305,7 @@ export const ProjectDetailPage = () => {
   const needsLabels = routeTabKey === 'dashboard' || routeTabKey === 'workflow'
   const needsMembers = routeTabKey === 'list' || routeTabKey === 'workload'
   const needsCycles = routeTabKey === 'dashboard' || routeTabKey === 'list'
-  const needsModules = routeTabKey === 'dashboard' || routeTabKey === 'list'
+  const needsModules = routeTabKey === 'dashboard' || routeTabKey === 'list' || routeTabKey === 'timeline'
   const needsMessages = routeTabKey === 'messages'
   const needsAttachments = routeTabKey === 'files'
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()))
@@ -409,6 +319,7 @@ export const ProjectDetailPage = () => {
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(organisationId, projectId)
   const { data: projectTabs = [], error: projectTabsError } = useProjectTabs(organisationId, projectId)
   const { data: issues = [] } = useIssues(organisationId, { project_id: projectId }, needsIssues)
+  const issueIds = useMemo(() => issues.map((issue) => issue.id).sort(), [issues])
   const { data: states = [] } = useIssueStates(organisationId, projectId, needsStates)
   const { data: labels = [] } = useIssueLabels(organisationId, projectId, needsLabels)
   const { data: members = [] } = useOrganisationMemberProfiles(organisationId, needsMembers)
@@ -416,7 +327,8 @@ export const ProjectDetailPage = () => {
   const { data: cycles = [] } = useCycles(organisationId, projectId, needsCycles)
   const { data: cycleIssueLinks = [] } = useCycleIssueLinks(organisationId, projectId, routeTabKey === 'list')
   const { data: modules = [] } = useModules(organisationId, projectId, needsModules)
-  const { data: moduleIssueLinks = [] } = useModuleIssueLinks(organisationId, projectId, routeTabKey === 'list')
+  const { data: moduleIssueLinks = [] } = useModuleIssueLinks(organisationId, projectId, routeTabKey === 'list' || routeTabKey === 'timeline')
+  const { data: blockers = [] } = useIssueBlockersForIssues(organisationId, issueIds, routeTabKey === 'timeline')
   const { data: messages = [] } = useProjectMessages(organisationId, projectId, needsMessages)
   const { data: attachments = [] } = useProjectIssueAttachments(organisationId, projectId, needsAttachments)
   const createProjectMessage = useCreateProjectMessage()
@@ -710,7 +622,14 @@ export const ProjectDetailPage = () => {
       ) : null}
 
       {activeTab === 'timeline' ? (
-        <ProjectTimelineView projectId={project.id} issues={datedIssues.length > 0 ? datedIssues : issues} states={states} onCreateIssue={() => setCreateIssueOpen(true)} />
+        <ProjectTimeline
+          projectId={project.id}
+          issues={datedIssues.length > 0 ? datedIssues : issues}
+          modules={modules}
+          moduleIssueLinks={moduleIssueLinks}
+          blockers={blockers}
+          onCreateIssue={() => setCreateIssueOpen(true)}
+        />
       ) : null}
 
       {activeTab === 'dashboard' ? (
