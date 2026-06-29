@@ -1048,6 +1048,31 @@ export const fetchIssueBlockers = async (
   }))
 }
 
+export const fetchIssueBlockersForIssues = async (
+  organisationId: string,
+  issueIds: string[],
+): Promise<IssueBlocker[]> => {
+  const uniqueIssueIds = Array.from(new Set(issueIds.filter(Boolean)))
+  if (uniqueIssueIds.length === 0) return []
+
+  const { data, error } = await db
+    .from('issue_blockers')
+    .select(issueBlockerSelect)
+    .eq('organisation_id', organisationId)
+    .in('issue_id', uniqueIssueIds)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+
+  const rows = (data ?? []) as unknown as Array<Omit<IssueBlocker, 'blocker_issue'>>
+  const issuesById = await fetchIssuesByIds(organisationId, rows.map((row) => row.blocker_issue_id))
+  return rows.map((row) => ({
+    ...row,
+    blocker_issue: row.blocker_issue_id ? issuesById.get(row.blocker_issue_id) ?? null : null,
+  }))
+}
+
 export const addIssueBlocker = async ({
   organisationId,
   projectId,

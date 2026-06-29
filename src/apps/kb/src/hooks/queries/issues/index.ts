@@ -19,6 +19,7 @@ import {
   fetchIssueAssignees,
   fetchIssueAssigneesForIssues,
   fetchIssueBlockers,
+  fetchIssueBlockersForIssues,
   fetchIssueComments,
   fetchIssueLabelLinks,
   fetchIssueLabels,
@@ -81,6 +82,8 @@ export const issueKeys = {
     ['open-kb', 'issues', organisationId, 'project-attachments', projectId] as const,
   blockers: (organisationId: string | null, issueId: string | null) =>
     ['open-kb', 'issues', organisationId, 'blockers', issueId] as const,
+  visibleBlockers: (organisationId: string | null, issueIds: string[]) =>
+    ['open-kb', 'issues', organisationId, 'visible-blockers', issueIds] as const,
   relations: (organisationId: string | null, issueId: string | null) =>
     ['open-kb', 'issues', organisationId, 'relations', issueId] as const,
   links: (organisationId: string | null, issueId: string | null) =>
@@ -179,6 +182,13 @@ export const useIssueBlockers = (organisationId: string | null, issueId: string 
     queryKey: issueKeys.blockers(organisationId, issueId),
     queryFn: () => fetchIssueBlockers(organisationId ?? '', issueId ?? ''),
     enabled: enabledWhen(organisationId, issueId),
+  })
+
+export const useIssueBlockersForIssues = (organisationId: string | null, issueIds: string[], enabled = true) =>
+  useQuery({
+    queryKey: issueKeys.visibleBlockers(organisationId, issueIds),
+    queryFn: () => fetchIssueBlockersForIssues(organisationId ?? '', issueIds),
+    enabled: Boolean(enabled && organisationId && issueIds.length > 0),
   })
 
 export const useIssueRelations = (organisationId: string | null, issueId: string | null) =>
