@@ -4,9 +4,9 @@
 -- public.organisations through organisation_id, and app access is gated by
 -- public.organisation_member_app_seats(app_code = 'open-kb').
 
-CREATE SCHEMA open_kb;
+CREATE SCHEMA kb;
 
-GRANT USAGE ON SCHEMA open_kb TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA kb TO anon, authenticated, service_role;
 
 INSERT INTO public.apps (code, name)
 VALUES ('open-kb', 'Open-KB')
@@ -46,7 +46,7 @@ SET
   stripe_price_id = EXCLUDED.stripe_price_id,
   is_active = EXCLUDED.is_active;
 
-CREATE TABLE open_kb.app_permissions (
+CREATE TABLE kb.app_permissions (
   code TEXT PRIMARY KEY,
   description TEXT,
   page_key TEXT,
@@ -57,7 +57,7 @@ CREATE TABLE open_kb.app_permissions (
   deprecated BOOLEAN NOT NULL DEFAULT false
 );
 
-INSERT INTO open_kb.app_permissions (code, description, page_key, action_key, label, sort_order, hidden, deprecated)
+INSERT INTO kb.app_permissions (code, description, page_key, action_key, label, sort_order, hidden, deprecated)
 VALUES
   ('dashboard.view', 'View Open-KB dashboard summaries', 'dashboard', 'view', 'View', 100, false, false),
   ('projects.view', 'View projects', 'projects', 'view', 'View', 200, false, false),
@@ -71,8 +71,6 @@ VALUES
   ('issues.delete', 'Delete issues and related work item records', 'issues', 'delete', 'Delete', 330, false, false),
   ('planning.view', 'View cycles, modules, estimates, and saved views', 'planning', 'view', 'View', 400, false, false),
   ('planning.manage', 'Manage cycles, modules, estimates, and planning assignments', 'planning', 'manage', 'Manage', 410, false, false),
-  ('pages.view', 'View pages, stickies, descriptions, and favorites', 'pages', 'view', 'View', 500, false, false),
-  ('pages.manage', 'Create and edit pages, stickies, and rich text assets', 'pages', 'manage', 'Manage', 510, false, false),
   ('intake.view', 'View intake queues and votes', 'intake', 'view', 'View', 600, false, false),
   ('intake.manage', 'Triage and manage intake issues', 'intake', 'manage', 'Manage', 610, false, false),
   ('analytics.view', 'View analytics and reports', 'analytics', 'view', 'View', 700, false, false),
@@ -89,7 +87,7 @@ SET description = EXCLUDED.description,
     hidden = EXCLUDED.hidden,
     deprecated = EXCLUDED.deprecated;
 
-CREATE TABLE open_kb.roles (
+CREATE TABLE kb.roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organisation_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -100,24 +98,24 @@ CREATE TABLE open_kb.roles (
   UNIQUE (organisation_id, name)
 );
 
-CREATE UNIQUE INDEX open_kb_roles_organisation_id_name_lower_uidx
-  ON open_kb.roles (organisation_id, lower(name));
+CREATE UNIQUE INDEX kb_roles_organisation_id_name_lower_uidx
+  ON kb.roles (organisation_id, lower(name));
 
-CREATE TABLE open_kb.role_permissions (
-  role_id UUID NOT NULL REFERENCES open_kb.roles(id) ON DELETE CASCADE,
-  permission_code TEXT NOT NULL REFERENCES open_kb.app_permissions(code) ON DELETE CASCADE,
+CREATE TABLE kb.role_permissions (
+  role_id UUID NOT NULL REFERENCES kb.roles(id) ON DELETE CASCADE,
+  permission_code TEXT NOT NULL REFERENCES kb.app_permissions(code) ON DELETE CASCADE,
   PRIMARY KEY (role_id, permission_code)
 );
 
-CREATE TABLE open_kb.organisation_member_roles (
+CREATE TABLE kb.organisation_member_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_member_id UUID NOT NULL REFERENCES public.organisation_members(id) ON DELETE CASCADE,
-  role_id UUID REFERENCES open_kb.roles(id) ON DELETE SET NULL,
+  role_id UUID REFERENCES kb.roles(id) ON DELETE SET NULL,
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   UNIQUE (org_member_id)
 );
 
-CREATE TABLE open_kb.feature_flags (
+CREATE TABLE kb.feature_flags (
   organisation_id UUID PRIMARY KEY REFERENCES public.organisations(id) ON DELETE CASCADE,
   github_sync_enabled BOOLEAN NOT NULL DEFAULT false,
   slack_sync_enabled BOOLEAN NOT NULL DEFAULT false,

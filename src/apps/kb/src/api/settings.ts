@@ -497,26 +497,43 @@ export const fetchOutboundProviderSyncs = async (organisationId: string): Promis
     .slice(0, 100)
 }
 
-export const retryProviderSync = async ({ provider, syncId }: OpenKbProviderSyncRetryInput) => {
-  const { data, error } = await db.rpc('retry_provider_sync', {
-    p_provider: provider,
-    p_sync_id: syncId,
-  })
+export const retryProviderSync = async ({ organisationId, provider, syncId }: OpenKbProviderSyncRetryInput) => {
+  const tableName = provider === 'github' ? 'github_comment_syncs' : 'slack_project_syncs'
+  const { data, error } = await db
+    .from(tableName)
+    .update({
+      status: 'retrying',
+      attempt_count: 0,
+      next_retry_at: null,
+      processed_at: null,
+      last_error_text: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', syncId)
+    .eq('organisation_id', organisationId)
+    .eq('sync_direction', 'outbound')
+    .is('deleted_at', null)
+    .select('id')
+    .maybeSingle()
 
   if (error) throw error
 
-  return Boolean(data)
+  return Boolean(data?.id)
 }
 
 export const disconnectProviderIntegration = async ({ organisationId, provider }: OpenKbProviderDisconnectInput) => {
-  const { data, error } = await db.rpc('disconnect_provider_integration', {
-    p_org_id: organisationId,
-    p_provider: provider,
-  })
+  const { data, error } = await db
+    .from('organisation_integrations')
+    .update({ status: 'disconnected' })
+    .eq('organisation_id', organisationId)
+    .eq('provider', provider)
+    .is('deleted_at', null)
+    .select('id')
+    .maybeSingle()
 
   if (error) throw error
 
-  return Boolean(data)
+  return Boolean(data?.id)
 }
 
 export const createSlackProjectSync = async (input: OpenKbSlackProjectSyncInput): Promise<OpenKbSlackProjectSync> => {

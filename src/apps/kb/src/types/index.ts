@@ -10,6 +10,10 @@ export type OpenKbTeam = {
   slug: string
   description_text: string | null
   status: string | null
+  metadata: {
+    color?: string
+    [key: string]: unknown
+  }
   created_by: string | null
   created_at: string
   updated_at: string | null
@@ -21,13 +25,37 @@ export type OpenKbTeamInput = {
   name: string
   slug?: string | null
   description_text?: string | null
+  metadata?: OpenKbTeam['metadata'] | null
 }
 
-export type OpenKbTeamUpdateInput = Partial<Pick<OpenKbTeamInput, 'name' | 'slug' | 'description_text'>> &
+export type OpenKbTeamUpdateInput = Partial<Pick<OpenKbTeamInput, 'name' | 'slug' | 'description_text' | 'metadata'>> &
   Partial<Pick<OpenKbTeam, 'status'>> & {
     id: string
     organisation_id: string
   }
+
+export type OpenKbTeamMember = {
+  id: string
+  organisation_id: string
+  team_id: string
+  profile_id: string
+  created_by: string | null
+  created_at: string
+  updated_at: string | null
+  deleted_at: string | null
+  profile: OpenKbProfile | null
+}
+
+export type OpenKbTeamMemberInput = {
+  organisation_id: string
+  team_id: string
+  profile_id: string
+}
+
+export type OpenKbTeamMemberRemoveInput = {
+  organisationId: string
+  memberId: string
+}
 
 export type Project = {
   id: string
@@ -41,7 +69,7 @@ export type Project = {
   sort_order: number
   created_at: string
   updated_at: string | null
-  team?: Pick<OpenKbTeam, 'id' | 'name' | 'slug' | 'description_text' | 'status'> | null
+  team?: Pick<OpenKbTeam, 'id' | 'name' | 'slug' | 'description_text' | 'status' | 'metadata'> | null
 }
 
 export type ProjectInput = {
@@ -296,6 +324,7 @@ export type Issue = {
   id: string
   organisation_id: string
   project_id: string
+  team_id: string | null
   sequence_id: number | null
   title: string
   description_json: EditorDocument
@@ -315,12 +344,14 @@ export type Issue = {
   updated_at: string | null
   deleted_at: string | null
   project?: IssueProject | null
+  team?: Pick<OpenKbTeam, 'id' | 'name' | 'slug' | 'status' | 'metadata'> | null
   state?: IssueState | null
 }
 
 export type IssueInput = {
   organisation_id: string
   project_id: string
+  team_id?: string | null
   title: string
   description_json?: EditorDocument | null
   description_html?: string | null
@@ -335,6 +366,7 @@ export type IssueInput = {
 export type DraftIssuePayload = {
   priority?: IssuePriority
   state_id?: string | null
+  team_id?: string | null
   estimate_point_id?: string | null
   start_date?: string | null
   target_date?: string | null
@@ -376,6 +408,7 @@ export type DraftIssueUpdateInput = Partial<Omit<DraftIssueInput, 'profile_id'>>
 
 export type IssueFilters = {
   project_id?: string | null
+  team_id?: string | null
   state_id?: string | null
   priority?: IssuePriority | null
   assignee_id?: string | null
@@ -389,7 +422,7 @@ export type IssueFilters = {
 export type IssueViewLayout = 'list' | 'board' | 'table' | 'calendar' | 'gantt'
 
 export type IssueUpdateInput = Partial<
-  Pick<IssueInput, 'title' | 'description_json' | 'description_html' | 'description_text' | 'priority' | 'state_id' | 'estimate_point_id' | 'start_date' | 'target_date'>
+  Pick<IssueInput, 'title' | 'description_json' | 'description_html' | 'description_text' | 'priority' | 'state_id' | 'team_id' | 'estimate_point_id' | 'start_date' | 'target_date'>
 > & {
   id: string
   organisation_id: string

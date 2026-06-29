@@ -8,6 +8,7 @@ import { RichTextEditor, type RichTextEditorValue } from '../editor'
 import { useCreateDraftIssue, useDeleteDraftIssue, useUpdateDraftIssue } from '../../hooks/queries/useDrafts'
 import { useCreateIssue, useIssueStates } from '../../hooks/queries/useIssues'
 import { useProjects } from '../../hooks/queries/useProjects'
+import { useTeams } from '../../hooks/queries/useTeams'
 import { getProjectIssuePath } from '../../lib/projectRoutes'
 import type { IssuePriority } from '../../types'
 
@@ -38,11 +39,13 @@ export const CreateIssueDialog = ({
   const [title, setTitle] = useState('')
   const [priority, setPriority] = useState<IssuePriority>('none')
   const [stateId, setStateId] = useState('')
+  const [teamId, setTeamId] = useState('')
   const [description, setDescription] = useState<RichTextEditorValue | null>(null)
   const [editorKey, setEditorKey] = useState(0)
   const [draftId, setDraftId] = useState<string | null>(null)
   const effectiveProjectId = globalMode ? selectedProjectId : projectId ?? ''
   const { data: projects = [], isLoading: projectsLoading } = useProjects(globalMode ? organisationId : null)
+  const { data: teams = [], isLoading: teamsLoading } = useTeams(organisationId)
   const { data: states = [], isLoading: statesLoading } = useIssueStates(organisationId, effectiveProjectId, Boolean(effectiveProjectId))
   const defaultState = states.find((state) => state.is_default) ?? states[0]
   const selectedStateId = stateId || defaultState?.id || ''
@@ -58,6 +61,7 @@ export const CreateIssueDialog = ({
       setTitle('')
       setPriority('none')
       setStateId('')
+      setTeamId('')
       setSelectedProjectId(projectId ?? '')
       setDescription(null)
       setDraftId(null)
@@ -78,6 +82,7 @@ export const CreateIssueDialog = ({
         title,
         priority,
         state_id: selectedStateId || null,
+        team_id: teamId || null,
         description_json: description?.json ?? null,
         description_html: description?.html ?? null,
         description_text: description?.text ?? null,
@@ -107,6 +112,7 @@ export const CreateIssueDialog = ({
       payload: {
         priority,
         state_id: selectedStateId || null,
+        team_id: teamId || null,
       },
     }
 
@@ -144,6 +150,19 @@ export const CreateIssueDialog = ({
               />
             </label>
           ) : null}
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Team</span>
+            <Select
+              className="border border-[var(--color-border)] bg-[var(--color-background)]"
+              value={teamId}
+              onChange={(event) => setTeamId(event.target.value)}
+              options={[
+                { value: '', label: 'No team' },
+                ...teams.map((team) => ({ value: team.id, label: team.name })),
+              ]}
+              placeholder={teamsLoading ? 'Loading teams...' : undefined}
+            />
+          </label>
           <label className="block space-y-2">
             <span className="text-sm font-medium">State</span>
             <Select

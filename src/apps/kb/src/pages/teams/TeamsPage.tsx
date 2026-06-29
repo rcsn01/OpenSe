@@ -2,33 +2,41 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Badge, Button, EmptyState, Input, Select, Textarea } from '@repo/ui'
-import { FolderKanban, Plus, Save, Trash2, UsersRound } from 'lucide-react'
+import { FolderKanban, Plus, Save, Trash2, UserPlus, UsersRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { buildTeamSlug } from '../../api/teams'
 import { OpenKbPageShell } from '../../components/OpenKbPageShell'
 import { useOrganisation } from '../../contexts/OrganisationContext'
+import { useOrganisationMemberProfiles } from '../../hooks/queries/useIssues'
 import { useMyPermissions } from '../../hooks/queries/usePermissions'
 import { useProjects } from '../../hooks/queries/useProjects'
-import { useCreateTeam, useDeleteTeam, useTeams, useUpdateTeam } from '../../hooks/queries/useTeams'
-import type { OpenKbTeam } from '../../types'
+import { useAddTeamMember, useCreateTeam, useDeleteTeam, useTeamMembers, useTeams, useUpdateTeam, useRemoveTeamMember } from '../../hooks/queries/useTeams'
+import { formatProfileName } from '../../lib/profileFormatting'
+import type { OpenKbTeam, OrganisationMemberProfile } from '../../types'
 
 const TeamRow = ({
   team,
   projectCount,
   canEdit,
   organisationId,
+  organisationMembers,
 }: {
   team: OpenKbTeam
   projectCount: number
   canEdit: boolean
   organisationId: string
+  organisationMembers: OrganisationMemberProfile[]
 }) => {
   const updateTeam = useUpdateTeam()
   const deleteTeam = useDeleteTeam()
+  const addTeamMember = useAddTeamMember()
+  const removeTeamMember = useRemoveTeamMember()
+  const { data: teamMembers = [] } = useTeamMembers(organisationId, team.id)
   const [name, setName] = useState(team.name)
   const [slug, setSlug] = useState(team.slug)
   const [description, setDescription] = useState(team.description_text ?? '')
   const [status, setStatus] = useState(team.status ?? 'active')
+  const [selectedMemberId, setSelectedMemberId] = useState('')
 
   const isDirty =
     name !== team.name ||
@@ -64,6 +72,34 @@ const TeamRow = ({
     }
   }
 
+  const activeMemberIds = new Set(teamMembers.map((member) => member.profile_id))
+  const availableMembers = organisationMembers.filter((member) => !activeMemberIds.has(member.profile_id))
+
+  const handleAddMember = async () => {
+    if (!selectedMemberId) return
+
+    try {
+      await addTeamMember.mutateAsync({
+        organisation_id: organisationId,
+        team_id: team.id,
+        profile_id: selectedMemberId,
+      })
+      setSelectedMemberId('')
+      toast.success('Team member added')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add team member')
+    }
+  }
+
+  const handleRemoveMember = async (memberId: string) => {
+    try {
+      await removeTeamMember.mutateAsync({ organisationId, memberId })
+      toast.success('Team member removed')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to remove team member')
+    }
+  }
+
   return (
     <form onSubmit={handleSave} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -79,6 +115,10 @@ const TeamRow = ({
               <span className="inline-flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
                 <FolderKanban className="h-3.5 w-3.5" />
                 {projectCount} {projectCount === 1 ? 'project' : 'projects'}
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
+                <UsersRound className="h-3.5 w-3.5" />
+                {teamMembers.length} {teamMembers.length === 1 ? 'member' : 'members'}
               </span>
             </div>
           </div>
@@ -134,6 +174,52 @@ const TeamRow = ({
         <span className="text-sm font-medium">Description</span>
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} disabled={!canEdit} />
       </label>
+      <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold">Members</h3>
+          <div className="flex min-w-0 gap-2">
+            <Select
+              className="min-w-52 border border-[var(--color-border)] bg-[var(--color-background)]"
+              value={selectedMemberId}
+              onChange={(event) => setSelectedMemberId(event.target.value)}
+              disabled={!canEdit || availableMembers.length === 0}
+              placeholder={availableMembers.length === 0 ? 'No available members' : 'Add organisation member'}
+              options={availableMembers.map((member) => ({
+                value: member.profile_id,
+                label: formatProfileName(member.profile),
+              }))}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              aria-label="Add team member"
+              disabled={!canEdit || !selectedMemberId}
+              loading={addTeamMember.isPending}
+              onClick={handleAddMember}
+            >
+              <UserPlus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {teamMembers.length === 0 ? (
+            <span className="text-sm text-[var(--color-muted-foreground)]">No members</span>
+          ) : teamMembers.map((member) => (
+            <span key={member.id} className="inline-flex max-w-full items-center gap-2 rounded-full bg-[var(--color-muted)] px-2.5 py-1 text-xs">
+              <span className="truncate">{formatProfileName(member.profile)}</span>
+              <button
+                type="button"
+                aria-label="Remove team member"
+                disabled={!canEdit || removeTeamMember.isPending}
+                onClick={() => handleRemoveMember(member.id)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      </div>
     </form>
   )
 }
@@ -144,6 +230,7 @@ export const TeamsPage = () => {
   const { data: permissions = [] } = useMyPermissions(organisationId)
   const { data: teams = [], isLoading: teamsLoading } = useTeams(organisationId)
   const { data: projects = [], isLoading: projectsLoading } = useProjects(organisationId)
+  const { data: organisationMembers = [], isLoading: membersLoading } = useOrganisationMemberProfiles(organisationId)
   const createTeam = useCreateTeam()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -185,7 +272,7 @@ export const TeamsPage = () => {
   }
 
   return (
-    <OpenKbPageShell isLoading={teamsLoading || projectsLoading}>
+    <OpenKbPageShell isLoading={teamsLoading || projectsLoading || membersLoading}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-normal">Teams</h1>
@@ -238,6 +325,7 @@ export const TeamsPage = () => {
               projectCount={projectCounts.get(team.id) ?? 0}
               canEdit={canEdit}
               organisationId={organisationId ?? ''}
+              organisationMembers={organisationMembers}
             />
           ))}
         </div>

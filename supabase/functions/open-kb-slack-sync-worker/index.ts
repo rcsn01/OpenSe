@@ -225,8 +225,8 @@ const restFetch = async <T>(
       'Content-Type': 'application/json',
       apikey: serviceRoleKey,
       Authorization: `Bearer ${serviceRoleKey}`,
-      'Accept-Profile': 'open_kb',
-      'Content-Profile': 'open_kb',
+      'Accept-Profile': 'kb',
+      'Content-Profile': 'kb',
       ...(init.headers ?? {}),
     },
   })
@@ -443,7 +443,7 @@ const processOutboundRows = async (
       )
       const comment = comments[0]
       if (!comment) {
-        await patchSync(supabaseUrl, serviceRoleKey, row.id, waitForCondition(row, 'open_kb_comment_missing'))
+        await patchSync(supabaseUrl, serviceRoleKey, row.id, waitForCondition(row, 'kb_comment_missing'))
         waiting += 1
         continue
       }
@@ -455,7 +455,7 @@ const processOutboundRows = async (
       )
       const issue = issues[0]
       if (!issue) {
-        await patchSync(supabaseUrl, serviceRoleKey, row.id, waitForCondition(row, 'open_kb_issue_missing'))
+        await patchSync(supabaseUrl, serviceRoleKey, row.id, waitForCondition(row, 'kb_issue_missing'))
         waiting += 1
         continue
       }

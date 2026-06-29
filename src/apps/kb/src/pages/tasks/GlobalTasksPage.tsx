@@ -19,6 +19,7 @@ import {
   useOrganisationMemberProfiles,
 } from '../../hooks/queries/useIssues'
 import { useCycleIssueLinks, useCycles, useModuleIssueLinks, useModules } from '../../hooks/queries/usePlanning'
+import { useTeams } from '../../hooks/queries/useTeams'
 import { buildBoardColumns } from '../../lib/issueViews'
 import { formatShortDate, startOfMonth, toDate } from '../../lib/dateFormatting'
 import { formatIssueKey, issuePriorityTone as priorityTone } from '../../lib/issueFormatting'
@@ -222,6 +223,7 @@ export const GlobalTasksPage = () => {
   const issueIds = useMemo(() => issues.map((issue) => issue.id), [issues])
   const { data: assignees = [] } = useIssueAssigneesForIssues(organisationId, issueIds, activeTab === 'list')
   const { data: states = [] } = useIssueStates(organisationId, null, needsStates)
+  const { data: teams = [] } = useTeams(needsIssues ? organisationId : null)
   const { data: members = [] } = useOrganisationMemberProfiles(organisationId, needsMembers)
   const { data: cycles = [] } = useCycles(organisationId, null, needsPlanning)
   const { data: cycleIssueLinks = [] } = useCycleIssueLinks(organisationId, null, activeTab === 'list')
@@ -300,6 +302,7 @@ export const GlobalTasksPage = () => {
               cycleIssueLinks={cycleIssueLinks}
               modules={modules}
               moduleIssueLinks={moduleIssueLinks}
+              teams={teams}
               listViewConfig={defaultProjectIssueListViewConfig}
               selectedIssueId={issueId}
               onOpenIssue={(issue) => navigate(getTasksListIssuePath(issue.id))}

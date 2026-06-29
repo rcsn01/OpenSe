@@ -19,7 +19,7 @@
 --   55_stoqr_reports_demo.sql
 
 --   56_stoqr_procurement_workflows.sql
---   57_open_kb_demo.sql
+--   57_kb_demo.sql
 --   60_admin_audit.sql
 --   90_synthetic_volume.sql
 --

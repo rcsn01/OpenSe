@@ -1,6 +1,6 @@
 -- Open-KB permission view, generic grants, and base role RLS.
 
-CREATE VIEW open_kb.my_permissions
+CREATE VIEW kb.my_permissions
 WITH (security_invoker = true)
 AS
 WITH current_membership AS (
@@ -9,19 +9,19 @@ WITH current_membership AS (
   JOIN public.organisation_member_app_seats mas
     ON mas.org_member_id = om.id
    AND mas.app_code = 'open-kb'
-  LEFT JOIN open_kb.organisation_member_roles omr
+  LEFT JOIN kb.organisation_member_roles omr
     ON omr.org_member_id = om.id
   WHERE om.user_id = auth.uid()
 ),
 assigned_permissions AS (
   SELECT cm.organisation_id, ap.code AS permission_code
   FROM current_membership cm
-  JOIN open_kb.app_permissions ap ON TRUE
+  JOIN kb.app_permissions ap ON TRUE
   WHERE cm.org_role = 'owner'
   UNION
   SELECT cm.organisation_id, rp.permission_code
   FROM current_membership cm
-  JOIN open_kb.role_permissions rp ON rp.role_id = cm.role_id
+  JOIN kb.role_permissions rp ON rp.role_id = cm.role_id
   WHERE cm.org_role <> 'owner'
 ),
 permission_edges(source_code, implied_code) AS (
@@ -34,7 +34,6 @@ permission_edges(source_code, implied_code) AS (
     ('issues.edit', 'issues.view'),
     ('issues.delete', 'issues.view'),
     ('planning.manage', 'planning.view'),
-    ('pages.manage', 'pages.view'),
     ('intake.manage', 'intake.view'),
     ('automation.manage', 'settings.view'),
     ('settings.roles.manage', 'settings.view'),
@@ -59,6 +58,66 @@ expanded_permissions AS (
 SELECT DISTINCT organisation_id, code
 FROM expanded_permissions;
 
+CREATE VIEW kb.public_deploy_boards
+WITH (security_invoker = true)
+AS
+SELECT
+  b.id AS board_id,
+  b.organisation_id,
+  b.project_id,
+  b.slug,
+  COALESCE(b.title, b.name, p.name) AS title,
+  b.description_text,
+  b.status,
+  b.payload,
+  p.name AS project_name,
+  p.identifier AS project_identifier,
+  p.description_text AS project_description_text
+FROM kb.project_deploy_boards b
+JOIN kb.projects p
+  ON p.id = b.project_id
+ AND p.organisation_id = b.organisation_id
+WHERE b.deleted_at IS NULL
+  AND p.deleted_at IS NULL
+  AND p.visibility = 'public'
+  AND COALESCE(b.status, 'active') = 'active';
+
+CREATE VIEW kb.public_deploy_board_issues
+WITH (security_invoker = true)
+AS
+SELECT
+  b.slug,
+  i.id AS issue_id,
+  i.project_id,
+  i.sequence_id,
+  i.title,
+  i.description_text,
+  i.priority,
+  i.state_id,
+  s.name AS state_name,
+  s.group_key AS state_group_key,
+  s.color AS state_color,
+  COALESCE(s.sort_order, 9999) AS state_sort_order,
+  i.start_date,
+  i.target_date,
+  i.completed_at,
+  i.created_at,
+  i.updated_at
+FROM kb.project_deploy_boards b
+JOIN kb.projects p
+  ON p.id = b.project_id
+ AND p.organisation_id = b.organisation_id
+JOIN kb.issues i
+  ON i.project_id = b.project_id
+ AND i.organisation_id = b.organisation_id
+LEFT JOIN kb.states s ON s.id = i.state_id
+WHERE b.deleted_at IS NULL
+  AND p.deleted_at IS NULL
+  AND p.visibility = 'public'
+  AND COALESCE(b.status, 'active') = 'active'
+  AND i.deleted_at IS NULL
+  AND i.archived_at IS NULL;
+
 DO $$
 DECLARE
   table_name TEXT;
@@ -67,7 +126,7 @@ BEGIN
   SELECT array_agg(tablename::TEXT ORDER BY tablename::TEXT)
   INTO org_tables
   FROM pg_tables
-  WHERE schemaname = 'open_kb'
+  WHERE schemaname = 'kb'
     AND tablename NOT IN (
       'app_permissions',
       'role_permissions',
@@ -91,75 +150,74 @@ BEGIN
       'issue_mentions',
       'user_favorites',
       'user_recent_visits',
-      'stickies',
       'draft_issues'
     );
 
   FOREACH table_name IN ARRAY org_tables LOOP
-    EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON open_kb.%I FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at)', 'handle_' || table_name || '_updated_at', table_name);
-    EXECUTE format('ALTER TABLE open_kb.%I ENABLE ROW LEVEL SECURITY', table_name);
-    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE open_kb.%I TO authenticated', table_name);
-    EXECUTE format('GRANT ALL PRIVILEGES ON TABLE open_kb.%I TO service_role', table_name);
-    EXECUTE format('CREATE POLICY %I ON open_kb.%I FOR SELECT TO authenticated USING (open_kb.has_app_seat(organisation_id))', table_name || '_select', table_name);
+    EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON kb.%I FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at)', 'handle_' || table_name || '_updated_at', table_name);
+    EXECUTE format('ALTER TABLE kb.%I ENABLE ROW LEVEL SECURITY', table_name);
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE kb.%I TO authenticated', table_name);
+    EXECUTE format('GRANT ALL PRIVILEGES ON TABLE kb.%I TO service_role', table_name);
+    EXECUTE format('CREATE POLICY %I ON kb.%I FOR SELECT TO authenticated USING (kb.has_app_seat(organisation_id))', table_name || '_select', table_name);
   END LOOP;
 END $$;
 
-ALTER TABLE open_kb.integration_credentials ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE open_kb.integration_credentials FROM PUBLIC, anon, authenticated;
-GRANT ALL PRIVILEGES ON TABLE open_kb.integration_credentials TO service_role;
+ALTER TABLE kb.integration_credentials ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE kb.integration_credentials FROM PUBLIC, anon, authenticated;
+GRANT ALL PRIVILEGES ON TABLE kb.integration_credentials TO service_role;
 
-ALTER TABLE open_kb.app_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE open_kb.role_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE open_kb.organisation_member_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kb.app_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kb.role_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kb.organisation_member_roles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY app_permissions_select ON open_kb.app_permissions
+CREATE POLICY app_permissions_select ON kb.app_permissions
   FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY role_permissions_select ON open_kb.role_permissions
+CREATE POLICY role_permissions_select ON kb.role_permissions
   FOR SELECT TO authenticated USING (
     EXISTS (
       SELECT 1
-      FROM open_kb.roles r
+      FROM kb.roles r
       WHERE r.id = role_permissions.role_id
-        AND open_kb.has_app_seat(r.organisation_id)
+        AND kb.has_app_seat(r.organisation_id)
     )
   );
 
-CREATE POLICY role_permissions_manage ON open_kb.role_permissions
+CREATE POLICY role_permissions_manage ON kb.role_permissions
   FOR ALL TO authenticated USING (
     EXISTS (
       SELECT 1
-      FROM open_kb.roles r
+      FROM kb.roles r
       WHERE r.id = role_permissions.role_id
-        AND open_kb.has_permission(r.organisation_id, 'settings.roles.manage')
+        AND kb.has_permission(r.organisation_id, 'settings.roles.manage')
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1
-      FROM open_kb.roles r
+      FROM kb.roles r
       WHERE r.id = role_permissions.role_id
-        AND open_kb.has_permission(r.organisation_id, 'settings.roles.manage')
+        AND kb.has_permission(r.organisation_id, 'settings.roles.manage')
     )
   );
 
-CREATE POLICY organisation_member_roles_select ON open_kb.organisation_member_roles
+CREATE POLICY organisation_member_roles_select ON kb.organisation_member_roles
   FOR SELECT TO authenticated USING (
     EXISTS (
       SELECT 1
       FROM public.organisation_members om
       WHERE om.id = organisation_member_roles.org_member_id
-        AND open_kb.has_app_seat(om.org_id)
+        AND kb.has_app_seat(om.org_id)
     )
   );
 
-CREATE POLICY organisation_member_roles_manage ON open_kb.organisation_member_roles
+CREATE POLICY organisation_member_roles_manage ON kb.organisation_member_roles
   FOR ALL TO authenticated USING (
     EXISTS (
       SELECT 1
       FROM public.organisation_members om
       WHERE om.id = organisation_member_roles.org_member_id
-        AND open_kb.has_permission(om.org_id, 'settings.roles.manage')
+        AND kb.has_permission(om.org_id, 'settings.roles.manage')
     )
   )
   WITH CHECK (
@@ -167,6 +225,6 @@ CREATE POLICY organisation_member_roles_manage ON open_kb.organisation_member_ro
       SELECT 1
       FROM public.organisation_members om
       WHERE om.id = organisation_member_roles.org_member_id
-        AND open_kb.has_permission(om.org_id, 'settings.roles.manage')
+        AND kb.has_permission(om.org_id, 'settings.roles.manage')
     )
   );

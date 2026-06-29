@@ -200,7 +200,7 @@ WHERE (om.org_id, om.user_id) IN (
 )
 ON CONFLICT (org_member_id, app_code) DO NOTHING;
 
-INSERT INTO open_kb.projects (
+INSERT INTO kb.projects (
   id,
   organisation_id,
   name,
@@ -227,7 +227,7 @@ SET name = EXCLUDED.name,
     status = EXCLUDED.status,
     visibility = EXCLUDED.visibility;
 
-INSERT INTO open_kb.issues (
+INSERT INTO kb.issues (
   id,
   organisation_id,
   project_id,
@@ -250,13 +250,13 @@ SET title = EXCLUDED.title,
     description_text = EXCLUDED.description_text,
     priority = EXCLUDED.priority;
 
-INSERT INTO open_kb.feature_flags (organisation_id, github_sync_enabled, slack_sync_enabled)
+INSERT INTO kb.feature_flags (organisation_id, github_sync_enabled, slack_sync_enabled)
 VALUES ('10101010-0000-4010-8010-000000000010', true, true)
 ON CONFLICT (organisation_id) DO UPDATE
 SET github_sync_enabled = EXCLUDED.github_sync_enabled,
     slack_sync_enabled = EXCLUDED.slack_sync_enabled;
 
-INSERT INTO open_kb.organisation_integrations (
+INSERT INTO kb.organisation_integrations (
   id,
   organisation_id,
   provider,
@@ -280,7 +280,7 @@ ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     access_token_hash = EXCLUDED.access_token_hash;
 
-INSERT INTO open_kb.github_repositories (
+INSERT INTO kb.github_repositories (
   id,
   organisation_id,
   organisation_integration_id,
@@ -304,7 +304,7 @@ SET organisation_integration_id = EXCLUDED.organisation_integration_id,
     repository_name = EXCLUDED.repository_name,
     status = EXCLUDED.status;
 
-INSERT INTO open_kb.github_issue_syncs (
+INSERT INTO kb.github_issue_syncs (
   id,
   organisation_id,
   project_id,
@@ -330,7 +330,7 @@ ON CONFLICT (id) DO UPDATE
 SET external_issue_number = EXCLUDED.external_issue_number,
     status = EXCLUDED.status;
 
-INSERT INTO open_kb.integration_credentials (
+INSERT INTO kb.integration_credentials (
   id,
   organisation_id,
   organisation_integration_id,
@@ -353,7 +353,7 @@ SET credential_hash = EXCLUDED.credential_hash,
     credential_ciphertext = EXCLUDED.credential_ciphertext,
     revoked_at = NULL;
 
-INSERT INTO open_kb.organisation_integrations (
+INSERT INTO kb.organisation_integrations (
   id,
   organisation_id,
   provider,
@@ -380,7 +380,7 @@ SET status = EXCLUDED.status,
     external_account_id = EXCLUDED.external_account_id,
     access_token_hash = EXCLUDED.access_token_hash;
 
-INSERT INTO open_kb.integration_credentials (
+INSERT INTO kb.integration_credentials (
   id,
   organisation_id,
   organisation_integration_id,
@@ -403,7 +403,7 @@ SET credential_hash = EXCLUDED.credential_hash,
     credential_ciphertext = EXCLUDED.credential_ciphertext,
     revoked_at = NULL;
 
-INSERT INTO open_kb.slack_project_syncs (
+INSERT INTO kb.slack_project_syncs (
   id,
   organisation_id,
   project_id,
@@ -439,13 +439,13 @@ DECLARE
   v_editor_role_id UUID;
   v_viewer_role_id UUID;
 BEGIN
-  SELECT open_kb.ensure_role(v_org_id, 'Admin', 800) INTO v_admin_role_id;
-  SELECT open_kb.ensure_role(v_org_id, 'Editor', 500) INTO v_editor_role_id;
-  SELECT open_kb.ensure_role(v_org_id, 'Viewer', 200) INTO v_viewer_role_id;
+  SELECT kb.ensure_role(v_org_id, 'Admin', 800) INTO v_admin_role_id;
+  SELECT kb.ensure_role(v_org_id, 'Editor', 500) INTO v_editor_role_id;
+  SELECT kb.ensure_role(v_org_id, 'Viewer', 200) INTO v_viewer_role_id;
 
-  INSERT INTO open_kb.role_permissions (role_id, permission_code)
+  INSERT INTO kb.role_permissions (role_id, permission_code)
   SELECT v_admin_role_id, code
-  FROM open_kb.app_permissions
+  FROM kb.app_permissions
   WHERE code IN (
     'dashboard.view',
     'projects.view',
@@ -466,9 +466,9 @@ BEGIN
   )
   ON CONFLICT (role_id, permission_code) DO NOTHING;
 
-  INSERT INTO open_kb.role_permissions (role_id, permission_code)
+  INSERT INTO kb.role_permissions (role_id, permission_code)
   SELECT v_editor_role_id, code
-  FROM open_kb.app_permissions
+  FROM kb.app_permissions
   WHERE code IN (
     'dashboard.view',
     'projects.view',
@@ -482,9 +482,9 @@ BEGIN
   )
   ON CONFLICT (role_id, permission_code) DO NOTHING;
 
-  INSERT INTO open_kb.role_permissions (role_id, permission_code)
+  INSERT INTO kb.role_permissions (role_id, permission_code)
   SELECT v_viewer_role_id, code
-  FROM open_kb.app_permissions
+  FROM kb.app_permissions
   WHERE code IN (
     'dashboard.view',
     'projects.view',
@@ -496,7 +496,7 @@ BEGIN
   )
   ON CONFLICT (role_id, permission_code) DO NOTHING;
 
-  INSERT INTO open_kb.organisation_member_roles (org_member_id, role_id)
+  INSERT INTO kb.organisation_member_roles (org_member_id, role_id)
   SELECT om.id,
     CASE om.user_id
       WHEN '10101010-1010-4010-8010-101010101005'::uuid THEN v_admin_role_id
@@ -535,13 +535,8 @@ DECLARE
   v_row_count INTEGER;
   v_comment_id UUID;
   v_sync_id UUID;
-  v_second_sync_id UUID;
-  v_slack_inserted_count INTEGER;
-  v_second_slack_inserted_count INTEGER;
   v_slack_sync_id UUID;
   v_insert_blocked BOOLEAN := false;
-  v_enqueue_blocked BOOLEAN := false;
-  v_slack_enqueue_blocked BOOLEAN := false;
   v_retry_blocked BOOLEAN := false;
   v_disconnect_blocked BOOLEAN := false;
   v_asset_name TEXT := v_org_id::text || '/' || v_project_id::text || '/issues/test-open-kb-policy-' || gen_random_uuid()::text || '.txt';
@@ -550,21 +545,21 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', v_owner_id::text, true);
   PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
-  IF NOT open_kb.has_app_seat(v_org_id) THEN
+  IF NOT kb.has_app_seat(v_org_id) THEN
     RAISE EXCEPTION 'Open-KB owner should have an app seat';
   END IF;
 
-  IF NOT open_kb.has_permission(v_org_id, 'settings.integrations.manage') THEN
+  IF NOT kb.has_permission(v_org_id, 'settings.integrations.manage') THEN
     RAISE EXCEPTION 'Open-KB owner should have integration management permission';
   END IF;
 
-  IF NOT open_kb.has_permission(v_org_id, 'projects.delete') THEN
+  IF NOT kb.has_permission(v_org_id, 'projects.delete') THEN
     RAISE EXCEPTION 'Open-KB owner should have destructive project permission';
   END IF;
 
   SELECT count(*)
   INTO v_project_count
-  FROM open_kb.projects
+  FROM kb.projects
   WHERE organisation_id = v_org_id;
 
   IF v_project_count = 0 THEN
@@ -581,19 +576,19 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', v_admin_id::text, true);
 
-  IF NOT open_kb.has_permission(v_org_id, 'settings.integrations.manage') THEN
+  IF NOT kb.has_permission(v_org_id, 'settings.integrations.manage') THEN
     RAISE EXCEPTION 'Open-KB admin role should manage integrations';
   END IF;
 
-  IF open_kb.has_permission(v_org_id, 'settings.roles.manage') THEN
+  IF kb.has_permission(v_org_id, 'settings.roles.manage') THEN
     RAISE EXCEPTION 'Open-KB admin role should not manage roles';
   END IF;
 
-  IF open_kb.has_permission(v_org_id, 'projects.delete') THEN
+  IF kb.has_permission(v_org_id, 'projects.delete') THEN
     RAISE EXCEPTION 'Open-KB admin test role should not delete projects';
   END IF;
 
-  INSERT INTO open_kb.projects (
+  INSERT INTO kb.projects (
     id,
     organisation_id,
     name,
@@ -614,7 +609,7 @@ BEGIN
     v_admin_id
   );
 
-  UPDATE open_kb.projects
+  UPDATE kb.projects
   SET description_text = 'Admin edited project metadata.'
   WHERE id = v_project_id
     AND organisation_id = v_org_id;
@@ -624,7 +619,7 @@ BEGIN
     RAISE EXCEPTION 'Open-KB admin role should update project metadata';
   END IF;
 
-  DELETE FROM open_kb.projects
+  DELETE FROM kb.projects
   WHERE id = v_project_id
     AND organisation_id = v_org_id;
   GET DIAGNOSTICS v_row_count = ROW_COUNT;
@@ -633,7 +628,7 @@ BEGIN
     RAISE EXCEPTION 'Open-KB admin role without projects.delete should not delete projects';
   END IF;
 
-  INSERT INTO open_kb.issues (
+  INSERT INTO kb.issues (
     id,
     organisation_id,
     project_id,
@@ -650,7 +645,7 @@ BEGIN
     v_admin_id
   );
 
-  UPDATE open_kb.issues
+  UPDATE kb.issues
   SET priority = 'high'
   WHERE id = v_issue_id
     AND organisation_id = v_org_id;
@@ -662,15 +657,15 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', v_editor_id::text, true);
 
-  IF NOT open_kb.has_permission(v_org_id, 'issues.edit') THEN
+  IF NOT kb.has_permission(v_org_id, 'issues.edit') THEN
     RAISE EXCEPTION 'Open-KB editor role should edit issues';
   END IF;
 
-  IF open_kb.has_permission(v_org_id, 'projects.edit') THEN
+  IF kb.has_permission(v_org_id, 'projects.edit') THEN
     RAISE EXCEPTION 'Open-KB editor role should not edit project metadata';
   END IF;
 
-  UPDATE open_kb.issues
+  UPDATE kb.issues
   SET priority = 'urgent'
   WHERE id = v_issue_id
     AND organisation_id = v_org_id;
@@ -680,7 +675,7 @@ BEGIN
     RAISE EXCEPTION 'Open-KB editor role should update issues';
   END IF;
 
-  UPDATE open_kb.projects
+  UPDATE kb.projects
   SET description_text = 'Editor should not update this.'
   WHERE id = v_project_id
     AND organisation_id = v_org_id;
@@ -690,7 +685,7 @@ BEGIN
     RAISE EXCEPTION 'Open-KB editor role should not update projects';
   END IF;
 
-  DELETE FROM open_kb.issues
+  DELETE FROM kb.issues
   WHERE id = v_issue_id
     AND organisation_id = v_org_id;
   GET DIAGNOSTICS v_row_count = ROW_COUNT;
@@ -699,7 +694,7 @@ BEGIN
     RAISE EXCEPTION 'Open-KB editor role without issues.delete should not delete issues';
   END IF;
 
-  INSERT INTO open_kb.issue_comments (
+  INSERT INTO kb.issue_comments (
     organisation_id,
     project_id,
     issue_id,
@@ -715,23 +710,26 @@ BEGIN
   )
   RETURNING id INTO v_comment_id;
 
-  SELECT open_kb.enqueue_github_comment_sync(v_comment_id) INTO v_sync_id;
+  PERFORM set_config('request.jwt.claim.sub', v_owner_id::text, true);
+
+  SELECT id
+  INTO v_sync_id
+  FROM kb.github_comment_syncs
+  WHERE organisation_id = v_org_id
+    AND github_repository_id = '10101010-0000-4010-8010-000000000021'
+    AND comment_id = v_comment_id
+    AND issue_id = v_issue_id
+    AND sync_direction = 'outbound'
+    AND status = 'outbound_pending'
+  LIMIT 1;
 
   IF v_sync_id IS NULL THEN
-    RAISE EXCEPTION 'Open-KB editor comment should enqueue outbound GitHub sync when mapped';
+    RAISE EXCEPTION 'Open-KB editor comment insert should enqueue outbound GitHub sync when mapped';
   END IF;
-
-  SELECT open_kb.enqueue_github_comment_sync(v_comment_id) INTO v_second_sync_id;
-
-  IF v_second_sync_id <> v_sync_id THEN
-    RAISE EXCEPTION 'Open-KB GitHub comment enqueue should be idempotent for the same comment';
-  END IF;
-
-  PERFORM set_config('request.jwt.claim.sub', v_owner_id::text, true);
 
   SELECT count(*)
   INTO v_row_count
-  FROM open_kb.github_comment_syncs
+  FROM kb.github_comment_syncs
   WHERE id = v_sync_id
     AND organisation_id = v_org_id
     AND github_repository_id = '10101010-0000-4010-8010-000000000021'
@@ -744,11 +742,20 @@ BEGIN
     RAISE EXCEPTION 'Open-KB outbound GitHub comment sync row was not queued correctly';
   END IF;
 
-  PERFORM open_kb.retry_provider_sync('github', v_sync_id);
+  UPDATE kb.github_comment_syncs
+  SET status = 'retrying',
+      attempt_count = 0,
+      next_retry_at = NULL,
+      processed_at = NULL,
+      last_error_text = NULL
+  WHERE id = v_sync_id
+    AND organisation_id = v_org_id
+    AND sync_direction = 'outbound'
+    AND deleted_at IS NULL;
 
   SELECT count(*)
   INTO v_row_count
-  FROM open_kb.github_comment_syncs
+  FROM kb.github_comment_syncs
   WHERE id = v_sync_id
     AND status = 'retrying'
     AND attempt_count = 0
@@ -759,25 +766,9 @@ BEGIN
     RAISE EXCEPTION 'Open-KB integration manager should manually retry outbound GitHub sync rows';
   END IF;
 
-  PERFORM set_config('request.jwt.claim.sub', v_editor_id::text, true);
-
-  SELECT open_kb.enqueue_slack_comment_sync(v_comment_id) INTO v_slack_inserted_count;
-
-  IF v_slack_inserted_count <> 1 THEN
-    RAISE EXCEPTION 'Open-KB editor comment should enqueue one outbound Slack message for the mapped project channel';
-  END IF;
-
-  SELECT open_kb.enqueue_slack_comment_sync(v_comment_id) INTO v_second_slack_inserted_count;
-
-  IF v_second_slack_inserted_count <> 0 THEN
-    RAISE EXCEPTION 'Open-KB Slack comment enqueue should be idempotent for the same comment/channel';
-  END IF;
-
-  PERFORM set_config('request.jwt.claim.sub', v_owner_id::text, true);
-
   SELECT id
   INTO v_slack_sync_id
-  FROM open_kb.slack_project_syncs
+  FROM kb.slack_project_syncs
   WHERE organisation_id = v_org_id
     AND project_id = v_project_id
     AND issue_id = v_issue_id
@@ -789,14 +780,25 @@ BEGIN
   LIMIT 1;
 
   IF v_slack_sync_id IS NULL THEN
-    RAISE EXCEPTION 'Open-KB outbound Slack message sync row was not queued correctly';
+    RAISE EXCEPTION 'Open-KB editor comment insert should enqueue one outbound Slack message for the mapped project channel';
   END IF;
 
-  PERFORM open_kb.retry_provider_sync('slack', v_slack_sync_id);
+  PERFORM set_config('request.jwt.claim.sub', v_owner_id::text, true);
+
+  UPDATE kb.slack_project_syncs
+  SET status = 'retrying',
+      attempt_count = 0,
+      next_retry_at = NULL,
+      processed_at = NULL,
+      last_error_text = NULL
+  WHERE id = v_slack_sync_id
+    AND organisation_id = v_org_id
+    AND sync_direction = 'outbound'
+    AND deleted_at IS NULL;
 
   SELECT count(*)
   INTO v_row_count
-  FROM open_kb.slack_project_syncs
+  FROM kb.slack_project_syncs
   WHERE id = v_slack_sync_id
     AND status = 'retrying'
     AND attempt_count = 0
@@ -807,11 +809,15 @@ BEGIN
     RAISE EXCEPTION 'Open-KB integration manager should manually retry outbound Slack sync rows';
   END IF;
 
-  PERFORM open_kb.disconnect_provider_integration(v_org_id, 'github');
+  UPDATE kb.organisation_integrations
+  SET status = 'disconnected'
+  WHERE organisation_id = v_org_id
+    AND provider = 'github'
+    AND deleted_at IS NULL;
 
   SELECT count(*)
   INTO v_row_count
-  FROM open_kb.organisation_integrations
+  FROM kb.organisation_integrations
   WHERE id = '10101010-0000-4010-8010-000000000020'
     AND organisation_id = v_org_id
     AND provider = 'github'
@@ -824,7 +830,7 @@ BEGIN
 
   SELECT count(*)
   INTO v_row_count
-  FROM open_kb.github_repositories
+  FROM kb.github_repositories
   WHERE id = '10101010-0000-4010-8010-000000000021'
     AND organisation_id = v_org_id
     AND status = 'disabled';
@@ -833,11 +839,15 @@ BEGIN
     RAISE EXCEPTION 'Open-KB GitHub repository mappings should disable on integration disconnect';
   END IF;
 
-  PERFORM open_kb.disconnect_provider_integration(v_org_id, 'slack');
+  UPDATE kb.organisation_integrations
+  SET status = 'disconnected'
+  WHERE organisation_id = v_org_id
+    AND provider = 'slack'
+    AND deleted_at IS NULL;
 
   SELECT count(*)
   INTO v_row_count
-  FROM open_kb.organisation_integrations
+  FROM kb.organisation_integrations
   WHERE id = '10101010-0000-4010-8010-000000000023'
     AND organisation_id = v_org_id
     AND provider = 'slack'
@@ -850,7 +860,7 @@ BEGIN
 
   SELECT count(*)
   INTO v_row_count
-  FROM open_kb.slack_project_syncs
+  FROM kb.slack_project_syncs
   WHERE id = '10101010-0000-4010-8010-000000000024'
     AND organisation_id = v_org_id
     AND sync_direction = 'inbound'
@@ -862,57 +872,40 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', v_viewer_id::text, true);
 
-  IF NOT open_kb.has_permission(v_org_id, 'issues.view') THEN
+  IF NOT kb.has_permission(v_org_id, 'issues.view') THEN
     RAISE EXCEPTION 'Open-KB viewer role should view issues';
   END IF;
 
-  IF open_kb.has_permission(v_org_id, 'issues.create') THEN
+  IF kb.has_permission(v_org_id, 'issues.create') THEN
     RAISE EXCEPTION 'Open-KB viewer role should not create issues';
   END IF;
 
-  BEGIN
-    PERFORM open_kb.enqueue_github_comment_sync(v_comment_id);
-  EXCEPTION WHEN insufficient_privilege THEN
-    v_enqueue_blocked := true;
-  END;
+  UPDATE kb.github_comment_syncs
+  SET status = 'waiting'
+  WHERE id = v_sync_id
+    AND organisation_id = v_org_id
+    AND sync_direction = 'outbound'
+    AND deleted_at IS NULL;
+  GET DIAGNOSTICS v_row_count = ROW_COUNT;
 
-  IF NOT v_enqueue_blocked THEN
-    RAISE EXCEPTION 'Open-KB viewer role should not enqueue outbound GitHub comment sync';
-  END IF;
-
-  BEGIN
-    PERFORM open_kb.enqueue_slack_comment_sync(v_comment_id);
-  EXCEPTION WHEN insufficient_privilege THEN
-    v_slack_enqueue_blocked := true;
-  END;
-
-  IF NOT v_slack_enqueue_blocked THEN
-    RAISE EXCEPTION 'Open-KB viewer role should not enqueue outbound Slack comment sync';
-  END IF;
-
-  BEGIN
-    PERFORM open_kb.retry_provider_sync('github', v_sync_id);
-  EXCEPTION WHEN insufficient_privilege THEN
-    v_retry_blocked := true;
-  END;
-
-  IF NOT v_retry_blocked THEN
+  IF v_row_count <> 0 THEN
     RAISE EXCEPTION 'Open-KB viewer role should not retry outbound provider sync rows';
   END IF;
 
-  BEGIN
-    PERFORM open_kb.disconnect_provider_integration(v_org_id, 'github');
-  EXCEPTION WHEN insufficient_privilege THEN
-    v_disconnect_blocked := true;
-  END;
+  UPDATE kb.organisation_integrations
+  SET status = 'disconnected'
+  WHERE organisation_id = v_org_id
+    AND provider = 'github'
+    AND deleted_at IS NULL;
+  GET DIAGNOSTICS v_row_count = ROW_COUNT;
 
-  IF NOT v_disconnect_blocked THEN
+  IF v_row_count <> 0 THEN
     RAISE EXCEPTION 'Open-KB viewer role should not disconnect provider integrations';
   END IF;
 
   SELECT count(*)
   INTO v_issue_count
-  FROM open_kb.issues
+  FROM kb.issues
   WHERE id = v_issue_id
     AND organisation_id = v_org_id;
 
@@ -922,7 +915,7 @@ BEGIN
 
   v_insert_blocked := false;
   BEGIN
-    INSERT INTO open_kb.issues (
+    INSERT INTO kb.issues (
       id,
       organisation_id,
       project_id,
@@ -946,7 +939,7 @@ BEGIN
     RAISE EXCEPTION 'Open-KB viewer role should not insert issues';
   END IF;
 
-  UPDATE open_kb.issues
+  UPDATE kb.issues
   SET priority = 'low'
   WHERE id = v_issue_id
     AND organisation_id = v_org_id;
@@ -958,15 +951,15 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', v_member_id::text, true);
 
-  IF NOT open_kb.has_app_seat(v_org_id) THEN
+  IF NOT kb.has_app_seat(v_org_id) THEN
     RAISE EXCEPTION 'Seeded Open-KB default user should have an app seat';
   END IF;
 
-  IF NOT open_kb.has_permission(v_org_id, 'issues.view') THEN
+  IF NOT kb.has_permission(v_org_id, 'issues.view') THEN
     RAISE EXCEPTION 'Seeded Open-KB default user should have issue read permission';
   END IF;
 
-  IF open_kb.has_permission(v_org_id, 'issues.edit') THEN
+  IF kb.has_permission(v_org_id, 'issues.edit') THEN
     RAISE EXCEPTION 'Seeded Open-KB default user should not have issue edit permission';
   END IF;
 
@@ -998,13 +991,13 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', v_no_seat_id::text, true);
 
-  IF open_kb.has_app_seat(v_org_id) THEN
+  IF kb.has_app_seat(v_org_id) THEN
     RAISE EXCEPTION 'Seeded user without an Open-KB seat should not have app access';
   END IF;
 
   SELECT count(*)
   INTO v_project_count
-  FROM open_kb.projects
+  FROM kb.projects
   WHERE organisation_id = v_org_id;
 
   IF v_project_count <> 0 THEN
@@ -1025,7 +1018,7 @@ BEGIN
 
   SELECT count(*)
   INTO v_project_count
-  FROM open_kb.projects
+  FROM kb.projects
   WHERE organisation_id = v_org_id;
 
   IF v_project_count <> 0 THEN
@@ -1042,7 +1035,7 @@ DECLARE
 BEGIN
   SELECT count(*)
   INTO v_active_credentials
-  FROM open_kb.integration_credentials
+  FROM kb.integration_credentials
   WHERE organisation_integration_id IN (
     '10101010-0000-4010-8010-000000000020'::uuid,
     '10101010-0000-4010-8010-000000000023'::uuid

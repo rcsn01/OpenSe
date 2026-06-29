@@ -22,7 +22,7 @@ const formatDateTime = (value: string) =>
     minute: '2-digit',
   }).format(new Date(value))
 
-export const NotificationsPage = () => {
+export const InboxPage = () => {
   const { user } = useAuth()
   const { organisationId } = useOrganisation()
   const { data: notifications = [], isLoading } = useNotifications(organisationId, user?.id ?? null)
@@ -73,7 +73,7 @@ export const NotificationsPage = () => {
     <OpenKbPageShell isLoading={isLoading || preferenceLoading}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-normal">Notifications</h1>
+          <h1 className="text-xl font-semibold tracking-normal">Inbox</h1>
           <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">Issue updates from watched Open-KB work.</p>
         </div>
         <Button type="button" variant="outline" onClick={handleMarkAllRead} disabled={unreadCount === 0} loading={markAllRead.isPending}>

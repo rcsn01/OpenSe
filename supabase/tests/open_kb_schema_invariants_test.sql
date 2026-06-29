@@ -6,10 +6,18 @@ DO $$
 DECLARE
   v_details TEXT;
 BEGIN
+  IF to_regnamespace('kb') IS NULL THEN
+    RAISE EXCEPTION 'Open-KB database schema must be kb';
+  END IF;
+
+  IF to_regnamespace('open' || '_kb') IS NOT NULL THEN
+    RAISE EXCEPTION 'Open-KB legacy underscore schema must not exist';
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM information_schema.tables
-    WHERE table_schema = 'open_kb'
+    WHERE table_schema = 'kb'
       AND table_name IN (
         'users',
         'profiles',
@@ -25,8 +33,17 @@ BEGIN
 
   IF EXISTS (
     SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'kb'
+      AND table_name = 'stickies'
+  ) THEN
+    RAISE EXCEPTION 'Open-KB must not keep the removed stickies table';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
     FROM information_schema.columns
-    WHERE table_schema = 'open_kb'
+    WHERE table_schema = 'kb'
       AND column_name = 'workspace_id'
   ) THEN
     RAISE EXCEPTION 'Open-KB must not reintroduce Plane workspace_id columns';
@@ -35,18 +52,48 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1
     FROM information_schema.columns
-    WHERE table_schema = 'open_kb'
+    WHERE table_schema = 'kb'
       AND table_name = 'projects'
       AND column_name = 'organisation_id'
   ) THEN
     RAISE EXCEPTION 'Open-KB projects must belong directly to public.organisations';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'kb'
+      AND table_name = 'team_members'
+  ) THEN
+    RAISE EXCEPTION 'Open-KB team_members table must exist';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'kb'
+      AND table_name = 'issues'
+      AND column_name = 'team_id'
+      AND is_nullable = 'YES'
+  ) THEN
+    RAISE EXCEPTION 'Open-KB issues.team_id must be nullable';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_indexes
+    WHERE schemaname = 'kb'
+      AND indexname = 'kb_team_members_team_profile_uidx'
+      AND indexdef ILIKE '%WHERE (deleted_at IS NULL)%'
+  ) THEN
+    RAISE EXCEPTION 'Open-KB team_members must enforce unique active team/profile membership';
+  END IF;
+
   SELECT string_agg(c.relname, ', ' ORDER BY c.relname)
   INTO v_details
   FROM pg_class c
   JOIN pg_namespace n ON n.oid = c.relnamespace
-  WHERE n.nspname = 'open_kb'
+  WHERE n.nspname = 'kb'
     AND c.relkind = 'r'
     AND NOT c.relrowsecurity;
 
@@ -58,50 +105,51 @@ BEGIN
   INTO v_details
   FROM pg_class c
   JOIN pg_namespace n ON n.oid = c.relnamespace
-  WHERE n.nspname = 'open_kb'
+  WHERE n.nspname = 'kb'
     AND c.relkind = 'r'
     AND (
-      has_table_privilege('anon', c.oid, 'SELECT')
-      OR has_table_privilege('anon', c.oid, 'INSERT')
+      has_table_privilege('anon', c.oid, 'INSERT')
       OR has_table_privilege('anon', c.oid, 'UPDATE')
       OR has_table_privilege('anon', c.oid, 'DELETE')
+      OR (
+        has_table_privilege('anon', c.oid, 'SELECT')
+        AND c.relname NOT IN ('projects', 'project_deploy_boards', 'issues', 'states')
+      )
     );
 
   IF v_details IS NOT NULL THEN
-    RAISE EXCEPTION 'Open-KB tables must not be directly accessible to anon: %', v_details;
+    RAISE EXCEPTION 'Open-KB tables must not be directly accessible to anon except public board read surfaces: %', v_details;
+  END IF;
+
+  IF NOT has_table_privilege('anon', 'kb.public_deploy_boards', 'SELECT')
+    OR NOT has_table_privilege('anon', 'kb.public_deploy_board_issues', 'SELECT')
+  THEN
+    RAISE EXCEPTION 'Open-KB public deploy board views must be selectable by anon';
   END IF;
 
   SELECT string_agg(n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')', ', ' ORDER BY n.nspname, p.proname)
   INTO v_details
   FROM pg_proc p
   JOIN pg_namespace n ON n.oid = p.pronamespace
-  WHERE n.nspname = 'open_kb'
+  WHERE n.nspname = 'kb'
     AND p.prosecdef
-    AND has_function_privilege('anon', p.oid, 'EXECUTE')
-    AND p.proname NOT IN ('public_deploy_board', 'public_deploy_board_issues');
+    AND has_function_privilege('anon', p.oid, 'EXECUTE');
 
   IF v_details IS NOT NULL THEN
-    RAISE EXCEPTION 'Only public deploy board RPCs may be SECURITY DEFINER callable by anon: %', v_details;
+    RAISE EXCEPTION 'Open-KB SECURITY DEFINER functions must not be callable by anon: %', v_details;
   END IF;
 
   SELECT string_agg(n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')', ', ' ORDER BY n.nspname, p.proname)
   INTO v_details
   FROM pg_proc p
   JOIN pg_namespace n ON n.oid = p.pronamespace
-  WHERE n.nspname = 'open_kb'
+  WHERE n.nspname = 'kb'
     AND p.prosecdef
     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
     AND p.proname NOT IN (
-      'public_deploy_board',
-      'public_deploy_board_issues',
-      'is_org_member',
       'has_app_seat',
       'has_project_access',
-      'has_permission',
-      'enqueue_github_comment_sync',
-      'enqueue_slack_comment_sync',
-      'retry_provider_sync',
-      'disconnect_provider_integration'
+      'has_permission'
     );
 
   IF v_details IS NOT NULL THEN
@@ -111,8 +159,8 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM pg_policies
-    WHERE schemaname = 'open_kb'
-      AND tablename IN ('github_repository_syncs', 'github_issue_syncs', 'github_comment_syncs', 'webhook_logs', 'integration_credentials')
+    WHERE schemaname = 'kb'
+      AND tablename IN ('github_repository_syncs', 'github_issue_syncs', 'webhook_logs', 'integration_credentials')
       AND cmd IN ('INSERT', 'UPDATE', 'DELETE', 'ALL')
       AND roles && ARRAY['authenticated', 'anon']::name[]
   ) THEN
@@ -122,17 +170,28 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM pg_policies
-    WHERE schemaname = 'open_kb'
+    WHERE schemaname = 'kb'
+      AND tablename = 'github_comment_syncs'
+      AND cmd IN ('INSERT', 'DELETE', 'ALL')
+      AND roles && ARRAY['authenticated', 'anon']::name[]
+  ) THEN
+    RAISE EXCEPTION 'Open-KB GitHub comment sync rows may only expose constrained retry updates';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'kb'
       AND tablename = 'integration_credentials'
       AND roles && ARRAY['authenticated', 'anon']::name[]
   ) THEN
     RAISE EXCEPTION 'Open-KB provider credentials must not have anon/authenticated policies';
   END IF;
 
-  IF has_table_privilege('authenticated', 'open_kb.integration_credentials', 'SELECT')
-    OR has_table_privilege('authenticated', 'open_kb.integration_credentials', 'INSERT')
-    OR has_table_privilege('authenticated', 'open_kb.integration_credentials', 'UPDATE')
-    OR has_table_privilege('authenticated', 'open_kb.integration_credentials', 'DELETE')
+  IF has_table_privilege('authenticated', 'kb.integration_credentials', 'SELECT')
+    OR has_table_privilege('authenticated', 'kb.integration_credentials', 'INSERT')
+    OR has_table_privilege('authenticated', 'kb.integration_credentials', 'UPDATE')
+    OR has_table_privilege('authenticated', 'kb.integration_credentials', 'DELETE')
   THEN
     RAISE EXCEPTION 'Open-KB provider credentials must not be directly accessible to authenticated';
   END IF;
@@ -140,7 +199,7 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM information_schema.columns
-    WHERE table_schema = 'open_kb'
+    WHERE table_schema = 'kb'
       AND table_name IN ('api_tokens', 'organisation_integrations', 'integration_credentials')
       AND column_name IN ('token', 'access_token', 'refresh_token', 'secret')
   ) THEN
@@ -174,7 +233,7 @@ BEGIN
     WHERE NOT EXISTS (
       SELECT 1
       FROM information_schema.columns c
-      WHERE c.table_schema = 'open_kb'
+      WHERE c.table_schema = 'kb'
         AND c.table_name = required.table_name
         AND c.column_name = required.column_name
     )
@@ -186,17 +245,17 @@ BEGIN
     SELECT 1
     FROM (
       VALUES
-        ('open_kb_github_repository_syncs_worker_due_idx'),
-        ('open_kb_github_issue_syncs_worker_due_idx'),
-        ('open_kb_github_comment_syncs_worker_due_idx'),
-        ('open_kb_github_comment_syncs_outbound_comment_uidx'),
-        ('open_kb_slack_project_syncs_worker_due_idx'),
-        ('open_kb_slack_project_syncs_outbound_comment_uidx')
+        ('kb_github_repository_syncs_worker_due_idx'),
+        ('kb_github_issue_syncs_worker_due_idx'),
+        ('kb_github_comment_syncs_worker_due_idx'),
+        ('kb_github_comment_syncs_outbound_comment_uidx'),
+        ('kb_slack_project_syncs_worker_due_idx'),
+        ('kb_slack_project_syncs_outbound_comment_uidx')
     ) AS required(index_name)
     WHERE NOT EXISTS (
       SELECT 1
       FROM pg_indexes i
-      WHERE i.schemaname = 'open_kb'
+      WHERE i.schemaname = 'kb'
         AND i.indexname = required.index_name
     )
   ) THEN

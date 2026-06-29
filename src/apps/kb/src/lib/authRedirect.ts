@@ -12,7 +12,7 @@ const accountsRedirects = createAccountsRedirects({
   accountsUrl: ACCOUNTS_URL,
   appPublicUrl: APP_PUBLIC_URL,
   appName: 'Open-KB',
-  defaultRedirectPath: '/dashboard',
+  defaultRedirectPath: '/home',
 })
 
 export const buildAccountsAuthUrl = (mode: AuthMode) => accountsRedirects.auth(mode)

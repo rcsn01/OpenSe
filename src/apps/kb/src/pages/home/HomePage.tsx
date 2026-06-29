@@ -42,7 +42,7 @@ const PersonalList = ({
         {items.slice(0, 8).map((item) => (
           <Link
             key={item.id}
-            to={item.payload.route ?? '/dashboard'}
+            to={item.payload.route ?? '/home'}
             className="grid gap-1 px-4 py-3 hover:bg-[var(--color-muted)]"
           >
             <div className="flex min-w-0 items-center gap-2">
@@ -60,7 +60,7 @@ const PersonalList = ({
   </section>
 )
 
-export const DashboardPage = () => {
+export const HomePage = () => {
   const { user } = useAuth()
   const { organisationId, organisationName } = useOrganisation()
   const { data: summary, isLoading: summaryLoading } = useProjectSummary(organisationId)

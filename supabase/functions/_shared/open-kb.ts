@@ -99,8 +99,8 @@ export const restFetch = async <T>(
       'Content-Type': 'application/json',
       apikey: key,
       Authorization: `Bearer ${key}`,
-      'Accept-Profile': 'open_kb',
-      'Content-Profile': 'open_kb',
+      'Accept-Profile': 'kb',
+      'Content-Profile': 'kb',
       ...(init.headers ?? {}),
     },
   })
