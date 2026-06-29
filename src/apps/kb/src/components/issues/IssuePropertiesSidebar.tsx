@@ -14,6 +14,7 @@ import type {
   IssueSubscriber,
   IssueVote,
   ModuleIssueLink,
+  OpenKbTeam,
   OrganisationMemberProfile,
   ProjectModule,
 } from '../../types'
@@ -28,6 +29,8 @@ export const IssuePropertiesSidebar = ({
   attachmentsLoading,
   estimatePoints,
   estimatePointId,
+  teams,
+  teamId,
   cycleLinks,
   moduleLinks,
   assignees,
@@ -60,6 +63,7 @@ export const IssuePropertiesSidebar = ({
   onToggleSubscribe,
   onToggleVote,
   onEstimatePointIdChange,
+  onTeamIdChange,
   onAttachmentFile,
   onUploadAttachment,
   onRemoveAttachment,
@@ -88,6 +92,8 @@ export const IssuePropertiesSidebar = ({
   attachmentsLoading: boolean
   estimatePoints: EstimatePoint[]
   estimatePointId: string
+  teams: OpenKbTeam[]
+  teamId: string
   cycleLinks: CycleIssueLink[]
   moduleLinks: ModuleIssueLink[]
   assignees: IssueAssignee[]
@@ -120,6 +126,7 @@ export const IssuePropertiesSidebar = ({
   onToggleSubscribe: () => void
   onToggleVote: () => void
   onEstimatePointIdChange: (value: string) => void
+  onTeamIdChange: (value: string) => void
   onAttachmentFile: (event: ChangeEvent<HTMLInputElement>) => void
   onUploadAttachment: (event: FormEvent<HTMLFormElement>) => void
   onRemoveAttachment: (attachmentId: string, storagePath?: string | null) => void
@@ -168,6 +175,18 @@ export const IssuePropertiesSidebar = ({
     <div>
       <p className="text-xs font-medium uppercase text-[var(--color-muted-foreground)]">Project</p>
       <p className="mt-1 font-medium">{issue.project?.name ?? 'Unknown project'}</p>
+    </div>
+    <div className="space-y-2">
+      <p className="text-xs font-medium uppercase text-[var(--color-muted-foreground)]">Team</p>
+      <Select
+        className="border border-[var(--color-border)] bg-[var(--color-background)]"
+        value={teamId}
+        onChange={(event) => onTeamIdChange(event.target.value)}
+        options={[
+          { value: '', label: 'No team' },
+          ...teams.map((team) => ({ value: team.id, label: team.name })),
+        ]}
+      />
     </div>
     <div>
       <p className="text-xs font-medium uppercase text-[var(--color-muted-foreground)]">Created</p>

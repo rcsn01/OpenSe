@@ -80,6 +80,7 @@ import {
   useRemoveIssueCycleLink,
   useRemoveIssueModuleLink,
 } from '../../../hooks/queries/usePlanning'
+import { useTeams } from '../../../hooks/queries/useTeams'
 import { useAddFavorite, useFavorites, useRecordRecentVisitOnce, useRemoveFavorite } from '../../../hooks/queries/usePersonal'
 import type { Issue, IssueLinkType, IssuePriority, IssueRelationType } from '../../../types'
 import {
@@ -147,6 +148,7 @@ export const IssueDetailContent = ({
   const { user } = useAuth()
   const profileId = user?.id ?? null
   const { data: states = [] } = useIssueStates(organisationId, issue.project_id)
+  const { data: teams = [] } = useTeams(organisationId)
   const { data: labels = [] } = useIssueLabels(organisationId, issue.project_id)
   const { data: labelLinks = [] } = useIssueLabelLinks(organisationId, issue.id)
   const { data: memberProfiles = [] } = useOrganisationMemberProfiles(organisationId)
@@ -204,6 +206,7 @@ export const IssueDetailContent = ({
   const [title, setTitle] = useState(issue.title)
   const [priority, setPriority] = useState<IssuePriority>(issue.priority)
   const [stateId, setStateId] = useState(issue.state_id ?? '')
+  const [teamId, setTeamId] = useState(issue.team_id ?? '')
   const [estimatePointId, setEstimatePointId] = useState(issue.estimate_point_id ?? '')
   const [description, setDescription] = useState<RichTextEditorValue>({
     json: issue.description_json,
@@ -312,6 +315,7 @@ export const IssueDetailContent = ({
         title,
         priority,
         state_id: stateId || null,
+        team_id: teamId || null,
         estimate_point_id: estimatePointId || null,
         description_json: description.json,
         description_html: description.html,
@@ -1012,6 +1016,8 @@ export const IssueDetailContent = ({
                 attachmentsLoading={attachmentsLoading}
                 estimatePoints={estimatePoints}
                 estimatePointId={estimatePointId}
+                teams={teams}
+                teamId={teamId}
                 cycleLinks={cycleLinks}
                 moduleLinks={moduleLinks}
                 assignees={assignees}
@@ -1044,6 +1050,7 @@ export const IssueDetailContent = ({
                 onToggleSubscribe={handleToggleSubscribe}
                 onToggleVote={handleToggleVote}
                 onEstimatePointIdChange={setEstimatePointId}
+                onTeamIdChange={setTeamId}
                 onAttachmentFile={handleAttachmentFile}
                 onUploadAttachment={handleUploadAttachment}
                 onRemoveAttachment={handleRemoveAttachment}

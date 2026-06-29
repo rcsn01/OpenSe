@@ -3,6 +3,7 @@ import { useAuth } from '@repo/shared/auth/context'
 import { useCurrentAccountProfileSummary } from '@repo/shared/account-profile'
 import { supabase } from '@repo/shared/supabase'
 import {
+  Activity,
   ArrowLeft,
   Bell,
   CheckSquare,
@@ -12,7 +13,9 @@ import {
   Home,
   PanelsTopLeft,
   Plus,
+  Settings,
   Star,
+  UsersRound,
 } from 'lucide-react'
 import {
   AppShellLayout,
@@ -58,11 +61,11 @@ export const AppLayout = () => {
 
   const personalNavItems: PermissionedNavItem[] = [
     {
-      href: '/dashboard',
+      href: '/home',
       label: 'Home',
       icon: <Home className="h-5 w-5" />,
       permission: 'dashboard.view',
-      isActive: isSectionActive('/dashboard'),
+      isActive: isSectionActive('/home'),
     },
     {
       href: getTasksPath('list'),
@@ -72,11 +75,32 @@ export const AppLayout = () => {
       isActive: isSectionActive('/tasks'),
     },
     {
-      href: '/notifications',
+      href: '/inbox',
       label: 'Inbox',
       icon: <Bell className="h-5 w-5" />,
       permission: 'dashboard.view',
-      isActive: isSectionActive('/notifications'),
+      isActive: isSectionActive('/inbox'),
+    },
+    {
+      href: '/analytics',
+      label: 'Analytics',
+      icon: <Activity className="h-5 w-5" />,
+      permission: 'analytics.view',
+      isActive: isSectionActive('/analytics'),
+    },
+    {
+      href: '/teams',
+      label: 'Teams',
+      icon: <UsersRound className="h-5 w-5" />,
+      permission: 'projects.view',
+      isActive: isSectionActive('/teams'),
+    },
+    {
+      href: '/settings',
+      label: 'Settings',
+      icon: <Settings className="h-5 w-5" />,
+      permission: 'settings.view',
+      isActive: isSectionActive('/settings'),
     },
   ]
 

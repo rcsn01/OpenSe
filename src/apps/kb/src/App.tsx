@@ -9,7 +9,7 @@ import { OrganisationProvider, useOrganisation } from './contexts/OrganisationCo
 import { buildAccountsAuthUrl, buildAccountsOnboardingUrl } from './lib/authRedirect'
 import { PermissionRoute } from './components/PermissionRoute'
 
-const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage').then((module) => ({ default: module.DashboardPage })))
+const HomePage = lazy(() => import('./pages/home/HomePage').then((module) => ({ default: module.HomePage })))
 const ProjectsPage = lazy(() => import('./pages/projects/ProjectsPage').then((module) => ({ default: module.ProjectsPage })))
 const TeamsPage = lazy(() => import('./pages/teams/TeamsPage').then((module) => ({ default: module.TeamsPage })))
 const NewProjectPage = lazy(() => import('./pages/projects/NewProjectPage').then((module) => ({ default: module.NewProjectPage })))
@@ -19,7 +19,7 @@ const GlobalTasksPage = lazy(() => import('./pages/tasks/GlobalTasksPage').then(
 const NewCyclePage = lazy(() => import('./pages/projects/cycles/NewCyclePage').then((module) => ({ default: module.NewCyclePage })))
 const CycleDetailPage = lazy(() => import('./pages/projects/cycles/CycleDetailPage').then((module) => ({ default: module.CycleDetailPage })))
 const AnalyticsPage = lazy(() => import('./pages/analytics/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })))
-const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage').then((module) => ({ default: module.NotificationsPage })))
+const InboxPage = lazy(() => import('./pages/inbox/InboxPage').then((module) => ({ default: module.InboxPage })))
 const PublicBoardPage = lazy(() => import('./pages/public/PublicBoardPage').then((module) => ({ default: module.PublicBoardPage })))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage').then((module) => ({ default: module.SettingsPage })))
 
@@ -64,7 +64,7 @@ export const RootRedirect = () => {
     return <EmptyState title="Loading session..." description="" />
   }
 
-  return <Navigate to={user ? '/dashboard' : '/auth'} replace />
+  return <Navigate to={user ? '/home' : '/auth'} replace />
 }
 
 const ProjectCyclesRedirect = () => {
@@ -119,7 +119,8 @@ export function App() {
             <Route element={<AppLayout />}>
               <Route index element={<RootRedirect />} />
               <Route element={<PermissionRoute permission="dashboard.view" />}>
-                <Route path="/dashboard" element={lazyRoute(<DashboardPage />)} />
+                <Route path="/home" element={lazyRoute(<HomePage />)} />
+                <Route path="/dashboard" element={<Navigate to="/home" replace />} />
               </Route>
               <Route element={<PermissionRoute permission="projects.view" />}>
                 <Route path="/teams" element={lazyRoute(<TeamsPage />)} />
@@ -150,18 +151,18 @@ export function App() {
               <Route element={<PermissionRoute permission="planning.manage" />}>
                 <Route path="/projects/:projectId/cycles/new" element={lazyRoute(<NewCyclePage />)} />
               </Route>
-              <Route path="/stickies" element={<Navigate to="/dashboard" replace />} />
               <Route element={<PermissionRoute permission="analytics.view" />}>
                 <Route path="/analytics" element={lazyRoute(<AnalyticsPage />)} />
               </Route>
               <Route element={<PermissionRoute permission="dashboard.view" />}>
-                <Route path="/notifications" element={lazyRoute(<NotificationsPage />)} />
+                <Route path="/inbox" element={lazyRoute(<InboxPage />)} />
+                <Route path="/notifications" element={<Navigate to="/inbox" replace />} />
               </Route>
               <Route element={<PermissionRoute permission="settings.view" />}>
                 <Route path="/settings" element={lazyRoute(<SettingsPage />)} />
               </Route>
             </Route>
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/home" replace />} />
           </Route>
         </Routes>
       </OrganisationProvider>

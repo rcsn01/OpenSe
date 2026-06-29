@@ -68,7 +68,7 @@ const userCanManageIntegrations = async (
       headers: {
         apikey: anonKey,
         Authorization: authHeader,
-        'Accept-Profile': 'open_kb',
+        'Accept-Profile': 'kb',
       },
     },
   )

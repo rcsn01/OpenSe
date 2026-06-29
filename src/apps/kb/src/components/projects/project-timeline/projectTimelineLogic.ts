@@ -24,6 +24,10 @@ export type TimelineSpan = {
   dayCount: number
 }
 
+export type TimelineWeekSpan = TimelineSpan & {
+  rangeLabel: string
+}
+
 export type TimelineModuleGroup = {
   id: string
   name: string
@@ -60,6 +64,28 @@ export const isWeekend = (date: Date) => {
 
 export const getQuarterLabel = (date: Date) =>
   `Q${Math.floor(date.getMonth() / 3) + 1} ${date.getFullYear()}`
+
+const startOfWeek = (date: Date) => addDays(stripTime(date), -date.getDay())
+
+export const getWeekLabel = (date: Date) => {
+  const weekStart = startOfWeek(date)
+  const firstWeekStart = startOfWeek(new Date(weekStart.getFullYear(), 0, 1))
+
+  return `W${Math.floor((weekStart.getTime() - firstWeekStart.getTime()) / (7 * dayMs)) + 1}`
+}
+
+export const formatWeekRangeLabel = (start: Date, end: Date) => {
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()
+  if (sameMonth) return `${start.getDate()} - ${end.getDate()}`
+
+  const startMonth = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(start)
+  const endMonth = new Intl.DateTimeFormat(undefined, { month: 'short' }).format(end)
+  if (start.getFullYear() !== end.getFullYear()) {
+    return `${start.getDate()} ${startMonth} - ${end.getDate()} ${endMonth}`
+  }
+
+  return `${start.getDate()} ${startMonth} - ${end.getDate()}`
+}
 
 export const buildIssueRange = (issue: Issue): TimelineIssueRange => {
   const createdDate = toDate(issue.created_at.slice(0, 10)) ?? stripTime(fallbackAnchor)
@@ -100,6 +126,18 @@ export const buildMonthSpans = (days: TimelineDay[]): TimelineSpan[] => {
 
 export const buildQuarterSpans = (days: TimelineDay[]): TimelineSpan[] =>
   buildDateSpans(days, (date) => `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3) + 1}`, getQuarterLabel)
+
+export const buildWeekSpans = (days: TimelineDay[]): TimelineWeekSpan[] => {
+  const spans = buildDateSpans(days, (date) => dayKey(startOfWeek(date)), getWeekLabel)
+  return spans.map((span) => {
+    const start = days[span.startIndex].date
+    const end = days[span.startIndex + span.dayCount - 1].date
+    return {
+      ...span,
+      rangeLabel: formatWeekRangeLabel(start, end),
+    }
+  })
+}
 
 const buildDateSpans = (
   days: TimelineDay[],

@@ -12,7 +12,7 @@ export const PermissionRoute = ({ permission }: { permission: string }) => {
   }
 
   if (!permissions.includes(permission)) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/home" replace />
   }
 
   return <Outlet />

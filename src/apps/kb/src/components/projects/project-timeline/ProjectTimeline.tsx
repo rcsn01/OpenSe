@@ -5,16 +5,17 @@ import { ArrowUpDown, ChevronDown, ListFilter, Plus, Search, SlidersHorizontal, 
 
 import { addDays, dayKey, formatShortDate } from '../../../lib/dateFormatting'
 import { formatIssueKey } from '../../../lib/issueFormatting'
+import { getOpenKbTextColorForBackground, resolveTimelineIssueColor } from '../../../lib/openKbColors'
 import { getProjectIssuePath } from '../../../lib/projectRoutes'
-import type { Issue, IssueBlocker, ModuleIssueLink, ProjectModule } from '../../../types'
+import type { Issue, IssueAssignee, IssueBlocker, ModuleIssueLink, OpenKbTeam, ProjectModule } from '../../../types'
 import {
   buildIssueRanges,
   buildModuleTimelineGroups,
   buildMonthSpans,
-  buildQuarterSpans,
   buildTimelineDays,
   buildTimelineRows,
   buildVisibleBlockerConnectors,
+  buildWeekSpans,
   daysBetweenInclusive,
   stripTime,
   type TimelineIssueRange,
@@ -24,6 +25,8 @@ import {
 type ProjectTimelineProps = {
   projectId: string
   issues: Issue[]
+  teams: OpenKbTeam[]
+  assignees: IssueAssignee[]
   modules: ProjectModule[]
   moduleIssueLinks: ModuleIssueLink[]
   blockers: IssueBlocker[]
@@ -38,7 +41,7 @@ const leftColumnWidth = 264
 const dayWidth = 24
 const groupRowHeight = 36
 const issueRowHeight = 44
-const headerHeight = 96
+const headerHeight = 56
 const barHeight = 28
 const barTop = 8
 const minimumBarWidth = 20
@@ -46,7 +49,6 @@ const initialPastDays = 90
 const initialFutureDays = 180
 const timelineExtensionDays = 180
 const scrollEdgeThreshold = 480
-const barColors = ['#8dd7e8', '#bfe88b', '#ffd166', '#f7a072', '#c4b5fd']
 
 const ProjectTimelineToolbar = ({ onCreateIssue }: { onCreateIssue: () => void }) => (
   <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4">
@@ -140,6 +142,8 @@ const getConnectorPath = ({
 export const ProjectTimeline = ({
   projectId,
   issues,
+  teams,
+  assignees,
   modules,
   moduleIssueLinks,
   blockers,
@@ -148,6 +152,7 @@ export const ProjectTimeline = ({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const didScrollToTodayRef = useRef(false)
   const pendingPrependWidthRef = useRef(0)
+  const [scrollContainerHeight, setScrollContainerHeight] = useState(0)
   const today = useMemo(() => stripTime(new Date()), [])
   const todayKey = useMemo(() => dayKey(today), [today])
   const [visibleRange, setVisibleRange] = useState(() => ({
@@ -157,7 +162,7 @@ export const ProjectTimeline = ({
   const ranges = useMemo(() => buildIssueRanges(issues), [issues])
   const days = useMemo(() => buildTimelineDays(visibleRange.start, visibleRange.end), [visibleRange.end, visibleRange.start])
   const monthSpans = useMemo(() => buildMonthSpans(days), [days])
-  const quarterSpans = useMemo(() => buildQuarterSpans(days), [days])
+  const weekSpans = useMemo(() => buildWeekSpans(days), [days])
   const groups = useMemo(
     () => buildModuleTimelineGroups({ ranges, modules, moduleIssueLinks }),
     [moduleIssueLinks, modules, ranges],
@@ -165,7 +170,18 @@ export const ProjectTimeline = ({
   const timelineRows = useMemo(() => buildTimelineRows(groups), [groups])
   const connectors = useMemo(() => buildVisibleBlockerConnectors(blockers, timelineRows), [blockers, timelineRows])
   const renderModel = useMemo(() => buildRenderRows(groups), [groups])
+  const assigneesByIssueId = useMemo(() => {
+    const byIssueId = new Map<string, IssueAssignee[]>()
+    assignees.forEach((assignee) => {
+      if (!assignee.issue_id) return
+      const issueAssignees = byIssueId.get(assignee.issue_id) ?? []
+      issueAssignees.push(assignee)
+      byIssueId.set(assignee.issue_id, issueAssignees)
+    })
+    return byIssueId
+  }, [assignees])
   const timelineWidth = days.length * dayWidth
+  const bodyHeight = Math.max(renderModel.height, scrollContainerHeight - headerHeight)
   const rowById = useMemo(() => {
     const byId = new Map<string, Extract<RenderRow, { kind: 'issue' }>>()
     renderModel.rows.forEach((row) => {
@@ -211,6 +227,20 @@ export const ProjectTimeline = ({
     didScrollToTodayRef.current = true
   }, [today, visibleRange.start])
 
+  useLayoutEffect(() => {
+    const scrollContainer = scrollContainerRef.current
+    if (!scrollContainer) return
+
+    const updateHeight = () => setScrollContainerHeight(scrollContainer.clientHeight)
+    updateHeight()
+
+    if (typeof ResizeObserver === 'undefined') return undefined
+
+    const resizeObserver = new ResizeObserver(updateHeight)
+    resizeObserver.observe(scrollContainer)
+    return () => resizeObserver.disconnect()
+  }, [])
+
   if (issues.length === 0) {
     return (
       <section className="-mx-2 flex min-h-0 flex-1 flex-col bg-[var(--color-background)]">
@@ -226,49 +256,51 @@ export const ProjectTimeline = ({
     <section className="-mx-2 flex min-h-0 flex-1 flex-col bg-[var(--color-background)]" data-testid="project-timeline">
       <ProjectTimelineToolbar onCreateIssue={onCreateIssue} />
       <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-auto" onScroll={handleScroll}>
-        <div className="relative" style={{ width: leftColumnWidth + timelineWidth, minHeight: headerHeight + renderModel.height }}>
-          <div className="sticky top-0 z-40 flex h-24 border-b border-[var(--color-border)] bg-[var(--color-background)]">
+        <div className="relative" style={{ width: leftColumnWidth + timelineWidth, minHeight: headerHeight + bodyHeight }}>
+          <div className="sticky top-0 z-40 flex h-14 border-b border-[var(--color-border)] bg-[var(--color-background)]">
             <div
-              className="sticky left-0 z-50 flex shrink-0 items-end border-r border-[var(--color-border)] bg-[var(--color-background)] px-4 pb-3 text-xs font-semibold uppercase tracking-normal text-[var(--color-muted-foreground)]"
+              className="sticky left-0 z-50 flex shrink-0 items-end border-r border-[var(--color-border)] bg-[var(--color-background)] px-4 pb-2 text-xs font-semibold uppercase tracking-normal text-[var(--color-muted-foreground)]"
               style={{ width: leftColumnWidth }}
             >
               Module
             </div>
             <div className="shrink-0" style={{ width: timelineWidth }}>
-              <div className="grid h-7 border-b border-[var(--color-border)] text-center text-[11px] font-semibold text-[var(--color-muted-foreground)]" style={{ gridTemplateColumns: `repeat(${days.length}, ${dayWidth}px)` }}>
-                {quarterSpans.map((span) => (
+              <div className="grid h-6 border-b border-[var(--color-border)] text-left text-xs font-medium" style={{ gridTemplateColumns: `repeat(${days.length}, ${dayWidth}px)` }}>
+                {monthSpans.map((span) => (
                   <div key={span.key} className="border-r border-[var(--color-border)] px-2 py-1" style={{ gridColumn: `${span.startIndex + 1} / span ${span.dayCount}` }}>
                     {span.label}
                   </div>
                 ))}
               </div>
-              <div className="grid h-8 border-b border-[var(--color-border)] text-center text-xs font-semibold" style={{ gridTemplateColumns: `repeat(${days.length}, ${dayWidth}px)` }}>
-                {monthSpans.map((span) => (
-                  <div key={span.key} className="border-r border-[var(--color-border)] px-2 py-1.5" style={{ gridColumn: `${span.startIndex + 1} / span ${span.dayCount}` }}>
-                    {span.label}
-                  </div>
-                ))}
-              </div>
-              <div className="grid h-9 text-center text-[11px] text-[var(--color-muted-foreground)]" style={{ gridTemplateColumns: `repeat(${days.length}, ${dayWidth}px)` }}>
-                {days.map((day) => (
+              <div className="grid h-8 text-xs" style={{ gridTemplateColumns: `repeat(${days.length}, ${dayWidth}px)` }}>
+                {weekSpans.map((span) => (
                   <div
-                    key={day.key}
-                    data-testid={day.isWeekend ? 'project-timeline-weekend-cell' : undefined}
-                    className={`${day.isWeekend ? 'bg-[#f5f6f8]' : 'bg-white'} ${day.key === todayKey ? 'shadow-[inset_0_0_0_1px_var(--color-primary)]' : ''} border-r border-[var(--color-border)] py-1`}
+                    key={span.key}
+                    className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center border-r border-[var(--color-border)] text-[var(--color-foreground)]"
+                    style={{ gridColumn: `${span.startIndex + 1} / span ${span.dayCount}` }}
                   >
-                    <div>{new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(day.date).slice(0, 1)}</div>
-                    <div className="font-semibold text-[var(--color-foreground)]">{day.date.getDate()}</div>
+                    <span className="border-r border-[var(--color-border)] px-1.5 text-[var(--color-muted-foreground)]">{span.label}</span>
+                    <span className="px-2 text-center font-medium">{span.rangeLabel}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="relative" style={{ height: renderModel.height }}>
+          <div className="relative" style={{ height: bodyHeight }}>
+            <div className="pointer-events-none absolute top-0 z-0 grid" style={{ left: leftColumnWidth, width: timelineWidth, height: bodyHeight, gridTemplateColumns: `repeat(${days.length}, ${dayWidth}px)` }}>
+              {days.map((day) => (
+                <div
+                  key={`background-${day.key}`}
+                  data-testid={day.isWeekend ? 'project-timeline-weekend-cell' : undefined}
+                  className={`${day.isWeekend ? 'bg-[#f5f6f8]' : 'bg-white'} ${day.key === todayKey ? 'shadow-[inset_1px_0_0_var(--color-primary)]' : ''} border-r border-[var(--color-border)]`}
+                />
+              ))}
+            </div>
             <svg
               aria-hidden="true"
               className="pointer-events-none absolute top-0 z-20"
-              height={renderModel.height}
+              height={bodyHeight}
               width={timelineWidth}
               style={{ left: leftColumnWidth }}
               data-testid="project-timeline-connectors"
@@ -299,7 +331,7 @@ export const ProjectTimeline = ({
             {renderModel.rows.map((row) => {
               if (row.kind === 'group') {
                 return (
-                  <div key={`group-${row.group.id}`} className="absolute left-0 flex border-b border-[var(--color-border)]" style={{ top: row.top, height: groupRowHeight, width: leftColumnWidth + timelineWidth }}>
+                  <div key={`group-${row.group.id}`} className="absolute left-0 flex" style={{ top: row.top, height: groupRowHeight, width: leftColumnWidth + timelineWidth }}>
                     <div className="sticky left-0 z-30 flex shrink-0 items-center gap-2 border-r border-[var(--color-border)] bg-[#f8fafc] px-4" style={{ width: leftColumnWidth }}>
                       <ChevronDown className="h-4 w-4 text-[var(--color-muted-foreground)]" />
                       <span className="truncate text-sm font-semibold">{row.group.name}</span>
@@ -307,7 +339,10 @@ export const ProjectTimeline = ({
                     </div>
                     <div className="grid shrink-0" style={{ width: timelineWidth, gridTemplateColumns: `repeat(${days.length}, ${dayWidth}px)` }}>
                       {days.map((day) => (
-                        <div key={`${row.group.id}-${day.key}`} className={day.isWeekend ? 'border-r border-[var(--color-border)] bg-[#f5f6f8]' : 'border-r border-[var(--color-border)] bg-white'} />
+                        <div
+                          key={`${row.group.id}-${day.key}`}
+                          className={`${day.isWeekend ? 'bg-[#f5f6f8]/70' : 'bg-white/70'} ${day.key === todayKey ? 'shadow-[inset_1px_0_0_var(--color-primary)]' : ''} border-r border-[var(--color-border)]`}
+                        />
                       ))}
                     </div>
                   </div>
@@ -315,11 +350,17 @@ export const ProjectTimeline = ({
               }
 
               const { left, width } = getBarStyle(row.range, visibleRange.start, visibleRange.end)
-              const barColor = row.range.issue.state?.color || barColors[Math.abs(row.range.issue.id.split('').reduce((sum, character) => sum + character.charCodeAt(0), 0)) % barColors.length]
+              const barColor = resolveTimelineIssueColor({
+                issue: row.range.issue,
+                assignees: assigneesByIssueId.get(row.range.issue.id) ?? [],
+                teams,
+              })
               const shouldRenderBar = isRangeVisible(row.range, visibleRange.start, visibleRange.end)
+              const durationDays = daysBetweenInclusive(row.range.start, row.range.end)
+              const labelPosition = durationDays <= 2 ? 'outside' : 'inside'
 
               return (
-                <div key={row.rowId} className="absolute left-0 flex border-b border-[var(--color-border)]" style={{ top: row.top, height: issueRowHeight, width: leftColumnWidth + timelineWidth }}>
+                <div key={row.rowId} className="absolute left-0 flex" style={{ top: row.top, height: issueRowHeight, width: leftColumnWidth + timelineWidth }}>
                   <div className="sticky left-0 z-30 grid shrink-0 grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-2 border-r border-[var(--color-border)] bg-[var(--color-background)] px-4 text-sm" style={{ width: leftColumnWidth }}>
                     <span className="font-mono text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(row.range.issue)}</span>
                     <span className="truncate font-medium">{row.range.issue.title}</span>
@@ -327,17 +368,28 @@ export const ProjectTimeline = ({
                   <div className="relative shrink-0" style={{ width: timelineWidth }}>
                     <div className="grid h-full" style={{ gridTemplateColumns: `repeat(${days.length}, ${dayWidth}px)` }}>
                       {days.map((day) => (
-                        <div key={`${row.rowId}-${day.key}`} className={day.isWeekend ? 'border-r border-[var(--color-border)] bg-[#f5f6f8]' : 'border-r border-[var(--color-border)] bg-white'} />
+                        <div
+                          key={`${row.rowId}-${day.key}`}
+                          className={`${day.isWeekend ? 'bg-[#f5f6f8]/70' : 'bg-white/70'} ${day.key === todayKey ? 'shadow-[inset_1px_0_0_var(--color-primary)]' : ''} border-r border-[var(--color-border)]`}
+                        />
                       ))}
                     </div>
                     {shouldRenderBar ? (
                       <Link
                         to={getProjectIssuePath(projectId, row.range.issue.id)}
-                        className="absolute z-30 flex items-center gap-2 rounded-[4px] px-2 text-xs font-medium text-slate-900 shadow-sm ring-1 ring-black/5 hover:brightness-95"
-                        style={{ left, top: barTop, width, height: barHeight, backgroundColor: barColor }}
+                        className={`absolute z-30 flex items-center gap-2 rounded-[4px] text-xs font-medium text-slate-900 shadow-sm ring-1 ring-black/5 hover:brightness-95 ${labelPosition === 'inside' ? 'px-2' : 'px-0'}`}
+                        style={{ left, top: barTop, width, height: barHeight, backgroundColor: barColor, color: getOpenKbTextColorForBackground(barColor) }}
                         title={`${row.range.issue.title} (${formatShortDate(dayKey(row.range.start))} - ${formatShortDate(dayKey(row.range.end))})`}
+                        data-label-position={labelPosition}
+                        data-bar-color={barColor}
                       >
-                        <span className="truncate">{row.range.issue.title}</span>
+                        {labelPosition === 'inside' ? (
+                          <span className="truncate">{row.range.issue.title}</span>
+                        ) : (
+                          <span className="absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-[3px] bg-white/90 px-1 text-[var(--color-foreground)] shadow-sm">
+                            {row.range.issue.title}
+                          </span>
+                        )}
                       </Link>
                     ) : null}
                   </div>

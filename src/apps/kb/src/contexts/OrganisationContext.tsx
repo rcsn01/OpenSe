@@ -15,7 +15,7 @@ type OrganisationContextValue = {
 
 const OrganisationContext = createContext<OrganisationContextValue | undefined>(undefined)
 
-const STORAGE_KEY = 'open_kb_selected_organisation'
+const STORAGE_KEY = 'kb_selected_organisation'
 
 export const OrganisationProvider = ({
   children,

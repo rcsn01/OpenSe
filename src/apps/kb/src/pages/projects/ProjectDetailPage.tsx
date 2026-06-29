@@ -31,12 +31,14 @@ import {
   useProjectMessages,
   useProjectTabs,
 } from '../../hooks/queries/useProjects'
+import { useTeams } from '../../hooks/queries/useTeams'
 import { defaultProjectTabsForProject } from '../../api/projects'
 import { useMyPermissions } from '../../hooks/queries/usePermissions'
 import { useRecordRecentVisitOnce } from '../../hooks/queries/usePersonal'
 import type { Issue, ProjectTab } from '../../types'
 import { formatFileSize } from '../../lib/fileFormatting'
 import { formatIssueKey, issuePriorityTone as priorityTone } from '../../lib/issueFormatting'
+import { getOpenKbItemColor, getOpenKbTextColorForBackground } from '../../lib/openKbColors'
 import { dayKey, formatShortDate, startOfMonth, toDate } from '../../lib/dateFormatting'
 import {
   getProjectTabDefinition,
@@ -148,12 +150,10 @@ const ProjectTaskToolbar = ({
   </div>
 )
 
-const labelPalette = ['#bfdbfe', '#bbf7d0', '#fecaca', '#fed7aa', '#fde68a']
-
 const issueLabel = (issue: Issue, index: number) => issue.project?.name || ['Project Management', 'Design Transfer', 'Manufacturing', 'Validation', 'QA/RA'][index % 5]
 
 const CompactAvatar = ({ value, tone = '#58c4d8' }: { value: string; tone?: string }) => (
-  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-slate-800" style={{ backgroundColor: tone }}>
+  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold" style={{ backgroundColor: tone, color: getOpenKbTextColorForBackground(tone) }}>
     {value
       .split(/\s+/)
       .filter(Boolean)
@@ -166,6 +166,8 @@ const CompactAvatar = ({ value, tone = '#58c4d8' }: { value: string; tone?: stri
 
 const ProjectBoardCard = ({ issue, index, projectId }: { issue: Issue; index: number; projectId: string }) => {
   const label = issueLabel(issue, index)
+  const labelColor = getOpenKbItemColor(`label:${label}`)
+  const avatarColor = getOpenKbItemColor(`profile:${issue.updated_by || issue.created_by || 'user'}`)
   const range = issue.start_date || issue.target_date
     ? `${formatShortDate(issue.start_date ?? issue.created_at.slice(0, 10))}${issue.target_date ? ` - ${formatShortDate(issue.target_date)}` : ''}`
     : formatShortDate(issue.created_at.slice(0, 10))
@@ -180,12 +182,12 @@ const ProjectBoardCard = ({ issue, index, projectId }: { issue: Issue; index: nu
         <h3 className="line-clamp-2 text-sm font-semibold leading-5">{issue.title}</h3>
       </div>
       <div className="mt-4">
-        <span className="inline-flex rounded-[4px] px-1.5 py-0.5 text-xs font-medium text-slate-700" style={{ backgroundColor: labelPalette[index % labelPalette.length] }}>
+        <span className="inline-flex rounded-[4px] px-1.5 py-0.5 text-xs font-medium" style={{ backgroundColor: labelColor, color: getOpenKbTextColorForBackground(labelColor) }}>
           {label}
         </span>
       </div>
       <div className="mt-5 flex items-center gap-3 text-xs text-[var(--color-muted-foreground)]">
-        <CompactAvatar value={issue.updated_by || issue.created_by || 'User'} tone={index % 3 === 0 ? '#58c4d8' : index % 3 === 1 ? '#f8c04a' : '#c4b5fd'} />
+        <CompactAvatar value={issue.updated_by || issue.created_by || 'User'} tone={avatarColor} />
         <span className={issue.priority === 'urgent' || issue.priority === 'high' ? 'font-medium text-rose-600' : ''}>{range}</span>
       </div>
     </Link>
@@ -321,9 +323,10 @@ export const ProjectDetailPage = () => {
   const { data: issues = [] } = useIssues(organisationId, { project_id: projectId }, needsIssues)
   const issueIds = useMemo(() => issues.map((issue) => issue.id).sort(), [issues])
   const { data: states = [] } = useIssueStates(organisationId, projectId, needsStates)
+  const { data: teams = [] } = useTeams(needsIssues ? organisationId : null)
   const { data: labels = [] } = useIssueLabels(organisationId, projectId, needsLabels)
   const { data: members = [] } = useOrganisationMemberProfiles(organisationId, needsMembers)
-  const { data: projectIssueAssignees = [] } = useProjectIssueAssignees(organisationId, projectId, routeTabKey === 'list')
+  const { data: projectIssueAssignees = [] } = useProjectIssueAssignees(organisationId, projectId, routeTabKey === 'list' || routeTabKey === 'timeline')
   const { data: cycles = [] } = useCycles(organisationId, projectId, needsCycles)
   const { data: cycleIssueLinks = [] } = useCycleIssueLinks(organisationId, projectId, routeTabKey === 'list')
   const { data: modules = [] } = useModules(organisationId, projectId, needsModules)
@@ -584,6 +587,7 @@ export const ProjectDetailPage = () => {
               cycleIssueLinks={cycleIssueLinks}
               modules={modules}
               moduleIssueLinks={moduleIssueLinks}
+              teams={teams}
               listViewConfig={activeListViewConfig}
               selectedIssueId={selectedListIssueId}
               selectedCycleId={selectedListCycleId}
@@ -628,6 +632,8 @@ export const ProjectDetailPage = () => {
         <ProjectTimeline
           projectId={project.id}
           issues={datedIssues.length > 0 ? datedIssues : issues}
+          teams={teams}
+          assignees={projectIssueAssignees}
           modules={modules}
           moduleIssueLinks={moduleIssueLinks}
           blockers={blockers}

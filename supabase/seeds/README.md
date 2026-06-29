@@ -14,7 +14,7 @@ When run manually, seeds execute in this order:
 6. `50_stoqr_catalog_inventory.sql` — StoQR catalog/inventory/purchasing/reporting
 7. `55_stoqr_reports_demo.sql` — StoQR reporting demo data
 8. `56_stoqr_procurement_workflows.sql` — StoQR procurement workflow demo data
-9. `57_open_kb_demo.sql` — Open-KB projects, issues, integrations, and personal workflow demo data
+9. `57_kb_demo.sql` — Open-KB projects, issues, integrations, and personal workflow demo data
 10. `60_admin_audit.sql` — audit/platform reference tables
 11. `90_synthetic_volume.sql` — high-volume synthetic dataset
 

@@ -37,6 +37,7 @@ const issueSelect = `
   id,
   organisation_id,
   project_id,
+  team_id,
   sequence_id,
   title,
   description_json,
@@ -56,6 +57,7 @@ const issueSelect = `
   updated_at,
   deleted_at,
   project:projects(id, name, identifier),
+  team:teams!issues_team_id_fkey(id, name, slug, status, metadata),
   state:states(id, organisation_id, project_id, name, group_key, color, sort_order, is_default)
 `
 
@@ -427,18 +429,6 @@ const safeLogIssueActivity = (input: Parameters<typeof logIssueActivity>[0]) => 
   return Promise.resolve()
 }
 
-const safeEnqueueCommentSyncs = (commentId: string) => {
-  void (async () => {
-    await Promise.allSettled([
-      db.rpc('enqueue_github_comment_sync', { p_comment_id: commentId }),
-      db.rpc('enqueue_slack_comment_sync', { p_comment_id: commentId }),
-    ])
-  })().catch(() => {
-    // Provider sync is asynchronous; comment creation should not roll back if queueing fails.
-  })
-  return Promise.resolve()
-}
-
 const safeNotifyMentionedProfile = async ({
   organisationId,
   projectId,
@@ -672,6 +662,10 @@ export const fetchIssues = async ({
     query = query.eq('project_id', filters.project_id)
   }
 
+  if (filters?.team_id !== undefined) {
+    query = filters.team_id ? query.eq('team_id', filters.team_id) : query.is('team_id', null)
+  }
+
   if (filters?.state_id) {
     query = query.eq('state_id', filters.state_id)
   }
@@ -766,6 +760,7 @@ export const createIssue = async (input: IssueInput): Promise<Issue> => {
     description_text: input.description_text?.trim() || null,
     priority: input.priority,
     state_id: input.state_id || null,
+    team_id: input.team_id === undefined ? undefined : input.team_id || null,
     estimate_point_id: input.estimate_point_id || null,
     start_date: input.start_date || null,
     target_date: input.target_date || null,
@@ -792,6 +787,7 @@ export const createIssue = async (input: IssueInput): Promise<Issue> => {
       title: issue.title,
       priority: issue.priority,
       state_id: issue.state_id,
+      team_id: issue.team_id,
     },
   })
 
@@ -806,6 +802,7 @@ export const updateIssue = async ({ id, organisation_id, ...input }: IssueUpdate
     description_html: input.description_html?.trim() || input.description_html,
     description_text: input.description_text?.trim() || input.description_text,
     state_id: input.state_id === undefined ? undefined : input.state_id || null,
+    team_id: input.team_id === undefined ? undefined : input.team_id || null,
     estimate_point_id: input.estimate_point_id === undefined ? undefined : input.estimate_point_id || null,
     updated_by: undefined,
   }
@@ -833,6 +830,7 @@ export const updateIssue = async ({ id, organisation_id, ...input }: IssueUpdate
       title: previousIssue.title,
       priority: previousIssue.priority,
       state_id: previousIssue.state_id,
+      team_id: previousIssue.team_id,
       estimate_point_id: previousIssue.estimate_point_id,
       target_date: previousIssue.target_date,
     },
@@ -840,6 +838,7 @@ export const updateIssue = async ({ id, organisation_id, ...input }: IssueUpdate
       title: issue.title,
       priority: issue.priority,
       state_id: issue.state_id,
+      team_id: issue.team_id,
       estimate_point_id: issue.estimate_point_id,
       target_date: issue.target_date,
     },
@@ -1783,7 +1782,6 @@ export const createIssueComment = async (input: IssueCommentInput): Promise<Issu
   if (error) throw error
 
   const comment = data as unknown as IssueComment
-  await safeEnqueueCommentSyncs(comment.id)
   await safeLogIssueActivity({
     organisationId: input.organisation_id,
     projectId: input.project_id,

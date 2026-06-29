@@ -11,7 +11,7 @@ import {
   serializeListViewConfig,
   sortProjectIssues,
 } from '../projectIssueListLogic'
-import type { Cycle, CycleIssueLink, Issue, IssueAssignee, IssueState, ModuleIssueLink, ProjectModule } from '../../../../types'
+import type { Cycle, CycleIssueLink, Issue, IssueAssignee, IssueState, ModuleIssueLink, OpenKbTeam, ProjectModule } from '../../../../types'
 
 const state = (id: string, name: string, sortOrder: number, groupKey = 'started'): IssueState => ({
   id,
@@ -28,6 +28,7 @@ const issue = (id: string, overrides: Partial<Issue> = {}): Issue => ({
   id,
   organisation_id: 'org',
   project_id: 'project',
+  team_id: null,
   sequence_id: Number(id.replace(/\D/g, '')) || null,
   title: `Issue ${id}`,
   description_json: { type: 'doc' },
@@ -114,6 +115,7 @@ describe('project issue list filtering and sorting', () => {
         query: 'quality',
         stateIds: [],
         assigneeIds: ['p1'],
+        teamIds: [],
         priorities: ['high'],
         dueBuckets: ['today'],
         showCompleted: false,
@@ -180,6 +182,21 @@ describe('project issue list grouping', () => {
       updated_at: null,
       deleted_at: null,
     }
+    const teams: OpenKbTeam[] = [
+      {
+        id: 'team-1',
+        organisation_id: 'org',
+        name: 'Product',
+        slug: 'product',
+        description_text: null,
+        status: 'active',
+        metadata: {},
+        created_by: null,
+        created_at: '2026-06-01T00:00:00.000Z',
+        updated_at: null,
+        deleted_at: null,
+      },
+    ]
     const issues = [issue('i1'), issue('i2')]
     const moduleLinks: ModuleIssueLink[] = [{ id: 'ml1', organisation_id: 'org', project_id: 'project', issue_id: 'i1', module_id: projectModule.id, module: projectModule }]
     const cycleLinks: CycleIssueLink[] = [{ id: 'cl1', organisation_id: 'org', project_id: 'project', issue_id: 'i1', cycle_id: cycle.id, cycle }]
@@ -196,6 +213,7 @@ describe('project issue list grouping', () => {
       modules: [projectModule],
       moduleLinksByIssueId: buildModuleLinksByIssueId(moduleLinks),
       moduleById: new Map([[projectModule.id, projectModule]]),
+      teams,
     })
     expect(moduleGroups.map((group) => [group.id, group.issues.map((item) => item.id)])).toEqual([
       [projectModule.id, ['i1']],
@@ -214,9 +232,67 @@ describe('project issue list grouping', () => {
       modules: [],
       moduleLinksByIssueId: buildModuleLinksByIssueId([]),
       moduleById: new Map(),
+      teams,
     })
     expect(cycleGroups.map((group) => [group.id, group.issues.map((item) => item.id)])).toEqual([
       [cycle.id, ['i1']],
+      ['none', ['i2']],
+    ])
+  })
+
+  it('filters and groups by issue team including unassigned issues', () => {
+    const teams: OpenKbTeam[] = [
+      {
+        id: 'team-1',
+        organisation_id: 'org',
+        name: 'Product',
+        slug: 'product',
+        description_text: null,
+        status: 'active',
+        metadata: {},
+        created_by: null,
+        created_at: '2026-06-01T00:00:00.000Z',
+        updated_at: null,
+        deleted_at: null,
+      },
+    ]
+    const issues = [
+      issue('i1', { team_id: 'team-1', team: { id: 'team-1', name: 'Product', slug: 'product', status: 'active', metadata: {} } }),
+      issue('i2'),
+    ]
+    const assigneesByIssueId = buildIssueAssigneesByIssueId([])
+
+    expect(filterProjectIssues({
+      issues,
+      assigneesByIssueId,
+      filters: {
+        query: '',
+        stateIds: [],
+        assigneeIds: [],
+        teamIds: ['none'],
+        priorities: [],
+        dueBuckets: [],
+        showCompleted: true,
+      },
+    }).map((item) => item.id)).toEqual(['i2'])
+
+    const groups = groupProjectIssues({
+      issues,
+      groupBy: 'team',
+      options: { ...defaultProjectIssueListOptions, showEmptyGroups: false },
+      sortedStates: [],
+      assignableMembers: [],
+      assigneesByIssueId,
+      cycles: [],
+      cycleLinkByIssueId: buildCycleLinkByIssueId([]),
+      modules: [],
+      moduleLinksByIssueId: buildModuleLinksByIssueId([]),
+      moduleById: new Map(),
+      teams,
+    })
+
+    expect(groups.map((group) => [group.id, group.issues.map((item) => item.id)])).toEqual([
+      ['team-1', ['i1']],
       ['none', ['i2']],
     ])
   })

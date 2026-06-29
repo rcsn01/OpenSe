@@ -37,6 +37,7 @@ const issue = (id: string): Issue => ({
   id,
   organisation_id: 'org',
   project_id: 'project',
+  team_id: null,
   sequence_id: 1,
   title: id,
   description_json: { type: 'doc' },

@@ -7,19 +7,21 @@ import { CycleDetailContent, CycleProgressRing as DetailCycleProgressRing } from
 import { buildCycleDetailModel } from '../../cycles/cycleDetailModel'
 import { EntityPreviewPaneShell } from '../../entity-preview/EntityPreviewPaneShell'
 import { useIssue } from '../../../hooks/queries/useIssues'
-import type { Cycle, CycleIssueLink, Issue, IssueAssignee, IssuePriority, IssueState, ModuleIssueLink, OrganisationMemberProfile, ProjectModule } from '../../../types'
+import type { Cycle, CycleIssueLink, Issue, IssueAssignee, IssuePriority, IssueState, ModuleIssueLink, OpenKbTeam, OrganisationMemberProfile, ProjectModule } from '../../../types'
 import { formatIssueKey, issuePriorityOptions, issuePriorityTone as priorityTone } from '../../../lib/issueFormatting'
 import { formatShortDate, toDate } from '../../../lib/dateFormatting'
+import { getOpenKbProfileColor, getOpenKbTextColorForBackground } from '../../../lib/openKbColors'
 
 type ProjectIssueListDueBucket = 'overdue' | 'today' | 'this_week' | 'later' | 'no_due'
-type ProjectIssueListSortField = 'manual' | 'title' | 'due_date' | 'priority' | 'status' | 'assignee' | 'created_at' | 'updated_at'
+type ProjectIssueListSortField = 'manual' | 'title' | 'due_date' | 'priority' | 'status' | 'assignee' | 'team' | 'created_at' | 'updated_at'
 type ProjectIssueListSortDirection = 'asc' | 'desc'
-type ProjectIssueListGroupKey = 'status' | 'assignee' | 'priority' | 'due_date' | 'module' | 'cycle' | 'none'
+type ProjectIssueListGroupKey = 'status' | 'assignee' | 'team' | 'priority' | 'due_date' | 'module' | 'cycle' | 'none'
 
 type ProjectIssueListFilters = {
   query: string
   stateIds: string[]
   assigneeIds: string[]
+  teamIds: string[]
   priorities: IssuePriority[]
   dueBuckets: ProjectIssueListDueBucket[]
   showCompleted: boolean
@@ -37,6 +39,7 @@ type ProjectIssueListOptions = {
     effort: boolean
     priority: boolean
     status: boolean
+    team: boolean
   }
   compactRows: boolean
   wrapTitles: boolean
@@ -63,6 +66,7 @@ const defaultProjectIssueListFilters: ProjectIssueListFilters = {
   query: '',
   stateIds: [],
   assigneeIds: [],
+  teamIds: [],
   priorities: [],
   dueBuckets: [],
   showCompleted: true,
@@ -80,6 +84,7 @@ const defaultProjectIssueListOptions: ProjectIssueListOptions = {
     effort: true,
     priority: true,
     status: true,
+    team: true,
   },
   compactRows: false,
   wrapTitles: false,
@@ -102,6 +107,7 @@ const sortFieldLabels: Record<ProjectIssueListSortField, string> = {
   priority: 'Priority',
   status: 'Status',
   assignee: 'Assignee',
+  team: 'Team',
   created_at: 'Created',
   updated_at: 'Updated',
 }
@@ -109,6 +115,7 @@ const sortFieldLabels: Record<ProjectIssueListSortField, string> = {
 const groupLabels: Record<ProjectIssueListGroupKey, string> = {
   status: 'Status',
   assignee: 'Assignee',
+  team: 'Team',
   priority: 'Priority',
   due_date: 'Due date',
   module: 'Module',
@@ -168,10 +175,14 @@ const AssigneeCell = ({
 
   const displayName = getProfileDisplayName(assignee.profile)
   const initials = getInitials(displayName)
+  const avatarColor = getOpenKbProfileColor(assignee.profile, assignee.profile_id)
 
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
-      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-[10px] font-semibold text-white">
+      <span
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+        style={{ backgroundColor: avatarColor, color: getOpenKbTextColorForBackground(avatarColor) }}
+      >
         {initials || 'U'}
       </span>
       <span className="truncate text-xs text-[var(--color-foreground)]">{displayName}</span>
@@ -205,6 +216,7 @@ const getDueBucket = (issue: Issue, now = new Date()): ProjectIssueListDueBucket
 }
 
 const getAssigneeName = (assignees: IssueAssignee[]) => assignees[0] ? getProfileDisplayName(assignees[0].profile) : 'Unassigned'
+const getIssueTeamName = (issue: Issue) => issue.team?.name ?? 'No team'
 
 const createToggle = <TValue extends string>(value: TValue, values: TValue[]) =>
   values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
@@ -282,6 +294,7 @@ const filterProjectIssues = ({
     if (query && !`${formatIssueKey(issue)} ${issue.title} ${issue.description_text ?? ''}`.toLowerCase().includes(query)) return false
     if (filters.stateIds.length > 0 && (!issue.state_id || !filters.stateIds.includes(issue.state_id))) return false
     if (filters.assigneeIds.length > 0 && !issueAssignees.some((assignee) => assignee.profile_id && filters.assigneeIds.includes(assignee.profile_id))) return false
+    if (filters.teamIds.length > 0 && !filters.teamIds.includes(issue.team_id ?? 'none')) return false
     if (filters.priorities.length > 0 && !filters.priorities.includes(issue.priority)) return false
     if (filters.dueBuckets.length > 0 && !filters.dueBuckets.includes(getDueBucket(issue, now))) return false
     return true
@@ -314,6 +327,8 @@ const sortProjectIssues = ({
         return compareValues(stateById.get(left.state_id ?? '')?.sort_order ?? Number.MAX_SAFE_INTEGER, stateById.get(right.state_id ?? '')?.sort_order ?? Number.MAX_SAFE_INTEGER, sort.direction)
       case 'assignee':
         return compareValues(getAssigneeName(leftAssignees), getAssigneeName(rightAssignees), sort.direction)
+      case 'team':
+        return compareValues(getIssueTeamName(left), getIssueTeamName(right), sort.direction)
       case 'created_at':
         return compareValues(toDate(left.created_at)?.getTime() ?? 0, toDate(right.created_at)?.getTime() ?? 0, sort.direction)
       case 'updated_at':
@@ -336,6 +351,7 @@ const groupProjectIssues = ({
   modules,
   moduleLinksByIssueId,
   moduleById,
+  teams,
 }: {
   issues: Issue[]
   groupBy: ProjectIssueListGroupKey
@@ -348,6 +364,7 @@ const groupProjectIssues = ({
   modules: ProjectModule[]
   moduleLinksByIssueId: Map<string, ModuleIssueLink[]>
   moduleById: Map<string, ProjectModule>
+  teams: OpenKbTeam[]
 }): ProjectIssueListGroup[] => {
   if (groupBy === 'none') return [{ id: 'all', title: 'All tasks', issues }]
 
@@ -395,6 +412,33 @@ const groupProjectIssues = ({
         issues: issues.filter((issue) => issue.priority === priority.value),
       }))
       .filter((group) => options.showEmptyGroups || group.issues.length > 0)
+  }
+
+  if (groupBy === 'team') {
+    const groupsById = new Map<string, ProjectIssueListGroup>()
+    if (options.showEmptyGroups) {
+      teams.forEach((team) => {
+        groupsById.set(team.id, {
+          id: team.id,
+          title: team.name,
+          issues: [],
+        })
+      })
+    }
+    issues.forEach((issue) => {
+      const id = issue.team_id ?? 'none'
+      const title = issue.team?.name ?? 'No team'
+      const existing: ProjectIssueListGroup = groupsById.get(id) ?? { id, title, issues: [] }
+      existing.issues.push(issue)
+      groupsById.set(id, existing)
+    })
+    return Array.from(groupsById.values())
+      .filter((group) => options.showEmptyGroups || group.issues.length > 0)
+      .sort((a, b) => {
+        if (a.id === 'none') return 1
+        if (b.id === 'none') return -1
+        return a.title.localeCompare(b.title)
+      })
   }
 
   if (groupBy === 'module') {
@@ -664,6 +708,7 @@ export const ProjectIssueListTable = ({
   cycleIssueLinks,
   modules,
   moduleIssueLinks,
+  teams,
   listViewConfig,
   onListViewChange,
   selectedIssueId,
@@ -682,6 +727,7 @@ export const ProjectIssueListTable = ({
   cycleIssueLinks: CycleIssueLink[]
   modules: ProjectModule[]
   moduleIssueLinks: ModuleIssueLink[]
+  teams: OpenKbTeam[]
   listViewConfig: ProjectIssueListViewConfig
   onListViewChange?: (config: ProjectIssueListViewConfig) => void
   selectedIssueId?: string | null
@@ -725,9 +771,10 @@ export const ProjectIssueListTable = ({
   const moduleById = useMemo(() => new Map(modules.map((projectModule) => [projectModule.id, projectModule])), [modules])
   const cycleLinkByIssueId = useMemo(() => buildCycleLinkByIssueId(cycleIssueLinks), [cycleIssueLinks])
   const assignableMembers = useMemo(() => getAssignableMembers(members, assignees), [assignees, members])
-  const activeFilterCount = filters.stateIds.length + filters.assigneeIds.length + filters.priorities.length + filters.dueBuckets.length + (filters.query.trim() ? 1 : 0) + (filters.showCompleted ? 0 : 1)
+  const activeFilterCount = filters.stateIds.length + filters.assigneeIds.length + filters.teamIds.length + filters.priorities.length + filters.dueBuckets.length + (filters.query.trim() ? 1 : 0) + (filters.showCompleted ? 0 : 1)
   const visibleColumns = [
     showProjectColumn ? '8rem' : null,
+    options.columns.team ? '7.5rem' : null,
     options.columns.assignee ? '7.5rem' : null,
     options.columns.dueDate ? '7.5rem' : null,
     options.columns.effort ? '7.5rem' : null,
@@ -760,8 +807,9 @@ export const ProjectIssueListTable = ({
       modules,
       moduleLinksByIssueId,
       moduleById,
+      teams,
     }),
-    [assigneesByIssueId, assignableMembers, cycleLinkByIssueId, cycles, groupBy, moduleById, moduleLinksByIssueId, modules, options, sortedIssues, sortedStates],
+    [assigneesByIssueId, assignableMembers, cycleLinkByIssueId, cycles, groupBy, moduleById, moduleLinksByIssueId, modules, options, sortedIssues, sortedStates, teams],
   )
 
   const resetView = () => {
@@ -845,6 +893,22 @@ export const ProjectIssueListTable = ({
                 {assignableMembers.length === 0 ? <div className="px-2 py-1 text-sm text-[var(--color-muted-foreground)]">No assignees</div> : null}
               </DropdownSection>
               <DropdownSeparator />
+              <DropdownSection title="Team">
+                <Checkbox
+                  label="No team"
+                  checked={filters.teamIds.includes('none')}
+                  onChange={() => setFilters((current) => ({ ...current, teamIds: createToggle('none', current.teamIds) }))}
+                />
+                {teams.map((team) => (
+                  <Checkbox
+                    key={team.id}
+                    label={team.name}
+                    checked={filters.teamIds.includes(team.id)}
+                    onChange={() => setFilters((current) => ({ ...current, teamIds: createToggle(team.id, current.teamIds) }))}
+                  />
+                ))}
+              </DropdownSection>
+              <DropdownSeparator />
               <DropdownSection title="Priority">
                 {issuePriorityOptions.map((priority) => (
                   <Checkbox
@@ -924,6 +988,7 @@ export const ProjectIssueListTable = ({
           >
             <DropdownPanel>
               <DropdownSection title="Columns">
+                <Checkbox label="Team" checked={options.columns.team} onChange={() => toggleColumn('team')} />
                 <Checkbox label="Assignee" checked={options.columns.assignee} onChange={() => toggleColumn('assignee')} />
                 <Checkbox label="Due date" checked={options.columns.dueDate} onChange={() => toggleColumn('dueDate')} />
                 <Checkbox label="Effort" checked={options.columns.effort} onChange={() => toggleColumn('effort')} />
@@ -952,6 +1017,7 @@ export const ProjectIssueListTable = ({
         <div className="sticky top-0 z-10 grid h-9 border-b border-[var(--color-border)] bg-[var(--color-background)] text-xs text-[var(--color-muted-foreground)]" style={{ gridTemplateColumns }}>
           <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Name</div>
           {showProjectColumn ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Project</div> : null}
+          {options.columns.team ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Team</div> : null}
           {options.columns.assignee ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Assignee</div> : null}
           {options.columns.dueDate ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Due date</div> : null}
           {options.columns.effort ? <div className="flex items-center border-r border-[var(--color-border)] px-2.5">Effort</div> : null}
@@ -984,6 +1050,11 @@ export const ProjectIssueListTable = ({
                     <span className="inline-flex min-w-0 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-muted)] px-2 py-0.5 text-xs font-medium text-[var(--color-muted-foreground)]">
                       <span className="truncate">{issue.project?.identifier || issue.project?.name || 'Project'}</span>
                     </span>
+                  </div>
+                ) : null}
+                {options.columns.team ? (
+                  <div className="flex min-w-0 items-center border-r border-[var(--color-border)] px-2.5 text-xs text-[var(--color-muted-foreground)]">
+                    <span className="truncate">{issue.team?.name ?? 'No team'}</span>
                   </div>
                 ) : null}
                 {options.columns.assignee ? (
@@ -1025,6 +1096,7 @@ export const ProjectIssueListTable = ({
             >
               <span className="flex items-center border-r border-[var(--color-border)] pl-14">Add task...</span>
               {showProjectColumn ? <span className="border-r border-[var(--color-border)]" /> : null}
+              {options.columns.team ? <span className="border-r border-[var(--color-border)]" /> : null}
               {options.columns.assignee ? <span className="border-r border-[var(--color-border)]" /> : null}
               {options.columns.dueDate ? <span className="border-r border-[var(--color-border)]" /> : null}
               {options.columns.effort ? <span className="border-r border-[var(--color-border)]" /> : null}

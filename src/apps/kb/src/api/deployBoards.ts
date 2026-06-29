@@ -122,15 +122,41 @@ export const deleteProjectDeployBoard = async ({
 }
 
 export const fetchPublicDeployBoard = async (slug: string): Promise<PublicDeployBoard | null> => {
-  const { data, error } = await db.rpc('public_deploy_board', { p_slug: slug })
+  const { data, error } = await db
+    .from('public_deploy_boards')
+    .select('*')
+    .ilike('slug', slug.trim())
+    .maybeSingle()
 
   if (error) throw error
 
-  return ((data ?? []) as PublicDeployBoard[])[0] ?? null
+  return (data ?? null) as PublicDeployBoard | null
 }
 
 export const fetchPublicDeployBoardIssues = async (slug: string): Promise<PublicDeployBoardIssue[]> => {
-  const { data, error } = await db.rpc('public_deploy_board_issues', { p_slug: slug })
+  const { data, error } = await db
+    .from('public_deploy_board_issues')
+    .select(`
+      issue_id,
+      project_id,
+      sequence_id,
+      title,
+      description_text,
+      priority,
+      state_id,
+      state_name,
+      state_group_key,
+      state_color,
+      start_date,
+      target_date,
+      completed_at,
+      created_at,
+      updated_at
+    `)
+    .ilike('slug', slug.trim())
+    .order('state_sort_order', { ascending: true })
+    .order('sequence_id', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false })
 
   if (error) throw error
 

@@ -27,7 +27,7 @@ const projectSelect = `
   sort_order,
   created_at,
   updated_at,
-  team:teams!projects_team_id_fkey(id, name, slug, description_text, status)
+  team:teams!projects_team_id_fkey(id, name, slug, description_text, status, metadata)
 `
 
 const projectMemberSelect = `

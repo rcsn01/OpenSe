@@ -23,6 +23,7 @@ const draftIssueSelect = `
 const toDraftPayload = (input: { payload?: DraftIssueInput['payload'] }) => ({
   priority: input.payload?.priority ?? 'none',
   state_id: input.payload?.state_id ?? null,
+  team_id: input.payload?.team_id ?? null,
   estimate_point_id: input.payload?.estimate_point_id ?? null,
   start_date: input.payload?.start_date ?? null,
   target_date: input.payload?.target_date ?? null,
@@ -152,6 +153,7 @@ export const publishDraftIssue = async ({
     description_text: draft.description_text,
     priority: draft.payload.priority ?? 'none',
     state_id: draft.payload.state_id ?? null,
+    team_id: draft.payload.team_id ?? null,
     estimate_point_id: draft.payload.estimate_point_id ?? null,
     start_date: draft.payload.start_date ?? null,
     target_date: draft.payload.target_date ?? null,

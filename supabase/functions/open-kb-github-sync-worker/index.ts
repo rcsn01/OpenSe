@@ -248,8 +248,8 @@ const restFetch = async <T>(
       'Content-Type': 'application/json',
       apikey: serviceRoleKey,
       Authorization: `Bearer ${serviceRoleKey}`,
-      'Accept-Profile': 'open_kb',
-      'Content-Profile': 'open_kb',
+      'Accept-Profile': 'kb',
+      'Content-Profile': 'kb',
       ...(init.headers ?? {}),
     },
   })
@@ -676,7 +676,7 @@ const processOutboundCommentRows = async (
       )
       const comment = comments[0]
       if (!comment) {
-        await patchRow(supabaseUrl, serviceRoleKey, 'github_comment_syncs', row.id, waitForCondition(row, 'open_kb_comment_missing'))
+        await patchRow(supabaseUrl, serviceRoleKey, 'github_comment_syncs', row.id, waitForCondition(row, 'kb_comment_missing'))
         waiting += 1
         continue
       }

@@ -1,16 +1,17 @@
-import type { Cycle, CycleIssueLink, Issue, IssueAssignee, IssuePriority, IssueState, ModuleIssueLink, OrganisationMemberProfile, ProjectModule, ProjectTab } from '../../../types'
+import type { Cycle, CycleIssueLink, Issue, IssueAssignee, IssuePriority, IssueState, ModuleIssueLink, OpenKbTeam, OrganisationMemberProfile, ProjectModule, ProjectTab } from '../../../types'
 import { formatIssueKey, issuePriorityOptions } from '../../../lib/issueFormatting'
 import { toDate } from '../../../lib/dateFormatting'
 
 export type ProjectIssueListDueBucket = 'overdue' | 'today' | 'this_week' | 'later' | 'no_due'
-export type ProjectIssueListSortField = 'manual' | 'title' | 'due_date' | 'priority' | 'status' | 'assignee' | 'created_at' | 'updated_at'
+export type ProjectIssueListSortField = 'manual' | 'title' | 'due_date' | 'priority' | 'status' | 'assignee' | 'team' | 'created_at' | 'updated_at'
 export type ProjectIssueListSortDirection = 'asc' | 'desc'
-export type ProjectIssueListGroupKey = 'status' | 'assignee' | 'priority' | 'due_date' | 'module' | 'cycle' | 'none'
+export type ProjectIssueListGroupKey = 'status' | 'assignee' | 'team' | 'priority' | 'due_date' | 'module' | 'cycle' | 'none'
 
 export type ProjectIssueListFilters = {
   query: string
   stateIds: string[]
   assigneeIds: string[]
+  teamIds: string[]
   priorities: IssuePriority[]
   dueBuckets: ProjectIssueListDueBucket[]
   showCompleted: boolean
@@ -28,6 +29,7 @@ export type ProjectIssueListOptions = {
     effort: boolean
     priority: boolean
     status: boolean
+    team: boolean
   }
   compactRows: boolean
   wrapTitles: boolean
@@ -54,6 +56,7 @@ export const defaultProjectIssueListFilters: ProjectIssueListFilters = {
   query: '',
   stateIds: [],
   assigneeIds: [],
+  teamIds: [],
   priorities: [],
   dueBuckets: [],
   showCompleted: true,
@@ -71,6 +74,7 @@ export const defaultProjectIssueListOptions: ProjectIssueListOptions = {
     effort: true,
     priority: true,
     status: true,
+    team: true,
   },
   compactRows: false,
   wrapTitles: false,
@@ -100,6 +104,7 @@ export const sortFieldLabels: Record<ProjectIssueListSortField, string> = {
   priority: 'Priority',
   status: 'Status',
   assignee: 'Assignee',
+  team: 'Team',
   created_at: 'Created',
   updated_at: 'Updated',
 }
@@ -107,6 +112,7 @@ export const sortFieldLabels: Record<ProjectIssueListSortField, string> = {
 export const groupLabels: Record<ProjectIssueListGroupKey, string> = {
   status: 'Status',
   assignee: 'Assignee',
+  team: 'Team',
   priority: 'Priority',
   due_date: 'Due date',
   module: 'Module',
@@ -180,6 +186,7 @@ export const readListViewConfig = (metadata: ProjectTab['metadata'] | null | und
       query: typeof filters.query === 'string' ? filters.query : defaultProjectIssueListFilters.query,
       stateIds: readStringArray(filters.stateIds),
       assigneeIds: readStringArray(filters.assigneeIds),
+      teamIds: readStringArray(filters.teamIds),
       priorities: readStringArray(filters.priorities, projectIssueListPriorities),
       dueBuckets: readStringArray(filters.dueBuckets, projectIssueListDueBuckets),
       showCompleted: readBoolean(filters.showCompleted, defaultProjectIssueListFilters.showCompleted),
@@ -196,6 +203,7 @@ export const readListViewConfig = (metadata: ProjectTab['metadata'] | null | und
         effort: readBoolean(columns.effort, defaultProjectIssueListOptions.columns.effort),
         priority: readBoolean(columns.priority, defaultProjectIssueListOptions.columns.priority),
         status: readBoolean(columns.status, defaultProjectIssueListOptions.columns.status),
+        team: readBoolean(columns.team, defaultProjectIssueListOptions.columns.team),
       },
       compactRows: readBoolean(options.compactRows, defaultProjectIssueListOptions.compactRows),
       wrapTitles: readBoolean(options.wrapTitles, defaultProjectIssueListOptions.wrapTitles),
@@ -230,6 +238,7 @@ export const getDueBucket = (issue: Issue, now = new Date()): ProjectIssueListDu
 }
 
 const getAssigneeName = (assignees: IssueAssignee[]) => assignees[0] ? getProfileDisplayName(assignees[0].profile) : 'Unassigned'
+const getIssueTeamName = (issue: Issue) => issue.team?.name ?? 'No team'
 
 export const createToggle = <TValue extends string>(value: TValue, values: TValue[]) =>
   values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
@@ -310,6 +319,7 @@ export const filterProjectIssues = ({
     if (query && !`${formatIssueKey(issue)} ${issue.title} ${issue.description_text ?? ''}`.toLowerCase().includes(query)) return false
     if (filters.stateIds.length > 0 && (!issue.state_id || !filters.stateIds.includes(issue.state_id))) return false
     if (filters.assigneeIds.length > 0 && !issueAssignees.some((assignee) => assignee.profile_id && filters.assigneeIds.includes(assignee.profile_id))) return false
+    if (filters.teamIds.length > 0 && !filters.teamIds.includes(issue.team_id ?? 'none')) return false
     if (filters.priorities.length > 0 && !filters.priorities.includes(issue.priority)) return false
     if (filters.dueBuckets.length > 0 && !filters.dueBuckets.includes(getDueBucket(issue, now))) return false
     return true
@@ -342,6 +352,8 @@ export const sortProjectIssues = ({
         return compareValues(stateById.get(left.state_id ?? '')?.sort_order ?? Number.MAX_SAFE_INTEGER, stateById.get(right.state_id ?? '')?.sort_order ?? Number.MAX_SAFE_INTEGER, sort.direction)
       case 'assignee':
         return compareValues(getAssigneeName(leftAssignees), getAssigneeName(rightAssignees), sort.direction)
+      case 'team':
+        return compareValues(getIssueTeamName(left), getIssueTeamName(right), sort.direction)
       case 'created_at':
         return compareValues(toDate(left.created_at)?.getTime() ?? 0, toDate(right.created_at)?.getTime() ?? 0, sort.direction)
       case 'updated_at':
@@ -364,6 +376,7 @@ export const groupProjectIssues = ({
   modules,
   moduleLinksByIssueId,
   moduleById,
+  teams,
 }: {
   issues: Issue[]
   groupBy: ProjectIssueListGroupKey
@@ -376,6 +389,7 @@ export const groupProjectIssues = ({
   modules: ProjectModule[]
   moduleLinksByIssueId: Map<string, ModuleIssueLink[]>
   moduleById: Map<string, ProjectModule>
+  teams: OpenKbTeam[]
 }): ProjectIssueListGroup[] => {
   if (groupBy === 'none') return [{ id: 'all', title: 'All tasks', issues }]
 
@@ -423,6 +437,33 @@ export const groupProjectIssues = ({
         issues: issues.filter((issue) => issue.priority === priority.value),
       }))
       .filter((group) => options.showEmptyGroups || group.issues.length > 0)
+  }
+
+  if (groupBy === 'team') {
+    const groupsById = new Map<string, ProjectIssueListGroup>()
+    if (options.showEmptyGroups) {
+      teams.forEach((team) => {
+        groupsById.set(team.id, {
+          id: team.id,
+          title: team.name,
+          issues: [],
+        })
+      })
+    }
+    issues.forEach((issue) => {
+      const id = issue.team_id ?? 'none'
+      const title = issue.team?.name ?? 'No team'
+      const existing: ProjectIssueListGroup = groupsById.get(id) ?? { id, title, issues: [] }
+      existing.issues.push(issue)
+      groupsById.set(id, existing)
+    })
+    return Array.from(groupsById.values())
+      .filter((group) => options.showEmptyGroups || group.issues.length > 0)
+      .sort((a, b) => {
+        if (a.id === 'none') return 1
+        if (b.id === 'none') return -1
+        return a.title.localeCompare(b.title)
+      })
   }
 
   if (groupBy === 'module') {
