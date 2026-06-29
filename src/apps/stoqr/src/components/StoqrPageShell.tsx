@@ -1,5 +1,5 @@
 import { type CSSProperties, type ReactNode, useMemo } from 'react'
-import { BasePage } from './BasePage'
+import { AppPageShell } from '@repo/ui'
 import { type PageTopBarSearchConfig, usePageTopBarSearch } from './Search/TopBarSearch'
 
 export type StoqrPageShellProps = {
@@ -22,10 +22,6 @@ const disabledSearchConfig: PageTopBarSearchConfig = {
   placeholder: '',
 }
 
-const defaultContentClassName = 'flex h-full min-h-0 overflow-hidden px-2 pb-8 pt-[18px]'
-const defaultContainerClassName =
-  '[&>*]:min-w-0 flex h-full min-h-0 min-w-0 flex-1 flex-col gap-7 overflow-hidden text-[var(--color-foreground)]'
-
 export const StoqrPageShell = ({
   companyId,
   children,
@@ -34,9 +30,9 @@ export const StoqrPageShell = ({
   loadingMessage,
   emptyStateTitle,
   emptyStateDescription,
-  contentClassName = defaultContentClassName,
+  contentClassName,
   contentStyle,
-  containerClassName = defaultContainerClassName,
+  containerClassName,
   containerStyle,
 }: StoqrPageShellProps) => {
   const searchConfig = useMemo(
@@ -46,19 +42,25 @@ export const StoqrPageShell = ({
 
   usePageTopBarSearch(searchConfig)
 
+  const emptyState =
+    !companyId
+      ? {
+          title: emptyStateTitle ?? 'No company selected',
+          description: emptyStateDescription ?? 'Select a company to continue.',
+        }
+      : undefined
+
   return (
-    <BasePage
-      companyId={companyId}
+    <AppPageShell
       isLoading={isLoading}
       loadingMessage={loadingMessage}
-      emptyStateTitle={emptyStateTitle}
-      emptyStateDescription={emptyStateDescription}
+      emptyState={emptyState}
       contentClassName={contentClassName}
       contentStyle={contentStyle}
       containerClassName={containerClassName}
       containerStyle={containerStyle}
     >
       {children}
-    </BasePage>
+    </AppPageShell>
   )
 }

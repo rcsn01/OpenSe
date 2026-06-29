@@ -5,18 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TopBarSearchContent, TopBarSearchProvider } from '../../components/Search/TopBarSearch'
 import { ScanPage } from '../ScanPage'
 
-const mockBasePage = vi.fn()
 const mockQuickScanTab = vi.fn()
 
 vi.mock('../../contexts/CompanyContext', () => ({
   useCompany: () => ({ companyId: 'company-1' }),
-}))
-
-vi.mock('../../components/BasePage', () => ({
-  BasePage: (props: { children: React.ReactNode }) => {
-    mockBasePage(props)
-    return <div>{props.children}</div>
-  },
 }))
 
 vi.mock('../../components/Tabs', () => ({
@@ -150,8 +142,8 @@ describe('ScanPage', () => {
     expect(screen.getByText('Scan history dock scanner')).toBeInTheDocument()
   })
 
-  it('renders inside a full-height base page container', () => {
-    render(
+  it('renders inside a full-height shared page shell container', () => {
+    const { container } = render(
       <MemoryRouter initialEntries={['/scan/scan-actions']}>
         <Routes>
           <Route element={<SearchShell />}>
@@ -161,12 +153,21 @@ describe('ScanPage', () => {
       </MemoryRouter>,
     )
 
-    expect(mockBasePage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        contentStyle: expect.objectContaining({ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden' }),
-        containerStyle: expect.objectContaining({ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }),
-      }),
-    )
+    const pageShell = container.querySelector('.app-page-shell')
+    expect(pageShell).toHaveStyle({
+      display: 'flex',
+      height: '100%',
+      minHeight: '0',
+      overflow: 'hidden',
+    })
+
+    const pageContainer = screen.getByText('Quick scan').closest('.stack')
+    expect(pageContainer).toHaveStyle({
+      display: 'flex',
+      flex: '1',
+      minHeight: '0',
+      overflow: 'hidden',
+    })
   })
 
   it('navigates to adjust with folderId for product-location scans', async () => {

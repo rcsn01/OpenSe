@@ -108,10 +108,10 @@ describe('LabelStudioPage', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('button', { name: 'Templates' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Preview & Batch' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Design' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Downloads' })).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Templates' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Preview & Batch' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Design' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Downloads' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Edit Product Label template' }))
 
@@ -130,7 +130,7 @@ describe('LabelStudioPage', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'Preview & Batch' }))
+    await user.click(screen.getByRole('tab', { name: 'Preview & Batch' }))
 
     expect(screen.getByText('Preview template: template-1')).toBeInTheDocument()
   })

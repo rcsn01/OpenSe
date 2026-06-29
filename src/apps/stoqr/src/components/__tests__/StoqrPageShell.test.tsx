@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
+import { APP_PAGE_SHELL_CONTENT_CLASS_NAME } from '@repo/ui'
 import { TopBarSearchContent, TopBarSearchProvider } from '../Search/TopBarSearch'
 import { StoqrPageShell } from '../StoqrPageShell'
 
@@ -34,8 +35,11 @@ describe('StoqrPageShell', () => {
   it('registers page search config and renders children through the page shell', async () => {
     const user = userEvent.setup()
 
-    renderShell()
+    const { container } = renderShell()
 
+    expect(container.querySelector('.app-page-shell')).toHaveClass(
+      ...APP_PAGE_SHELL_CONTENT_CLASS_NAME.split(' '),
+    )
     expect(screen.getByText('Shell content')).toBeInTheDocument()
     const search = screen.getByRole('combobox', { name: 'Search shell...' })
     expect(search).toBeInTheDocument()
