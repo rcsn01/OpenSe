@@ -150,7 +150,9 @@ BEGIN
       'issue_mentions',
       'user_favorites',
       'user_recent_visits',
-      'draft_issues'
+      'draft_issues',
+      'workflow_rules',
+      'workflow_rule_actions'
     );
 
   FOREACH table_name IN ARRAY org_tables LOOP

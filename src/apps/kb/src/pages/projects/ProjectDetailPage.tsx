@@ -5,6 +5,7 @@ import { ArrowUpDown, ChevronDown, Circle, Download, ListFilter, Plus, Search, S
 import { useAuth } from '@repo/shared/auth/context'
 import { OpenKbPageShell } from '../../components/OpenKbPageShell'
 import { ProjectSettingsPanel } from '../../components/projects/ProjectSettingsPanel'
+import { ProjectWorkflowPanel } from '../../components/projects/ProjectWorkflowPanel'
 import { ProjectTabBar } from '../../components/projects/ProjectTabBar'
 import { useOrganisation } from '../../contexts/OrganisationContext'
 import { CreateIssueDialog } from '../../components/issues/CreateIssueDialog'
@@ -295,7 +296,7 @@ export const ProjectDetailPage = () => {
   const routeTabKey = getProjectTabKeyFromSection(section)
   const needsIssues = ['overview', 'list', 'board', 'timeline', 'dashboard', 'calendar', 'gantt', 'workload'].includes(routeTabKey)
   const needsStates = routeTabKey === 'overview' || routeTabKey === 'list' || routeTabKey === 'board' || routeTabKey === 'dashboard' || routeTabKey === 'workflow'
-  const needsLabels = routeTabKey === 'dashboard' || routeTabKey === 'workflow'
+  const needsLabels = routeTabKey === 'dashboard'
   const needsMembers = routeTabKey === 'list' || routeTabKey === 'workload'
   const needsCycles = routeTabKey === 'dashboard' || routeTabKey === 'list'
   const needsModules = routeTabKey === 'dashboard' || routeTabKey === 'list' || routeTabKey === 'timeline'
@@ -646,36 +647,13 @@ export const ProjectDetailPage = () => {
         <IssueCalendar issues={issues} month={calendarMonth} onMonthChange={setCalendarMonth} />
       ) : null}
 
-      {activeTab === 'workflow' ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-            <div className="border-b border-[var(--color-border)] px-4 py-3 text-sm font-semibold">States</div>
-            <div className="divide-y divide-[var(--color-border)]">
-              {states.map((state) => (
-                <div key={state.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: state.color }} />
-                    {state.name}
-                  </span>
-                  <Badge variant="neutral">{state.group_key}</Badge>
-                </div>
-              ))}
-            </div>
-          </section>
-          <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-            <div className="border-b border-[var(--color-border)] px-4 py-3 text-sm font-semibold">Labels</div>
-            <div className="flex flex-wrap gap-2 p-4">
-              {labels.length === 0 ? <span className="text-sm text-[var(--color-muted-foreground)]">No project labels.</span> : labels.map((label) => (
-                <Badge key={label.id} variant="outline">{label.name}</Badge>
-              ))}
-            </div>
-            <div className="border-t border-[var(--color-border)] px-4 py-3">
-              <Button type="button" variant="outline" onClick={() => navigate(`/projects/${project.id}/settings`)}>
-                Workflow settings
-              </Button>
-            </div>
-          </section>
-        </div>
+      {activeTab === 'workflow' && project && organisationId ? (
+        <ProjectWorkflowPanel
+          organisationId={organisationId}
+          projectId={project.id}
+          states={states}
+          canEdit={canEditProject}
+        />
       ) : null}
 
       {activeTab === 'gantt' ? <IssueGantt issues={issues} /> : null}

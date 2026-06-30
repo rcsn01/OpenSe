@@ -70,6 +70,24 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'kb'
+      AND table_name = 'workflow_rules'
+  ) THEN
+    RAISE EXCEPTION 'Open-KB workflow_rules table must exist';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'kb'
+      AND table_name = 'workflow_rule_actions'
+  ) THEN
+    RAISE EXCEPTION 'Open-KB workflow_rule_actions table must exist';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
     FROM information_schema.columns
     WHERE table_schema = 'kb'
       AND table_name = 'issues'

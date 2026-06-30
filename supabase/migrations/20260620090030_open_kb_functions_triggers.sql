@@ -689,6 +689,300 @@ CREATE TRIGGER trg_kb_issue_sequence
   FOR EACH ROW
   EXECUTE FUNCTION kb.assign_issue_sequence();
 
+CREATE FUNCTION kb.should_skip_workflow()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT coalesce(current_setting('kb.skip_workflow', true), '') = 'on';
+$$;
+
+CREATE FUNCTION kb.apply_workflow_action(
+  p_issue kb.issues,
+  p_action kb.workflow_rule_actions
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = kb, public
+AS $$
+DECLARE
+  v_profile_id TEXT;
+  v_item JSONB;
+  v_subtask_title TEXT;
+  v_subtask_state_id UUID;
+  v_subtask_priority TEXT;
+  v_due_date DATE;
+BEGIN
+  CASE p_action.action_type
+    WHEN 'assign_users' THEN
+      FOR v_profile_id IN
+        SELECT jsonb_array_elements_text(coalesce(p_action.config->'profile_ids', '[]'::jsonb))
+      LOOP
+        IF NOT EXISTS (
+          SELECT 1
+          FROM kb.issue_assignees ia
+          WHERE ia.issue_id = p_issue.id
+            AND ia.profile_id = v_profile_id::uuid
+            AND ia.deleted_at IS NULL
+        ) THEN
+          INSERT INTO kb.issue_assignees (
+            organisation_id,
+            project_id,
+            issue_id,
+            profile_id
+          )
+          VALUES (
+            p_issue.organisation_id,
+            p_issue.project_id,
+            p_issue.id,
+            v_profile_id::uuid
+          );
+        END IF;
+      END LOOP;
+
+    WHEN 'assign_team' THEN
+      IF p_action.config ? 'team_id' AND nullif(p_action.config->>'team_id', '') IS NOT NULL THEN
+        UPDATE kb.issues
+        SET team_id = (p_action.config->>'team_id')::uuid
+        WHERE id = p_issue.id
+          AND organisation_id = p_issue.organisation_id;
+      END IF;
+
+    WHEN 'set_due_date' THEN
+      IF coalesce(p_action.config->>'mode', '') = 'absolute'
+        AND nullif(p_action.config->>'date', '') IS NOT NULL THEN
+        v_due_date := (p_action.config->>'date')::date;
+      ELSIF coalesce(p_action.config->>'mode', '') = 'relative'
+        AND (p_action.config->>'days') ~ '^-?[0-9]+$' THEN
+        v_due_date := CURRENT_DATE + (p_action.config->>'days')::integer;
+      END IF;
+
+      IF v_due_date IS NOT NULL THEN
+        UPDATE kb.issues
+        SET target_date = v_due_date
+        WHERE id = p_issue.id
+          AND organisation_id = p_issue.organisation_id;
+      END IF;
+
+    WHEN 'add_comment' THEN
+      IF nullif(btrim(p_action.config->>'text'), '') IS NOT NULL THEN
+        INSERT INTO kb.issue_comments (
+          organisation_id,
+          project_id,
+          issue_id,
+          description_text,
+          description_json,
+          created_by
+        )
+        VALUES (
+          p_issue.organisation_id,
+          p_issue.project_id,
+          p_issue.id,
+          btrim(p_action.config->>'text'),
+          jsonb_build_object(
+            'type', 'doc',
+            'content', jsonb_build_array(
+              jsonb_build_object(
+                'type', 'paragraph',
+                'content', jsonb_build_array(
+                  jsonb_build_object('type', 'text', 'text', btrim(p_action.config->>'text'))
+                )
+              )
+            )
+          ),
+          coalesce(auth.uid(), p_issue.created_by)
+        );
+      END IF;
+
+    WHEN 'create_subtasks' THEN
+      FOR v_item IN
+        SELECT value
+        FROM jsonb_array_elements(coalesce(p_action.config->'items', '[]'::jsonb))
+      LOOP
+        v_subtask_title := nullif(btrim(v_item->>'title'), '');
+        IF v_subtask_title IS NULL THEN
+          CONTINUE;
+        END IF;
+
+        v_subtask_state_id := NULL;
+        IF nullif(v_item->>'state_id', '') IS NOT NULL THEN
+          v_subtask_state_id := (v_item->>'state_id')::uuid;
+        END IF;
+
+        v_subtask_priority := coalesce(nullif(v_item->>'priority', ''), p_issue.priority, 'none');
+        IF v_subtask_priority NOT IN ('none', 'low', 'medium', 'high', 'urgent') THEN
+          v_subtask_priority := 'none';
+        END IF;
+
+        INSERT INTO kb.issues (
+          organisation_id,
+          project_id,
+          parent_issue_id,
+          title,
+          priority,
+          state_id,
+          created_by
+        )
+        VALUES (
+          p_issue.organisation_id,
+          p_issue.project_id,
+          p_issue.id,
+          v_subtask_title,
+          v_subtask_priority,
+          v_subtask_state_id,
+          coalesce(auth.uid(), p_issue.created_by)
+        );
+      END LOOP;
+
+    ELSE
+      NULL;
+  END CASE;
+END;
+$$;
+
+CREATE FUNCTION kb.run_issue_workflow_rules()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = kb, public
+AS $$
+DECLARE
+  v_rule RECORD;
+  v_action RECORD;
+  v_previous_state_id UUID;
+BEGIN
+  IF kb.should_skip_workflow() THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.deleted_at IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+
+  PERFORM set_config('kb.skip_workflow', 'on', true);
+
+  IF TG_OP = 'INSERT' THEN
+    FOR v_rule IN
+      SELECT wr.*
+      FROM kb.workflow_rules wr
+      WHERE wr.organisation_id = NEW.organisation_id
+        AND wr.project_id = NEW.project_id
+        AND wr.deleted_at IS NULL
+        AND wr.enabled
+        AND wr.trigger_event = 'issue_created'
+        AND (wr.state_id IS NULL OR wr.state_id = NEW.state_id)
+      ORDER BY wr.sort_order, wr.created_at
+    LOOP
+      FOR v_action IN
+        SELECT wra.*
+        FROM kb.workflow_rule_actions wra
+        WHERE wra.rule_id = v_rule.id
+          AND wra.deleted_at IS NULL
+        ORDER BY wra.sort_order, wra.created_at
+      LOOP
+        PERFORM kb.apply_workflow_action(NEW, v_action);
+      END LOOP;
+
+      INSERT INTO kb.issue_activities (
+        organisation_id,
+        project_id,
+        issue_id,
+        name,
+        title,
+        status,
+        payload
+      )
+      VALUES (
+        NEW.organisation_id,
+        NEW.project_id,
+        NEW.id,
+        'workflow.executed',
+        format('Workflow rule "%s" ran', v_rule.name),
+        'active',
+        jsonb_build_object(
+          'event', 'workflow.executed',
+          'entity', 'workflow_rule',
+          'entity_id', v_rule.id,
+          'current', jsonb_build_object(
+            'rule_id', v_rule.id,
+            'rule_name', v_rule.name,
+            'trigger_event', v_rule.trigger_event
+          )
+        )
+      );
+    END LOOP;
+  ELSIF TG_OP = 'UPDATE' AND NEW.state_id IS DISTINCT FROM OLD.state_id THEN
+    v_previous_state_id := OLD.state_id;
+
+    FOR v_rule IN
+      SELECT wr.*
+      FROM kb.workflow_rules wr
+      WHERE wr.organisation_id = NEW.organisation_id
+        AND wr.project_id = NEW.project_id
+        AND wr.deleted_at IS NULL
+        AND wr.enabled
+        AND wr.trigger_event = 'state_entered'
+        AND wr.state_id = NEW.state_id
+      ORDER BY wr.sort_order, wr.created_at
+    LOOP
+      FOR v_action IN
+        SELECT wra.*
+        FROM kb.workflow_rule_actions wra
+        WHERE wra.rule_id = v_rule.id
+          AND wra.deleted_at IS NULL
+        ORDER BY wra.sort_order, wra.created_at
+      LOOP
+        PERFORM kb.apply_workflow_action(NEW, v_action);
+      END LOOP;
+
+      INSERT INTO kb.issue_activities (
+        organisation_id,
+        project_id,
+        issue_id,
+        name,
+        title,
+        status,
+        payload
+      )
+      VALUES (
+        NEW.organisation_id,
+        NEW.project_id,
+        NEW.id,
+        'workflow.executed',
+        format('Workflow rule "%s" ran', v_rule.name),
+        'active',
+        jsonb_build_object(
+          'event', 'workflow.executed',
+          'entity', 'workflow_rule',
+          'entity_id', v_rule.id,
+          'current', jsonb_build_object(
+            'rule_id', v_rule.id,
+            'rule_name', v_rule.name,
+            'trigger_event', v_rule.trigger_event,
+            'previous_state_id', v_previous_state_id,
+            'state_id', NEW.state_id
+          )
+        )
+      );
+    END LOOP;
+  END IF;
+
+  PERFORM set_config('kb.skip_workflow', 'off', true);
+
+  RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    PERFORM set_config('kb.skip_workflow', 'off', true);
+    RAISE;
+END;
+$$;
+
+CREATE TRIGGER trg_kb_issue_workflow_rules
+  AFTER INSERT OR UPDATE OF state_id ON kb.issues
+  FOR EACH ROW
+  EXECUTE FUNCTION kb.run_issue_workflow_rules();
+
 CREATE TRIGGER trg_kb_issue_comment_provider_syncs
   AFTER INSERT ON kb.issue_comments
   FOR EACH ROW

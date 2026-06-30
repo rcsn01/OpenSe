@@ -158,6 +158,85 @@ export type ProjectDeployBoardUpdateInput = Partial<Omit<ProjectDeployBoardInput
   project_id: string
 }
 
+export type WorkflowTriggerEvent = 'issue_created' | 'state_entered'
+
+export type WorkflowActionType =
+  | 'assign_users'
+  | 'assign_team'
+  | 'set_due_date'
+  | 'add_comment'
+  | 'create_subtasks'
+
+export type WorkflowDueDateConfig =
+  | { mode: 'absolute'; date: string }
+  | { mode: 'relative'; days: number }
+
+export type WorkflowSubtaskConfigItem = {
+  title: string
+  state_id?: string | null
+  priority?: IssuePriority | null
+}
+
+export type WorkflowActionConfig =
+  | { action_type: 'assign_users'; profile_ids: string[] }
+  | { action_type: 'assign_team'; team_id: string }
+  | { action_type: 'set_due_date' } & WorkflowDueDateConfig
+  | { action_type: 'add_comment'; text: string }
+  | { action_type: 'create_subtasks'; items: WorkflowSubtaskConfigItem[] }
+
+export type WorkflowRuleAction = {
+  id: string
+  organisation_id: string
+  project_id: string
+  rule_id: string
+  action_type: WorkflowActionType
+  config: Record<string, unknown>
+  sort_order: number
+  created_at: string
+  updated_at: string | null
+  deleted_at: string | null
+}
+
+export type WorkflowRule = {
+  id: string
+  organisation_id: string
+  project_id: string
+  name: string
+  trigger_event: WorkflowTriggerEvent
+  state_id: string | null
+  enabled: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string | null
+  deleted_at: string | null
+  state?: IssueState | null
+  actions: WorkflowRuleAction[]
+}
+
+export type WorkflowRuleActionInput = {
+  action_type: WorkflowActionType
+  config: Record<string, unknown>
+  sort_order?: number
+}
+
+export type WorkflowRuleInput = {
+  organisation_id: string
+  project_id: string
+  name: string
+  trigger_event: WorkflowTriggerEvent
+  state_id?: string | null
+  enabled?: boolean
+  sort_order?: number
+  actions: WorkflowRuleActionInput[]
+}
+
+export type WorkflowRuleUpdateInput = Partial<Omit<WorkflowRuleInput, 'organisation_id' | 'project_id' | 'actions'>> & {
+  id: string
+  organisation_id: string
+  project_id: string
+  actions?: WorkflowRuleActionInput[]
+}
+
 export type PublicDeployBoard = {
   board_id: string
   organisation_id: string

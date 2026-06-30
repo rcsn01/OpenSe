@@ -77,6 +77,26 @@ test.describe('Open-KB Interactions', () => {
     await expect(openKbPage.getByLabel('Title', { exact: true })).toHaveValue('Mock Open-KB issue');
   });
 
+  test('creates a workflow rule from the project workflow tab', async ({ openKbPage }) => {
+    await openKbPage.goto(`/projects/${PROJECT_ID}/workflow`, { waitUntil: 'domcontentloaded' });
+
+    await openKbPage.getByRole('button', { name: 'Add rule' }).click();
+    await openKbPage.getByLabel('Rule name').fill('Review comment rule');
+    await openKbPage.getByLabel('Trigger').selectOption('state_entered');
+    await openKbPage.getByLabel('Status', { exact: true }).selectOption({ index: 0 });
+    await openKbPage.locator('select').nth(2).selectOption('add_comment');
+    await openKbPage.getByPlaceholder('Workflow comment text').fill('Ready for review');
+
+    const saveResponse = openKbPage.waitForResponse((response) =>
+      response.url().includes('/rest/v1/workflow_rules') && response.request().method() === 'POST',
+    );
+    await openKbPage.getByRole('button', { name: 'Save rule' }).click();
+    await expect((await saveResponse).ok()).toBeTruthy();
+
+    await expect(openKbPage.getByText('Review comment rule')).toBeVisible();
+    await expect(openKbPage.getByText('Add comment')).toBeVisible();
+  });
+
   test('adds, removes, and protects configurable project tabs', async ({ openKbPage }) => {
     await openKbPage.goto(`/projects/${PROJECT_ID}/list`, { waitUntil: 'domcontentloaded' });
 
