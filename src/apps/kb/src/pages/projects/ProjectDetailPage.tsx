@@ -2,12 +2,10 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Badge, Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input } from '@repo/ui'
 import { ArrowUpDown, ChevronDown, Circle, Download, ListFilter, Plus, Search, SlidersHorizontal, TableProperties } from 'lucide-react'
-import { toast } from 'sonner'
 import { useAuth } from '@repo/shared/auth/context'
 import { OpenKbPageShell } from '../../components/OpenKbPageShell'
 import { ProjectSettingsPanel } from '../../components/projects/ProjectSettingsPanel'
 import { ProjectTabBar } from '../../components/projects/ProjectTabBar'
-import { RichTextEditor, type RichTextEditorValue } from '../../components/editor'
 import { useOrganisation } from '../../contexts/OrganisationContext'
 import { CreateIssueDialog } from '../../components/issues/CreateIssueDialog'
 import {
@@ -26,9 +24,7 @@ import {
 } from '../../hooks/queries/useIssues'
 import { useCycleIssueLinks, useCycles, useModuleIssueLinks, useModules } from '../../hooks/queries/usePlanning'
 import {
-  useCreateProjectMessage,
   useProject,
-  useProjectMessages,
   useProjectTabs,
 } from '../../hooks/queries/useProjects'
 import { useTeams } from '../../hooks/queries/useTeams'
@@ -39,7 +35,7 @@ import type { Issue, ProjectTab } from '../../types'
 import { formatFileSize } from '../../lib/fileFormatting'
 import { formatIssueKey, issuePriorityTone as priorityTone } from '../../lib/issueFormatting'
 import { getOpenKbItemColor, getOpenKbTextColorForBackground } from '../../lib/openKbColors'
-import { dayKey, formatShortDate, startOfMonth, toDate } from '../../lib/dateFormatting'
+import { formatShortDate, startOfMonth, toDate } from '../../lib/dateFormatting'
 import {
   getProjectTabDefinition,
   getProjectTabKeyFromSection,
@@ -65,11 +61,6 @@ import {
 } from '../../components/projects/project-list/projectIssueListLogic'
 import { useProjectTabActions } from '../../components/projects/useProjectTabActions'
 import { ProjectTimeline } from '../../components/projects/project-timeline/ProjectTimeline'
-
-const emptyDocument = {
-  type: 'doc',
-  content: [{ type: 'paragraph' }],
-}
 
 const IssueList = ({ issues, emptyTitle, projectId }: { issues: Issue[]; emptyTitle: string; projectId: string }) => {
   if (issues.length === 0) {
@@ -308,14 +299,8 @@ export const ProjectDetailPage = () => {
   const needsMembers = routeTabKey === 'list' || routeTabKey === 'workload'
   const needsCycles = routeTabKey === 'dashboard' || routeTabKey === 'list'
   const needsModules = routeTabKey === 'dashboard' || routeTabKey === 'list' || routeTabKey === 'timeline'
-  const needsMessages = routeTabKey === 'messages'
   const needsAttachments = routeTabKey === 'files'
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()))
-  const [messageValue, setMessageValue] = useState<RichTextEditorValue>({
-    json: emptyDocument,
-    html: '',
-    text: '',
-  })
   const [createIssueOpen, setCreateIssueOpen] = useState(false)
   const { data: permissions = [] } = useMyPermissions(organisationId)
   const { data: project, isLoading: projectLoading, error: projectError } = useProject(organisationId, projectId)
@@ -332,9 +317,7 @@ export const ProjectDetailPage = () => {
   const { data: modules = [] } = useModules(organisationId, projectId, needsModules)
   const { data: moduleIssueLinks = [] } = useModuleIssueLinks(organisationId, projectId, routeTabKey === 'list' || routeTabKey === 'timeline')
   const { data: blockers = [] } = useIssueBlockersForIssues(organisationId, issueIds, routeTabKey === 'timeline')
-  const { data: messages = [] } = useProjectMessages(organisationId, projectId, needsMessages)
   const { data: attachments = [] } = useProjectIssueAttachments(organisationId, projectId, needsAttachments)
-  const createProjectMessage = useCreateProjectMessage()
   const recordRecentVisitOnce = useRecordRecentVisitOnce()
 
   const visibleTabs = useMemo(() => {
@@ -456,24 +439,6 @@ export const ProjectDetailPage = () => {
       identifier: projectVisit.identifier,
     })
   }, [organisationId, profileId, projectVisit, recordRecentVisitOnce])
-
-  const handleCreateMessage = async () => {
-    if (!organisationId || !projectId || !messageValue.text.trim()) return
-
-    try {
-      await createProjectMessage.mutateAsync({
-        organisation_id: organisationId,
-        project_id: projectId,
-        description_json: messageValue.json,
-        description_html: messageValue.html,
-        description_text: messageValue.text,
-      })
-      setMessageValue({ json: emptyDocument, html: '', text: '' })
-      toast.success('Message posted')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to post message')
-    }
-  }
 
   const projectTabBar = projectId ? (
     <ProjectTabBar
@@ -711,29 +676,6 @@ export const ProjectDetailPage = () => {
             </div>
           </section>
         </div>
-      ) : null}
-
-      {activeTab === 'messages' ? (
-        <section className="space-y-4">
-          {canEditProject ? (
-            <div className="space-y-3">
-              <RichTextEditor value={messageValue.json} placeholder="Write a project update..." onChange={setMessageValue} />
-              <Button type="button" onClick={handleCreateMessage} disabled={!messageValue.text.trim()} loading={createProjectMessage.isPending}>
-                Post message
-              </Button>
-            </div>
-          ) : null}
-          <div className="space-y-3">
-            {messages.length === 0 ? <EmptyState title="No project messages" description="" /> : messages.map((message) => (
-              <article key={message.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-                <div className="mb-3 text-xs text-[var(--color-muted-foreground)]">
-                  {message.profile?.full_name || message.profile?.email || 'Open-KB user'} · {formatShortDate(dayKey(new Date(message.created_at)))}
-                </div>
-                <RichTextEditor value={message.description_json} readOnly />
-              </article>
-            ))}
-          </div>
-        </section>
       ) : null}
 
       {activeTab === 'gantt' ? <IssueGantt issues={issues} /> : null}

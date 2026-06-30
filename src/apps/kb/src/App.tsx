@@ -134,6 +134,8 @@ export function App() {
                 <Route path="/projects/:projectId/pages/*" element={<RemovedProjectPagesRedirect />} />
                 <Route path="/projects/:projectId/note" element={<RemovedProjectPagesRedirect />} />
                 <Route path="/projects/:projectId/note/*" element={<RemovedProjectPagesRedirect />} />
+                <Route path="/projects/:projectId/messages" element={<RemovedProjectPagesRedirect />} />
+                <Route path="/projects/:projectId/messages/*" element={<RemovedProjectPagesRedirect />} />
                 <Route path="/projects/:projectId/cycles" element={<ProjectCyclesRedirect />} />
                 <Route path="/projects/:projectId/cycles/:cycleId" element={lazyRoute(<CycleDetailPage />)} />
                 <Route path="/projects/:projectId" element={lazyRoute(<ProjectDetailPage />)} />

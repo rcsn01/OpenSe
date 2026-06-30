@@ -5,8 +5,6 @@ import type {
   ProjectInput,
   ProjectMember,
   ProjectMemberInput,
-  ProjectMessage,
-  ProjectMessageInput,
   ProjectSummary,
   ProjectTab,
   ProjectTabInput,
@@ -56,23 +54,6 @@ const projectTabSelect = `
   created_at,
   updated_at,
   deleted_at
-`
-
-const projectMessageSelect = `
-  id,
-  organisation_id,
-  project_id,
-  profile_id,
-  description_json,
-  description_html,
-  description_text,
-  metadata,
-  created_by,
-  updated_by,
-  created_at,
-  updated_at,
-  deleted_at,
-  profile:profiles(id, email, full_name, username, avatar_url)
 `
 
 const normalizeIdentifier = (value: string) =>
@@ -339,45 +320,3 @@ export const updateProjectTab = async ({
 
 export const removeProjectTab = async (input: Pick<ProjectTabUpdateInput, 'id' | 'organisation_id' | 'project_id'>) =>
   updateProjectTab({ ...input, deleted_at: new Date().toISOString() })
-
-export const fetchProjectMessages = async (
-  organisationId: string,
-  projectId: string,
-): Promise<ProjectMessage[]> => {
-  const { data, error } = await db
-    .from('project_messages')
-    .select(projectMessageSelect)
-    .eq('organisation_id', organisationId)
-    .eq('project_id', projectId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-
-  return ((data ?? []) as Array<ProjectMessage & { profile: OpenKbProfile | OpenKbProfile[] | null }>).map((row) => ({
-    ...row,
-    profile: normalizeSingle(row.profile),
-  }))
-}
-
-export const createProjectMessage = async (input: ProjectMessageInput): Promise<ProjectMessage> => {
-  const { data, error } = await db
-    .from('project_messages')
-    .insert({
-      organisation_id: input.organisation_id,
-      project_id: input.project_id,
-      description_json: input.description_json,
-      description_html: input.description_html?.trim() || null,
-      description_text: input.description_text?.trim() || null,
-    })
-    .select(projectMessageSelect)
-    .single()
-
-  if (error) throw error
-
-  const item = data as unknown as ProjectMessage & { profile: OpenKbProfile | OpenKbProfile[] | null }
-  return {
-    ...item,
-    profile: normalizeSingle(item.profile),
-  }
-}

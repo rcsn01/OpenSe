@@ -42,6 +42,7 @@ describe('project tab registry', () => {
     expect(getProjectTabKeyFromSection('cycles')).toBe('overview')
     expect(getProjectTabKeyFromSection('pages')).toBe('overview')
     expect(getProjectTabKeyFromSection('note')).toBe('overview')
+    expect(getProjectTabKeyFromSection('messages')).toBe('overview')
   })
 
   it('deduplicates tab keys and omits removed standalone tabs', () => {
@@ -55,7 +56,6 @@ describe('project tab registry', () => {
       'dashboard',
       'calendar',
       'workflow',
-      'messages',
       'gantt',
       'workload',
       'files',
