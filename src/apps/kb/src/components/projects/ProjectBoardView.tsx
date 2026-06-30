@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -19,7 +18,6 @@ import { useUpdateIssue } from '../../hooks/queries/useIssues'
 import type { Issue } from '../../types'
 import { formatShortDate } from '../../lib/dateFormatting'
 import { getOpenKbItemColor, getOpenKbTextColorForBackground } from '../../lib/openKbColors'
-import { getProjectIssuePath } from '../../lib/projectRoutes'
 import type { buildBoardColumns } from '../../lib/issueViews'
 import {
   applyBoardDrop,
@@ -95,10 +93,12 @@ const ProjectBoardCardContent = ({
   issue,
   index,
   dragging = false,
+  selected = false,
 }: {
   issue: Issue
   index: number
   dragging?: boolean
+  selected?: boolean
 }) => {
   const label = issueLabel(issue, index)
   const labelColor = getOpenKbItemColor(`label:${label}`)
@@ -109,7 +109,7 @@ const ProjectBoardCardContent = ({
 
   return (
     <div
-      className={`block rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] hover:border-[#7aa7ff] ${dragging ? 'opacity-60' : ''}`}
+      className={`block rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] hover:border-[#7aa7ff] ${dragging ? 'opacity-60' : ''} ${selected ? 'border-[#7aa7ff] bg-blue-50' : ''}`}
     >
       <div className="flex items-start gap-2">
         <Circle className="mt-0.5 h-4 w-4 text-[#96a09d]" />
@@ -131,13 +131,15 @@ const ProjectBoardCardContent = ({
 const ProjectBoardCard = ({
   issue,
   index,
-  projectId,
   canEdit,
+  selectedIssueId,
+  onOpenIssue,
 }: {
   issue: Issue
   index: number
-  projectId: string
   canEdit: boolean
+  selectedIssueId?: string | null
+  onOpenIssue: (issue: Issue) => void
 }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: issue.id,
@@ -148,27 +150,35 @@ const ProjectBoardCard = ({
 
   return (
     <div ref={setNodeRef} style={style} className={isDragging ? 'opacity-40' : undefined}>
-      <Link
-        to={getProjectIssuePath(projectId, issue.id)}
-        className="block"
+      <button
+        type="button"
+        onClick={() => onOpenIssue(issue)}
+        className="block w-full text-left"
         {...(canEdit ? { ...attributes, ...listeners } : {})}
       >
-        <ProjectBoardCardContent issue={issue} index={index} dragging={isDragging} />
-      </Link>
+        <ProjectBoardCardContent
+          issue={issue}
+          index={index}
+          dragging={isDragging}
+          selected={selectedIssueId === issue.id}
+        />
+      </button>
     </div>
   )
 }
 
 const ProjectBoardColumn = ({
   column,
-  projectId,
   canEdit,
   onCreateIssue,
+  selectedIssueId,
+  onOpenIssue,
 }: {
   column: BoardColumn
-  projectId: string
   canEdit: boolean
   onCreateIssue: () => void
+  selectedIssueId?: string | null
+  onOpenIssue: (issue: Issue) => void
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
@@ -188,7 +198,14 @@ const ProjectBoardColumn = ({
             Add task
           </button>
         ) : column.issues.map((issue, index) => (
-          <ProjectBoardCard key={issue.id} issue={issue} index={index} projectId={projectId} canEdit={canEdit} />
+          <ProjectBoardCard
+            key={issue.id}
+            issue={issue}
+            index={index}
+            canEdit={canEdit}
+            selectedIssueId={selectedIssueId}
+            onOpenIssue={onOpenIssue}
+          />
         ))}
         {column.issues.length > 0 ? (
           <button type="button" onClick={onCreateIssue} className="mt-1 px-4 py-2 text-left text-sm font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
@@ -202,16 +219,18 @@ const ProjectBoardColumn = ({
 
 export const ProjectBoardView = ({
   organisationId,
-  projectId,
   columns,
   canEdit,
   onCreateIssue,
+  onOpenIssue,
+  selectedIssueId,
 }: {
   organisationId: string
-  projectId: string
   columns: ReturnType<typeof buildBoardColumns>
   canEdit: boolean
   onCreateIssue: () => void
+  onOpenIssue: (issue: Issue) => void
+  selectedIssueId?: string | null
 }) => {
   const updateIssue = useUpdateIssue()
   const [boardColumns, setBoardColumns] = useState(columns)
@@ -288,9 +307,10 @@ export const ProjectBoardView = ({
               <ProjectBoardColumn
                 key={column.id}
                 column={column}
-                projectId={projectId}
                 canEdit={canEdit}
                 onCreateIssue={onCreateIssue}
+                selectedIssueId={selectedIssueId}
+                onOpenIssue={onOpenIssue}
               />
             ))}
           </div>

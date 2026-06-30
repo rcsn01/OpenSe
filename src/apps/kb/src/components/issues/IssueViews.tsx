@@ -113,10 +113,14 @@ export const IssueCalendar = ({
   issues,
   month,
   onMonthChange,
+  onOpenIssue,
+  selectedIssueId,
 }: {
   issues: Issue[]
   month: Date
   onMonthChange: (date: Date) => void
+  onOpenIssue?: (issue: Issue) => void
+  selectedIssueId?: string | null
 }) => {
   const days = buildCalendarDays(month)
   const monthLabel = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(month)
@@ -142,10 +146,25 @@ export const IssueCalendar = ({
               <div className="mb-2 text-xs font-medium">{day.getDate()}</div>
               <div className="space-y-1">
                 {dayIssues.slice(0, 4).map((issue) => (
-                  <Link key={issue.id} to={issuePath(issue)} className="block rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-xs hover:border-[var(--color-border-hover)]">
-                    <span className="block truncate font-medium">{issue.title}</span>
-                    <span className="text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</span>
-                  </Link>
+                  onOpenIssue ? (
+                    <button
+                      key={issue.id}
+                      type="button"
+                      onClick={() => onOpenIssue(issue)}
+                      className={cn(
+                        'block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-left text-xs hover:border-[var(--color-border-hover)]',
+                        selectedIssueId === issue.id && 'border-[#7aa7ff] bg-blue-50',
+                      )}
+                    >
+                      <span className="block truncate font-medium">{issue.title}</span>
+                      <span className="text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</span>
+                    </button>
+                  ) : (
+                    <Link key={issue.id} to={issuePath(issue)} className="block rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-xs hover:border-[var(--color-border-hover)]">
+                      <span className="block truncate font-medium">{issue.title}</span>
+                      <span className="text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</span>
+                    </Link>
+                  )
                 ))}
                 {dayIssues.length > 4 ? <div className="text-xs text-[var(--color-muted-foreground)]">+{dayIssues.length - 4} more</div> : null}
               </div>
