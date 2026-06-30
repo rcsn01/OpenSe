@@ -1,12 +1,22 @@
+import { getProjectTabInstancePath, getProjectTabPath, type ProjectTabKey } from './projectTabs'
+
 export type TaskSectionKey = 'overview' | 'list' | 'board' | 'dashboard' | 'calendar' | 'gantt' | 'workload'
 
 export const getProjectIssuePath = (projectId: string, issueId: string) =>
   `/projects/${projectId}/issues/${issueId}`
 
+export const getProjectTabIssuePath = (
+  projectId: string,
+  tabKey: ProjectTabKey,
+  issueId: string,
+  tabInstanceId?: string | null,
+) =>
+  tabInstanceId
+    ? `${getProjectTabInstancePath(projectId, tabKey, tabInstanceId)}/issues/${issueId}`
+    : `${getProjectTabPath(projectId, tabKey)}/issues/${issueId}`
+
 export const getProjectListIssuePath = (projectId: string, issueId: string, tabId?: string | null) =>
-  tabId
-    ? `/projects/${projectId}/list/${tabId}/issues/${issueId}`
-    : `/projects/${projectId}/list/issues/${issueId}`
+  getProjectTabIssuePath(projectId, 'list', issueId, tabId)
 
 export const getProjectCyclePath = (projectId: string, cycleId: string) =>
   `/projects/${projectId}/cycles/${cycleId}`

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getProjectIssuePath,
   getProjectListIssuePath,
+  getProjectTabIssuePath,
   getTasksListIssuePath,
   getTasksPath,
 } from '../projectRoutes'
@@ -12,6 +13,12 @@ describe('project and task routes', () => {
     expect(getProjectIssuePath('project-1', 'issue-1')).toBe('/projects/project-1/issues/issue-1')
     expect(getProjectListIssuePath('project-1', 'issue-1')).toBe('/projects/project-1/list/issues/issue-1')
     expect(getProjectListIssuePath('project-1', 'issue-1', 'tab-1')).toBe('/projects/project-1/list/tab-1/issues/issue-1')
+  })
+
+  it('builds tab-scoped issue paths for preview panes', () => {
+    expect(getProjectTabIssuePath('project-1', 'board', 'issue-1')).toBe('/projects/project-1/board/issues/issue-1')
+    expect(getProjectTabIssuePath('project-1', 'calendar', 'issue-1', 'tab-1')).toBe('/projects/project-1/calendar/tab-1/issues/issue-1')
+    expect(getProjectTabIssuePath('project-1', 'overview', 'issue-1')).toBe('/projects/project-1/overview/issues/issue-1')
   })
 
   it('builds global task workspace paths', () => {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Badge, Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input } from '@repo/ui'
+import { APP_PAGE_SHELL_CONTAINER_CLASS_NAME, Badge, Button, cn, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input } from '@repo/ui'
 import { Download, ListFilter, Plus } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
 import { OpenKbPageShell } from '../../components/OpenKbPageShell'
@@ -49,7 +49,7 @@ import {
   getProjectCyclePath,
   getProjectIssuePath,
   getProjectListCyclePath,
-  getProjectListIssuePath,
+  getProjectTabIssuePath,
 } from '../../lib/projectRoutes'
 import {
   ProjectCyclePreviewPane,
@@ -63,7 +63,23 @@ import {
 import { useProjectTabActions } from '../../components/projects/useProjectTabActions'
 import { ProjectTimeline } from '../../components/projects/project-timeline/ProjectTimeline'
 
-const IssueList = ({ issues, emptyTitle, projectId }: { issues: Issue[]; emptyTitle: string; projectId: string }) => {
+const previewPaneTabs = ['list', 'board', 'calendar', 'overview'] as const satisfies readonly ProjectTabKey[]
+type PreviewPaneTab = (typeof previewPaneTabs)[number]
+
+const isPreviewPaneTab = (tab: ProjectTabKey): tab is PreviewPaneTab =>
+  previewPaneTabs.includes(tab as PreviewPaneTab)
+
+const IssueList = ({
+  issues,
+  emptyTitle,
+  onOpenIssue,
+  selectedIssueId,
+}: {
+  issues: Issue[]
+  emptyTitle: string
+  onOpenIssue: (issue: Issue) => void
+  selectedIssueId?: string | null
+}) => {
   if (issues.length === 0) {
     return <EmptyState title={emptyTitle} description="" />
   }
@@ -72,7 +88,15 @@ const IssueList = ({ issues, emptyTitle, projectId }: { issues: Issue[]; emptyTi
     <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
       <div className="divide-y divide-[var(--color-border)]">
         {issues.map((issue) => (
-          <Link key={issue.id} to={getProjectIssuePath(projectId, issue.id)} className="grid gap-2 px-4 py-3 text-sm hover:bg-[var(--color-muted)] md:grid-cols-[7rem_minmax(0,1fr)_8rem_10rem] md:items-center">
+          <button
+            key={issue.id}
+            type="button"
+            onClick={() => onOpenIssue(issue)}
+            className={cx(
+              'grid w-full gap-2 px-4 py-3 text-left text-sm hover:bg-[var(--color-muted)] md:grid-cols-[7rem_minmax(0,1fr)_8rem_10rem] md:items-center',
+              selectedIssueId === issue.id && 'bg-blue-50',
+            )}
+          >
             <span className="font-mono text-xs text-[var(--color-muted-foreground)]">{formatIssueKey(issue)}</span>
             <span className="min-w-0 truncate font-medium">{issue.title}</span>
             <Badge variant={priorityTone[issue.priority]}>{issue.priority}</Badge>
@@ -80,12 +104,56 @@ const IssueList = ({ issues, emptyTitle, projectId }: { issues: Issue[]; emptyTi
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: issue.state?.color ?? '#64748b' }} />
               <span className="truncate">{issue.state?.name ?? 'No state'}</span>
             </span>
-          </Link>
+          </button>
         ))}
       </div>
     </div>
   )
 }
+
+const ProjectTabIssueSplitLayout = ({
+  selectedIssueId,
+  organisationId,
+  projectId,
+  tabBaseHref,
+  onClose,
+  shrinkMain,
+  children,
+  preview,
+}: {
+  selectedIssueId?: string | null
+  organisationId: string | null
+  projectId: string
+  tabBaseHref: string
+  onClose: () => void
+  shrinkMain?: boolean
+  children: ReactNode
+  preview?: ReactNode
+}) => (
+  <div className="-mx-2 flex min-h-0 flex-1 overflow-hidden bg-[var(--color-background)]">
+    <div className={cx('flex min-h-0 min-w-0 flex-col transition-[width] duration-150', shrinkMain ? 'w-[48%]' : 'w-full')}>
+      {children}
+    </div>
+    {((selectedIssueId && organisationId) || preview) ? (
+      <div className="min-h-0 min-w-0 flex-1">
+        {preview ?? (
+          selectedIssueId && organisationId ? (
+            <ProjectIssuePreviewPane
+              organisationId={organisationId}
+              projectId={projectId}
+              issueId={selectedIssueId}
+              listHref={tabBaseHref}
+              expandedHref={getProjectIssuePath(projectId, selectedIssueId)}
+              onClose={onClose}
+            />
+          ) : null
+        )}
+      </div>
+    ) : null}
+  </div>
+)
+
+const projectPageContainerClassName = cn(APP_PAGE_SHELL_CONTAINER_CLASS_NAME, 'gap-0')
 
 const ProjectTopSlot = ({ children }: { children: ReactNode }) => (
   <div className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
@@ -204,7 +272,7 @@ export const ProjectDetailPage = () => {
   }, [routeTabKey, tabId, visibleTabs])
   const activeTab = (activeTabInstance?.tab_key as ProjectTabKey | undefined) ?? routeTabKey
   const activeTabId = activeTabInstance?.id ?? null
-  const selectedListIssueId = activeTab === 'list' ? issueId : null
+  const selectedPreviewIssueId = isPreviewPaneTab(activeTab) ? issueId ?? null : null
   const selectedListCycleId = activeTab === 'list' ? cycleId : null
   const activeListViewConfig = useMemo(
     () => readListViewConfig(activeTabInstance?.metadata),
@@ -232,14 +300,19 @@ export const ProjectDetailPage = () => {
     activeTabId,
     activeTabInstance,
   })
+  const tabBaseHref = projectId
+    ? activeTabId && tabId
+      ? getProjectTabInstancePath(projectId, activeTab, activeTabId)
+      : getProjectTabPath(projectId, activeTab)
+    : '/projects'
   const listHref = projectId
     ? activeTabId && tabId
       ? getProjectTabInstancePath(projectId, 'list', activeTabId)
       : getProjectTabPath(projectId, 'list')
     : '/projects'
-  const handleOpenListIssue = (issue: Issue) => {
+  const handleOpenPreviewIssue = (issue: Issue) => {
     if (!projectId) return
-    navigate(getProjectListIssuePath(projectId, issue.id, activeTabId))
+    navigate(getProjectTabIssuePath(projectId, activeTab, issue.id, activeTabId))
   }
   const handleOpenListCycle = (cycle: { id: string }) => {
     if (!projectId) return
@@ -331,24 +404,28 @@ export const ProjectDetailPage = () => {
 
   if (projectError) {
     return (
-      <OpenKbPageShell>
+      <OpenKbPageShell containerClassName={projectPageContainerClassName}>
         {projectTopSlot}
-        <EmptyState title="Project not found" description={projectError instanceof Error ? projectError.message : ''} />
+        <div className="p-1">
+          <EmptyState title="Project not found" description={projectError instanceof Error ? projectError.message : ''} />
+        </div>
       </OpenKbPageShell>
     )
   }
 
   if (!project) {
     return (
-      <OpenKbPageShell>
+      <OpenKbPageShell containerClassName={projectPageContainerClassName}>
         {projectTopSlot}
-        <EmptyState title={projectLoading ? 'Loading project...' : 'Project not found'} description="" />
+        <div className="p-1">
+          <EmptyState title={projectLoading ? 'Loading project...' : 'Project not found'} description="" />
+        </div>
       </OpenKbPageShell>
     )
   }
 
   return (
-    <OpenKbPageShell>
+    <OpenKbPageShell containerClassName={projectPageContainerClassName}>
       {projectTopSlot}
       <Dialog open={Boolean(renameTab)} onClose={() => setRenameTab(null)}>
         <DialogContent className="max-w-sm">
@@ -382,69 +459,55 @@ export const ProjectDetailPage = () => {
       </Dialog>
 
       {activeTab === 'overview' ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold">Recent issues</h2>
-              <Link className="text-sm font-medium text-[var(--color-primary)] hover:underline" to={`/projects/${project.id}/list`}>All issues</Link>
-            </div>
-            <IssueList issues={recentIssues} emptyTitle="No issues in this project" projectId={project.id} />
-          </section>
-          <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <h2 className="text-sm font-semibold">State breakdown</h2>
-            <div className="mt-3 space-y-3">
-              {stateCounts.map(({ state, count }) => (
-                <div key={state.id} className="flex items-center justify-between gap-3">
-                  <span className="inline-flex min-w-0 items-center gap-2 text-sm">
-                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: state.color }} />
-                    <span className="truncate">{state.name}</span>
-                  </span>
-                  <Badge variant="neutral">{count}</Badge>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
+        <ProjectTabIssueSplitLayout
+          selectedIssueId={selectedPreviewIssueId}
+          organisationId={organisationId}
+          projectId={project.id}
+          tabBaseHref={tabBaseHref}
+          onClose={() => navigate(tabBaseHref)}
+          shrinkMain={Boolean(selectedPreviewIssueId)}
+        >
+          <div className="grid gap-4 p-1 xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <section className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold">Recent issues</h2>
+                <Link className="text-sm font-medium text-[var(--color-primary)] hover:underline" to={`/projects/${project.id}/list`}>All issues</Link>
+              </div>
+              <IssueList
+                issues={recentIssues}
+                emptyTitle="No issues in this project"
+                onOpenIssue={handleOpenPreviewIssue}
+                selectedIssueId={selectedPreviewIssueId}
+              />
+            </section>
+            <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+              <h2 className="text-sm font-semibold">State breakdown</h2>
+              <div className="mt-3 space-y-3">
+                {stateCounts.map(({ state, count }) => (
+                  <div key={state.id} className="flex items-center justify-between gap-3">
+                    <span className="inline-flex min-w-0 items-center gap-2 text-sm">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: state.color }} />
+                      <span className="truncate">{state.name}</span>
+                    </span>
+                    <Badge variant="neutral">{count}</Badge>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </ProjectTabIssueSplitLayout>
       ) : null}
 
       {activeTab === 'list' ? (
-        <div className="-mx-2 flex min-h-0 flex-1 overflow-hidden bg-[var(--color-background)]">
-          <div className={cx('flex min-h-0 min-w-0 flex-col transition-[width] duration-150', selectedListIssueId || selectedListCycleId ? 'w-[48%]' : 'w-full')}>
-            <ProjectIssueListTable
-              key={activeTabId ?? 'list'}
-              tabId={activeTabId}
-              issues={issues}
-              states={states}
-              members={members}
-              assignees={projectIssueAssignees}
-              cycles={cycles}
-              cycleIssueLinks={cycleIssueLinks}
-              modules={modules}
-              moduleIssueLinks={moduleIssueLinks}
-              teams={teams}
-              listViewConfig={activeListViewConfig}
-              selectedIssueId={selectedListIssueId}
-              selectedCycleId={selectedListCycleId}
-              onOpenIssue={handleOpenListIssue}
-              onOpenCycle={handleOpenListCycle}
-              onListViewChange={canEditProjectTabs ? handleListViewChange : undefined}
-              onCreateIssue={() => setCreateIssueOpen(true)}
-            />
-          </div>
-          {selectedListIssueId && organisationId ? (
-            <div className="min-h-0 min-w-0 flex-1">
-              <ProjectIssuePreviewPane
-                organisationId={organisationId}
-                projectId={project.id}
-                issueId={selectedListIssueId}
-                listHref={listHref}
-                expandedHref={getProjectIssuePath(project.id, selectedListIssueId)}
-                onClose={() => navigate(listHref)}
-              />
-            </div>
-          ) : null}
-          {!selectedListIssueId && selectedListCycleId ? (
-            <div className="min-h-0 min-w-0 flex-1">
+        <ProjectTabIssueSplitLayout
+          selectedIssueId={selectedPreviewIssueId}
+          organisationId={organisationId}
+          projectId={project.id}
+          tabBaseHref={tabBaseHref}
+          onClose={() => navigate(tabBaseHref)}
+          shrinkMain={Boolean(selectedPreviewIssueId || selectedListCycleId)}
+          preview={
+            !selectedPreviewIssueId && selectedListCycleId ? (
               <ProjectCyclePreviewPane
                 cycleId={selectedListCycleId}
                 cycles={cycles}
@@ -453,19 +516,50 @@ export const ProjectDetailPage = () => {
                 onExpand={() => navigate(getProjectCyclePath(project.id, selectedListCycleId))}
                 onClose={() => navigate(listHref)}
               />
-            </div>
-          ) : null}
-        </div>
+            ) : undefined
+          }
+        >
+          <ProjectIssueListTable
+            key={activeTabId ?? 'list'}
+            tabId={activeTabId}
+            issues={issues}
+            states={states}
+            members={members}
+            assignees={projectIssueAssignees}
+            cycles={cycles}
+            cycleIssueLinks={cycleIssueLinks}
+            modules={modules}
+            moduleIssueLinks={moduleIssueLinks}
+            teams={teams}
+            listViewConfig={activeListViewConfig}
+            selectedIssueId={selectedPreviewIssueId}
+            selectedCycleId={selectedListCycleId}
+            onOpenIssue={handleOpenPreviewIssue}
+            onOpenCycle={handleOpenListCycle}
+            onListViewChange={canEditProjectTabs ? handleListViewChange : undefined}
+            onCreateIssue={() => setCreateIssueOpen(true)}
+          />
+        </ProjectTabIssueSplitLayout>
       ) : null}
 
       {activeTab === 'board' && project && organisationId ? (
-        <ProjectBoardView
+        <ProjectTabIssueSplitLayout
+          selectedIssueId={selectedPreviewIssueId}
           organisationId={organisationId}
           projectId={project.id}
-          columns={boardColumns}
-          canEdit={canEditProject}
-          onCreateIssue={() => setCreateIssueOpen(true)}
-        />
+          tabBaseHref={tabBaseHref}
+          onClose={() => navigate(tabBaseHref)}
+          shrinkMain={Boolean(selectedPreviewIssueId)}
+        >
+          <ProjectBoardView
+            organisationId={organisationId}
+            columns={boardColumns}
+            canEdit={canEditProject}
+            onCreateIssue={() => setCreateIssueOpen(true)}
+            onOpenIssue={handleOpenPreviewIssue}
+            selectedIssueId={selectedPreviewIssueId}
+          />
+        </ProjectTabIssueSplitLayout>
       ) : null}
 
       {activeTab === 'timeline' ? (
@@ -518,65 +612,94 @@ export const ProjectDetailPage = () => {
       ) : null}
 
       {activeTab === 'calendar' ? (
-        <IssueCalendar issues={issues} month={calendarMonth} onMonthChange={setCalendarMonth} />
+        <ProjectTabIssueSplitLayout
+          selectedIssueId={selectedPreviewIssueId}
+          organisationId={organisationId}
+          projectId={project.id}
+          tabBaseHref={tabBaseHref}
+          onClose={() => navigate(tabBaseHref)}
+          shrinkMain={Boolean(selectedPreviewIssueId)}
+        >
+          <div className="p-1">
+            <IssueCalendar
+              issues={issues}
+              month={calendarMonth}
+              onMonthChange={setCalendarMonth}
+              onOpenIssue={handleOpenPreviewIssue}
+              selectedIssueId={selectedPreviewIssueId}
+            />
+          </div>
+        </ProjectTabIssueSplitLayout>
       ) : null}
 
       {activeTab === 'workflow' && project && organisationId ? (
-        <ProjectWorkflowPanel
-          organisationId={organisationId}
-          projectId={project.id}
-          states={states}
-          canEdit={canEditProject}
-        />
+        <div className="p-1">
+          <ProjectWorkflowPanel
+            organisationId={organisationId}
+            projectId={project.id}
+            states={states}
+            canEdit={canEditProject}
+          />
+        </div>
       ) : null}
 
-      {activeTab === 'gantt' ? <IssueGantt issues={issues} /> : null}
+      {activeTab === 'gantt' ? (
+        <div className="p-1">
+          <IssueGantt issues={issues} />
+        </div>
+      ) : null}
 
       {activeTab === 'workload' ? (
-        <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="border-b border-[var(--color-border)] px-4 py-3 text-sm font-semibold">Workload</div>
-          <div className="divide-y divide-[var(--color-border)]">
-            {workload.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-[var(--color-muted-foreground)]">No member workload yet.</div>
-            ) : workload.map(({ member, count }) => (
-              <div key={member.profile_id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <span>{member.profile.full_name || member.profile.username || member.profile.email || 'Unknown user'}</span>
-                <Badge variant="neutral">{count}</Badge>
-              </div>
-            ))}
-          </div>
-        </section>
+        <div className="p-1">
+          <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div className="border-b border-[var(--color-border)] px-4 py-3 text-sm font-semibold">Workload</div>
+            <div className="divide-y divide-[var(--color-border)]">
+              {workload.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-[var(--color-muted-foreground)]">No member workload yet.</div>
+              ) : workload.map(({ member, count }) => (
+                <div key={member.profile_id} className="flex items-center justify-between px-4 py-3 text-sm">
+                  <span>{member.profile.full_name || member.profile.username || member.profile.email || 'Unknown user'}</span>
+                  <Badge variant="neutral">{count}</Badge>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {activeTab === 'files' ? (
-        <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="border-b border-[var(--color-border)] px-4 py-3 text-sm font-semibold">Project files</div>
-          <div className="divide-y divide-[var(--color-border)]">
-            {attachments.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-[var(--color-muted-foreground)]">No issue attachments in this project.</div>
-            ) : attachments.map((attachment) => (
-              <div key={attachment.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[minmax(0,1fr)_8rem_auto] md:items-center">
-                <span className="min-w-0 truncate font-medium">{attachment.name ?? attachment.metadata.file_name}</span>
-                <span className="text-[var(--color-muted-foreground)]">{formatFileSize(attachment.metadata.size)}</span>
-                {attachment.signed_url ? (
-                  <a className="inline-flex h-8 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 text-xs font-medium hover:bg-[var(--color-muted)]" href={attachment.signed_url}>
-                    <Download className="h-3.5 w-3.5" />
-                    Download
-                  </a>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </section>
+        <div className="p-1">
+          <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div className="border-b border-[var(--color-border)] px-4 py-3 text-sm font-semibold">Project files</div>
+            <div className="divide-y divide-[var(--color-border)]">
+              {attachments.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-[var(--color-muted-foreground)]">No issue attachments in this project.</div>
+              ) : attachments.map((attachment) => (
+                <div key={attachment.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[minmax(0,1fr)_8rem_auto] md:items-center">
+                  <span className="min-w-0 truncate font-medium">{attachment.name ?? attachment.metadata.file_name}</span>
+                  <span className="text-[var(--color-muted-foreground)]">{formatFileSize(attachment.metadata.size)}</span>
+                  {attachment.signed_url ? (
+                    <a className="inline-flex h-8 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 text-xs font-medium hover:bg-[var(--color-muted)]" href={attachment.signed_url}>
+                      <Download className="h-3.5 w-3.5" />
+                      Download
+                    </a>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {activeTab === 'settings' ? (
-        <ProjectSettingsPanel
-          project={project}
-          organisationId={organisationId ?? ''}
-          canEditProject={canEditProject}
-          canManageMembers={canManageMembers}
-        />
+        <div className="p-1">
+          <ProjectSettingsPanel
+            project={project}
+            organisationId={organisationId ?? ''}
+            canEditProject={canEditProject}
+            canManageMembers={canManageMembers}
+          />
+        </div>
       ) : null}
 
       {organisationId && project ? (
