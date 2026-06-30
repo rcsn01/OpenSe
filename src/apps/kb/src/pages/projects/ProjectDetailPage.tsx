@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Badge, Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input } from '@repo/ui'
-import { ArrowUpDown, ChevronDown, Circle, Download, ListFilter, Plus, Search, SlidersHorizontal, TableProperties } from 'lucide-react'
+import { Download, ListFilter, Plus } from 'lucide-react'
 import { useAuth } from '@repo/shared/auth/context'
 import { OpenKbPageShell } from '../../components/OpenKbPageShell'
 import { ProjectSettingsPanel } from '../../components/projects/ProjectSettingsPanel'
 import { ProjectWorkflowPanel } from '../../components/projects/ProjectWorkflowPanel'
+import { ProjectBoardView } from '../../components/projects/ProjectBoardView'
 import { ProjectTabBar } from '../../components/projects/ProjectTabBar'
 import { useOrganisation } from '../../contexts/OrganisationContext'
 import { CreateIssueDialog } from '../../components/issues/CreateIssueDialog'
@@ -35,8 +36,7 @@ import { useRecordRecentVisitOnce } from '../../hooks/queries/usePersonal'
 import type { Issue, ProjectTab } from '../../types'
 import { formatFileSize } from '../../lib/fileFormatting'
 import { formatIssueKey, issuePriorityTone as priorityTone } from '../../lib/issueFormatting'
-import { getOpenKbItemColor, getOpenKbTextColorForBackground } from '../../lib/openKbColors'
-import { formatShortDate, startOfMonth, toDate } from '../../lib/dateFormatting'
+import { startOfMonth, toDate } from '../../lib/dateFormatting'
 import {
   getProjectTabDefinition,
   getProjectTabKeyFromSection,
@@ -91,138 +91,6 @@ const ProjectTopSlot = ({ children }: { children: ReactNode }) => (
   <div className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
     {children}
   </div>
-)
-
-const ProjectTaskToolbar = ({
-  label = 'Add task',
-  onCreateIssue,
-}: {
-  label?: string
-  onCreateIssue: () => void
-}) => (
-  <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4">
-    <div className="flex items-center gap-0">
-      <button
-        type="button"
-        onClick={onCreateIssue}
-        className="inline-flex h-8 items-center gap-2 rounded-l-[var(--radius-md)] border border-[var(--color-border)] px-3 text-sm font-medium hover:bg-[var(--color-muted)]"
-      >
-        <Plus className="h-4 w-4" />
-        {label}
-      </button>
-      <button
-        type="button"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-r-[var(--radius-md)] border border-l-0 border-[var(--color-border)] hover:bg-[var(--color-muted)]"
-        aria-label={`${label} options`}
-      >
-        <ChevronDown className="h-4 w-4" />
-      </button>
-    </div>
-    <div className="flex items-center gap-5 text-xs font-medium text-[var(--color-muted-foreground)]">
-      <button type="button" className="inline-flex items-center gap-1.5 hover:text-[var(--color-foreground)]">
-        <ListFilter className="h-3.5 w-3.5" />
-        Filter
-      </button>
-      <button type="button" className="inline-flex items-center gap-1.5 hover:text-[var(--color-foreground)]">
-        <ArrowUpDown className="h-3.5 w-3.5" />
-        Sort
-      </button>
-      <button type="button" className="inline-flex items-center gap-1.5 hover:text-[var(--color-foreground)]">
-        <TableProperties className="h-3.5 w-3.5" />
-        Group
-      </button>
-      <button type="button" className="inline-flex items-center gap-1.5 hover:text-[var(--color-foreground)]">
-        <SlidersHorizontal className="h-3.5 w-3.5" />
-        Options
-      </button>
-      <button type="button" className="inline-flex items-center hover:text-[var(--color-foreground)]" aria-label="Search tasks">
-        <Search className="h-4 w-4" />
-      </button>
-    </div>
-  </div>
-)
-
-const issueLabel = (issue: Issue, index: number) => issue.project?.name || ['Project Management', 'Design Transfer', 'Manufacturing', 'Validation', 'QA/RA'][index % 5]
-
-const CompactAvatar = ({ value, tone = '#58c4d8' }: { value: string; tone?: string }) => (
-  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold" style={{ backgroundColor: tone, color: getOpenKbTextColorForBackground(tone) }}>
-    {value
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase() || 'U'}
-  </span>
-)
-
-const ProjectBoardCard = ({ issue, index, projectId }: { issue: Issue; index: number; projectId: string }) => {
-  const label = issueLabel(issue, index)
-  const labelColor = getOpenKbItemColor(`label:${label}`)
-  const avatarColor = getOpenKbItemColor(`profile:${issue.updated_by || issue.created_by || 'user'}`)
-  const range = issue.start_date || issue.target_date
-    ? `${formatShortDate(issue.start_date ?? issue.created_at.slice(0, 10))}${issue.target_date ? ` - ${formatShortDate(issue.target_date)}` : ''}`
-    : formatShortDate(issue.created_at.slice(0, 10))
-
-  return (
-    <Link
-      to={getProjectIssuePath(projectId, issue.id)}
-      className="block rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] hover:border-[#7aa7ff]"
-    >
-      <div className="flex items-start gap-2">
-        <Circle className="mt-0.5 h-4 w-4 text-[#96a09d]" />
-        <h3 className="line-clamp-2 text-sm font-semibold leading-5">{issue.title}</h3>
-      </div>
-      <div className="mt-4">
-        <span className="inline-flex rounded-[4px] px-1.5 py-0.5 text-xs font-medium" style={{ backgroundColor: labelColor, color: getOpenKbTextColorForBackground(labelColor) }}>
-          {label}
-        </span>
-      </div>
-      <div className="mt-5 flex items-center gap-3 text-xs text-[var(--color-muted-foreground)]">
-        <CompactAvatar value={issue.updated_by || issue.created_by || 'User'} tone={avatarColor} />
-        <span className={issue.priority === 'urgent' || issue.priority === 'high' ? 'font-medium text-rose-600' : ''}>{range}</span>
-      </div>
-    </Link>
-  )
-}
-
-const ProjectBoardView = ({
-  projectId,
-  columns,
-  onCreateIssue,
-}: {
-  projectId: string
-  columns: ReturnType<typeof buildBoardColumns>
-  onCreateIssue: () => void
-}) => (
-  <section className="-mx-2 flex min-h-0 flex-1 flex-col bg-[var(--color-background)]">
-    <ProjectTaskToolbar onCreateIssue={onCreateIssue} />
-    <div className="min-h-0 flex-1 overflow-auto p-4">
-      <div className="grid min-h-full grid-flow-col auto-cols-[19rem] gap-4">
-        {columns.map((column) => (
-          <section key={column.id} className="flex min-h-[32rem] flex-col rounded-[var(--radius-md)] bg-[#f4f5f6]">
-            <div className="flex h-12 shrink-0 items-center gap-3 rounded-t-[var(--radius-md)] bg-[#eef0f2] px-3">
-              <h2 className="truncate text-base font-semibold">{column.title}</h2>
-              <span className="text-sm font-semibold text-[var(--color-muted-foreground)]">{column.issues.length}</span>
-            </div>
-            <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-3">
-              {column.issues.length === 0 ? (
-                <button type="button" onClick={onCreateIssue} className="flex h-14 items-center rounded-[var(--radius-md)] bg-[#eef0f2] px-4 text-sm font-medium text-[var(--color-muted-foreground)] hover:bg-[#e7e9ec]">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add task
-                </button>
-              ) : column.issues.map((issue, index) => <ProjectBoardCard key={issue.id} issue={issue} index={index} projectId={projectId} />)}
-              {column.issues.length > 0 ? (
-                <button type="button" onClick={onCreateIssue} className="mt-1 px-4 py-2 text-left text-sm font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
-                  + Add task
-                </button>
-              ) : null}
-            </div>
-          </section>
-        ))}
-      </div>
-    </div>
-  </section>
 )
 
 const DashboardMetric = ({ label, value, filters }: { label: string; value: number; filters: number }) => (
@@ -590,8 +458,14 @@ export const ProjectDetailPage = () => {
         </div>
       ) : null}
 
-      {activeTab === 'board' ? (
-        <ProjectBoardView projectId={project.id} columns={boardColumns} onCreateIssue={() => setCreateIssueOpen(true)} />
+      {activeTab === 'board' && project && organisationId ? (
+        <ProjectBoardView
+          organisationId={organisationId}
+          projectId={project.id}
+          columns={boardColumns}
+          canEdit={canEditProject}
+          onCreateIssue={() => setCreateIssueOpen(true)}
+        />
       ) : null}
 
       {activeTab === 'timeline' ? (
