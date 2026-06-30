@@ -489,3 +489,62 @@ CREATE UNIQUE INDEX kb_slack_project_syncs_outbound_comment_uidx
     AND sync_direction = 'outbound'
     AND comment_id IS NOT NULL
     AND channel_id IS NOT NULL;
+
+CREATE TABLE kb.workflow_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organisation_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
+  project_id UUID NOT NULL REFERENCES kb.projects(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  trigger_event TEXT NOT NULL CHECK (trigger_event IN ('issue_created', 'state_entered')),
+  state_id UUID REFERENCES kb.states(id) ON DELETE SET NULL,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_by UUID DEFAULT auth.uid() REFERENCES public.profiles(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ,
+  CONSTRAINT kb_workflow_rules_state_entered_check
+    CHECK (
+      (trigger_event = 'state_entered' AND state_id IS NOT NULL)
+      OR trigger_event = 'issue_created'
+    )
+);
+
+CREATE INDEX kb_workflow_rules_project_idx
+  ON kb.workflow_rules (project_id, sort_order, deleted_at);
+
+CREATE TABLE kb.workflow_rule_actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organisation_id UUID NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
+  project_id UUID NOT NULL REFERENCES kb.projects(id) ON DELETE CASCADE,
+  rule_id UUID NOT NULL REFERENCES kb.workflow_rules(id) ON DELETE CASCADE,
+  action_type TEXT NOT NULL CHECK (
+    action_type IN ('assign_users', 'assign_team', 'set_due_date', 'add_comment', 'create_subtasks')
+  ),
+  config JSONB NOT NULL DEFAULT '{}'::jsonb,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_by UUID DEFAULT auth.uid() REFERENCES public.profiles(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ
+);
+
+CREATE INDEX kb_workflow_rule_actions_rule_idx
+  ON kb.workflow_rule_actions (rule_id, sort_order, deleted_at);
+
+CREATE INDEX kb_workflow_rule_actions_project_idx
+  ON kb.workflow_rule_actions (project_id, deleted_at);
+
+CREATE TRIGGER handle_workflow_rules_updated_at
+  BEFORE UPDATE ON kb.workflow_rules
+  FOR EACH ROW
+  EXECUTE FUNCTION extensions.moddatetime(updated_at);
+
+CREATE TRIGGER handle_workflow_rule_actions_updated_at
+  BEFORE UPDATE ON kb.workflow_rule_actions
+  FOR EACH ROW
+  EXECUTE FUNCTION extensions.moddatetime(updated_at);

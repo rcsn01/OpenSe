@@ -355,6 +355,8 @@ export const installOpenKbMockSupabase = async (page: Page) => {
     module_issues: [],
     intake_issues: [],
     project_deploy_boards: [],
+    workflow_rules: [],
+    workflow_rule_actions: [],
     api_tokens: [],
     webhooks: [],
     webhook_logs: [],
@@ -416,6 +418,18 @@ export const installOpenKbMockSupabase = async (page: Page) => {
     if (table === 'issue_comments') {
       created.profile_id = created.profile_id ?? USER_ID;
       created.actor_profile_id = created.actor_profile_id ?? USER_ID;
+    }
+
+    if (table === 'workflow_rules') {
+      created.enabled = created.enabled ?? true;
+      created.sort_order = created.sort_order ?? (store.workflow_rules?.length ?? 0) * 10;
+      created.metadata = created.metadata ?? {};
+    }
+
+    if (table === 'workflow_rule_actions') {
+      created.config = created.config ?? {};
+      created.sort_order = created.sort_order ?? (store.workflow_rule_actions?.length ?? 0) * 10;
+      created.metadata = created.metadata ?? {};
     }
 
     store[table] = store[table] ?? [];

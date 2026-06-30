@@ -8,6 +8,8 @@ ALTER TABLE kb.issue_mentions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kb.user_favorites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kb.user_recent_visits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kb.draft_issues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kb.workflow_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kb.workflow_rule_actions ENABLE ROW LEVEL SECURITY;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
   kb.teams,
@@ -17,7 +19,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE
   kb.issue_mentions,
   kb.user_favorites,
   kb.user_recent_visits,
-  kb.draft_issues
+  kb.draft_issues,
+  kb.workflow_rules,
+  kb.workflow_rule_actions
 TO authenticated;
 
 GRANT ALL PRIVILEGES ON TABLE
@@ -28,7 +32,9 @@ GRANT ALL PRIVILEGES ON TABLE
   kb.issue_mentions,
   kb.user_favorites,
   kb.user_recent_visits,
-  kb.draft_issues
+  kb.draft_issues,
+  kb.workflow_rules,
+  kb.workflow_rule_actions
 TO service_role;
 
 -- Public deploy board reads are served by the open-kb-public-deploy-board Edge
@@ -106,6 +112,70 @@ CREATE POLICY project_deploy_boards_update ON kb.project_deploy_boards
   );
 
 CREATE POLICY project_deploy_boards_delete ON kb.project_deploy_boards
+  FOR DELETE TO authenticated
+  USING (
+    kb.has_permission(organisation_id, 'projects.edit')
+    AND kb.has_project_access(project_id)
+  );
+
+CREATE POLICY workflow_rules_select ON kb.workflow_rules
+  FOR SELECT TO authenticated
+  USING (
+    kb.has_permission(organisation_id, 'projects.view')
+    AND kb.has_project_access(project_id)
+  );
+
+CREATE POLICY workflow_rules_insert ON kb.workflow_rules
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    kb.has_permission(organisation_id, 'projects.edit')
+    AND kb.has_project_access(project_id)
+  );
+
+CREATE POLICY workflow_rules_update ON kb.workflow_rules
+  FOR UPDATE TO authenticated
+  USING (
+    kb.has_permission(organisation_id, 'projects.edit')
+    AND kb.has_project_access(project_id)
+  )
+  WITH CHECK (
+    kb.has_permission(organisation_id, 'projects.edit')
+    AND kb.has_project_access(project_id)
+  );
+
+CREATE POLICY workflow_rules_delete ON kb.workflow_rules
+  FOR DELETE TO authenticated
+  USING (
+    kb.has_permission(organisation_id, 'projects.edit')
+    AND kb.has_project_access(project_id)
+  );
+
+CREATE POLICY workflow_rule_actions_select ON kb.workflow_rule_actions
+  FOR SELECT TO authenticated
+  USING (
+    kb.has_permission(organisation_id, 'projects.view')
+    AND kb.has_project_access(project_id)
+  );
+
+CREATE POLICY workflow_rule_actions_insert ON kb.workflow_rule_actions
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    kb.has_permission(organisation_id, 'projects.edit')
+    AND kb.has_project_access(project_id)
+  );
+
+CREATE POLICY workflow_rule_actions_update ON kb.workflow_rule_actions
+  FOR UPDATE TO authenticated
+  USING (
+    kb.has_permission(organisation_id, 'projects.edit')
+    AND kb.has_project_access(project_id)
+  )
+  WITH CHECK (
+    kb.has_permission(organisation_id, 'projects.edit')
+    AND kb.has_project_access(project_id)
+  );
+
+CREATE POLICY workflow_rule_actions_delete ON kb.workflow_rule_actions
   FOR DELETE TO authenticated
   USING (
     kb.has_permission(organisation_id, 'projects.edit')
