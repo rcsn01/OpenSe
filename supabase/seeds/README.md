@@ -1,6 +1,6 @@
 # Seed file layout
 
-Seed execution order is recorded in `supabase/config.toml` (`[db.seed].sql_paths`), but CLI auto-seeding is disabled (`[db.seed].enabled = false`) so `supabase db reset --linked` stays schema-only. Use `./setup.sh` option 2 to insert seed data manually.
+Seed execution order is recorded in `supabase/config.toml` (`[db.seed].sql_paths`). Local `supabase db reset` runs these files automatically when `[db.seed].enabled = true`. Linked resets stay schema-only unless you seed explicitly through `./setup.sh`.
 
 Runtime catalog rows required by schema triggers, including `public.apps` and app permission codes, are migration-owned. Manual seeds should only load demo, reference, and test data.
 

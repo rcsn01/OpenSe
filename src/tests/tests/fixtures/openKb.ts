@@ -328,7 +328,6 @@ export const installOpenKbMockSupabase = async (page: Page) => {
     states: [clone(state)],
     issues: [clone(issue)],
     project_tabs: defaultProjectTabs(PROJECT_ID).map(clone),
-    project_messages: [],
     cycles: [],
     modules: [],
     estimates: [],

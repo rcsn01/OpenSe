@@ -143,31 +143,6 @@ export type ProjectDeployBoard = {
   deleted_at: string | null
 }
 
-export type ProjectMessage = {
-  id: string
-  organisation_id: string
-  project_id: string
-  profile_id: string | null
-  description_json: EditorDocument
-  description_html: string | null
-  description_text: string | null
-  metadata: Record<string, unknown>
-  created_by: string | null
-  updated_by: string | null
-  created_at: string
-  updated_at: string | null
-  deleted_at: string | null
-  profile?: OpenKbProfile | null
-}
-
-export type ProjectMessageInput = {
-  organisation_id: string
-  project_id: string
-  description_json: EditorDocument
-  description_html?: string | null
-  description_text?: string | null
-}
-
 export type ProjectDeployBoardInput = {
   organisation_id: string
   project_id: string

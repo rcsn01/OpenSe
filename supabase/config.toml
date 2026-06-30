@@ -19,9 +19,10 @@ shadow_port = 54320
 major_version = 17
 
 [db.seed]
-# Keep reset/push flows schema-only by default, especially for linked remotes.
-# Run seed files explicitly through ./setup.sh when demo/reference data is needed.
-enabled = false
+# Seeds run automatically on local `supabase db reset` and `supabase start`.
+# Linked/cloud resets do not apply these files by default; use `--no-seed` on
+# `supabase db reset --linked` if you want to be explicit.
+enabled = true
 sql_paths = [
 	"./seeds/00_cleanup.sql",
 	"./seeds/10_auth_users.sql",

@@ -31,7 +31,6 @@ const authenticatedRoutes = [
   `/projects/${PROJECT_ID}/dashboard`,
   `/projects/${PROJECT_ID}/calendar`,
   `/projects/${PROJECT_ID}/workflow`,
-  `/projects/${PROJECT_ID}/messages`,
   `/projects/${PROJECT_ID}/gantt`,
   `/projects/${PROJECT_ID}/workload`,
   `/projects/${PROJECT_ID}/files`,
@@ -50,6 +49,7 @@ const staleRoutes = [
   { from: `/projects/${PROJECT_ID}/pages`, to: `/projects/${PROJECT_ID}/list` },
   { from: `/projects/${PROJECT_ID}/pages/new`, to: `/projects/${PROJECT_ID}/list` },
   { from: `/projects/${PROJECT_ID}/pages/11110000-0000-4000-8000-00000000e2e3`, to: `/projects/${PROJECT_ID}/list` },
+  { from: `/projects/${PROJECT_ID}/messages`, to: `/projects/${PROJECT_ID}/list` },
   { from: '/stickies', to: '/dashboard' },
 ];
 

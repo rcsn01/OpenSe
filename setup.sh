@@ -22,7 +22,7 @@ SEED_FILES=(
   "supabase/seeds/50_stoqr_catalog_inventory.sql"
   "supabase/seeds/55_stoqr_reports_demo.sql"
   "supabase/seeds/56_stoqr_procurement_workflows.sql"
-  "supabase/seeds/57_open_kb_demo.sql"
+  "supabase/seeds/57_kb_demo.sql"
   "supabase/seeds/60_admin_audit.sql"
   "supabase/seeds/90_synthetic_volume.sql"
 )
@@ -456,19 +456,25 @@ full_reset() {
     deploy_alert_functions "$project_ref" "$token"
 
     info "Resetting linked remote database..."
-    run_supabase db reset --linked --yes
-    success "Linked remote database reset without auto-seeding."
+    run_supabase db reset --linked --yes --no-seed
+    success "Linked remote database reset without seed data."
 
     configure_alert_dispatch "$target" "$token" "$project_ref"
   else
-    info "Resetting local database..."
-    run_supabase db reset --yes
-    success "Local database reset without auto-seeding."
+    if [[ "$seed_after_reset" == "true" ]]; then
+      info "Resetting local database with seed data..."
+      run_supabase db reset --yes
+      success "Local database reset with seed data."
+    else
+      info "Resetting local database..."
+      run_supabase db reset --yes --no-seed
+      success "Local database reset without seed data."
+    fi
 
     configure_alert_dispatch "$target" "$token"
   fi
 
-  if [[ "$seed_after_reset" == "true" ]]; then
+  if [[ "$seed_after_reset" == "true" && "$target" == "remote" ]]; then
     info "Inserting seed data..."
     run_seed_files "$target"
     success "Seed data inserted. Login with founder@gmail.com / !Password1."

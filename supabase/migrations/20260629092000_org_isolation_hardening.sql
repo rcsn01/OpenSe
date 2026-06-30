@@ -19,7 +19,7 @@
 --   * the existing USING clause must be the bare kb.has_app_seat(organisation_id)
 --     predicate (no auth.uid()/has_permission()/has_project_access() already).
 -- Tables with bespoke select policies (notifications, issue_mentions, teams,
--- project_tabs, project_messages, deploy boards, provider/sync tables, etc.)
+-- project_tabs, deploy boards, provider/sync tables, etc.)
 -- are excluded by name and by the predicate guards so they keep their own rules.
 DO $$
 DECLARE
@@ -56,7 +56,6 @@ BEGIN
         'user_recent_visits',
         'draft_issues',
         'project_tabs',
-        'project_messages',
         'team_members',
         'roles',
         'feature_flags'
