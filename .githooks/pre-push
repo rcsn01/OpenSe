@@ -1,11 +1,43 @@
 #!/bin/sh
 set -eu
 
+should_reset_main=0
+
 while read local_ref local_sha remote_ref remote_sha
 do
-  if [ "$remote_ref" = "refs/heads/main" ]; then
-    echo "Pushing to main: running local production Docker builds first..."
-    cd src
-    docker compose -f docker-compose.prod.yml build
+  if [ "$remote_ref" = "refs/heads/main" ] && [ "$local_sha" != "0000000000000000000000000000000000000000" ]; then
+    should_reset_main=1
   fi
 done
+
+if [ "$should_reset_main" != "1" ]; then
+  exit 0
+fi
+
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
+fi
+
+db_url="${OPENSE_SELF_HOSTED_SUPABASE_DB_URL:-${SELF_HOSTED_SUPABASE_DB_URL:-}}"
+
+if [ -z "$db_url" ]; then
+  cat >&2 <<'EOF'
+Pushing to main requires resetting the self-hosted Supabase database first.
+
+Set OPENSE_SELF_HOSTED_SUPABASE_DB_URL to the direct Postgres connection string, then push again.
+Example:
+  export OPENSE_SELF_HOSTED_SUPABASE_DB_URL='postgresql://postgres:<password>@<host>:5432/postgres'
+
+The URL must be the Postgres URL, not the public Supabase API URL.
+EOF
+  exit 1
+fi
+
+echo "Pushing to main: running local production Docker builds first..."
+docker compose -f src/docker-compose.prod.yml build
+
+echo "Pushing to main: fully resetting self-hosted Supabase database..."
+PGSSLMODE=disable pnpm --dir src exec supabase --workdir .. db reset --db-url "$db_url" --yes

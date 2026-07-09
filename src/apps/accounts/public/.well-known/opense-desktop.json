@@ -1,7 +1,7 @@
 {
   "version": 1,
   "instanceName": "OpenSe",
-  "supabaseUrl": "https://sllrsicziiasebqhytfr.supabase.co",
-  "supabasePublishableKey": "sb_publishable_SxOXLjCSmOvVZqfAZUCjmA_PkiO_Fsd",
+  "supabaseUrl": "https://supabase-1.rcsn01.com/",
+  "supabasePublishableKey": "sb_publishable_Xfivny4qTPzP8sMeHs71Ap_MWKd8v-c",
   "googleAuthEnabled": false
 }
