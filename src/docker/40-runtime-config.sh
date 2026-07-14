@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+: "${VITE_SUPABASE_URL:?VITE_SUPABASE_URL is required}"
+: "${VITE_SUPABASE_ANON_KEY:?VITE_SUPABASE_ANON_KEY is required}"
+
+envsubst '${VITE_SUPABASE_URL} ${VITE_SUPABASE_ANON_KEY} ${VITE_GOOGLE_AUTH_ENABLED} ${VITE_AUTH_COOKIE_DOMAIN} ${VITE_ACCOUNTS_URL} ${VITE_ETL_PUBLIC_URL} ${VITE_OPEN_KB_PUBLIC_URL} ${VITE_OPENSE_PUBLIC_URL} ${VITE_STOQR_PUBLIC_URL} ${VITE_UI_PUBLIC_URL}' \
+  < /opt/opense/runtime-config.template.js \
+  > /usr/share/nginx/html/config.js

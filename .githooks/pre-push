@@ -37,7 +37,7 @@ EOF
 fi
 
 echo "Pushing to main: running local production Docker builds first..."
-docker compose -f src/docker-compose.prod.yml build
+pnpm --dir src docker:build
 
 echo "Pushing to main: fully resetting self-hosted Supabase database..."
 PGSSLMODE=disable pnpm --dir src exec supabase --workdir .. db reset --db-url "$db_url" --yes

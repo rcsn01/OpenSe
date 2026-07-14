@@ -7,7 +7,7 @@
 #   APP_NAME  – folder name under apps/ (e.g. accounts, etl, kb, stoqr)
 #
 # Runtime env config:
-#   mount or replace /usr/share/nginx/html/config.js to set window.__OPENSE_CONFIG__.
+#   pass VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, and optional public app URLs.
 #
 # Usage:
 #   docker build --build-arg APP_NAME=accounts -t opense/accounts .
@@ -52,6 +52,11 @@ ARG APP_NAME
 
 # Copy the SPA build output
 COPY --from=builder /app/apps/${APP_NAME}/dist /usr/share/nginx/html
+
+# Generate browser-readable runtime configuration when the container starts.
+COPY docker/runtime-config.template.js /opt/opense/runtime-config.template.js
+COPY docker/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
+RUN chmod +x /docker-entrypoint.d/40-runtime-config.sh
 
 # SPA fallback: send all routes to index.html
 RUN printf 'server {\n\
