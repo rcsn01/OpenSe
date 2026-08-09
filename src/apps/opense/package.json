@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node ../../scripts/generate-runtime-config.mjs --app opense",
+    "predev": "node ../../scripts/generate-runtime-config.mjs --local-supabase --app opense",
     "dev": "astro dev --host 0.0.0.0 --port 5994",
     "build": "astro build",
     "typecheck": "astro check",

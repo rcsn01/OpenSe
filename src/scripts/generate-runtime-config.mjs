@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { loadEnvFile } from 'node:process'
@@ -12,6 +13,37 @@ const templatePath = join(sourceRoot, 'docker', 'runtime-config.template.js')
 if (existsSync(envPath)) {
   loadEnvFile(envPath)
 }
+
+const useLocalSupabase = process.argv.includes('--local-supabase')
+
+const getLocalSupabaseConfig = () => {
+  const supabaseCliPath = join(sourceRoot, 'node_modules', '.bin', 'supabase')
+
+  try {
+    const output = execFileSync(
+      supabaseCliPath,
+      ['--workdir', repositoryRoot, 'status', '--output', 'json'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    )
+    const status = JSON.parse(output)
+
+    if (!status.API_URL || !status.ANON_KEY) {
+      throw new Error('Supabase status did not include API_URL and ANON_KEY.')
+    }
+
+    return {
+      VITE_SUPABASE_URL: status.API_URL,
+      VITE_SUPABASE_ANON_KEY: status.ANON_KEY,
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? ` ${error.message}` : ''
+    throw new Error(
+      `Local Supabase is not available. Start it with \`pnpm db:start\` and try again.${detail}`,
+    )
+  }
+}
+
+const localSupabaseConfig = useLocalSupabase ? getLocalSupabaseConfig() : {}
 
 const defaultValues = {
   VITE_GOOGLE_AUTH_ENABLED: 'false',
@@ -30,13 +62,16 @@ const runtimeKeys = [
 ]
 
 for (const key of ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']) {
-  if (!process.env[key]) {
+  if (!(localSupabaseConfig[key] ?? process.env[key])) {
     throw new Error(`${key} is required. Set it in ${envPath}.`)
   }
 }
 
 const runtimeConfig = Object.fromEntries(
-  runtimeKeys.map((key) => [key, process.env[key] ?? defaultValues[key] ?? '']),
+  runtimeKeys.map((key) => [
+    key,
+    localSupabaseConfig[key] ?? process.env[key] ?? defaultValues[key] ?? '',
+  ]),
 )
 const configSource = `window.__OPENSE_CONFIG__ = ${JSON.stringify(runtimeConfig, null, 2)};\n`
 
