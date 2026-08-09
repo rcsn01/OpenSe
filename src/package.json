@@ -16,10 +16,11 @@
   "scripts": {
     "build": "turbo run build",
     "runtime-config": "node scripts/generate-runtime-config.mjs",
+    "runtime-config:local": "node scripts/generate-runtime-config.mjs --local-supabase",
     "docker:build": "docker compose --env-file ../.env -f docker-compose.prod.yml build",
     "docker:up": "docker compose --env-file ../.env -f docker-compose.prod.yml up -d",
     "docker:down": "docker compose --env-file ../.env -f docker-compose.prod.yml down",
-    "predev": "pnpm runtime-config",
+    "predev": "pnpm db:start && pnpm runtime-config:local",
     "dev": "turbo run dev --filter=@repo/accounts --filter=@repo/etl --filter=@repo/kb --filter=@repo/opense --filter=@repo/stoqr --filter=@repo/ui-design",
     "dev:accounts": "pnpm --dir apps/accounts dev",
     "dev:desktop": "pnpm --dir apps/opense-desktop dev",

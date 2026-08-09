@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { ContentTabs } from "@repo/ui";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCompany } from "../contexts/CompanyContext";
-import { BasePage } from "../components/BasePage";
+import { StoqrPageShell } from "../components/StoqrPageShell";
 import { PageAvailabilityGuard } from "../components/PageAvailabilityGuard";
 import { PurchaseOrdersTab } from "../components/Procurement/PurchaseOrdersTab";
 import { SuppliersTab } from "../components/Procurement/SuppliersTab";
@@ -42,11 +42,11 @@ export const ProcurementPage = () => {
   }, [companyId]);
 
   return (
-    <BasePage
+    <StoqrPageShell
       companyId={companyId}
       emptyStateTitle="No company selected"
       emptyStateDescription="Select a company to manage procurement."
-      contentClassName="flex h-full min-h-0 overflow-hidden px-2 pb-8 pt-[18px]"
+      contentClassName="flex h-full min-h-0 overflow-hidden px-2 pb-8"
       containerClassName="[&>*]:min-w-0 flex h-full min-h-0 min-w-0 flex-1 flex-col gap-7 overflow-hidden text-[var(--color-foreground)]"
     >
       <PageAvailabilityGuard companyId={companyId} feature="procurement">
@@ -59,6 +59,6 @@ export const ProcurementPage = () => {
           contentClassName="overflow-hidden"
         />
       </PageAvailabilityGuard>
-    </BasePage>
+    </StoqrPageShell>
   );
 };

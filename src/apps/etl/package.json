@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node ../../scripts/generate-runtime-config.mjs --app etl",
+    "predev": "node ../../scripts/generate-runtime-config.mjs --local-supabase --app etl",
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",

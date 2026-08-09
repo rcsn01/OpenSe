@@ -78,7 +78,7 @@ export const ReportsPage = () => {
     <StoqrPageShell
       companyId={companyId}
       search={searchConfig}
-      contentClassName="flex h-full min-h-0 overflow-hidden px-2 pb-8 pt-[18px]"
+      contentClassName="flex h-full min-h-0 overflow-hidden px-2 pb-8"
       containerClassName="[&>*]:min-w-0 flex h-full min-h-0 min-w-0 flex-1 flex-col gap-7 overflow-hidden text-[var(--color-foreground)]"
     >
       <PageAvailabilityGuard companyId={companyId} feature="reports">
