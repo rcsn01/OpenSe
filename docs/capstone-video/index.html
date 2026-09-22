@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#102926" />
+    <title>Open-SE | Capstone project video</title>
+    <link rel="stylesheet" href="presentation.css" />
+    <script src="presentation.js" defer></script>
+  </head>
+  <body>
+    <main class="deck" aria-label="Open-SE capstone presentation">
+      <section class="slide slide-cover is-active" data-title="Introduction" aria-label="Slide 1: Introduction">
+        <div class="cover-glow"></div>
+        <div class="cover-grid"></div>
+        <div class="cover-content">
+          <p class="eyebrow reveal">Capstone project video</p>
+          <h1 class="reveal">Open<span class="accent">-SE</span></h1>
+          <p class="cover-subtitle reveal">Customer-controlled inventory software for small and medium-sized businesses</p>
+          <div class="cover-rule reveal"></div>
+          <p class="cover-author reveal">Chu-Cheng Yu <span>·</span> Design capstone <span>·</span> 2026</p>
+        </div>
+        <div class="cover-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      </section>
+
+      <section class="slide slide-problem" data-title="The problem" aria-label="Slide 2: The problem">
+        <header class="slide-header"><p class="eyebrow reveal">01 / Why this project</p><h2 class="reveal">Inventory work is often split across tools.</h2></header>
+        <div class="problem-layout">
+          <div class="problem-list reveal">
+            <div><span class="list-index">01</span><strong>Separate systems</strong><small>stock, purchasing, labels and reports</small></div>
+            <div><span class="list-index">02</span><strong>Recurring fees</strong><small>more users can mean more subscriptions</small></div>
+            <div><span class="list-index">03</span><strong>Limited custody</strong><small>operational records sit with a cloud vendor</small></div>
+          </div>
+          <div class="problem-answer reveal">
+            <span class="answer-line"></span>
+            <p class="answer-label">Project question</p>
+            <p>Can one self-hosted platform keep inventory workflows together while giving the customer control of the system and its data?</p>
+          </div>
+        </div>
+        <p class="slide-note reveal">Target users: SMEs with suitable infrastructure or technical support.</p>
+      </section>
+
+      <section class="slide slide-product" data-title="The product" aria-label="Slide 3: The product">
+        <header class="slide-header"><p class="eyebrow reveal">02 / What I built</p><h2 class="reveal">One platform, connected inventory work.</h2></header>
+        <div class="product-layout">
+          <div class="product-shot reveal"><img src="assets/stoqr-inventory.webp" alt="StoQR inventory interface with product list and stock controls" /></div>
+          <div class="product-details">
+            <div class="feature reveal"><span>Accounts</span><p>Identity, organisations, invitations and roles</p></div>
+            <div class="feature reveal"><span>StoQR</span><p>Products, scanning, stock movements, purchasing and reports</p></div>
+            <div class="feature reveal"><span>Shared foundation</span><p>Common interface and organisation model in one monorepo</p></div>
+          </div>
+        </div>
+        <p class="caption reveal">Product screen uses synthetic data.</p>
+      </section>
+
+      <section class="slide slide-method" data-title="Methodology" aria-label="Slide 4: Methodology">
+        <header class="slide-header"><p class="eyebrow reveal">03 / Methodology</p><h2 class="reveal">Design science: build the artefact, then test its claims.</h2></header>
+        <div class="method-path" aria-label="Method steps">
+          <div class="method-step reveal"><span class="step-number">1</span><h3>Define</h3><p>Turn the SME problem into traceable requirements.</p></div>
+          <div class="method-step reveal"><span class="step-number">2</span><h3>Choose</h3><p>Compare architecture and technology against weighted criteria.</p></div>
+          <div class="method-step reveal"><span class="step-number">3</span><h3>Build</h3><p>Deliver in iterations with review and quality gates.</p></div>
+          <div class="method-step reveal"><span class="step-number">4</span><h3>Verify</h3><p>Reset synthetic data and repeat security and browser tests.</p></div>
+        </div>
+        <div class="method-reason reveal"><strong>Why this fits</strong><p>The project needed both a working system and evidence that its design meets the stated requirements.</p></div>
+      </section>
+
+      <section class="slide slide-architecture" data-title="How it works" aria-label="Slide 5: Architecture">
+        <header class="slide-header"><p class="eyebrow reveal">04 / Architecture</p><h2 class="reveal">The customer controls the core data path.</h2></header>
+        <div class="architecture-grid">
+          <div class="architecture-user reveal"><span class="mini-icon">⌁</span><strong>Authorised user</strong><small>browser, mobile or desktop</small></div>
+          <div class="architecture-connector reveal" aria-hidden="true"><span></span></div>
+          <div class="custody-boundary reveal">
+            <span class="boundary-label">Customer-controlled site</span>
+            <div class="architecture-apps"><div><strong>Open-SE entry</strong><small>shared access</small></div><div><strong>Accounts</strong><small>identity + roles</small></div><div><strong>StoQR</strong><small>inventory work</small></div></div>
+            <div class="vertical-flow" aria-hidden="true"></div>
+            <div class="architecture-data"><strong>Self-hosted Supabase + PostgreSQL</strong><span>Organisation IDs and row-level security guard tenant data</span></div>
+          </div>
+        </div>
+        <p class="architecture-condition reveal">Custody finding assumes a safe customer site and optional outbound connectors disabled or governed.</p>
+      </section>
+
+      <section class="slide slide-results" data-title="Results" aria-label="Slide 6: Results">
+        <header class="slide-header"><p class="eyebrow reveal">05 / Main findings</p><h2 class="reveal">The foundation works. Release testing exposed gaps.</h2></header>
+        <div class="results-layout">
+          <div class="result-stat reveal"><span class="stat-number">474</span><span class="stat-label">scoped unit tests passed</span></div>
+          <div class="result-stat reveal"><span class="stat-number">42</span><span class="stat-label">scoped tables with RLS enabled</span></div>
+          <div class="result-stat result-cost reveal"><span class="stat-number">A$0</span><span class="stat-label">recurring platform subscription</span></div>
+          <div class="browser-tests reveal">
+            <div class="browser-heading"><strong>Browser journeys</strong><span>each corrected run · 124 scoped scenarios</span></div>
+            <div class="test-bar" role="img" aria-label="97 passed, 19 failed, 3 skipped and 5 did not run out of 124 scoped scenarios"><span class="test-pass"></span><span class="test-fail"></span><span class="test-skip"></span><span class="test-unrun"></span></div>
+            <div class="test-legend"><span><i class="dot pass"></i>97 passed</span><span><i class="dot fail"></i>19 failed</span><span><i class="dot skip"></i>3 skipped</span><span><i class="dot unrun"></i>5 not run</span></div>
+          </div>
+        </div>
+        <p class="results-caveat reveal">A$0 refers to the software subscription. Hosting, backups and administration still have costs.</p>
+      </section>
+
+      <section class="slide slide-contribution" data-title="Contribution and next steps" aria-label="Slide 7: Contribution and recommendations">
+        <header class="slide-header"><p class="eyebrow reveal">06 / Contribution</p><h2 class="reveal">A working design with clear evidence boundaries.</h2></header>
+        <div class="contribution-layout">
+          <div class="contribution-statement reveal"><p>Open-SE brings <em>shared identity</em>, <em>inventory workflows</em>, <em>tenant isolation</em> and <em>customer-run deployment</em> into one tested design.</p></div>
+          <div class="next-steps reveal"><h3>Before release</h3><ol><li>Fix the failing end-to-end journeys.</li><li>Review privileged access and restore backups in a test.</li><li>Validate with SME users and clarify the licence.</li></ol></div>
+        </div>
+        <p class="contribution-footer reveal">The evaluation used synthetic data; production readiness remains future work.</p>
+      </section>
+
+      <section class="slide slide-lessons" data-title="Professional learning" aria-label="Slide 8: Professional learning">
+        <header class="slide-header"><p class="eyebrow reveal">07 / What I learned</p><h2 class="reveal">Two habits I will take into engineering work.</h2></header>
+        <div class="lessons-layout">
+          <article class="lesson reveal"><span>01</span><h3>Verify complete journeys early.</h3><p>A large test count can hide integration failures. Next time I will keep a small acceptance path working throughout development.</p><strong>Benefit at work: more reliable releases.</strong></article>
+          <article class="lesson reveal"><span>02</span><h3>Make claims match evidence.</h3><p>Security, data custody and cost each need a defined boundary. I learned to record limitations and turn feedback into testable actions.</p><strong>Benefit at work: clearer decisions and accountability.</strong></article>
+        </div>
+        <p class="closing reveal">Thank you.</p>
+      </section>
+    </main>
+
+    <aside class="speaker-notes" id="speaker-notes" aria-label="Speaker notes" hidden><div class="notes-head"><strong>Speaker notes</strong><button id="close-notes" type="button" aria-label="Close notes">×</button></div><p id="note-title"></p><p id="note-text"></p></aside>
+    <div class="controls" id="controls"><button id="previous" type="button" aria-label="Previous slide">←</button><span id="slide-status" aria-live="polite">1 / 8</span><button id="next" type="button" aria-label="Next slide">→</button><span class="control-divider"></span><button id="notes-button" type="button" aria-label="Toggle speaker notes" title="Speaker notes (N)">Notes</button><button id="fullscreen" type="button" aria-label="Toggle fullscreen" title="Fullscreen (F)">⛶</button></div>
+    <div class="progress" aria-hidden="true"><span id="progress-fill"></span></div>
+  </body>
+</html>
