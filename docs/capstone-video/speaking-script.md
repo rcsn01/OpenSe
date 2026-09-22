@@ -18,7 +18,7 @@ I built a shared entry point, Accounts for identity and organisation management,
 
 ## Slide 4 — Methodology
 
-I chose design science because the capstone needed two outputs: a working artefact and evidence about its behaviour. I translated the problem into requirements, compared design options using weighted criteria, built the selected architecture in iterations, and checked it against the requirements. The development process combined planned quality gates with iterative feature work. For evaluation, I reset synthetic data and repeated database security and browser workflow tests. This approach suited a design capstone because I could connect each engineering choice to an observable result.
+The report uses a design-science approach because this capstone had to produce both software and evidence about how it behaves. I followed a hybrid waterfall–Agile lifecycle: a planning gate set the requirements and architecture, then iterative sprints built and revised the system, followed by quality and compliance checks. This was Agile-inspired rather than formal Scrum. I traced stakeholder needs through acceptance criteria to verification evidence, and used weighted comparison matrices to choose the architecture, technology stack and tenancy model. Evaluation combined unit tests, SQL security tests and repeated browser journeys after clean resets with synthetic data. This method suited the project because each design choice could be checked against a stated requirement. The project did not reach a live customer release.
 
 ## Slide 5 — How it works
 
