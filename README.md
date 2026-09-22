@@ -17,6 +17,25 @@ Options:
 
 For remote Supabase setup, the script uses `SUPABASE_PROJECT_REF` or derives it from `VITE_SUPABASE_URL`/`SUPABASE_URL` when available. It also sets `STOQR_ALERT_DISPATCH_TOKEN` and the legacy `ALERT_EMAIL_DISPATCH_TOKEN` Edge Function secret to the same value so low-stock dispatch survives Edge Function redeploys.
 
+## Publishing a release
+
+Pushing to `main` does not publish images or create a release. To publish from the local Mac, first install and authenticate GitHub CLI:
+
+```bash
+brew install gh
+gh auth login
+```
+
+Set the next semantic version in `src/package.json`, commit it to `main`, push it, then run:
+
+```bash
+pnpm --dir src release:images
+```
+
+The command requires a clean `main` branch that exactly matches `origin/main`. It first builds all production Docker images locally. If that succeeds, it creates and pushes an `opense-v<version>` tag, starts the GitHub Actions workflow, waits for all OpenSe images to publish to GHCR with `<version>`, `latest`, and commit SHA tags, then creates the matching GitHub Release. Use `pnpm --dir src release:images --dry-run` to inspect the release without changing anything.
+
+If dispatch fails after the tag is pushed, retry it with the command printed by the release script.
+
 **PROPRIETARY SOURCE CODE - SOURCE AVAILABLE**
 
 This repository is hosted publicly for **educational and portfolio demonstration purposes only**. This project is **source-available, not open source**.
