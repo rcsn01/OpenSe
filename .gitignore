@@ -6,4 +6,5 @@ supabase/migrations/.temp/
 opencode.jsonc
 src/apps/opense-desktop/electron/assistant-service.cjs
 src/apps/pi/
+.pi/
 /supabase/.branches

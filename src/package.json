@@ -18,7 +18,7 @@
     "build": "turbo run build",
     "runtime-config": "node scripts/generate-runtime-config.mjs",
     "runtime-config:local": "node scripts/generate-runtime-config.mjs --local-supabase",
-    "docker:build": "docker compose --env-file ../.env -f docker-compose.prod.yml build",
+    "docker:build": "docker compose --parallel 1 --env-file ../.env -f docker-compose.prod.yml build",
     "docker:up": "docker compose --env-file ../.env -f docker-compose.prod.yml up -d",
     "docker:down": "docker compose --env-file ../.env -f docker-compose.prod.yml down",
     "release:images": "node scripts/release-images.mjs",
