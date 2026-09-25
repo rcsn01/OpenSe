@@ -120,22 +120,6 @@ export const groupLabels: Record<ProjectIssueListGroupKey, string> = {
   none: 'No grouping',
 }
 
-export const moduleStatusLabel: Record<ProjectModule['status'], string> = {
-  backlog: 'Backlog',
-  planned: 'Planned',
-  in_progress: 'In Progress',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-}
-
-export const moduleStatusClass: Record<ProjectModule['status'], string> = {
-  backlog: 'bg-[var(--color-muted)] text-[var(--color-muted-foreground)]',
-  planned: 'bg-blue-100 text-blue-700',
-  in_progress: 'bg-amber-100 text-amber-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-  cancelled: 'bg-rose-100 text-rose-700',
-}
-
 const priorityRank: Record<IssuePriority, number> = {
   urgent: 4,
   high: 3,
@@ -239,9 +223,6 @@ export const getDueBucket = (issue: Issue, now = new Date()): ProjectIssueListDu
 
 const getAssigneeName = (assignees: IssueAssignee[]) => assignees[0] ? getProfileDisplayName(assignees[0].profile) : 'Unassigned'
 const getIssueTeamName = (issue: Issue) => issue.team?.name ?? 'No team'
-
-export const createToggle = <TValue extends string>(value: TValue, values: TValue[]) =>
-  values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
 
 export const isProjectIssueComplete = (issue: Issue) =>
   Boolean(issue.completed_at || issue.state?.group_key === 'completed' || issue.state?.name?.toLowerCase().includes('done') || issue.state?.name?.toLowerCase().includes('resolved'))
